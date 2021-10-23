@@ -106,17 +106,6 @@ impl Hex8 {
     /// ```text
     /// shape[m](ξ) = Sᵐ(ξ)
     /// ```
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use gemlab::Hex8;
-    /// use russell_lab::Vector;
-    /// let mut geo = Hex8::new();
-    /// let ndim = geo.get_ndim();
-    /// let ksi = Vector::new(ndim);
-    /// geo.calc_shape(&ksi);
-    /// ```
     pub fn calc_shape(&mut self, coord: &Vector) {
         let (r, s, t) = (coord[0], coord[1], coord[2]);
 
@@ -134,15 +123,6 @@ impl Hex8 {
     ///
     /// ```text
     /// deriv[m][i](ξ) = ({dSᵐ(ξ)/dξ}_ξ)[i]
-    /// ```
-    ///
-    /// ```
-    /// use gemlab::Hex8;
-    /// use russell_lab::Vector;
-    /// let mut geo = Hex8::new();
-    /// let ndim = geo.get_ndim();
-    /// let ksi = Vector::new(ndim);
-    /// geo.calc_deriv(&ksi);
     /// ```
     pub fn calc_deriv(&mut self, coord: &Vector) {
         let (r, s, t) = (coord[0], coord[1], coord[2]);
