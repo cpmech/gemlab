@@ -59,9 +59,9 @@ pub struct Hex8 {
     //
     // ```text
     // ξᵐ = vector{r, s, t} @ node m
-    // coords = matrix{ξ⁰, ξ¹, ξ², ξ³, ξ⁴, ξ⁵, ξ⁶, ξ⁷, ξ⁸}
+    // coords = [ξ⁰, ξ¹, ξ², ξ³, ξ⁴, ξ⁵, ξ⁶, ξ⁷, ξ⁸]
     // ```
-    coords: Matrix,
+    coords: Vec<Vector>,
 
     // shape functions @ natural coordinate (nnode)
     //
@@ -86,16 +86,16 @@ impl Hex8 {
     pub fn new() -> Self {
         Hex8 {
             #[rustfmt::skip]
-            coords: Matrix::from(&[
-                [-1.0, -1.0, -1.0],
-                [ 1.0, -1.0, -1.0],
-                [ 1.0,  1.0, -1.0],
-                [-1.0,  1.0, -1.0],
-                [-1.0, -1.0,  1.0],
-                [ 1.0, -1.0,  1.0],
-                [ 1.0,  1.0,  1.0],
-                [-1.0,  1.0,  1.0],
-            ]),
+            coords: vec![
+                Vector::from(&[-1.0, -1.0, -1.0]),
+                Vector::from(&[ 1.0, -1.0, -1.0]),
+                Vector::from(&[ 1.0,  1.0, -1.0]),
+                Vector::from(&[-1.0,  1.0, -1.0]),
+                Vector::from(&[-1.0, -1.0,  1.0]),
+                Vector::from(&[ 1.0, -1.0,  1.0]),
+                Vector::from(&[ 1.0,  1.0,  1.0]),
+                Vector::from(&[-1.0,  1.0,  1.0]),
+            ],
             shape: Vector::new(NNODE),
             deriv: Matrix::new(NNODE, NDIM),
         }
@@ -211,7 +211,7 @@ mod tests {
     #[test]
     fn new_works() {
         let geo = Hex8::new();
-        assert_eq!(geo.coords.dims(), (NNODE, NDIM));
+        assert_eq!(geo.coords.len(), NNODE);
         assert_eq!(geo.shape.dim(), NNODE);
         assert_eq!(geo.deriv.dims(), (NNODE, NDIM));
     }
