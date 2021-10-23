@@ -2,8 +2,15 @@
 name = "gemlab"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Geometry laboratory for finite element analyses"
+homepage = "https://github.com/cpmech/gemlab"
+repository = "https://github.com/cpmech/gemlab"
+documentation = "https://docs.rs/gemlab"
+readme = "README.md"
+categories = ["mathematics", "science"]
+keywords = ["geometry", "mesh", "fem"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 russell_chk = "0.2"
