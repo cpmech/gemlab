@@ -31,18 +31,18 @@ use russell_lab::{Matrix, Vector};
 /// // geometry object
 /// let mut geo = Hex8::new();
 /// let ndim = geo.get_ndim();
-
+///
 /// // compute shape fn and deriv @ ksi=(0,0,0) for all nodes
 /// let ksi = Vector::new(ndim);
 /// geo.calc_shape(&ksi);
 /// geo.calc_deriv(&ksi);
-
+///
 /// // get shape fn and deriv for node m
 /// let m = 0;
 /// let sm = geo.get_shape(m);
 /// let mut dsm_dksi = Vector::new(ndim);
 /// geo.get_deriv(&mut dsm_dksi, m);
-
+///
 /// // check shape fn and deriv @ ksi for node m
 /// assert_eq!(sm, 0.125);
 /// assert_eq!(
@@ -102,6 +102,21 @@ impl Hex8 {
     }
 
     /// Calculates the shape functions at natural coordinate
+    ///
+    /// ```text
+    /// shape[m](ξ) = Sᵐ(ξ)
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use gemlab::Hex8;
+    /// use russell_lab::Vector;
+    /// let mut geo = Hex8::new();
+    /// let ndim = geo.get_ndim();
+    /// let ksi = Vector::new(ndim);
+    /// geo.calc_shape(&ksi);
+    /// ```
     pub fn calc_shape(&mut self, coord: &Vector) {
         let (r, s, t) = (coord[0], coord[1], coord[2]);
 
@@ -116,6 +131,19 @@ impl Hex8 {
     }
 
     /// Calculates the derivatives of shape functions at natural coordinate
+    ///
+    /// ```text
+    /// deriv[m][i](ξ) = ({dSᵐ(ξ)/dξ}_ξ)[i]
+    /// ```
+    ///
+    /// ```
+    /// use gemlab::Hex8;
+    /// use russell_lab::Vector;
+    /// let mut geo = Hex8::new();
+    /// let ndim = geo.get_ndim();
+    /// let ksi = Vector::new(ndim);
+    /// geo.calc_deriv(&ksi);
+    /// ```
     pub fn calc_deriv(&mut self, coord: &Vector) {
         let (r, s, t) = (coord[0], coord[1], coord[2]);
 
@@ -153,11 +181,19 @@ impl Hex8 {
     }
 
     /// Returns the previously computed shape function for node m
+    ///
+    /// ```text
+    /// shape[m](ξ) = Sᵐ(ξ)
+    /// ```
     pub fn get_shape(&self, m: usize) -> f64 {
         self.shape[m]
     }
 
     /// Returns the previously computed derivative of shape function for node m
+    //
+    // ```text
+    // deriv[m][i](ξ) = ({dSᵐ(ξ)/dξ}_ξ)[i]
+    // ```
     pub fn get_deriv(&self, deriv: &mut Vector, m: usize) {
         deriv[0] = self.deriv[m][0];
         deriv[1] = self.deriv[m][1];
@@ -175,6 +211,10 @@ impl Hex8 {
     }
 
     /// Returns the natural coordinates @ node m
+    //
+    // ```text
+    // coord = ξᵐ = vector{r, s, t} @ node m
+    // ```
     pub fn get_coord(&self, coord: &mut Vector, m: usize) {
         coord[0] = self.coords[m][0];
         coord[1] = self.coords[m][1];
@@ -262,7 +302,4 @@ mod tests {
         assert_eq!(geo.get_ndim(), NDIM);
         assert_eq!(geo.get_nnode(), NNODE);
     }
-
-    #[test]
-    fn another() {}
 }
