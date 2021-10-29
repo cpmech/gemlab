@@ -33,9 +33,13 @@
 //! );
 //! ```
 
+mod hex20;
 mod hex8;
 mod qua4;
+mod qua8;
 mod shape;
+pub use crate::shapes::hex20::*;
 pub use crate::shapes::hex8::*;
 pub use crate::shapes::qua4::*;
+pub use crate::shapes::qua8::*;
 pub use crate::shapes::shape::*;

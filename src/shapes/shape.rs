@@ -77,7 +77,9 @@ pub trait Shape {
 pub fn new(kind: Kind) -> Box<dyn Shape> {
     match kind {
         Kind::Qua4 => Box::new(Qua4::new()),
+        Kind::Qua8 => Box::new(Qua8::new()),
         Kind::Hex8 => Box::new(Hex8::new()),
+        Kind::Hex20 => Box::new(Hex20::new()),
         _ => panic!("Shape kind {:?} is not available yet", kind),
     }
 }
@@ -88,6 +90,10 @@ pub fn new(kind: Kind) -> Box<dyn Shape> {
 mod tests {
     use super::*;
     use russell_chk::*;
+
+    fn gen_kinds() -> Vec<Kind> {
+        vec![Kind::Qua4, Kind::Qua8, Kind::Hex8, Kind::Hex20]
+    }
 
     #[test]
     fn kind_traits_work() {
@@ -118,7 +124,7 @@ mod tests {
 
     #[test]
     fn calc_interp_works() {
-        let kinds = vec![Kind::Hex8, Kind::Qua4];
+        let kinds = gen_kinds();
         for kind in kinds {
             let mut shape = new(kind);
             let ndim = shape.get_ndim();
@@ -141,7 +147,7 @@ mod tests {
 
     #[test]
     fn calc_deriv_works() {
-        let kinds = vec![Kind::Hex8, Kind::Qua4];
+        let kinds = gen_kinds();
         for kind in kinds {
             let mut shape = new(kind);
             let ndim = shape.get_ndim();
@@ -164,7 +170,7 @@ mod tests {
                 args.m = m;
                 for i in 0..ndim {
                     args.i = i;
-                    assert_deriv_approx_eq!(dsm_dksi[i], args.at_ksi[i], sm, args, 1e-13);
+                    assert_deriv_approx_eq!(dsm_dksi[i], args.at_ksi[i], sm, args, 1e-12);
                 }
             }
         }
