@@ -88,7 +88,7 @@ pub struct Block {
     edge_groups: Vec<usize>,  // edge groups (nedge)
     face_groups: Vec<usize>,  // face groups (nface)
     ndiv: Vec<usize>,         // number of divisions along each dim (ndim)
-    weights: Matrix,          // weights along each dimension (ndim, ndiv)
+    weights: Vec<Vec<f64>>,   // weights along each dimension (ndim, {nx,ny,nz})
     sum_weights: Vec<f64>,    // sum of weights along each dimension (ndim)
 
     // maps side to constraint (num_sides)
@@ -116,7 +116,7 @@ impl Block {
             edge_groups: vec![0; nedge],
             face_groups: vec![0; nface],
             ndiv: vec![NDIV; ndim],
-            weights: Matrix::filled(ndim, NDIV, 1.0),
+            weights: vec![vec![1.0; NDIV]; ndim],
             sum_weights: vec![NDIV as f64; ndim],
             constraints: HashMap::new(),
         }
@@ -214,6 +214,28 @@ impl Block {
         self.face_groups[f] = group;
         self
     }
+
+    /// Sets the number of equal divisions
+    pub fn set_ndiv(&mut self, ndiv: &[usize]) -> &mut Self {
+        assert_eq!(ndiv.len(), self.ndim);
+        for i in 0..ndiv.len() {
+            self.ndiv[i] = ndiv[i];
+            self.weights[i] = vec![1.0; ndiv[i]];
+        }
+        self.calc_sum_weights();
+        self
+    }
+
+    /// Calculates the sum of weights along each direction
+    fn calc_sum_weights(&mut self) {
+        for i in 0..self.ndim {
+            let mut sum_w = 0.0;
+            for w in &self.weights[i] {
+                sum_w += w;
+            }
+            self.sum_weights[i] = sum_w;
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -243,13 +265,7 @@ mod tests {
         assert_eq!(qua4.edge_groups, &[0, 0, 0, 0]);
         assert_eq!(qua4.face_groups, &[]);
         assert_eq!(qua4.ndiv, &[2, 2]);
-        assert_eq!(
-            format!("{}", qua4.weights),
-            "┌     ┐\n\
-             │ 1 1 │\n\
-             │ 1 1 │\n\
-             └     ┘"
-        );
+        assert_eq!(format!("{:?}", qua4.weights), "[[1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(qua4.sum_weights, &[2.0, 2.0]);
 
         let qua8 = Block::new(BlockKind::Qua8);
@@ -275,13 +291,7 @@ mod tests {
         assert_eq!(qua8.edge_groups, &[0, 0, 0, 0]);
         assert_eq!(qua8.face_groups, &[]);
         assert_eq!(qua8.ndiv, &[2, 2]);
-        assert_eq!(
-            format!("{}", qua8.weights),
-            "┌     ┐\n\
-             │ 1 1 │\n\
-             │ 1 1 │\n\
-             └     ┘"
-        );
+        assert_eq!(format!("{:?}", qua8.weights), "[[1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(qua8.sum_weights, &[2.0, 2.0]);
 
         let hex8 = Block::new(BlockKind::Hex8);
@@ -307,14 +317,7 @@ mod tests {
         assert_eq!(hex8.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         assert_eq!(hex8.face_groups, &[0, 0, 0, 0, 0, 0]);
         assert_eq!(hex8.ndiv, &[2, 2, 2]);
-        assert_eq!(
-            format!("{}", hex8.weights),
-            "┌     ┐\n\
-             │ 1 1 │\n\
-             │ 1 1 │\n\
-             │ 1 1 │\n\
-             └     ┘"
-        );
+        assert_eq!(format!("{:?}", hex8.weights), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(hex8.sum_weights, &[2.0, 2.0, 2.0]);
 
         let hex20 = Block::new(BlockKind::Hex20);
@@ -355,14 +358,7 @@ mod tests {
         assert_eq!(hex20.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         assert_eq!(hex20.face_groups, &[0, 0, 0, 0, 0, 0]);
         assert_eq!(hex20.ndiv, &[2, 2, 2]);
-        assert_eq!(
-            format!("{}", hex20.weights),
-            "┌     ┐\n\
-             │ 1 1 │\n\
-             │ 1 1 │\n\
-             │ 1 1 │\n\
-             └     ┘"
-        );
+        assert_eq!(format!("{:?}", hex20.weights), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(hex20.sum_weights, &[2.0, 2.0, 2.0]);
     }
 
@@ -485,5 +481,14 @@ mod tests {
         let mut block = Block::new(BlockKind::Hex8);
         block.set_face_group(0, 111);
         assert_eq!(block.face_groups, &[111, 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn set_ndiv_works() {
+        let mut block = Block::new(BlockKind::Qua4);
+        block.set_ndiv(&[3, 4]);
+        assert_eq!(block.ndiv, &[3, 4]);
+        assert_eq!(format!("{:?}", block.weights), "[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]]");
+        assert_eq!(block.sum_weights, &[3.0, 4.0]);
     }
 }
