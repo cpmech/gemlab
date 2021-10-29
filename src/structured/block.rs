@@ -220,22 +220,48 @@ mod tests {
 
     #[test]
     fn set_coords_works() {
-        let mut block = Block::new(1, BlockKind::Qua4);
+        let mut qua4 = Block::new(1, BlockKind::Qua4);
         #[rustfmt::skip]
-        block.set_coords(&[
+        qua4.set_coords(&[
             [0.0, 0.0],
             [2.0, 0.0],
             [2.0, 2.0],
             [0.0, 2.0],
         ]);
         assert_eq!(
-            format!("{}", block.coords),
+            format!("{}", qua4.coords),
             "┌     ┐\n\
              │ 0 0 │\n\
              │ 2 0 │\n\
              │ 2 2 │\n\
              │ 0 2 │\n\
              └     ┘"
+        );
+
+        let mut hex8 = Block::new(1, BlockKind::Hex8);
+        #[rustfmt::skip]
+        hex8.set_coords(&[
+            [0.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [2.0, 2.0, 0.0],
+            [0.0, 2.0, 0.0],
+            [0.0, 0.0, 2.0],
+            [2.0, 0.0, 2.0],
+            [2.0, 2.0, 2.0],
+            [0.0, 2.0, 2.0],
+        ]);
+        assert_eq!(
+            format!("{}", hex8.coords),
+            "┌       ┐\n\
+             │ 0 0 0 │\n\
+             │ 2 0 0 │\n\
+             │ 2 2 0 │\n\
+             │ 0 2 0 │\n\
+             │ 0 0 2 │\n\
+             │ 2 0 2 │\n\
+             │ 2 2 2 │\n\
+             │ 0 2 2 │\n\
+             └       ┘"
         );
     }
 }
