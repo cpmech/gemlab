@@ -96,6 +96,7 @@ pub struct Block {
 }
 
 impl Block {
+    /// Creates a new Block with default options
     pub fn new(group: usize, kind: BlockKind) -> Self {
         let (ndim, npoint, nedge, nface) = match kind {
             BlockKind::Qua4 => (2, 4, 4, 0),
@@ -120,25 +121,44 @@ impl Block {
         }
     }
 
-    pub fn set_point_2d(&mut self, m: usize, group: usize, x: f64, y: f64) -> &mut Self {
+    /// Sets 2D point
+    ///
+    /// # Input
+    ///
+    /// `p` -- index of point in [0, npoint-1]
+    /// `group` -- group of point
+    /// `x`, `y` -- coordinates of point
+    pub fn set_point_2d(&mut self, p: usize, group: usize, x: f64, y: f64) -> &mut Self {
         assert_eq!(self.ndim, 2);
-        assert!(m < self.npoint);
-        self.point_groups[m] = group;
-        self.coords[m][0] = x;
-        self.coords[m][1] = y;
+        assert!(p < self.npoint);
+        self.point_groups[p] = group;
+        self.coords[p][0] = x;
+        self.coords[p][1] = y;
         self
     }
 
-    pub fn set_point_3d(&mut self, m: usize, group: usize, x: f64, y: f64, z: f64) -> &mut Self {
+    /// Sets 3D point
+    ///
+    /// # Input
+    ///
+    /// `p` -- index of point in [0, npoint-1]
+    /// `group` -- group of point
+    /// `x`, `y`, `z` -- coordinates of point
+    pub fn set_point_3d(&mut self, p: usize, group: usize, x: f64, y: f64, z: f64) -> &mut Self {
         assert_eq!(self.ndim, 3);
-        assert!(m < self.npoint);
-        self.point_groups[m] = group;
-        self.coords[m][0] = x;
-        self.coords[m][1] = y;
-        self.coords[m][2] = z;
+        assert!(p < self.npoint);
+        self.point_groups[p] = group;
+        self.coords[p][0] = x;
+        self.coords[p][1] = y;
+        self.coords[p][2] = z;
         self
     }
 
+    /// Sets the coordinates of all 2D or 3D points
+    ///
+    /// # Input
+    ///
+    /// `coords` -- (npoint, ndim) matrix with all coordinates
     pub fn set_coords<'a, T, U>(&mut self, coords: &'a T) -> &mut Self
     where
         T: AsArray2D<'a, U>,
@@ -155,9 +175,36 @@ impl Block {
         self
     }
 
-    pub fn set_point_group(&mut self, m: usize, group: usize) -> &mut Self {
-        assert!(m < self.npoint);
-        self.point_groups[m] = group;
+    /// Sets the group of a point
+    ///
+    /// # Input
+    ///
+    /// `p` -- index of point in [0, npoint-1]
+    pub fn set_point_group(&mut self, p: usize, group: usize) -> &mut Self {
+        assert!(p < self.npoint);
+        self.point_groups[p] = group;
+        self
+    }
+
+    /// Sets the group of an edge
+    ///
+    /// # Input
+    ///
+    /// `e` -- index of edge in [0, nedge-1]
+    pub fn set_edge_group(&mut self, e: usize, group: usize) -> &mut Self {
+        assert!(e < self.nedge);
+        self.edge_groups[e] = group;
+        self
+    }
+
+    /// Sets the group of a face
+    ///
+    /// # Input
+    ///
+    /// `f` -- index of edge in [0, nface-1]
+    pub fn set_face_group(&mut self, f: usize, group: usize) -> &mut Self {
+        assert!(f < self.nface);
+        self.face_groups[f] = group;
         self
     }
 }
@@ -276,5 +323,19 @@ mod tests {
         let mut block = Block::new(1, BlockKind::Qua4);
         block.set_point_group(0, 111);
         assert_eq!(block.point_groups, &[111, 0, 0, 0]);
+    }
+
+    #[test]
+    fn set_edge_group_works() {
+        let mut block = Block::new(1, BlockKind::Qua4);
+        block.set_edge_group(0, 111);
+        assert_eq!(block.edge_groups, &[111, 0, 0, 0]);
+    }
+
+    #[test]
+    fn set_face_group_works() {
+        let mut block = Block::new(1, BlockKind::Hex8);
+        block.set_face_group(0, 111);
+        assert_eq!(block.face_groups, &[111, 0, 0, 0, 0, 0]);
     }
 }
