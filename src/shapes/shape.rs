@@ -2,7 +2,7 @@ use super::*;
 use russell_lab::Vector;
 
 /// Defines the kind of shape
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug)]
 pub enum Kind {
     Lin2,
     Lin3,
