@@ -87,8 +87,8 @@ pub struct Block {
     point_groups: Vec<usize>, // point groups (npoint)
     edge_groups: Vec<usize>,  // edge groups (nedge)
     face_groups: Vec<usize>,  // face groups (nface)
-    num_div: Vec<usize>,      // number of divisions along each dim (ndim)
-    weights: Vec<Vec<f64>>,   // weights along each dimension (ndim, nweight)
+    ndiv: Vec<usize>,         // number of divisions along each dim (ndim)
+    weights: Matrix,          // weights along each dimension (ndim, ndiv)
     sum_weights: Vec<f64>,    // sum of weights along each dimension (ndim)
 
     // maps side to constraint (num_sides)
@@ -104,6 +104,7 @@ impl Block {
             BlockKind::Hex8 => (3, 8, 12, 6),
             BlockKind::Hex20 => (3, 20, 12, 6),
         };
+        const NDIV: usize = 2;
         Block {
             group,
             ndim,
@@ -114,9 +115,9 @@ impl Block {
             point_groups: vec![0; npoint],
             edge_groups: vec![0; nedge],
             face_groups: vec![0; nface],
-            num_div: vec![0; ndim],
-            weights: vec![Vec::new(); ndim],
-            sum_weights: vec![0.0; ndim],
+            ndiv: vec![NDIV; ndim],
+            weights: Matrix::filled(ndim, NDIV, 1.0),
+            sum_weights: vec![NDIV as f64; ndim],
             constraints: HashMap::new(),
         }
     }
@@ -217,12 +218,38 @@ mod tests {
 
     #[test]
     fn new_works() {
-        let block = Block::new(1, BlockKind::Qua4);
+        let block = Block::new(1, BlockKind::Hex8);
         assert_eq!(block.group, 1);
-        assert_eq!(block.ndim, 2);
-        assert_eq!(block.npoint, 4);
-        assert_eq!(block.nedge, 4);
-        assert_eq!(block.nface, 0);
+        assert_eq!(block.ndim, 3);
+        assert_eq!(block.npoint, 8);
+        assert_eq!(block.nedge, 12);
+        assert_eq!(block.nface, 6);
+        assert_eq!(
+            format!("{}", block.coords),
+            "┌       ┐\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             └       ┘"
+        );
+        assert_eq!(block.point_groups, &[0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(block.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(block.face_groups, &[0, 0, 0, 0, 0, 0]);
+        assert_eq!(block.ndiv, &[2, 2, 2]);
+        assert_eq!(
+            format!("{}", block.weights),
+            "┌     ┐\n\
+             │ 1 1 │\n\
+             │ 1 1 │\n\
+             │ 1 1 │\n\
+             └     ┘"
+        );
+        assert_eq!(block.sum_weights, &[2.0, 2.0, 2.0]);
     }
 
     #[test]
