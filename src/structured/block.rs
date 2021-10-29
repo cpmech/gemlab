@@ -2,13 +2,6 @@ use crate::as_array::AsArray2D;
 use crate::geometry::Circle;
 use russell_lab::Matrix;
 
-pub enum BlockKind {
-    Qua4,
-    Qua8,
-    Hex8,
-    Hex20,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Constraint {
     /// Arc
@@ -83,7 +76,7 @@ pub enum Constraint {
 pub struct Block {
     group: usize,             // group of all elements in this block
     ndim: usize,              // space dimension
-    npoint: usize,            // number of points (4, 8, or 20)
+    npoint: usize,            // number of points (8 or 20) (quadratic block internally)
     nedge: usize,             // number of edges (4 or 12)
     nface: usize,             // number of faces (4 or 6)
     coords: Matrix,           // coordinates of points (npoint, ndim)
@@ -100,12 +93,11 @@ pub struct Block {
 
 impl Block {
     /// Creates a new Block with default options
-    pub fn new(kind: BlockKind) -> Self {
-        let (ndim, npoint, nedge, nface) = match kind {
-            BlockKind::Qua4 => (2, 4, 4, 0),
-            BlockKind::Qua8 => (2, 8, 4, 0),
-            BlockKind::Hex8 => (3, 8, 12, 6),
-            BlockKind::Hex20 => (3, 20, 12, 6),
+    pub fn new(ndim: usize) -> Self {
+        let (npoint, nedge, nface) = match ndim {
+            2 => (8, 4, 0),
+            3 => (20, 12, 6),
+            _ => panic!("ndim must be 2 or 3"),
         };
         const NDIV: usize = 2;
         Block {
@@ -132,55 +124,59 @@ impl Block {
         self
     }
 
-    /// Sets 2D point
-    ///
-    /// # Input
-    ///
-    /// * `p` -- index of point in [0, npoint-1]
-    /// * `group` -- group of point
-    /// * `x`, `y` -- coordinates of point
-    pub fn set_point_2d(&mut self, p: usize, group: usize, x: f64, y: f64) -> &mut Self {
-        assert_eq!(self.ndim, 2);
-        assert!(p < self.npoint);
-        self.point_groups[p] = group;
-        self.coords[p][0] = x;
-        self.coords[p][1] = y;
-        self
-    }
-
-    /// Sets 3D point
-    ///
-    /// # Input
-    ///
-    /// * `p` -- index of point in [0, npoint-1]
-    /// * `group` -- group of point
-    /// * `x`, `y`, `z` -- coordinates of point
-    pub fn set_point_3d(&mut self, p: usize, group: usize, x: f64, y: f64, z: f64) -> &mut Self {
-        assert_eq!(self.ndim, 3);
-        assert!(p < self.npoint);
-        self.point_groups[p] = group;
-        self.coords[p][0] = x;
-        self.coords[p][1] = y;
-        self.coords[p][2] = z;
-        self
-    }
-
     /// Sets the coordinates of all 2D or 3D points
     ///
-    /// # Input
+    /// # Input (2D)
     ///
-    /// * `coords` -- (npoint, ndim) matrix with all coordinates
+    /// * `coords` -- (4 or 8, 2) matrix with all coordinates
+    ///
+    /// # Input (3D)
+    ///
+    /// * `coords` -- (8 or 20, 3) matrix with all coordinates
     pub fn set_coords<'a, T, U>(&mut self, coords: &'a T) -> &mut Self
     where
         T: AsArray2D<'a, U>,
         U: 'a + Into<f64>,
     {
+        // check
         let (nrow, ncol) = coords.size();
-        assert_eq!(nrow, self.npoint);
         assert_eq!(ncol, self.ndim);
+        if self.ndim == 2 {
+            assert!(nrow == 4 || nrow == 8);
+        } else {
+            assert!(nrow == 8 || nrow == 20);
+        }
+        // set corner points
         for i in 0..nrow {
             for j in 0..ncol {
                 self.coords[i][j] = coords.at(i, j).into();
+            }
+        }
+        // generate mid points
+        if self.ndim == 2 && nrow == 4 {
+            for i in 0..self.ndim {
+                self.coords[4][i] = (self.coords[0][i] + self.coords[1][i]) / 2.0;
+                self.coords[5][i] = (self.coords[1][i] + self.coords[2][i]) / 2.0;
+                self.coords[6][i] = (self.coords[2][i] + self.coords[3][i]) / 2.0;
+                self.coords[7][i] = (self.coords[3][i] + self.coords[0][i]) / 2.0;
+            }
+        }
+        if self.ndim == 3 && nrow == 8 {
+            for i in 0..self.ndim {
+                self.coords[8][i] = (self.coords[0][i] + self.coords[1][i]) / 2.0;
+                self.coords[9][i] = (self.coords[1][i] + self.coords[2][i]) / 2.0;
+                self.coords[10][i] = (self.coords[2][i] + self.coords[3][i]) / 2.0;
+                self.coords[11][i] = (self.coords[3][i] + self.coords[0][i]) / 2.0;
+
+                self.coords[12][i] = (self.coords[4][i] + self.coords[5][i]) / 2.0;
+                self.coords[13][i] = (self.coords[5][i] + self.coords[6][i]) / 2.0;
+                self.coords[14][i] = (self.coords[6][i] + self.coords[7][i]) / 2.0;
+                self.coords[15][i] = (self.coords[7][i] + self.coords[4][i]) / 2.0;
+
+                self.coords[16][i] = (self.coords[0][i] + self.coords[4][i]) / 2.0;
+                self.coords[17][i] = (self.coords[1][i] + self.coords[5][i]) / 2.0;
+                self.coords[18][i] = (self.coords[2][i] + self.coords[6][i]) / 2.0;
+                self.coords[19][i] = (self.coords[3][i] + self.coords[7][i]) / 2.0;
             }
         }
         self
@@ -288,36 +284,14 @@ mod tests {
 
     #[test]
     fn new_works() {
-        let qua4 = Block::new(BlockKind::Qua4);
-        assert_eq!(qua4.group, 1);
-        assert_eq!(qua4.ndim, 2);
-        assert_eq!(qua4.npoint, 4);
-        assert_eq!(qua4.nedge, 4);
-        assert_eq!(qua4.nface, 0);
+        let b2d = Block::new(2);
+        assert_eq!(b2d.group, 1);
+        assert_eq!(b2d.ndim, 2);
+        assert_eq!(b2d.npoint, 8);
+        assert_eq!(b2d.nedge, 4);
+        assert_eq!(b2d.nface, 0);
         assert_eq!(
-            format!("{}", qua4.coords),
-            "┌     ┐\n\
-             │ 0 0 │\n\
-             │ 0 0 │\n\
-             │ 0 0 │\n\
-             │ 0 0 │\n\
-             └     ┘"
-        );
-        assert_eq!(qua4.point_groups, &[0, 0, 0, 0]);
-        assert_eq!(qua4.edge_groups, &[0, 0, 0, 0]);
-        assert_eq!(qua4.face_groups, &[]);
-        assert_eq!(qua4.ndiv, &[2, 2]);
-        assert_eq!(format!("{:?}", qua4.weights), "[[1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(qua4.sum_weights, &[2.0, 2.0]);
-
-        let qua8 = Block::new(BlockKind::Qua8);
-        assert_eq!(qua8.group, 1);
-        assert_eq!(qua8.ndim, 2);
-        assert_eq!(qua8.npoint, 8);
-        assert_eq!(qua8.nedge, 4);
-        assert_eq!(qua8.nface, 0);
-        assert_eq!(
-            format!("{}", qua8.coords),
+            format!("{}", b2d.coords),
             "┌     ┐\n\
              │ 0 0 │\n\
              │ 0 0 │\n\
@@ -329,47 +303,21 @@ mod tests {
              │ 0 0 │\n\
              └     ┘"
         );
-        assert_eq!(qua8.point_groups, &[0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(qua8.edge_groups, &[0, 0, 0, 0]);
-        assert_eq!(qua8.face_groups, &[]);
-        assert_eq!(qua8.ndiv, &[2, 2]);
-        assert_eq!(format!("{:?}", qua8.weights), "[[1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(qua8.sum_weights, &[2.0, 2.0]);
+        assert_eq!(b2d.point_groups, &[0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(b2d.edge_groups, &[0, 0, 0, 0]);
+        assert_eq!(b2d.face_groups, &[]);
+        assert_eq!(b2d.ndiv, &[2, 2]);
+        assert_eq!(format!("{:?}", b2d.weights), "[[1.0, 1.0], [1.0, 1.0]]");
+        assert_eq!(b2d.sum_weights, &[2.0, 2.0]);
 
-        let hex8 = Block::new(BlockKind::Hex8);
-        assert_eq!(hex8.group, 1);
-        assert_eq!(hex8.ndim, 3);
-        assert_eq!(hex8.npoint, 8);
-        assert_eq!(hex8.nedge, 12);
-        assert_eq!(hex8.nface, 6);
+        let b3d = Block::new(3);
+        assert_eq!(b3d.group, 1);
+        assert_eq!(b3d.ndim, 3);
+        assert_eq!(b3d.npoint, 20);
+        assert_eq!(b3d.nedge, 12);
+        assert_eq!(b3d.nface, 6);
         assert_eq!(
-            format!("{}", hex8.coords),
-            "┌       ┐\n\
-             │ 0 0 0 │\n\
-             │ 0 0 0 │\n\
-             │ 0 0 0 │\n\
-             │ 0 0 0 │\n\
-             │ 0 0 0 │\n\
-             │ 0 0 0 │\n\
-             │ 0 0 0 │\n\
-             │ 0 0 0 │\n\
-             └       ┘"
-        );
-        assert_eq!(hex8.point_groups, &[0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(hex8.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(hex8.face_groups, &[0, 0, 0, 0, 0, 0]);
-        assert_eq!(hex8.ndiv, &[2, 2, 2]);
-        assert_eq!(format!("{:?}", hex8.weights), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(hex8.sum_weights, &[2.0, 2.0, 2.0]);
-
-        let hex20 = Block::new(BlockKind::Hex20);
-        assert_eq!(hex20.group, 1);
-        assert_eq!(hex20.ndim, 3);
-        assert_eq!(hex20.npoint, 20);
-        assert_eq!(hex20.nedge, 12);
-        assert_eq!(hex20.nface, 6);
-        assert_eq!(
-            format!("{}", hex20.coords),
+            format!("{}", b3d.coords),
             "┌       ┐\n\
              │ 0 0 0 │\n\
              │ 0 0 0 │\n\
@@ -394,92 +342,50 @@ mod tests {
              └       ┘"
         );
         assert_eq!(
-            hex20.point_groups,
+            b3d.point_groups,
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         );
-        assert_eq!(hex20.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(hex20.face_groups, &[0, 0, 0, 0, 0, 0]);
-        assert_eq!(hex20.ndiv, &[2, 2, 2]);
-        assert_eq!(format!("{:?}", hex20.weights), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(hex20.sum_weights, &[2.0, 2.0, 2.0]);
+        assert_eq!(b3d.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(b3d.face_groups, &[0, 0, 0, 0, 0, 0]);
+        assert_eq!(b3d.ndiv, &[2, 2, 2]);
+        assert_eq!(format!("{:?}", b3d.weights), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
+        assert_eq!(b3d.sum_weights, &[2.0, 2.0, 2.0]);
     }
 
     #[test]
     fn set_group_works() {
-        let mut block = Block::new(BlockKind::Qua4);
+        let mut block = Block::new(2);
         block.set_group(2);
         assert_eq!(block.group, 2);
     }
 
     #[test]
-    fn set_point_2d_works() {
-        let mut block = Block::new(BlockKind::Qua4);
-        block
-            .set_point_2d(0, 1, 0.0, 0.0)
-            .set_point_2d(1, 2, 2.0, 0.0)
-            .set_point_2d(2, 3, 2.0, 2.0)
-            .set_point_2d(3, 4, 0.0, 2.0);
-        assert_eq!(
-            format!("{}", block.coords),
-            "┌     ┐\n\
-             │ 0 0 │\n\
-             │ 2 0 │\n\
-             │ 2 2 │\n\
-             │ 0 2 │\n\
-             └     ┘"
-        );
-    }
-
-    #[test]
-    fn set_point_3d_works() {
-        let mut block = Block::new(BlockKind::Hex8);
-        block
-            .set_point_3d(0, 1, 0.0, 0.0, 0.0)
-            .set_point_3d(1, 2, 2.0, 0.0, 0.0)
-            .set_point_3d(2, 3, 2.0, 2.0, 0.0)
-            .set_point_3d(3, 4, 0.0, 2.0, 0.0)
-            .set_point_3d(4, 1, 0.0, 0.0, 2.0)
-            .set_point_3d(5, 2, 2.0, 0.0, 2.0)
-            .set_point_3d(6, 3, 2.0, 2.0, 2.0)
-            .set_point_3d(7, 4, 0.0, 2.0, 2.0);
-        assert_eq!(
-            format!("{}", block.coords),
-            "┌       ┐\n\
-             │ 0 0 0 │\n\
-             │ 2 0 0 │\n\
-             │ 2 2 0 │\n\
-             │ 0 2 0 │\n\
-             │ 0 0 2 │\n\
-             │ 2 0 2 │\n\
-             │ 2 2 2 │\n\
-             │ 0 2 2 │\n\
-             └       ┘"
-        );
-    }
-
-    #[test]
     fn set_coords_works() {
-        let mut qua4 = Block::new(BlockKind::Qua4);
+        let mut b2d = Block::new(2);
         #[rustfmt::skip]
-        qua4.set_coords(&[
+        b2d.set_coords(&[
             [0.0, 0.0],
             [2.0, 0.0],
             [2.0, 2.0],
             [0.0, 2.0],
         ]);
         assert_eq!(
-            format!("{}", qua4.coords),
+            format!("{}", b2d.coords),
             "┌     ┐\n\
              │ 0 0 │\n\
              │ 2 0 │\n\
              │ 2 2 │\n\
              │ 0 2 │\n\
+             │ 1 0 │\n\
+             │ 2 1 │\n\
+             │ 1 2 │\n\
+             │ 0 1 │\n\
              └     ┘"
         );
 
-        let mut hex8 = Block::new(BlockKind::Hex8);
+        let mut b3d = Block::new(3);
         #[rustfmt::skip]
-        hex8.set_coords(&[
+        b3d.set_coords(&[
             [0.0, 0.0, 0.0],
             [2.0, 0.0, 0.0],
             [2.0, 2.0, 0.0],
@@ -490,7 +396,7 @@ mod tests {
             [0.0, 2.0, 2.0],
         ]);
         assert_eq!(
-            format!("{}", hex8.coords),
+            format!("{}", b3d.coords),
             "┌       ┐\n\
              │ 0 0 0 │\n\
              │ 2 0 0 │\n\
@@ -500,34 +406,46 @@ mod tests {
              │ 2 0 2 │\n\
              │ 2 2 2 │\n\
              │ 0 2 2 │\n\
+             │ 1 0 0 │\n\
+             │ 2 1 0 │\n\
+             │ 1 2 0 │\n\
+             │ 0 1 0 │\n\
+             │ 1 0 2 │\n\
+             │ 2 1 2 │\n\
+             │ 1 2 2 │\n\
+             │ 0 1 2 │\n\
+             │ 0 0 1 │\n\
+             │ 2 0 1 │\n\
+             │ 2 2 1 │\n\
+             │ 0 2 1 │\n\
              └       ┘"
         );
     }
 
     #[test]
     fn set_point_group_works() {
-        let mut block = Block::new(BlockKind::Qua4);
+        let mut block = Block::new(2);
         block.set_point_group(0, 111);
-        assert_eq!(block.point_groups, &[111, 0, 0, 0]);
+        assert_eq!(block.point_groups, &[111, 0, 0, 0, 0, 0, 0, 0]);
     }
 
     #[test]
     fn set_edge_group_works() {
-        let mut block = Block::new(BlockKind::Qua4);
+        let mut block = Block::new(2);
         block.set_edge_group(0, 111);
         assert_eq!(block.edge_groups, &[111, 0, 0, 0]);
     }
 
     #[test]
     fn set_face_group_works() {
-        let mut block = Block::new(BlockKind::Hex8);
+        let mut block = Block::new(3);
         block.set_face_group(0, 111);
         assert_eq!(block.face_groups, &[111, 0, 0, 0, 0, 0]);
     }
 
     #[test]
     fn set_ndiv_works() {
-        let mut block = Block::new(BlockKind::Qua4);
+        let mut block = Block::new(2);
         block.set_ndiv(&[3, 4]);
         assert_eq!(block.ndiv, &[3, 4]);
         assert_eq!(
@@ -539,7 +457,7 @@ mod tests {
 
     #[test]
     fn set_edge_constraint_works() {
-        let mut block = Block::new(BlockKind::Qua4);
+        let mut block = Block::new(2);
         let constraint = Constraint::Arc(Circle {
             center: [-1.0, -1.0],
             radius: 2.0,
@@ -551,7 +469,7 @@ mod tests {
 
     #[test]
     fn set_face_constraint_works() {
-        let mut block = Block::new(BlockKind::Hex8);
+        let mut block = Block::new(3);
         let constraint = Constraint::ArcX(Circle {
             center: [-1.0, -1.0],
             radius: 2.0,
