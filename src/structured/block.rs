@@ -218,14 +218,74 @@ mod tests {
 
     #[test]
     fn new_works() {
-        let block = Block::new(1, BlockKind::Hex8);
-        assert_eq!(block.group, 1);
-        assert_eq!(block.ndim, 3);
-        assert_eq!(block.npoint, 8);
-        assert_eq!(block.nedge, 12);
-        assert_eq!(block.nface, 6);
+        let qua4 = Block::new(1, BlockKind::Qua4);
+        assert_eq!(qua4.group, 1);
+        assert_eq!(qua4.ndim, 2);
+        assert_eq!(qua4.npoint, 4);
+        assert_eq!(qua4.nedge, 4);
+        assert_eq!(qua4.nface, 0);
         assert_eq!(
-            format!("{}", block.coords),
+            format!("{}", qua4.coords),
+            "┌     ┐\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             └     ┘"
+        );
+        assert_eq!(qua4.point_groups, &[0, 0, 0, 0]);
+        assert_eq!(qua4.edge_groups, &[0, 0, 0, 0]);
+        assert_eq!(qua4.face_groups, &[]);
+        assert_eq!(qua4.ndiv, &[2, 2]);
+        assert_eq!(
+            format!("{}", qua4.weights),
+            "┌     ┐\n\
+             │ 1 1 │\n\
+             │ 1 1 │\n\
+             └     ┘"
+        );
+        assert_eq!(qua4.sum_weights, &[2.0, 2.0]);
+
+        let qua8 = Block::new(1, BlockKind::Qua8);
+        assert_eq!(qua8.group, 1);
+        assert_eq!(qua8.ndim, 2);
+        assert_eq!(qua8.npoint, 8);
+        assert_eq!(qua8.nedge, 4);
+        assert_eq!(qua8.nface, 0);
+        assert_eq!(
+            format!("{}", qua8.coords),
+            "┌     ┐\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             └     ┘"
+        );
+        assert_eq!(qua8.point_groups, &[0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(qua8.edge_groups, &[0, 0, 0, 0]);
+        assert_eq!(qua8.face_groups, &[]);
+        assert_eq!(qua8.ndiv, &[2, 2]);
+        assert_eq!(
+            format!("{}", qua8.weights),
+            "┌     ┐\n\
+             │ 1 1 │\n\
+             │ 1 1 │\n\
+             └     ┘"
+        );
+        assert_eq!(qua8.sum_weights, &[2.0, 2.0]);
+
+        let hex8 = Block::new(1, BlockKind::Hex8);
+        assert_eq!(hex8.group, 1);
+        assert_eq!(hex8.ndim, 3);
+        assert_eq!(hex8.npoint, 8);
+        assert_eq!(hex8.nedge, 12);
+        assert_eq!(hex8.nface, 6);
+        assert_eq!(
+            format!("{}", hex8.coords),
             "┌       ┐\n\
              │ 0 0 0 │\n\
              │ 0 0 0 │\n\
@@ -237,19 +297,67 @@ mod tests {
              │ 0 0 0 │\n\
              └       ┘"
         );
-        assert_eq!(block.point_groups, &[0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(block.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(block.face_groups, &[0, 0, 0, 0, 0, 0]);
-        assert_eq!(block.ndiv, &[2, 2, 2]);
+        assert_eq!(hex8.point_groups, &[0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(hex8.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(hex8.face_groups, &[0, 0, 0, 0, 0, 0]);
+        assert_eq!(hex8.ndiv, &[2, 2, 2]);
         assert_eq!(
-            format!("{}", block.weights),
+            format!("{}", hex8.weights),
             "┌     ┐\n\
              │ 1 1 │\n\
              │ 1 1 │\n\
              │ 1 1 │\n\
              └     ┘"
         );
-        assert_eq!(block.sum_weights, &[2.0, 2.0, 2.0]);
+        assert_eq!(hex8.sum_weights, &[2.0, 2.0, 2.0]);
+
+        let hex20 = Block::new(1, BlockKind::Hex20);
+        assert_eq!(hex20.group, 1);
+        assert_eq!(hex20.ndim, 3);
+        assert_eq!(hex20.npoint, 20);
+        assert_eq!(hex20.nedge, 12);
+        assert_eq!(hex20.nface, 6);
+        assert_eq!(
+            format!("{}", hex20.coords),
+            "┌       ┐\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             │ 0 0 0 │\n\
+             └       ┘"
+        );
+        assert_eq!(
+            hex20.point_groups,
+            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(hex20.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(hex20.face_groups, &[0, 0, 0, 0, 0, 0]);
+        assert_eq!(hex20.ndiv, &[2, 2, 2]);
+        assert_eq!(
+            format!("{}", hex20.weights),
+            "┌     ┐\n\
+             │ 1 1 │\n\
+             │ 1 1 │\n\
+             │ 1 1 │\n\
+             └     ┘"
+        );
+        assert_eq!(hex20.sum_weights, &[2.0, 2.0, 2.0]);
     }
 
     #[test]
