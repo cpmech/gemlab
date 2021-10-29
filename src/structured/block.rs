@@ -125,9 +125,9 @@ impl Block {
     ///
     /// # Input
     ///
-    /// `p` -- index of point in [0, npoint-1]
-    /// `group` -- group of point
-    /// `x`, `y` -- coordinates of point
+    /// * `p` -- index of point in [0, npoint-1]
+    /// * `group` -- group of point
+    /// * `x`, `y` -- coordinates of point
     pub fn set_point_2d(&mut self, p: usize, group: usize, x: f64, y: f64) -> &mut Self {
         assert_eq!(self.ndim, 2);
         assert!(p < self.npoint);
@@ -141,9 +141,9 @@ impl Block {
     ///
     /// # Input
     ///
-    /// `p` -- index of point in [0, npoint-1]
-    /// `group` -- group of point
-    /// `x`, `y`, `z` -- coordinates of point
+    /// * `p` -- index of point in [0, npoint-1]
+    /// * `group` -- group of point
+    /// * `x`, `y`, `z` -- coordinates of point
     pub fn set_point_3d(&mut self, p: usize, group: usize, x: f64, y: f64, z: f64) -> &mut Self {
         assert_eq!(self.ndim, 3);
         assert!(p < self.npoint);
@@ -158,7 +158,7 @@ impl Block {
     ///
     /// # Input
     ///
-    /// `coords` -- (npoint, ndim) matrix with all coordinates
+    /// * `coords` -- (npoint, ndim) matrix with all coordinates
     pub fn set_coords<'a, T, U>(&mut self, coords: &'a T) -> &mut Self
     where
         T: AsArray2D<'a, U>,
@@ -179,7 +179,7 @@ impl Block {
     ///
     /// # Input
     ///
-    /// `p` -- index of point in [0, npoint-1]
+    /// * `p` -- index of point in [0, npoint-1]
     pub fn set_point_group(&mut self, p: usize, group: usize) -> &mut Self {
         assert!(p < self.npoint);
         self.point_groups[p] = group;
@@ -190,7 +190,7 @@ impl Block {
     ///
     /// # Input
     ///
-    /// `e` -- index of edge in [0, nedge-1]
+    /// * `e` -- index of edge in [0, nedge-1]
     pub fn set_edge_group(&mut self, e: usize, group: usize) -> &mut Self {
         assert!(e < self.nedge);
         self.edge_groups[e] = group;
@@ -201,7 +201,7 @@ impl Block {
     ///
     /// # Input
     ///
-    /// `f` -- index of edge in [0, nface-1]
+    /// * `f` -- index of edge in [0, nface-1]
     pub fn set_face_group(&mut self, f: usize, group: usize) -> &mut Self {
         assert!(f < self.nface);
         self.face_groups[f] = group;
