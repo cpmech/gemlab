@@ -97,7 +97,7 @@ pub struct Block {
 
 impl Block {
     /// Creates a new Block with default options
-    pub fn new(group: usize, kind: BlockKind) -> Self {
+    pub fn new(kind: BlockKind) -> Self {
         let (ndim, npoint, nedge, nface) = match kind {
             BlockKind::Qua4 => (2, 4, 4, 0),
             BlockKind::Qua8 => (2, 8, 4, 0),
@@ -106,7 +106,7 @@ impl Block {
         };
         const NDIV: usize = 2;
         Block {
-            group,
+            group: 1,
             ndim,
             npoint,
             nedge,
@@ -120,6 +120,12 @@ impl Block {
             sum_weights: vec![NDIV as f64; ndim],
             constraints: HashMap::new(),
         }
+    }
+
+    /// Sets group
+    pub fn set_group(&mut self, group: usize) -> &mut Self {
+        self.group = group;
+        self
     }
 
     /// Sets 2D point
@@ -218,7 +224,7 @@ mod tests {
 
     #[test]
     fn new_works() {
-        let qua4 = Block::new(1, BlockKind::Qua4);
+        let qua4 = Block::new(BlockKind::Qua4);
         assert_eq!(qua4.group, 1);
         assert_eq!(qua4.ndim, 2);
         assert_eq!(qua4.npoint, 4);
@@ -246,7 +252,7 @@ mod tests {
         );
         assert_eq!(qua4.sum_weights, &[2.0, 2.0]);
 
-        let qua8 = Block::new(1, BlockKind::Qua8);
+        let qua8 = Block::new(BlockKind::Qua8);
         assert_eq!(qua8.group, 1);
         assert_eq!(qua8.ndim, 2);
         assert_eq!(qua8.npoint, 8);
@@ -278,7 +284,7 @@ mod tests {
         );
         assert_eq!(qua8.sum_weights, &[2.0, 2.0]);
 
-        let hex8 = Block::new(1, BlockKind::Hex8);
+        let hex8 = Block::new(BlockKind::Hex8);
         assert_eq!(hex8.group, 1);
         assert_eq!(hex8.ndim, 3);
         assert_eq!(hex8.npoint, 8);
@@ -311,7 +317,7 @@ mod tests {
         );
         assert_eq!(hex8.sum_weights, &[2.0, 2.0, 2.0]);
 
-        let hex20 = Block::new(1, BlockKind::Hex20);
+        let hex20 = Block::new(BlockKind::Hex20);
         assert_eq!(hex20.group, 1);
         assert_eq!(hex20.ndim, 3);
         assert_eq!(hex20.npoint, 20);
@@ -361,8 +367,15 @@ mod tests {
     }
 
     #[test]
+    fn set_group_works() {
+        let mut block = Block::new(BlockKind::Qua4);
+        block.set_group(2);
+        assert_eq!(block.group, 2);
+    }
+
+    #[test]
     fn set_point_2d_works() {
-        let mut block = Block::new(1, BlockKind::Qua4);
+        let mut block = Block::new(BlockKind::Qua4);
         block
             .set_point_2d(0, 1, 0.0, 0.0)
             .set_point_2d(1, 2, 2.0, 0.0)
@@ -381,7 +394,7 @@ mod tests {
 
     #[test]
     fn set_point_3d_works() {
-        let mut block = Block::new(1, BlockKind::Hex8);
+        let mut block = Block::new(BlockKind::Hex8);
         block
             .set_point_3d(0, 1, 0.0, 0.0, 0.0)
             .set_point_3d(1, 2, 2.0, 0.0, 0.0)
@@ -408,7 +421,7 @@ mod tests {
 
     #[test]
     fn set_coords_works() {
-        let mut qua4 = Block::new(1, BlockKind::Qua4);
+        let mut qua4 = Block::new(BlockKind::Qua4);
         #[rustfmt::skip]
         qua4.set_coords(&[
             [0.0, 0.0],
@@ -426,7 +439,7 @@ mod tests {
              └     ┘"
         );
 
-        let mut hex8 = Block::new(1, BlockKind::Hex8);
+        let mut hex8 = Block::new(BlockKind::Hex8);
         #[rustfmt::skip]
         hex8.set_coords(&[
             [0.0, 0.0, 0.0],
@@ -455,21 +468,21 @@ mod tests {
 
     #[test]
     fn set_point_group_works() {
-        let mut block = Block::new(1, BlockKind::Qua4);
+        let mut block = Block::new(BlockKind::Qua4);
         block.set_point_group(0, 111);
         assert_eq!(block.point_groups, &[111, 0, 0, 0]);
     }
 
     #[test]
     fn set_edge_group_works() {
-        let mut block = Block::new(1, BlockKind::Qua4);
+        let mut block = Block::new(BlockKind::Qua4);
         block.set_edge_group(0, 111);
         assert_eq!(block.edge_groups, &[111, 0, 0, 0]);
     }
 
     #[test]
     fn set_face_group_works() {
-        let mut block = Block::new(1, BlockKind::Hex8);
+        let mut block = Block::new(BlockKind::Hex8);
         block.set_face_group(0, 111);
         assert_eq!(block.face_groups, &[111, 0, 0, 0, 0, 0]);
     }
