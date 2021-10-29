@@ -219,6 +219,7 @@ impl Block {
     pub fn set_ndiv(&mut self, ndiv: &[usize]) -> &mut Self {
         assert_eq!(ndiv.len(), self.ndim);
         for i in 0..ndiv.len() {
+            assert!(ndiv[i] > 0);
             self.ndiv[i] = ndiv[i];
             self.weights[i] = vec![1.0; ndiv[i]];
         }
@@ -488,7 +489,10 @@ mod tests {
         let mut block = Block::new(BlockKind::Qua4);
         block.set_ndiv(&[3, 4]);
         assert_eq!(block.ndiv, &[3, 4]);
-        assert_eq!(format!("{:?}", block.weights), "[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]]");
+        assert_eq!(
+            format!("{:?}", block.weights),
+            "[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]]"
+        );
         assert_eq!(block.sum_weights, &[3.0, 4.0]);
     }
 }
