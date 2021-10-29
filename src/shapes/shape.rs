@@ -67,7 +67,7 @@ pub trait Shape {
     /// Returns the number of faces
     fn get_nface(&self) -> usize;
 
-    /// Returns all natural coordinates @ point m
+    /// Returns natural coordinates @ point m
     ///
     /// ```text
     /// coord = ξᵐ = vector{r, s, t} @ point m
