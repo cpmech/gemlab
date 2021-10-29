@@ -141,26 +141,6 @@ impl Shape for Hex8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use russell_chk::*;
-
-    // Holds arguments for numerical differentiation
-    struct Arguments {
-        shape: Hex8,    // shape
-        at_ksi: Vector, // at nat coord value
-        ksi: Vector,    // temporary nat coord
-        m: usize,       // point index
-        i: usize,       // dimension index
-    }
-
-    // Computes the interpolation fn @ m as a function of x = ksi[i]
-    fn sm(x: f64, args: &mut Arguments) -> f64 {
-        args.ksi[0] = args.at_ksi[0];
-        args.ksi[1] = args.at_ksi[1];
-        args.ksi[2] = args.at_ksi[2];
-        args.ksi[args.i] = x;
-        args.shape.calc_interp(&args.ksi);
-        args.shape.get_interp(args.m)
-    }
 
     #[test]
     fn new_works() {
@@ -168,54 +148,5 @@ mod tests {
         assert_eq!(geo.coords.len(), NPOINT);
         assert_eq!(geo.interp.dim(), NPOINT);
         assert_eq!(geo.deriv.dims(), (NPOINT, NDIM));
-    }
-
-    #[test]
-    fn calc_interp_works() {
-        let mut geo = Hex8::new();
-        let mut ksi = Vector::new(NDIM);
-        for m in 0..NPOINT {
-            geo.get_ksi(&mut ksi, m);
-            geo.calc_interp(&ksi);
-            for n in 0..NPOINT {
-                let smn = geo.get_interp(n);
-                if m == n {
-                    assert_approx_eq!(smn, 1.0, 1e-15);
-                } else {
-                    assert_approx_eq!(smn, 0.0, 1e-15);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn calc_deriv_works() {
-        let args = &mut Arguments {
-            shape: Hex8::new(),
-            at_ksi: Vector::from(&[0.25, 0.25, 0.25]),
-            ksi: Vector::new(NDIM),
-            m: 0,
-            i: 0,
-        };
-        let mut geo = Hex8::new();
-        let mut dsm_dksi = Vector::new(NDIM);
-        geo.calc_deriv(&args.at_ksi);
-        for m in 0..NPOINT {
-            geo.get_deriv(&mut dsm_dksi, m);
-            args.m = m;
-            for i in 0..NDIM {
-                args.i = i;
-                assert_deriv_approx_eq!(dsm_dksi[i], args.at_ksi[i], sm, args, 1e-13);
-            }
-        }
-    }
-
-    #[test]
-    fn getters_work() {
-        let geo = Hex8::new();
-        assert_eq!(geo.get_ndim(), NDIM);
-        assert_eq!(geo.get_npoint(), NPOINT);
-        assert_eq!(geo.get_nedge(), NEDGE);
-        assert_eq!(geo.get_nface(), NFACE);
     }
 }
