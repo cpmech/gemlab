@@ -6,12 +6,6 @@ const NPOINT: usize = 4;
 const NEDGE: usize = 4;
 const NFACE: usize = 0;
 
-pub struct Qua4 {
-    coords: Vec<Vector>, // natural coordinates (npoint, ndim)
-    interp: Vector,      // interpolation functions @ natural coordinate (npoint)
-    deriv: Matrix,       // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
-}
-
 /// Implements a quadrilateral with 4 points
 ///
 /// The natural coordinates range from -1 to +1 with the geometry centred @ 0
@@ -25,6 +19,12 @@ pub struct Qua4 {
 /// |           |
 /// 0-----------1
 /// ```
+pub struct Qua4 {
+    coords: Vec<Vector>, // natural coordinates (npoint, ndim)
+    interp: Vector,      // interpolation functions @ natural coordinate (npoint)
+    deriv: Matrix,       // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
+}
+
 impl Qua4 {
     pub fn new() -> Self {
         Qua4 {
