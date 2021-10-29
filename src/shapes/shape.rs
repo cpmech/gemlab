@@ -23,6 +23,21 @@ pub enum Kind {
     Hex20,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum KindQua {
+    Qua4,
+    Qua8,
+    Qua9,
+    Qua12,
+    Qua16,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum KindHex {
+    Hex8,
+    Hex20,
+}
+
 /// Defines the functionality of shape
 pub trait Shape {
     /// Calculates the interpolation functions at natural coordinate ξ
@@ -84,6 +99,23 @@ pub fn new(kind: Kind) -> Box<dyn Shape> {
     }
 }
 
+/// Returns new Qua Shape
+pub fn new_qua(kind: KindQua) -> Box<dyn Shape> {
+    match kind {
+        KindQua::Qua4 => Box::new(Qua4::new()),
+        KindQua::Qua8 => Box::new(Qua8::new()),
+        _ => panic!("Shape kind {:?} is not available yet", kind),
+    }
+}
+
+/// Returns new Hex Shape
+pub fn new_hex(kind: KindHex) -> Box<dyn Shape> {
+    match kind {
+        KindHex::Hex8 => Box::new(Hex8::new()),
+        KindHex::Hex20 => Box::new(Hex20::new()),
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -96,11 +128,21 @@ mod tests {
     }
 
     #[test]
-    fn kind_traits_work() {
-        let kind = Kind::Lin2;
-        let clone = kind.clone();
-        assert_eq!(kind, clone);
-        assert_eq!(format!("{:?}", kind), "Lin2");
+    fn kind_enums_work() {
+        let lin = Kind::Lin2;
+        let clone = lin.clone();
+        assert_eq!(lin, clone);
+        assert_eq!(format!("{:?}", lin), "Lin2");
+
+        let qua = KindQua::Qua12;
+        let clone = qua.clone();
+        assert_eq!(qua, clone);
+        assert_eq!(format!("{:?}", qua), "Qua12");
+
+        let hex = KindHex::Hex20;
+        let clone = hex.clone();
+        assert_eq!(hex, clone);
+        assert_eq!(format!("{:?}", hex), "Hex20");
     }
 
     // Holds arguments for numerical differentiation

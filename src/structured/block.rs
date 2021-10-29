@@ -1,6 +1,7 @@
 use crate::as_array::AsArray2D;
 use crate::geometry::Circle;
-use crate::shapes::{self, Shape};
+use crate::shapes::{self, KindHex, KindQua, Shape};
+use crate::{Cell, Mesh, Vertex};
 use russell_lab::Matrix;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -252,6 +253,18 @@ impl Block {
         self.face_constraints[f] = Some(constraint);
         self
     }
+
+    /// Subdivide block into vertices and cells (mesh)
+    pub fn subdivide_2d(&self, output: KindQua) -> Result<(), &'static str> {
+        Ok(())
+    }
+
+    /// Subdivide block into vertices and cells (mesh)
+    pub fn subdivide_3d(&self, output: KindHex) -> Result<(), &'static str> {
+        Ok(())
+    }
+
+    // --- private ---
 
     /// Calculates the sum of weights along each direction
     fn calc_sum_weights(&mut self) {
