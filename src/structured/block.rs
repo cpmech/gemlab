@@ -192,6 +192,33 @@ mod tests {
     }
 
     #[test]
+    fn set_point_3d_works() {
+        let mut block = Block::new(1, BlockKind::Hex8);
+        block
+            .set_point_3d(0, 1, 0.0, 0.0, 0.0)
+            .set_point_3d(1, 2, 2.0, 0.0, 0.0)
+            .set_point_3d(2, 3, 2.0, 2.0, 0.0)
+            .set_point_3d(3, 4, 0.0, 2.0, 0.0)
+            .set_point_3d(4, 1, 0.0, 0.0, 2.0)
+            .set_point_3d(5, 2, 2.0, 0.0, 2.0)
+            .set_point_3d(6, 3, 2.0, 2.0, 2.0)
+            .set_point_3d(7, 4, 0.0, 2.0, 2.0);
+        assert_eq!(
+            format!("{}", block.coords),
+            "┌       ┐\n\
+             │ 0 0 0 │\n\
+             │ 2 0 0 │\n\
+             │ 2 2 0 │\n\
+             │ 0 2 0 │\n\
+             │ 0 0 2 │\n\
+             │ 2 0 2 │\n\
+             │ 2 2 2 │\n\
+             │ 0 2 2 │\n\
+             └       ┘"
+        );
+    }
+
+    #[test]
     fn set_coords_works() {
         let mut block = Block::new(1, BlockKind::Qua4);
         #[rustfmt::skip]
