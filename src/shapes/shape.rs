@@ -2,7 +2,7 @@ use super::*;
 use russell_lab::Vector;
 
 /// Defines the kind of shape
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Kind {
     Lin2,
     Lin3,
@@ -88,6 +88,14 @@ pub fn new(kind: Kind) -> Box<dyn Shape> {
 mod tests {
     use super::*;
     use russell_chk::*;
+
+    #[test]
+    fn kind_traits_work() {
+        let kind = Kind::Lin2;
+        let clone = kind.clone();
+        assert_eq!(kind, clone);
+        assert_eq!(format!("{:?}", kind), "Lin2");
+    }
 
     // Holds arguments for numerical differentiation
     struct Arguments {
