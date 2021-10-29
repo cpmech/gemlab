@@ -1,54 +1,36 @@
-use super::Trait;
+use super::Shape;
 use russell_lab::{Matrix, Vector};
+
+const NDIM: usize = 3;
+const NPOINT: usize = 8;
+const NEDGE: usize = 12;
+const NFACE: usize = 6;
 
 /// Implements a hexahedron with 8 points
 ///
 /// The natural coordinates range from -1 to +1 with the geometry centred @ 0
 ///
 /// ```text
-///              4________________7
-///            ,'|              ,'|
-///          ,'  |            ,'  |
-///        ,'    |          ,'    |
-///      ,'      |        ,'      |
-///    5'===============6'        |
-///    |         |      |         |
-///    |         |      |         |
-///    |         0_____ | ________3
-///    |       ,'       |       ,'
-///    |     ,'         |     ,'
-///    |   ,'           |   ,'
-///    | ,'             | ,'
-///    1________________2'
+///           4________________7
+///         ,'|              ,'|
+///       ,'  |            ,'  |
+///     ,'    |          ,'    |
+///   ,'      |        ,'      |
+/// 5'===============6'        |
+/// |         |      |         |
+/// |         |      |         |
+/// |         0_____ | ________3
+/// |       ,'       |       ,'
+/// |     ,'         |     ,'
+/// |   ,'           |   ,'
+/// | ,'             | ,'
+/// 1________________2'
 /// ```
 pub struct Hex8 {
-    // natural coordinates (npoint, ndim)
-    //
-    // ```text
-    // ξᵐ = vector{r, s, t} @ point m
-    // coords = [ξ⁰, ξ¹, ξ², ξ³, ξ⁴, ξ⁵, ξ⁶, ξ⁷, ξ⁸]
-    // ```
-    coords: Vec<Vector>,
-
-    // interpolation functions @ natural coordinate (npoint)
-    //
-    // ```text
-    // interp[m](ξ) = Sᵐ(ξ)
-    // ```
-    interp: Vector,
-
-    // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
-    //
-    // ```text
-    // deriv[m][i](ξ) = ({dSᵐ(ξ)/dξ}_ξ)[i]
-    // ```
-    deriv: Matrix,
+    coords: Vec<Vector>, // natural coordinates (npoint, ndim)
+    interp: Vector,      // interpolation functions @ natural coordinate (npoint)
+    deriv: Matrix,       // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
 }
-
-const NDIM: usize = 3;
-const NPOINT: usize = 8;
-const NEDGE: usize = 12;
-const NFACE: usize = 6;
 
 impl Hex8 {
     /// Creates a new object with pre-calculated interpolation fn and derivatives
@@ -71,9 +53,9 @@ impl Hex8 {
     }
 }
 
-impl Trait for Hex8 {
-    fn calc_interp(&mut self, coord: &Vector) {
-        let (r, s, t) = (coord[0], coord[1], coord[2]);
+impl Shape for Hex8 {
+    fn calc_interp(&mut self, ksi: &Vector) {
+        let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
         self.interp[0] = (1.0 - r - s + r * s - t + s * t + r * t - r * s * t) / 8.0;
         self.interp[1] = (1.0 + r - s - r * s - t + s * t - r * t + r * s * t) / 8.0;
@@ -85,8 +67,8 @@ impl Trait for Hex8 {
         self.interp[7] = (1.0 - r + s - r * s + t + s * t - r * t - r * s * t) / 8.0;
     }
 
-    fn calc_deriv(&mut self, coord: &Vector) {
-        let (r, s, t) = (coord[0], coord[1], coord[2]);
+    fn calc_deriv(&mut self, ksi: &Vector) {
+        let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
         self.deriv[0][0] = (-1.0 + s + t - s * t) / 8.0;
         self.deriv[0][1] = (-1.0 + r + t - r * t) / 8.0;
@@ -163,7 +145,7 @@ mod tests {
 
     // Holds arguments for numerical differentiation
     struct Arguments {
-        geo: Hex8,      // geometry
+        shape: Hex8,    // shape
         at_ksi: Vector, // at nat coord value
         ksi: Vector,    // temporary nat coord
         m: usize,       // point index
@@ -176,8 +158,8 @@ mod tests {
         args.ksi[1] = args.at_ksi[1];
         args.ksi[2] = args.at_ksi[2];
         args.ksi[args.i] = x;
-        args.geo.calc_interp(&args.ksi);
-        args.geo.get_interp(args.m)
+        args.shape.calc_interp(&args.ksi);
+        args.shape.get_interp(args.m)
     }
 
     #[test]
@@ -209,7 +191,7 @@ mod tests {
     #[test]
     fn calc_deriv_works() {
         let args = &mut Arguments {
-            geo: Hex8::new(),
+            shape: Hex8::new(),
             at_ksi: Vector::from(&[0.25, 0.25, 0.25]),
             ksi: Vector::new(NDIM),
             m: 0,
@@ -233,5 +215,7 @@ mod tests {
         let geo = Hex8::new();
         assert_eq!(geo.get_ndim(), NDIM);
         assert_eq!(geo.get_npoint(), NPOINT);
+        assert_eq!(geo.get_nedge(), NEDGE);
+        assert_eq!(geo.get_nface(), NFACE);
     }
 }

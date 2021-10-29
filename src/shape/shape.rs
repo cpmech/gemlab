@@ -25,20 +25,20 @@ pub enum Kind {
 }
 
 /// Defines the functionality of shape
-pub trait Trait {
+pub trait Shape {
     /// Calculates the interpolation functions at natural coordinate ξ
     ///
     /// ```text
     /// interp[m](ξ) = Sᵐ(ξ)
     /// ```
-    fn calc_interp(&mut self, coord: &Vector);
+    fn calc_interp(&mut self, ksi: &Vector);
 
     /// Calculates the derivatives of interpolation fn at natural coordinate ξ
     ///
     /// ```text
     /// deriv[m][i](ξ) = ({dSᵐ(ξ)/dξ}_ξ)[i]
     /// ```
-    fn calc_deriv(&mut self, coord: &Vector);
+    fn calc_deriv(&mut self, ksi: &Vector);
 
     /// Returns the previously computed interpolation fn for point m
     ///
@@ -74,7 +74,8 @@ pub trait Trait {
     fn get_ksi(&self, ksi: &mut Vector, m: usize);
 }
 
-pub fn new(kind: Kind) -> Box<dyn Trait> {
+/// Returns new Shape
+pub fn new(kind: Kind) -> Box<dyn Shape> {
     match kind {
         Kind::Qua4 => Box::new(Qua4::new()),
         Kind::Hex8 => Box::new(Hex8::new()),
