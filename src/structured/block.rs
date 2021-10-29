@@ -154,6 +154,12 @@ impl Block {
         }
         self
     }
+
+    pub fn set_point_group(&mut self, m: usize, group: usize) -> &mut Self {
+        assert!(m < self.npoint);
+        self.point_groups[m] = group;
+        self
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -263,5 +269,12 @@ mod tests {
              │ 0 2 2 │\n\
              └       ┘"
         );
+    }
+
+    #[test]
+    fn set_point_group_works() {
+        let mut block = Block::new(1, BlockKind::Qua4);
+        block.set_point_group(0, 111);
+        assert_eq!(block.point_groups, &[111, 0, 0, 0]);
     }
 }
