@@ -6,23 +6,21 @@ use russell_lab::Vector;
 pub enum Kind {
     Lin2,
     Lin3,
+    Lin4,
     Lin5,
     Tri3,
     Tri6,
+    Tri10,
     Tri15,
     Qua4,
     Qua8,
     Qua9,
+    Qua12,
+    Qua16,
     Tet4,
     Tet10,
     Hex8,
     Hex20,
-    Joint,
-    Lin4,
-    Tri10,
-    Qua12,
-    Qua16,
-    Beam,
 }
 
 /// Defines the functionality of shape
