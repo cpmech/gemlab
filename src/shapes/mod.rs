@@ -3,11 +3,11 @@
 //!
 //! ```
 //! // import
-//! use gemlab::shape;
+//! use gemlab::shapes;
 //! use russell_lab::Vector;
 //!
 //! // shape object
-//! let mut shape = shape::new(shape::Kind::Hex8);
+//! let mut shape = shapes::new(shapes::Kind::Hex8);
 //! let ndim = shape.get_ndim();
 //!
 //! // compute interp fn and deriv @ ksi=(0,0,0) for all points
@@ -36,6 +36,6 @@
 mod hex8;
 mod qua4;
 mod shape;
-pub use crate::shape::hex8::*;
-pub use crate::shape::qua4::*;
-pub use crate::shape::shape::*;
+pub use crate::shapes::hex8::*;
+pub use crate::shapes::qua4::*;
+pub use crate::shapes::shape::*;
