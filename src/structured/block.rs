@@ -1,6 +1,6 @@
-use crate::AsArray2D;
+use crate::as_array::AsArray2D;
+use crate::geometry::Circle;
 use russell_lab::Matrix;
-use std::collections::HashMap;
 
 pub enum BlockKind {
     Qua4,
@@ -9,10 +9,13 @@ pub enum BlockKind {
     Hex20,
 }
 
-pub enum Constraint {}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Constraint {
+    /// Arc
+    Arc(Circle),
 
-pub struct ConstraintData {
-    kind: Constraint,
+    /// Arc surface extruded along X
+    ArcX(Circle),
 }
 
 /// Defines a polygon on polyhedron that can be split into smaller shapes
@@ -91,8 +94,8 @@ pub struct Block {
     weights: Vec<Vec<f64>>,   // weights along each dimension (ndim, {nx,ny,nz})
     sum_weights: Vec<f64>,    // sum of weights along each dimension (ndim)
 
-    // maps side to constraint (num_sides)
-    constraints: HashMap<Constraint, ConstraintData>,
+    edge_constraints: Vec<Option<Constraint>>, // constraints (nedge)
+    face_constraints: Vec<Option<Constraint>>, // constraints (nface)
 }
 
 impl Block {
@@ -118,7 +121,8 @@ impl Block {
             ndiv: vec![NDIV; ndim],
             weights: vec![vec![1.0; NDIV]; ndim],
             sum_weights: vec![NDIV as f64; ndim],
-            constraints: HashMap::new(),
+            edge_constraints: vec![None; nedge],
+            face_constraints: vec![None; nface],
         }
     }
 
@@ -227,6 +231,28 @@ impl Block {
         self
     }
 
+    /// Sets constraint to an edge of this block
+    ///
+    /// # Input
+    ///
+    /// * `e` -- index of edge in [0, nedge-1]
+    /// * `constraint` -- the constraint
+    pub fn set_edge_constraint(&mut self, e: usize, constraint: Constraint) -> &mut Self {
+        self.edge_constraints[e] = Some(constraint);
+        self
+    }
+
+    /// Sets constraint to a face of this block
+    ///
+    /// # Input
+    ///
+    /// * `f` -- index of face in [0, nface-1]
+    /// * `constraint` -- the constraint
+    pub fn set_face_constraint(&mut self, f: usize, constraint: Constraint) -> &mut Self {
+        self.face_constraints[f] = Some(constraint);
+        self
+    }
+
     /// Calculates the sum of weights along each direction
     fn calc_sum_weights(&mut self) {
         for i in 0..self.ndim {
@@ -244,6 +270,21 @@ impl Block {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn constraint_traits_work() {
+        let constraint = Constraint::Arc(Circle {
+            center: [2.0, 3.0],
+            radius: 1.0,
+            tolerance: 1e-2,
+        });
+        let clone = constraint.clone();
+        assert_eq!(constraint, clone);
+        assert_eq!(
+            format!("{:?}", constraint),
+            "Arc(Circle { center: [2.0, 3.0], radius: 1.0, tolerance: 0.01 })"
+        );
+    }
 
     #[test]
     fn new_works() {
@@ -494,5 +535,29 @@ mod tests {
             "[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]]"
         );
         assert_eq!(block.sum_weights, &[3.0, 4.0]);
+    }
+
+    #[test]
+    fn set_edge_constraint_works() {
+        let mut block = Block::new(BlockKind::Qua4);
+        let constraint = Constraint::Arc(Circle {
+            center: [-1.0, -1.0],
+            radius: 2.0,
+            tolerance: 1e-3,
+        });
+        block.set_edge_constraint(0, constraint);
+        assert_eq!(block.edge_constraints[0], Some(constraint));
+    }
+
+    #[test]
+    fn set_face_constraint_works() {
+        let mut block = Block::new(BlockKind::Hex8);
+        let constraint = Constraint::ArcX(Circle {
+            center: [-1.0, -1.0],
+            radius: 2.0,
+            tolerance: 1e-3,
+        });
+        block.set_face_constraint(0, constraint);
+        assert_eq!(block.face_constraints[0], Some(constraint));
     }
 }
