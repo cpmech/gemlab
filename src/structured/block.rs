@@ -1,5 +1,6 @@
 use crate::as_array::AsArray2D;
 use crate::geometry::Circle;
+use crate::shapes::{self, Shape};
 use russell_lab::Matrix;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -86,6 +87,7 @@ pub struct Block {
     ndiv: Vec<usize>,         // number of divisions along each dim (ndim)
     weights: Vec<Vec<f64>>,   // weights along each dimension (ndim, {nx,ny,nz})
     sum_weights: Vec<f64>,    // sum of weights along each dimension (ndim)
+    shape: Box<dyn Shape>,    // shape and interpolation functions
 
     edge_constraints: Vec<Option<Constraint>>, // constraints (nedge)
     face_constraints: Vec<Option<Constraint>>, // constraints (nface)
@@ -94,11 +96,12 @@ pub struct Block {
 impl Block {
     /// Creates a new Block with default options
     pub fn new(ndim: usize) -> Self {
-        let (npoint, nedge, nface) = match ndim {
-            2 => (8, 4, 0),
-            3 => (20, 12, 6),
-            _ => panic!("ndim must be 2 or 3"),
+        let shape = if ndim == 2 {
+            shapes::new(shapes::Kind::Qua8)
+        } else {
+            shapes::new(shapes::Kind::Hex20)
         };
+        let (npoint, nedge, nface) = (shape.get_npoint(), shape.get_nedge(), shape.get_nface());
         const NDIV: usize = 2;
         Block {
             group: 1,
@@ -115,6 +118,7 @@ impl Block {
             sum_weights: vec![NDIV as f64; ndim],
             edge_constraints: vec![None; nedge],
             face_constraints: vec![None; nface],
+            shape,
         }
     }
 
@@ -309,6 +313,7 @@ mod tests {
         assert_eq!(b2d.ndiv, &[2, 2]);
         assert_eq!(format!("{:?}", b2d.weights), "[[1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b2d.sum_weights, &[2.0, 2.0]);
+        assert_eq!(b2d.shape.get_npoint(), 8);
 
         let b3d = Block::new(3);
         assert_eq!(b3d.group, 1);
@@ -350,6 +355,7 @@ mod tests {
         assert_eq!(b3d.ndiv, &[2, 2, 2]);
         assert_eq!(format!("{:?}", b3d.weights), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b3d.sum_weights, &[2.0, 2.0, 2.0]);
+        assert_eq!(b3d.shape.get_npoint(), 20);
     }
 
     #[test]
