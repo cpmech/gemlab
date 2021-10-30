@@ -1,10 +1,8 @@
-use crate::{Edge, Face};
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Cell {
     pub id: usize,
     pub group: usize,
-    pub vertices: Vec<usize>,
-    pub edges: Vec<Edge>,
-    pub faces: Vec<Face>,
+    pub point_ids: Vec<usize>,
+    pub edge_ids: Vec<usize>,
+    pub face_ids: Vec<usize>,
 }

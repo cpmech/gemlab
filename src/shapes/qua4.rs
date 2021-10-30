@@ -41,7 +41,7 @@ pub struct Qua4 {
     coords: Vec<Vector>,       // natural coordinates (npoint, ndim)
     interp: Vector,            // interpolation functions @ natural coordinate (npoint)
     deriv: Matrix,             // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
-    edge_ids: Vec<Vec<usize>>, // ids of vertices on edges
+    edge_ids: Vec<Vec<usize>>, // ids of points on edges
 }
 
 impl Qua4 {
@@ -120,13 +120,13 @@ impl Shape for Qua4 {
         FACE_NPOINT
     }
 
-    fn get_edge(&self, local_vertex_ids: &mut Vec<usize>, e: usize) {
+    fn get_edge(&self, local_point_ids: &mut Vec<usize>, e: usize) {
         for i in 0..EDGE_NPOINT {
-            local_vertex_ids[i] = self.edge_ids[e][i];
+            local_point_ids[i] = self.edge_ids[e][i];
         }
     }
 
-    fn get_face(&self, local_vertex_ids: &mut Vec<usize>, f: usize) {}
+    fn get_face(&self, local_point_ids: &mut Vec<usize>, f: usize) {}
 
     fn get_ksi(&self, ksi: &mut Vector, m: usize) {
         ksi[0] = self.coords[m][0];

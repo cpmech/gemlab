@@ -1,7 +1,7 @@
 #[derive(Clone, Debug)]
-pub struct Edge {
+pub struct Point {
     pub id: usize,
     pub group: usize,
-    pub point_ids: Vec<usize>,
+    pub coords: Vec<f64>,
     pub shared_by_cell_ids: Vec<usize>,
 }

@@ -1,7 +1,7 @@
-use crate::{Cell, Vertex};
+use crate::{Cell, Point};
 
 pub struct Mesh {
     pub ndim: usize,
-    pub vertices: Vec<Vertex>,
+    pub vertices: Vec<Point>,
     pub cells: Vec<Cell>,
 }

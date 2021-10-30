@@ -1,14 +1,28 @@
 use crate::as_array::AsArray2D;
 use crate::geometry::Circle;
 use crate::shapes::{self, KindHex, KindQua, Shape};
-use crate::{Cell, Vertex};
+use crate::{Cell, Edge, Face, Point};
 use russell_lab::{mat_vec_mul, Matrix, Vector};
 use std::collections::HashMap;
 
 #[derive(Hash, Eq, PartialEq, Debug)]
-struct CoordsBits2D {
+struct KeyPoint {
     x: u64,
     y: u64,
+    z: u64,
+}
+
+#[derive(Hash, Eq, PartialEq, Debug)]
+struct KeyEdge {
+    a: usize,
+    b: usize,
+}
+
+#[derive(Hash, Eq, PartialEq, Debug)]
+struct KeyFace {
+    a: usize,
+    b: usize,
+    c: usize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -273,23 +287,32 @@ impl Block {
     /// Subdivide block into vertices and cells (mesh)
     pub fn subdivide_2d(&mut self, output: KindQua) -> Result<(), &'static str> {
         // output map
-        let mut vertices = HashMap::<CoordsBits2D, Vertex>::new();
-        let mut nvert = 0_usize;
-        let mut ncell = 0_usize;
+        let mut points = HashMap::<KeyPoint, Point>::new();
+        let mut edges = HashMap::<KeyEdge, Edge>::new();
+        let mut faces = HashMap::<KeyFace, Face>::new();
+        let mut cells = Vec::<Cell>::new();
+        let mut point_id = 0_usize;
+        let mut edge_id = 0_usize;
+        let mut face_id = 0_usize;
+        let mut cell_id = 0_usize;
 
         // auxiliary variables
         let shape = shapes::new_qua(output);
         let (npoint, nedge, nface) = (shape.get_npoint(), shape.get_nedge(), shape.get_nface());
-        let mut edge_ids = vec![0; shape.get_edge_npoint()];
+        let edge_npoint = shape.get_edge_npoint();
+        let face_npoint = shape.get_face_npoint();
+        let mut edge_local_point_ids = vec![0_usize; edge_npoint];
+        let mut face_local_point_ids = vec![0_usize; face_npoint];
 
         // point coordinate
         let mut x = Vector::new(self.ndim);
 
         // transformation matrix
-        //   _                                 _
-        //  |  scale_x    0.0    translation_x  |
-        //  |    0.0    scale_y  translation_y  |
-        //  |_   0.0      0.0         1.0      _|
+        //   _                                       _
+        //  |  scale_x   0.0    0.0    translation_x  |
+        //  |    0.0   scale_y  0.0    translation_y  |
+        //  |    0.0     0.0   scale_z translation_z  |
+        //  |_   0.0     0.0    0.0         1.0      _|
         let mut t = Matrix::identity(self.ndim + 1);
 
         // augmented nat-coordinates
@@ -302,85 +325,150 @@ impl Block {
         // length of shape along each direction in nat-coords space
         const L: f64 = 2.0;
 
+        // number of divisions along each direction
+        let (nx, ny, nz) = (
+            self.ndiv[0],
+            self.ndiv[1],
+            if self.ndim == 2 { 1 } else { self.ndiv[2] },
+        );
+
         // center of shape in nat-coords
-        let mut cx: f64;
-        let mut cy = -1.0 + self.delta_ksi[1][0] / L;
+        let mut cen = vec![0.0; self.ndim];
 
-        // for each y-division
-        for j in 0..self.ndiv[1] {
-            cx = -1.0 + self.delta_ksi[0][0] / L;
-            t[1][1] = self.delta_ksi[1][j] / L;
-            t[1][2] = cy;
-
-            // for each x-division
-            for i in 0..self.ndiv[0] {
-                t[0][0] = self.delta_ksi[0][i] / L;
-                t[0][2] = cx - 0.0;
-
-                // for each point
-                let mut vertex_ids = vec![0; npoint];
-                for m in 0..npoint {
-                    // set and transform nat-coords
-                    shape.get_ksi(&mut ksi_aug, m);
-                    mat_vec_mul(&mut ksi_tra, 1.0, &t, &ksi_aug)?;
-
-                    // compute real coords
-                    self.shape.calc_interp(&ksi_tra);
-                    self.shape.mul_interp_by_matrix(&mut x, &self.coords)?;
-
-                    // store real coords in map
-                    let key = CoordsBits2D {
-                        x: x[0].to_bits(),
-                        y: x[1].to_bits(),
-                    };
-                    if vertices.contains_key(&key) {
-                        let vertex = vertices.get_mut(&key).unwrap();
-                        vertex.shared_by_cells.push(ncell);
-                        vertex_ids[m] = vertex.id;
-                    } else {
-                        vertex_ids[m] = nvert;
-                        vertices.insert(
-                            key,
-                            Vertex {
-                                id: nvert,
-                                group: 1,
-                                coords: vec![x[0], x[1]],
-                                shared_by_cells: vec![ncell],
-                            },
-                        );
-                        nvert += 1;
-                    }
-                }
-
-                // for each edge
-                for e in 0..nedge {
-                    shape.get_edge(&mut edge_ids, e);
-                    println!("{}", e);
-                }
-
-                // new cell
-                let cell = Cell {
-                    id: ncell,
-                    group: self.group,
-                    vertices: vertex_ids,
-                    edges: Vec::new(),
-                    faces: Vec::new(),
-                };
-
-                // next cell
-                ncell += 1;
-
-                // next x-center
-                cx += self.delta_ksi[0][i];
+        // for each z-division
+        if self.ndim == 3 {
+            cen[2] = -1.0 + self.delta_ksi[2][0] / 2.0;
+        }
+        for k in 0..nz {
+            if self.ndim == 3 {
+                t[2][2] = self.delta_ksi[2][k] / L; // scale
+                t[2][self.ndim] = cen[2]; // translation
             }
 
-            // next y-center
-            cy += self.delta_ksi[1][j];
+            // for each y-division
+            cen[1] = -1.0 + self.delta_ksi[1][0] / 2.0;
+            for j in 0..self.ndiv[1] {
+                t[1][1] = self.delta_ksi[1][j] / L; // scale
+                t[1][self.ndim] = cen[1]; // translation
+
+                // for each x-division
+                cen[0] = -1.0 + self.delta_ksi[0][0] / 2.0;
+                for i in 0..self.ndiv[0] {
+                    t[0][0] = self.delta_ksi[0][i] / L; // scale
+                    t[0][self.ndim] = cen[0]; // translation
+
+                    // for each point
+                    let mut point_ids = vec![0; npoint];
+                    for m in 0..npoint {
+                        // set and transform nat-coords
+                        shape.get_ksi(&mut ksi_aug, m);
+                        mat_vec_mul(&mut ksi_tra, 1.0, &t, &ksi_aug)?;
+
+                        // compute real coords
+                        self.shape.calc_interp(&ksi_tra);
+                        self.shape.mul_interp_by_matrix(&mut x, &self.coords)?;
+
+                        // store real coords in map
+                        let key = KeyPoint {
+                            x: x[0].to_bits(),
+                            y: x[1].to_bits(),
+                            z: if self.ndim == 3 { x[2].to_bits() } else { 0 },
+                        };
+                        if points.contains_key(&key) {
+                            let point = points.get_mut(&key).unwrap();
+                            point.shared_by_cell_ids.push(cell_id);
+                            point_ids[m] = point.id;
+                        } else {
+                            point_ids[m] = point_id;
+                            points.insert(
+                                key,
+                                Point {
+                                    id: point_id,
+                                    group: self.group,
+                                    coords: x.as_data().clone(),
+                                    shared_by_cell_ids: vec![cell_id],
+                                },
+                            );
+                            point_id += 1;
+                        }
+                    }
+
+                    // for each edge
+                    let mut edge_ids = vec![0; nedge];
+                    for e in 0..nedge {
+                        // convert local point ids on edge to global ids
+                        shape.get_edge(&mut edge_local_point_ids, e);
+                        let mut edge_point_ids = vec![0; edge_npoint];
+                        for m in 0..edge_npoint {
+                            edge_point_ids[m] = point_ids[edge_local_point_ids[m]];
+                        }
+                        edge_point_ids.sort();
+
+                        // store edge in map
+                        let key = KeyEdge {
+                            a: edge_point_ids[0],
+                            b: edge_point_ids[1],
+                        };
+                        if edges.contains_key(&key) {
+                            let edge = edges.get_mut(&key).unwrap();
+                            edge.shared_by_cell_ids.push(cell_id);
+                            edge_ids[e] = edge.id;
+                        } else {
+                            edge_ids[e] = edge_id;
+                            edges.insert(
+                                key,
+                                Edge {
+                                    id: edge_id,
+                                    group: self.group,
+                                    point_ids: edge_point_ids,
+                                    shared_by_cell_ids: vec![cell_id],
+                                },
+                            );
+                            edge_id += 1;
+                        }
+                    }
+
+                    // new cell
+                    let cell = Cell {
+                        id: cell_id,
+                        group: self.group,
+                        point_ids,
+                        edge_ids,
+                        face_ids: Vec::new(),
+                    };
+                    cells.push(cell);
+                    cell_id += 1;
+
+                    // next x-center
+                    cen[0] += self.delta_ksi[0][i];
+                }
+
+                // next y-center
+                cen[1] += self.delta_ksi[1][j];
+            }
+
+            // next z-center
+            if self.ndim == 3 {
+                cen[2] += self.delta_ksi[2][k];
+            }
         }
 
-        for vertex in vertices.values() {
-            println!("{:?}", vertex);
+        for point in points.values() {
+            println!("{:?}", point);
         }
+        println!();
+        for edge in edges.values() {
+            println!("{:?}", edge);
+        }
+        println!();
+        for face in faces.values() {
+            println!("{:?}", face);
+        }
+        println!();
+        for cell in &cells {
+            println!("{:?}", cell);
+        }
+
         Ok(())
     }
 
