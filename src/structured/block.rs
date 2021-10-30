@@ -1,7 +1,7 @@
 use crate::as_array::AsArray2D;
 use crate::geometry::Circle;
 use crate::shapes::{self, KindStructured, Shape};
-use crate::{Cell, Edge, Face, KeyEdge, KeyFace, KeyPoint, Mesh, Point};
+use crate::{Cell, Edge, Face, KeyEdge, KeyFace, KeyPoint, MeshMaps, Point};
 use russell_lab::{mat_vec_mul, Matrix, Vector};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -264,9 +264,9 @@ impl Block {
     }
 
     /// Subdivide block into vertices and cells (mesh)
-    pub fn subdivide(&mut self, output: KindStructured) -> Result<Mesh, &'static str> {
+    pub fn subdivide(&mut self, output: KindStructured) -> Result<MeshMaps, &'static str> {
         // results
-        let mut mesh = Mesh::new(self.ndim);
+        let mut mesh = MeshMaps::new(self.ndim);
         let mut point_id = 0_usize;
         let mut edge_id = 0_usize;
         let mut face_id = 0_usize;
