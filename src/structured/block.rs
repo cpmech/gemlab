@@ -1,8 +1,15 @@
 use crate::as_array::AsArray2D;
 use crate::geometry::Circle;
 use crate::shapes::{self, KindHex, KindQua, Shape};
-use crate::{Cell, Mesh, Vertex};
-use russell_lab::Matrix;
+use crate::{Cell, Vertex};
+use russell_lab::{mat_vec_mul, Matrix, Vector};
+use std::collections::HashMap;
+
+#[derive(Hash, Eq, PartialEq, Debug)]
+struct CoordsBits2D {
+    x: u64,
+    y: u64,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Constraint {
@@ -86,8 +93,7 @@ pub struct Block {
     edge_groups: Vec<usize>,  // edge groups (nedge)
     face_groups: Vec<usize>,  // face groups (nface)
     ndiv: Vec<usize>,         // number of divisions along each dim (ndim)
-    weights: Vec<Vec<f64>>,   // weights along each dimension (ndim, {nx,ny,nz})
-    sum_weights: Vec<f64>,    // sum of weights along each dimension (ndim)
+    delta_ksi: Vec<Vec<f64>>, // delta ksi along each dim (ndim, {ndiv[0],ndiv[1],ndiv[2]})
     shape: Box<dyn Shape>,    // shape and interpolation functions
 
     edge_constraints: Vec<Option<Constraint>>, // constraints (nedge)
@@ -115,8 +121,7 @@ impl Block {
             edge_groups: vec![0; nedge],
             face_groups: vec![0; nface],
             ndiv: vec![NDIV; ndim],
-            weights: vec![vec![1.0; NDIV]; ndim],
-            sum_weights: vec![NDIV as f64; ndim],
+            delta_ksi: vec![vec![1.0; NDIV]; ndim],
             edge_constraints: vec![None; nedge],
             face_constraints: vec![None; nface],
             shape,
@@ -221,14 +226,25 @@ impl Block {
     }
 
     /// Sets the number of equal divisions
+    ///
+    /// For each direction:
+    ///
+    /// ```text
+    /// Δξᵐ = wᵐ ⋅ L / Σ_m wᵐ
+    /// ```
+    ///
+    /// where `L=2` is the edge-length (in natural coordinates) and `wᵐ` are
+    /// the weights for each division `m`.
     pub fn set_ndiv(&mut self, ndiv: &[usize]) -> &mut Self {
         assert_eq!(ndiv.len(), self.ndim);
-        for i in 0..ndiv.len() {
+        const L: f64 = 2.0;
+        for i in 0..self.ndim {
             assert!(ndiv[i] > 0);
             self.ndiv[i] = ndiv[i];
-            self.weights[i] = vec![1.0; ndiv[i]];
+            let w = 1.0;
+            let sum_w = ndiv[i] as f64;
+            self.delta_ksi[i] = vec![w * L / sum_w; ndiv[i]];
         }
-        self.calc_sum_weights();
         self
     }
 
@@ -255,26 +271,122 @@ impl Block {
     }
 
     /// Subdivide block into vertices and cells (mesh)
-    pub fn subdivide_2d(&self, output: KindQua) -> Result<(), &'static str> {
+    pub fn subdivide_2d(&mut self, output: KindQua) -> Result<(), &'static str> {
+        // output map
+        let mut vertices = HashMap::<CoordsBits2D, Vertex>::new();
+        let mut nvert = 0_usize;
+        let mut ncell = 0_usize;
+
+        // auxiliary variables
+        let shape = shapes::new_qua(output);
+        let (npoint, nedge, nface) = (shape.get_npoint(), shape.get_nedge(), shape.get_nface());
+        let mut edge_ids = vec![0; shape.get_edge_npoint()];
+
+        // point coordinate
+        let mut x = Vector::new(self.ndim);
+
+        // transformation matrix
+        //   _                                 _
+        //  |  scale_x    0.0    translation_x  |
+        //  |    0.0    scale_y  translation_y  |
+        //  |_   0.0      0.0         1.0      _|
+        let mut t = Matrix::identity(self.ndim + 1);
+
+        // augmented nat-coordinates
+        let mut ksi_aug = Vector::new(self.ndim + 1);
+        ksi_aug[self.ndim] = 1.0;
+
+        // augmented transformed nat-coordinates
+        let mut ksi_tra = Vector::new(self.ndim + 1);
+
+        // length of shape along each direction in nat-coords space
+        const L: f64 = 2.0;
+
+        // center of shape in nat-coords
+        let mut cx: f64;
+        let mut cy = -1.0 + self.delta_ksi[1][0] / L;
+
+        // for each y-division
+        for j in 0..self.ndiv[1] {
+            cx = -1.0 + self.delta_ksi[0][0] / L;
+            t[1][1] = self.delta_ksi[1][j] / L;
+            t[1][2] = cy;
+
+            // for each x-division
+            for i in 0..self.ndiv[0] {
+                t[0][0] = self.delta_ksi[0][i] / L;
+                t[0][2] = cx - 0.0;
+
+                // for each point
+                let mut vertex_ids = vec![0; npoint];
+                for m in 0..npoint {
+                    // set and transform nat-coords
+                    shape.get_ksi(&mut ksi_aug, m);
+                    mat_vec_mul(&mut ksi_tra, 1.0, &t, &ksi_aug)?;
+
+                    // compute real coords
+                    self.shape.calc_interp(&ksi_tra);
+                    self.shape.mul_interp_by_matrix(&mut x, &self.coords)?;
+
+                    // store real coords in map
+                    let key = CoordsBits2D {
+                        x: x[0].to_bits(),
+                        y: x[1].to_bits(),
+                    };
+                    if vertices.contains_key(&key) {
+                        let vertex = vertices.get_mut(&key).unwrap();
+                        vertex.shared_by_cells.push(ncell);
+                        vertex_ids[m] = vertex.id;
+                    } else {
+                        vertex_ids[m] = nvert;
+                        vertices.insert(
+                            key,
+                            Vertex {
+                                id: nvert,
+                                group: 1,
+                                coords: vec![x[0], x[1]],
+                                shared_by_cells: vec![ncell],
+                            },
+                        );
+                        nvert += 1;
+                    }
+                }
+
+                // for each edge
+                for e in 0..nedge {
+                    shape.get_edge(&mut edge_ids, e);
+                    println!("{}", e);
+                }
+
+                // new cell
+                let cell = Cell {
+                    id: ncell,
+                    group: self.group,
+                    vertices: vertex_ids,
+                    edges: Vec::new(),
+                    faces: Vec::new(),
+                };
+
+                // next cell
+                ncell += 1;
+
+                // next x-center
+                cx += self.delta_ksi[0][i];
+            }
+
+            // next y-center
+            cy += self.delta_ksi[1][j];
+        }
+
+        for vertex in vertices.values() {
+            println!("{:?}", vertex);
+        }
         Ok(())
     }
 
     /// Subdivide block into vertices and cells (mesh)
-    pub fn subdivide_3d(&self, output: KindHex) -> Result<(), &'static str> {
+    pub fn subdivide_3d(&self, _output: KindHex) -> Result<(), &'static str> {
         Ok(())
-    }
-
-    // --- private ---
-
-    /// Calculates the sum of weights along each direction
-    fn calc_sum_weights(&mut self) {
-        for i in 0..self.ndim {
-            let mut sum_w = 0.0;
-            for w in &self.weights[i] {
-                sum_w += w;
-            }
-            self.sum_weights[i] = sum_w;
-        }
     }
 }
 
@@ -324,8 +436,7 @@ mod tests {
         assert_eq!(b2d.edge_groups, &[0, 0, 0, 0]);
         assert_eq!(b2d.face_groups, &[]);
         assert_eq!(b2d.ndiv, &[2, 2]);
-        assert_eq!(format!("{:?}", b2d.weights), "[[1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(b2d.sum_weights, &[2.0, 2.0]);
+        assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b2d.shape.get_npoint(), 8);
 
         let b3d = Block::new(3);
@@ -366,8 +477,7 @@ mod tests {
         assert_eq!(b3d.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         assert_eq!(b3d.face_groups, &[0, 0, 0, 0, 0, 0]);
         assert_eq!(b3d.ndiv, &[2, 2, 2]);
-        assert_eq!(format!("{:?}", b3d.weights), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(b3d.sum_weights, &[2.0, 2.0, 2.0]);
+        assert_eq!(format!("{:?}", b3d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b3d.shape.get_npoint(), 20);
     }
 
@@ -465,13 +575,9 @@ mod tests {
     #[test]
     fn set_ndiv_works() {
         let mut block = Block::new(2);
-        block.set_ndiv(&[3, 4]);
-        assert_eq!(block.ndiv, &[3, 4]);
-        assert_eq!(
-            format!("{:?}", block.weights),
-            "[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]]"
-        );
-        assert_eq!(block.sum_weights, &[3.0, 4.0]);
+        block.set_ndiv(&[2, 4]);
+        assert_eq!(block.ndiv, &[2, 4]);
+        assert_eq!(format!("{:?}", block.delta_ksi), "[[1.0, 1.0], [0.5, 0.5, 0.5, 0.5]]");
     }
 
     #[test]
@@ -496,5 +602,19 @@ mod tests {
         });
         block.set_face_constraint(0, constraint);
         assert_eq!(block.face_constraints[0], Some(constraint));
+    }
+
+    #[test]
+    fn subdivide_2d_works() -> Result<(), &'static str> {
+        let mut block = Block::new(2);
+        #[rustfmt::skip]
+        block.set_coords(&[
+            [0.0, 0.0],
+            [2.0, 0.0],
+            [2.0, 2.0],
+            [0.0, 2.0],
+        ]);
+        block.subdivide_2d(KindQua::Qua4)?;
+        Ok(())
     }
 }

@@ -1,14 +1,18 @@
 use super::Shape;
-use russell_lab::{Matrix, Vector};
+use russell_lab::{vec_mat_mul, Matrix, Vector};
 
 const NDIM: usize = 2;
 const NPOINT: usize = 8;
 const NEDGE: usize = 4;
 const NFACE: usize = 0;
+const EDGE_NPOINT: usize = 3;
+const FACE_NPOINT: usize = 0;
 
 /// Implements a quadrilateral with 8 points
 ///
 /// The natural coordinates range from -1 to +1 with the geometry centred @ 0
+///
+/// # Local IDs of points
 ///
 /// ```text
 /// 3-----6-----2
@@ -19,10 +23,25 @@ const NFACE: usize = 0;
 /// |           |
 /// 0-----4-----1
 /// ```
+///
+/// # Local IDs of edges
+///
+/// ```text
+///        2
+///  +-----------+
+///  |           |
+///  |           |
+/// 3|           |1
+///  |           |
+///  |           |
+///  +-----------+
+///        0
+/// ```
 pub struct Qua8 {
-    coords: Vec<Vector>, // natural coordinates (npoint, ndim)
-    interp: Vector,      // interpolation functions @ natural coordinate (npoint)
-    deriv: Matrix,       // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
+    coords: Vec<Vector>,       // natural coordinates (npoint, ndim)
+    interp: Vector,            // interpolation functions @ natural coordinate (npoint)
+    deriv: Matrix,             // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
+    edge_ids: Vec<Vec<usize>>, // ids of vertices on edges
 }
 
 impl Qua8 {
@@ -41,6 +60,7 @@ impl Qua8 {
             ],
             interp: Vector::new(NPOINT),
             deriv: Matrix::new(NPOINT, NDIM),
+            edge_ids: vec![vec![0, 1, 4], vec![1, 2, 5], vec![2, 3, 6], vec![3, 0, 7]],
         }
     }
 }
@@ -106,9 +126,29 @@ impl Shape for Qua8 {
         NFACE
     }
 
+    fn get_edge_npoint(&self) -> usize {
+        EDGE_NPOINT
+    }
+
+    fn get_face_npoint(&self) -> usize {
+        FACE_NPOINT
+    }
+
+    fn get_edge(&self, local_vertex_ids: &mut Vec<usize>, e: usize) {
+        for i in 0..EDGE_NPOINT {
+            local_vertex_ids[i] = self.edge_ids[e][i];
+        }
+    }
+
+    fn get_face(&self, local_vertex_ids: &mut Vec<usize>, f: usize) {}
+
     fn get_ksi(&self, ksi: &mut Vector, m: usize) {
         ksi[0] = self.coords[m][0];
         ksi[1] = self.coords[m][1];
+    }
+
+    fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), &'static str> {
+        vec_mat_mul(v, 1.0, &self.interp, a)
     }
 }
 

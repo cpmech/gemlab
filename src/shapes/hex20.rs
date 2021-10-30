@@ -1,14 +1,18 @@
 use super::Shape;
-use russell_lab::{Matrix, Vector};
+use russell_lab::{vec_mat_mul, Matrix, Vector};
 
 const NDIM: usize = 3;
 const NPOINT: usize = 20;
 const NEDGE: usize = 12;
 const NFACE: usize = 6;
+const EDGE_NPOINT: usize = 3;
+const FACE_NPOINT: usize = 8;
 
 /// Implements a hexahedron with 20 points
 ///
 /// The natural coordinates range from -1 to +1 with the geometry centred @ 0
+///
+/// # Local IDs of points
 ///
 /// ```text
 ///            4_______15_______7
@@ -26,10 +30,52 @@ const NFACE: usize = 6;
 ///  | ,'             | ,'
 ///  1_______9________2'
 /// ```
+///
+/// # Local IDs of edges
+///
+/// ```text
+///                     7
+///             +----------------+
+///           ,'|              ,'|
+///       4 ,'  |8          6,'  |
+///       ,'    |          ,'    |   
+///     ,'      |   5    ,'      |11
+///   +'===============+'        |
+///   |         |      |         |
+///   |         |      |  3      |
+///   |         .- - - | -  - - -+
+///  9|       ,'       |       ,'
+///   |    0,'         |10   ,'
+///   |   ,'           |   ,' 2
+///   | ,'             | ,'
+///   +----------------+'
+///           1
+/// ```
+///
+/// # Local IDs of faces
+///
+/// ```text
+///           +----------------+
+///         ,'|              ,'|
+///       ,'  |  ___       ,'  |
+///     ,'    |,'5,'  [0],'    |
+///   ,'      |~~~     ,'      |
+/// +'===============+'  ,'|   |
+/// |   ,'|   |      |   |3|   |
+/// |   |2|   |      |   |,'   |
+/// |   |,'   +- - - | +- - - -+
+/// |       ,'       |       ,'
+/// |     ,' [1]  ___|     ,'
+/// |   ,'      ,'4,'|   ,'
+/// | ,'        ~~~  | ,'
+/// +----------------+'
+/// ```
 pub struct Hex20 {
-    coords: Vec<Vector>, // natural coordinates (npoint, ndim)
-    interp: Vector,      // interpolation functions @ natural coordinate (npoint)
-    deriv: Matrix,       // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
+    coords: Vec<Vector>,       // natural coordinates (npoint, ndim)
+    interp: Vector,            // interpolation functions @ natural coordinate (npoint)
+    deriv: Matrix,             // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
+    edge_ids: Vec<Vec<usize>>, // ids of vertices on edges
+    face_ids: Vec<Vec<usize>>, // ids of vertices on faces
 }
 
 impl Hex20 {
@@ -65,6 +111,28 @@ impl Hex20 {
             ],
             interp: Vector::new(NPOINT),
             deriv: Matrix::new(NPOINT, NDIM),
+            edge_ids: vec![
+                vec![0, 1, 8],
+                vec![1, 2, 9],
+                vec![2, 3, 10],
+                vec![3, 0, 11],
+                vec![4, 5, 12],
+                vec![5, 6, 13],
+                vec![6, 7, 14],
+                vec![7, 4, 15],
+                vec![0, 4, 16],
+                vec![1, 5, 17],
+                vec![2, 6, 18],
+                vec![3, 7, 19],
+            ],
+            face_ids: vec![
+                vec![0, 4, 7, 3, 16, 15, 19, 11],
+                vec![1, 2, 6, 5, 9, 18, 13, 17],
+                vec![0, 1, 5, 4, 8, 17, 12, 16],
+                vec![2, 3, 7, 6, 10, 19, 14, 18],
+                vec![0, 3, 2, 1, 11, 10, 9, 8],
+                vec![4, 5, 6, 7, 12, 13, 14, 15],
+            ],
         }
     }
 }
@@ -202,10 +270,34 @@ impl Shape for Hex20 {
         NFACE
     }
 
+    fn get_edge_npoint(&self) -> usize {
+        EDGE_NPOINT
+    }
+
+    fn get_face_npoint(&self) -> usize {
+        FACE_NPOINT
+    }
+
+    fn get_edge(&self, local_vertex_ids: &mut Vec<usize>, e: usize) {
+        for i in 0..EDGE_NPOINT {
+            local_vertex_ids[i] = self.edge_ids[e][i];
+        }
+    }
+
+    fn get_face(&self, local_vertex_ids: &mut Vec<usize>, f: usize) {
+        for i in 0..FACE_NPOINT {
+            local_vertex_ids[i] = self.face_ids[f][i];
+        }
+    }
+
     fn get_ksi(&self, ksi: &mut Vector, m: usize) {
         ksi[0] = self.coords[m][0];
         ksi[1] = self.coords[m][1];
         ksi[2] = self.coords[m][2];
+    }
+
+    fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), &'static str> {
+        vec_mat_mul(v, 1.0, &self.interp, a)
     }
 }
 

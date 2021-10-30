@@ -1,5 +1,5 @@
 use super::*;
-use russell_lab::Vector;
+use russell_lab::{Matrix, Vector};
 
 /// Defines the kind of shape
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -80,12 +80,59 @@ pub trait Shape {
     /// Returns the number of faces
     fn get_nface(&self) -> usize;
 
+    /// Returns the number of points on edge
+    fn get_edge_npoint(&self) -> usize;
+
+    /// Returns the number of points on face
+    fn get_face_npoint(&self) -> usize;
+
+    /// Returns the local ids of vertices on selected edge
+    ///
+    /// # Input
+    ///
+    /// * `e` -- the index of edge in [0, nedge-1]
+    /// * `local_vertex_ids` -- ids of vertices on edge. len = edge_npoint
+    fn get_edge(&self, local_vertex_ids: &mut Vec<usize>, e: usize);
+
+    /// Returns the local ids of vertices on selected face
+    ///
+    /// # Input
+    ///
+    /// * `f` -- index of face in [0, nface-1]
+    /// * `local_vertex_ids` -- ids of vertices on face. len = face_npoint
+    fn get_face(&self, local_vertex_ids: &mut Vec<usize>, f: usize);
+
     /// Returns natural coordinates @ point m
     ///
     /// ```text
     /// coord = ξᵐ = vector{r, s, t} @ point m
     /// ```
     fn get_ksi(&self, ksi: &mut Vector, m: usize);
+
+    /// Multiplies the interpolation vector (S) by a matrix (a)
+    ///
+    /// ```text
+    /// v[n] = Σ_m Sᵐ ⋅ a[m][n]
+    /// ```
+    ///
+    /// or
+    ///
+    /// ```text
+    ///  v  =  S  ⋅   a
+    /// (n)   (m)   (m,n)
+    /// ```
+    ///
+    /// or
+    ///
+    /// ```text
+    ///  v  =   aᵀ  ⋅  S
+    /// (n)   (n,m)   (m)   
+    /// ```
+    ///
+    /// # Note
+    ///
+    /// The interpolation vector must be computed first by calling `calc_interp`.
+    fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), &'static str>;
 }
 
 /// Returns new Shape
@@ -239,5 +286,38 @@ mod tests {
                 _ => panic!("Shape kind \"{:?}\" is not available yet", kind),
             }
         }
+    }
+
+    #[test]
+    fn mul_interp_by_matrix_works() -> Result<(), &'static str> {
+        // iso-parametric elements: xᵢ = Σ_m Sᵐ ⋅ cᵐᵢ
+        // where c is a matrix of coordinates
+        let kinds = gen_kinds();
+        for kind in kinds {
+            let mut shape = new(kind);
+            let ndim = shape.get_ndim();
+            let npoint = shape.get_npoint();
+            let mut ksi = Vector::new(ndim);
+            // create matrix of coordinates with shifted nat-coords: edges = [0, 2]
+            let mut c = Matrix::new(npoint, ndim);
+            for m in 0..npoint {
+                shape.get_ksi(&mut ksi, m);
+                for i in 0..ndim {
+                    c[m][i] = 1.0 + ksi[i];
+                }
+            }
+            // set @ksi such that x[i] = 1.25
+            let mut at_ksi = Vector::new(ndim);
+            for i in 0..ndim {
+                at_ksi[i] = 0.25;
+            }
+            shape.calc_interp(&at_ksi);
+            // multiply S by C matrix
+            let mut x = Vector::new(ndim);
+            shape.mul_interp_by_matrix(&mut x, &c)?;
+            let x_correct = vec![1.25; ndim];
+            assert_vec_approx_eq!(x.as_data(), x_correct, 1e-15);
+        }
+        Ok(())
     }
 }
