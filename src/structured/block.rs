@@ -1,29 +1,8 @@
 use crate::as_array::AsArray2D;
 use crate::geometry::Circle;
 use crate::shapes::{self, KindStructured, Shape};
-use crate::{Cell, Edge, Face, Point};
+use crate::{Cell, Edge, Face, KeyEdge, KeyFace, KeyPoint, Mesh, Point};
 use russell_lab::{mat_vec_mul, Matrix, Vector};
-use std::collections::HashMap;
-
-#[derive(Hash, Eq, PartialEq, Debug)]
-struct KeyPoint {
-    x: u64,
-    y: u64,
-    z: u64,
-}
-
-#[derive(Hash, Eq, PartialEq, Debug)]
-struct KeyEdge {
-    a: usize,
-    b: usize,
-}
-
-#[derive(Hash, Eq, PartialEq, Debug)]
-struct KeyFace {
-    a: usize,
-    b: usize,
-    c: usize,
-}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Constraint {
@@ -285,12 +264,9 @@ impl Block {
     }
 
     /// Subdivide block into vertices and cells (mesh)
-    pub fn subdivide(&mut self, output: KindStructured) -> Result<(), &'static str> {
-        // output map
-        let mut points = HashMap::<KeyPoint, Point>::new();
-        let mut edges = HashMap::<KeyEdge, Edge>::new();
-        let mut faces = HashMap::<KeyFace, Face>::new();
-        let mut cells = Vec::<Cell>::new();
+    pub fn subdivide(&mut self, output: KindStructured) -> Result<Mesh, &'static str> {
+        // results
+        let mut mesh = Mesh::new(self.ndim);
         let mut point_id = 0_usize;
         let mut edge_id = 0_usize;
         let mut face_id = 0_usize;
@@ -374,13 +350,13 @@ impl Block {
                             y: x[1].to_bits(),
                             z: if self.ndim == 3 { x[2].to_bits() } else { 0 },
                         };
-                        if points.contains_key(&key) {
-                            let point = points.get_mut(&key).unwrap();
+                        if mesh.points.contains_key(&key) {
+                            let point = mesh.points.get_mut(&key).unwrap();
                             point.shared_by_cell_ids.push(cell_id);
                             point_ids[m] = point.id;
                         } else {
                             point_ids[m] = point_id;
-                            points.insert(
+                            mesh.points.insert(
                                 key,
                                 Point {
                                     id: point_id,
@@ -409,13 +385,13 @@ impl Block {
                             a: edge_point_ids[0],
                             b: edge_point_ids[1],
                         };
-                        if edges.contains_key(&key) {
-                            let edge = edges.get_mut(&key).unwrap();
+                        if mesh.edges.contains_key(&key) {
+                            let edge = mesh.edges.get_mut(&key).unwrap();
                             edge.shared_by_cell_ids.push(cell_id);
                             edge_ids[e] = edge.id;
                         } else {
                             edge_ids[e] = edge_id;
-                            edges.insert(
+                            mesh.edges.insert(
                                 key,
                                 Edge {
                                     id: edge_id,
@@ -445,13 +421,13 @@ impl Block {
                             b: face_point_ids[1],
                             c: face_point_ids[2],
                         };
-                        if faces.contains_key(&key) {
-                            let face = faces.get_mut(&key).unwrap();
+                        if mesh.faces.contains_key(&key) {
+                            let face = mesh.faces.get_mut(&key).unwrap();
                             face.shared_by_cell_ids.push(cell_id);
                             face_ids[f] = face.id;
                         } else {
                             face_ids[f] = face_id;
-                            faces.insert(
+                            mesh.faces.insert(
                                 key,
                                 Face {
                                     id: face_id,
@@ -472,7 +448,7 @@ impl Block {
                         edge_ids,
                         face_ids: Vec::new(),
                     };
-                    cells.push(cell);
+                    mesh.cells.push(cell);
                     cell_id += 1;
 
                     // next x-center
@@ -489,23 +465,8 @@ impl Block {
             }
         }
 
-        for point in points.values() {
-            println!("{:?}", point);
-        }
-        println!();
-        for edge in edges.values() {
-            println!("{:?}", edge);
-        }
-        println!();
-        for face in faces.values() {
-            println!("{:?}", face);
-        }
-        println!();
-        for cell in &cells {
-            println!("{:?}", cell);
-        }
-
-        Ok(())
+        // done
+        Ok(mesh)
     }
 }
 
@@ -733,7 +694,8 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ]);
-        block.subdivide(KindStructured::Qua4)?;
+        let mesh = block.subdivide(KindStructured::Qua4)?;
+        mesh.print();
         Ok(())
     }
 
@@ -751,7 +713,8 @@ mod tests {
             [2.0, 2.0, 2.0],
             [0.0, 2.0, 2.0],
         ]);
-        block.subdivide(KindStructured::Hex8)?;
+        let mesh = block.subdivide(KindStructured::Hex8)?;
+        mesh.print();
         Ok(())
     }
 }
