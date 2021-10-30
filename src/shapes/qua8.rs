@@ -140,7 +140,7 @@ impl Shape for Qua8 {
         }
     }
 
-    fn get_face(&self, local_point_ids: &mut Vec<usize>, f: usize) {}
+    fn get_face(&self, _local_point_ids: &mut Vec<usize>, _f: usize) {}
 
     fn get_ksi(&self, ksi: &mut Vector, m: usize) {
         ksi[0] = self.coords[m][0];
