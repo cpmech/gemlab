@@ -1,6 +1,6 @@
 use crate::as_array::AsArray2D;
 use crate::geometry::Circle;
-use crate::shapes::{self, KindHex, KindQua, Shape};
+use crate::shapes::{self, KindStructured, Shape};
 use crate::{Cell, Edge, Face, Point};
 use russell_lab::{mat_vec_mul, Matrix, Vector};
 use std::collections::HashMap;
@@ -285,7 +285,7 @@ impl Block {
     }
 
     /// Subdivide block into vertices and cells (mesh)
-    pub fn subdivide_2d(&mut self, output: KindQua) -> Result<(), &'static str> {
+    pub fn subdivide(&mut self, output: KindStructured) -> Result<(), &'static str> {
         // output map
         let mut points = HashMap::<KeyPoint, Point>::new();
         let mut edges = HashMap::<KeyEdge, Edge>::new();
@@ -297,7 +297,7 @@ impl Block {
         let mut cell_id = 0_usize;
 
         // auxiliary variables
-        let shape = shapes::new_qua(output);
+        let shape = shapes::new_structured(output);
         let (npoint, nedge, nface) = (shape.get_npoint(), shape.get_nedge(), shape.get_nface());
         let edge_npoint = shape.get_edge_npoint();
         let face_npoint = shape.get_face_npoint();
@@ -428,6 +428,42 @@ impl Block {
                         }
                     }
 
+                    // for each face
+                    let mut face_ids = vec![0; nface];
+                    for f in 0..nface {
+                        // convert local point ids on face to global ids
+                        shape.get_face(&mut face_local_point_ids, f);
+                        let mut face_point_ids = vec![0; face_npoint];
+                        for m in 0..face_npoint {
+                            face_point_ids[m] = point_ids[face_local_point_ids[m]];
+                        }
+                        face_point_ids.sort();
+
+                        // store face in map
+                        let key = KeyFace {
+                            a: face_point_ids[0],
+                            b: face_point_ids[1],
+                            c: face_point_ids[2],
+                        };
+                        if faces.contains_key(&key) {
+                            let face = faces.get_mut(&key).unwrap();
+                            face.shared_by_cell_ids.push(cell_id);
+                            face_ids[f] = face.id;
+                        } else {
+                            face_ids[f] = face_id;
+                            faces.insert(
+                                key,
+                                Face {
+                                    id: face_id,
+                                    group: self.group,
+                                    point_ids: face_point_ids,
+                                    shared_by_cell_ids: vec![cell_id],
+                                },
+                            );
+                            face_id += 1;
+                        }
+                    }
+
                     // new cell
                     let cell = Cell {
                         id: cell_id,
@@ -469,11 +505,6 @@ impl Block {
             println!("{:?}", cell);
         }
 
-        Ok(())
-    }
-
-    /// Subdivide block into vertices and cells (mesh)
-    pub fn subdivide_3d(&self, _output: KindHex) -> Result<(), &'static str> {
         Ok(())
     }
 }
@@ -702,7 +733,25 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ]);
-        block.subdivide_2d(KindQua::Qua4)?;
+        block.subdivide(KindStructured::Qua4)?;
+        Ok(())
+    }
+
+    #[test]
+    fn subdivide_3d_works() -> Result<(), &'static str> {
+        let mut block = Block::new(3);
+        #[rustfmt::skip]
+        block.set_coords(&[
+            [0.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [2.0, 2.0, 0.0],
+            [0.0, 2.0, 0.0],
+            [0.0, 0.0, 2.0],
+            [2.0, 0.0, 2.0],
+            [2.0, 2.0, 2.0],
+            [0.0, 2.0, 2.0],
+        ]);
+        block.subdivide(KindStructured::Hex8)?;
         Ok(())
     }
 }

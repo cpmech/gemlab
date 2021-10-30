@@ -38,6 +38,17 @@ pub enum KindHex {
     Hex20,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum KindStructured {
+    Qua4,
+    Qua8,
+    Qua9,
+    Qua12,
+    Qua16,
+    Hex8,
+    Hex20,
+}
+
 /// Defines the functionality of shape
 pub trait Shape {
     /// Calculates the interpolation functions at natural coordinate ξ
@@ -160,6 +171,17 @@ pub fn new_hex(kind: KindHex) -> Box<dyn Shape> {
     match kind {
         KindHex::Hex8 => Box::new(Hex8::new()),
         KindHex::Hex20 => Box::new(Hex20::new()),
+    }
+}
+
+/// Returns new Structured (Qua or Hex) Shape
+pub fn new_structured(kind: KindStructured) -> Box<dyn Shape> {
+    match kind {
+        KindStructured::Qua4 => Box::new(Qua4::new()),
+        KindStructured::Qua8 => Box::new(Qua8::new()),
+        KindStructured::Hex8 => Box::new(Hex8::new()),
+        KindStructured::Hex20 => Box::new(Hex20::new()),
+        _ => panic!("Shape kind {:?} is not available yet", kind),
     }
 }
 
