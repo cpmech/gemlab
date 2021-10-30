@@ -347,13 +347,13 @@ impl Block {
 
             // for each y-division
             cen[1] = -1.0 + self.delta_ksi[1][0] / 2.0;
-            for j in 0..self.ndiv[1] {
+            for j in 0..ny {
                 t[1][1] = self.delta_ksi[1][j] / L; // scale
                 t[1][self.ndim] = cen[1]; // translation
 
                 // for each x-division
                 cen[0] = -1.0 + self.delta_ksi[0][0] / 2.0;
-                for i in 0..self.ndiv[0] {
+                for i in 0..nx {
                     t[0][0] = self.delta_ksi[0][i] / L; // scale
                     t[0][self.ndim] = cen[0]; // translation
 
