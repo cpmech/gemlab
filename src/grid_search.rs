@@ -51,10 +51,10 @@ impl GridSearch {
             return Err("len(ndiv) == ndim must be 2 or 3");
         }
         if xmin.len() != ndim {
-            return Err("size of xmin must equal ndim == len(ndiv)");
+            return Err("len(xmin) must equal ndim == len(ndiv)");
         }
         if xmax.len() != ndim {
-            return Err("size of xmax must equal ndim == len(ndiv)");
+            return Err("len(xmax) must equal ndim == len(ndiv)");
         }
 
         // allocate gs
@@ -106,7 +106,7 @@ impl GridSearch {
         U: 'a + Into<f64>,
     {
         if x.size() != self.ndim {
-            return Err("x must have len equal to ndim");
+            return Err("len(x) must equal ndim");
         }
         match self.container_index(x) {
             Some(index) => {
@@ -215,7 +215,7 @@ mod tests {
         container_index: usize,
     }
 
-    fn get_test_data() -> Vec<TestData> {
+    fn get_test_data_2d() -> Vec<TestData> {
         vec![
             TestData {
                 id: 100,
@@ -251,14 +251,34 @@ mod tests {
         ]
     }
 
+    fn get_test_data_3d() -> Vec<TestData> {
+        vec![
+            TestData {
+                id: 100,
+                x: vec![-1.0, -1.0, -1.0],
+                container_index: 0,
+            },
+            TestData {
+                id: 200,
+                x: vec![0.0, 0.0, 0.0],
+                container_index: 7,
+            },
+            TestData {
+                id: 300,
+                x: vec![0.25, 0.25, 0.25],
+                container_index: 7,
+            },
+        ]
+    }
+
     #[test]
     fn new_fails_on_wrong_input() {
         let grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], &[1]);
         assert_eq!(grid.err(), Some("len(ndiv) == ndim must be 2 or 3"));
         let grid = GridSearch::new(&[0.0], &[1.0, 1.0], &[1, 1]);
-        assert_eq!(grid.err(), Some("size of xmin must equal ndim == len(ndiv)"));
+        assert_eq!(grid.err(), Some("len(xmin) must equal ndim == len(ndiv)"));
         let grid = GridSearch::new(&[0.0, 0.0], &[1.0], &[1, 1]);
-        assert_eq!(grid.err(), Some("size of xmax must equal ndim == len(ndiv)"));
+        assert_eq!(grid.err(), Some("len(xmax) must equal ndim == len(ndiv)"));
         let grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], &[0, 1]);
         assert_eq!(grid.err(), Some("ndiv must be at least equal to 1"));
         let grid = GridSearch::new(&[0.0, 0.0], &[0.0, 1.0], &[1, 1]);
@@ -287,9 +307,9 @@ mod tests {
     }
 
     #[test]
-    fn container_index_works() -> Result<(), &'static str> {
+    fn container_index_2d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
-        for data in get_test_data() {
+        for data in get_test_data_2d() {
             let index = grid.container_index(&data.x).unwrap();
             assert_eq!(index, data.container_index);
         }
@@ -297,26 +317,72 @@ mod tests {
     }
 
     #[test]
-    fn insert_works() -> Result<(), &'static str> {
+    fn container_index_3d_works() -> Result<(), &'static str> {
+        let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[2, 2, 2])?;
+        for data in get_test_data_3d() {
+            let index = grid.container_index(&data.x).unwrap();
+            assert_eq!(index, data.container_index);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn insert_fails_on_wrong_input() -> Result<(), &'static str> {
+        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], &[1, 1])?;
+        let res = grid.insert(100, &[0.0, 0.0, 0.0]);
+        assert_eq!(res, Err("len(x) must equal ndim"));
+        Ok(())
+    }
+
+    #[test]
+    fn insert_2d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
-        for data in get_test_data() {
+        for data in get_test_data_2d() {
             grid.insert(data.id, &data.x)?;
             let container = grid.containers.get(&data.container_index).unwrap();
             let item = container.items.iter().find(|item| item.id == data.id).unwrap();
             assert_eq!(item.id, data.id);
         }
         assert_eq!(grid.containers.len(), 5);
+        let res = grid.insert(1000, &[0.80001, 0.0]);
+        assert_eq!(res, Err("point is outside the grid"));
         Ok(())
     }
 
     #[test]
-    fn plot_works() -> Result<(), &'static str> {
+    fn insert_3d_works() -> Result<(), &'static str> {
+        let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[2, 2, 2])?;
+        for data in get_test_data_3d() {
+            grid.insert(data.id, &data.x)?;
+            let container = grid.containers.get(&data.container_index).unwrap();
+            let item = container.items.iter().find(|item| item.id == data.id).unwrap();
+            assert_eq!(item.id, data.id);
+        }
+        assert_eq!(grid.containers.len(), 2);
+        let res = grid.insert(1000, &[1.00001, 0.0, 0.0]);
+        assert_eq!(res, Err("point is outside the grid"));
+        Ok(())
+    }
+
+    #[test]
+    fn plot_2d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
-        for data in get_test_data() {
+        for data in get_test_data_2d() {
             grid.insert(data.id, &data.x)?;
         }
         let plot = grid.plot()?;
-        plot.save("/tmp/gemlab/search_grid_plot_works.svg")?;
+        plot.save("/tmp/gemlab/search_grid_plot_2d_works.svg")?;
+        Ok(())
+    }
+
+    #[test]
+    fn plot_3d_works() -> Result<(), &'static str> {
+        let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[2, 2, 2])?;
+        for data in get_test_data_3d() {
+            grid.insert(data.id, &data.x)?;
+        }
+        let plot = grid.plot()?;
+        plot.save("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
         Ok(())
     }
 }
