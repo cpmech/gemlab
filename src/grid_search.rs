@@ -143,25 +143,30 @@ impl GridSearch {
         plot.add(&shapes);
 
         // draw items
-        if self.ndim == 2 {
-            let mut curve = Curve::new();
-            let mut text = Text::new();
-            curve
-                .set_marker_style("o")
-                .set_marker_color("#fab32faa")
-                .set_marker_line_color("black")
-                .set_marker_line_width(0.5);
-            text.set_color("#cd0000");
-            for container in self.containers.values() {
-                for item in &container.items {
-                    let txt = format!("{}", item.id);
+        let mut curve = Curve::new();
+        let mut text = Text::new();
+        curve
+            .set_marker_style("o")
+            .set_marker_color("#fab32faa")
+            .set_marker_line_color("black")
+            .set_marker_line_width(0.5);
+        text.set_color("#cd0000");
+        for container in self.containers.values() {
+            for item in &container.items {
+                let txt = format!("{}", item.id);
+                if self.ndim == 2 {
                     curve.draw(&[item.x], &[item.y]);
                     text.draw(item.x, item.y, &txt);
+                } else {
+                    curve.draw_3d(&[item.x], &[item.y], &[item.z]);
+                    text.draw_3d(item.x, item.y, item.z, &txt);
                 }
             }
-            plot.add(&curve);
-            plot.add(&text);
         }
+        plot.add(&curve);
+        plot.add(&text);
+
+        // done
         Ok(plot)
     }
 
