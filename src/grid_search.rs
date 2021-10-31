@@ -50,13 +50,13 @@ impl GridSearch {
         // check input
         let ndim = ndiv.len();
         if ndim < 2 || ndim > 3 {
-            return Err("ndim must be 2 or 3");
+            return Err("len(ndiv) == ndim must be 2 or 3");
         }
         if xmin.len() != ndim {
-            return Err("size of xmin must equal ndim");
+            return Err("size of xmin must equal ndim == len(ndiv)");
         }
         if xmax.len() != ndim {
-            return Err("size of xmax must equal ndim");
+            return Err("size of xmax must equal ndim == len(ndiv)");
         }
 
         // allocate gs
@@ -251,6 +251,18 @@ mod tests {
                 container_index: 24,
             },
         ]
+    }
+
+    #[test]
+    fn new_fails_on_wrong_input() {
+        let grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], &[1]);
+        assert_eq!(grid.err(), Some("len(ndiv) == ndim must be 2 or 3"));
+        let grid = GridSearch::new(&[0.0], &[1.0, 1.0], &[1, 1]);
+        assert_eq!(grid.err(), Some("size of xmin must equal ndim == len(ndiv)"));
+        let grid = GridSearch::new(&[0.0, 0.0], &[1.0], &[1, 1]);
+        assert_eq!(grid.err(), Some("size of xmax must equal ndim == len(ndiv)"));
+        let grid = GridSearch::new(&[0.0, 0.0], &[0.0, 1.0], &[1, 1]);
+        assert_eq!(grid.err(), Some("xmax must be greater than xmin"));
     }
 
     #[test]
