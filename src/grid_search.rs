@@ -286,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn new_works() -> Result<(), &'static str> {
+    fn new_2d_works() -> Result<(), &'static str> {
         let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.ndiv, [5, 5, 0]);
@@ -303,6 +303,21 @@ mod tests {
         let b1 = 0.2_f64.to_bits();
         println!("{} =? {}", b0, b1);
         assert_eq!(b0, b1);
+        Ok(())
+    }
+
+    #[test]
+    fn new_3d_works() -> Result<(), &'static str> {
+        let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[2, 2, 2])?;
+        assert_eq!(grid.ndim, 3);
+        assert_eq!(grid.ndiv, [2, 2, 2]);
+        assert_eq!(grid.xmin, [-1.0, -1.0, -1.0]);
+        assert_eq!(grid.xmax, [1.0, 1.0, 1.0]);
+        assert_eq!(grid.xdelta, [2.0, 2.0, 2.0]);
+        assert_eq!(grid.size, [1.0, 1.0, 1.0]);
+        assert_eq!(grid.cf, [1, 2, 4]);
+        assert_eq!(grid.ratio, [0, 0, 0]);
+        assert_eq!(grid.containers.len(), 0);
         Ok(())
     }
 
@@ -334,6 +349,9 @@ mod tests {
     fn insert_fails_on_wrong_input() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], &[1, 1])?;
         let res = grid.insert(100, &[0.0, 0.0, 0.0]);
+        assert_eq!(res, Err("len(x) must equal ndim"));
+        let mut grid = GridSearch::new(&[0.0, 0.0, 0.0], &[1.0, 1.0, 1.0], &[1, 1, 1])?;
+        let res = grid.insert(100, &[0.0, 0.0]);
         assert_eq!(res, Err("len(x) must equal ndim"));
         Ok(())
     }
