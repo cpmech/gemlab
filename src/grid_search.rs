@@ -196,7 +196,7 @@ impl GridSearch {
             }
             self.ratio[i] = ((x.at(i).into() - self.xmin[i]) / self.size[i]) as usize;
             if self.ratio[i] == self.ndiv[i] {
-                // the point is exactly on the max edge, thus select inner bin
+                // the point is exactly on the max edge, thus select inner cell
                 self.ratio[i] -= 1; // move to the inside
             }
             index += self.ratio[i] * self.cf[i];
@@ -210,6 +210,48 @@ impl GridSearch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct TestData {
+        id: usize,
+        x: Vec<f64>,
+        container_index: usize,
+    }
+
+    fn get_test_data() -> Vec<TestData> {
+        vec![
+            TestData {
+                id: 100,
+                x: vec![0.0, 0.2],
+                container_index: 6,
+            },
+            TestData {
+                id: 200,
+                x: vec![0.2, 0.6000000000000001],
+                container_index: 12,
+            },
+            TestData {
+                id: 300,
+                x: vec![0.4, 1.0],
+                // in this case, the ratio is:
+                // 3.0000000000000004, 2.9999999999999996
+                // thus, the point falls in #13 instead of #18
+                container_index: 13,
+            },
+            TestData {
+                id: 400,
+                x: vec![0.6, 1.4],
+                // in this case, the ratio is:
+                // 4, 3.9999999999999996
+                // thus, the point falls in #19 instead of #24
+                container_index: 19,
+            },
+            TestData {
+                id: 500,
+                x: vec![0.8, 1.8],
+                container_index: 24,
+            },
+        ]
+    }
 
     #[test]
     fn new_works() -> Result<(), &'static str> {
@@ -235,22 +277,29 @@ mod tests {
     #[test]
     fn container_index_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
-        let index = grid.container_index(&[0.4, 1.0]).unwrap();
-        assert_eq!(index, 13);
+        for data in get_test_data() {
+            let index = grid.container_index(&data.x).unwrap();
+            assert_eq!(index, data.container_index);
+        }
         Ok(())
     }
 
     #[test]
     fn insert_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
-        grid.insert(33, &[0.4, 1.0])?;
+        for data in get_test_data() {
+            grid.insert(data.id, &data.x)?;
+            // todo
+        }
         Ok(())
     }
 
     #[test]
     fn plot_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
-        grid.insert(33, &[0.4, 1.0])?;
+        for data in get_test_data() {
+            grid.insert(data.id, &data.x)?;
+        }
         let plot = grid.plot()?;
         plot.save("/tmp/gemlab/search_grid_plot_works.svg")?;
         Ok(())
