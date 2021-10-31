@@ -1,7 +1,7 @@
-use crate::as_array::AsArray2D;
-use crate::geometry::Circle;
-use crate::shapes::{self, KindStructured, Shape};
-use crate::{Cell, Edge, Face, KeyEdge, KeyFace, KeyPoint, MeshMaps, Point};
+use crate::{
+    new_shape_qua_or_hex, AsArray2D, Cell, Circle, Edge, Face, KeyEdge, KeyFace, KeyPoint, KindQuaOrHex, MeshMaps,
+    Point, Shape,
+};
 use russell_lab::{mat_vec_mul, Matrix, Vector};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -97,9 +97,9 @@ impl Block {
     /// Creates a new Block with default options
     pub fn new(ndim: usize) -> Self {
         let shape = if ndim == 2 {
-            shapes::new(shapes::Kind::Qua8)
+            new_shape_qua_or_hex(KindQuaOrHex::Qua8)
         } else {
-            shapes::new(shapes::Kind::Hex20)
+            new_shape_qua_or_hex(KindQuaOrHex::Hex20)
         };
         let (npoint, nedge, nface) = (shape.get_npoint(), shape.get_nedge(), shape.get_nface());
         const NDIV: usize = 2;
@@ -264,7 +264,7 @@ impl Block {
     }
 
     /// Subdivide block into vertices and cells (mesh)
-    pub fn subdivide(&mut self, output: KindStructured) -> Result<MeshMaps, &'static str> {
+    pub fn subdivide(&mut self, output: KindQuaOrHex) -> Result<MeshMaps, &'static str> {
         // results
         let mut mesh = MeshMaps::new(self.ndim);
         let mut point_id = 0_usize;
@@ -273,7 +273,7 @@ impl Block {
         let mut cell_id = 0_usize;
 
         // auxiliary variables
-        let shape = shapes::new_structured(output);
+        let shape = new_shape_qua_or_hex(output);
         let (npoint, nedge, nface) = (shape.get_npoint(), shape.get_nedge(), shape.get_nface());
         let edge_npoint = shape.get_edge_npoint();
         let face_npoint = shape.get_face_npoint();
@@ -694,7 +694,7 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ]);
-        let mesh = block.subdivide(KindStructured::Qua4)?;
+        let mesh = block.subdivide(KindQuaOrHex::Qua4)?;
         mesh.print();
         Ok(())
     }
@@ -713,7 +713,7 @@ mod tests {
             [2.0, 2.0, 2.0],
             [0.0, 2.0, 2.0],
         ]);
-        let mesh = block.subdivide(KindStructured::Hex8)?;
+        let mesh = block.subdivide(KindQuaOrHex::Hex8)?;
         mesh.print();
         Ok(())
     }

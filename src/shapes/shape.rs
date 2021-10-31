@@ -23,6 +23,7 @@ pub enum Kind {
     Hex20,
 }
 
+/// Defines Qua shapes
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum KindQua {
     Qua4,
@@ -32,14 +33,16 @@ pub enum KindQua {
     Qua16,
 }
 
+/// Defines Hex shapes
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum KindHex {
     Hex8,
     Hex20,
 }
 
+/// Defines Qua or Hex shapes
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum KindStructured {
+pub enum KindQuaOrHex {
     Qua4,
     Qua8,
     Qua9,
@@ -147,7 +150,7 @@ pub trait Shape {
 }
 
 /// Returns new Shape
-pub fn new(kind: Kind) -> Box<dyn Shape> {
+pub fn new_shape(kind: Kind) -> Box<dyn Shape> {
     match kind {
         Kind::Qua4 => Box::new(Qua4::new()),
         Kind::Qua8 => Box::new(Qua8::new()),
@@ -158,7 +161,7 @@ pub fn new(kind: Kind) -> Box<dyn Shape> {
 }
 
 /// Returns new Qua Shape
-pub fn new_qua(kind: KindQua) -> Box<dyn Shape> {
+pub fn new_shape_qua(kind: KindQua) -> Box<dyn Shape> {
     match kind {
         KindQua::Qua4 => Box::new(Qua4::new()),
         KindQua::Qua8 => Box::new(Qua8::new()),
@@ -167,20 +170,20 @@ pub fn new_qua(kind: KindQua) -> Box<dyn Shape> {
 }
 
 /// Returns new Hex Shape
-pub fn new_hex(kind: KindHex) -> Box<dyn Shape> {
+pub fn new_shape_hex(kind: KindHex) -> Box<dyn Shape> {
     match kind {
         KindHex::Hex8 => Box::new(Hex8::new()),
         KindHex::Hex20 => Box::new(Hex20::new()),
     }
 }
 
-/// Returns new Structured (Qua or Hex) Shape
-pub fn new_structured(kind: KindStructured) -> Box<dyn Shape> {
+/// Returns new Qua or Hex Shape
+pub fn new_shape_qua_or_hex(kind: KindQuaOrHex) -> Box<dyn Shape> {
     match kind {
-        KindStructured::Qua4 => Box::new(Qua4::new()),
-        KindStructured::Qua8 => Box::new(Qua8::new()),
-        KindStructured::Hex8 => Box::new(Hex8::new()),
-        KindStructured::Hex20 => Box::new(Hex20::new()),
+        KindQuaOrHex::Qua4 => Box::new(Qua4::new()),
+        KindQuaOrHex::Qua8 => Box::new(Qua8::new()),
+        KindQuaOrHex::Hex8 => Box::new(Hex8::new()),
+        KindQuaOrHex::Hex20 => Box::new(Hex20::new()),
         _ => panic!("Shape kind {:?} is not available yet", kind),
     }
 }
@@ -237,7 +240,7 @@ mod tests {
     fn calc_interp_works() {
         let kinds = gen_kinds();
         for kind in kinds {
-            let mut shape = new(kind);
+            let mut shape = new_shape(kind);
             let ndim = shape.get_ndim();
             let npoint = shape.get_npoint();
             let mut ksi = Vector::new(ndim);
@@ -260,7 +263,7 @@ mod tests {
     fn calc_deriv_works() {
         let kinds = gen_kinds();
         for kind in kinds {
-            let mut shape = new(kind);
+            let mut shape = new_shape(kind);
             let ndim = shape.get_ndim();
             let npoint = shape.get_npoint();
             let mut at_ksi = Vector::new(ndim);
@@ -268,7 +271,7 @@ mod tests {
                 at_ksi[i] = 0.25;
             }
             let args = &mut Arguments {
-                shape: new(kind),
+                shape: new_shape(kind),
                 at_ksi,
                 ksi: Vector::new(ndim),
                 m: 0,
@@ -291,7 +294,7 @@ mod tests {
     fn getters_work() {
         let kinds = vec![Kind::Hex8, Kind::Qua4];
         for kind in kinds {
-            let shape = new(kind);
+            let shape = new_shape(kind);
             match kind {
                 Kind::Qua4 => {
                     assert_eq!(shape.get_ndim(), 2);
@@ -316,7 +319,7 @@ mod tests {
         // where c is a matrix of coordinates
         let kinds = gen_kinds();
         for kind in kinds {
-            let mut shape = new(kind);
+            let mut shape = new_shape(kind);
             let ndim = shape.get_ndim();
             let npoint = shape.get_npoint();
             let mut ksi = Vector::new(ndim);

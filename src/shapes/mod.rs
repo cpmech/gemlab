@@ -3,11 +3,11 @@
 //!
 //! ```
 //! // import
-//! use gemlab::shapes;
+//! use gemlab::*;
 //! use russell_lab::Vector;
 //!
 //! // shape object
-//! let mut shape = shapes::new(shapes::Kind::Hex8);
+//! let mut shape = new_shape(Kind::Hex8);
 //! let ndim = shape.get_ndim();
 //!
 //! // compute interp fn and deriv @ ksi=(0,0,0) for all points
