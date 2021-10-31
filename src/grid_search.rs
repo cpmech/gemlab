@@ -1,4 +1,3 @@
-use crate::AsArray1D;
 use plotpy::{Curve, Plot, Shapes, Text};
 use std::collections::HashMap;
 
@@ -99,25 +98,12 @@ impl GridSearch {
     /// # Input
     ///
     /// * `id` -- identification number for the item
-    /// * `x` -- coordinates of the item (an 1D array with len = ndim)
-    pub fn insert<'a, T, U>(&mut self, id: usize, x: &'a T) -> Result<(), &'static str>
-    where
-        T: AsArray1D<'a, U>,
-        U: 'a + Into<f64>,
-    {
-        if x.size() != self.ndim {
-            return Err("len(x) must equal ndim");
-        }
-        match self.container_index(x) {
+    /// * `x`, `y`, `z` -- coordinates of the item (`z` is ignored if ndim == 2)
+    pub fn insert(&mut self, id: usize, x: f64, y: f64, z: f64) -> Result<(), &'static str> {
+        match self.container_index(&[x, y, z]) {
             Some(index) => {
                 // new item data
-                let mut item = Item {
-                    id,
-                    x: [x.at(0).into(), x.at(1).into(), 0.0],
-                };
-                if self.ndim == 3 {
-                    item.x[2] = x.at(2).into();
-                }
+                let item = Item { id, x: [x, y, z] };
 
                 // update container
                 if self.containers.contains_key(&index) {
@@ -182,17 +168,13 @@ impl GridSearch {
     /// # Output
     ///
     /// * returns the index of the container or None if the point is out-of-range
-    fn container_index<'a, T, U>(&mut self, x: &'a T) -> Option<usize>
-    where
-        T: AsArray1D<'a, U>,
-        U: 'a + Into<f64>,
-    {
+    fn container_index(&mut self, x: &[f64]) -> Option<usize> {
         let mut index = 0;
         for i in 0..self.ndim {
-            if x.at(i).into() < self.xmin[i] || x.at(i).into() > self.xmax[i] {
+            if x[i] < self.xmin[i] || x[i] > self.xmax[i] {
                 return None;
             }
-            self.ratio[i] = ((x.at(i).into() - self.xmin[i]) / self.size[i]) as usize;
+            self.ratio[i] = ((x[i] - self.xmin[i]) / self.size[i]) as usize;
             if self.ratio[i] == self.ndiv[i] {
                 // the point is exactly on the max edge, thus select inner container
                 self.ratio[i] -= 1; // move to the inside
@@ -209,63 +191,83 @@ impl GridSearch {
 mod tests {
     use super::*;
 
-    struct TestData {
+    struct TestData2D {
         id: usize,
-        x: Vec<f64>,
+        x: f64,
+        y: f64,
         container_index: usize,
     }
 
-    fn get_test_data_2d() -> Vec<TestData> {
+    struct TestData3D {
+        id: usize,
+        x: f64,
+        y: f64,
+        z: f64,
+        container_index: usize,
+    }
+
+    fn get_test_data_2d() -> Vec<TestData2D> {
         vec![
-            TestData {
+            TestData2D {
                 id: 100,
-                x: vec![0.0, 0.2],
+                x: 0.0,
+                y: 0.2,
                 container_index: 6,
             },
-            TestData {
+            TestData2D {
                 id: 200,
-                x: vec![0.2, 0.6000000000000001],
+                x: 0.2,
+                y: 0.6000000000000001,
                 container_index: 12,
             },
-            TestData {
+            TestData2D {
                 id: 300,
-                x: vec![0.4, 1.0],
+                x: 0.4,
+                y: 1.0,
                 // in this case, the ratio is:
                 // 3.0000000000000004, 2.9999999999999996
                 // thus, the point falls in #13 instead of #18
                 container_index: 13,
             },
-            TestData {
+            TestData2D {
                 id: 400,
-                x: vec![0.6, 1.4],
+                x: 0.6,
+                y: 1.4,
                 // in this case, the ratio is:
                 // 4, 3.9999999999999996
                 // thus, the point falls in #19 instead of #24
                 container_index: 19,
             },
-            TestData {
+            TestData2D {
                 id: 500,
-                x: vec![0.8, 1.8],
+                x: 0.8,
+                y: 1.8,
                 container_index: 24,
             },
         ]
     }
 
-    fn get_test_data_3d() -> Vec<TestData> {
+    fn get_test_data_3d() -> Vec<TestData3D> {
         vec![
-            TestData {
+            TestData3D {
                 id: 100,
-                x: vec![-1.0, -1.0, -1.0],
+                x: -1.0,
+                y: -1.0,
+                z: -1.0,
                 container_index: 0,
             },
-            TestData {
+            TestData3D {
                 id: 200,
-                x: vec![0.0, 0.0, 0.0],
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
                 container_index: 7,
             },
-            TestData {
+            TestData3D {
                 id: 300,
-                x: vec![0.25, 0.25, 0.25],
+                x: 0.25,
+                y: 0.25,
+                z: 0.25,
                 container_index: 7,
             },
         ]
@@ -325,7 +327,7 @@ mod tests {
     fn container_index_2d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
         for data in get_test_data_2d() {
-            let index = grid.container_index(&data.x).unwrap();
+            let index = grid.container_index(&[data.x, data.y]).unwrap();
             assert_eq!(index, data.container_index);
         }
         let index = grid.container_index(&[0.80001, 0.0]);
@@ -337,7 +339,7 @@ mod tests {
     fn container_index_3d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[2, 2, 2])?;
         for data in get_test_data_3d() {
-            let index = grid.container_index(&data.x).unwrap();
+            let index = grid.container_index(&[data.x, data.y, data.z]).unwrap();
             assert_eq!(index, data.container_index);
         }
         let index = grid.container_index(&[1.00001, 0.0, 0.0]);
@@ -346,27 +348,16 @@ mod tests {
     }
 
     #[test]
-    fn insert_fails_on_wrong_input() -> Result<(), &'static str> {
-        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], &[1, 1])?;
-        let res = grid.insert(100, &[0.0, 0.0, 0.0]);
-        assert_eq!(res, Err("len(x) must equal ndim"));
-        let mut grid = GridSearch::new(&[0.0, 0.0, 0.0], &[1.0, 1.0, 1.0], &[1, 1, 1])?;
-        let res = grid.insert(100, &[0.0, 0.0]);
-        assert_eq!(res, Err("len(x) must equal ndim"));
-        Ok(())
-    }
-
-    #[test]
     fn insert_2d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
         for data in get_test_data_2d() {
-            grid.insert(data.id, &data.x)?;
+            grid.insert(data.id, data.x, data.y, 0.0)?;
             let container = grid.containers.get(&data.container_index).unwrap();
             let item = container.items.iter().find(|item| item.id == data.id).unwrap();
             assert_eq!(item.id, data.id);
         }
         assert_eq!(grid.containers.len(), 5);
-        let res = grid.insert(1000, &[0.80001, 0.0]);
+        let res = grid.insert(1000, 0.80001, 0.0, 0.0);
         assert_eq!(res, Err("point is outside the grid"));
         Ok(())
     }
@@ -375,13 +366,13 @@ mod tests {
     fn insert_3d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[2, 2, 2])?;
         for data in get_test_data_3d() {
-            grid.insert(data.id, &data.x)?;
+            grid.insert(data.id, data.x, data.y, data.z)?;
             let container = grid.containers.get(&data.container_index).unwrap();
             let item = container.items.iter().find(|item| item.id == data.id).unwrap();
             assert_eq!(item.id, data.id);
         }
         assert_eq!(grid.containers.len(), 2);
-        let res = grid.insert(1000, &[1.00001, 0.0, 0.0]);
+        let res = grid.insert(1000, 1.00001, 0.0, 0.0);
         assert_eq!(res, Err("point is outside the grid"));
         Ok(())
     }
@@ -390,7 +381,7 @@ mod tests {
     fn plot_2d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
         for data in get_test_data_2d() {
-            grid.insert(data.id, &data.x)?;
+            grid.insert(data.id, data.x, data.y, 0.0)?;
         }
         let plot = grid.plot()?;
         plot.save("/tmp/gemlab/search_grid_plot_2d_works.svg")?;
@@ -401,7 +392,7 @@ mod tests {
     fn plot_3d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[2, 2, 2])?;
         for data in get_test_data_3d() {
-            grid.insert(data.id, &data.x)?;
+            grid.insert(data.id, data.x, data.y, 0.0)?;
         }
         let plot = grid.plot()?;
         plot.save("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
