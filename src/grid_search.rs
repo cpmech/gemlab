@@ -3,8 +3,10 @@ use std::collections::HashMap;
 
 /// Holds the id and coordinates of an item
 struct Item {
-    id: usize,   // identification number
-    x: [f64; 3], // coordinates
+    id: usize, // identification number
+    x: f64,    // x-coordinate
+    y: f64,    // y-coordinate
+    z: f64,    // z-coordinate
 }
 
 /// Holds items
@@ -23,9 +25,9 @@ pub struct GridSearch {
     // constants
     ndim: usize,      // space dimension
     ndiv: [usize; 3], // number of divisions along each direction
-    xmin: [f64; 3],   // min values
-    xmax: [f64; 3],   // max values
-    xdelta: [f64; 3], // difference between max and min
+    min: [f64; 3],    // min values
+    max: [f64; 3],    // max values
+    delta: [f64; 3],  // difference between max and min
     size: [f64; 3],   // size of each container
     cf: [usize; 3],   // coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
 
@@ -41,18 +43,18 @@ impl GridSearch {
     ///
     /// # Input
     ///
-    /// * `xmin, xmax` -- min and max coordinates (len = 2 or 3 == ndim)
+    /// * `min, max` -- min and max coordinates (len = 2 or 3 == ndim)
     /// * `ndiv` -- number of divisions along each dimension (len = 2 or 3 == ndim)
-    pub fn new(xmin: &[f64], xmax: &[f64], ndiv: &[usize]) -> Result<Self, &'static str> {
+    pub fn new(min: &[f64], max: &[f64], ndiv: &[usize]) -> Result<Self, &'static str> {
         // check input
         let ndim = ndiv.len();
         if ndim < 2 || ndim > 3 {
             return Err("len(ndiv) == ndim must be 2 or 3");
         }
-        if xmin.len() != ndim {
+        if min.len() != ndim {
             return Err("len(xmin) must equal ndim == len(ndiv)");
         }
-        if xmax.len() != ndim {
+        if max.len() != ndim {
             return Err("len(xmax) must equal ndim == len(ndiv)");
         }
 
@@ -60,9 +62,9 @@ impl GridSearch {
         let mut grid = GridSearch {
             ndim,
             ndiv: [0; 3],
-            xmin: [0.0; 3],
-            xmax: [0.0; 3],
-            xdelta: [0.0; 3],
+            min: [0.0; 3],
+            max: [0.0; 3],
+            delta: [0.0; 3],
             size: [0.0; 3],
             ratio: [0; 3],
             cf: [0; 3],
@@ -75,13 +77,13 @@ impl GridSearch {
             if ndiv[i] < 1 {
                 return Err("ndiv must be at least equal to 1");
             }
-            grid.xmin[i] = xmin[i];
-            grid.xmax[i] = xmax[i];
-            grid.xdelta[i] = xmax[i] - xmin[i];
-            if grid.xdelta[i] <= 0.0 {
+            grid.min[i] = min[i];
+            grid.max[i] = max[i];
+            grid.delta[i] = max[i] - min[i];
+            if grid.delta[i] <= 0.0 {
                 return Err("xmax must be greater than xmin");
             }
-            grid.size[i] = grid.xdelta[i] / (ndiv[i] as f64);
+            grid.size[i] = grid.delta[i] / (ndiv[i] as f64);
         }
 
         // coefficient
@@ -103,7 +105,7 @@ impl GridSearch {
         match self.container_index(&[x, y, z]) {
             Some(index) => {
                 // new item data
-                let item = Item { id, x: [x, y, z] };
+                let item = Item { id, x, y, z };
 
                 // update container
                 if self.containers.contains_key(&index) {
@@ -130,8 +132,8 @@ impl GridSearch {
         let mut xmax = vec![0.0; self.ndim];
         let mut ndiv = vec![0; self.ndim];
         for i in 0..self.ndim {
-            xmin[i] = self.xmin[i];
-            xmax[i] = self.xmax[i];
+            xmin[i] = self.min[i];
+            xmax[i] = self.max[i];
             ndiv[i] = self.ndiv[i];
         }
         let mut shapes = Shapes::new();
@@ -153,8 +155,8 @@ impl GridSearch {
             for container in self.containers.values() {
                 for item in &container.items {
                     let txt = format!("{}", item.id);
-                    curve.draw(&[item.x[0]], &[item.x[1]]);
-                    text.draw(item.x[0], item.x[1], &txt);
+                    curve.draw(&[item.x], &[item.y]);
+                    text.draw(item.x, item.y, &txt);
                 }
             }
             plot.add(&curve);
@@ -171,10 +173,10 @@ impl GridSearch {
     fn container_index(&mut self, x: &[f64]) -> Option<usize> {
         let mut index = 0;
         for i in 0..self.ndim {
-            if x[i] < self.xmin[i] || x[i] > self.xmax[i] {
+            if x[i] < self.min[i] || x[i] > self.max[i] {
                 return None;
             }
-            self.ratio[i] = ((x[i] - self.xmin[i]) / self.size[i]) as usize;
+            self.ratio[i] = ((x[i] - self.min[i]) / self.size[i]) as usize;
             if self.ratio[i] == self.ndiv[i] {
                 // the point is exactly on the max edge, thus select inner container
                 self.ratio[i] -= 1; // move to the inside
@@ -292,9 +294,9 @@ mod tests {
         let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.ndiv, [5, 5, 0]);
-        assert_eq!(grid.xmin, [-0.2, -0.2, 0.0]);
-        assert_eq!(grid.xmax, [0.8, 1.8, 0.0]);
-        assert_eq!(grid.xdelta, [1.0, 2.0, 0.0]);
+        assert_eq!(grid.min, [-0.2, -0.2, 0.0]);
+        assert_eq!(grid.max, [0.8, 1.8, 0.0]);
+        assert_eq!(grid.delta, [1.0, 2.0, 0.0]);
         assert_eq!(grid.size, [0.2, 0.4, 0.0]);
         assert_eq!(grid.cf, [1, 5, 25]);
         assert_eq!(grid.ratio, [0, 0, 0]);
@@ -313,9 +315,9 @@ mod tests {
         let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[2, 2, 2])?;
         assert_eq!(grid.ndim, 3);
         assert_eq!(grid.ndiv, [2, 2, 2]);
-        assert_eq!(grid.xmin, [-1.0, -1.0, -1.0]);
-        assert_eq!(grid.xmax, [1.0, 1.0, 1.0]);
-        assert_eq!(grid.xdelta, [2.0, 2.0, 2.0]);
+        assert_eq!(grid.min, [-1.0, -1.0, -1.0]);
+        assert_eq!(grid.max, [1.0, 1.0, 1.0]);
+        assert_eq!(grid.delta, [2.0, 2.0, 2.0]);
         assert_eq!(grid.size, [1.0, 1.0, 1.0]);
         assert_eq!(grid.cf, [1, 2, 4]);
         assert_eq!(grid.ratio, [0, 0, 0]);
