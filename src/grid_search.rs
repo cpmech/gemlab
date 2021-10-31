@@ -313,6 +313,8 @@ mod tests {
             let index = grid.container_index(&data.x).unwrap();
             assert_eq!(index, data.container_index);
         }
+        let index = grid.container_index(&[0.80001, 0.0]);
+        assert_eq!(index, None); // outside
         Ok(())
     }
 
@@ -323,6 +325,8 @@ mod tests {
             let index = grid.container_index(&data.x).unwrap();
             assert_eq!(index, data.container_index);
         }
+        let index = grid.container_index(&[1.00001, 0.0, 0.0]);
+        assert_eq!(index, None); // outside
         Ok(())
     }
 
