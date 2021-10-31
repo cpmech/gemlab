@@ -3,14 +3,12 @@ use plotpy::{Curve, Plot, Shapes, Text};
 use std::collections::HashMap;
 
 /// Holds the id and coordinates of an item
-#[derive(Clone, Debug)]
 struct Item {
     id: usize,   // identification number
     x: [f64; 3], // coordinates
 }
 
 /// Holds items
-#[derive(Clone, Debug)]
 struct Container {
     items: Vec<Item>,
 }
@@ -76,7 +74,7 @@ impl GridSearch {
         for i in 0..ndim {
             grid.ndiv[i] = ndiv[i];
             if ndiv[i] < 1 {
-                return Err("ndiv must be at least 1");
+                return Err("ndiv must be at least equal to 1");
             }
             grid.xmin[i] = xmin[i];
             grid.xmax[i] = xmax[i];
@@ -261,6 +259,8 @@ mod tests {
         assert_eq!(grid.err(), Some("size of xmin must equal ndim == len(ndiv)"));
         let grid = GridSearch::new(&[0.0, 0.0], &[1.0], &[1, 1]);
         assert_eq!(grid.err(), Some("size of xmax must equal ndim == len(ndiv)"));
+        let grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], &[0, 1]);
+        assert_eq!(grid.err(), Some("ndiv must be at least equal to 1"));
         let grid = GridSearch::new(&[0.0, 0.0], &[0.0, 1.0], &[1, 1]);
         assert_eq!(grid.err(), Some("xmax must be greater than xmin"));
     }
