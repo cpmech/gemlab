@@ -34,6 +34,9 @@ pub struct GridSearch {
     // auxiliary variable
     ratio: [usize; 3], // ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
 
+    // array to hold container indices
+    neighborhood: Vec<usize>, // 9 in 2D or 27 in 3D = pow(3,ndim)
+
     // holds non-empty containers. maps container.index to container.data
     containers: HashMap<usize, Container>,
 }
@@ -68,6 +71,7 @@ impl GridSearch {
             size: [0.0; 3],
             ratio: [0; 3],
             cf: [0; 3],
+            neighborhood: vec![0; usize::pow(3, ndim as u32)],
             containers: HashMap::new(),
         };
 
@@ -120,6 +124,16 @@ impl GridSearch {
             None => return Err("point is outside the grid"),
         }
         Ok(())
+    }
+
+    pub fn find(&mut self, x: f64, y: f64, z: f64) -> Result<Option<usize>, &'static str> {
+        match self.container_index(&[x, y, z]) {
+            Some(index) => {
+                // todo
+            }
+            None => return Ok(None),
+        }
+        Ok(None)
     }
 
     /// Returns a drawing of this object
@@ -189,6 +203,40 @@ impl GridSearch {
             index += self.ratio[i] * self.cf[i];
         }
         Some(index)
+    }
+
+    /// Returns all containers around index, including index itself
+    fn container_neighborhood(&mut self, index: usize) {
+        self.neighborhood[0] = index;
+        self.neighborhood[1] = index - 1;
+        self.neighborhood[2] = index + 1;
+        self.neighborhood[3] = index - self.cf[1];
+        self.neighborhood[4] = index + self.cf[1];
+        self.neighborhood[5] = index - 1 - self.cf[1];
+        self.neighborhood[6] = index - 1 + self.cf[1];
+        self.neighborhood[7] = index + 1 - self.cf[1];
+        self.neighborhood[8] = index + 1 + self.cf[1];
+        if self.ndim == 3 {
+            self.neighborhood[9] = self.neighborhood[0] - self.cf[2];
+            self.neighborhood[10] = self.neighborhood[1] - self.cf[2];
+            self.neighborhood[11] = self.neighborhood[2] - self.cf[2];
+            self.neighborhood[12] = self.neighborhood[3] - self.cf[2];
+            self.neighborhood[13] = self.neighborhood[4] - self.cf[2];
+            self.neighborhood[14] = self.neighborhood[5] - self.cf[2];
+            self.neighborhood[15] = self.neighborhood[6] - self.cf[2];
+            self.neighborhood[16] = self.neighborhood[7] - self.cf[2];
+            self.neighborhood[17] = self.neighborhood[8] - self.cf[2];
+
+            self.neighborhood[18] = self.neighborhood[0] + self.cf[2];
+            self.neighborhood[19] = self.neighborhood[1] + self.cf[2];
+            self.neighborhood[20] = self.neighborhood[2] + self.cf[2];
+            self.neighborhood[21] = self.neighborhood[3] + self.cf[2];
+            self.neighborhood[22] = self.neighborhood[4] + self.cf[2];
+            self.neighborhood[23] = self.neighborhood[5] + self.cf[2];
+            self.neighborhood[24] = self.neighborhood[6] + self.cf[2];
+            self.neighborhood[25] = self.neighborhood[7] + self.cf[2];
+            self.neighborhood[26] = self.neighborhood[8] + self.cf[2];
+        }
     }
 }
 
@@ -355,6 +403,28 @@ mod tests {
     }
 
     #[test]
+    fn container_neighborhood_2d_works() -> Result<(), &'static str> {
+        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], &[5, 5])?;
+        grid.container_neighborhood(12);
+        assert_eq!(grid.neighborhood, &[12, 11, 13, 7, 17, 6, 16, 8, 18]);
+        Ok(())
+    }
+
+    #[test]
+    fn container_neighborhood_3d_works() -> Result<(), &'static str> {
+        let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[3, 3, 3])?;
+        grid.container_neighborhood(13);
+        #[rustfmt::skip]
+        assert_eq!(
+            grid.neighborhood,
+            &[13, 12, 14, 10, 16,  9, 15, 11, 17,
+               4,  3,  5,  1,  7,  0,  6,  2,  8,
+              22, 21, 23, 19, 25, 18, 24, 20, 26]
+        );
+        Ok(())
+    }
+
+    #[test]
     fn insert_2d_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
         for data in get_test_data_2d() {
@@ -397,9 +467,9 @@ mod tests {
 
     #[test]
     fn plot_3d_works() -> Result<(), &'static str> {
-        let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[2, 2, 2])?;
+        let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[3, 3, 3])?;
         for data in get_test_data_3d() {
-            grid.insert(data.id, data.x, data.y, 0.0)?;
+            grid.insert(data.id, data.x, data.y, data.z)?;
         }
         let plot = grid.plot()?;
         plot.save("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
