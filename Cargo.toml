@@ -12,6 +12,7 @@ categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
 
 [dependencies]
+plotpy = { path = "../plotpy", version = "0.2" }
 russell_chk = "0.2"
 russell_lab = { path = "../russell/russell_lab", version = "0.2" }
 serde = { version = "1.0", features = ["derive"] }
