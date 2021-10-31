@@ -3,14 +3,14 @@ use plotpy::{Curve, Plot, Shapes, Text};
 use std::collections::HashMap;
 
 /// Holds the id and coordinates of an item
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Item {
     id: usize,   // identification number
     x: [f64; 3], // coordinates
 }
 
 /// Holds items
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Container {
     items: Vec<Item>,
 }
@@ -29,14 +29,14 @@ pub struct GridSearch {
     xmin: [f64; 3],   // min values
     xmax: [f64; 3],   // max values
     xdelta: [f64; 3], // difference between max and min
-    size: [f64; 3],   // size of each cell
+    size: [f64; 3],   // size of each container
     cf: [usize; 3],   // coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
 
     // auxiliary variable
     ratio: [usize; 3], // ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
 
-    // holds non-empty cells. maps cell.id to container
-    cells: HashMap<usize, Container>,
+    // holds non-empty containers. maps container.index to container.data
+    containers: HashMap<usize, Container>,
 }
 
 impl GridSearch {
@@ -69,7 +69,7 @@ impl GridSearch {
             size: [0.0; 3],
             ratio: [0; 3],
             cf: [0; 3],
-            cells: HashMap::new(),
+            containers: HashMap::new(),
         };
 
         // check and compute sizes
@@ -122,13 +122,13 @@ impl GridSearch {
                 }
 
                 // update container
-                if self.cells.contains_key(&index) {
-                    let cell = self.cells.get_mut(&index).unwrap();
-                    cell.items.push(item);
+                if self.containers.contains_key(&index) {
+                    let container = self.containers.get_mut(&index).unwrap();
+                    container.items.push(item);
 
                 // initialize container
                 } else {
-                    self.cells.insert(index, Container { items: vec![item] });
+                    self.containers.insert(index, Container { items: vec![item] });
                 }
             }
             None => return Err("point is outside the grid"),
@@ -166,7 +166,7 @@ impl GridSearch {
                 .set_marker_line_color("black")
                 .set_marker_line_width(0.5);
             text.set_color("#cd0000");
-            for container in self.cells.values() {
+            for container in self.containers.values() {
                 for item in &container.items {
                     let txt = format!("{}", item.id);
                     curve.draw(&[item.x[0]], &[item.x[1]]);
@@ -196,7 +196,7 @@ impl GridSearch {
             }
             self.ratio[i] = ((x.at(i).into() - self.xmin[i]) / self.size[i]) as usize;
             if self.ratio[i] == self.ndiv[i] {
-                // the point is exactly on the max edge, thus select inner cell
+                // the point is exactly on the max edge, thus select inner container
                 self.ratio[i] -= 1; // move to the inside
             }
             index += self.ratio[i] * self.cf[i];
@@ -264,7 +264,7 @@ mod tests {
         assert_eq!(grid.size, [0.2, 0.4, 0.0]);
         assert_eq!(grid.cf, [1, 5, 25]);
         assert_eq!(grid.ratio, [0, 0, 0]);
-        assert_eq!(grid.cells.len(), 0);
+        assert_eq!(grid.containers.len(), 0);
         println!("{:.20}", grid.size[0]);
         assert_eq!(grid.size[0], 0.20000000000000001110); // TODO: check if this is a problem
         let b0 = 0.20000000000000001110_f64.to_bits();
@@ -289,8 +289,11 @@ mod tests {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
         for data in get_test_data() {
             grid.insert(data.id, &data.x)?;
-            // todo
+            let container = grid.containers.get(&data.container_index).unwrap();
+            let item = container.items.iter().find(|item| item.id == data.id).unwrap();
+            assert_eq!(item.id, data.id);
         }
+        assert_eq!(grid.containers.len(), 5);
         Ok(())
     }
 
