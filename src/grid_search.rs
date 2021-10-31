@@ -1,5 +1,5 @@
 use crate::AsArray1D;
-use plotpy::{Plot, Shapes};
+use plotpy::{Curve, Plot, Shapes, Text};
 use std::collections::HashMap;
 
 /// Holds the id and coordinates of an item
@@ -136,8 +136,12 @@ impl GridSearch {
         Ok(())
     }
 
-    /// Returns a Plot draw this object
-    pub fn get_plot(&self) -> Result<Plot, &'static str> {
+    /// Returns a drawing of this object
+    pub fn plot(&self) -> Result<Plot, &'static str> {
+        // create plot
+        let mut plot = Plot::new();
+
+        // draw grid
         let mut xmin = vec![0.0; self.ndim];
         let mut xmax = vec![0.0; self.ndim];
         let mut ndiv = vec![0; self.ndim];
@@ -147,9 +151,31 @@ impl GridSearch {
             ndiv[i] = self.ndiv[i];
         }
         let mut shapes = Shapes::new();
-        shapes.draw_grid(&xmin, &xmax, &ndiv, true)?;
-        let mut plot = Plot::new();
+        shapes
+            .set_alt_text_color("#5d5d5d")
+            .draw_grid(&xmin, &xmax, &ndiv, false, true)?;
         plot.add(&shapes);
+
+        // draw items
+        if self.ndim == 2 {
+            let mut curve = Curve::new();
+            let mut text = Text::new();
+            curve
+                .set_marker_style("o")
+                .set_marker_color("#fab32faa")
+                .set_marker_line_color("black")
+                .set_marker_line_width(0.5);
+            text.set_color("#cd0000");
+            for container in self.cells.values() {
+                for item in &container.items {
+                    let txt = format!("{}", item.id);
+                    curve.draw(&[item.x[0]], &[item.x[1]]);
+                    text.draw(item.x[0], item.x[1], &txt);
+                }
+            }
+            plot.add(&curve);
+            plot.add(&text);
+        }
         Ok(plot)
     }
 
@@ -198,6 +224,11 @@ mod tests {
         assert_eq!(grid.ratio, [0, 0, 0]);
         assert_eq!(grid.cells.len(), 0);
         println!("{:.20}", grid.size[0]);
+        assert_eq!(grid.size[0], 0.20000000000000001110); // TODO: check if this is a problem
+        let b0 = 0.20000000000000001110_f64.to_bits();
+        let b1 = 0.2_f64.to_bits();
+        println!("{} =? {}", b0, b1);
+        assert_eq!(b0, b1);
         Ok(())
     }
 
@@ -217,10 +248,11 @@ mod tests {
     }
 
     #[test]
-    fn get_plot_works() -> Result<(), &'static str> {
-        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
-        let plot = grid.get_plot()?;
-        plot.save("/tmp/gemlab/search_grid_get_plot_works.svg")?;
+    fn plot_works() -> Result<(), &'static str> {
+        let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
+        grid.insert(33, &[0.4, 1.0])?;
+        let plot = grid.plot()?;
+        plot.save("/tmp/gemlab/search_grid_plot_works.svg")?;
         Ok(())
     }
 }
