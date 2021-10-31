@@ -1,4 +1,5 @@
 use crate::AsArray1D;
+use plotpy::{Plot, Shapes};
 use std::collections::HashMap;
 
 /// Holds the id and coordinates of an item
@@ -135,8 +136,22 @@ impl GridSearch {
         Ok(())
     }
 
-    /// Draws grid
-    pub fn draw(&self) {}
+    /// Returns a Plot draw this object
+    pub fn get_plot(&self) -> Result<Plot, &'static str> {
+        let mut xmin = vec![0.0; self.ndim];
+        let mut xmax = vec![0.0; self.ndim];
+        let mut ndiv = vec![0; self.ndim];
+        for i in 0..self.ndim {
+            xmin[i] = self.xmin[i];
+            xmax[i] = self.xmax[i];
+            ndiv[i] = self.ndiv[i];
+        }
+        let mut shapes = Shapes::new();
+        shapes.draw_grid(&xmin, &xmax, &ndiv, true)?;
+        let mut plot = Plot::new();
+        plot.add(&shapes);
+        Ok(plot)
+    }
 
     /// Calculates the container index where the point x should be located
     ///
@@ -198,6 +213,14 @@ mod tests {
     fn insert_works() -> Result<(), &'static str> {
         let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
         grid.insert(33, &[0.4, 1.0])?;
+        Ok(())
+    }
+
+    #[test]
+    fn get_plot_works() -> Result<(), &'static str> {
+        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], &[5, 5])?;
+        let plot = grid.get_plot()?;
+        plot.save("/tmp/gemlab/search_grid_get_plot_works.svg")?;
         Ok(())
     }
 }
