@@ -336,13 +336,20 @@ mod tests {
     #[test]
     fn new_fails_on_wrong_input() {
         let grid = GridSearch::new(&[1], &[0.0, 0.0], &[1.0, 1.0], &[0.1, 0.1]);
-        assert_eq!(grid.err(), Some("len(ndiv) == ndim must be 2 or 3"));
+        assert_eq!(grid.err(), Some("ndiv.len() must be 2 or 3 = ndim"));
+
         let grid = GridSearch::new(&[1, 1], &[0.0], &[1.0, 1.0], &[0.1, 0.1]);
-        assert_eq!(grid.err(), Some("len(xmin) must equal ndim == len(ndiv)"));
+        assert_eq!(grid.err(), Some("xmin.len() must equal ndiv.len()"));
+
         let grid = GridSearch::new(&[1, 1], &[0.0, 0.0], &[1.0], &[0.1, 0.1]);
-        assert_eq!(grid.err(), Some("len(xmax) must equal ndim == len(ndiv)"));
+        assert_eq!(grid.err(), Some("xmax.len() must equal ndiv.len()"));
+
         let grid = GridSearch::new(&[0, 1], &[0.0, 0.0], &[1.0, 1.0], &[0.1, 0.1]);
         assert_eq!(grid.err(), Some("ndiv must be at least equal to 1"));
+
+        let grid = GridSearch::new(&[0, 1], &[0.0, 0.0], &[1.0, 1.0], &[0.1]);
+        assert_eq!(grid.err(), Some("tol.len() must equal ndiv.len()"));
+
         let grid = GridSearch::new(&[1, 1], &[0.0, 0.0], &[0.0, 1.0], &[0.1, 0.1]);
         assert_eq!(grid.err(), Some("xmax must be greater than xmin"));
     }
@@ -358,13 +365,10 @@ mod tests {
         assert_eq!(grid.size, [0.2, 0.4, 0.0]);
         assert_eq!(grid.cf, [1, 5, 25]);
         assert_eq!(grid.ratio, [0, 0, 0]);
+        assert_eq!(grid.tol, [1e-6, 1e-6, 0.0]);
+        assert_eq!(grid.halo.len(), 8);
+        assert_eq!(grid.ncorner, 4);
         assert_eq!(grid.containers.len(), 0);
-        println!("{:.20}", grid.size[0]);
-        assert_eq!(grid.size[0], 0.20000000000000001110); // TODO: check if this is a problem
-        let b0 = 0.20000000000000001110_f64.to_bits();
-        let b1 = 0.2_f64.to_bits();
-        println!("{} =? {}", b0, b1);
-        assert_eq!(b0, b1);
         Ok(())
     }
 
@@ -379,6 +383,9 @@ mod tests {
         assert_eq!(grid.size, [1.0, 1.0, 1.0]);
         assert_eq!(grid.cf, [1, 2, 4]);
         assert_eq!(grid.ratio, [0, 0, 0]);
+        assert_eq!(grid.tol, [1e-6, 1e-6, 1e-6]);
+        assert_eq!(grid.halo.len(), 8);
+        assert_eq!(grid.ncorner, 8);
         assert_eq!(grid.containers.len(), 0);
         Ok(())
     }
