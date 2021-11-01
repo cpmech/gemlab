@@ -325,13 +325,12 @@ impl fmt::Display for GridSearch {
         let mut indices: Vec<_> = self.containers.keys().collect();
         indices.sort();
         for index in indices {
-            if let Some(container) = self.containers.get(index) {
-                let mut ids: Vec<_> = container.items.iter().map(|item| item.id).collect();
-                ids.sort();
-                write!(f, "{}: {:?}\n", index, ids).unwrap();
-                for id in ids {
-                    unique_items.insert(id, true);
-                }
+            let container = self.containers.get(index).unwrap();
+            let mut ids: Vec<_> = container.items.iter().map(|item| item.id).collect();
+            ids.sort();
+            write!(f, "{}: {:?}\n", index, ids).unwrap();
+            for id in ids {
+                unique_items.insert(id, true);
             }
         }
         // summary
