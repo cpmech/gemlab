@@ -34,6 +34,9 @@ pub struct GridSearch {
     // auxiliary variable
     ratio: [usize; 3], // ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
 
+    // square halo: bounding box corners around point, including the point
+    halo: [[f64; 3]; 9], // 5=4+1 in 2D or 9=8+1 in 3D (each contains 3 coords)
+
     // holds non-empty containers. maps container.index to container.data
     containers: HashMap<usize, Container>,
 }
@@ -66,8 +69,9 @@ impl GridSearch {
             max: [0.0; 3],
             delta: [0.0; 3],
             size: [0.0; 3],
-            ratio: [0; 3],
             cf: [0; 3],
+            ratio: [0; 3],
+            halo: [[0.0; 3]; 9],
             containers: HashMap::new(),
         };
 
@@ -122,14 +126,35 @@ impl GridSearch {
         Ok(())
     }
 
-    pub fn find(&mut self, x: f64, y: f64, z: f64) -> Result<Option<usize>, &'static str> {
-        match self.container_index(&[x, y, z]) {
-            Some(index) => {
-                // todo
+    pub fn find(&mut self, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64) -> Result<Vec<usize>, &'static str> {
+        let mut near_points = Vec::new();
+        let coords = if self.ndim == 2 {
+            vec![
+                vec![x, y, z],
+                vec![x - dx, y - dy, z],
+                vec![x + dx, y - dy, z],
+                vec![x - dx, y + dy, z],
+                vec![x + dx, y + dy, z],
+            ]
+        } else {
+            vec![
+                vec![x, y, z],
+                vec![x - dx, y - dy, z - dz],
+                vec![x + dx, y - dy, z - dz],
+                vec![x - dx, y + dy, z - dz],
+                vec![x + dx, y + dy, z - dz],
+                vec![x - dx, y - dy, z + dz],
+                vec![x + dx, y - dy, z + dz],
+                vec![x - dx, y + dy, z + dz],
+                vec![x + dx, y + dy, z + dz],
+            ]
+        };
+        if let Some(index) = self.container_index(&[x, y, z]) {
+            if let Some(container) = self.containers.get(&index) {
+                //
             }
-            None => return Ok(None),
         }
-        Ok(None)
+        Ok(near_points)
     }
 
     /// Returns a drawing of this object
@@ -199,6 +224,23 @@ impl GridSearch {
             index += self.ratio[i] * self.cf[i];
         }
         Some(index)
+    }
+
+    /// Sets square halo around point, including the point itself
+    fn set_halo(&mut self, x: &[f64], dx: &[f64]) {
+        for i in 0..self.ndim {
+            self.halo[0][i] = x[i];
+            self.halo[1][i] = x[i] - dx[i];
+            self.halo[2][i] = x[i] + dx[i];
+        }
+        if self.ndim == 2 {
+            self.halo[3][0] = x[0] - dx[0];
+            self.halo[3][1] = x[1] + dx[1];
+            self.halo[4][0] = x[0] + dx[0];
+            self.halo[4][1] = x[1] - dx[1];
+        }
+        self.halo[0][0] = x[0] - dx[0];
+        self.halo[0][1] = x[1] - dx[1];
     }
 }
 
