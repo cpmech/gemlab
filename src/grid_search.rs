@@ -454,37 +454,34 @@ mod tests {
     }
 
     #[test]
-    fn new_2d_works() {
-        let grid = get_test_grid_2d();
-        assert_eq!(grid.ndim, 2);
-        assert_eq!(grid.ndiv, [5, 5, 0]);
-        assert_eq!(grid.min, [-0.2, -0.2, 0.0]);
-        assert_eq!(grid.max, [0.8, 1.8, 0.0]);
-        assert_eq!(grid.delta, [1.0, 2.0, 0.0]);
-        assert_eq!(grid.size, [0.2, 0.4, 0.0]);
-        assert_eq!(grid.cf, [1, 5, 25]);
-        assert_eq!(grid.ratio, [0, 0, 0]);
-        assert_eq!(grid.tol, [1e-2, 1e-2, 0.0]);
-        assert_eq!(grid.halo.len(), 8);
-        assert_eq!(grid.ncorner, 4);
-        assert_eq!(grid.containers.len(), 0);
-    }
+    fn new_works() {
+        let g2d = get_test_grid_2d();
+        assert_eq!(g2d.ndim, 2);
+        assert_eq!(g2d.ndiv, [5, 5, 0]);
+        assert_eq!(g2d.min, [-0.2, -0.2, 0.0]);
+        assert_eq!(g2d.max, [0.8, 1.8, 0.0]);
+        assert_eq!(g2d.delta, [1.0, 2.0, 0.0]);
+        assert_eq!(g2d.size, [0.2, 0.4, 0.0]);
+        assert_eq!(g2d.cf, [1, 5, 25]);
+        assert_eq!(g2d.ratio, [0, 0, 0]);
+        assert_eq!(g2d.tol, [1e-2, 1e-2, 0.0]);
+        assert_eq!(g2d.halo.len(), 8);
+        assert_eq!(g2d.ncorner, 4);
+        assert_eq!(g2d.containers.len(), 0);
 
-    #[test]
-    fn new_3d_works() {
-        let grid = get_test_grid_3d();
-        assert_eq!(grid.ndim, 3);
-        assert_eq!(grid.ndiv, [3, 3, 3]);
-        assert_eq!(grid.min, [-1.0, -1.0, -1.0]);
-        assert_eq!(grid.max, [1.0, 1.0, 1.0]);
-        assert_eq!(grid.delta, [2.0, 2.0, 2.0]);
-        assert_eq!(grid.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
-        assert_eq!(grid.cf, [1, 3, 9]);
-        assert_eq!(grid.ratio, [0, 0, 0]);
-        assert_eq!(grid.tol, [1e-2, 1e-2, 1e-2]);
-        assert_eq!(grid.halo.len(), 8);
-        assert_eq!(grid.ncorner, 8);
-        assert_eq!(grid.containers.len(), 0);
+        let g3d = get_test_grid_3d();
+        assert_eq!(g3d.ndim, 3);
+        assert_eq!(g3d.ndiv, [3, 3, 3]);
+        assert_eq!(g3d.min, [-1.0, -1.0, -1.0]);
+        assert_eq!(g3d.max, [1.0, 1.0, 1.0]);
+        assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
+        assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
+        assert_eq!(g3d.cf, [1, 3, 9]);
+        assert_eq!(g3d.ratio, [0, 0, 0]);
+        assert_eq!(g3d.tol, [1e-2, 1e-2, 1e-2]);
+        assert_eq!(g3d.halo.len(), 8);
+        assert_eq!(g3d.ncorner, 8);
+        assert_eq!(g3d.containers.len(), 0);
     }
 
     #[test]
@@ -507,25 +504,42 @@ mod tests {
     }
 
     #[test]
-    fn container_index_2d_works() -> Result<(), &'static str> {
-        let mut grid = get_test_grid_2d();
-        for data in get_test_data_2d() {
-            let index = grid.container_index(data.x).unwrap();
-            assert_eq!(index, data.container);
-        }
-        let index = grid.container_index(&[0.80001, 0.0]);
-        assert_eq!(index, None); // outside
-        Ok(())
+    fn set_halo_works() {
+        let mut g2d = get_test_grid_2d();
+        g2d.set_halo(&[0.5, 0.5]);
+        assert_eq!(g2d.halo[0], [0.49, 0.49, 0.0]);
+        assert_eq!(g2d.halo[1], [0.51, 0.49, 0.0]);
+        assert_eq!(g2d.halo[2], [0.51, 0.51, 0.0]);
+        assert_eq!(g2d.halo[3], [0.49, 0.51, 0.0]);
+
+        let mut g3d = get_test_grid_3d();
+        g3d.set_halo(&[0.5, 0.5, 0.5]);
+        assert_eq!(g3d.halo[0], [0.49, 0.49, 0.49]);
+        assert_eq!(g3d.halo[1], [0.51, 0.49, 0.49]);
+        assert_eq!(g3d.halo[2], [0.51, 0.51, 0.49]);
+        assert_eq!(g3d.halo[3], [0.49, 0.51, 0.49]);
+        assert_eq!(g3d.halo[4], [0.49, 0.49, 0.51]);
+        assert_eq!(g3d.halo[5], [0.51, 0.49, 0.51]);
+        assert_eq!(g3d.halo[6], [0.51, 0.51, 0.51]);
+        assert_eq!(g3d.halo[7], [0.49, 0.51, 0.51]);
     }
 
     #[test]
-    fn container_index_3d_works() -> Result<(), &'static str> {
-        let mut grid = get_test_grid_3d();
-        for data in get_test_data_3d() {
-            let index = grid.container_index(data.x).unwrap();
+    fn container_index_works() -> Result<(), &'static str> {
+        let mut g2d = get_test_grid_2d();
+        for data in get_test_data_2d() {
+            let index = g2d.container_index(data.x).unwrap();
             assert_eq!(index, data.container);
         }
-        let index = grid.container_index(&[1.00001, 0.0, 0.0]);
+        let index = g2d.container_index(&[0.80001, 0.0]);
+        assert_eq!(index, None); // outside
+
+        let mut g3d = get_test_grid_3d();
+        for data in get_test_data_3d() {
+            let index = g3d.container_index(data.x).unwrap();
+            assert_eq!(index, data.container);
+        }
+        let index = g3d.container_index(&[1.00001, 0.0, 0.0]);
         assert_eq!(index, None); // outside
         Ok(())
     }
@@ -613,23 +627,19 @@ mod tests {
     }
 
     #[test]
-    fn plot_2d_works() -> Result<(), &'static str> {
-        let mut grid = get_test_grid_2d();
+    fn plot_works() -> Result<(), &'static str> {
+        let mut g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
-            grid.insert(data.id, data.x)?;
+            g2d.insert(data.id, data.x)?;
         }
-        let plot = grid.plot()?;
+        let plot = g2d.plot()?;
         plot.save("/tmp/gemlab/search_grid_plot_2d_works.svg")?;
-        Ok(())
-    }
 
-    #[test]
-    fn plot_3d_works() -> Result<(), &'static str> {
-        let mut grid = get_test_grid_3d();
+        let mut g3d = get_test_grid_3d();
         for data in get_test_data_3d() {
-            grid.insert(data.id, data.x)?;
+            g3d.insert(data.id, data.x)?;
         }
-        let plot = grid.plot()?;
+        let plot = g3d.plot()?;
         plot.save("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
         Ok(())
     }
