@@ -402,6 +402,12 @@ mod tests {
                 container: 24,
                 containers: &[24],
             },
+            TestData {
+                id: 600,
+                x: &[0.6, 0.0],
+                container: 4,
+                containers: &[3, 4], // will be on 3 twice
+            },
         ]
     }
 
@@ -425,6 +431,12 @@ mod tests {
                 x: &[-1.0 + L * 2.0 / 3.0, -1.0 + L * 2.0 / 3.0, -1.0 + L * 2.0 / 3.0],
                 container: 26,
                 containers: &[13, 14, 16, 17, 22, 23, 25, 26],
+            },
+            TestData {
+                id: 400,
+                x: &[-1.0 + L * 2.0 / 3.0, -0.7, -0.7],
+                container: 2,
+                containers: &[1, 2], // will be on 1 four times
             },
         ]
     }
@@ -570,6 +582,8 @@ mod tests {
             format!("{}", grid),
             "0: [100]\n\
              1: [100]\n\
+             3: [600, 600]\n\
+             4: [600]\n\
              5: [100]\n\
              6: [100, 200]\n\
              7: [200]\n\
@@ -581,13 +595,13 @@ mod tests {
              19: [400]\n\
              23: [400]\n\
              24: [400, 500]\n\
-             ids = [100, 200, 300, 400, 500]\n\
-             nitem = 5\n\
-             ncontainer = 13\n"
+             ids = [100, 200, 300, 400, 500, 600]\n\
+             nitem = 6\n\
+             ncontainer = 15\n"
         );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
-        assert_eq!(indices, &[0, 1, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23, 24]);
+        assert_eq!(indices, &[0, 1, 3, 4, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23, 24]);
         Ok(())
     }
 
@@ -604,6 +618,8 @@ mod tests {
         assert_eq!(
             format!("{}", grid),
             "0: [100]\n\
+             1: [400, 400, 400, 400]\n\
+             2: [400]\n\
              13: [200, 300]\n\
              14: [300]\n\
              16: [300]\n\
@@ -612,13 +628,13 @@ mod tests {
              23: [300]\n\
              25: [300]\n\
              26: [300]\n\
-             ids = [100, 200, 300]\n\
-             nitem = 3\n\
-             ncontainer = 9\n"
+             ids = [100, 200, 300, 400]\n\
+             nitem = 4\n\
+             ncontainer = 11\n"
         );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
-        assert_eq!(indices, &[0, 13, 14, 16, 17, 22, 23, 25, 26]);
+        assert_eq!(indices, &[0, 1, 2, 13, 14, 16, 17, 22, 23, 25, 26]);
         Ok(())
     }
 
@@ -665,7 +681,8 @@ mod tests {
         for data in get_test_data_2d() {
             g2d.insert(data.id, data.x)?;
         }
-        let plot = g2d.plot()?;
+        let mut plot = g2d.plot()?;
+        plot.set_yrange(-0.4, 2.0).set_num_ticks_y(12).grid_and_labels("x", "y");
         plot.save("/tmp/gemlab/search_grid_plot_2d_works.svg")?;
 
         let mut g3d = get_test_grid_3d();
