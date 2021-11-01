@@ -543,7 +543,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_fails_on_wrong_input() -> Result<(), &'static str> {
+    fn insert_fails_on_wrong_input() {
         let mut g2d = get_test_grid_2d();
         let res = g2d.insert(0, &[0.0, 0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
@@ -555,7 +555,6 @@ mod tests {
         assert_eq!(res, Err("x.len() must equal ndim"));
         let res = g3d.insert(1000, &[1.00001, 0.0, 0.0]);
         assert_eq!(res, Err("point is outside the grid"));
-        Ok(())
     }
 
     #[test]
@@ -621,6 +620,43 @@ mod tests {
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
         assert_eq!(indices, &[0, 13, 14, 16, 17, 22, 23, 25, 26]);
+        Ok(())
+    }
+
+    #[test]
+    fn find_fails_on_wrong_input() {
+        let mut g2d = get_test_grid_2d();
+        let res = g2d.find(&[0.0, 0.0, 0.0]);
+        assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g2d.find(&[0.80001, 0.0]);
+        assert_eq!(res, Err("point is outside the grid"));
+
+        let mut g3d = get_test_grid_3d();
+        let res = g3d.find(&[0.0, 0.0]);
+        assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g3d.find(&[1.00001, 0.0, 0.0]);
+        assert_eq!(res, Err("point is outside the grid"));
+    }
+
+    #[test]
+    fn find_works() -> Result<(), &'static str> {
+        let mut g2d = get_test_grid_2d();
+        for data in get_test_data_2d() {
+            g2d.insert(data.id, data.x)?;
+            let id = g2d.find(data.x)?;
+            assert_eq!(id, Some(data.id));
+        }
+        let id = g2d.find(&[0.5, 0.5])?;
+        assert_eq!(id, None);
+
+        let mut g3d = get_test_grid_3d();
+        for data in get_test_data_3d() {
+            g3d.insert(data.id, data.x)?;
+            let id = g3d.find(data.x)?;
+            assert_eq!(id, Some(data.id));
+        }
+        let id = g3d.find(&[0.5, 0.5, 0.5])?;
+        assert_eq!(id, None);
         Ok(())
     }
 
