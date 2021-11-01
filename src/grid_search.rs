@@ -1,5 +1,6 @@
 use plotpy::{Curve, Plot, Shapes, Text};
 use std::collections::HashMap;
+use std::fmt;
 
 /// Holds the id and coordinates of an item
 #[derive(Debug)]
@@ -318,6 +319,33 @@ impl GridSearch {
     }
 }
 
+impl fmt::Display for GridSearch {
+    /// Shows info about the items in the grid containers
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // items
+        let mut unique_items: HashMap<usize, bool> = HashMap::new();
+        let mut indices: Vec<_> = self.containers.keys().collect();
+        indices.sort();
+        for index in indices {
+            if let Some(container) = self.containers.get(index) {
+                let mut ids: Vec<_> = container.items.iter().map(|item| item.id).collect();
+                ids.sort();
+                write!(f, "{}: {:?}\n", index, ids).unwrap();
+                for id in ids {
+                    unique_items.insert(id, true);
+                }
+            }
+        }
+        // summary
+        let mut ids: Vec<_> = unique_items.keys().collect();
+        ids.sort();
+        write!(f, "ids = {:?}\n", ids).unwrap();
+        write!(f, "nitem = {}\n", unique_items.len()).unwrap();
+        write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();
+        Ok(())
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -426,7 +454,7 @@ mod tests {
     }
 
     #[test]
-    fn new_2d_works() -> Result<(), &'static str> {
+    fn new_2d_works() {
         let grid = get_test_grid_2d();
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.ndiv, [5, 5, 0]);
@@ -440,11 +468,10 @@ mod tests {
         assert_eq!(grid.halo.len(), 8);
         assert_eq!(grid.ncorner, 4);
         assert_eq!(grid.containers.len(), 0);
-        Ok(())
     }
 
     #[test]
-    fn new_3d_works() -> Result<(), &'static str> {
+    fn new_3d_works() {
         let grid = get_test_grid_3d();
         assert_eq!(grid.ndim, 3);
         assert_eq!(grid.ndiv, [3, 3, 3]);
@@ -458,7 +485,25 @@ mod tests {
         assert_eq!(grid.halo.len(), 8);
         assert_eq!(grid.ncorner, 8);
         assert_eq!(grid.containers.len(), 0);
-        Ok(())
+    }
+
+    #[test]
+    fn display_trait_works() {
+        let g2d = get_test_grid_2d();
+        assert_eq!(
+            format!("{}", g2d),
+            "ids = []\n\
+             nitem = 0\n\
+             ncontainer = 0\n"
+        );
+
+        let g3d = get_test_grid_3d();
+        assert_eq!(
+            format!("{}", g3d),
+            "ids = []\n\
+             nitem = 0\n\
+             ncontainer = 0\n"
+        );
     }
 
     #[test]
@@ -511,9 +556,25 @@ mod tests {
                 container.items.iter().find(|item| item.id == data.id).unwrap();
             }
         }
-        for (index, container) in &grid.containers {
-            println!("{:3}: {:?}", index, container);
-        }
+        assert_eq!(
+            format!("{}", grid),
+            "0: [100]\n\
+             1: [100]\n\
+             5: [100]\n\
+             6: [100, 200]\n\
+             7: [200]\n\
+             11: [200]\n\
+             12: [200, 300]\n\
+             13: [300]\n\
+             17: [300]\n\
+             18: [300, 400]\n\
+             19: [400]\n\
+             23: [400]\n\
+             24: [400, 500]\n\
+             ids = [100, 200, 300, 400, 500]\n\
+             nitem = 5\n\
+             ncontainer = 13\n"
+        );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
         assert_eq!(indices, &[0, 1, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23, 24]);
@@ -530,9 +591,21 @@ mod tests {
                 container.items.iter().find(|item| item.id == data.id).unwrap();
             }
         }
-        for (index, container) in &grid.containers {
-            println!("{:3}: {:?}", index, container);
-        }
+        assert_eq!(
+            format!("{}", grid),
+            "0: [100]\n\
+             13: [200, 300]\n\
+             14: [300]\n\
+             16: [300]\n\
+             17: [300]\n\
+             22: [300]\n\
+             23: [300]\n\
+             25: [300]\n\
+             26: [300]\n\
+             ids = [100, 200, 300]\n\
+             nitem = 3\n\
+             ncontainer = 9\n"
+        );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
         assert_eq!(indices, &[0, 13, 14, 16, 17, 22, 23, 25, 26]);
