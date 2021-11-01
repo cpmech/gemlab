@@ -3,14 +3,12 @@ use std::collections::HashMap;
 use std::fmt;
 
 /// Holds the id and coordinates of an item
-#[derive(Debug)]
 struct Item {
     id: usize,   // identification number
     x: Vec<f64>, // (ndim) coordinates
 }
 
 /// Holds items
-#[derive(Debug)]
 struct Container {
     items: Vec<Item>,
 }
