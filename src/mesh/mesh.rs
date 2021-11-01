@@ -51,9 +51,9 @@ impl MeshMaps {
     }
 
     pub fn to_mesh(&self) {
-        let npoint = self.points.len();
-        let nedge = self.edges.len();
-        let nface = self.faces.len();
+        // let npoint = self.points.len();
+        // let nedge = self.edges.len();
+        // let nface = self.faces.len();
         // let mut points:Vec<Point>;
         for point in self.points.values() {
             println!("{:?}", point);
@@ -83,7 +83,7 @@ impl MeshMaps {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     #[test]
     fn serialize_works() {
