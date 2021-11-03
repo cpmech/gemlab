@@ -764,6 +764,7 @@ mod tests {
             [0.0, 2.0],
         ]);
         let mesh = block.subdivide(KindQuaOrHex::Qua4)?;
+        println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
             "ndim = 2\n\
@@ -784,10 +785,66 @@ mod tests {
              i:8 g:1 x:[2.0, 2.0] c:[3]\n\
              \n\
              cells\n\
-             i:0 g:1 p:[0, 1, 2, 3] e:[0, 0, 0, 0] f:[]\n\
-             i:1 g:1 p:[1, 4, 5, 2] e:[0, 0, 0, 0] f:[]\n\
-             i:2 g:1 p:[3, 2, 6, 7] e:[0, 0, 0, 0] f:[]\n\
-             i:3 g:1 p:[2, 5, 8, 6] e:[0, 0, 0, 0] f:[]\n\
+             i:0 g:1 p:[0, 1, 2, 3] e:[] f:[]\n\
+             i:1 g:1 p:[1, 4, 5, 2] e:[] f:[]\n\
+             i:2 g:1 p:[3, 2, 6, 7] e:[] f:[]\n\
+             i:3 g:1 p:[2, 5, 8, 6] e:[] f:[]\n\
+             \n\
+             boundary_edges\n\
+             \n\
+             boundary_faces\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn subdivide_2d_o2_works() -> Result<(), &'static str> {
+        let mut block = Block::new(2);
+        #[rustfmt::skip]
+        block.set_coords(&[
+            [0.0, 0.0],
+            [2.0, 0.0],
+            [2.0, 2.0],
+            [0.0, 2.0],
+        ]);
+        let mesh = block.subdivide(KindQuaOrHex::Qua8)?;
+        println!("{}", mesh);
+        assert_eq!(
+            format!("{}", mesh),
+            "ndim = 2\n\
+             npoint = 21\n\
+             ncell = 4\n\
+             n_boundary_edge = 0\n\
+             n_boundary_face = 0\n\
+             \n\
+             points\n\
+             i:0 g:1 x:[0.0, 0.0] c:[0]\n\
+             i:1 g:1 x:[1.0, 0.0] c:[0, 1]\n\
+             i:2 g:1 x:[1.0, 1.0] c:[0, 1, 2, 3]\n\
+             i:3 g:1 x:[0.0, 1.0] c:[0, 2]\n\
+             i:4 g:1 x:[0.5, 0.0] c:[0]\n\
+             i:5 g:1 x:[1.0, 0.5] c:[0, 1]\n\
+             i:6 g:1 x:[0.5, 1.0] c:[0, 2]\n\
+             i:7 g:1 x:[0.0, 0.5] c:[0]\n\
+             i:8 g:1 x:[2.0, 0.0] c:[1]\n\
+             i:9 g:1 x:[2.0, 1.0] c:[1, 3]\n\
+             i:10 g:1 x:[1.5, 0.0] c:[1]\n\
+             i:11 g:1 x:[2.0, 0.5] c:[1]\n\
+             i:12 g:1 x:[1.5, 1.0] c:[1, 3]\n\
+             i:13 g:1 x:[1.0, 2.0] c:[2, 3]\n\
+             i:14 g:1 x:[0.0, 2.0] c:[2]\n\
+             i:15 g:1 x:[1.0, 1.5] c:[2, 3]\n\
+             i:16 g:1 x:[0.5, 2.0] c:[2]\n\
+             i:17 g:1 x:[0.0, 1.5] c:[2]\n\
+             i:18 g:1 x:[2.0, 2.0] c:[3]\n\
+             i:19 g:1 x:[2.0, 1.5] c:[3]\n\
+             i:20 g:1 x:[1.5, 2.0] c:[3]\n\
+             \n\
+             cells\n\
+             i:0 g:1 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
+             i:1 g:1 p:[1, 8, 9, 2, 10, 11, 12, 5] e:[] f:[]\n\
+             i:2 g:1 p:[3, 2, 13, 14, 6, 15, 16, 17] e:[] f:[]\n\
+             i:3 g:1 p:[2, 9, 18, 13, 12, 19, 20, 15] e:[] f:[]\n\
              \n\
              boundary_edges\n\
              \n\
