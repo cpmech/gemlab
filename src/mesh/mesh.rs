@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt::{self, Write};
+use std::fmt;
 
 #[derive(Hash, Eq, PartialEq, Debug, Deserialize, Serialize)]
 pub struct KeyEdge {
@@ -80,64 +80,65 @@ impl Mesh {
         self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
         Ok(serialized)
     }
-
-    pub fn to_string(&self) -> String {
-        let mut buffer = "### POINTS ###############################################################\n".to_string();
-        buffer.push_str("# i=index=ID, g=group, x=coordinates, c=shared_by_cell_ids\n\n");
-        for point in &self.points {
-            write!(
-                &mut buffer,
-                "i:{} g:{} x:{:?} c:{:?}\n",
-                point.id, point.group, point.coords, point.shared_by_cell_ids
-            )
-            .unwrap();
-        }
-        buffer.push_str("\n### CELLS ################################################################\n");
-        buffer.push_str("# i=index=ID, g=group, p=points, e=boundary_edge_ids, f=boundary_face_ids\n\n");
-        for cell in &self.cells {
-            write!(
-                &mut buffer,
-                "i:{} g:{} p:{:?} e:{:?} f:{:?}\n",
-                cell.id, cell.group, cell.point_ids, cell.boundary_edge_ids, cell.boundary_face_ids
-            )
-            .unwrap();
-        }
-        buffer.push_str("\n### BOUNDARY EDGES #######################################################\n");
-        buffer.push_str("# i=index=ID, g=group, k=key(point,point), c=shared_by_cell_ids\n\n");
-        let mut keys_and_edges: Vec<_> = self.boundary_edges.keys().zip(self.boundary_edges.values()).collect();
-        keys_and_edges.sort_by(|left, right| left.1.id.cmp(&right.1.id));
-        for (key, edge) in keys_and_edges {
-            write!(
-                &mut buffer,
-                "i:{} g:{}, k:({},{}), c:{:?}\n",
-                edge.id, edge.group, key.a, key.b, edge.shared_by_cell_ids
-            )
-            .unwrap();
-        }
-        buffer.push_str("\n### BOUNDARY FACES #######################################################\n");
-        buffer.push_str("# i=index=ID, g=group, k=key(point,point,point), c=shared_by_cell_ids\n\n");
-        let mut keys_and_faces: Vec<_> = self.boundary_faces.keys().zip(self.boundary_faces.values()).collect();
-        keys_and_faces.sort_by(|left, right| left.1.id.cmp(&right.1.id));
-        for (key, face) in keys_and_faces {
-            write!(
-                &mut buffer,
-                "i:{} g:{}, k:({},{},{}), c:{:?}\n",
-                face.id, face.group, key.a, key.b, key.c, face.shared_by_cell_ids
-            )
-            .unwrap();
-        }
-        buffer
-    }
 }
 
 impl fmt::Display for Mesh {
-    /// Shows info about the Mesh
+    /// Prints mesh data (may be large)
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // summary
         write!(f, "ndim = {}\n", self.ndim).unwrap();
         write!(f, "npoint = {}\n", self.points.len()).unwrap();
         write!(f, "ncell = {}\n", self.cells.len()).unwrap();
         write!(f, "n_boundary_edge = {}\n", self.boundary_edges.len()).unwrap();
         write!(f, "n_boundary_face = {}\n", self.boundary_faces.len()).unwrap();
+
+        // points: i=index, g=group, x=coordinates, c=shared_by_cell_ids
+        write!(f, "\npoints\n").unwrap();
+        for point in &self.points {
+            write!(
+                f,
+                "i:{} g:{} x:{:?} c:{:?}\n",
+                point.id, point.group, point.coords, point.shared_by_cell_ids
+            )
+            .unwrap();
+        }
+
+        // cells: i=index, g=group, p=points, e=boundary_edge_ids, f=boundary_face_ids
+        write!(f, "\ncells\n").unwrap();
+        for cell in &self.cells {
+            write!(
+                f,
+                "i:{} g:{} p:{:?} e:{:?} f:{:?}\n",
+                cell.id, cell.group, cell.point_ids, cell.boundary_edge_ids, cell.boundary_face_ids
+            )
+            .unwrap();
+        }
+
+        // boundary edges: i=index, g=group, k=key(point,point), c=shared_by_cell_ids
+        write!(f, "\nboundary_edges\n").unwrap();
+        let mut keys_and_edges: Vec<_> = self.boundary_edges.keys().zip(self.boundary_edges.values()).collect();
+        keys_and_edges.sort_by(|left, right| left.1.id.cmp(&right.1.id));
+        for (key, edge) in keys_and_edges {
+            write!(
+                f,
+                "i:{} g:{}, k:({},{}), c:{:?}\n",
+                edge.id, edge.group, key.a, key.b, edge.shared_by_cell_ids
+            )
+            .unwrap();
+        }
+
+        // boundary_faces: i=index, g=group, k=key(point,point,point), c=shared_by_cell_ids
+        write!(f, "\nboundary_faces\n").unwrap();
+        let mut keys_and_faces: Vec<_> = self.boundary_faces.keys().zip(self.boundary_faces.values()).collect();
+        keys_and_faces.sort_by(|left, right| left.1.id.cmp(&right.1.id));
+        for (key, face) in keys_and_faces {
+            write!(
+                f,
+                "i:{} g:{}, k:({},{},{}), c:{:?}\n",
+                face.id, face.group, key.a, key.b, key.c, face.shared_by_cell_ids
+            )
+            .unwrap();
+        }
         Ok(())
     }
 }

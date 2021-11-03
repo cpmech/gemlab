@@ -764,8 +764,35 @@ mod tests {
             [0.0, 2.0],
         ]);
         let mesh = block.subdivide(KindQuaOrHex::Qua4)?;
-        println!("{}", mesh);
-        println!("{}", mesh.to_string());
+        assert_eq!(
+            format!("{}", mesh),
+            "ndim = 2\n\
+             npoint = 9\n\
+             ncell = 4\n\
+             n_boundary_edge = 0\n\
+             n_boundary_face = 0\n\
+             \n\
+             points\n\
+             i:0 g:1 x:[0.0, 0.0] c:[0]\n\
+             i:1 g:1 x:[1.0, 0.0] c:[0, 1]\n\
+             i:2 g:1 x:[1.0, 1.0] c:[0, 1, 2, 3]\n\
+             i:3 g:1 x:[0.0, 1.0] c:[0, 2]\n\
+             i:4 g:1 x:[2.0, 0.0] c:[1]\n\
+             i:5 g:1 x:[2.0, 1.0] c:[1, 3]\n\
+             i:6 g:1 x:[1.0, 2.0] c:[2, 3]\n\
+             i:7 g:1 x:[0.0, 2.0] c:[2]\n\
+             i:8 g:1 x:[2.0, 2.0] c:[3]\n\
+             \n\
+             cells\n\
+             i:0 g:1 p:[0, 1, 2, 3] e:[0, 0, 0, 0] f:[]\n\
+             i:1 g:1 p:[1, 4, 5, 2] e:[0, 0, 0, 0] f:[]\n\
+             i:2 g:1 p:[3, 2, 6, 7] e:[0, 0, 0, 0] f:[]\n\
+             i:3 g:1 p:[2, 5, 8, 6] e:[0, 0, 0, 0] f:[]\n\
+             \n\
+             boundary_edges\n\
+             \n\
+             boundary_faces\n"
+        );
         Ok(())
     }
 
