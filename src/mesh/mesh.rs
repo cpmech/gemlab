@@ -53,6 +53,7 @@ pub struct Mesh {
     pub ndim: usize,
     pub points: Vec<Point>,
     pub cells: Vec<Cell>,
+    pub boundary_points: HashMap<usize, bool>,
     pub boundary_edges: HashMap<KeyEdge, Edge>,
     pub boundary_faces: HashMap<KeyFace, Face>,
 }
@@ -63,8 +64,9 @@ impl Mesh {
             ndim,
             points: Vec::new(),
             cells: Vec::new(),
-            boundary_edges: HashMap::<KeyEdge, Edge>::new(),
-            boundary_faces: HashMap::<KeyFace, Face>::new(),
+            boundary_points: HashMap::new(),
+            boundary_edges: HashMap::new(),
+            boundary_faces: HashMap::new(),
         }
     }
 
@@ -89,6 +91,7 @@ impl fmt::Display for Mesh {
         write!(f, "ndim = {}\n", self.ndim).unwrap();
         write!(f, "npoint = {}\n", self.points.len()).unwrap();
         write!(f, "ncell = {}\n", self.cells.len()).unwrap();
+        write!(f, "n_boundary_point = {}\n", self.boundary_points.len()).unwrap();
         write!(f, "n_boundary_edge = {}\n", self.boundary_edges.len()).unwrap();
         write!(f, "n_boundary_face = {}\n", self.boundary_faces.len()).unwrap();
 
@@ -112,6 +115,17 @@ impl fmt::Display for Mesh {
                 cell.id, cell.group, cell.point_ids, cell.boundary_edge_ids, cell.boundary_face_ids
             )
             .unwrap();
+        }
+
+        // boundary points: i=index
+        write!(f, "\nboundary_points\n").unwrap();
+        let mut point_indices: Vec<_> = self.boundary_points.keys().collect();
+        point_indices.sort();
+        for index in point_indices {
+            write!(f, "{} ", index).unwrap();
+        }
+        if self.boundary_points.len() > 0 {
+            write!(f, "\n").unwrap();
         }
 
         // boundary edges: i=index, g=group, k=key(point,point), c=shared_by_cell_ids

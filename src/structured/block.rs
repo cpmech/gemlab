@@ -98,6 +98,12 @@ pub struct Block {
 }
 
 impl Block {
+    // constants
+    const NAT_MIN: f64 = -1.0; // min natural coordinate value
+    const NAT_MAX: f64 = 1.0; // max natural coordinate value
+    const NAT_LENGTH: f64 = 2.0; // length of shape along each direction in natural coords space
+    const NAT_TOLERANCE: f64 = 1e-5; // tolerance to compare coordinates in the natural space
+
     /// Creates a new Block with default options
     pub fn new(ndim: usize) -> Self {
         let shape = if ndim == 2 {
@@ -111,7 +117,6 @@ impl Block {
         const GRID_NDIV: usize = 20;
         const GRID_MIN: f64 = -1.0;
         const GRID_MAX: f64 = 1.0;
-        const GRID_TOL: f64 = 1e-5;
 
         Block {
             group: 1,
@@ -132,7 +137,7 @@ impl Block {
                 &vec![GRID_NDIV; ndim],
                 &vec![GRID_MIN; ndim],
                 &vec![GRID_MAX; ndim],
-                &vec![GRID_TOL; ndim],
+                &vec![Block::NAT_TOLERANCE; ndim],
             )
             .unwrap(),
         }
@@ -247,13 +252,12 @@ impl Block {
     /// the weights for each division `m`.
     pub fn set_ndiv(&mut self, ndiv: &[usize]) -> &mut Self {
         assert_eq!(ndiv.len(), self.ndim);
-        const L: f64 = 2.0;
         for i in 0..self.ndim {
             assert!(ndiv[i] > 0);
             self.ndiv[i] = ndiv[i];
             let w = 1.0;
             let sum_w = ndiv[i] as f64;
-            self.delta_ksi[i] = vec![w * L / sum_w; ndiv[i]];
+            self.delta_ksi[i] = vec![w * Block::NAT_LENGTH / sum_w; ndiv[i]];
         }
         self
     }
@@ -311,9 +315,6 @@ impl Block {
         // augmented transformed nat-coordinates
         let mut ksi = Vector::new(self.ndim + 1);
 
-        // length of shape along each direction in nat-coords space
-        const L: f64 = 2.0;
-
         // center of shape in nat-coords
         let mut center = vec![0.0; self.ndim];
 
@@ -333,20 +334,20 @@ impl Block {
         }
         for k in 0..nz {
             if self.ndim == 3 {
-                transform[2][2] = self.delta_ksi[2][k] / L; // scale
+                transform[2][2] = self.delta_ksi[2][k] / Block::NAT_LENGTH; // scale
                 transform[2][self.ndim] = center[2]; // translation
             }
 
             // for each y-division
             center[1] = -1.0 + self.delta_ksi[1][0] / 2.0;
             for j in 0..ny {
-                transform[1][1] = self.delta_ksi[1][j] / L; // scale
+                transform[1][1] = self.delta_ksi[1][j] / Block::NAT_LENGTH; // scale
                 transform[1][self.ndim] = center[1]; // translation
 
                 // for each x-division
                 center[0] = -1.0 + self.delta_ksi[0][0] / 2.0;
                 for i in 0..nx {
-                    transform[0][0] = self.delta_ksi[0][i] / L; // scale
+                    transform[0][0] = self.delta_ksi[0][i] / Block::NAT_LENGTH; // scale
                     transform[0][self.ndim] = center[0]; // translation
 
                     // for each point
@@ -359,6 +360,11 @@ impl Block {
                         // maybe append point to mesh
                         let index = self.maybe_append_new_point(&mut mesh, &mut x, &ksi, cell_id)?;
                         point_ids[m] = index;
+
+                        // mark boundary point
+                        if self.is_boundary_point(&ksi) {
+                            mesh.boundary_points.insert(index, true);
+                        }
                     }
 
                     // for each edge
@@ -536,6 +542,18 @@ impl Block {
         }
         */
         Ok(0)
+    }
+
+    fn is_boundary_point(&self, ksi: &Vector) -> bool {
+        for i in 0..self.ndim {
+            if f64::abs(ksi[i] - Block::NAT_MIN) <= Block::NAT_TOLERANCE {
+                return true;
+            }
+            if f64::abs(ksi[i] - Block::NAT_MAX) <= Block::NAT_TOLERANCE {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -770,6 +788,7 @@ mod tests {
             "ndim = 2\n\
              npoint = 9\n\
              ncell = 4\n\
+             n_boundary_point = 8\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
              \n\
@@ -789,6 +808,9 @@ mod tests {
              i:1 g:1 p:[1, 4, 5, 2] e:[] f:[]\n\
              i:2 g:1 p:[3, 2, 6, 7] e:[] f:[]\n\
              i:3 g:1 p:[2, 5, 8, 6] e:[] f:[]\n\
+             \n\
+             boundary_points\n\
+             0 1 3 4 5 6 7 8 \n\
              \n\
              boundary_edges\n\
              \n\
@@ -814,6 +836,7 @@ mod tests {
             "ndim = 2\n\
              npoint = 21\n\
              ncell = 4\n\
+             n_boundary_point = 16\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
              \n\
@@ -846,6 +869,9 @@ mod tests {
              i:2 g:1 p:[3, 2, 13, 14, 6, 15, 16, 17] e:[] f:[]\n\
              i:3 g:1 p:[2, 9, 18, 13, 12, 19, 20, 15] e:[] f:[]\n\
              \n\
+             boundary_points\n\
+             0 1 3 4 7 8 9 10 11 13 14 16 17 18 19 20 \n\
+             \n\
              boundary_edges\n\
              \n\
              boundary_faces\n"
@@ -874,6 +900,7 @@ mod tests {
             "ndim = 3\n\
              npoint = 27\n\
              ncell = 8\n\
+             n_boundary_point = 26\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
              \n\
@@ -916,6 +943,9 @@ mod tests {
              i:6 g:1 p:[7, 6, 14, 15, 21, 20, 24, 25] e:[] f:[]\n\
              i:7 g:1 p:[6, 11, 17, 14, 20, 23, 26, 24] e:[] f:[]\n\
              \n\
+             boundary_points\n\
+             0 1 2 3 4 5 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 \n\
+             \n\
              boundary_edges\n\
              \n\
              boundary_faces\n"
@@ -944,6 +974,7 @@ mod tests {
             "ndim = 3\n\
              npoint = 81\n\
              ncell = 8\n\
+             n_boundary_point = 74\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
              \n\
@@ -1039,6 +1070,9 @@ mod tests {
              i:5 g:1 p:[5, 22, 23, 6, 52, 63, 64, 53, 27, 28, 29, 13, 65, 66, 67, 56, 60, 68, 69, 61] e:[] f:[]\n\
              i:6 g:1 p:[7, 6, 34, 35, 54, 53, 70, 71, 14, 39, 40, 41, 57, 72, 73, 74, 62, 61, 75, 76] e:[] f:[]\n\
              i:7 g:1 p:[6, 23, 45, 34, 53, 64, 77, 70, 29, 48, 49, 39, 67, 78, 79, 72, 61, 69, 80, 75] e:[] f:[]\n\
+             \n\
+             boundary_points\n\
+             0 1 2 3 4 5 7 8 9 10 11 12 15 16 17 19 20 21 22 23 24 25 26 27 28 30 31 32 33 34 35 36 37 38 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 \n\
              \n\
              boundary_edges\n\
              \n\
