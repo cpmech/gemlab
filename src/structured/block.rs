@@ -1,8 +1,5 @@
-use crate::{
-    new_shape_qua_or_hex, AsArray2D, Cell, Circle, Edge, Face, GridSearch, KeyEdge, KeyFace, KindQuaOrHex, Mesh, Point,
-    Shape,
-};
-use russell_lab::{mat_vec_mul, Matrix, Vector};
+use crate::{new_shape_qua_or_hex, AsArray2D, Cell, Circle, Edge, Face, GridSearch, KindQuaOrHex, Mesh, Point, Shape};
+use russell_lab::{mat_vec_mul, sort2, Matrix, Vector};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Constraint {
@@ -469,32 +466,40 @@ impl Block {
         // results
         let mut boundary_edge_ids = Vec::new();
 
+        // auxiliary variables
+        let nedge = shape_out.get_nedge();
+        let npoint = shape_out.get_edge_npoint();
+
         // loop over each edge
-        for e in 0..shape_out.get_nedge() {
-            // point ids
-            let mut boundary_point_ids = Vec::new();
-            for i in 0..shape_out.get_edge_npoint() {
+        for e in 0..nedge {
+            // check if at least two points of edge are on the boundary
+            let mut npoint_on_boundary = 0;
+            for i in 0..npoint {
                 let local_point_id = self.shape.get_edge_local_point_id(e, i);
                 let point_id = point_ids[local_point_id];
                 if mesh.is_point_on_boundary(point_id) {
-                    boundary_point_ids.push(point_id);
+                    npoint_on_boundary += 1;
                 }
-                if boundary_point_ids.len() == 2 {
-                    break;
+                if npoint_on_boundary == 2 {
+                    break; // 2 is enough
                 }
             }
 
             // skip if edge is not on boundary
-            if boundary_point_ids.len() < 2 {
+            if npoint_on_boundary < 2 {
                 continue;
             }
 
-            // define key
-            boundary_point_ids.sort(); // important
-            let key = KeyEdge {
-                a: boundary_point_ids[0],
-                b: boundary_point_ids[1],
-            };
+            // collect point ids
+            let mut edge_point_ids = vec![0; npoint];
+            for i in 0..npoint {
+                let local_point_id = self.shape.get_edge_local_point_id(e, i);
+                edge_point_ids[i] = point_ids[local_point_id];
+            }
+
+            // define key (sorted ids)
+            let mut key = (edge_point_ids[0], edge_point_ids[1]);
+            sort2(&mut key);
 
             // existing item
             if mesh.boundary_edges.contains_key(&key) {
@@ -511,7 +516,7 @@ impl Block {
                     Edge {
                         id: new_edge_id,
                         group: self.group,
-                        point_ids: boundary_point_ids,
+                        point_ids: edge_point_ids,
                         shared_by_cell_ids: vec![cell_id],
                     },
                 );
@@ -767,7 +772,7 @@ mod tests {
              npoint = 9\n\
              ncell = 4\n\
              n_boundary_point = 8\n\
-             n_boundary_edge = 0\n\
+             n_boundary_edge = 8\n\
              n_boundary_face = 0\n\
              \n\
              points\n\
@@ -782,15 +787,23 @@ mod tests {
              i:8 g:1 x:[2.0, 2.0] c:[3]\n\
              \n\
              cells\n\
-             i:0 g:1 p:[0, 1, 2, 3] e:[] f:[]\n\
-             i:1 g:1 p:[1, 4, 5, 2] e:[] f:[]\n\
-             i:2 g:1 p:[3, 2, 6, 7] e:[] f:[]\n\
-             i:3 g:1 p:[2, 5, 8, 6] e:[] f:[]\n\
+             i:0 g:1 p:[0, 1, 2, 3] e:[0, 1] f:[]\n\
+             i:1 g:1 p:[1, 4, 5, 2] e:[2, 3] f:[]\n\
+             i:2 g:1 p:[3, 2, 6, 7] e:[4, 5] f:[]\n\
+             i:3 g:1 p:[2, 5, 8, 6] e:[6, 7] f:[]\n\
              \n\
              boundary_points\n\
              0 1 3 4 5 6 7 8 \n\
              \n\
              boundary_edges\n\
+             i:0 g:1 k:(0,1) p:[0, 1] c:[0]\n\
+             i:1 g:1 k:(0,3) p:[3, 0] c:[0]\n\
+             i:2 g:1 k:(1,4) p:[1, 4] c:[1]\n\
+             i:3 g:1 k:(4,5) p:[4, 5] c:[1]\n\
+             i:4 g:1 k:(6,7) p:[6, 7] c:[2]\n\
+             i:5 g:1 k:(3,7) p:[7, 3] c:[2]\n\
+             i:6 g:1 k:(5,8) p:[5, 8] c:[3]\n\
+             i:7 g:1 k:(6,8) p:[8, 6] c:[3]\n\
              \n\
              boundary_faces\n"
         );

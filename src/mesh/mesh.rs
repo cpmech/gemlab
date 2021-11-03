@@ -2,19 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 
-#[derive(Hash, Eq, PartialEq, Debug, Deserialize, Serialize)]
-pub struct KeyEdge {
-    pub a: usize,
-    pub b: usize,
-}
-
-#[derive(Hash, Eq, PartialEq, Debug, Deserialize, Serialize)]
-pub struct KeyFace {
-    pub a: usize,
-    pub b: usize,
-    pub c: usize,
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Point {
     pub id: usize,
@@ -27,7 +14,7 @@ pub struct Point {
 pub struct Edge {
     pub id: usize,
     pub group: usize,
-    pub point_ids: Vec<usize>,
+    pub point_ids: Vec<usize>, // in the right order (unsorted)
     pub shared_by_cell_ids: Vec<usize>,
 }
 
@@ -35,7 +22,7 @@ pub struct Edge {
 pub struct Face {
     pub id: usize,
     pub group: usize,
-    pub point_ids: Vec<usize>,
+    pub point_ids: Vec<usize>, // in the right order (unsorted)
     pub shared_by_cell_ids: Vec<usize>,
 }
 
@@ -54,8 +41,8 @@ pub struct Mesh {
     pub points: Vec<Point>,
     pub cells: Vec<Cell>,
     pub boundary_points: HashMap<usize, bool>,
-    pub boundary_edges: HashMap<KeyEdge, Edge>,
-    pub boundary_faces: HashMap<KeyFace, Face>,
+    pub boundary_edges: HashMap<(usize, usize), Edge>, // the key is sorted
+    pub boundary_faces: HashMap<(usize, usize, usize), Face>, // the key is sorted
 }
 
 impl Mesh {
@@ -143,7 +130,7 @@ impl fmt::Display for Mesh {
             write!(
                 f,
                 "i:{} g:{} k:({},{}) p:{:?} c:{:?}\n",
-                edge.id, edge.group, key.a, key.b, edge.point_ids, edge.shared_by_cell_ids
+                edge.id, edge.group, key.0, key.1, edge.point_ids, edge.shared_by_cell_ids
             )
             .unwrap();
         }
@@ -156,7 +143,7 @@ impl fmt::Display for Mesh {
             write!(
                 f,
                 "i:{} g:{} k:({},{},{}) p:{:?} c:{:?}\n",
-                face.id, face.group, key.a, key.b, key.c, face.point_ids, face.shared_by_cell_ids
+                face.id, face.group, key.0, key.1, key.2, face.point_ids, face.shared_by_cell_ids
             )
             .unwrap();
         }
