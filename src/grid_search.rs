@@ -98,6 +98,9 @@ impl GridSearch {
             }
             grid.size[i] = grid.delta[i] / (ndiv[i] as f64);
             grid.tol[i] = tol[i];
+            if grid.size[i] <= 10.0 * grid.tol[i] {
+                return Err("ndiv is too high; ndiv must be such that the grid size is greater than 10 * tol");
+            }
         }
 
         // coefficient
@@ -460,6 +463,12 @@ mod tests {
 
         let grid = GridSearch::new(&[1, 1], &[0.0, 0.0], &[0.0, 1.0], &[0.1, 0.1]);
         assert_eq!(grid.err(), Some("xmax must be greater than xmin"));
+
+        let grid = GridSearch::new(&[10, 10], &[0.0, 0.0], &[1.0, 1.0], &[0.1, 0.1]);
+        assert_eq!(
+            grid.err(),
+            Some("ndiv is too high; ndiv must be such that the grid size is greater than 10 * tol")
+        );
     }
 
     #[test]
