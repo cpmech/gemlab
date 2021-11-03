@@ -100,21 +100,21 @@ pub trait Shape {
     /// Returns the number of points on face
     fn get_face_npoint(&self) -> usize;
 
-    /// Returns the local ids of points on selected edge
+    /// Returns the local id of point on edge
     ///
     /// # Input
     ///
-    /// * `e` -- the index of edge in [0, nedge-1]
-    /// * `local_point_ids` -- ids of points on edge. len = edge_npoint
-    fn get_edge(&self, local_point_ids: &mut Vec<usize>, e: usize);
+    /// * `e` -- index of edge in [0, nedge-1]
+    /// * `i` -- index of local point [0, edge_npoint-1]
+    fn get_edge_local_point_id(&self, e: usize, i: usize) -> usize;
 
-    /// Returns the local ids of points on selected face
+    /// Returns the local id of point on face
     ///
     /// # Input
     ///
     /// * `f` -- index of face in [0, nface-1]
-    /// * `local_point_ids` -- ids of points on face. len = face_npoint
-    fn get_face(&self, local_point_ids: &mut Vec<usize>, f: usize);
+    /// * `i` -- index of local point [0, face_npoint-1]
+    fn get_face_local_point_id(&self, f: usize, i: usize) -> usize;
 
     /// Returns natural coordinates @ point m
     ///

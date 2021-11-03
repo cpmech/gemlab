@@ -205,16 +205,12 @@ impl Shape for Hex8 {
         FACE_NPOINT
     }
 
-    fn get_edge(&self, local_point_ids: &mut Vec<usize>, e: usize) {
-        for i in 0..EDGE_NPOINT {
-            local_point_ids[i] = self.edge_ids[e][i];
-        }
+    fn get_edge_local_point_id(&self, e: usize, i: usize) -> usize {
+        self.edge_ids[e][i]
     }
 
-    fn get_face(&self, local_point_ids: &mut Vec<usize>, f: usize) {
-        for i in 0..FACE_NPOINT {
-            local_point_ids[i] = self.face_ids[f][i];
-        }
+    fn get_face_local_point_id(&self, f: usize, i: usize) -> usize {
+        self.face_ids[f][i]
     }
 
     fn get_ksi(&self, ksi: &mut Vector, m: usize) {

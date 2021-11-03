@@ -134,13 +134,13 @@ impl Shape for Qua8 {
         FACE_NPOINT
     }
 
-    fn get_edge(&self, local_point_ids: &mut Vec<usize>, e: usize) {
-        for i in 0..EDGE_NPOINT {
-            local_point_ids[i] = self.edge_ids[e][i];
-        }
+    fn get_edge_local_point_id(&self, e: usize, i: usize) -> usize {
+        self.edge_ids[e][i]
     }
 
-    fn get_face(&self, _local_point_ids: &mut Vec<usize>, _f: usize) {}
+    fn get_face_local_point_id(&self, _: usize, _: usize) -> usize {
+        0 // none
+    }
 
     fn get_ksi(&self, ksi: &mut Vector, m: usize) {
         ksi[0] = self.coords[m][0];

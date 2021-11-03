@@ -82,6 +82,13 @@ impl Mesh {
         self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
         Ok(serialized)
     }
+
+    pub fn is_point_on_boundary(&self, id: usize) -> bool {
+        match self.boundary_points.get(&id) {
+            Some(_) => true,
+            None => false,
+        }
+    }
 }
 
 impl fmt::Display for Mesh {
@@ -128,28 +135,28 @@ impl fmt::Display for Mesh {
             write!(f, "\n").unwrap();
         }
 
-        // boundary edges: i=index, g=group, k=key(point,point), c=shared_by_cell_ids
+        // boundary edges: i=index, g=group, k=key(point,point), p=point_ids c=shared_by_cell_ids
         write!(f, "\nboundary_edges\n").unwrap();
         let mut keys_and_edges: Vec<_> = self.boundary_edges.keys().zip(self.boundary_edges.values()).collect();
         keys_and_edges.sort_by(|left, right| left.1.id.cmp(&right.1.id));
         for (key, edge) in keys_and_edges {
             write!(
                 f,
-                "i:{} g:{}, k:({},{}), c:{:?}\n",
-                edge.id, edge.group, key.a, key.b, edge.shared_by_cell_ids
+                "i:{} g:{} k:({},{}) p:{:?} c:{:?}\n",
+                edge.id, edge.group, key.a, key.b, edge.point_ids, edge.shared_by_cell_ids
             )
             .unwrap();
         }
 
-        // boundary_faces: i=index, g=group, k=key(point,point,point), c=shared_by_cell_ids
+        // boundary_faces: i=index, g=group, k=key(point,point,point), p=point_ids, c=shared_by_cell_ids
         write!(f, "\nboundary_faces\n").unwrap();
         let mut keys_and_faces: Vec<_> = self.boundary_faces.keys().zip(self.boundary_faces.values()).collect();
         keys_and_faces.sort_by(|left, right| left.1.id.cmp(&right.1.id));
         for (key, face) in keys_and_faces {
             write!(
                 f,
-                "i:{} g:{}, k:({},{},{}), c:{:?}\n",
-                face.id, face.group, key.a, key.b, key.c, face.shared_by_cell_ids
+                "i:{} g:{} k:({},{},{}) p:{:?} c:{:?}\n",
+                face.id, face.group, key.a, key.b, key.c, face.point_ids, face.shared_by_cell_ids
             )
             .unwrap();
         }
