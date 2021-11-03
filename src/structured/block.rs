@@ -304,7 +304,7 @@ impl Block {
         //  |_   0.0     0.0    0.0         1.0      _|
         let mut transform = Matrix::identity(self.ndim + 1);
 
-        // augmented nat-coordinates
+        // augmented natural coordinates [r,s,1] or [r,s,t,1]
         let mut ksi_aug = Vector::new(self.ndim + 1);
         ksi_aug[self.ndim] = 1.0;
 
