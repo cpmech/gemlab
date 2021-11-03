@@ -102,7 +102,7 @@ impl Block {
     const NAT_MIN: f64 = -1.0; // min natural coordinate value
     const NAT_MAX: f64 = 1.0; // max natural coordinate value
     const NAT_LENGTH: f64 = 2.0; // length of shape along each direction in natural coords space
-    const NAT_TOLERANCE: f64 = 1e-5; // tolerance to compare coordinates in the natural space
+    const NAT_TOLERANCE: f64 = 1e-4; // tolerance to compare coordinates in the natural space
 
     /// Creates a new Block with default options
     pub fn new(ndim: usize) -> Self {
