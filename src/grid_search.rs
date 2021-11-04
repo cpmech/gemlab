@@ -190,6 +190,30 @@ impl GridSearch {
         Ok(None)
     }
 
+    /// Inserts a new item if the coordinates are not found
+    ///
+    /// # Input
+    ///
+    /// * `id` -- identification number for the new item
+    /// * `x` -- coordinates (ndim) of the item
+    ///
+    /// # Output
+    ///
+    /// * Returns the id of the item; either found or given as input.
+    /// * Thus, if the output and input ids are different, it means that
+    ///   the item exists already and the output id is the existing id.
+    ///
+    /// # Note
+    ///
+    /// This function is a combination of `find` and `insert`
+    pub fn maybe_insert(&mut self, id: usize, x: &[f64]) -> Result<usize, &'static str> {
+        if let Some(id) = self.find(x)? {
+            return Ok(id);
+        }
+        self.insert(id, x)?;
+        Ok(id)
+    }
+
     /// Returns a drawing of this object
     pub fn plot(&self) -> Result<Plot, &'static str> {
         // create plot
@@ -681,6 +705,18 @@ mod tests {
         }
         let id = g3d.find(&[0.5, 0.5, 0.5])?;
         assert_eq!(id, None);
+        Ok(())
+    }
+
+    #[test]
+    fn maybe_insert_works() -> Result<(), &'static str> {
+        let mut grid = GridSearch::new(&[3, 3], &[0.0, 0.0], &[1.0, 1.0], &[1e-2, 1e-2])?;
+        let id = grid.maybe_insert(111, &[0.5, 0.5])?;
+        assert_eq!(id, 111);
+        let id = grid.maybe_insert(222, &[0.75, 0.75])?;
+        assert_eq!(id, 222);
+        let id = grid.maybe_insert(333, &[0.5, 0.5])?;
+        assert_eq!(id, 111); // existent
         Ok(())
     }
 
