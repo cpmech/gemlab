@@ -9,6 +9,25 @@ const EDGE_NPOINT: usize = 3;
 const FACE_NPOINT: usize = 0;
 const FACE_NEDGE: usize = 0;
 
+#[rustfmt::skip]
+const EDGE_IDS: [[usize; 3]; 4] = [
+    [0, 1, 4],
+    [1, 2, 5],
+    [2, 3, 6],
+    [3, 0, 7],
+];
+
+#[rustfmt::skip]
+const NATURAL_COORDS: [[f64; 2]; 8] = [
+    [-1.0, -1.0],
+    [ 1.0, -1.0],
+    [ 1.0,  1.0],
+    [-1.0,  1.0],
+    [ 0.0, -1.0],
+    [ 1.0,  0.0],
+    [ 0.0,  1.0],
+    [-1.0,  0.0],
+];
 /// Implements a quadrilateral with 8 points
 ///
 /// The natural coordinates range from -1 to +1 with the geometry centred @ 0
@@ -17,11 +36,11 @@ const FACE_NEDGE: usize = 0;
 ///
 /// ```text
 /// 3-----6-----2
-/// |     s     |
-/// |     |     |
-/// 7     +--r  5
-/// |           |
-/// |           |
+/// |     s     |           r     s            r     s
+/// |     |     |   p:0 [-1.0, -1.0]   p:4 [ 0.0, -1.0]
+/// 7     +--r  5   p:1 [ 1.0, -1.0]   p:5 [ 1.0,  0.0]
+/// |           |   p:2 [ 1.0,  1.0]   p:6 [ 0.0,  1.0]
+/// |           |   p:3 [-1.0,  1.0]   p:7 [-1.0,  0.0]
 /// 0-----4-----1
 /// ```
 ///
@@ -30,38 +49,24 @@ const FACE_NEDGE: usize = 0;
 /// ```text
 ///        2
 ///  +-----------+
-///  |           |
-///  |           |
-/// 3|           |1
-///  |           |
+///  |           |     e:0 [0, 1, 4]
+///  |           |     e:1 [1, 2, 5]
+/// 3|           |1    e:2 [2, 3, 6]
+///  |           |     e:3 [3, 0, 7]
 ///  |           |
 ///  +-----------+
 ///        0
 /// ```
 pub struct Qua8 {
-    coords: Vec<Vector>,       // natural coordinates (npoint, ndim)
-    interp: Vector,            // interpolation functions @ natural coordinate (npoint)
-    deriv: Matrix,             // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
-    edge_ids: Vec<Vec<usize>>, // ids of points on edges
+    interp: Vector, // interpolation functions @ natural coordinate (npoint)
+    deriv: Matrix,  // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
 }
 
 impl Qua8 {
     pub fn new() -> Self {
         Qua8 {
-            #[rustfmt::skip]
-            coords: vec![
-                Vector::from(&[-1.0, -1.0]),
-                Vector::from(&[ 1.0, -1.0]),
-                Vector::from(&[ 1.0,  1.0]),
-                Vector::from(&[-1.0,  1.0]),
-                Vector::from(&[ 0.0, -1.0]),
-                Vector::from(&[ 1.0,  0.0]),
-                Vector::from(&[ 0.0,  1.0]),
-                Vector::from(&[-1.0,  0.0]),
-            ],
             interp: Vector::new(NPOINT),
             deriv: Matrix::new(NPOINT, NDIM),
-            edge_ids: vec![vec![0, 1, 4], vec![1, 2, 5], vec![2, 3, 6], vec![3, 0, 7]],
         }
     }
 }
@@ -140,7 +145,7 @@ impl Shape for Qua8 {
     }
 
     fn get_edge_local_point_id(&self, e: usize, i: usize) -> usize {
-        self.edge_ids[e][i]
+        EDGE_IDS[e][i]
     }
 
     fn get_face_local_point_id(&self, _: usize, _: usize) -> usize {
@@ -152,8 +157,8 @@ impl Shape for Qua8 {
     }
 
     fn get_ksi(&self, ksi: &mut Vector, m: usize) {
-        ksi[0] = self.coords[m][0];
-        ksi[1] = self.coords[m][1];
+        ksi[0] = NATURAL_COORDS[m][0];
+        ksi[1] = NATURAL_COORDS[m][1];
     }
 
     fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), &'static str> {
@@ -169,9 +174,8 @@ mod tests {
 
     #[test]
     fn new_works() {
-        let geo = Qua8::new();
-        assert_eq!(geo.coords.len(), NPOINT);
-        assert_eq!(geo.interp.dim(), NPOINT);
-        assert_eq!(geo.deriv.dims(), (NPOINT, NDIM));
+        let shape = Qua8::new();
+        assert_eq!(shape.interp.dim(), NPOINT);
+        assert_eq!(shape.deriv.dims(), (NPOINT, NDIM));
     }
 }
