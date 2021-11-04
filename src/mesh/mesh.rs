@@ -69,13 +69,6 @@ impl Mesh {
         self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
         Ok(serialized)
     }
-
-    pub fn is_point_on_boundary(&self, id: usize) -> bool {
-        match self.boundary_points.get(&id) {
-            Some(_) => true,
-            None => false,
-        }
-    }
 }
 
 impl fmt::Display for Mesh {

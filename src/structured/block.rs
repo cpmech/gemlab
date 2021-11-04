@@ -1,5 +1,5 @@
 use crate::{new_shape_qua_or_hex, AsArray2D, Cell, Circle, Edge, Face, GridSearch, KindQuaOrHex, Mesh, Point, Shape};
-use russell_lab::{mat_vec_mul, sort2, Matrix, Vector};
+use russell_lab::{mat_vec_mul, sort2, sort3, Matrix, Vector};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Constraint {
@@ -364,13 +364,16 @@ impl Block {
                     // new edge
                     let boundary_edge_ids = self.maybe_append_new_edge(&mut mesh, &shape_out, &point_ids, cell_id)?;
 
+                    // new face
+                    let boundary_face_ids = self.maybe_append_new_face(&mut mesh, &shape_out, &point_ids, cell_id)?;
+
                     // new cell
                     let cell = Cell {
                         id: cell_id,
                         group: self.group,
                         point_ids,
                         boundary_edge_ids,
-                        boundary_face_ids: Vec::new(),
+                        boundary_face_ids,
                     };
                     mesh.cells.push(cell);
 
@@ -468,16 +471,16 @@ impl Block {
 
         // auxiliary variables
         let nedge = shape_out.get_nedge();
-        let npoint = shape_out.get_edge_npoint();
+        let edge_npoint = shape_out.get_edge_npoint();
 
         // loop over each edge
         for e in 0..nedge {
             // check if at least two points of edge are on the boundary
             let mut npoint_on_boundary = 0;
-            for i in 0..npoint {
+            for i in 0..edge_npoint {
                 let local_point_id = self.shape.get_edge_local_point_id(e, i);
                 let point_id = point_ids[local_point_id];
-                if mesh.is_point_on_boundary(point_id) {
+                if mesh.boundary_points.contains_key(&point_id) {
                     npoint_on_boundary += 1;
                 }
                 if npoint_on_boundary == 2 {
@@ -491,19 +494,19 @@ impl Block {
             }
 
             // collect point ids
-            let mut edge_point_ids = vec![0; npoint];
-            for i in 0..npoint {
+            let mut edge_point_ids = vec![0; edge_npoint];
+            for i in 0..edge_npoint {
                 let local_point_id = self.shape.get_edge_local_point_id(e, i);
                 edge_point_ids[i] = point_ids[local_point_id];
             }
 
             // define key (sorted ids)
-            let mut key = (edge_point_ids[0], edge_point_ids[1]);
-            sort2(&mut key);
+            let mut edge_key = (edge_point_ids[0], edge_point_ids[1]);
+            sort2(&mut edge_key);
 
             // existing item
-            if mesh.boundary_edges.contains_key(&key) {
-                let edge = mesh.boundary_edges.get_mut(&key).unwrap();
+            if mesh.boundary_edges.contains_key(&edge_key) {
+                let edge = mesh.boundary_edges.get_mut(&edge_key).unwrap();
                 edge.shared_by_cell_ids.push(cell_id);
                 boundary_edge_ids.push(edge.id);
 
@@ -512,7 +515,7 @@ impl Block {
                 let new_edge_id = mesh.boundary_edges.len();
                 boundary_edge_ids.push(new_edge_id);
                 mesh.boundary_edges.insert(
-                    key,
+                    edge_key,
                     Edge {
                         id: new_edge_id,
                         group: self.group,
@@ -527,6 +530,98 @@ impl Block {
         Ok(boundary_edge_ids)
     }
 
+    /// Appends new boundary face, if not existent yet
+    ///
+    /// # Output
+    ///
+    /// * `mesh` -- updated mesh with new boundary face
+    ///
+    /// # Input
+    ///
+    /// * `shape_out` -- shape object for the output cells
+    /// * `point_ids` -- (just added) cell point ids
+    /// * `cell_id` -- ID of the cell adding this point (to set shared-by information)
+    ///
+    /// # Returns
+    ///
+    /// Returns the IDs of the new or existent face on boundary.
+    fn maybe_append_new_face(
+        &mut self,
+        mesh: &mut Mesh,
+        shape_out: &Box<dyn Shape>,
+        point_ids: &Vec<usize>,
+        cell_id: usize,
+    ) -> Result<Vec<usize>, &'static str> {
+        // results
+        let mut boundary_face_ids = Vec::new();
+
+        // auxiliary variables
+        let nface = shape_out.get_nface();
+        let face_npoint = shape_out.get_face_npoint();
+        let face_nedge = shape_out.get_face_nedge();
+
+        // loop over each face
+        for f in 0..nface {
+            // check if at least three edges of face are on the boundary
+            let mut nedge_on_boundary = 0;
+            for k in 0..face_nedge {
+                let local_point_id_0 = self.shape.get_face_edge_local_point_id(f, k, 0);
+                let local_point_id_1 = self.shape.get_face_edge_local_point_id(f, k, 1);
+                let point_id_0 = point_ids[local_point_id_0];
+                let point_id_1 = point_ids[local_point_id_1];
+                let mut edge_key = (point_id_0, point_id_1);
+                sort2(&mut edge_key);
+                if mesh.boundary_edges.contains_key(&edge_key) {
+                    nedge_on_boundary += 1;
+                }
+                if nedge_on_boundary == 3 {
+                    break;
+                }
+            }
+
+            // skip if face is not on boundary
+            if nedge_on_boundary < 3 {
+                continue;
+            }
+
+            // collect point ids
+            let mut face_point_ids = vec![0; face_npoint];
+            for i in 0..face_npoint {
+                let local_point_id = self.shape.get_face_local_point_id(f, i);
+                face_point_ids[i] = point_ids[local_point_id];
+            }
+
+            // define key (sorted ids)
+            let mut face_key = (face_point_ids[0], face_point_ids[1], face_point_ids[2]);
+            sort3(&mut face_key);
+
+            // existing item
+            if mesh.boundary_faces.contains_key(&face_key) {
+                let face = mesh.boundary_faces.get_mut(&face_key).unwrap();
+                face.shared_by_cell_ids.push(cell_id);
+                boundary_face_ids.push(face.id);
+
+            // new item
+            } else {
+                let new_face_id = mesh.boundary_faces.len();
+                boundary_face_ids.push(new_face_id);
+                mesh.boundary_faces.insert(
+                    face_key,
+                    Face {
+                        id: new_face_id,
+                        group: self.group,
+                        point_ids: face_point_ids,
+                        shared_by_cell_ids: vec![cell_id],
+                    },
+                );
+            }
+        }
+
+        // done
+        Ok(boundary_face_ids)
+    }
+
+    /// Returns whether or not a point is on boundary given its natural coordinates
     fn is_boundary_point(&self, ksi: &Vector) -> bool {
         for i in 0..self.ndim {
             if f64::abs(ksi[i] - Block::NAT_MIN) <= Block::NAT_TOLERANCE {
@@ -773,7 +868,7 @@ mod tests {
              ncell = 4\n\
              n_boundary_point = 8\n\
              n_boundary_edge = 8\n\
-             n_boundary_face = 0\n\
+             n_boundary_face = 24\n\
              \n\
              points\n\
              i:0 g:1 x:[0.0, 0.0] c:[0]\n\
@@ -805,7 +900,9 @@ mod tests {
              i:6 g:1 k:(5,8) p:[5, 8] c:[3]\n\
              i:7 g:1 k:(6,8) p:[8, 6] c:[3]\n\
              \n\
-             boundary_faces\n"
+             boundary_faces\n\
+             i:0 g:1 k:(0,4,7) p:[0, 4, 7, 3] c:[0]\n\
+             "
         );
         Ok(())
     }
