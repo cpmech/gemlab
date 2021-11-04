@@ -7,6 +7,55 @@ const NEDGE: usize = 12;
 const NFACE: usize = 6;
 const EDGE_NPOINT: usize = 2;
 const FACE_NPOINT: usize = 4;
+const FACE_NEDGE: usize = 4;
+
+#[rustfmt::skip]
+const EDGE_POINT_IDS: [[usize; 2]; 12] = [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 0],
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 4],
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7],
+];
+
+#[rustfmt::skip]
+const FACE_POINT_IDS: [[usize; 4]; 6] = [
+    [0, 4, 7, 3],
+    [1, 2, 6, 5],
+    [0, 1, 5, 4],
+    [2, 3, 7, 6],
+    [0, 3, 2, 1],
+    [4, 5, 6, 7],
+];
+
+#[rustfmt::skip]
+const FACE_EDGE_POINT_IDS: [[[usize; 2]; 4]; 6] = [
+    [[0, 4], [4, 7], [7, 3], [3, 0]],
+    [[1, 2], [2, 6], [6, 5], [5, 1]],
+    [[0, 1], [1, 5], [5, 4], [4, 0]],
+    [[2, 3], [3, 7], [7, 6], [6, 2]],
+    [[0, 3], [3, 2], [2, 1], [1, 0]],
+    [[4, 5], [5, 6], [6, 7], [7, 4]],
+];
+
+#[rustfmt::skip]
+const POINT_NATURAL_COORDS: [[f64; 3]; 8] = [
+    [-1.0, -1.0, -1.0],
+    [ 1.0, -1.0, -1.0],
+    [ 1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0],
+    [-1.0, -1.0,  1.0],
+    [ 1.0, -1.0,  1.0],
+    [ 1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0],
+];
 
 /// Implements a hexahedron with 8 points
 ///
@@ -17,15 +66,15 @@ const FACE_NPOINT: usize = 4;
 /// ```text
 ///           4________________7
 ///         ,'|              ,'|
-///       ,'  |            ,'  |
-///     ,'    |          ,'    |
-///   ,'      |        ,'      |
-/// 5'===============6'        |
-/// |         |      |         |
-/// |         |      |         |
-/// |         0_____ | ________3
-/// |       ,'       |       ,'
-/// |     ,'         |     ,'
+///       ,'  |            ,'  |             r     s     t
+///     ,'    |          ,'    |     p:0 [-1.0, -1.0, -1.0]
+///   ,'      |        ,'      |     p:1 [ 1.0, -1.0, -1.0]
+/// 5'===============6'        |     p:2 [ 1.0,  1.0, -1.0]
+/// |         |      |         |     p:3 [-1.0,  1.0, -1.0]
+/// |         |      |         |     p:4 [-1.0, -1.0,  1.0]
+/// |         0_____ | ________3     p:5 [ 1.0, -1.0,  1.0]
+/// |       ,'       |       ,'      p:6 [ 1.0,  1.0,  1.0]
+/// |     ,'         |     ,'        p:7 [-1.0,  1.0,  1.0]
 /// |   ,'           |   ,'
 /// | ,'             | ,'
 /// 1________________2'
@@ -34,19 +83,19 @@ const FACE_NPOINT: usize = 4;
 /// # Local IDs of edges
 ///
 /// ```text
-///                     7
-///             +----------------+
-///           ,'|              ,'|
-///       4 ,'  |8          6,'  |
-///       ,'    |          ,'    |   
-///     ,'      |   5    ,'      |11
-///   +'===============+'        |
-///   |         |      |         |
-///   |         |      |  3      |
-///   |         .- - - | -  - - -+
-///  9|       ,'       |       ,'
-///   |    0,'         |10   ,'
-///   |   ,'           |   ,' 2
+///                     7                   p0  p1
+///             +----------------+     e:0  [0, 1]
+///           ,'|              ,'|     e:1  [1, 2]
+///       4 ,'  |8          6,'  |     e:2  [2, 3]
+///       ,'    |          ,'    |     e:3  [3, 0]
+///     ,'      |   5    ,'      |11   e:4  [4, 5]
+///   +'===============+'        |     e:5  [5, 6]
+///   |         |      |         |     e:6  [6, 7]
+///   |         |      |  3      |     e:7  [7, 4]
+///   |         .- - - | -  - - -+     e:8  [0, 4]
+///  9|       ,'       |       ,'      e:9  [1, 5]
+///   |    0,'         |10   ,'        e:10 [2, 6]
+///   |   ,'           |   ,' 2        e:11 [3, 7]
 ///   | ,'             | ,'
 ///   +----------------+'
 ///           1
@@ -54,69 +103,35 @@ const FACE_NPOINT: usize = 4;
 ///
 /// # Local IDs of faces
 ///
+/// Note: the order of points is such that the right-hand rule generates outward normals.
+///
 /// ```text
-///           +----------------+
+///           4----------------7
 ///         ,'|              ,'|
 ///       ,'  |  ___       ,'  |
-///     ,'    |,'5,'  [0],'    |
-///   ,'      |~~~     ,'      |
-/// +'===============+'  ,'|   |
-/// |   ,'|   |      |   |3|   |
-/// |   |2|   |      |   |,'   |
-/// |   |,'   +- - - | +- - - -+
-/// |       ,'       |       ,'
+///     ,'    |,'5,'  [0],'    |        p0 p1 p2 p3
+///   ,'      |~~~     ,'      |    f:0 [0, 4, 7, 3]
+/// 5'===============6'  ,'|   |    f:1 [1, 2, 6, 5]
+/// |   ,'|   |      |   |3|   |    f:2 [0, 1, 5, 4]
+/// |   |2|   |      |   |,'   |    f:3 [2, 3, 7, 6]
+/// |   |,'   0- - - | +- - - -3    f:4 [0, 3, 2, 1]
+/// |       ,'       |       ,'     f:5 [4, 5, 6, 7]
 /// |     ,' [1]  ___|     ,'
 /// |   ,'      ,'4,'|   ,'
 /// | ,'        ~~~  | ,'
-/// +----------------+'
+/// 1----------------2'
 /// ```
 pub struct Hex8 {
-    coords: Vec<Vector>,       // natural coordinates (npoint, ndim)
-    interp: Vector,            // interpolation functions @ natural coordinate (npoint)
-    deriv: Matrix,             // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
-    edge_ids: Vec<Vec<usize>>, // ids of points on edges
-    face_ids: Vec<Vec<usize>>, // ids of points on faces
+    interp: Vector, // interpolation functions @ natural coordinate (npoint)
+    deriv: Matrix,  // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
 }
 
 impl Hex8 {
     /// Creates a new object with pre-calculated interpolation fn and derivatives
     pub fn new() -> Self {
         Hex8 {
-            #[rustfmt::skip]
-            coords: vec![
-                Vector::from(&[-1.0, -1.0, -1.0]),
-                Vector::from(&[ 1.0, -1.0, -1.0]),
-                Vector::from(&[ 1.0,  1.0, -1.0]),
-                Vector::from(&[-1.0,  1.0, -1.0]),
-                Vector::from(&[-1.0, -1.0,  1.0]),
-                Vector::from(&[ 1.0, -1.0,  1.0]),
-                Vector::from(&[ 1.0,  1.0,  1.0]),
-                Vector::from(&[-1.0,  1.0,  1.0]),
-            ],
             interp: Vector::new(NPOINT),
             deriv: Matrix::new(NPOINT, NDIM),
-            edge_ids: vec![
-                vec![0, 1],
-                vec![1, 2],
-                vec![2, 3],
-                vec![3, 0],
-                vec![4, 5],
-                vec![5, 6],
-                vec![6, 7],
-                vec![7, 4],
-                vec![0, 4],
-                vec![1, 5],
-                vec![2, 6],
-                vec![3, 7],
-            ],
-            face_ids: vec![
-                vec![0, 4, 7, 3],
-                vec![1, 2, 6, 5],
-                vec![0, 1, 5, 4],
-                vec![2, 3, 7, 6],
-                vec![0, 3, 2, 1],
-                vec![4, 5, 6, 7],
-            ],
         }
     }
 }
@@ -205,18 +220,26 @@ impl Shape for Hex8 {
         FACE_NPOINT
     }
 
+    fn get_face_nedge(&self) -> usize {
+        FACE_NEDGE
+    }
+
     fn get_edge_local_point_id(&self, e: usize, i: usize) -> usize {
-        self.edge_ids[e][i]
+        EDGE_POINT_IDS[e][i]
     }
 
     fn get_face_local_point_id(&self, f: usize, i: usize) -> usize {
-        self.face_ids[f][i]
+        FACE_POINT_IDS[f][i]
+    }
+
+    fn get_face_edge_local_point_id(&self, f: usize, k: usize, i: usize) -> usize {
+        FACE_EDGE_POINT_IDS[f][k][i]
     }
 
     fn get_ksi(&self, ksi: &mut Vector, m: usize) {
-        ksi[0] = self.coords[m][0];
-        ksi[1] = self.coords[m][1];
-        ksi[2] = self.coords[m][2];
+        ksi[0] = POINT_NATURAL_COORDS[m][0];
+        ksi[1] = POINT_NATURAL_COORDS[m][1];
+        ksi[2] = POINT_NATURAL_COORDS[m][2];
     }
 
     fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), &'static str> {
@@ -232,9 +255,8 @@ mod tests {
 
     #[test]
     fn new_works() {
-        let geo = Hex8::new();
-        assert_eq!(geo.coords.len(), NPOINT);
-        assert_eq!(geo.interp.dim(), NPOINT);
-        assert_eq!(geo.deriv.dims(), (NPOINT, NDIM));
+        let shape = Hex8::new();
+        assert_eq!(shape.interp.dim(), NPOINT);
+        assert_eq!(shape.deriv.dims(), (NPOINT, NDIM));
     }
 }
