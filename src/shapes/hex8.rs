@@ -104,6 +104,7 @@ const POINT_NATURAL_COORDS: [[f64; 3]; 8] = [
 /// # Local IDs of faces
 ///
 /// Note: the order of points is such that the right-hand rule generates outward normals.
+/// Also, the order of face points corresponds to Qua4 points.
 ///
 /// ```text
 ///           4----------------7
