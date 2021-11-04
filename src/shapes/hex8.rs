@@ -10,7 +10,7 @@ const FACE_NPOINT: usize = 4;
 const FACE_NEDGE: usize = 4;
 
 #[rustfmt::skip]
-const EDGE_POINT_IDS: [[usize; 2]; 12] = [
+const EDGE_POINT_IDS: [[usize; EDGE_NPOINT]; NEDGE] = [
     [0, 1],
     [1, 2],
     [2, 3],
@@ -26,7 +26,7 @@ const EDGE_POINT_IDS: [[usize; 2]; 12] = [
 ];
 
 #[rustfmt::skip]
-const FACE_POINT_IDS: [[usize; 4]; 6] = [
+const FACE_POINT_IDS: [[usize; FACE_NPOINT]; NFACE] = [
     [0, 4, 7, 3],
     [1, 2, 6, 5],
     [0, 1, 5, 4],
@@ -36,7 +36,7 @@ const FACE_POINT_IDS: [[usize; 4]; 6] = [
 ];
 
 #[rustfmt::skip]
-const FACE_EDGE_POINT_IDS: [[[usize; 2]; 4]; 6] = [
+const FACE_EDGE_POINT_IDS: [[[usize; EDGE_NPOINT]; FACE_NEDGE]; NFACE] = [
     [[0, 4], [4, 7], [7, 3], [3, 0]],
     [[1, 2], [2, 6], [6, 5], [5, 1]],
     [[0, 1], [1, 5], [5, 4], [4, 0]],
@@ -46,7 +46,7 @@ const FACE_EDGE_POINT_IDS: [[[usize; 2]; 4]; 6] = [
 ];
 
 #[rustfmt::skip]
-const POINT_NATURAL_COORDS: [[f64; 3]; 8] = [
+const POINT_NATURAL_COORDS: [[f64; NDIM]; NPOINT] = [
     [-1.0, -1.0, -1.0],
     [ 1.0, -1.0, -1.0],
     [ 1.0,  1.0, -1.0],
