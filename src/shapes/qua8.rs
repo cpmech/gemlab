@@ -10,7 +10,7 @@ const FACE_NPOINT: usize = 0;
 const FACE_NEDGE: usize = 0;
 
 #[rustfmt::skip]
-const EDGE_IDS: [[usize; 3]; 4] = [
+const EDGE_POINT_IDS: [[usize; 3]; 4] = [
     [0, 1, 4],
     [1, 2, 5],
     [2, 3, 6],
@@ -18,7 +18,7 @@ const EDGE_IDS: [[usize; 3]; 4] = [
 ];
 
 #[rustfmt::skip]
-const NATURAL_COORDS: [[f64; 2]; 8] = [
+const POINT_NATURAL_COORDS: [[f64; 2]; 8] = [
     [-1.0, -1.0],
     [ 1.0, -1.0],
     [ 1.0,  1.0],
@@ -28,6 +28,7 @@ const NATURAL_COORDS: [[f64; 2]; 8] = [
     [ 0.0,  1.0],
     [-1.0,  0.0],
 ];
+
 /// Implements a quadrilateral with 8 points
 ///
 /// The natural coordinates range from -1 to +1 with the geometry centred @ 0
@@ -145,7 +146,7 @@ impl Shape for Qua8 {
     }
 
     fn get_edge_local_point_id(&self, e: usize, i: usize) -> usize {
-        EDGE_IDS[e][i]
+        EDGE_POINT_IDS[e][i]
     }
 
     fn get_face_local_point_id(&self, _: usize, _: usize) -> usize {
@@ -157,8 +158,8 @@ impl Shape for Qua8 {
     }
 
     fn get_ksi(&self, ksi: &mut Vector, m: usize) {
-        ksi[0] = NATURAL_COORDS[m][0];
-        ksi[1] = NATURAL_COORDS[m][1];
+        ksi[0] = POINT_NATURAL_COORDS[m][0];
+        ksi[1] = POINT_NATURAL_COORDS[m][1];
     }
 
     fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), &'static str> {
