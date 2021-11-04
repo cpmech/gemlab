@@ -100,6 +100,9 @@ pub trait Shape {
     /// Returns the number of points on face
     fn get_face_npoint(&self) -> usize;
 
+    /// Returns the number of edges on face (not the cell's edges)
+    fn get_face_nedge(&self) -> usize;
+
     /// Returns the local id of point on edge
     ///
     /// # Input
@@ -115,6 +118,15 @@ pub trait Shape {
     /// * `f` -- index of face in [0, nface-1]
     /// * `i` -- index of local point [0, face_npoint-1]
     fn get_face_local_point_id(&self, f: usize, i: usize) -> usize;
+
+    /// Returns the local point id on an edge on the face
+    ///
+    /// # Input
+    ///
+    /// * `f` -- index of face in [0, nface-1]
+    /// * `k` -- index of face's edge (not the index of cell's edge) in [0, face_nedge-1]
+    /// * `i` -- index of local point [0, face_npoint-1]
+    fn get_face_edge_local_point_id(&self, f: usize, k: usize, i: usize) -> usize;
 
     /// Returns natural coordinates @ point m
     ///

@@ -7,6 +7,7 @@ const NEDGE: usize = 4;
 const NFACE: usize = 0;
 const EDGE_NPOINT: usize = 2;
 const FACE_NPOINT: usize = 0;
+const FACE_NEDGE: usize = 0;
 
 /// Implements a quadrilateral with 4 points
 ///
@@ -120,11 +121,19 @@ impl Shape for Qua4 {
         FACE_NPOINT
     }
 
+    fn get_face_nedge(&self) -> usize {
+        FACE_NEDGE
+    }
+
     fn get_edge_local_point_id(&self, e: usize, i: usize) -> usize {
         self.edge_ids[e][i]
     }
 
     fn get_face_local_point_id(&self, _: usize, _: usize) -> usize {
+        0 // none
+    }
+
+    fn get_face_edge_local_point_id(&self, f: usize, k: usize, i: usize) -> usize {
         0 // none
     }
 
