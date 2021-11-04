@@ -153,7 +153,7 @@ impl Shape for Qua8 {
         0 // none
     }
 
-    fn get_face_edge_local_point_id(&self, f: usize, k: usize, i: usize) -> usize {
+    fn get_face_edge_local_point_id(&self, _: usize, _: usize, _: usize) -> usize {
         0 // none
     }
 
