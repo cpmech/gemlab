@@ -1,3 +1,4 @@
+use crate::{Kind, Shape};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -48,6 +49,7 @@ pub struct Face {
 pub struct Cell {
     pub id: usize,
     pub group: usize,
+    pub ndim: usize,
     pub point_ids: Vec<usize>,
     pub boundary_edge_ids: Vec<usize>,
     pub boundary_face_ids: Vec<usize>,
@@ -98,6 +100,7 @@ impl Mesh {
         let zero_cell = Cell {
             id: 0,
             group: 0,
+            ndim: 0,
             point_ids: Vec::new(),
             boundary_edge_ids: Vec::new(),
             boundary_face_ids: Vec::new(),
@@ -156,16 +159,25 @@ impl Mesh {
     }
 
     pub fn compute_derived_props(&mut self) {
+        // points.shared_by_cell_ids
         for cell in &self.cells {
             for point_id in &cell.point_ids {
                 self.points[*point_id].shared_by_cell_ids.insert(cell.id, true);
             }
         }
+
+        // boundary_points
         for point in &self.points {
             if point.shared_by_cell_ids.len() <= 1 {
                 self.boundary_points.insert(point.id, true);
             }
         }
+
+        // shapes map
+        let mut shapes_map = HashMap::<Kind, Box<dyn Shape>>::new();
+
+        // boundary_edges
+        for cell in &self.cells {}
     }
 }
 
@@ -198,8 +210,8 @@ impl fmt::Display for Mesh {
         for cell in &self.cells {
             write!(
                 f,
-                "i:{} g:{} p:{:?} e:{:?} f:{:?}\n",
-                cell.id, cell.group, cell.point_ids, cell.boundary_edge_ids, cell.boundary_face_ids
+                "i:{} g:{} n:{} p:{:?} e:{:?} f:{:?}\n",
+                cell.id, cell.group, cell.ndim, cell.point_ids, cell.boundary_edge_ids, cell.boundary_face_ids
             )
             .unwrap();
         }
@@ -248,7 +260,7 @@ impl fmt::Display for Mesh {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     #[test]
     fn new_works() {
@@ -281,10 +293,10 @@ mod tests {
              i:8 g:1 x:[2.0, 2.0] c:[3]\n\
              \n\
              cells\n\
-             i:0 g:1 p:[0, 1, 2, 3] e:[0, 1] f:[]\n\
-             i:1 g:1 p:[1, 4, 5, 2] e:[2, 3] f:[]\n\
-             i:2 g:1 p:[3, 2, 6, 7] e:[4, 5] f:[]\n\
-             i:3 g:1 p:[2, 5, 8, 6] e:[6, 7] f:[]\n\
+             i:0 g:1 n:2 p:[0, 1, 2, 3] e:[0, 1] f:[]\n\
+             i:1 g:1 n:2 p:[1, 4, 5, 2] e:[2, 3] f:[]\n\
+             i:2 g:1 n:2 p:[3, 2, 6, 7] e:[4, 5] f:[]\n\
+             i:3 g:1 n:2 p:[2, 5, 8, 6] e:[6, 7] f:[]\n\
              \n\
              boundary_points\n\
              0 1 3 4 5 6 7 8 \n\

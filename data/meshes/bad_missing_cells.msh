@@ -3,7 +3,7 @@
 2 6 2
 
 # points
-# id=index group x y
+# id group x y
 0 1  0.0 0.0
 1 1  1.0 0.0
 2 11 1.0 1.0
@@ -12,5 +12,5 @@
 5 1  2.0 1.0
 
 # cells
-# id=index group [point_ids]
-0 1  0 1 2 3
+# id group ndim npoint point_ids...
+0 1  2 4  0 1 2 3

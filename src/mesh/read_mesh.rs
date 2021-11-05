@@ -120,13 +120,23 @@ impl ReadMeshData {
             None => return Err("cannot read cell group"),
         };
 
-        loop {
+        match data.next() {
+            Some(v) => mesh.cells[i].ndim = v.parse().map_err(|_| "cannot parse cell ndim")?,
+            None => return Err("cannot read cell ndim"),
+        };
+
+        let cell_npoint: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse cell npoint")?,
+            None => return Err("cannot read cell npoint"),
+        };
+
+        for _ in 0..cell_npoint {
             match data.next() {
                 Some(v) => {
-                    let point_id: usize = v.parse().map_err(|_| "cannot parse point id of cell (connectivity)")?;
+                    let point_id: usize = v.parse().map_err(|_| "cannot parse cell point id")?;
                     mesh.cells[i].point_ids.push(point_id);
                 }
-                None => break,
+                None => return Err("cannot read cell point id"),
             }
         }
 
@@ -387,8 +397,31 @@ mod tests {
         );
 
         assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" 0 1 ")).err(),
+            Some("cannot read cell ndim")
+        );
+        assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 1  wrong")).err(),
-            Some("cannot parse point id of cell (connectivity)")
+            Some("cannot parse cell ndim")
+        );
+
+        assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" 0 1 2")).err(),
+            Some("cannot read cell npoint")
+        );
+        assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" 0 1  2 wrong")).err(),
+            Some("cannot parse cell npoint")
+        );
+
+        assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" 0 1  2 4  ")).err(),
+            Some("cannot read cell point id")
+        );
+        assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" 0 1  2 4  0 1 2 wrong"))
+                .err(),
+            Some("cannot parse cell point id")
         );
         Ok(())
     }
@@ -438,8 +471,8 @@ mod tests {
              i:5 g:1 x:[2.0, 1.0] c:[]\n\
              \n\
              cells\n\
-             i:0 g:1 p:[0, 1, 2, 3] e:[] f:[]\n\
-             i:1 g:8 p:[1, 4, 5, 2] e:[] f:[]\n\
+             i:0 g:1 n:2 p:[0, 1, 2, 3] e:[] f:[]\n\
+             i:1 g:8 n:2 p:[1, 4, 5, 2] e:[] f:[]\n\
              \n\
              boundary_points\n\
              \n\
@@ -479,8 +512,8 @@ mod tests {
              i:11 g:1 x:[0.0, 1.0, 2.0] c:[]\n\
              \n\
              cells\n\
-             i:0 g:1 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
-             i:1 g:8 p:[4, 5, 6, 7, 8, 9, 10, 11] e:[] f:[]\n\
+             i:0 g:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
+             i:1 g:8 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11] e:[] f:[]\n\
              \n\
              boundary_points\n\
              \n\
@@ -507,7 +540,7 @@ mod tests {
             2 4 1\n\
             \n\
             # points\n\
-            # id=index group x y\n\
+            # id group x y\n\
             0 1 0.0 0.0\n";
         assert_eq!(
             parse_mesh(&missing_points.to_string()).err(),
@@ -520,7 +553,7 @@ mod tests {
             2 6 2\n\
             \n\
             # points\n\
-            # id=index group x y\n\
+            # id group x y\n\
             0 1  0.0 0.0\n\
             1 1  1.0 0.0\n\
             2 11 1.0 1.0\n\
@@ -529,8 +562,8 @@ mod tests {
             5 1  2.0 1.0\n\
             \n\
             # cells\n\
-            # id=index group [point_ids]\n\
-            0 1  0 1 2 3\n";
+            # idx group point_ids...\n\
+            0 1  2 4  0 1 2 3\n";
         assert_eq!(
             parse_mesh(&missing_cells.to_string()).err(),
             Some("not all cells have been found")
@@ -546,7 +579,7 @@ mod tests {
             2 6 2\n\
             \n\
             # points\n\
-            # id=index group x y\n\
+            # id group x y\n\
             0 1  0.0 0.0\n\
             1 1  1.0 0.0\n\
             2 11 1.0 1.0\n\
@@ -555,9 +588,9 @@ mod tests {
             5 1  2.0 1.0\n\
             \n\
             # cells\n\
-            # id=index group [point_ids]\n\
-            0 1  0 1 2 3\n\
-            1 8  1 4 5 2\n";
+            # id group ndim npoint point_ids...\n\
+            0 1  2 4  0 1 2 3\n\
+            1 8  2 4  1 4 5 2\n";
         let mesh = parse_mesh(&text.to_string())?;
         println!("{}", mesh);
         assert_eq!(
@@ -578,8 +611,8 @@ mod tests {
              i:5 g:1 x:[2.0, 1.0] c:[]\n\
              \n\
              cells\n\
-             i:0 g:1 p:[0, 1, 2, 3] e:[] f:[]\n\
-             i:1 g:8 p:[1, 4, 5, 2] e:[] f:[]\n\
+             i:0 g:1 n:2 p:[0, 1, 2, 3] e:[] f:[]\n\
+             i:1 g:8 n:2 p:[1, 4, 5, 2] e:[] f:[]\n\
              \n\
              boundary_points\n\
              \n\
@@ -598,7 +631,7 @@ mod tests {
             3 12 2\n\
             \n\
             # points\n\
-            # id=index group x y z\n\
+            # id group x y z\n\
             0 1   0.0 0.0 0.0\n\
             1 1   1.0 0.0 0.0\n\
             2 1   1.0 1.0 0.0\n\
@@ -613,9 +646,9 @@ mod tests {
             11 1   0.0 1.0 2.0\n\
             \n\
             # cells\n\
-            # id=index group [point_ids]\n\
-            0 1  0 1 2 3 4 5  6  7\n\
-            1 8  4 5 6 7 8 9 10 11\n";
+            # id group ndim npoint point_ids...\n\
+            0 1  3 8  0 1 2 3 4 5  6  7\n\
+            1 8  3 8  4 5 6 7 8 9 10 11\n";
         let mesh = parse_mesh(&text.to_string())?;
         println!("{}", mesh);
         assert_eq!(
@@ -642,8 +675,8 @@ mod tests {
              i:11 g:1 x:[0.0, 1.0, 2.0] c:[]\n\
              \n\
              cells\n\
-             i:0 g:1 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
-             i:1 g:8 p:[4, 5, 6, 7, 8, 9, 10, 11] e:[] f:[]\n\
+             i:0 g:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
+             i:1 g:8 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11] e:[] f:[]\n\
              \n\
              boundary_points\n\
              \n\
