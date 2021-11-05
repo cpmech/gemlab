@@ -149,29 +149,6 @@ pub fn new_shape_qua_or_hex(kind: KindQuaOrHex) -> Box<dyn Shape> {
     }
 }
 
-pub fn new_shape_from_ndim_npoint(ndim: usize, npoint: usize) -> Option<Box<dyn Shape>> {
-    match (ndim, npoint) {
-        // (1, 2) => Some(Box::new(Lin2::new())),
-        // (1, 3) => Some(Box::new(Lin3::new())),
-        // (1, 4) => Some(Box::new(Lin4::new())),
-        // (1, 5) => Some(Box::new(Lin5::new())),
-        // (2, 3) => Some(Box::new(Tri3::new())),
-        // (2, 6) => Some(Box::new(Tri6::new())),
-        // (2, 10) => Some(Box::new(Tri10::new())),
-        // (2, 15) => Some(Box::new(Tri15::new())),
-        (2, 4) => Some(Box::new(Qua4::new())),
-        (2, 8) => Some(Box::new(Qua8::new())),
-        // (2, 9) => Some(Box::new(Qua9::new())),
-        // (2, 12) => Some(Box::new(Qua12::new())),
-        // (2, 16) => Some(Box::new(Qua16::new())),
-        // (3, 4) => Some(Box::new(Tet4::new())),
-        // (3, 10) => Some(Box::new(Tet10::new())),
-        (3, 8) => Some(Box::new(Hex8::new())),
-        (3, 20) => Some(Box::new(Hex20::new())),
-        _ => None,
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]

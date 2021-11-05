@@ -32,7 +32,7 @@ impl Generator {
 
         for (edge_key, edge) in &self.mesh.boundary_edges {
             for i in 0..2 {
-                let point_id = edge.point_ids[i];
+                let point_id = edge.points[i];
                 let x = &self.mesh.points[point_id].coords;
                 let existing_point_id = grid_bry.maybe_insert(point_id, x).unwrap();
                 if point_id != existing_point_id {
@@ -46,7 +46,7 @@ impl Generator {
         for (edge_key, edge) in &right.boundary_edges {
             let mut npoint_found = 0;
             for i in 0..2 {
-                let point_id = edge.point_ids[i];
+                let point_id = edge.points[i];
                 let x = &right.points[point_id].coords;
                 if let Some(left_point_id) = grid_bry.find(x).unwrap() {
                     npoint_found += 1;

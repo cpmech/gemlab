@@ -134,7 +134,7 @@ impl ReadMeshData {
             match data.next() {
                 Some(v) => {
                     let point_id: usize = v.parse().map_err(|_| "cannot parse cell point id")?;
-                    mesh.cells[i].point_ids.push(point_id);
+                    mesh.cells[i].points.push(point_id);
                 }
                 None => return Err("cannot read cell point id"),
             }

@@ -1,5 +1,5 @@
 /// Defines the kind of shape
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Kind {
     Lin2,
     Lin3,
@@ -21,7 +21,7 @@ pub enum Kind {
 }
 
 /// Defines Qua shapes
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum KindQua {
     Qua4,
     Qua8,
@@ -31,14 +31,14 @@ pub enum KindQua {
 }
 
 /// Defines Hex shapes
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum KindHex {
     Hex8,
     Hex20,
 }
 
 /// Defines Qua or Hex shapes
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum KindQuaOrHex {
     Qua4,
     Qua8,
