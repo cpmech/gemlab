@@ -1,4 +1,4 @@
-use crate::{kind_from_ndim_npoint, new_shape, Kind, Shape};
+use crate::{kind_from_ndim_npoint, new_shape, Kind, Shape, StrError};
 use russell_lab::{sort2, sort3};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -64,7 +64,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn new(ndim: usize) -> Result<Self, &'static str> {
+    pub fn new(ndim: usize) -> Result<Self, StrError> {
         if ndim < 2 || ndim > 3 {
             return Err("ndim must be 2 or 3");
         }
@@ -82,7 +82,7 @@ impl Mesh {
         })
     }
 
-    pub fn new_zeroed(ndim: usize, npoint: usize, ncell: usize) -> Result<Self, &'static str> {
+    pub fn new_zeroed(ndim: usize, npoint: usize, ncell: usize) -> Result<Self, StrError> {
         if ndim < 2 || ndim > 3 {
             return Err("ndim must be 2 or 3");
         }
@@ -122,7 +122,7 @@ impl Mesh {
         })
     }
 
-    pub fn compute_derived_props(&mut self) -> Result<(), &'static str> {
+    pub fn compute_derived_props(&mut self) -> Result<(), StrError> {
         // auxiliary maps
         let mut all_shapes: HashMap<Kind, Box<dyn Shape>> = HashMap::new();
         let mut all_edges: HashMap<EdgeKey, Edge> = HashMap::new();
@@ -227,20 +227,20 @@ impl Mesh {
         Ok(())
     }
 
-    pub fn from_serialized(serialized: &Vec<u8>) -> Result<Self, &'static str> {
+    pub fn from_serialized(serialized: &Vec<u8>) -> Result<Self, StrError> {
         let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
         let res = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
         Ok(res)
     }
 
-    pub fn get_serialized(&self) -> Result<Vec<u8>, &'static str> {
+    pub fn get_serialized(&self) -> Result<Vec<u8>, StrError> {
         let mut serialized = Vec::new();
         let mut serializer = rmp_serde::Serializer::new(&mut serialized);
         self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
         Ok(serialized)
     }
 
-    pub fn write_serialized<P>(&self, full_path: &P) -> Result<(), &'static str>
+    pub fn write_serialized<P>(&self, full_path: &P) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
@@ -358,7 +358,7 @@ impl fmt::Display for Mesh {
 
 #[cfg(test)]
 mod tests {
-    use super::{Cell, Mesh, Point};
+    use super::{Cell, Mesh, Point, StrError};
     use std::collections::{HashMap, HashSet};
 
     #[test]
@@ -372,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn compute_derived_props_works() -> Result<(), &'static str> {
+    fn compute_derived_props_works() -> Result<(), StrError> {
         let mut mesh = Mesh {
             ndim: 2,
             points: vec![

@@ -1,4 +1,4 @@
-use super::Shape;
+use crate::{Shape, StrError};
 use russell_lab::{vec_mat_mul, Matrix, Vector};
 
 const NDIM: usize = 3;
@@ -317,7 +317,7 @@ impl Shape for Hex20 {
         ksi[2] = POINT_NATURAL_COORDS[m][2];
     }
 
-    fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), &'static str> {
+    fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), StrError> {
         vec_mat_mul(v, 1.0, &self.interp, a)
     }
 }

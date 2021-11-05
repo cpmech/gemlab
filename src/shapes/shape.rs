@@ -1,4 +1,4 @@
-use crate::{Hex20, Hex8, Kind, KindHex, KindQua, KindQuaOrHex, Qua4, Qua8};
+use crate::{Hex20, Hex8, Kind, KindHex, KindQua, KindQuaOrHex, Qua4, Qua8, StrError};
 use russell_lab::{Matrix, Vector};
 
 /// Defines the functionality of shape
@@ -107,7 +107,7 @@ pub trait Shape {
     /// # Note
     ///
     /// The interpolation vector must be computed first by calling `calc_interp`.
-    fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), &'static str>;
+    fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), StrError>;
 }
 
 /// Returns new Shape
@@ -257,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn mul_interp_by_matrix_works() -> Result<(), &'static str> {
+    fn mul_interp_by_matrix_works() -> Result<(), StrError> {
         // iso-parametric elements: xᵢ = Σ_m Sᵐ ⋅ cᵐᵢ
         // where c is a matrix of coordinates
         let kinds = gen_kinds();

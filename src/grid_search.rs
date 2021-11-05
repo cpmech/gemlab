@@ -1,3 +1,4 @@
+use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
 use std::collections::HashMap;
 use std::fmt;
@@ -52,7 +53,7 @@ impl GridSearch {
     /// * `min` -- min coordinates (len = ndim)
     /// * `max` -- max coordinates (len = ndim)
     /// * `tol` -- tolerances to compare coordinates (len = ndim)
-    pub fn new(ndiv: &[usize], min: &[f64], max: &[f64], tol: &[f64]) -> Result<Self, &'static str> {
+    pub fn new(ndiv: &[usize], min: &[f64], max: &[f64], tol: &[f64]) -> Result<Self, StrError> {
         // check input
         let ndim = ndiv.len();
         if ndim < 2 || ndim > 3 {
@@ -118,7 +119,7 @@ impl GridSearch {
     ///
     /// * `id` -- identification number for the item
     /// * `x` -- coordinates (ndim) of the item
-    pub fn insert(&mut self, id: usize, x: &[f64]) -> Result<(), &'static str> {
+    pub fn insert(&mut self, id: usize, x: &[f64]) -> Result<(), StrError> {
         // check
         if x.len() != self.ndim {
             return Err("x.len() must equal ndim");
@@ -154,7 +155,7 @@ impl GridSearch {
     /// # Output
     ///
     /// * `id` -- if found, returns the identification number of the item
-    pub fn find(&mut self, x: &[f64]) -> Result<Option<usize>, &'static str> {
+    pub fn find(&mut self, x: &[f64]) -> Result<Option<usize>, StrError> {
         // check
         if x.len() != self.ndim {
             return Err("x.len() must equal ndim");
@@ -206,7 +207,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This function is a combination of `find` and `insert`
-    pub fn maybe_insert(&mut self, id: usize, x: &[f64]) -> Result<usize, &'static str> {
+    pub fn maybe_insert(&mut self, id: usize, x: &[f64]) -> Result<usize, StrError> {
         if let Some(id) = self.find(x)? {
             return Ok(id);
         }
@@ -215,7 +216,7 @@ impl GridSearch {
     }
 
     /// Returns a drawing of this object
-    pub fn plot(&self) -> Result<Plot, &'static str> {
+    pub fn plot(&self) -> Result<Plot, StrError> {
         // create plot
         let mut plot = Plot::new();
 
@@ -567,7 +568,7 @@ mod tests {
     }
 
     #[test]
-    fn container_index_works() -> Result<(), &'static str> {
+    fn container_index_works() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
             let index = g2d.container_index(data.x).unwrap();
@@ -602,7 +603,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_2d_works() -> Result<(), &'static str> {
+    fn insert_2d_works() -> Result<(), StrError> {
         let mut grid = get_test_grid_2d();
         for data in get_test_data_2d() {
             grid.insert(data.id, data.x)?;
@@ -639,7 +640,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_3d_works() -> Result<(), &'static str> {
+    fn insert_3d_works() -> Result<(), StrError> {
         let mut grid = get_test_grid_3d();
         for data in get_test_data_3d() {
             grid.insert(data.id, data.x)?;
@@ -687,7 +688,7 @@ mod tests {
     }
 
     #[test]
-    fn find_works() -> Result<(), &'static str> {
+    fn find_works() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
             g2d.insert(data.id, data.x)?;
@@ -709,7 +710,7 @@ mod tests {
     }
 
     #[test]
-    fn maybe_insert_works() -> Result<(), &'static str> {
+    fn maybe_insert_works() -> Result<(), StrError> {
         let mut grid = GridSearch::new(&[3, 3], &[0.0, 0.0], &[1.0, 1.0], &[1e-2, 1e-2])?;
         let id = grid.maybe_insert(111, &[0.5, 0.5])?;
         assert_eq!(id, 111);
@@ -721,7 +722,7 @@ mod tests {
     }
 
     #[test]
-    fn plot_works() -> Result<(), &'static str> {
+    fn plot_works() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
             g2d.insert(data.id, data.x)?;

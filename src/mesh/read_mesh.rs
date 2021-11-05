@@ -1,4 +1,4 @@
-use crate::Mesh;
+use crate::{Mesh, StrError};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -21,7 +21,7 @@ impl ReadMeshData {
         }
     }
 
-    fn parse_sizes(&mut self, line: &str) -> Result<bool, &'static str> {
+    fn parse_sizes(&mut self, line: &str) -> Result<bool, StrError> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
         if maybe_data.starts_with("#") || maybe_data == "" {
             return Ok(false); // ignore comments or empty lines; returns false == not parsed
@@ -48,7 +48,7 @@ impl ReadMeshData {
         Ok(true) // returns true == parsed
     }
 
-    fn parse_point(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, &'static str> {
+    fn parse_point(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, StrError> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
         if maybe_data.starts_with("#") || maybe_data == "" {
             return Ok(false); // ignore comments or empty lines
@@ -95,7 +95,7 @@ impl ReadMeshData {
         Ok(true) // returns true == parsed
     }
 
-    fn parse_cell(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, &'static str> {
+    fn parse_cell(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, StrError> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
         if maybe_data.starts_with("#") || maybe_data == "" {
             return Ok(false); // ignore comments or empty lines
@@ -146,7 +146,7 @@ impl ReadMeshData {
     }
 }
 
-pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
+pub fn read_mesh(filepath: &String) -> Result<Mesh, StrError> {
     let input = File::open(filepath).map_err(|_| "cannot open file")?;
     let buffered = BufReader::new(input);
     let mut lines_iter = buffered.lines();
@@ -214,7 +214,7 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
     Ok(mesh)
 }
 
-pub fn parse_mesh(text: &str) -> Result<Mesh, &'static str> {
+pub fn parse_mesh(text: &str) -> Result<Mesh, StrError> {
     // auxiliary data structure
     let mut data = ReadMeshData::new();
 
@@ -280,10 +280,10 @@ pub fn parse_mesh(text: &str) -> Result<Mesh, &'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_mesh, read_mesh, Mesh, ReadMeshData};
+    use super::{parse_mesh, read_mesh, Mesh, ReadMeshData, StrError};
 
     #[test]
-    fn parse_sizes_captures_errors() -> Result<(), &'static str> {
+    fn parse_sizes_captures_errors() -> Result<(), StrError> {
         let mut data = ReadMeshData::new();
 
         assert_eq!(
@@ -312,7 +312,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_point_captures_errors() -> Result<(), &'static str> {
+    fn parse_point_captures_errors() -> Result<(), StrError> {
         let mut data = ReadMeshData::new();
         data.ndim = 3;
         data.npoint = 2;
@@ -369,7 +369,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_cell_captures_errors() -> Result<(), &'static str> {
+    fn parse_cell_captures_errors() -> Result<(), StrError> {
         let mut data = ReadMeshData::new();
         data.ndim = 3;
         data.npoint = 2;
@@ -427,7 +427,7 @@ mod tests {
     }
 
     #[test]
-    fn read_mesh_handle_wrong_files() -> Result<(), &'static str> {
+    fn read_mesh_handle_wrong_files() -> Result<(), StrError> {
         assert_eq!(read_mesh(&String::from("__wrong__")).err(), Some("cannot open file"));
         assert_eq!(
             read_mesh(&String::from("./data/meshes/bad_empty.msh")).err(),
@@ -449,7 +449,7 @@ mod tests {
     }
 
     #[test]
-    fn read_mesh_2d_works() -> Result<(), &'static str> {
+    fn read_mesh_2d_works() -> Result<(), StrError> {
         let filepath = "./data/meshes/ok1.msh".to_string();
         let mesh = read_mesh(&filepath)?;
         println!("{}", mesh);
@@ -484,7 +484,7 @@ mod tests {
     }
 
     #[test]
-    fn read_mesh_3d_works() -> Result<(), &'static str> {
+    fn read_mesh_3d_works() -> Result<(), StrError> {
         let filepath = "./data/meshes/ok2.msh".to_string();
         let mesh = read_mesh(&filepath)?;
         println!("{}", mesh);
@@ -525,7 +525,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_mesh_handle_wrong_data() -> Result<(), &'static str> {
+    fn parse_mesh_handle_wrong_data() -> Result<(), StrError> {
         assert_eq!(
             parse_mesh(
                 "# header\n\
@@ -575,7 +575,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_mesh_2d_works() -> Result<(), &'static str> {
+    fn parse_mesh_2d_works() -> Result<(), StrError> {
         let mesh = parse_mesh(
             r"# header
             # ndim npoint ncell
@@ -627,7 +627,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_mesh_3d_works() -> Result<(), &'static str> {
+    fn parse_mesh_3d_works() -> Result<(), StrError> {
         let mesh = parse_mesh(
             r"# header
             # ndim npoint ncell

@@ -1,6 +1,6 @@
 use crate::{
     new_shape_qua_or_hex, AsArray2D, Cell, Circle, Edge, EdgeKey, Face, FaceKey, GridSearch, KindQuaOrHex, Mesh, Point,
-    Shape,
+    Shape, StrError,
 };
 use russell_lab::{mat_vec_mul, sort2, sort3, Matrix, Vector};
 use std::collections::HashSet;
@@ -287,7 +287,7 @@ impl Block {
     }
 
     /// Subdivide block into vertices and cells (mesh)
-    pub fn subdivide(&mut self, output: KindQuaOrHex) -> Result<Mesh, &'static str> {
+    pub fn subdivide(&mut self, output: KindQuaOrHex) -> Result<Mesh, StrError> {
         // results
         let mut mesh = Mesh::new(self.ndim)?;
 
@@ -421,7 +421,7 @@ impl Block {
         x: &mut Vector,
         ksi_vec: &Vector,
         cell_id: usize,
-    ) -> Result<usize, &'static str> {
+    ) -> Result<usize, StrError> {
         // handle existent point
         let ksi = &ksi_vec.as_data()[0..self.ndim];
         if let Some(index) = self.grid_ksi.find(ksi)? {
@@ -474,7 +474,7 @@ impl Block {
         shape_out: &Box<dyn Shape>,
         point_ids: &Vec<usize>,
         cell_id: usize,
-    ) -> Result<HashSet<EdgeKey>, &'static str> {
+    ) -> Result<HashSet<EdgeKey>, StrError> {
         // results
         let mut boundary_edges: HashSet<EdgeKey> = HashSet::new();
 
@@ -561,7 +561,7 @@ impl Block {
         shape_out: &Box<dyn Shape>,
         point_ids: &Vec<usize>,
         cell_id: usize,
-    ) -> Result<HashSet<FaceKey>, &'static str> {
+    ) -> Result<HashSet<FaceKey>, StrError> {
         // results
         let mut boundary_faces: HashSet<FaceKey> = HashSet::new();
 
@@ -650,7 +650,7 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{Block, Circle, Constraint, KindQuaOrHex, StrError};
 
     #[test]
     fn constraint_traits_work() {
@@ -861,7 +861,7 @@ mod tests {
     }
 
     #[test]
-    fn subdivide_2d_works() -> Result<(), &'static str> {
+    fn subdivide_2d_works() -> Result<(), StrError> {
         let mut block = Block::new(2);
         #[rustfmt::skip]
         block.set_coords(&[
@@ -917,7 +917,7 @@ mod tests {
     }
 
     #[test]
-    fn subdivide_2d_o2_works() -> Result<(), &'static str> {
+    fn subdivide_2d_o2_works() -> Result<(), StrError> {
         let mut block = Block::new(2);
         #[rustfmt::skip]
         block.set_coords(&[
@@ -985,7 +985,7 @@ mod tests {
     }
 
     #[test]
-    fn subdivide_3d_works() -> Result<(), &'static str> {
+    fn subdivide_3d_works() -> Result<(), StrError> {
         let mut block = Block::new(3);
         #[rustfmt::skip]
         block.set_coords(&[
@@ -1131,7 +1131,7 @@ mod tests {
     }
 
     #[test]
-    fn subdivide_3d_o2_works() -> Result<(), &'static str> {
+    fn subdivide_3d_o2_works() -> Result<(), StrError> {
         let mut block = Block::new(3);
         #[rustfmt::skip]
         block.set_coords(&[

@@ -1,5 +1,7 @@
 //! Gemlab
 
+pub type StrError = &'static str;
+
 mod as_array;
 mod fem;
 mod geometry;

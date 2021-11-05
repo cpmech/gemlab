@@ -1,4 +1,4 @@
-use super::Shape;
+use crate::{Shape, StrError};
 use russell_lab::{vec_mat_mul, Matrix, Vector};
 
 const NDIM: usize = 2;
@@ -148,7 +148,7 @@ impl Shape for Qua4 {
         ksi[1] = POINT_NATURAL_COORDS[m][1];
     }
 
-    fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), &'static str> {
+    fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), StrError> {
         vec_mat_mul(v, 1.0, &self.interp, a)
     }
 }
