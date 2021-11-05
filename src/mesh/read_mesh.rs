@@ -94,6 +94,46 @@ impl ReadMeshData {
 
         Ok(true) // returns true == parsed
     }
+
+    fn parse_cell(&mut self, mesh: &mut Mesh, line: &String) -> Result<bool, &'static str> {
+        let maybe_data = line.trim_start().trim_end_matches("\n");
+        if maybe_data.starts_with("#") || maybe_data == "" {
+            return Ok(false); // ignore comments or empty lines
+        }
+
+        let mut data = maybe_data.split_whitespace();
+
+        let i: usize = data
+            .next()
+            .unwrap() // must panic because no error expected here
+            .parse()
+            .map_err(|_| "cannot parse cell id")?;
+
+        if i != self.current_ncell {
+            return Err("the id and index of cells must equal each other");
+        }
+
+        mesh.cells[i].id = i;
+
+        match data.next() {
+            Some(v) => mesh.cells[i].group = v.parse().map_err(|_| "cannot parse cell group")?,
+            None => return Err("cannot read cell group"),
+        };
+
+        loop {
+            match data.next() {
+                Some(v) => {
+                    let point_id: usize = v.parse().map_err(|_| "cannot parse point id of cell (connectivity)")?;
+                    mesh.cells[i].point_ids.push(point_id);
+                }
+                None => break,
+            }
+        }
+
+        self.current_ncell += 1; // next cell
+
+        Ok(true) // returns true == parsed
+    }
 }
 
 pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
@@ -141,6 +181,24 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
     }
 
     // read and parse cells
+    loop {
+        match lines_iter.next() {
+            Some(v) => {
+                let line = v.unwrap(); // must panic because no error expected here
+                if data.parse_cell(&mut mesh, &line)? {
+                    if data.current_ncell == data.ncell {
+                        break;
+                    }
+                }
+            }
+            None => break,
+        }
+    }
+
+    // check data
+    if data.current_ncell != data.ncell {
+        return Err("not all cells have been found");
+    }
 
     // done
     Ok(mesh)
@@ -283,7 +341,7 @@ mod tests {
              i:3 g:1 x:[0.0, 1.0] c:[]\n\
              \n\
              cells\n\
-             i:0 g:0 p:[] e:[] f:[]\n\
+             i:0 g:1 p:[0, 1, 2, 3] e:[] f:[]\n\
              \n\
              boundary_points\n\
              \n\
@@ -319,7 +377,7 @@ mod tests {
              i:7 g:1 x:[0.0, 1.0, 1.0] c:[]\n\
              \n\
              cells\n\
-             i:0 g:0 p:[] e:[] f:[]\n\
+             i:0 g:1 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
              \n\
              boundary_points\n\
              \n\
