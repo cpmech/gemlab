@@ -31,7 +31,7 @@ impl ReadMeshData {
         }
     }
 
-    fn parse_header(&mut self, line: &String) -> Result<bool, &'static str> {
+    fn parse_sizes(&mut self, line: &String) -> Result<bool, &'static str> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
         if maybe_data.starts_with("#") || maybe_data == "" {
             return Ok(false); // ignore comments or empty lines; returns false == not parsed
@@ -116,14 +116,18 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
     // auxiliary data structure
     let mut data = ReadMeshData::new();
 
-    // read first line
-    let header = match lines_iter.next() {
-        Some(v) => v.unwrap(), // must panic because no error expected here
-        None => return Err("file is empty"),
-    };
-
-    // parse header
-    data.parse_header(&header)?;
+    // read and parse sizes
+    loop {
+        match lines_iter.next() {
+            Some(v) => {
+                let line = v.unwrap(); // must panic because no error expected here
+                if data.parse_sizes(&line)? {
+                    break;
+                }
+            }
+            None => return Err("file is empty or header is missing"),
+        }
+    }
 
     // allocate mesh
     let mut mesh = Mesh::new_zeroed(data.ndim, data.npoint, data.ncell)?;
@@ -167,51 +171,51 @@ mod tests {
     use super::{read_mesh, ReadMeshData};
 
     #[test]
-    fn parse_header_captures_errors() -> Result<(), &'static str> {
+    fn parse_sizes_captures_errors() -> Result<(), &'static str> {
         let mut data = ReadMeshData::new();
 
         assert_eq!(
-            data.parse_header(&String::from("  \n")),
+            data.parse_sizes(&String::from("  \n")),
             Err("cannot find the keyword %%MatrixMarket on the first line")
         );
         assert_eq!(
-            data.parse_header(&String::from("MatrixMarket  ")),
-            Err("the header (first line) must start with %%MatrixMarket"),
+            data.parse_sizes(&String::from("MatrixMarket  ")),
+            Err("the sizes (first line) must start with %%MatrixMarket"),
         );
 
         assert_eq!(
-            data.parse_header(&String::from("  %%MatrixMarket")),
-            Err("cannot find the first option in the header line"),
+            data.parse_sizes(&String::from("  %%MatrixMarket")),
+            Err("cannot find the first option in the sizes line"),
         );
         assert_eq!(
-            data.parse_header(&String::from("%%MatrixMarket   wrong")),
+            data.parse_sizes(&String::from("%%MatrixMarket   wrong")),
             Err("after %%MatrixMarket, the first option must be \"matrix\""),
         );
 
         assert_eq!(
-            data.parse_header(&String::from("%%MatrixMarket matrix  ")),
-            Err("cannot find the second option in the header line"),
+            data.parse_sizes(&String::from("%%MatrixMarket matrix  ")),
+            Err("cannot find the second option in the sizes line"),
         );
         assert_eq!(
-            data.parse_header(&String::from("%%MatrixMarket   matrix wrong")),
+            data.parse_sizes(&String::from("%%MatrixMarket   matrix wrong")),
             Err("after %%MatrixMarket, the second option must be \"coordinate\""),
         );
 
         assert_eq!(
-            data.parse_header(&String::from("%%MatrixMarket matrix  coordinate")),
-            Err("cannot find the third option in the header line"),
+            data.parse_sizes(&String::from("%%MatrixMarket matrix  coordinate")),
+            Err("cannot find the third option in the sizes line"),
         );
         assert_eq!(
-            data.parse_header(&String::from("%%MatrixMarket matrix    coordinate  wrong")),
+            data.parse_sizes(&String::from("%%MatrixMarket matrix    coordinate  wrong")),
             Err("after %%MatrixMarket, the third option must be \"real\""),
         );
 
         assert_eq!(
-            data.parse_header(&String::from("%%MatrixMarket  matrix coordinate real")),
-            Err("cannot find the fourth option in the header line"),
+            data.parse_sizes(&String::from("%%MatrixMarket  matrix coordinate real")),
+            Err("cannot find the fourth option in the sizes line"),
         );
         assert_eq!(
-            data.parse_header(&String::from("  %%MatrixMarket matrix coordinate real wrong")),
+            data.parse_sizes(&String::from("  %%MatrixMarket matrix coordinate real wrong")),
             Err("after %%MatrixMarket, the fourth option must be either \"general\" or \"symmetric\""),
         );
         Ok(())
@@ -288,9 +292,31 @@ mod tests {
     fn read_mesh_works() -> Result<(), &'static str> {
         let filepath = "./data/meshes/ok1.msh".to_string();
         let mesh = read_mesh(&filepath)?;
-        assert_eq!(mesh.ndim, 2);
-        assert_eq!(mesh.points.len(), 4);
-        assert_eq!(mesh.cells.len(), 1);
+        println!("{}", mesh);
+        assert_eq!(
+            format!("{}", mesh),
+            "ndim = 2\n\
+             npoint = 4\n\
+             ncell = 1\n\
+             n_boundary_point = 0\n\
+             n_boundary_edge = 0\n\
+             n_boundary_face = 0\n\
+             \n\
+             points\n\
+             i:0 g:1 x:[0.0, 0.0] c:[]\n\
+             i:1 g:1 x:[1.0, 0.0] c:[]\n\
+             i:2 g:1 x:[1.0, 1.0] c:[]\n\
+             i:3 g:1 x:[0.0, 1.0] c:[]\n\
+             \n\
+             cells\n\
+             i:0 g:0 p:[] e:[] f:[]\n\
+             \n\
+             boundary_points\n\
+             \n\
+             boundary_edges\n\
+             \n\
+             boundary_faces\n"
+        );
         Ok(())
     }
 }

@@ -93,7 +93,7 @@ impl Mesh {
         Ok(Mesh {
             ndim,
             points: vec![zero_point; npoint],
-            cells: vec![zero_cell; npoint],
+            cells: vec![zero_cell; ncell],
             boundary_points: HashMap::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
