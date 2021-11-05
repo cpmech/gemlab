@@ -156,6 +156,8 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
         return Err("not all points have been found");
     }
 
+    // read and parse cells
+
     // done
     Ok(mesh)
 }
@@ -205,6 +207,11 @@ mod tests {
         assert_eq!(
             data.parse_point(&String::from(" wrong \n")).err(),
             Some("cannot parse point id")
+        );
+
+        assert_eq!(
+            data.parse_point(&String::from(" 2 1 0.0 0.0 0.0 \n")).err(),
+            Some("the id and index of points must equal each other")
         );
 
         assert_eq!(
@@ -288,6 +295,38 @@ mod tests {
              i:1 g:1 x:[1.0, 0.0] c:[]\n\
              i:2 g:1 x:[1.0, 1.0] c:[]\n\
              i:3 g:1 x:[0.0, 1.0] c:[]\n\
+             \n\
+             cells\n\
+             i:0 g:0 p:[] e:[] f:[]\n\
+             \n\
+             boundary_points\n\
+             \n\
+             boundary_edges\n\
+             \n\
+             boundary_faces\n"
+        );
+
+        let filepath = "./data/meshes/ok2.msh".to_string();
+        let mesh = read_mesh(&filepath)?;
+        println!("{}", mesh);
+        assert_eq!(
+            format!("{}", mesh),
+            "ndim = 3\n\
+             npoint = 8\n\
+             ncell = 1\n\
+             n_boundary_point = 0\n\
+             n_boundary_edge = 0\n\
+             n_boundary_face = 0\n\
+             \n\
+             points\n\
+             i:0 g:1 x:[0.0, 0.0, 0.0] c:[]\n\
+             i:1 g:1 x:[1.0, 0.0, 0.0] c:[]\n\
+             i:2 g:1 x:[1.0, 1.0, 0.0] c:[]\n\
+             i:3 g:1 x:[0.0, 1.0, 0.0] c:[]\n\
+             i:4 g:1 x:[0.0, 0.0, 1.0] c:[]\n\
+             i:5 g:1 x:[1.0, 0.0, 1.0] c:[]\n\
+             i:6 g:1 x:[1.0, 1.0, 1.0] c:[]\n\
+             i:7 g:1 x:[0.0, 1.0, 1.0] c:[]\n\
              \n\
              cells\n\
              i:0 g:0 p:[] e:[] f:[]\n\
