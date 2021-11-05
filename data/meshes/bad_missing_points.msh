@@ -1,0 +1,7 @@
+# header
+# ndim npoint ncell
+2 4 1
+
+# points
+# id=index group x y
+0 1 0.0 0.0

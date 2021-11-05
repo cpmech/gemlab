@@ -64,10 +64,6 @@ impl ReadMeshData {
             return Ok(false); // ignore comments or empty lines
         }
 
-        if self.current_npoint == self.npoint {
-            return Err("there are more points than specified");
-        }
-
         let mut data = maybe_data.split_whitespace();
 
         self.point_id = data
@@ -206,15 +202,6 @@ mod tests {
         data.npoint = 2;
         data.ncell = 1;
 
-        data.current_npoint = 2;
-
-        assert_eq!(
-            data.parse_point(&String::from("0 1 0.0 0.0 0.0\n")).err(),
-            Some("there are more points than specified")
-        );
-
-        data.current_npoint = 0;
-
         assert_eq!(
             data.parse_point(&String::from(" wrong \n")).err(),
             Some("cannot parse point id")
@@ -263,16 +250,22 @@ mod tests {
         assert_eq!(read_mesh(&String::from("__wrong__")).err(), Some("cannot open file"));
         assert_eq!(
             read_mesh(&String::from("./data/meshes/bad_empty.msh")).err(),
-            Some("file is empty")
+            Some("file is empty or header is missing")
+        );
+        assert_eq!(
+            read_mesh(&String::from("./data/meshes/bad_missing_header.msh")).err(),
+            Some("file is empty or header is missing")
         );
         assert_eq!(
             read_mesh(&String::from("./data/meshes/bad_missing_points.msh")).err(),
             Some("not all points have been found")
         );
+        /*
         assert_eq!(
             read_mesh(&String::from("./data/meshes/bad_many_points.msh")).err(),
             Some("there are more points than specified")
         );
+        */
         Ok(())
     }
 
