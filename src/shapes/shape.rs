@@ -1,56 +1,5 @@
-use super::*;
+use crate::{Hex20, Hex8, Kind, KindHex, KindQua, KindQuaOrHex, Qua4, Qua8};
 use russell_lab::{Matrix, Vector};
-
-/// Defines the kind of shape
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Kind {
-    Lin2,
-    Lin3,
-    Lin4,
-    Lin5,
-    Tri3,
-    Tri6,
-    Tri10,
-    Tri15,
-    Qua4,
-    Qua8,
-    Qua9,
-    Qua12,
-    Qua16,
-    Tet4,
-    Tet10,
-    Hex8,
-    Hex20,
-}
-
-/// Defines Qua shapes
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum KindQua {
-    Qua4,
-    Qua8,
-    Qua9,
-    Qua12,
-    Qua16,
-}
-
-/// Defines Hex shapes
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum KindHex {
-    Hex8,
-    Hex20,
-}
-
-/// Defines Qua or Hex shapes
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum KindQuaOrHex {
-    Qua4,
-    Qua8,
-    Qua9,
-    Qua12,
-    Qua16,
-    Hex8,
-    Hex20,
-}
 
 /// Defines the functionality of shape
 pub trait Shape {
@@ -232,24 +181,6 @@ mod tests {
 
     fn gen_kinds() -> Vec<Kind> {
         vec![Kind::Qua4, Kind::Qua8, Kind::Hex8, Kind::Hex20]
-    }
-
-    #[test]
-    fn kind_enums_work() {
-        let lin = Kind::Lin2;
-        let clone = lin.clone();
-        assert_eq!(lin, clone);
-        assert_eq!(format!("{:?}", lin), "Lin2");
-
-        let qua = KindQua::Qua12;
-        let clone = qua.clone();
-        assert_eq!(qua, clone);
-        assert_eq!(format!("{:?}", qua), "Qua12");
-
-        let hex = KindHex::Hex20;
-        let clone = hex.clone();
-        assert_eq!(hex, clone);
-        assert_eq!(format!("{:?}", hex), "Hex20");
     }
 
     // Holds arguments for numerical differentiation
