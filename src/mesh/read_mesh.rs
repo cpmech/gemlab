@@ -86,19 +86,19 @@ impl ReadMeshData {
         };
 
         match data.next() {
-            Some(v) => self.point_x = v.parse().map_err(|_| "cannot parse point x coord")?,
-            None => return Err("cannot read x coord"),
+            Some(v) => self.point_x = v.parse().map_err(|_| "cannot parse point x coordinate")?,
+            None => return Err("cannot read point x coordinate"),
         };
 
         match data.next() {
-            Some(v) => self.point_y = v.parse().map_err(|_| "cannot parse point y coord")?,
-            None => return Err("cannot read y coord"),
+            Some(v) => self.point_y = v.parse().map_err(|_| "cannot parse point y coordinate")?,
+            None => return Err("cannot read point y coordinate"),
         };
 
         if self.ndim == 3 {
             match data.next() {
-                Some(v) => self.point_z = v.parse().map_err(|_| "cannot parse point z coord")?,
-                None => return Err("cannot read z coord"),
+                Some(v) => self.point_z = v.parse().map_err(|_| "cannot parse point z coordinate")?,
+                None => return Err("cannot read point z coordinate"),
             };
         }
 
@@ -175,48 +175,26 @@ mod tests {
         let mut data = ReadMeshData::new();
 
         assert_eq!(
-            data.parse_sizes(&String::from("  \n")),
-            Err("cannot find the keyword %%MatrixMarket on the first line")
-        );
-        assert_eq!(
-            data.parse_sizes(&String::from("MatrixMarket  ")),
-            Err("the sizes (first line) must start with %%MatrixMarket"),
+            data.parse_sizes(&String::from(" wrong \n")).err(),
+            Some("cannot parse ndim")
         );
 
         assert_eq!(
-            data.parse_sizes(&String::from("  %%MatrixMarket")),
-            Err("cannot find the first option in the sizes line"),
+            data.parse_sizes(&String::from(" 2 \n")).err(),
+            Some("cannot read npoint")
         );
         assert_eq!(
-            data.parse_sizes(&String::from("%%MatrixMarket   wrong")),
-            Err("after %%MatrixMarket, the first option must be \"matrix\""),
-        );
-
-        assert_eq!(
-            data.parse_sizes(&String::from("%%MatrixMarket matrix  ")),
-            Err("cannot find the second option in the sizes line"),
-        );
-        assert_eq!(
-            data.parse_sizes(&String::from("%%MatrixMarket   matrix wrong")),
-            Err("after %%MatrixMarket, the second option must be \"coordinate\""),
+            data.parse_sizes(&String::from(" 1 wrong")).err(),
+            Some("cannot parse npoint")
         );
 
         assert_eq!(
-            data.parse_sizes(&String::from("%%MatrixMarket matrix  coordinate")),
-            Err("cannot find the third option in the sizes line"),
+            data.parse_sizes(&String::from(" 2 4   \n")).err(),
+            Some("cannot read ncell")
         );
         assert_eq!(
-            data.parse_sizes(&String::from("%%MatrixMarket matrix    coordinate  wrong")),
-            Err("after %%MatrixMarket, the third option must be \"real\""),
-        );
-
-        assert_eq!(
-            data.parse_sizes(&String::from("%%MatrixMarket  matrix coordinate real")),
-            Err("cannot find the fourth option in the sizes line"),
-        );
-        assert_eq!(
-            data.parse_sizes(&String::from("  %%MatrixMarket matrix coordinate real wrong")),
-            Err("after %%MatrixMarket, the fourth option must be either \"general\" or \"symmetric\""),
+            data.parse_sizes(&String::from(" 2 4  wrong")).err(),
+            Some("cannot parse ncell")
         );
         Ok(())
     }
@@ -224,48 +202,58 @@ mod tests {
     #[test]
     fn parse_point_captures_errors() -> Result<(), &'static str> {
         let mut data = ReadMeshData::new();
-        data.ndim = 2;
+        data.ndim = 3;
         data.npoint = 2;
         data.ncell = 1;
 
+        data.current_npoint = 2;
+
+        assert_eq!(
+            data.parse_point(&String::from("0 1 0.0 0.0 0.0\n")).err(),
+            Some("there are more points than specified")
+        );
+
+        data.current_npoint = 0;
+
         assert_eq!(
             data.parse_point(&String::from(" wrong \n")).err(),
-            Some("cannot parse index i")
+            Some("cannot parse point id")
         );
 
         assert_eq!(
-            data.parse_point(&String::from(" 1 \n")).err(),
-            Some("cannot read index j")
+            data.parse_point(&String::from(" 0 \n")).err(),
+            Some("cannot read point group")
         );
         assert_eq!(
-            data.parse_point(&String::from(" 1 wrong")).err(),
-            Some("cannot parse index j")
-        );
-
-        assert_eq!(
-            data.parse_point(&String::from(" 1 1   \n")).err(),
-            Some("cannot read value aij")
-        );
-        assert_eq!(
-            data.parse_point(&String::from(" 1 1  wrong")).err(),
-            Some("cannot parse value aij")
+            data.parse_point(&String::from(" 0 wrong")).err(),
+            Some("cannot parse point group")
         );
 
         assert_eq!(
-            data.parse_point(&String::from(" 0 1  1")).err(),
-            Some("found invalid indices")
+            data.parse_point(&String::from(" 0 1   \n")).err(),
+            Some("cannot read point x coordinate")
         );
         assert_eq!(
-            data.parse_point(&String::from(" 3 1  1")).err(),
-            Some("found invalid indices")
+            data.parse_point(&String::from(" 0 1  wrong")).err(),
+            Some("cannot parse point x coordinate")
+        );
+
+        assert_eq!(
+            data.parse_point(&String::from(" 0 1 0.0  \n")).err(),
+            Some("cannot read point y coordinate")
         );
         assert_eq!(
-            data.parse_point(&String::from(" 1 0  1")).err(),
-            Some("found invalid indices")
+            data.parse_point(&String::from(" 0 1 0.0 wrong")).err(),
+            Some("cannot parse point y coordinate")
+        );
+
+        assert_eq!(
+            data.parse_point(&String::from(" 0 1 0.0 0.0 \n")).err(),
+            Some("cannot read point z coordinate")
         );
         assert_eq!(
-            data.parse_point(&String::from(" 1 3  1")).err(),
-            Some("found invalid indices")
+            data.parse_point(&String::from(" 0 1 0.0 0.0 wrong")).err(),
+            Some("cannot parse point z coordinate")
         );
         Ok(())
     }
