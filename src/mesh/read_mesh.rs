@@ -297,6 +297,41 @@ mod tests {
     }
 
     #[test]
+    fn parse_cell_captures_errors() -> Result<(), &'static str> {
+        let mut data = ReadMeshData::new();
+        data.ndim = 3;
+        data.npoint = 2;
+        data.ncell = 1;
+
+        let mut mesh = Mesh::new_zeroed(data.ndim, data.npoint, data.ncell)?;
+
+        assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" wrong \n")).err(),
+            Some("cannot parse cell id")
+        );
+
+        assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" 2 1 0.0 0.0 0.0 \n")).err(),
+            Some("the id and index of cells must equal each other")
+        );
+
+        assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" 0 \n")).err(),
+            Some("cannot read cell group")
+        );
+        assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" 0 wrong")).err(),
+            Some("cannot parse cell group")
+        );
+
+        assert_eq!(
+            data.parse_cell(&mut mesh, &String::from(" 0 1  wrong")).err(),
+            Some("cannot parse point id of cell (connectivity)")
+        );
+        Ok(())
+    }
+
+    #[test]
     fn read_mesh_handle_wrong_files() -> Result<(), &'static str> {
         assert_eq!(read_mesh(&String::from("__wrong__")).err(), Some("cannot open file"));
         assert_eq!(
@@ -311,12 +346,10 @@ mod tests {
             read_mesh(&String::from("./data/meshes/bad_missing_points.msh")).err(),
             Some("not all points have been found")
         );
-        /*
         assert_eq!(
-            read_mesh(&String::from("./data/meshes/bad_many_points.msh")).err(),
-            Some("there are more points than specified")
+            read_mesh(&String::from("./data/meshes/bad_missing_cells.msh")).err(),
+            Some("not all cells have been found")
         );
-        */
         Ok(())
     }
 
@@ -328,8 +361,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "ndim = 2\n\
-             npoint = 4\n\
-             ncell = 1\n\
+             npoint = 6\n\
+             ncell = 2\n\
              n_boundary_point = 0\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
@@ -337,11 +370,14 @@ mod tests {
              points\n\
              i:0 g:1 x:[0.0, 0.0] c:[]\n\
              i:1 g:1 x:[1.0, 0.0] c:[]\n\
-             i:2 g:1 x:[1.0, 1.0] c:[]\n\
+             i:2 g:11 x:[1.0, 1.0] c:[]\n\
              i:3 g:1 x:[0.0, 1.0] c:[]\n\
+             i:4 g:1 x:[2.0, 0.0] c:[]\n\
+             i:5 g:1 x:[2.0, 1.0] c:[]\n\
              \n\
              cells\n\
              i:0 g:1 p:[0, 1, 2, 3] e:[] f:[]\n\
+             i:1 g:8 p:[1, 4, 5, 2] e:[] f:[]\n\
              \n\
              boundary_points\n\
              \n\
@@ -360,8 +396,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "ndim = 3\n\
-             npoint = 8\n\
-             ncell = 1\n\
+             npoint = 12\n\
+             ncell = 2\n\
              n_boundary_point = 0\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
@@ -373,11 +409,16 @@ mod tests {
              i:3 g:1 x:[0.0, 1.0, 0.0] c:[]\n\
              i:4 g:1 x:[0.0, 0.0, 1.0] c:[]\n\
              i:5 g:1 x:[1.0, 0.0, 1.0] c:[]\n\
-             i:6 g:1 x:[1.0, 1.0, 1.0] c:[]\n\
+             i:6 g:111 x:[1.0, 1.0, 1.0] c:[]\n\
              i:7 g:1 x:[0.0, 1.0, 1.0] c:[]\n\
+             i:8 g:1 x:[0.0, 0.0, 2.0] c:[]\n\
+             i:9 g:1 x:[1.0, 0.0, 2.0] c:[]\n\
+             i:10 g:1 x:[1.0, 1.0, 2.0] c:[]\n\
+             i:11 g:1 x:[0.0, 1.0, 2.0] c:[]\n\
              \n\
              cells\n\
              i:0 g:1 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
+             i:1 g:8 p:[4, 5, 6, 7, 8, 9, 10, 11] e:[] f:[]\n\
              \n\
              boundary_points\n\
              \n\
