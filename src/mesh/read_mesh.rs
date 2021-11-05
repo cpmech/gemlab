@@ -214,7 +214,7 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
     Ok(mesh)
 }
 
-pub fn parse_mesh(text: &String) -> Result<Mesh, &'static str> {
+pub fn parse_mesh(text: &str) -> Result<Mesh, &'static str> {
     // auxiliary data structure
     let mut data = ReadMeshData::new();
 
@@ -526,46 +526,49 @@ mod tests {
 
     #[test]
     fn parse_mesh_handle_wrong_data() -> Result<(), &'static str> {
-        let missing_header = "\n\
-            # header\n\
-            # ndim npoint ncell\n";
         assert_eq!(
-            parse_mesh(&missing_header.to_string()).err(),
+            parse_mesh(
+                "# header\n\
+                 # ndim npoint ncell\n"
+            )
+            .err(),
             Some("text string is empty or header is missing")
         );
 
-        let missing_points = "\n\
-            # header\n\
-            # ndim npoint ncell\n\
-            2 4 1\n\
-            \n\
-            # points\n\
-            # id group x y\n\
-            0 1 0.0 0.0\n";
         assert_eq!(
-            parse_mesh(&missing_points.to_string()).err(),
+            parse_mesh(
+                "# header\n\
+                 # ndim npoint ncell\n\
+                 2 4 1\n\
+                 \n\
+                 # points\n\
+                 # id group x y\n\
+                 0 1 0.0 0.0\n"
+            )
+            .err(),
             Some("not all points have been found")
         );
 
-        let missing_cells = "\n\
-            # header\n\
-            # ndim npoint ncell\n\
-            2 6 2\n\
-            \n\
-            # points\n\
-            # id group x y\n\
-            0 1  0.0 0.0\n\
-            1 1  1.0 0.0\n\
-            2 11 1.0 1.0\n\
-            3 1  0.0 1.0\n\
-            4 1  2.0 0.0\n\
-            5 1  2.0 1.0\n\
-            \n\
-            # cells\n\
-            # idx group point_ids...\n\
-            0 1  2 4  0 1 2 3\n";
         assert_eq!(
-            parse_mesh(&missing_cells.to_string()).err(),
+            parse_mesh(
+                "# header\n\
+                 # ndim npoint ncell\n\
+                 2 6 2\n\
+                 \n\
+                 # points\n\
+                 # id group x y\n\
+                 0 1  0.0 0.0\n\
+                 1 1  1.0 0.0\n\
+                 2 11 1.0 1.0\n\
+                 3 1  0.0 1.0\n\
+                 4 1  2.0 0.0\n\
+                 5 1  2.0 1.0\n\
+                 \n\
+                 # cells\n\
+                 # idx group point_ids...\n\
+                 0 1  2 4  0 1 2 3\n"
+            )
+            .err(),
             Some("not all cells have been found")
         );
         Ok(())
@@ -573,25 +576,25 @@ mod tests {
 
     #[test]
     fn parse_mesh_2d_works() -> Result<(), &'static str> {
-        let text = "\n\
-            # header\n\
-            # ndim npoint ncell\n\
-            2 6 2\n\
-            \n\
-            # points\n\
-            # id group x y\n\
-            0 1  0.0 0.0\n\
-            1 1  1.0 0.0\n\
-            2 11 1.0 1.0\n\
-            3 1  0.0 1.0\n\
-            4 1  2.0 0.0\n\
-            5 1  2.0 1.0\n\
-            \n\
-            # cells\n\
-            # id group ndim npoint point_ids...\n\
-            0 1  2 4  0 1 2 3\n\
-            1 8  2 4  1 4 5 2\n";
-        let mesh = parse_mesh(&text.to_string())?;
+        let mesh = parse_mesh(
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 6 2\n\
+             \n\
+             # points\n\
+             # id group x y\n\
+             0 1  0.0 0.0\n\
+             1 1  1.0 0.0\n\
+             2 11 1.0 1.0\n\
+             3 1  0.0 1.0\n\
+             4 1  2.0 0.0\n\
+             5 1  2.0 1.0\n\
+             \n\
+             # cells\n\
+             # id group ndim npoint point_ids...\n\
+             0 1  2 4  0 1 2 3\n\
+             1 8  2 4  1 4 5 2\n",
+        )?;
         println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
@@ -625,31 +628,31 @@ mod tests {
 
     #[test]
     fn parse_mesh_3d_works() -> Result<(), &'static str> {
-        let text = "\n\
-            # header\n\
-            # ndim npoint ncell\n\
-            3 12 2\n\
-            \n\
-            # points\n\
-            # id group x y z\n\
-            0 1   0.0 0.0 0.0\n\
-            1 1   1.0 0.0 0.0\n\
-            2 1   1.0 1.0 0.0\n\
-            3 1   0.0 1.0 0.0\n\
-            4 1   0.0 0.0 1.0\n\
-            5 1   1.0 0.0 1.0\n\
-            6 111 1.0 1.0 1.0\n\
-            7 1   0.0 1.0 1.0\n\
-            8 1   0.0 0.0 2.0\n\
-            9 1   1.0 0.0 2.0\n\
-            10 1   1.0 1.0 2.0\n\
-            11 1   0.0 1.0 2.0\n\
-            \n\
-            # cells\n\
-            # id group ndim npoint point_ids...\n\
-            0 1  3 8  0 1 2 3 4 5  6  7\n\
-            1 8  3 8  4 5 6 7 8 9 10 11\n";
-        let mesh = parse_mesh(&text.to_string())?;
+        let mesh = parse_mesh(
+            "# header\n\
+             # ndim npoint ncell\n\
+             3 12 2\n\
+             \n\
+             # points\n\
+             # id group x y z\n\
+             0 1   0.0 0.0 0.0\n\
+             1 1   1.0 0.0 0.0\n\
+             2 1   1.0 1.0 0.0\n\
+             3 1   0.0 1.0 0.0\n\
+             4 1   0.0 0.0 1.0\n\
+             5 1   1.0 0.0 1.0\n\
+             6 111 1.0 1.0 1.0\n\
+             7 1   0.0 1.0 1.0\n\
+             8 1   0.0 0.0 2.0\n\
+             9 1   1.0 0.0 2.0\n\
+             10 1   1.0 1.0 2.0\n\
+             11 1   0.0 1.0 2.0\n\
+             \n\
+             # cells\n\
+             # id group ndim npoint point_ids...\n\
+             0 1  3 8  0 1 2 3 4 5  6  7\n\
+             1 8  3 8  4 5 6 7 8 9 10 11\n",
+        )?;
         println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
