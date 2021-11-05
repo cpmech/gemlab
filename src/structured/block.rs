@@ -1,5 +1,6 @@
 use crate::{new_shape_qua_or_hex, AsArray2D, Cell, Circle, Edge, Face, GridSearch, KindQuaOrHex, Mesh, Point, Shape};
 use russell_lab::{mat_vec_mul, sort2, sort3, Matrix, Vector};
+use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Constraint {
@@ -420,7 +421,7 @@ impl Block {
         // handle existent point
         let ksi = &ksi_vec.as_data()[0..self.ndim];
         if let Some(index) = self.grid_ksi.find(ksi)? {
-            mesh.points[index].shared_by_cell_ids.push(cell_id);
+            mesh.points[index].shared_by_cell_ids.insert(cell_id, true);
             return Ok(index);
         }
 
@@ -433,11 +434,13 @@ impl Block {
         self.shape.mul_interp_by_matrix(x, &self.coords)?;
 
         // add new point to mesh
+        let mut shared_by_cell_ids = HashMap::new();
+        shared_by_cell_ids.insert(cell_id, true);
         mesh.points.push(Point {
             id: index,
             group: self.group,
             coords: x.as_data().clone(),
-            shared_by_cell_ids: vec![cell_id],
+            shared_by_cell_ids,
         });
 
         // done

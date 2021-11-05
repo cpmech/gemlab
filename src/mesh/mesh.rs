@@ -12,10 +12,21 @@ pub struct Point {
     pub id: usize,
     pub group: usize,
     pub coords: Vec<f64>,
-    pub shared_by_cell_ids: Vec<usize>,
+    // pub shared_by_cell_ids: Vec<usize>,
+    pub shared_by_cell_ids: HashMap<usize, bool>,
     // pub shared_by_boundary_edge_ids: Vec<usize>,
     // pub shared_by_boundary_face_ids: Vec<usize>,
 }
+
+/*
+impl Point {
+    pub fn update_shared_by_cell(&mut self, cell_id: usize) {
+        if !self.shared_by_cell_ids.iter().any(|&cell_id| cell_id == cell_id) {
+            self.shared_by_cell_ids.push(cell_id);
+        }
+    }
+}
+*/
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
@@ -81,7 +92,8 @@ impl Mesh {
             id: 0,
             group: 0,
             coords: vec![0.0; ndim],
-            shared_by_cell_ids: Vec::new(),
+            // shared_by_cell_ids: Vec::new(),
+            shared_by_cell_ids: HashMap::new(),
         };
         let zero_cell = Cell {
             id: 0,
@@ -142,6 +154,19 @@ impl Mesh {
         }
         return (min, max);
     }
+
+    pub fn compute_derived_props(&mut self) {
+        for cell in &self.cells {
+            for point_id in &cell.point_ids {
+                self.points[*point_id].shared_by_cell_ids.insert(cell.id, true);
+            }
+        }
+        for point in &self.points {
+            if point.shared_by_cell_ids.len() <= 1 {
+                self.boundary_points.insert(point.id, true);
+            }
+        }
+    }
 }
 
 impl fmt::Display for Mesh {
@@ -158,10 +183,12 @@ impl fmt::Display for Mesh {
         // points: i=index, g=group, x=coordinates, c=shared_by_cell_ids
         write!(f, "\npoints\n").unwrap();
         for point in &self.points {
+            let mut shared_by_cell_ids: Vec<_> = point.shared_by_cell_ids.keys().collect();
+            shared_by_cell_ids.sort();
             write!(
                 f,
                 "i:{} g:{} x:{:?} c:{:?}\n",
-                point.id, point.group, point.coords, point.shared_by_cell_ids
+                point.id, point.group, point.coords, shared_by_cell_ids
             )
             .unwrap();
         }
