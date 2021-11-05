@@ -8,11 +8,6 @@ struct ReadMeshData {
     ncell: usize,
     current_npoint: usize,
     current_ncell: usize,
-    point_id: usize,
-    point_group: usize,
-    point_x: f64,
-    point_y: f64,
-    point_z: f64,
 }
 
 impl ReadMeshData {
@@ -23,11 +18,6 @@ impl ReadMeshData {
             ncell: 0,
             current_npoint: 0,
             current_ncell: 0,
-            point_id: 0,
-            point_group: 0,
-            point_x: 0.0,
-            point_y: 0.0,
-            point_z: 0.0,
         }
     }
 
@@ -58,7 +48,7 @@ impl ReadMeshData {
         Ok(true) // returns true == parsed
     }
 
-    fn parse_point(&mut self, line: &String) -> Result<bool, &'static str> {
+    fn parse_point(&mut self, mesh: &mut Mesh, line: &String) -> Result<bool, &'static str> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
         if maybe_data.starts_with("#") || maybe_data == "" {
             return Ok(false); // ignore comments or empty lines
@@ -66,34 +56,36 @@ impl ReadMeshData {
 
         let mut data = maybe_data.split_whitespace();
 
-        self.point_id = data
+        let i: usize = data
             .next()
             .unwrap() // must panic because no error expected here
             .parse()
             .map_err(|_| "cannot parse point id")?;
 
-        if self.point_id != self.current_npoint {
+        if i != self.current_npoint {
             return Err("the id and index of points must equal each other");
         }
 
+        mesh.points[i].id = i;
+
         match data.next() {
-            Some(v) => self.point_group = v.parse().map_err(|_| "cannot parse point group")?,
+            Some(v) => mesh.points[i].group = v.parse().map_err(|_| "cannot parse point group")?,
             None => return Err("cannot read point group"),
         };
 
         match data.next() {
-            Some(v) => self.point_x = v.parse().map_err(|_| "cannot parse point x coordinate")?,
+            Some(v) => mesh.points[i].coords[0] = v.parse().map_err(|_| "cannot parse point x coordinate")?,
             None => return Err("cannot read point x coordinate"),
         };
 
         match data.next() {
-            Some(v) => self.point_y = v.parse().map_err(|_| "cannot parse point y coordinate")?,
+            Some(v) => mesh.points[i].coords[1] = v.parse().map_err(|_| "cannot parse point y coordinate")?,
             None => return Err("cannot read point y coordinate"),
         };
 
         if self.ndim == 3 {
             match data.next() {
-                Some(v) => self.point_z = v.parse().map_err(|_| "cannot parse point z coordinate")?,
+                Some(v) => mesh.points[i].coords[2] = v.parse().map_err(|_| "cannot parse point z coordinate")?,
                 None => return Err("cannot read point z coordinate"),
             };
         }
@@ -133,15 +125,7 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
         match lines_iter.next() {
             Some(v) => {
                 let line = v.unwrap(); // must panic because no error expected here
-                if data.parse_point(&line)? {
-                    let index = data.point_id;
-                    mesh.points[index].id = data.point_id;
-                    mesh.points[index].group = data.point_group;
-                    mesh.points[index].coords[0] = data.point_x;
-                    mesh.points[index].coords[1] = data.point_y;
-                    if data.ndim == 3 {
-                        mesh.points[data.point_id].coords[2] = data.point_z;
-                    }
+                if data.parse_point(&mut mesh, &line)? {
                     if data.current_npoint == data.npoint {
                         break;
                     }
@@ -166,7 +150,7 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{read_mesh, ReadMeshData};
+    use super::{read_mesh, Mesh, ReadMeshData};
 
     #[test]
     fn parse_sizes_captures_errors() -> Result<(), &'static str> {
@@ -204,49 +188,51 @@ mod tests {
         data.npoint = 2;
         data.ncell = 1;
 
+        let mut mesh = Mesh::new_zeroed(data.ndim, data.npoint, data.ncell)?;
+
         assert_eq!(
-            data.parse_point(&String::from(" wrong \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" wrong \n")).err(),
             Some("cannot parse point id")
         );
 
         assert_eq!(
-            data.parse_point(&String::from(" 2 1 0.0 0.0 0.0 \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" 2 1 0.0 0.0 0.0 \n")).err(),
             Some("the id and index of points must equal each other")
         );
 
         assert_eq!(
-            data.parse_point(&String::from(" 0 \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0 \n")).err(),
             Some("cannot read point group")
         );
         assert_eq!(
-            data.parse_point(&String::from(" 0 wrong")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0 wrong")).err(),
             Some("cannot parse point group")
         );
 
         assert_eq!(
-            data.parse_point(&String::from(" 0 1   \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0 1   \n")).err(),
             Some("cannot read point x coordinate")
         );
         assert_eq!(
-            data.parse_point(&String::from(" 0 1  wrong")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0 1  wrong")).err(),
             Some("cannot parse point x coordinate")
         );
 
         assert_eq!(
-            data.parse_point(&String::from(" 0 1 0.0  \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0 1 0.0  \n")).err(),
             Some("cannot read point y coordinate")
         );
         assert_eq!(
-            data.parse_point(&String::from(" 0 1 0.0 wrong")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0 1 0.0 wrong")).err(),
             Some("cannot parse point y coordinate")
         );
 
         assert_eq!(
-            data.parse_point(&String::from(" 0 1 0.0 0.0 \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0 1 0.0 0.0 \n")).err(),
             Some("cannot read point z coordinate")
         );
         assert_eq!(
-            data.parse_point(&String::from(" 0 1 0.0 0.0 wrong")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0 1 0.0 0.0 wrong")).err(),
             Some("cannot parse point z coordinate")
         );
         Ok(())
@@ -277,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn read_mesh_works() -> Result<(), &'static str> {
+    fn read_mesh_2d_works() -> Result<(), &'static str> {
         let filepath = "./data/meshes/ok1.msh".to_string();
         let mesh = read_mesh(&filepath)?;
         println!("{}", mesh);
@@ -305,7 +291,11 @@ mod tests {
              \n\
              boundary_faces\n"
         );
+        Ok(())
+    }
 
+    #[test]
+    fn read_mesh_3d_works() -> Result<(), &'static str> {
         let filepath = "./data/meshes/ok2.msh".to_string();
         let mesh = read_mesh(&filepath)?;
         println!("{}", mesh);
