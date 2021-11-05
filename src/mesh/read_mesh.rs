@@ -21,7 +21,7 @@ impl ReadMeshData {
         }
     }
 
-    fn parse_sizes(&mut self, line: &String) -> Result<bool, &'static str> {
+    fn parse_sizes(&mut self, line: &str) -> Result<bool, &'static str> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
         if maybe_data.starts_with("#") || maybe_data == "" {
             return Ok(false); // ignore comments or empty lines; returns false == not parsed
@@ -48,7 +48,7 @@ impl ReadMeshData {
         Ok(true) // returns true == parsed
     }
 
-    fn parse_point(&mut self, mesh: &mut Mesh, line: &String) -> Result<bool, &'static str> {
+    fn parse_point(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, &'static str> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
         if maybe_data.starts_with("#") || maybe_data == "" {
             return Ok(false); // ignore comments or empty lines
@@ -95,7 +95,7 @@ impl ReadMeshData {
         Ok(true) // returns true == parsed
     }
 
-    fn parse_cell(&mut self, mesh: &mut Mesh, line: &String) -> Result<bool, &'static str> {
+    fn parse_cell(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, &'static str> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
         if maybe_data.starts_with("#") || maybe_data == "" {
             return Ok(false); // ignore comments or empty lines
@@ -204,11 +204,73 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, &'static str> {
     Ok(mesh)
 }
 
+pub fn parse_mesh(text: &String) -> Result<Mesh, &'static str> {
+    // auxiliary data structure
+    let mut data = ReadMeshData::new();
+
+    // read and parse sizes
+    let mut lines_iter = text.lines();
+    loop {
+        match lines_iter.next() {
+            Some(line) => {
+                if data.parse_sizes(line)? {
+                    break;
+                }
+            }
+            None => return Err("text string is empty or header is missing"),
+        }
+    }
+
+    // allocate mesh
+    let mut mesh = Mesh::new_zeroed(data.ndim, data.npoint, data.ncell)?;
+
+    // read and parse points
+    loop {
+        match lines_iter.next() {
+            Some(line) => {
+                if data.parse_point(&mut mesh, line)? {
+                    if data.current_npoint == data.npoint {
+                        break;
+                    }
+                }
+            }
+            None => break,
+        }
+    }
+
+    // check data
+    if data.current_npoint != data.npoint {
+        return Err("not all points have been found");
+    }
+
+    // read and parse cells
+    loop {
+        match lines_iter.next() {
+            Some(line) => {
+                if data.parse_cell(&mut mesh, line)? {
+                    if data.current_ncell == data.ncell {
+                        break;
+                    }
+                }
+            }
+            None => break,
+        }
+    }
+
+    // check data
+    if data.current_ncell != data.ncell {
+        return Err("not all cells have been found");
+    }
+
+    // done
+    Ok(mesh)
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{read_mesh, Mesh, ReadMeshData};
+    use super::{parse_mesh, read_mesh, Mesh, ReadMeshData};
 
     #[test]
     fn parse_sizes_captures_errors() -> Result<(), &'static str> {
@@ -392,6 +454,169 @@ mod tests {
     fn read_mesh_3d_works() -> Result<(), &'static str> {
         let filepath = "./data/meshes/ok2.msh".to_string();
         let mesh = read_mesh(&filepath)?;
+        println!("{}", mesh);
+        assert_eq!(
+            format!("{}", mesh),
+            "ndim = 3\n\
+             npoint = 12\n\
+             ncell = 2\n\
+             n_boundary_point = 0\n\
+             n_boundary_edge = 0\n\
+             n_boundary_face = 0\n\
+             \n\
+             points\n\
+             i:0 g:1 x:[0.0, 0.0, 0.0] c:[]\n\
+             i:1 g:1 x:[1.0, 0.0, 0.0] c:[]\n\
+             i:2 g:1 x:[1.0, 1.0, 0.0] c:[]\n\
+             i:3 g:1 x:[0.0, 1.0, 0.0] c:[]\n\
+             i:4 g:1 x:[0.0, 0.0, 1.0] c:[]\n\
+             i:5 g:1 x:[1.0, 0.0, 1.0] c:[]\n\
+             i:6 g:111 x:[1.0, 1.0, 1.0] c:[]\n\
+             i:7 g:1 x:[0.0, 1.0, 1.0] c:[]\n\
+             i:8 g:1 x:[0.0, 0.0, 2.0] c:[]\n\
+             i:9 g:1 x:[1.0, 0.0, 2.0] c:[]\n\
+             i:10 g:1 x:[1.0, 1.0, 2.0] c:[]\n\
+             i:11 g:1 x:[0.0, 1.0, 2.0] c:[]\n\
+             \n\
+             cells\n\
+             i:0 g:1 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
+             i:1 g:8 p:[4, 5, 6, 7, 8, 9, 10, 11] e:[] f:[]\n\
+             \n\
+             boundary_points\n\
+             \n\
+             boundary_edges\n\
+             \n\
+             boundary_faces\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn parse_mesh_handle_wrong_data() -> Result<(), &'static str> {
+        let missing_header = "\n\
+            # header\n\
+            # ndim npoint ncell\n";
+        assert_eq!(
+            parse_mesh(&missing_header.to_string()).err(),
+            Some("text string is empty or header is missing")
+        );
+
+        let missing_points = "\n\
+            # header\n\
+            # ndim npoint ncell\n\
+            2 4 1\n\
+            \n\
+            # points\n\
+            # id=index group x y\n\
+            0 1 0.0 0.0\n";
+        assert_eq!(
+            parse_mesh(&missing_points.to_string()).err(),
+            Some("not all points have been found")
+        );
+
+        let missing_cells = "\n\
+            # header\n\
+            # ndim npoint ncell\n\
+            2 6 2\n\
+            \n\
+            # points\n\
+            # id=index group x y\n\
+            0 1  0.0 0.0\n\
+            1 1  1.0 0.0\n\
+            2 11 1.0 1.0\n\
+            3 1  0.0 1.0\n\
+            4 1  2.0 0.0\n\
+            5 1  2.0 1.0\n\
+            \n\
+            # cells\n\
+            # id=index group [point_ids]\n\
+            0 1  0 1 2 3\n";
+        assert_eq!(
+            parse_mesh(&missing_cells.to_string()).err(),
+            Some("not all cells have been found")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn parse_mesh_2d_works() -> Result<(), &'static str> {
+        let text = "\n\
+            # header\n\
+            # ndim npoint ncell\n\
+            2 6 2\n\
+            \n\
+            # points\n\
+            # id=index group x y\n\
+            0 1  0.0 0.0\n\
+            1 1  1.0 0.0\n\
+            2 11 1.0 1.0\n\
+            3 1  0.0 1.0\n\
+            4 1  2.0 0.0\n\
+            5 1  2.0 1.0\n\
+            \n\
+            # cells\n\
+            # id=index group [point_ids]\n\
+            0 1  0 1 2 3\n\
+            1 8  1 4 5 2\n";
+        let mesh = parse_mesh(&text.to_string())?;
+        println!("{}", mesh);
+        assert_eq!(
+            format!("{}", mesh),
+            "ndim = 2\n\
+             npoint = 6\n\
+             ncell = 2\n\
+             n_boundary_point = 0\n\
+             n_boundary_edge = 0\n\
+             n_boundary_face = 0\n\
+             \n\
+             points\n\
+             i:0 g:1 x:[0.0, 0.0] c:[]\n\
+             i:1 g:1 x:[1.0, 0.0] c:[]\n\
+             i:2 g:11 x:[1.0, 1.0] c:[]\n\
+             i:3 g:1 x:[0.0, 1.0] c:[]\n\
+             i:4 g:1 x:[2.0, 0.0] c:[]\n\
+             i:5 g:1 x:[2.0, 1.0] c:[]\n\
+             \n\
+             cells\n\
+             i:0 g:1 p:[0, 1, 2, 3] e:[] f:[]\n\
+             i:1 g:8 p:[1, 4, 5, 2] e:[] f:[]\n\
+             \n\
+             boundary_points\n\
+             \n\
+             boundary_edges\n\
+             \n\
+             boundary_faces\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn parse_mesh_3d_works() -> Result<(), &'static str> {
+        let text = "\n\
+            # header\n\
+            # ndim npoint ncell\n\
+            3 12 2\n\
+            \n\
+            # points\n\
+            # id=index group x y z\n\
+            0 1   0.0 0.0 0.0\n\
+            1 1   1.0 0.0 0.0\n\
+            2 1   1.0 1.0 0.0\n\
+            3 1   0.0 1.0 0.0\n\
+            4 1   0.0 0.0 1.0\n\
+            5 1   1.0 0.0 1.0\n\
+            6 111 1.0 1.0 1.0\n\
+            7 1   0.0 1.0 1.0\n\
+            8 1   0.0 0.0 2.0\n\
+            9 1   1.0 0.0 2.0\n\
+            10 1   1.0 1.0 2.0\n\
+            11 1   0.0 1.0 2.0\n\
+            \n\
+            # cells\n\
+            # id=index group [point_ids]\n\
+            0 1  0 1 2 3 4 5  6  7\n\
+            1 8  4 5 6 7 8 9 10 11\n";
+        let mesh = parse_mesh(&text.to_string())?;
         println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
