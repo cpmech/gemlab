@@ -9,39 +9,42 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
+pub type Group = usize;
+pub type Index = usize;
+pub type CellId = usize;
 pub type EdgeKey = (usize, usize);
 pub type FaceKey = (usize, usize, usize);
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Point {
-    pub id: usize,
-    pub group: usize,
+    pub id: Index,
+    pub group: Group,
     pub coords: Vec<f64>,
-    pub shared_by_cells: HashSet<usize>,
+    pub shared_by_cells: HashSet<Index>,
     pub shared_by_edges: HashSet<EdgeKey>,
     pub shared_by_faces: HashSet<FaceKey>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
-    pub group: usize,
-    pub points: Vec<usize>, // in the right order (unsorted)
-    pub shared_by_cells: HashSet<usize>,
+    pub group: Group,
+    pub points: Vec<Index>, // in the right order (unsorted)
+    pub shared_by_cells: HashSet<Index>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Face {
-    pub group: usize,
-    pub points: Vec<usize>, // in the right order (unsorted)
-    pub shared_by_cells: HashSet<usize>,
+    pub group: Group,
+    pub points: Vec<Index>, // in the right order (unsorted)
+    pub shared_by_cells: HashSet<Index>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Cell {
-    pub id: usize,
-    pub group: usize,
+    pub id: Index,
+    pub group: Group,
     pub ndim: usize,
-    pub points: Vec<usize>,
+    pub points: Vec<Index>,
     pub boundary_edges: HashSet<EdgeKey>,
     pub boundary_faces: HashSet<FaceKey>,
 }
@@ -51,9 +54,13 @@ pub struct Mesh {
     pub ndim: usize,
     pub points: Vec<Point>,
     pub cells: Vec<Cell>,
-    pub boundary_points: HashSet<usize>,
+    pub boundary_points: HashSet<Index>,
     pub boundary_edges: HashMap<EdgeKey, Edge>,
     pub boundary_faces: HashMap<FaceKey, Face>,
+    pub point_groups: HashMap<Group, Vec<Index>>,
+    pub cell_groups: HashMap<Group, Vec<Index>>,
+    pub edge_groups: HashMap<Group, Vec<EdgeKey>>,
+    pub face_groups: HashMap<Group, Vec<FaceKey>>,
 }
 
 impl Mesh {
@@ -68,6 +75,10 @@ impl Mesh {
             boundary_points: HashSet::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
+            point_groups: HashMap::new(),
+            cell_groups: HashMap::new(),
+            edge_groups: HashMap::new(),
+            face_groups: HashMap::new(),
         })
     }
 
@@ -104,6 +115,10 @@ impl Mesh {
             boundary_points: HashSet::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
+            point_groups: HashMap::new(),
+            cell_groups: HashMap::new(),
+            edge_groups: HashMap::new(),
+            face_groups: HashMap::new(),
         })
     }
 
@@ -405,6 +420,10 @@ mod tests {
             boundary_points: HashSet::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
+            point_groups: HashMap::new(),
+            cell_groups: HashMap::new(),
+            edge_groups: HashMap::new(),
+            face_groups: HashMap::new(),
         };
         mesh.compute_derived_props()?;
         Ok(())
