@@ -285,7 +285,7 @@ impl Block {
     /// Subdivide block into vertices and cells (mesh)
     pub fn subdivide(&mut self, output: KindQuaOrHex) -> Result<Mesh, &'static str> {
         // results
-        let mut mesh = Mesh::new(self.ndim);
+        let mut mesh = Mesh::new(self.ndim)?;
 
         // auxiliary variables
         let shape_out = new_shape_qua_or_hex(output);

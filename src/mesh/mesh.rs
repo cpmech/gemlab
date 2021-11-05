@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fmt;
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Point {
@@ -8,6 +13,8 @@ pub struct Point {
     pub group: usize,
     pub coords: Vec<f64>,
     pub shared_by_cell_ids: Vec<usize>,
+    // pub shared_by_boundary_edge_ids: Vec<usize>,
+    // pub shared_by_boundary_face_ids: Vec<usize>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -46,15 +53,51 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn new(ndim: usize) -> Self {
-        Mesh {
+    pub fn new(ndim: usize) -> Result<Self, &'static str> {
+        if ndim < 2 || ndim > 3 {
+            return Err("ndim must be 2 or 3");
+        }
+        Ok(Mesh {
             ndim,
             points: Vec::new(),
             cells: Vec::new(),
             boundary_points: HashMap::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
+        })
+    }
+
+    pub fn new_zeroed(ndim: usize, npoint: usize, ncell: usize) -> Result<Self, &'static str> {
+        if ndim < 2 || ndim > 3 {
+            return Err("ndim must be 2 or 3");
         }
+        if npoint < 2 {
+            return Err("npoint must be greater than or equal to 2");
+        }
+        if ncell < 1 {
+            return Err("ncell must be greater than or equal to 1");
+        }
+        let zero_point = Point {
+            id: 0,
+            group: 0,
+            coords: vec![0.0; ndim],
+            shared_by_cell_ids: Vec::new(),
+        };
+        let zero_cell = Cell {
+            id: 0,
+            group: 0,
+            point_ids: Vec::new(),
+            boundary_edge_ids: Vec::new(),
+            boundary_face_ids: Vec::new(),
+        };
+        Ok(Mesh {
+            ndim,
+            points: vec![zero_point; npoint],
+            cells: vec![zero_cell; npoint],
+            boundary_points: HashMap::new(),
+            boundary_edges: HashMap::new(),
+            boundary_faces: HashMap::new(),
+        })
     }
 
     pub fn from_serialized(serialized: &Vec<u8>) -> Result<Self, &'static str> {
@@ -68,6 +111,36 @@ impl Mesh {
         let mut serializer = rmp_serde::Serializer::new(&mut serialized);
         self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
         Ok(serialized)
+    }
+
+    pub fn write_serialized<P>(&self, full_path: &P) -> Result<(), &'static str>
+    where
+        P: AsRef<OsStr> + ?Sized,
+    {
+        let path = Path::new(full_path).to_path_buf();
+        if let Some(p) = path.parent() {
+            fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
+        }
+        let serialized = self.get_serialized()?;
+        let mut file = File::create(path).map_err(|_| "cannot create file")?;
+        file.write_all(&serialized).map_err(|_| "cannot write file")?;
+        Ok(())
+    }
+
+    pub fn get_limits(&self) -> (Vec<f64>, Vec<f64>) {
+        let mut min = vec![f64::MAX; self.ndim];
+        let mut max = vec![f64::MIN; self.ndim];
+        for point in &self.points {
+            for i in 0..self.ndim {
+                if point.coords[i] < min[i] {
+                    min[i] = point.coords[i];
+                }
+                if point.coords[i] > max[i] {
+                    max[i] = point.coords[i];
+                }
+            }
+        }
+        return (min, max);
     }
 }
 
@@ -148,7 +221,7 @@ impl fmt::Display for Mesh {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
 
     #[test]
     fn new_works() {
@@ -158,6 +231,51 @@ mod tests {
     #[test]
     fn serialize_works() {
         // todo
+    }
+
+    #[test]
+    fn from_string_works() -> Result<(), &'static str> {
+        let data = "ndim = 2\n\
+             npoint = 9\n\
+             ncell = 4\n\
+             n_boundary_point = 8\n\
+             n_boundary_edge = 8\n\
+             n_boundary_face = 0\n\
+             \n\
+             points\n\
+             i:0 g:1 x:[0.0, 0.0] c:[0]\n\
+             i:1 g:1 x:[1.0, 0.0] c:[0, 1]\n\
+             i:2 g:1 x:[1.0, 1.0] c:[0, 1, 2, 3]\n\
+             i:3 g:1 x:[0.0, 1.0] c:[0, 2]\n\
+             i:4 g:1 x:[2.0, 0.0] c:[1]\n\
+             i:5 g:1 x:[2.0, 1.0] c:[1, 3]\n\
+             i:6 g:1 x:[1.0, 2.0] c:[2, 3]\n\
+             i:7 g:1 x:[0.0, 2.0] c:[2]\n\
+             i:8 g:1 x:[2.0, 2.0] c:[3]\n\
+             \n\
+             cells\n\
+             i:0 g:1 p:[0, 1, 2, 3] e:[0, 1] f:[]\n\
+             i:1 g:1 p:[1, 4, 5, 2] e:[2, 3] f:[]\n\
+             i:2 g:1 p:[3, 2, 6, 7] e:[4, 5] f:[]\n\
+             i:3 g:1 p:[2, 5, 8, 6] e:[6, 7] f:[]\n\
+             \n\
+             boundary_points\n\
+             0 1 3 4 5 6 7 8 \n\
+             \n\
+             boundary_edges\n\
+             i:0 g:1 k:(0,1) p:[0, 1] c:[0]\n\
+             i:1 g:1 k:(0,3) p:[3, 0] c:[0]\n\
+             i:2 g:1 k:(1,4) p:[1, 4] c:[1]\n\
+             i:3 g:1 k:(4,5) p:[4, 5] c:[1]\n\
+             i:4 g:1 k:(6,7) p:[6, 7] c:[2]\n\
+             i:5 g:1 k:(3,7) p:[7, 3] c:[2]\n\
+             i:6 g:1 k:(5,8) p:[5, 8] c:[3]\n\
+             i:7 g:1 k:(6,8) p:[8, 6] c:[3]\n\
+             \n\
+             boundary_faces\n"
+            .to_string();
+        // Mesh::from_string(&data)?;
+        Ok(())
     }
 
     #[test]
