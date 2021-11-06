@@ -1,15 +1,18 @@
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 
 /// Holds the id and coordinates of an item
+#[derive(Deserialize, Serialize)]
 struct Item {
     id: usize,   // identification number
     x: Vec<f64>, // (ndim) coordinates
 }
 
 /// Holds items
+#[derive(Deserialize, Serialize)]
 struct Container {
     items: Vec<Item>,
 }
@@ -21,96 +24,124 @@ struct Container {
 /// * Durand, Farias, and Pedroso (2015) Computing intersections between
 ///   non-compatible curves and finite elements, Computational Mechanics;
 ///   DOI=10.1007/s00466-015-1181-y
+#[derive(Deserialize, Serialize)]
 pub struct GridSearch {
     // constants
     ndim: usize,      // space dimension
-    ndiv: [usize; 3], // number of divisions along each direction
-    min: [f64; 3],    // min values
-    max: [f64; 3],    // max values
-    delta: [f64; 3],  // difference between max and min
-    size: [f64; 3],   // size of each container
-    cf: [usize; 3],   // coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
+    ndiv: Vec<usize>, // (ndim) number of divisions along each direction
+    min: Vec<f64>,    // (ndim) min values
+    max: Vec<f64>,    // (ndim) max values
+    delta: Vec<f64>,  // (ndim) difference between max and min
+    size: Vec<f64>,   // (ndim) size of each container
+    cf: Vec<usize>,   // (3) coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
 
     // auxiliary variable
-    ratio: [usize; 3], // ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
+    ratio: Vec<usize>, // (ndim) ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
 
     // square/cubic halo: bounding box corners around point, including the point
-    tol: [f64; 3],       // tolerances to compare coordinates and define the halo
-    halo: [[f64; 3]; 8], // 4 in 2D or 8 in 3D (each contains 3 coords)
+    tol: Vec<f64>,       // tolerances to compare coordinates and define the halo
+    halo: Vec<Vec<f64>>, // (ncorner) 4 in 2D or 8 in 3D (each contains ndim coords)
     ncorner: usize,      // number of halo corners 4 in 2D or 8 in 3D
 
     // holds non-empty containers. maps container.index to container.data
     // a point may be located in more than one container (e.g., when at boundaries)
     containers: HashMap<usize, Container>,
+
+    // indicates whether initialize has been called or not
+    initialized: bool,
 }
 
 impl GridSearch {
     /// Creates a new GridSearch
+    pub fn new(ndim: usize) -> Result<Self, StrError> {
+        // check
+        if ndim < 2 || ndim > 3 {
+            return Err("ndim must be 2 or 3");
+        }
+
+        // constants
+        const DEFAULT_TOLERANCE: f64 = 1e-4;
+        let ncorner = usize::pow(2, ndim as u32);
+
+        // done
+        Ok(GridSearch {
+            ndim,
+            ndiv: vec![0; ndim],
+            min: vec![0.0; ndim],
+            max: vec![0.0; ndim],
+            delta: vec![0.0; ndim],
+            size: vec![0.0; ndim],
+            cf: vec![0; 3], // << must be 3
+            ratio: vec![0; ndim],
+            tol: vec![DEFAULT_TOLERANCE; ndim],
+            halo: vec![vec![0.0; ndim]; ncorner],
+            ncorner,
+            containers: HashMap::new(),
+            initialized: false,
+        })
+    }
+
+    /// Sets the tolerances to compare coordinates (len = ndim)
+    ///
+    /// # Note
+    ///
+    /// You must call `initialize` AFTER setting the tolerances.
+    pub fn set_tolerances(&mut self, tol: &[f64]) -> Result<(), StrError> {
+        if tol.len() != self.ndim {
+            return Err("tol.len() must equal ndim");
+        }
+        self.tol.copy_from_slice(tol);
+        self.initialized = false;
+        Ok(())
+    }
+
+    /// Initializes the GridSearch
     ///
     /// # Input
     ///
     /// * `ndiv` -- number of divisions along each dimension (len = 2 or 3 == ndim)
     /// * `min` -- min coordinates (len = ndim)
     /// * `max` -- max coordinates (len = ndim)
-    /// * `tol` -- tolerances to compare coordinates (len = ndim)
-    pub fn new(ndiv: &[usize], min: &[f64], max: &[f64], tol: &[f64]) -> Result<Self, StrError> {
+    pub fn initialize(&mut self, ndiv: &[usize], min: &[f64], max: &[f64]) -> Result<(), StrError> {
         // check input
-        let ndim = ndiv.len();
-        if ndim < 2 || ndim > 3 {
-            return Err("ndiv.len() must be 2 or 3 = ndim");
+        self.initialized = false;
+        if ndiv.len() != self.ndim {
+            return Err("ndiv.len() must equal ndim");
         }
-        if min.len() != ndim {
-            return Err("xmin.len() must equal ndiv.len()");
+        if min.len() != self.ndim {
+            return Err("min.len() must equal ndim");
         }
-        if max.len() != ndim {
-            return Err("xmax.len() must equal ndiv.len()");
+        if max.len() != self.ndim {
+            return Err("max.len() must equal ndim");
         }
-        if tol.len() != ndim {
-            return Err("tol.len() must equal ndiv.len()");
-        }
-
-        // allocate gs
-        let mut grid = GridSearch {
-            ndim,
-            ndiv: [0; 3],
-            min: [0.0; 3],
-            max: [0.0; 3],
-            delta: [0.0; 3],
-            size: [0.0; 3],
-            cf: [0; 3],
-            ratio: [0; 3],
-            tol: [0.0; 3],
-            halo: [[0.0; 3]; 8],
-            ncorner: usize::pow(2, ndim as u32),
-            containers: HashMap::new(),
-        };
 
         // check and compute sizes
-        for i in 0..ndim {
-            grid.ndiv[i] = ndiv[i];
+        for i in 0..self.ndim {
+            self.ndiv[i] = ndiv[i];
             if ndiv[i] < 1 {
-                return Err("ndiv must be at least equal to 1");
+                return Err("ndiv must be at least 1");
             }
-            grid.min[i] = min[i];
-            grid.max[i] = max[i];
-            grid.delta[i] = max[i] - min[i];
-            if grid.delta[i] <= 0.0 {
-                return Err("xmax must be greater than xmin");
+            self.min[i] = min[i];
+            self.max[i] = max[i];
+            self.delta[i] = max[i] - min[i];
+            if self.delta[i] <= 0.0 {
+                return Err("max must be greater than min");
             }
-            grid.size[i] = grid.delta[i] / (ndiv[i] as f64);
-            grid.tol[i] = tol[i];
-            if grid.size[i] <= 10.0 * grid.tol[i] {
+            self.size[i] = self.delta[i] / (ndiv[i] as f64);
+            self.tol[i] = self.tol[i];
+            if self.size[i] <= 10.0 * self.tol[i] {
                 return Err("ndiv is too high; ndiv must be such that the grid size is greater than 10 * tol");
             }
         }
 
         // coefficient
-        grid.cf[0] = 1;
-        grid.cf[1] = grid.ndiv[0];
-        grid.cf[2] = grid.ndiv[0] * grid.ndiv[1];
+        self.cf[0] = 1;
+        self.cf[1] = self.ndiv[0];
+        self.cf[2] = self.ndiv[0] * self.ndiv[1];
 
         // done
-        Ok(grid)
+        self.initialized = true;
+        Ok(())
     }
 
     /// Inserts a new item to the right container in the grid
@@ -121,6 +152,9 @@ impl GridSearch {
     /// * `x` -- coordinates (ndim) of the item
     pub fn insert(&mut self, id: usize, x: &[f64]) -> Result<(), StrError> {
         // check
+        if !self.initialized {
+            return Err("initialize must be called first");
+        }
         if x.len() != self.ndim {
             return Err("x.len() must equal ndim");
         }
@@ -157,6 +191,9 @@ impl GridSearch {
     /// * `id` -- if found, returns the identification number of the item
     pub fn find(&mut self, x: &[f64]) -> Result<Option<usize>, StrError> {
         // check
+        if !self.initialized {
+            return Err("initialize must be called first");
+        }
         if x.len() != self.ndim {
             return Err("x.len() must equal ndim");
         }
@@ -217,6 +254,11 @@ impl GridSearch {
 
     /// Returns a drawing of this object
     pub fn plot(&self) -> Result<Plot, StrError> {
+        // check
+        if !self.initialized {
+            return Err("initialize must be called first");
+        }
+
         // create plot
         let mut plot = Plot::new();
 
@@ -261,6 +303,21 @@ impl GridSearch {
 
         // done
         Ok(plot)
+    }
+
+    /// Returns the serialized data
+    pub fn encode(&self) -> Result<Vec<u8>, StrError> {
+        let mut serialized = Vec::new();
+        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
+        self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
+        Ok(serialized)
+    }
+
+    /// Creates a new GridSearch from serialized data
+    pub fn decode(serialized: &Vec<u8>) -> Result<Self, StrError> {
+        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
+        let res = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
+        Ok(res)
     }
 
     /// Calculates the container index where the point x should be located
@@ -385,11 +442,18 @@ mod tests {
     }
 
     fn get_test_grid_2d() -> GridSearch {
-        GridSearch::new(&[5, 5], &[-0.2, -0.2], &[0.8, 1.8], &[1e-2, 1e-2]).unwrap()
+        let mut grid = GridSearch::new(2).unwrap();
+        grid.set_tolerances(&[1e-2, 1e-2]).unwrap();
+        grid.initialize(&[5, 5], &[-0.2, -0.2], &[0.8, 1.8]).unwrap();
+        grid
     }
 
     fn get_test_grid_3d() -> GridSearch {
-        GridSearch::new(&[3, 3, 3], &[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], &[1e-2, 1e-2, 1e-2]).unwrap()
+        let mut grid = GridSearch::new(3).unwrap();
+        grid.set_tolerances(&[1e-2, 1e-2, 1e-2]).unwrap();
+        grid.initialize(&[3, 3, 3], &[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])
+            .unwrap();
+        grid
     }
 
     fn get_test_data_2d<'a>() -> Vec<TestData<'a>> {
@@ -471,46 +535,74 @@ mod tests {
 
     #[test]
     fn new_fails_on_wrong_input() {
-        let grid = GridSearch::new(&[1], &[0.0, 0.0], &[1.0, 1.0], &[0.1, 0.1]);
-        assert_eq!(grid.err(), Some("ndiv.len() must be 2 or 3 = ndim"));
+        let grid = GridSearch::new(1);
+        assert_eq!(grid.err(), Some("ndim must be 2 or 3"));
+    }
 
-        let grid = GridSearch::new(&[1, 1], &[0.0], &[1.0, 1.0], &[0.1, 0.1]);
-        assert_eq!(grid.err(), Some("xmin.len() must equal ndiv.len()"));
+    #[test]
+    fn set_tolerances_fails_on_wrong_input() -> Result<(), StrError> {
+        let mut grid = GridSearch::new(2)?;
+        let res = grid.set_tolerances(&[0.1]);
+        assert_eq!(res.err(), Some("tol.len() must equal ndim"));
+        Ok(())
+    }
 
-        let grid = GridSearch::new(&[1, 1], &[0.0, 0.0], &[1.0], &[0.1, 0.1]);
-        assert_eq!(grid.err(), Some("xmax.len() must equal ndiv.len()"));
+    #[test]
+    fn set_tolerances_works() -> Result<(), StrError> {
+        let mut grid = GridSearch::new(2)?;
+        grid.set_tolerances(&[0.2, 0.2])?;
+        assert_eq!(grid.tol, &[0.2, 0.2]);
+        Ok(())
+    }
 
-        let grid = GridSearch::new(&[0, 1], &[0.0, 0.0], &[1.0, 1.0], &[0.1, 0.1]);
-        assert_eq!(grid.err(), Some("ndiv must be at least equal to 1"));
+    #[test]
+    fn initialize_fails_on_wrong_input() -> Result<(), StrError> {
+        let mut grid = GridSearch::new(2)?;
+        let res = grid.initialize(&[1], &[0.0, 0.0], &[1.0, 1.0]);
+        assert_eq!(res.err(), Some("ndiv.len() must equal ndim"));
 
-        let grid = GridSearch::new(&[0, 1], &[0.0, 0.0], &[1.0, 1.0], &[0.1]);
-        assert_eq!(grid.err(), Some("tol.len() must equal ndiv.len()"));
+        let mut grid = GridSearch::new(2)?;
+        let res = grid.initialize(&[1, 1], &[0.0], &[1.0, 1.0]);
+        assert_eq!(res.err(), Some("min.len() must equal ndim"));
 
-        let grid = GridSearch::new(&[1, 1], &[0.0, 0.0], &[0.0, 1.0], &[0.1, 0.1]);
-        assert_eq!(grid.err(), Some("xmax must be greater than xmin"));
+        let mut grid = GridSearch::new(2)?;
+        let res = grid.initialize(&[1, 1], &[0.0, 0.0], &[1.0]);
+        assert_eq!(res.err(), Some("max.len() must equal ndim"));
 
-        let grid = GridSearch::new(&[10, 10], &[0.0, 0.0], &[1.0, 1.0], &[0.1, 0.1]);
+        let mut grid = GridSearch::new(2)?;
+        let res = grid.initialize(&[0, 1], &[0.0, 0.0], &[1.0, 1.0]);
+        assert_eq!(res.err(), Some("ndiv must be at least 1"));
+
+        let mut grid = GridSearch::new(2)?;
+        let res = grid.initialize(&[1, 1], &[0.0, 0.0], &[0.0, 1.0]);
+        assert_eq!(res.err(), Some("max must be greater than min"));
+
+        let mut grid = GridSearch::new(2)?;
+        grid.set_tolerances(&[0.1, 0.1])?;
+        let res = grid.initialize(&[10, 10], &[0.0, 0.0], &[1.0, 1.0]);
         assert_eq!(
-            grid.err(),
+            res.err(),
             Some("ndiv is too high; ndiv must be such that the grid size is greater than 10 * tol")
         );
+        Ok(())
     }
 
     #[test]
     fn new_works() {
         let g2d = get_test_grid_2d();
         assert_eq!(g2d.ndim, 2);
-        assert_eq!(g2d.ndiv, [5, 5, 0]);
-        assert_eq!(g2d.min, [-0.2, -0.2, 0.0]);
-        assert_eq!(g2d.max, [0.8, 1.8, 0.0]);
-        assert_eq!(g2d.delta, [1.0, 2.0, 0.0]);
-        assert_eq!(g2d.size, [0.2, 0.4, 0.0]);
+        assert_eq!(g2d.ndiv, [5, 5]);
+        assert_eq!(g2d.min, [-0.2, -0.2]);
+        assert_eq!(g2d.max, [0.8, 1.8]);
+        assert_eq!(g2d.delta, [1.0, 2.0]);
+        assert_eq!(g2d.size, [0.2, 0.4]);
         assert_eq!(g2d.cf, [1, 5, 25]);
-        assert_eq!(g2d.ratio, [0, 0, 0]);
-        assert_eq!(g2d.tol, [1e-2, 1e-2, 0.0]);
-        assert_eq!(g2d.halo.len(), 8);
+        assert_eq!(g2d.ratio, [0, 0]);
+        assert_eq!(g2d.tol, [1e-2, 1e-2]);
+        assert_eq!(g2d.halo.len(), 4);
         assert_eq!(g2d.ncorner, 4);
         assert_eq!(g2d.containers.len(), 0);
+        assert_eq!(g2d.initialized, true);
 
         let g3d = get_test_grid_3d();
         assert_eq!(g3d.ndim, 3);
@@ -525,6 +617,7 @@ mod tests {
         assert_eq!(g3d.halo.len(), 8);
         assert_eq!(g3d.ncorner, 8);
         assert_eq!(g3d.containers.len(), 0);
+        assert_eq!(g2d.initialized, true);
     }
 
     #[test]
@@ -550,10 +643,10 @@ mod tests {
     fn set_halo_works() {
         let mut g2d = get_test_grid_2d();
         g2d.set_halo(&[0.5, 0.5]);
-        assert_eq!(g2d.halo[0], [0.49, 0.49, 0.0]);
-        assert_eq!(g2d.halo[1], [0.51, 0.49, 0.0]);
-        assert_eq!(g2d.halo[2], [0.51, 0.51, 0.0]);
-        assert_eq!(g2d.halo[3], [0.49, 0.51, 0.0]);
+        assert_eq!(g2d.halo[0], [0.49, 0.49]);
+        assert_eq!(g2d.halo[1], [0.51, 0.49]);
+        assert_eq!(g2d.halo[2], [0.51, 0.51]);
+        assert_eq!(g2d.halo[3], [0.49, 0.51]);
 
         let mut g3d = get_test_grid_3d();
         g3d.set_halo(&[0.5, 0.5, 0.5]);
@@ -711,7 +804,8 @@ mod tests {
 
     #[test]
     fn maybe_insert_works() -> Result<(), StrError> {
-        let mut grid = GridSearch::new(&[3, 3], &[0.0, 0.0], &[1.0, 1.0], &[1e-2, 1e-2])?;
+        let mut grid = GridSearch::new(2)?;
+        grid.initialize(&[3, 3], &[0.0, 0.0], &[1.0, 1.0])?;
         let id = grid.maybe_insert(111, &[0.5, 0.5])?;
         assert_eq!(id, 111);
         let id = grid.maybe_insert(222, &[0.75, 0.75])?;
@@ -737,6 +831,69 @@ mod tests {
         }
         let plot = g3d.plot()?;
         plot.save("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
+        Ok(())
+    }
+
+    #[test]
+    fn initialize_flag_works() -> Result<(), StrError> {
+        let mut grid = GridSearch::new(2)?;
+        let res = grid.insert(0, &[0.0, 0.0]);
+        assert_eq!(res.err(), Some("initialize must be called first"));
+
+        grid.initialize(&[1, 1], &[0.0, 0.0], &[1.0, 1.0])?;
+        let res = grid.insert(0, &[0.0, 0.0]);
+        assert_eq!(res.err(), None);
+        assert_eq!(grid.initialized, true);
+
+        grid.set_tolerances(&[0.1, 0.1])?;
+        assert_eq!(grid.initialized, false);
+        let res = grid.insert(0, &[0.0, 0.0]);
+        assert_eq!(res.err(), Some("initialize must be called first"));
+
+        let res = grid.find(&[0.0, 0.0]);
+        assert_eq!(res.err(), Some("initialize must be called first"));
+
+        let res = grid.plot();
+        assert_eq!(res.err(), Some("initialize must be called first"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn encode_decode_work() -> Result<(), StrError> {
+        let original2d = get_test_grid_2d();
+        let data2d = original2d.encode()?;
+        let g2d = GridSearch::decode(&data2d)?;
+        assert_eq!(g2d.ndim, 2);
+        assert_eq!(g2d.ndiv, [5, 5]);
+        assert_eq!(g2d.min, [-0.2, -0.2]);
+        assert_eq!(g2d.max, [0.8, 1.8]);
+        assert_eq!(g2d.delta, [1.0, 2.0]);
+        assert_eq!(g2d.size, [0.2, 0.4]);
+        assert_eq!(g2d.cf, [1, 5, 25]);
+        assert_eq!(g2d.ratio, [0, 0]);
+        assert_eq!(g2d.tol, [1e-2, 1e-2]);
+        assert_eq!(g2d.halo.len(), 4);
+        assert_eq!(g2d.ncorner, 4);
+        assert_eq!(g2d.containers.len(), 0);
+        assert_eq!(g2d.initialized, true);
+
+        let original3d = get_test_grid_3d();
+        let data3d = original3d.encode()?;
+        let g3d = GridSearch::decode(&data3d)?;
+        assert_eq!(g3d.ndim, 3);
+        assert_eq!(g3d.ndiv, [3, 3, 3]);
+        assert_eq!(g3d.min, [-1.0, -1.0, -1.0]);
+        assert_eq!(g3d.max, [1.0, 1.0, 1.0]);
+        assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
+        assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
+        assert_eq!(g3d.cf, [1, 3, 9]);
+        assert_eq!(g3d.ratio, [0, 0, 0]);
+        assert_eq!(g3d.tol, [1e-2, 1e-2, 1e-2]);
+        assert_eq!(g3d.halo.len(), 8);
+        assert_eq!(g3d.ncorner, 8);
+        assert_eq!(g3d.containers.len(), 0);
+        assert_eq!(g2d.initialized, true);
         Ok(())
     }
 }
