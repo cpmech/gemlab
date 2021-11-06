@@ -92,7 +92,7 @@ impl Vector3D {
     /// ```text
     /// result := α * this + β * another
     /// ```
-    pub fn new_added(&self, alpha: f64, beta: f64, another: &Vector3D) -> Vector3D {
+    pub fn get_added(&self, alpha: f64, beta: f64, another: &Vector3D) -> Vector3D {
         Vector3D {
             u: alpha * self.u + beta * another.u,
             v: alpha * self.v + beta * another.v,
@@ -116,9 +116,11 @@ impl Vector3D {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SQRT_3;
+    use russell_chk::assert_approx_eq;
 
     #[test]
-    fn get_translated_works() {
+    fn point3d_get_translated_works() {
         let a = Point3D {
             x: -1.0,
             y: 0.0,
@@ -126,5 +128,101 @@ mod tests {
         };
         let b = a.get_translated(1.0, 2.0, 3.0);
         assert_eq!(b.x, 0.0);
+        assert_eq!(b.y, 2.0);
+        assert_eq!(b.z, 1.0);
+    }
+
+    #[test]
+    fn point3d_dist_from_point_works() {
+        let a = Point3D { x: 0.0, y: 0.0, z: 0.0 };
+        let b = Point3D { x: 1.0, y: 0.0, z: 0.0 };
+        assert_approx_eq!(a.dist_from_point(&b), 1.0, 1e-15);
+
+        let b = Point3D { x: 0.0, y: 2.0, z: 0.0 };
+        assert_approx_eq!(a.dist_from_point(&b), 2.0, 1e-15);
+
+        let b = Point3D { x: 0.0, y: 0.0, z: 3.0 };
+        assert_approx_eq!(a.dist_from_point(&b), 3.0, 1e-15);
+
+        let a = Point3D { x: 1.0, y: 1.0, z: 1.0 };
+        let b = Point3D { x: 2.0, y: 2.0, z: 2.0 };
+        assert_approx_eq!(a.dist_from_point(&b), SQRT_3, 1e-15);
+    }
+
+    #[test]
+    fn segment3d_new_works() {
+        let a = Point3D { x: 0.0, y: 2.0, z: 3.0 };
+        let b = Point3D { x: 3.0, y: 2.0, z: 1.0 };
+        let segment = Segment3D::new(&a, &b);
+        assert_eq!(segment.a.x, 0.0);
+        assert_eq!(segment.a.y, 2.0);
+        assert_eq!(segment.a.z, 3.0);
+        assert_eq!(segment.b.x, 3.0);
+        assert_eq!(segment.b.y, 2.0);
+        assert_eq!(segment.b.z, 1.0);
+    }
+
+    #[test]
+    fn segment3d_get_scaled_works() {
+        let a = Point3D { x: 0.0, y: 2.0, z: 3.0 };
+        let b = Point3D { x: 3.0, y: 2.0, z: 1.0 };
+        let segment = Segment3D::new(&a, &b);
+        let scaled = segment.get_scaled(0.5);
+        assert_eq!(scaled.a.x, 0.0);
+        assert_eq!(scaled.a.y, 2.0);
+        assert_eq!(scaled.a.z, 3.0);
+        assert_eq!(scaled.b.x, 1.5);
+        assert_eq!(scaled.b.y, 2.0);
+        assert_eq!(scaled.b.z, 2.0);
+    }
+
+    #[test]
+    fn segment3d_length_works() {
+        let a = Point3D { x: 0.0, y: 2.0, z: 3.0 };
+        let b = Point3D { x: 3.0, y: 2.0, z: 1.0 };
+        let segment = Segment3D::new(&a, &b);
+        assert_approx_eq!(segment.length(), f64::sqrt(13.0), 1e-15)
+    }
+
+    #[test]
+    fn segment3d_get_vector_works() {
+        let a = Point3D { x: 0.0, y: 2.0, z: 3.0 };
+        let b = Point3D { x: 3.0, y: 2.0, z: 1.0 };
+        let segment = Segment3D::new(&a, &b);
+        let vector = segment.get_vector(0.5);
+        assert_eq!(vector.u, 1.5);
+        assert_eq!(vector.v, 0.0);
+        assert_eq!(vector.w, -1.0);
+    }
+
+    #[test]
+    fn vector3d_new_scaled_works() {
+        let vector = Vector3D::new_scaled(1.0, 2.0, 3.0, 0.5);
+        assert_eq!(vector.u, 0.5);
+        assert_eq!(vector.v, 1.0);
+        assert_eq!(vector.w, 1.5);
+    }
+
+    #[test]
+    fn vector3d_get_added_works() {
+        let x = Vector3D { u: 1.0, v: 2.0, w: 3.0 };
+        let y = Vector3D { u: 3.0, v: 2.0, w: 1.0 };
+        let z = x.get_added(0.5, 3.0, &y);
+        assert_eq!(z.u, 9.5);
+        assert_eq!(z.v, 7.0);
+        assert_eq!(z.w, 4.5);
+    }
+
+    #[test]
+    fn vector3d_dot_works() {
+        let x = Vector3D { u: 1.0, v: 2.0, w: 3.0 };
+        let y = Vector3D { u: 3.0, v: 2.0, w: 1.0 };
+        assert_eq!(x.dot(&y), 10.0);
+    }
+
+    #[test]
+    fn vector3d_norm() {
+        let x = Vector3D { u: 3.0, v: 4.0, w: 5.0 };
+        assert_approx_eq!(x.norm(), f64::sqrt(50.0), 1e-15);
     }
 }
