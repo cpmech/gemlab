@@ -107,7 +107,13 @@ impl Block {
     const NAT_TOLERANCE: f64 = 1e-4; // tolerance to compare coordinates in the natural space
 
     /// Creates a new Block with default options
-    pub fn new(ndim: usize) -> Self {
+    pub fn new(ndim: usize) -> Result<Self, StrError> {
+        // check
+        if ndim < 2 || ndim > 3 {
+            return Err("ndim must be 2 or 3");
+        }
+
+        // shape
         let shape = if ndim == 2 {
             new_shape_qua_or_hex(KindQuaOrHex::Qua8)
         } else {
@@ -115,12 +121,19 @@ impl Block {
         };
         let (npoint, nedge, nface) = (shape.get_npoint(), shape.get_nedge(), shape.get_nface());
 
+        // constants
         const NDIV: usize = 2;
         const GRID_NDIV: usize = 20;
         const GRID_MIN: f64 = -1.0;
         const GRID_MAX: f64 = 1.0;
 
-        Block {
+        // grid
+        let mut grid_ksi = GridSearch::new(ndim)?;
+        grid_ksi.set_tolerances(&vec![Block::NAT_TOLERANCE; ndim])?;
+        grid_ksi.initialize(&vec![GRID_NDIV; ndim], &vec![GRID_MIN; ndim], &vec![GRID_MAX; ndim])?;
+
+        // done
+        Ok(Block {
             group: 1,
             ndim,
             npoint,
@@ -135,14 +148,8 @@ impl Block {
             edge_constraints: vec![None; nedge],
             face_constraints: vec![None; nface],
             shape,
-            grid_ksi: GridSearch::new(
-                &vec![GRID_NDIV; ndim],
-                &vec![GRID_MIN; ndim],
-                &vec![GRID_MAX; ndim],
-                &vec![Block::NAT_TOLERANCE; ndim],
-            )
-            .unwrap(),
-        }
+            grid_ksi,
+        })
     }
 
     /// Sets group
@@ -668,8 +675,14 @@ mod tests {
     }
 
     #[test]
-    fn new_works() {
-        let b2d = Block::new(2);
+    fn new_fails_on_wrong_input() {
+        let b2d = Block::new(1);
+        assert_eq!(b2d.err(), Some("ndim must be 2 or 3"));
+    }
+
+    #[test]
+    fn new_works() -> Result<(), StrError> {
+        let b2d = Block::new(2)?;
         assert_eq!(b2d.group, 1);
         assert_eq!(b2d.ndim, 2);
         assert_eq!(b2d.npoint, 8);
@@ -695,7 +708,7 @@ mod tests {
         assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b2d.shape.get_npoint(), 8);
 
-        let b3d = Block::new(3);
+        let b3d = Block::new(3)?;
         assert_eq!(b3d.group, 1);
         assert_eq!(b3d.ndim, 3);
         assert_eq!(b3d.npoint, 20);
@@ -735,18 +748,20 @@ mod tests {
         assert_eq!(b3d.ndiv, &[2, 2, 2]);
         assert_eq!(format!("{:?}", b3d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b3d.shape.get_npoint(), 20);
+        Ok(())
     }
 
     #[test]
-    fn set_group_works() {
-        let mut block = Block::new(2);
+    fn set_group_works() -> Result<(), StrError> {
+        let mut block = Block::new(2)?;
         block.set_group(2);
         assert_eq!(block.group, 2);
+        Ok(())
     }
 
     #[test]
-    fn set_coords_works() {
-        let mut b2d = Block::new(2);
+    fn set_coords_works() -> Result<(), StrError> {
+        let mut b2d = Block::new(2)?;
         #[rustfmt::skip]
         b2d.set_coords(&[
             [0.0, 0.0],
@@ -768,7 +783,7 @@ mod tests {
              └     ┘"
         );
 
-        let mut b3d = Block::new(3);
+        let mut b3d = Block::new(3)?;
         #[rustfmt::skip]
         b3d.set_coords(&[
             [0.0, 0.0, 0.0],
@@ -805,40 +820,45 @@ mod tests {
              │ 0 2 1 │\n\
              └       ┘"
         );
+        Ok(())
     }
 
     #[test]
-    fn set_point_group_works() {
-        let mut block = Block::new(2);
+    fn set_point_group_works() -> Result<(), StrError> {
+        let mut block = Block::new(2)?;
         block.set_point_group(0, 111);
         assert_eq!(block.point_groups, &[111, 0, 0, 0, 0, 0, 0, 0]);
+        Ok(())
     }
 
     #[test]
-    fn set_edge_group_works() {
-        let mut block = Block::new(2);
+    fn set_edge_group_works() -> Result<(), StrError> {
+        let mut block = Block::new(2)?;
         block.set_edge_group(0, 111);
         assert_eq!(block.edge_groups, &[111, 0, 0, 0]);
+        Ok(())
     }
 
     #[test]
-    fn set_face_group_works() {
-        let mut block = Block::new(3);
+    fn set_face_group_works() -> Result<(), StrError> {
+        let mut block = Block::new(3)?;
         block.set_face_group(0, 111);
         assert_eq!(block.face_groups, &[111, 0, 0, 0, 0, 0]);
+        Ok(())
     }
 
     #[test]
-    fn set_ndiv_works() {
-        let mut block = Block::new(2);
+    fn set_ndiv_works() -> Result<(), StrError> {
+        let mut block = Block::new(2)?;
         block.set_ndiv(&[2, 4]);
         assert_eq!(block.ndiv, &[2, 4]);
         assert_eq!(format!("{:?}", block.delta_ksi), "[[1.0, 1.0], [0.5, 0.5, 0.5, 0.5]]");
+        Ok(())
     }
 
     #[test]
-    fn set_edge_constraint_works() {
-        let mut block = Block::new(2);
+    fn set_edge_constraint_works() -> Result<(), StrError> {
+        let mut block = Block::new(2)?;
         let constraint = Constraint::Arc(Circle {
             center: [-1.0, -1.0],
             radius: 2.0,
@@ -846,11 +866,12 @@ mod tests {
         });
         block.set_edge_constraint(0, constraint);
         assert_eq!(block.edge_constraints[0], Some(constraint));
+        Ok(())
     }
 
     #[test]
-    fn set_face_constraint_works() {
-        let mut block = Block::new(3);
+    fn set_face_constraint_works() -> Result<(), StrError> {
+        let mut block = Block::new(3)?;
         let constraint = Constraint::ArcX(Circle {
             center: [-1.0, -1.0],
             radius: 2.0,
@@ -858,11 +879,12 @@ mod tests {
         });
         block.set_face_constraint(0, constraint);
         assert_eq!(block.face_constraints[0], Some(constraint));
+        Ok(())
     }
 
     #[test]
     fn subdivide_2d_works() -> Result<(), StrError> {
-        let mut block = Block::new(2);
+        let mut block = Block::new(2)?;
         #[rustfmt::skip]
         block.set_coords(&[
             [0.0, 0.0],
@@ -918,7 +940,7 @@ mod tests {
 
     #[test]
     fn subdivide_2d_o2_works() -> Result<(), StrError> {
-        let mut block = Block::new(2);
+        let mut block = Block::new(2)?;
         #[rustfmt::skip]
         block.set_coords(&[
             [0.0, 0.0],
@@ -986,7 +1008,7 @@ mod tests {
 
     #[test]
     fn subdivide_3d_works() -> Result<(), StrError> {
-        let mut block = Block::new(3);
+        let mut block = Block::new(3)?;
         #[rustfmt::skip]
         block.set_coords(&[
             [0.0, 0.0, 0.0],
@@ -1132,7 +1154,7 @@ mod tests {
 
     #[test]
     fn subdivide_3d_o2_works() -> Result<(), StrError> {
-        let mut block = Block::new(3);
+        let mut block = Block::new(3)?;
         #[rustfmt::skip]
         block.set_coords(&[
             [0.0, 0.0, 0.0],
