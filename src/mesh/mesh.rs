@@ -1,6 +1,4 @@
-#![allow(unused)]
-
-use crate::{kind_from_ndim_npoint, new_shape, Kind, Shape, StrError};
+use crate::{kind_from_ndim_npoint, new_shape, At, Geo, GridSearch, Kind, Shape, StrError};
 use russell_lab::{sort2, sort3};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -65,8 +63,7 @@ pub struct Mesh {
     pub face_groups: HashMap<Group, Vec<FaceKey>>,
     pub min: Vec<f64>,
     pub max: Vec<f64>,
-    // #[serde(skip)]
-    // grid_search: GridSearch,
+    pub grid: GridSearch,
 }
 
 impl Mesh {
@@ -87,6 +84,7 @@ impl Mesh {
             face_groups: HashMap::new(),
             min: Vec::new(),
             max: Vec::new(),
+            grid: GridSearch::new(ndim)?,
         })
     }
 
@@ -129,6 +127,7 @@ impl Mesh {
             face_groups: HashMap::new(),
             min: Vec::new(),
             max: Vec::new(),
+            grid: GridSearch::new(ndim)?,
         })
     }
 
@@ -282,6 +281,40 @@ impl Mesh {
         file.write_all(&serialized).map_err(|_| "cannot write file")?;
         Ok(())
     }
+
+    pub fn set_group(&mut self, name: &str, geo: Geo) -> Result<(), StrError> {
+        let mut points: Vec<usize> = Vec::new();
+        match geo {
+            Geo::Point(at) => {
+                for index in 0..self.points.len() {
+                    if self.point_belongs_to(index, &at) {
+                        points.push(index);
+                    }
+                }
+            }
+            Geo::Edge(at) => {}
+            Geo::Face(at) => {}
+        };
+        Ok(())
+    }
+
+    fn point_belongs_to(&self, index: usize, at: &At) -> bool {
+        let coords = &self.points[index].coords;
+        match at {
+            At::XY(x, y) => false,
+            At::XYZ(x, y, z) => false,
+            At::Horizontal(x, y) => false,
+            At::Vertical(x, y) => false,
+            At::Circle(x, y, z) => false,
+            At::Circle3D(x, y, z, r) => false,
+            At::CylinderX(x, y, z, r) => false,
+            At::CylinderY(x, y, z, r) => false,
+            At::CylinderZ(x, y, z, r) => false,
+            At::PlaneNormalX(x, y, z) => false,
+            At::PlaneNormalY(x, y, z) => false,
+            At::PlaneNormalZ(x, y, z) => false,
+        }
+    }
 }
 
 impl fmt::Display for Mesh {
@@ -371,6 +404,8 @@ impl fmt::Display for Mesh {
 
 #[cfg(test)]
 mod tests {
+    use crate::parse_mesh;
+
     use super::*;
     use std::collections::{HashMap, HashSet};
 
@@ -439,6 +474,7 @@ mod tests {
             face_groups: HashMap::new(),
             min: Vec::new(),
             max: Vec::new(),
+            grid: GridSearch::new(2)?,
         };
         mesh.compute_derived_props()?;
         Ok(())
@@ -447,5 +483,35 @@ mod tests {
     #[test]
     fn display_works() {
         // todo
+    }
+
+    #[test]
+    fn set_group_works() -> Result<(), StrError> {
+        let mut mesh = parse_mesh(
+            r"
+            2 4 1
+            0 1 0.0 0.0
+            1 1 1.0 0.0
+            2 1 1.0 1.0
+            3 1 0.0 1.0
+            0 1  2 4  0 1 2 3
+        ",
+        )?;
+
+        mesh.set_group("origin", Geo::Point(At::XY(0.0, 0.0)))?;
+        mesh.set_group("origin", Geo::Point(At::Horizontal(0.0, 0.0)))?;
+        mesh.set_group("origin", Geo::Point(At::Vertical(0.0, 0.0)))?;
+        mesh.set_group("origin", Geo::Point(At::XYZ(0.0, 0.0, 0.0)))?;
+        mesh.set_group("bedrock", Geo::Edge(At::Horizontal(0.0, 0.0)))?;
+        mesh.set_group("left", Geo::Edge(At::Vertical(0.0, 0.0)))?;
+        mesh.set_group("right", Geo::Edge(At::Vertical(0.0, 0.0)))?;
+        mesh.set_group("tunnel", Geo::Face(At::Circle(0.0, 0.0, 0.5)))?;
+        mesh.set_group("tunnel", Geo::Face(At::Circle3D(0.0, 0.0, 0.0, 0.5)))?;
+        mesh.set_group("tunnel", Geo::Face(At::CylinderX(0.0, 0.0, 0.0, 0.5)))?;
+        mesh.set_group("bedrock", Geo::Face(At::PlaneNormalZ(0.0, 0.0, 0.0)))?;
+
+        println!("{}", mesh);
+
+        Ok(())
     }
 }
