@@ -1,9 +1,23 @@
+/// Holds the Cartesian coordinates of a point in 2D
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Point2D {
+    pub x: f64,
+    pub y: f64,
+}
+
 /// Holds the Cartesian coordinates of a point in 3D
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point3D {
     pub x: f64,
     pub y: f64,
     pub z: f64,
+}
+
+/// Represents a vector in 2D
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Vector2D {
+    pub u: f64,
+    pub v: f64,
 }
 
 /// Represents a vector in 3D
@@ -14,11 +28,21 @@ pub struct Vector3D {
     pub w: f64,
 }
 
-/// Represents a directed segment from A to B in 3D
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Segment3D {
-    pub a: Point3D,
-    pub b: Point3D,
+impl Point2D {
+    /// Returns a new translated point
+    #[inline]
+    pub fn get_translated(&self, dx: f64, dy: f64) -> Point2D {
+        Point2D {
+            x: self.x + dx,
+            y: self.y + dy,
+        }
+    }
+
+    /// Computes the unsigned distance between this point and another
+    #[inline]
+    pub fn dist_from_point(&self, another: &Point2D) -> f64 {
+        f64::sqrt((self.x - another.x) * (self.x - another.x) + (self.y - another.y) * (self.y - another.y))
+    }
 }
 
 impl Point3D {
@@ -40,6 +64,55 @@ impl Point3D {
                 + (self.y - another.y) * (self.y - another.y)
                 + (self.z - another.z) * (self.z - another.z),
         )
+    }
+}
+
+impl Vector2D {
+    /// Creates a new vector from two points (a to b)
+    ///
+    /// ```text
+    /// vector := b - a
+    /// ```
+    #[inline]
+    pub fn new_from_points(a: &Point2D, b: &Point2D) -> Self {
+        Vector2D {
+            u: b.x - a.x,
+            v: b.y - a.y,
+        }
+    }
+
+    /// Creates a new scaled vector
+    #[inline]
+    pub fn new_scaled(u: f64, v: f64, scale: f64) -> Self {
+        Vector2D {
+            u: scale * u,
+            v: scale * v,
+        }
+    }
+
+    /// Creates a new vector by subtracting this vector by another
+    ///
+    /// ```text
+    /// result := this - another
+    /// ```
+    #[inline]
+    pub fn get_subtracted(&self, another: &Vector2D) -> Vector2D {
+        Vector2D {
+            u: self.u - another.u,
+            v: self.v - another.v,
+        }
+    }
+
+    /// Computes the inner product of this vector with another
+    #[inline]
+    pub fn dot(&self, another: &Vector2D) -> f64 {
+        self.u * another.u + self.v * another.v
+    }
+
+    /// Computes the Euclidean norm of this vector
+    #[inline]
+    pub fn norm(&self) -> f64 {
+        f64::sqrt(self.u * self.u + self.v * self.v)
     }
 }
 
@@ -100,8 +173,62 @@ impl Vector3D {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::SQRT_3;
+    use crate::{SQRT_2, SQRT_3};
     use russell_chk::assert_approx_eq;
+
+    #[test]
+    fn point2d_traits_work() {
+        let a = Point2D { x: 1.0, y: 2.0 };
+        let clone = a.clone();
+        assert_eq!(a, clone);
+        assert_eq!(format!("{:?}", a), "Point2D { x: 1.0, y: 2.0 }");
+    }
+
+    #[test]
+    fn point3d_traits_work() {
+        let a = Point3D { x: 1.0, y: 2.0, z: 3.0 };
+        let clone = a.clone();
+        assert_eq!(a, clone);
+        assert_eq!(format!("{:?}", a), "Point3D { x: 1.0, y: 2.0, z: 3.0 }");
+    }
+
+    #[test]
+    fn vector2d_traits_work() {
+        let x = Vector2D { u: 1.0, v: 2.0 };
+        let clone = x.clone();
+        assert_eq!(x, clone);
+        assert_eq!(format!("{:?}", x), "Vector2D { u: 1.0, v: 2.0 }");
+    }
+
+    #[test]
+    fn vector3d_traits_work() {
+        let x = Vector3D { u: 1.0, v: 2.0, w: 3.0 };
+        let clone = x.clone();
+        assert_eq!(x, clone);
+        assert_eq!(format!("{:?}", x), "Vector3D { u: 1.0, v: 2.0, w: 3.0 }");
+    }
+
+    #[test]
+    fn point2d_get_translated_works() {
+        let a = Point2D { x: 1.0, y: 2.0 };
+        let b = a.get_translated(1.0, 2.0);
+        assert_eq!(b.x, 2.0);
+        assert_eq!(b.y, 4.0);
+    }
+
+    #[test]
+    fn point2d_dist_from_point_works() {
+        let a = Point2D { x: 0.0, y: 0.0 };
+        let b = Point2D { x: 1.0, y: 0.0 };
+        assert_approx_eq!(a.dist_from_point(&b), 1.0, 1e-15);
+
+        let b = Point2D { x: 0.0, y: 2.0 };
+        assert_approx_eq!(a.dist_from_point(&b), 2.0, 1e-15);
+
+        let a = Point2D { x: 1.0, y: 1.0 };
+        let b = Point2D { x: 2.0, y: 2.0 };
+        assert_approx_eq!(a.dist_from_point(&b), SQRT_2, 1e-15);
+    }
 
     #[test]
     fn point3d_get_translated_works() {
@@ -127,6 +254,44 @@ mod tests {
         let a = Point3D { x: 1.0, y: 1.0, z: 1.0 };
         let b = Point3D { x: 2.0, y: 2.0, z: 2.0 };
         assert_approx_eq!(a.dist_from_point(&b), SQRT_3, 1e-15);
+    }
+
+    #[test]
+    fn vector2d_new_from_points_works() {
+        let a = Point2D { x: 1.0, y: 2.0 };
+        let b = Point2D { x: 4.0, y: 5.0 };
+        let vector = Vector2D::new_from_points(&a, &b);
+        assert_eq!(vector.u, 3.0);
+        assert_eq!(vector.v, 3.0);
+    }
+
+    #[test]
+    fn vector2d_new_scaled_works() {
+        let vector = Vector2D::new_scaled(1.0, 2.0, 0.5);
+        assert_eq!(vector.u, 0.5);
+        assert_eq!(vector.v, 1.0);
+    }
+
+    #[test]
+    fn vector2d_get_subtracted_works() {
+        let x = Vector2D { u: 1.0, v: 2.0 };
+        let y = Vector2D { u: 3.0, v: 2.0 };
+        let z = x.get_subtracted(&y);
+        assert_eq!(z.u, -2.0);
+        assert_eq!(z.v, 0.0);
+    }
+
+    #[test]
+    fn vector2d_dot_works() {
+        let x = Vector2D { u: 1.0, v: 2.0 };
+        let y = Vector2D { u: 3.0, v: 2.0 };
+        assert_eq!(x.dot(&y), 7.0);
+    }
+
+    #[test]
+    fn vector2d_norm() {
+        let x = Vector2D { u: 3.0, v: 4.0 };
+        assert_approx_eq!(x.norm(), 5.0, 1e-15);
     }
 
     #[test]

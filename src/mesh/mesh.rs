@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::{kind_from_ndim_npoint, new_shape, Kind, Shape, StrError};
 use russell_lab::{sort2, sort3};
 use serde::{Deserialize, Serialize};
@@ -63,6 +65,8 @@ pub struct Mesh {
     pub face_groups: HashMap<Group, Vec<FaceKey>>,
     pub min: Vec<f64>,
     pub max: Vec<f64>,
+    // #[serde(skip)]
+    // grid_search: GridSearch,
 }
 
 impl Mesh {
