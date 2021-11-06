@@ -1,4 +1,7 @@
-use crate::{kind_from_ndim_npoint, new_shape, At, Geo, GridSearch, Kind, Shape, StrError};
+use super::{At, Geo};
+use crate::shapes::{kind_from_ndim_npoint, new_shape, Kind, Shape};
+use crate::util::GridSearch;
+use crate::StrError;
 use russell_lab::{sort2, sort3};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -489,9 +492,8 @@ impl fmt::Display for Mesh {
 
 #[cfg(test)]
 mod tests {
-    use crate::parse_mesh;
-
     use super::*;
+    use crate::mesh::parse_mesh;
     use std::collections::{HashMap, HashSet};
 
     #[test]

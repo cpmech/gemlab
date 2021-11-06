@@ -173,7 +173,7 @@ impl Vector3D {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SQRT_2, SQRT_3};
+    use crate::util::{SQRT_2, SQRT_3};
     use russell_chk::assert_approx_eq;
 
     #[test]

@@ -7,7 +7,8 @@ macro_rules! print_bc {
     }};
 }
 
-use crate::{EdgeKey, Group, Index, Mesh, StrError};
+use crate::mesh::{EdgeKey, Group, Index, Mesh};
+use crate::StrError;
 
 type FnTimeSpace = fn(f64, &[f64]) -> f64;
 
@@ -104,7 +105,7 @@ impl Simulation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse_mesh;
+    use crate::mesh::parse_mesh;
     // use crate::Mesh;
 
     #[test]

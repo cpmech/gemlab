@@ -1,7 +1,8 @@
-use crate::{
-    new_shape_qua_or_hex, AsArray2D, Cell, Circle, Edge, EdgeKey, Face, FaceKey, GridSearch, KindQuaOrHex, Mesh, Point,
-    Shape, StrError,
-};
+use super::{Cell, Edge, EdgeKey, Face, FaceKey, Mesh, Point};
+use crate::geometry::Circle;
+use crate::shapes::{new_shape_qua_or_hex, KindQuaOrHex, Shape};
+use crate::util::{AsArray2D, GridSearch};
+use crate::StrError;
 use russell_lab::{mat_vec_mul, sort2, sort3, Matrix, Vector};
 use std::collections::HashSet;
 

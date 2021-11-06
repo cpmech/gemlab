@@ -1,4 +1,5 @@
-use crate::{Point2D, Point3D, StrError, Vector2D, Vector3D};
+use super::{Point2D, Point3D, Vector2D, Vector3D};
+use crate::StrError;
 
 /// Computes the distance between a point and a segment in 2D
 ///
@@ -81,7 +82,7 @@ pub fn point_segment_distance_3d(a: &Point3D, b: &Point3D, c: &Point3D) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SQRT_2, SQRT_2_BY_3};
+    use crate::util::{SQRT_2, SQRT_2_BY_3};
     use russell_chk::assert_approx_eq;
 
     #[test]

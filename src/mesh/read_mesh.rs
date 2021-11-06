@@ -1,4 +1,5 @@
-use crate::{Mesh, StrError};
+use super::Mesh;
+use crate::StrError;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 

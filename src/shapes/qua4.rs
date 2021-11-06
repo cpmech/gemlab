@@ -1,4 +1,5 @@
-use crate::{Shape, StrError};
+use super::Shape;
+use crate::StrError;
 use russell_lab::{vec_mat_mul, Matrix, Vector};
 
 const NDIM: usize = 2;

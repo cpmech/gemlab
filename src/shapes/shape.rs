@@ -1,4 +1,5 @@
-use crate::{Hex20, Hex8, Kind, KindHex, KindQua, KindQuaOrHex, Qua4, Qua8, StrError};
+use super::{Hex20, Hex8, Kind, KindHex, KindQua, KindQuaOrHex, Qua4, Qua8};
+use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
 /// Defines the functionality of shape
