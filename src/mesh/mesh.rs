@@ -61,10 +61,12 @@ pub struct Mesh {
     pub cell_groups: HashMap<Group, Vec<Index>>,
     pub edge_groups: HashMap<Group, Vec<EdgeKey>>,
     pub face_groups: HashMap<Group, Vec<FaceKey>>,
+    pub min: Vec<f64>,
+    pub max: Vec<f64>,
 }
 
 impl Mesh {
-    pub fn new(ndim: usize) -> Result<Self, StrError> {
+    pub(crate) fn new(ndim: usize) -> Result<Self, StrError> {
         if ndim < 2 || ndim > 3 {
             return Err("ndim must be 2 or 3");
         }
@@ -79,10 +81,12 @@ impl Mesh {
             cell_groups: HashMap::new(),
             edge_groups: HashMap::new(),
             face_groups: HashMap::new(),
+            min: Vec::new(),
+            max: Vec::new(),
         })
     }
 
-    pub fn new_zeroed(ndim: usize, npoint: usize, ncell: usize) -> Result<Self, StrError> {
+    pub(crate) fn new_zeroed(ndim: usize, npoint: usize, ncell: usize) -> Result<Self, StrError> {
         if ndim < 2 || ndim > 3 {
             return Err("ndim must be 2 or 3");
         }
@@ -119,10 +123,12 @@ impl Mesh {
             cell_groups: HashMap::new(),
             edge_groups: HashMap::new(),
             face_groups: HashMap::new(),
+            min: Vec::new(),
+            max: Vec::new(),
         })
     }
 
-    pub fn compute_derived_props(&mut self) -> Result<(), StrError> {
+    pub(crate) fn compute_derived_props(&mut self) -> Result<(), StrError> {
         // auxiliary maps
         let mut all_shapes: HashMap<Kind, Box<dyn Shape>> = HashMap::new();
         let mut all_edges: HashMap<EdgeKey, Edge> = HashMap::new();
@@ -224,6 +230,25 @@ impl Mesh {
         println!("\nALL FACES");
         println!("{:?}", all_faces);
 
+        // limits
+        self.min = vec![f64::MAX; self.ndim];
+        self.max = vec![f64::MIN; self.ndim];
+        for point in &self.points {
+            for i in 0..self.ndim {
+                if point.coords[i] < self.min[i] {
+                    self.min[i] = point.coords[i];
+                }
+                if point.coords[i] > self.max[i] {
+                    self.max[i] = point.coords[i];
+                }
+            }
+        }
+        for i in 0..self.ndim {
+            if self.min[i] >= self.max[i] {
+                return Err("mesh limits are invalid");
+            }
+        }
+
         Ok(())
     }
 
@@ -252,22 +277,6 @@ impl Mesh {
         let mut file = File::create(path).map_err(|_| "cannot create file")?;
         file.write_all(&serialized).map_err(|_| "cannot write file")?;
         Ok(())
-    }
-
-    pub fn get_limits(&self) -> (Vec<f64>, Vec<f64>) {
-        let mut min = vec![f64::MAX; self.ndim];
-        let mut max = vec![f64::MIN; self.ndim];
-        for point in &self.points {
-            for i in 0..self.ndim {
-                if point.coords[i] < min[i] {
-                    min[i] = point.coords[i];
-                }
-                if point.coords[i] > max[i] {
-                    max[i] = point.coords[i];
-                }
-            }
-        }
-        return (min, max);
     }
 }
 
@@ -358,7 +367,7 @@ impl fmt::Display for Mesh {
 
 #[cfg(test)]
 mod tests {
-    use super::{Cell, Mesh, Point, StrError};
+    use super::*;
     use std::collections::{HashMap, HashSet};
 
     #[test]
@@ -424,6 +433,8 @@ mod tests {
             cell_groups: HashMap::new(),
             edge_groups: HashMap::new(),
             face_groups: HashMap::new(),
+            min: Vec::new(),
+            max: Vec::new(),
         };
         mesh.compute_derived_props()?;
         Ok(())

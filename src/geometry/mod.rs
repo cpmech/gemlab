@@ -5,6 +5,11 @@ pub struct Circle {
     pub tolerance: f64,
 }
 
+mod algorithms;
+mod definitions;
+pub use crate::geometry::algorithms::*;
+pub use crate::geometry::definitions::*;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
