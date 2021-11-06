@@ -351,7 +351,7 @@ impl Mesh {
             }
             At::Horizontal(x, y) => {
                 if self.ndim == 2 {
-                    let ids = self.grid.find_along_edge(&[*x, *y], &[*x + 1.0, *y]).unwrap();
+                    let ids = self.grid.find_along_segment(&[*x, *y], &[*x + 1.0, *y]).unwrap();
                     for id in ids {
                         points.insert(id);
                     }
@@ -359,7 +359,7 @@ impl Mesh {
             }
             At::Vertical(x, y) => {
                 if self.ndim == 2 {
-                    for id in self.grid.find_along_edge(&[*x, *y], &[*x, *y + 1.0]).unwrap() {
+                    for id in self.grid.find_along_segment(&[*x, *y], &[*x, *y + 1.0]).unwrap() {
                         points.insert(id);
                     }
                 }

@@ -32,7 +32,8 @@ pub struct GridSearch {
     min: Vec<f64>,    // (ndim) min values
     max: Vec<f64>,    // (ndim) max values
     delta: Vec<f64>,  // (ndim) difference between max and min
-    size: Vec<f64>,   // (ndim) size of each container
+    size: Vec<f64>,   // (ndim) side lengths of each container
+    radius: f64,      // radius of the circumscribed circle of containers
     cf: Vec<usize>,   // (3) coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
 
     // auxiliary variable
@@ -71,6 +72,7 @@ impl GridSearch {
             max: vec![0.0; ndim],
             delta: vec![0.0; ndim],
             size: vec![0.0; ndim],
+            radius: 0.0,
             cf: vec![0; 3], // << must be 3
             ratio: vec![0; ndim],
             tol: vec![DEFAULT_TOLERANCE; ndim],
@@ -116,6 +118,7 @@ impl GridSearch {
         }
 
         // check and compute sizes
+        self.radius = 0.0;
         for i in 0..self.ndim {
             self.ndiv[i] = ndiv[i];
             if ndiv[i] < 1 {
@@ -132,7 +135,9 @@ impl GridSearch {
             if self.size[i] <= 10.0 * self.tol[i] {
                 return Err("ndiv is too high; ndiv must be such that the grid size is greater than 10 * tol");
             }
+            self.radius += self.size[i] * self.size[i];
         }
+        self.radius = f64::sqrt(self.radius);
 
         // coefficient
         self.cf[0] = 1;
@@ -242,7 +247,7 @@ impl GridSearch {
     /// # Note
     ///
     /// The points `a` and `b` define a bounding box that is used to filter points within.
-    pub fn find_along_edge(&mut self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
+    pub fn find_along_segment(&mut self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -253,8 +258,18 @@ impl GridSearch {
         if b.len() != self.ndim {
             return Err("b.len() must equal ndim");
         }
-        // todo
         let ids = HashSet::new();
+
+        // loop over all containers
+        let mut cen = vec![0.0; self.ndim];
+        for (index, container) in &self.containers {
+            // compute center
+            let (i, j, k) = self.container_pivot_indices(*index);
+            self.container_center(&mut cen, i, j, k);
+
+            // check if container is near the segment
+        }
+
         Ok(ids)
     }
 
@@ -401,6 +416,7 @@ impl GridSearch {
     /// # Output
     ///
     /// * returns the index of the container or None if the point is out-of-range
+    #[inline]
     fn container_index(&mut self, x: &[f64]) -> Option<usize> {
         let mut index = 0;
         for i in 0..self.ndim {
@@ -417,7 +433,27 @@ impl GridSearch {
         Some(index)
     }
 
+    /// Computes the i,j,k indices of the lower-left-bottom corner of the container
+    #[inline]
+    fn container_pivot_indices(&self, index: usize) -> (usize, usize, usize) {
+        let i = index % self.ndiv[0];
+        let j = (index % self.cf[2]) / self.ndiv[0];
+        let k = index / self.cf[2];
+        (i, j, k)
+    }
+
+    /// Computes the center coordinates of container
+    #[inline]
+    fn container_center(&self, cen: &mut [f64], i: usize, j: usize, k: usize) {
+        cen[0] = self.min[0] + (i as f64) * self.size[0] + self.size[0] / 2.0;
+        cen[1] = self.min[1] + (j as f64) * self.size[1] + self.size[1] / 2.0;
+        if self.ndim == 3 {
+            cen[2] = self.min[2] + (k as f64) * self.size[2] + self.size[2] / 2.0;
+        }
+    }
+
     /// Update container or insert point in container
+    #[inline]
     fn update_or_insert(&mut self, index: usize, id: usize, x: &[f64]) {
         let item = Item { id, x: Vec::from(x) };
         if self.containers.contains_key(&index) {
@@ -429,6 +465,7 @@ impl GridSearch {
     }
 
     /// Sets square/cubic halo around point
+    #[inline]
     fn set_halo(&mut self, x: &[f64]) {
         if self.ndim == 2 {
             self.halo[0][0] = x[0] - self.tol[0];
@@ -509,6 +546,7 @@ impl fmt::Display for GridSearch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     struct TestData<'a> {
         id: usize,
@@ -672,6 +710,7 @@ mod tests {
         assert_eq!(g2d.max, [0.8, 1.8]);
         assert_eq!(g2d.delta, [1.0, 2.0]);
         assert_eq!(g2d.size, [0.2, 0.4]);
+        assert_approx_eq!(g2d.radius, f64::sqrt(0.2), 1e-15);
         assert_eq!(g2d.cf, [1, 5, 25]);
         assert_eq!(g2d.ratio, [0, 0]);
         assert_eq!(g2d.tol, [1e-2, 1e-2]);
@@ -687,6 +726,7 @@ mod tests {
         assert_eq!(g3d.max, [1.0, 1.0, 1.0]);
         assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
         assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
+        assert_approx_eq!(g3d.radius, f64::sqrt(12.0 / 9.0), 1e-15);
         assert_eq!(g3d.cf, [1, 3, 9]);
         assert_eq!(g3d.ratio, [0, 0, 0]);
         assert_eq!(g3d.tol, [1e-2, 1e-2, 1e-2]);
@@ -753,6 +793,65 @@ mod tests {
         }
         let index = g3d.container_index(&[1.00001, 0.0, 0.0]);
         assert_eq!(index, None); // outside
+        Ok(())
+    }
+
+    #[test]
+    fn container_pivot_indices_works() -> Result<(), StrError> {
+        let g2d = get_test_grid_2d();
+        assert_eq!(g2d.container_pivot_indices(0), (0, 0, 0));
+        assert_eq!(g2d.container_pivot_indices(4), (4, 0, 0));
+        assert_eq!(g2d.container_pivot_indices(20), (0, 4, 0));
+        assert_eq!(g2d.container_pivot_indices(24), (4, 4, 0));
+        assert_eq!(g2d.container_pivot_indices(8), (3, 1, 0));
+        assert_eq!(g2d.container_pivot_indices(17), (2, 3, 0));
+        assert_eq!(g2d.container_pivot_indices(23), (3, 4, 0));
+
+        let g3d = get_test_grid_3d();
+        assert_eq!(g3d.container_pivot_indices(0), (0, 0, 0));
+        assert_eq!(g3d.container_pivot_indices(2), (2, 0, 0));
+        assert_eq!(g3d.container_pivot_indices(6), (0, 2, 0));
+        assert_eq!(g3d.container_pivot_indices(8), (2, 2, 0));
+        assert_eq!(g3d.container_pivot_indices(18), (0, 0, 2));
+        assert_eq!(g3d.container_pivot_indices(20), (2, 0, 2));
+        assert_eq!(g3d.container_pivot_indices(24), (0, 2, 2));
+        assert_eq!(g3d.container_pivot_indices(26), (2, 2, 2));
+        assert_eq!(g3d.container_pivot_indices(13), (1, 1, 1));
+        Ok(())
+    }
+
+    #[test]
+    fn container_center_works() -> Result<(), StrError> {
+        let g2d = get_test_grid_2d();
+        let mut cen2d = vec![0.0; 2];
+        g2d.container_center(&mut cen2d, 0, 0, 0);
+        assert_vec_approx_eq!(cen2d, &[-0.1, 0.0], 1e-15);
+        g2d.container_center(&mut cen2d, 4, 0, 0);
+        assert_vec_approx_eq!(cen2d, &[0.7, 0.0], 1e-15);
+        g2d.container_center(&mut cen2d, 0, 4, 0);
+        assert_vec_approx_eq!(cen2d, &[-0.1, 1.6], 1e-15);
+        g2d.container_center(&mut cen2d, 4, 4, 0);
+        assert_vec_approx_eq!(cen2d, &[0.7, 1.6], 1e-15);
+        g2d.container_center(&mut cen2d, 3, 1, 0);
+        assert_vec_approx_eq!(cen2d, &[0.5, 0.4], 1e-15);
+        g2d.container_center(&mut cen2d, 2, 3, 0);
+        assert_vec_approx_eq!(cen2d, &[0.3, 1.2], 1e-15);
+        g2d.container_center(&mut cen2d, 3, 4, 0);
+        assert_vec_approx_eq!(cen2d, &[0.5, 1.6], 1e-15);
+
+        let g3d = get_test_grid_3d();
+        let mut cen3d = vec![0.0; 3];
+        let l = 2.0 / 3.0;
+        let hl = l / 2.0;
+        let l2 = l * 2.0;
+        g3d.container_center(&mut cen3d, 0, 0, 0);
+        assert_vec_approx_eq!(cen3d, &[-1.0 + hl, -1.0 + hl, -1.0 + hl], 1e-14);
+        g3d.container_center(&mut cen3d, 2, 0, 0);
+        assert_vec_approx_eq!(cen3d, &[-1.0 + l2 + hl, -1.0 + hl, -1.0 + hl], 1e-14);
+        g3d.container_center(&mut cen3d, 0, 2, 0);
+        assert_vec_approx_eq!(cen3d, &[-1.0 + hl, -1.0 + l2 + hl, -1.0 + hl], 1e-14);
+        g3d.container_center(&mut cen3d, 2, 2, 2);
+        assert_vec_approx_eq!(cen3d, &[-1.0 + l2 + hl, -1.0 + l2 + hl, -1.0 + l2 + hl], 1e-14);
         Ok(())
     }
 
