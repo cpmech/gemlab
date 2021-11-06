@@ -1,5 +1,6 @@
-//! Gemlab
+//! Gemlab -- Geometry And Meshes laboratory for Finite Element Analyses
 
+/// Defines a type alias for the error type as a static string
 pub type StrError = &'static str;
 
 pub mod fem;

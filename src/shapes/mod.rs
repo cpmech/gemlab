@@ -1,4 +1,5 @@
 //! Defines shapes and interpolation functions
+//!
 //! # Example
 //!
 //! ```

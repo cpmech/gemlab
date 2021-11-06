@@ -1,3 +1,5 @@
+//! Contains utilities such as the GridSearch, constants and types
+
 mod as_array;
 mod constants;
 mod grid_search;

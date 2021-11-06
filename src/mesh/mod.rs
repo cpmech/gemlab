@@ -1,3 +1,5 @@
+//! Defines finite element mesh and generators
+
 mod block;
 mod enums;
 mod mesh;

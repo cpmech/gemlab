@@ -1,3 +1,5 @@
+//! Implements a simple linear finite element solver
+
 #![allow(dead_code)]
 #![allow(unused_variables)]
 

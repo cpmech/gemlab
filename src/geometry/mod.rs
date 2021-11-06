@@ -1,3 +1,5 @@
+//! Contains basic geometric features and algorithms
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Circle {
     pub center: [f64; 2],
