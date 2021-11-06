@@ -1,7 +1,7 @@
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// Holds the id and coordinates of an item
@@ -226,6 +226,82 @@ impl GridSearch {
             }
         }
         Ok(None)
+    }
+
+    /// Finds points along edge
+    ///
+    /// # Input
+    ///
+    /// * `a` -- (ndim) edge point
+    /// * `b` -- (ndim) edge point
+    ///
+    /// # Output
+    ///
+    /// Returns the ids of points near edge.
+    ///
+    /// # Note
+    ///
+    /// The points `a` and `b` define a bounding box that is used to filter points within.
+    pub fn find_along_edge(&mut self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
+        // check
+        if !self.initialized {
+            return Err("initialize must be called first");
+        }
+        if a.len() != self.ndim {
+            return Err("a.len() must equal ndim");
+        }
+        if b.len() != self.ndim {
+            return Err("b.len() must equal ndim");
+        }
+        // todo
+        let ids = HashSet::new();
+        Ok(ids)
+    }
+
+    /// Finds points along circumference
+    ///
+    /// # Input
+    ///
+    /// * `c` -- (ndim) center
+    /// * `r` -- radius
+    ///
+    /// # Output
+    ///
+    /// Returns the ids of points near circumference.
+    pub fn find_along_circumference(&mut self, c: &[f64], r: f64) -> Result<HashSet<usize>, StrError> {
+        // check
+        if !self.initialized {
+            return Err("initialize must be called first");
+        }
+        if c.len() != self.ndim {
+            return Err("c.len() must equal ndim");
+        }
+        // todo
+        let ids = HashSet::new();
+        Ok(ids)
+    }
+
+    /// Finds points along cylinder parallel to x
+    ///
+    /// # Input
+    ///
+    /// * `c` -- (ndim) center
+    /// * `r` -- radius
+    ///
+    /// # Output
+    ///
+    /// Returns the ids of points near the cylinder surface.
+    pub fn find_along_cylinder_x(&mut self, c: &[f64], r: f64) -> Result<HashSet<usize>, StrError> {
+        // check
+        if !self.initialized {
+            return Err("initialize must be called first");
+        }
+        if c.len() != self.ndim {
+            return Err("c.len() must equal ndim");
+        }
+        // todo
+        let ids = HashSet::new();
+        Ok(ids)
     }
 
     /// Inserts a new item if the coordinates are not found

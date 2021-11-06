@@ -57,10 +57,10 @@ pub struct Mesh {
     pub boundary_points: HashSet<Index>,
     pub boundary_edges: HashMap<EdgeKey, Edge>,
     pub boundary_faces: HashMap<FaceKey, Face>,
-    pub point_groups: HashMap<Group, Vec<Index>>,
-    pub cell_groups: HashMap<Group, Vec<Index>>,
-    pub edge_groups: HashMap<Group, Vec<EdgeKey>>,
-    pub face_groups: HashMap<Group, Vec<FaceKey>>,
+    pub point_groups: HashMap<String, HashSet<Index>>,
+    pub cell_groups: HashMap<String, HashSet<Index>>,
+    pub edge_groups: HashMap<String, HashSet<EdgeKey>>,
+    pub face_groups: HashMap<String, HashSet<FaceKey>>,
     pub min: Vec<f64>,
     pub max: Vec<f64>,
     pub grid: GridSearch,
@@ -283,37 +283,122 @@ impl Mesh {
     }
 
     pub fn set_group(&mut self, name: &str, geo: Geo) -> Result<(), StrError> {
-        let mut points: Vec<usize> = Vec::new();
         match geo {
             Geo::Point(at) => {
-                for index in 0..self.points.len() {
-                    if self.point_belongs_to(index, &at) {
-                        points.push(index);
+                // find all points near the geometric feature
+                for index in self.find_points(&at) {
+                    // new map
+                    if self.point_groups.contains_key(name) {
+                        let group = self.point_groups.get_mut(name).unwrap();
+                        group.insert(index);
+                    // update map
+                    } else {
+                        let mut indices = HashSet::new();
+                        indices.insert(index);
+                        self.point_groups.insert(name.to_string(), indices);
                     }
                 }
             }
-            Geo::Edge(at) => {}
-            Geo::Face(at) => {}
+            Geo::Edge(at) => {
+                // find all points near the geometric feature
+                let points = self.find_points(&at);
+                for index in &points {
+                    // loop over all edges touching this point
+                    let point = &self.points[*index];
+                    for key in &point.shared_by_edges {
+                        // check if two edge points pass through the geometric feature
+                        if points.contains(&key.0) && points.contains(&key.1) {
+                            // new map
+                            if self.edge_groups.contains_key(name) {
+                                let group = self.edge_groups.get_mut(name).unwrap();
+                                group.insert(key.clone());
+                            // update map
+                            } else {
+                                let mut keys = HashSet::new();
+                                keys.insert(key.clone());
+                                self.edge_groups.insert(name.to_string(), keys);
+                            }
+                        }
+                    }
+                }
+            }
+            Geo::Face(_) => {
+                // todo
+            }
         };
         Ok(())
     }
 
-    fn point_belongs_to(&self, index: usize, at: &At) -> bool {
-        let coords = &self.points[index].coords;
+    fn find_points(&mut self, at: &At) -> HashSet<Index> {
+        let mut points: HashSet<Index> = HashSet::new();
         match at {
-            At::XY(x, y) => false,
-            At::XYZ(x, y, z) => false,
-            At::Horizontal(x, y) => false,
-            At::Vertical(x, y) => false,
-            At::Circle(x, y, z) => false,
-            At::Circle3D(x, y, z, r) => false,
-            At::CylinderX(x, y, z, r) => false,
-            At::CylinderY(x, y, z, r) => false,
-            At::CylinderZ(x, y, z, r) => false,
-            At::PlaneNormalX(x, y, z) => false,
-            At::PlaneNormalY(x, y, z) => false,
-            At::PlaneNormalZ(x, y, z) => false,
+            At::XY(x, y) => {
+                if self.ndim == 2 {
+                    if let Some(id) = self.grid.find(&[*x, *y]).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::XYZ(x, y, z) => {
+                if self.ndim == 3 {
+                    if let Some(id) = self.grid.find(&[*x, *y, *z]).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::Horizontal(x, y) => {
+                if self.ndim == 2 {
+                    let ids = self.grid.find_along_edge(&[*x, *y], &[*x + 1.0, *y]).unwrap();
+                    for id in ids {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::Vertical(x, y) => {
+                if self.ndim == 2 {
+                    for id in self.grid.find_along_edge(&[*x, *y], &[*x, *y + 1.0]).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::Circle(x, y, r) => {
+                if self.ndim == 2 {
+                    for id in self.grid.find_along_circumference(&[*x, *y], *r).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::Circle3D(x, y, z, r) => {
+                if self.ndim == 3 {
+                    for id in self.grid.find_along_circumference(&[*x, *y, *z], *r).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::CylinderX(x, y, z, r) => {
+                if self.ndim == 3 {
+                    for id in self.grid.find_along_cylinder_x(&[*x, *y, *z], *r).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::CylinderY(x, y, z, r) => {
+                println!("{} {} {} {}", x, y, z, r);
+            }
+            At::CylinderZ(x, y, z, r) => {
+                println!("{} {} {} {}", x, y, z, r);
+            }
+            At::PlaneNormalX(x, y, z) => {
+                println!("{} {} {}", x, y, z);
+            }
+            At::PlaneNormalY(x, y, z) => {
+                println!("{} {} {}", x, y, z);
+            }
+            At::PlaneNormalZ(x, y, z) => {
+                println!("{} {} {}", x, y, z);
+            }
         }
+        points
     }
 }
 
