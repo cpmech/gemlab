@@ -87,6 +87,24 @@ pub fn point_segment_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, St
     Ok(distance)
 }
 
+/// Computes the signed distance from point to circumference (negative is inside)
+///
+/// # Note
+///
+/// This works in 2D only
+pub fn point_circumference_distance(center: &[f64], radius: f64, x: &[f64]) -> Result<f64, StrError> {
+    let ndim = center.len();
+    if ndim != 2 {
+        return Err("center.len() == ndim must be 2");
+    }
+    if x.len() != ndim {
+        return Err("x.len() must equal center.len() == ndim");
+    }
+    let center_distance = point_point_distance(center, x)?;
+    let distance = center_distance - radius;
+    Ok(distance)
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -269,6 +287,36 @@ mod tests {
         let c = &[1.0, 1.0, 2.0];
         let distance = point_segment_distance(a, b, c)?;
         assert_eq!(distance, 1.0);
+        Ok(())
+    }
+
+    #[test]
+    fn point_circumference_distance_fails_on_wrong_input() {
+        assert_eq!(
+            point_circumference_distance(&[0.0], 1.0, &[2.0, 2.0]).err(),
+            Some("center.len() == ndim must be 2")
+        );
+        assert_eq!(
+            point_circumference_distance(&[0.0, 0.0], 1.0, &[2.0]).err(),
+            Some("x.len() must equal center.len() == ndim")
+        );
+    }
+
+    #[test]
+    fn point_circumference_distance_works() -> Result<(), StrError> {
+        let center = &[3.0, 4.0];
+        let radius = 5.0;
+        let distance = point_circumference_distance(center, radius, &[0.0, 0.0])?;
+        assert_eq!(distance, 0.0);
+
+        let distance = point_circumference_distance(center, radius, &[3.0, 4.0])?;
+        assert_eq!(distance, -5.0);
+
+        let distance = point_circumference_distance(center, radius, &[6.0, 8.0])?;
+        assert_eq!(distance, 0.0);
+
+        let distance = point_circumference_distance(center, radius, &[9.0, 12.0])?;
+        assert_eq!(distance, 5.0);
         Ok(())
     }
 }
