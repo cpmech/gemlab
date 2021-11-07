@@ -584,7 +584,7 @@ impl fmt::Display for GridSearch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use plotpy::Shapes;
+    use plotpy::{Curve, Shapes};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     struct TestData<'a> {
@@ -1060,7 +1060,7 @@ mod tests {
     }
 
     #[test]
-    fn containers_near_segment_works() -> Result<(), StrError> {
+    fn containers_near_segment_2d_works() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
             g2d.insert(data.id, data.x)?;
@@ -1080,6 +1080,22 @@ mod tests {
         let mut indices = g2d.containers_near_segment(&[0.2, -0.2], &[0.8, 0.1])?;
         indices.sort();
         assert_eq!(indices, &[1, 3, 4]);
+        Ok(())
+    }
+
+    #[test]
+    fn containers_near_segment_3d_works() -> Result<(), StrError> {
+        let mut g3d = get_test_grid_3d();
+        for data in get_test_data_3d() {
+            g3d.insert(data.id, data.x)?;
+        }
+        let mut indices = g3d.containers_near_segment(&[-1.0, -1.0, -1.0], &[1.0, -1.0, -1.0])?;
+        indices.sort();
+        assert_eq!(indices, &[0, 1, 2]);
+
+        let mut indices = g3d.containers_near_segment(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])?;
+        indices.sort();
+        assert_eq!(indices, &[0, 1, 13, 14, 16, 17, 22, 23, 25, 26]);
         Ok(())
     }
 
@@ -1132,7 +1148,13 @@ mod tests {
         for data in get_test_data_3d() {
             g3d.insert(data.id, data.x)?;
         }
-        let plot = g3d.plot()?;
+        let mut plot = g3d.plot()?;
+        let mut curve = Curve::new();
+        curve.set_line_color("#fab32f").set_line_width(1.5);
+        curve.draw_3d(&[-1.0, 1.0], &[-1.0, -1.0], &[-1.0, -1.0]);
+        curve.draw_3d(&[-1.0, 1.0], &[-1.0, 1.0], &[-1.0, 1.0]);
+        plot.add(&curve);
+        plot.set_figure_size_points(600.0, 600.0);
         plot.save("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
         Ok(())
     }
