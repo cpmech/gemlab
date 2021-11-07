@@ -58,7 +58,7 @@ pub fn point_segment_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, St
     let distance: f64;
     if ndim == 2 {
         // n ⋅ n  with n = b - a
-        let n_dot_n = (b[0] - a[0]) + (b[1] - a[1]);
+        let n_dot_n = (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]);
         if n_dot_n <= f64::EPSILON {
             return Err("segment is too short");
         }
@@ -71,7 +71,7 @@ pub fn point_segment_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, St
         distance = f64::sqrt(q0 * q0 + q1 * q1);
     } else {
         // n ⋅ n  with n = b - a
-        let n_dot_n = (b[0] - a[0]) + (b[1] - a[1]) + (b[2] - a[2]);
+        let n_dot_n = (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]) + (b[2] - a[2]) * (b[2] - a[2]);
         if n_dot_n <= f64::EPSILON {
             return Err("segment is too short");
         }
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn point_segment_distance_2d_works() -> Result<(), StrError> {
         let a = &[0.0, 0.0];
-        let b = &[1.0, 1.0];
+        let b = &[2.0, 2.0];
         let c = &a.clone();
         let distance = point_segment_distance(a, b, c)?;
         assert_eq!(distance, 0.0);
@@ -199,23 +199,29 @@ mod tests {
         assert_eq!(distance, 0.0);
 
         let a = &[0.0, 0.0];
-        let b = &[1.0, 0.0];
+        let b = &[8.0, 0.0];
         let c = &[1.0, 0.5];
         let distance = point_segment_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
 
         let a = &[0.0, 0.0];
-        let b = &[0.0, 1.0];
+        let b = &[0.0, 3.0];
         let c = &[0.5, 1.0];
         let distance = point_segment_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
+
+        let a = &[0.6, 0.0];
+        let b = &[0.6, 1.8];
+        let c = &[0.3, 1.2];
+        let distance = point_segment_distance(a, b, c)?;
+        assert_eq!(distance, 0.3);
         Ok(())
     }
 
     #[test]
     fn point_segment_distance_3d_works() -> Result<(), StrError> {
         let a = &[0.0, 0.0, 0.0];
-        let b = &[1.0, 1.0, 1.0];
+        let b = &[2.0, 2.0, 2.0];
         let c = &a.clone();
         let distance = point_segment_distance(a, b, c)?;
         assert_eq!(distance, 0.0);
@@ -241,22 +247,28 @@ mod tests {
         assert_eq!(distance, 0.0);
 
         let a = &[0.0, 0.0, 0.0];
-        let b = &[1.0, 0.0, 0.0];
+        let b = &[2.0, 0.0, 0.0];
         let c = &[1.0, 0.5, 0.0];
         let distance = point_segment_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
 
         let a = &[0.0, 0.0, 0.0];
-        let b = &[0.0, 1.0, 0.0];
+        let b = &[0.0, 3.0, 0.0];
         let c = &[0.5, 1.0, 0.0];
         let distance = point_segment_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
 
         let a = &[0.0, 0.0, 0.0];
-        let b = &[0.0, 0.0, 1.0];
+        let b = &[0.0, 0.0, 4.0];
         let c = &[0.0, 0.5, 1.0];
         let distance = point_segment_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
+
+        let a = &[1.0, 2.0, 1.0];
+        let b = &[1.0, 2.0, 5.0];
+        let c = &[1.0, 1.0, 2.0];
+        let distance = point_segment_distance(a, b, c)?;
+        assert_eq!(distance, 1.0);
         Ok(())
     }
 }
