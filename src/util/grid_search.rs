@@ -243,7 +243,7 @@ impl GridSearch {
         Ok(None)
     }
 
-    /// Finds points along edge
+    /// Finds points on an edge
     ///
     /// # Input
     ///
@@ -257,7 +257,7 @@ impl GridSearch {
     /// # Note
     ///
     /// The points `a` and `b` define a bounding box that is used to filter points within.
-    pub fn find_along_segment(&mut self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_segment(&mut self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -286,7 +286,7 @@ impl GridSearch {
         Ok(ids)
     }
 
-    /// Finds points along circumference
+    /// Finds points on a circumference
     ///
     /// # Input
     ///
@@ -296,7 +296,7 @@ impl GridSearch {
     /// # Output
     ///
     /// Returns the ids of points near circumference.
-    pub fn find_along_circumference(&mut self, c: &[f64], r: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_circumference(&mut self, c: &[f64], r: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -309,7 +309,7 @@ impl GridSearch {
         Ok(ids)
     }
 
-    /// Finds points along cylinder parallel to x
+    /// Finds points on the surface of a cylinder parallel to x
     ///
     /// # Input
     ///
@@ -319,7 +319,7 @@ impl GridSearch {
     /// # Output
     ///
     /// Returns the ids of points near the cylinder surface.
-    pub fn find_along_cylinder_x(&mut self, c: &[f64], r: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_cylinder_x(&mut self, c: &[f64], r: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -1093,26 +1093,26 @@ mod tests {
     }
 
     #[test]
-    fn find_along_segment_2d_works() -> Result<(), StrError> {
+    fn find_on_segment_2d_works() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
             g2d.insert(data.id, data.x)?;
         }
-        let map = g2d.find_along_segment(&[0.6, 0.0], &[0.6, 1.8])?;
+        let map = g2d.find_on_segment(&[0.6, 0.0], &[0.6, 1.8])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&400, &600]);
 
-        let map = g2d.find_along_segment(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
+        let map = g2d.find_on_segment(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
         let ids: Vec<_> = map.iter().collect();
         assert_eq!(ids.len(), 0);
 
-        let map = g2d.find_along_segment(&[-0.2, 1.8], &[0.8, 1.8])?;
+        let map = g2d.find_on_segment(&[-0.2, 1.8], &[0.8, 1.8])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&500]);
 
-        let map = g2d.find_along_segment(&[0.2, -0.2], &[0.8, 0.1])?;
+        let map = g2d.find_on_segment(&[0.2, -0.2], &[0.8, 0.1])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&600]);
@@ -1120,17 +1120,17 @@ mod tests {
     }
 
     #[test]
-    fn find_along_segment_3d_works() -> Result<(), StrError> {
+    fn find_on_segment_3d_works() -> Result<(), StrError> {
         let mut g3d = get_test_grid_3d();
         for data in get_test_data_3d() {
             g3d.insert(data.id, data.x)?;
         }
-        let map = g3d.find_along_segment(&[-1.0, -1.0, -1.0], &[1.0, -1.0, -1.0])?;
+        let map = g3d.find_on_segment(&[-1.0, -1.0, -1.0], &[1.0, -1.0, -1.0])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&100]);
 
-        let map = g3d.find_along_segment(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])?;
+        let map = g3d.find_on_segment(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&100, &200, &300]);

@@ -351,7 +351,7 @@ impl Mesh {
             }
             At::Horizontal(x, y) => {
                 if self.ndim == 2 {
-                    let ids = self.grid.find_along_segment(&[*x, *y], &[*x + 1.0, *y]).unwrap();
+                    let ids = self.grid.find_on_segment(&[*x, *y], &[*x + 1.0, *y]).unwrap();
                     for id in ids {
                         points.insert(id);
                     }
@@ -359,28 +359,28 @@ impl Mesh {
             }
             At::Vertical(x, y) => {
                 if self.ndim == 2 {
-                    for id in self.grid.find_along_segment(&[*x, *y], &[*x, *y + 1.0]).unwrap() {
+                    for id in self.grid.find_on_segment(&[*x, *y], &[*x, *y + 1.0]).unwrap() {
                         points.insert(id);
                     }
                 }
             }
             At::Circle(x, y, r) => {
                 if self.ndim == 2 {
-                    for id in self.grid.find_along_circumference(&[*x, *y], *r).unwrap() {
+                    for id in self.grid.find_on_circumference(&[*x, *y], *r).unwrap() {
                         points.insert(id);
                     }
                 }
             }
             At::Circle3D(x, y, z, r) => {
                 if self.ndim == 3 {
-                    for id in self.grid.find_along_circumference(&[*x, *y, *z], *r).unwrap() {
+                    for id in self.grid.find_on_circumference(&[*x, *y, *z], *r).unwrap() {
                         points.insert(id);
                     }
                 }
             }
             At::CylinderX(x, y, z, r) => {
                 if self.ndim == 3 {
-                    for id in self.grid.find_along_cylinder_x(&[*x, *y, *z], *r).unwrap() {
+                    for id in self.grid.find_on_cylinder_x(&[*x, *y, *z], *r).unwrap() {
                         points.insert(id);
                     }
                 }
