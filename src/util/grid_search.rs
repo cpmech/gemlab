@@ -1,4 +1,4 @@
-use crate::geometry::{point_point_distance, point_segment_distance};
+use crate::geometry::{point_line_distance, point_point_distance};
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
 use serde::{Deserialize, Serialize};
@@ -243,21 +243,17 @@ impl GridSearch {
         Ok(None)
     }
 
-    /// Finds points on an edge
+    /// Finds points on a 2D or 3D line
     ///
     /// # Input
     ///
-    /// * `a` -- (ndim) edge point
-    /// * `b` -- (ndim) edge point
+    /// * `a` -- (ndim) first point on the line
+    /// * `b` -- (ndim) second point on the line (different than `a`)
     ///
     /// # Output
     ///
-    /// Returns the ids of points near edge.
-    ///
-    /// # Note
-    ///
-    /// The points `a` and `b` define a bounding box that is used to filter points within.
-    pub fn find_on_segment(&mut self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
+    /// Returns the ids of points.
+    pub fn find_on_line(&mut self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -269,15 +265,15 @@ impl GridSearch {
             return Err("b.len() must equal ndim");
         }
 
-        // find containers near the segment
-        let nearest_containers = self.containers_near_segment(a, b)?;
+        // find containers near the line
+        let nearest_containers = self.containers_near_line(a, b)?;
 
-        // find container points near the segment
+        // find container points near the line
         let mut ids = HashSet::new();
         for index in nearest_containers {
             let container = self.containers.get(&index).unwrap();
             for item in &container.items {
-                let distance = point_segment_distance(a, b, &item.x)?;
+                let distance = point_line_distance(a, b, &item.x)?;
                 if distance <= self.radius_tol {
                     ids.insert(item.id.clone());
                 }
@@ -286,22 +282,29 @@ impl GridSearch {
         Ok(ids)
     }
 
-    /// Finds points on a circumference
+    /// Finds points on the perimeter of a circle (2D only)
     ///
     /// # Input
     ///
-    /// * `c` -- (ndim) center
-    /// * `r` -- radius
+    /// `center` -- 2D circle center
+    /// `radius` -- circle radius
     ///
     /// # Output
     ///
-    /// Returns the ids of points near circumference.
-    pub fn find_on_circumference(&mut self, c: &[f64], r: f64) -> Result<HashSet<usize>, StrError> {
+    /// Returns the ids of points.
+    ///
+    /// # Note
+    ///
+    /// This works in 2D only.
+    pub fn find_on_circle(&mut self, center: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
         }
-        if c.len() != self.ndim {
+        if self.ndim != 2 {
+            return Err("this works in 2D only");
+        }
+        if center.len() != self.ndim {
             return Err("c.len() must equal ndim");
         }
         // todo
@@ -309,23 +312,117 @@ impl GridSearch {
         Ok(ids)
     }
 
-    /// Finds points on the surface of a cylinder parallel to x
+    /// Finds points on the surface of a cylinder (3D only)
     ///
     /// # Input
     ///
-    /// * `c` -- (ndim) center
-    /// * `r` -- radius
+    /// `axis_a` -- 3D point on the cylinder axis
+    /// `axis_b` -- 3D point on the cylinder axis
+    /// `radius` -- cylinder radius
     ///
     /// # Output
     ///
-    /// Returns the ids of points near the cylinder surface.
-    pub fn find_on_cylinder_x(&mut self, c: &[f64], r: f64) -> Result<HashSet<usize>, StrError> {
+    /// Returns the ids of points.
+    ///
+    /// # Note
+    ///
+    /// This works in 3D only.
+    pub fn find_on_cylinder(
+        &mut self,
+        axis_a: &[f64],
+        axis_b: &[f64],
+        radius: f64,
+    ) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
         }
-        if c.len() != self.ndim {
-            return Err("c.len() must equal ndim");
+        if self.ndim != 3 {
+            return Err("this works in 3D only");
+        }
+        if axis_a.len() != self.ndim {
+            return Err("axis_a.len() must equal ndim");
+        }
+        if axis_b.len() != self.ndim {
+            return Err("axis_b.len() must equal ndim");
+        }
+        // todo
+        let ids = HashSet::new();
+        Ok(ids)
+    }
+
+    /// Find points on the x-y plane (3D only)
+    ///
+    /// # Input
+    ///
+    /// `z` -- the plane passes through `z`
+    ///
+    /// # Output
+    ///
+    /// Returns the ids of points.
+    ///
+    /// # Note
+    ///
+    /// This works in 3D only.
+    pub fn find_on_plane_xy(&mut self, z: f64) -> Result<HashSet<usize>, StrError> {
+        // check
+        if !self.initialized {
+            return Err("initialize must be called first");
+        }
+        if self.ndim != 3 {
+            return Err("this works in 3D only");
+        }
+        // todo
+        let ids = HashSet::new();
+        Ok(ids)
+    }
+
+    /// Find points on the y-z plane (3D only)
+    ///
+    /// # Input
+    ///
+    /// `x` -- the plane passes through `x`
+    ///
+    /// # Output
+    ///
+    /// Returns the ids of points.
+    ///
+    /// # Note
+    ///
+    /// This works in 3D only.
+    pub fn find_on_plane_yz(&mut self, x: f64) -> Result<HashSet<usize>, StrError> {
+        // check
+        if !self.initialized {
+            return Err("initialize must be called first");
+        }
+        if self.ndim != 3 {
+            return Err("this works in 3D only");
+        }
+        // todo
+        let ids = HashSet::new();
+        Ok(ids)
+    }
+
+    /// Find points on the x-z plane (3D only)
+    ///
+    /// # Input
+    ///
+    /// `y` -- the plane passes through `y`
+    ///
+    /// # Output
+    ///
+    /// Returns the ids of points.
+    ///
+    /// # Note
+    ///
+    /// This works in 3D only.
+    pub fn find_on_plane_xz(&mut self, y: f64) -> Result<HashSet<usize>, StrError> {
+        // check
+        if !self.initialized {
+            return Err("initialize must be called first");
+        }
+        if self.ndim != 3 {
+            return Err("this works in 3D only");
         }
         // todo
         let ids = HashSet::new();
@@ -465,9 +562,9 @@ impl GridSearch {
         }
     }
 
-    /// Returns the indices of containers near a segment
+    /// Returns the indices of containers near a line
     #[inline]
-    fn containers_near_segment(&self, a: &[f64], b: &[f64]) -> Result<Vec<usize>, StrError> {
+    fn containers_near_line(&self, a: &[f64], b: &[f64]) -> Result<Vec<usize>, StrError> {
         let mut nearest_containers = Vec::new();
         let mut cen = vec![0.0; self.ndim];
         for index in self.containers.keys() {
@@ -475,7 +572,7 @@ impl GridSearch {
             let (i, j, k) = self.container_pivot_indices(*index);
             self.container_center(&mut cen, i, j, k);
             // check if the center of container is near the segment
-            let distance = point_segment_distance(a, b, &cen)?;
+            let distance = point_line_distance(a, b, &cen)?;
             if distance < self.radius + self.radius_tol {
                 nearest_containers.push(*index);
             }
@@ -1053,66 +1150,66 @@ mod tests {
     }
 
     #[test]
-    fn containers_near_segment_2d_works() -> Result<(), StrError> {
+    fn containers_near_line_2d_works() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
             g2d.insert(data.id, data.x)?;
         }
-        let mut indices = g2d.containers_near_segment(&[0.6, 0.0], &[0.6, 1.8])?;
+        let mut indices = g2d.containers_near_line(&[0.6, 0.0], &[0.6, 1.8])?;
         indices.sort();
         assert_eq!(indices, &[3, 4, 13, 18, 19, 23, 24]);
 
-        let mut indices = g2d.containers_near_segment(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
+        let mut indices = g2d.containers_near_line(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
         indices.sort();
         assert_eq!(indices, &[1, 3, 6, 7, 11, 12, 13, 17, 18, 23]);
 
-        let mut indices = g2d.containers_near_segment(&[-0.2, 1.8], &[0.8, 1.8])?;
+        let mut indices = g2d.containers_near_line(&[-0.2, 1.8], &[0.8, 1.8])?;
         indices.sort();
         assert_eq!(indices, &[23, 24]);
 
-        let mut indices = g2d.containers_near_segment(&[0.2, -0.2], &[0.8, 0.1])?;
+        let mut indices = g2d.containers_near_line(&[0.2, -0.2], &[0.8, 0.1])?;
         indices.sort();
         assert_eq!(indices, &[1, 3, 4]);
         Ok(())
     }
 
     #[test]
-    fn containers_near_segment_3d_works() -> Result<(), StrError> {
+    fn containers_near_line_3d_works() -> Result<(), StrError> {
         let mut g3d = get_test_grid_3d();
         for data in get_test_data_3d() {
             g3d.insert(data.id, data.x)?;
         }
-        let mut indices = g3d.containers_near_segment(&[-1.0, -1.0, -1.0], &[1.0, -1.0, -1.0])?;
+        let mut indices = g3d.containers_near_line(&[-1.0, -1.0, -1.0], &[1.0, -1.0, -1.0])?;
         indices.sort();
         assert_eq!(indices, &[0, 1, 2]);
 
-        let mut indices = g3d.containers_near_segment(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])?;
+        let mut indices = g3d.containers_near_line(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])?;
         indices.sort();
         assert_eq!(indices, &[0, 1, 13, 14, 16, 17, 22, 23, 25, 26]);
         Ok(())
     }
 
     #[test]
-    fn find_on_segment_2d_works() -> Result<(), StrError> {
+    fn find_on_line_2d_works() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
             g2d.insert(data.id, data.x)?;
         }
-        let map = g2d.find_on_segment(&[0.6, 0.0], &[0.6, 1.8])?;
+        let map = g2d.find_on_line(&[0.6, 0.0], &[0.6, 1.8])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&400, &600]);
 
-        let map = g2d.find_on_segment(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
+        let map = g2d.find_on_line(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
         let ids: Vec<_> = map.iter().collect();
         assert_eq!(ids.len(), 0);
 
-        let map = g2d.find_on_segment(&[-0.2, 1.8], &[0.8, 1.8])?;
+        let map = g2d.find_on_line(&[-0.2, 1.8], &[0.8, 1.8])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&500]);
 
-        let map = g2d.find_on_segment(&[0.2, -0.2], &[0.8, 0.1])?;
+        let map = g2d.find_on_line(&[0.2, -0.2], &[0.8, 0.1])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&600]);
@@ -1120,17 +1217,17 @@ mod tests {
     }
 
     #[test]
-    fn find_on_segment_3d_works() -> Result<(), StrError> {
+    fn find_on_line_3d_works() -> Result<(), StrError> {
         let mut g3d = get_test_grid_3d();
         for data in get_test_data_3d() {
             g3d.insert(data.id, data.x)?;
         }
-        let map = g3d.find_on_segment(&[-1.0, -1.0, -1.0], &[1.0, -1.0, -1.0])?;
+        let map = g3d.find_on_line(&[-1.0, -1.0, -1.0], &[1.0, -1.0, -1.0])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&100]);
 
-        let map = g3d.find_on_segment(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])?;
+        let map = g3d.find_on_line(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&100, &200, &300]);

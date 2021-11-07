@@ -1,6 +1,15 @@
 use crate::StrError;
 
 /// Computes the point-to-point distance
+///
+/// # Input
+///
+/// * `a` -- first point
+/// * `b` -- second point
+///
+/// # Output
+///
+/// Returns the unsigned distance between the two points.
 pub fn point_point_distance(a: &[f64], b: &[f64]) -> Result<f64, StrError> {
     let ndim = a.len();
     if ndim < 2 || ndim > 3 {
@@ -19,32 +28,33 @@ pub fn point_point_distance(a: &[f64], b: &[f64]) -> Result<f64, StrError> {
     Ok(distance)
 }
 
-/// Computes the distance between a point and a segment
+/// Computes the distance between a point and a line
 ///
 /// ```text
-///                 c
-///                /^
-/// ⇀             / | ⇀   ⇀   ⇀
-/// x = vec(c-a) /  | q = x - p
-///             /   |       
+///                 c                x := c - a
+///                /^                n := b - a
+/// ⇀             / | ⇀   ⇀   ⇀      p := ((x ⋅ n) / (n ⋅ n)) * n
+/// x = vec(c-a) /  | q = x - p      q := x - p
+///             /   |                distance := norm(q)
 ///            /    |
 ///           a----->-------------b
 ///             ⇀              ⇀
 ///             p = projection(x)
 ///
-///           a-------------------b
 ///               ⇀
 ///               n = vec(b-c)
 /// ```
 ///
-/// ```text
-/// x := c - a
-/// n := b - a
-/// p := ((x ⋅ n) / (n ⋅ n)) * n
-/// q := x - p
-/// distance := norm(q)
-/// ```
-pub fn point_segment_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrError> {
+/// # Input
+///
+/// * `a` -- first point on the line
+/// * `b` -- second point on the line (different than `a`)
+/// * `c` -- point whose distance is sought
+///
+/// # Output
+///
+/// Returns the unsigned distance.
+pub fn point_line_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrError> {
     let ndim = a.len();
     if ndim < 2 || ndim > 3 {
         return Err("a.len() == ndim must be 2 or 3");
@@ -60,7 +70,7 @@ pub fn point_segment_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, St
         // n ⋅ n  with n = b - a
         let n_dot_n = (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]);
         if n_dot_n <= f64::EPSILON {
-            return Err("segment is too short");
+            return Err("a-to-b segment is too short");
         }
         // x ⋅ n  with x = c - a
         let x_dot_n = (c[0] - a[0]) * (b[0] - a[0]) + (c[1] - a[1]) * (b[1] - a[1]);
@@ -73,7 +83,7 @@ pub fn point_segment_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, St
         // n ⋅ n  with n = b - a
         let n_dot_n = (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]) + (b[2] - a[2]) * (b[2] - a[2]);
         if n_dot_n <= f64::EPSILON {
-            return Err("segment is too short");
+            return Err("a-to-b segment is too short");
         }
         // x ⋅ n  with x = c - a
         let x_dot_n = (c[0] - a[0]) * (b[0] - a[0]) + (c[1] - a[1]) * (b[1] - a[1]) + (c[2] - a[2]) * (b[2] - a[2]);
@@ -87,74 +97,62 @@ pub fn point_segment_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, St
     Ok(distance)
 }
 
-/// Computes the signed distance from point to circumference (negative is inside)
+/// Computes the signed distance from point to circle perimeter
+///
+/// # Input
+///
+/// `center` -- 2D circle center
+/// `radius` -- circle radius
+/// `p` -- 2D point
+///
+/// # Output
+///
+/// Returns the signed distance (negative is inside).
 ///
 /// # Note
 ///
 /// This works in 2D only.
-pub fn point_circumference_distance(center: &[f64], radius: f64, x: &[f64]) -> Result<f64, StrError> {
+pub fn point_circle_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
     let ndim = center.len();
     if ndim != 2 {
         return Err("center.len() == ndim must be 2");
     }
-    if x.len() != ndim {
+    if p.len() != ndim {
         return Err("x.len() must equal center.len() == ndim");
     }
-    let center_distance = point_point_distance(center, x)?;
+    let center_distance = point_point_distance(center, p)?;
     let distance = center_distance - radius;
     Ok(distance)
 }
 
-/// Computes the signed distance from point to the surface of a cylinder parallel to x (negative is inside)
+/// Computes the signed distance from point to the surface of a cylinder parallel to x
+///
+/// # Input
+///
+/// `axis_a` -- 3D point on the cylinder axis
+/// `axis_b` -- 3D point on the cylinder axis
+/// `radius` -- cylinder radius
+/// `p` -- 3D point
+///
+/// # Output
+///
+/// Returns the signed distance (negative is inside)
 ///
 /// # Note
 ///
 /// This works in 3D only.
-pub fn point_cylinder_x_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
-    let ndim = center.len();
+pub fn point_cylinder_distance(axis_a: &[f64], axis_b: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
+    let ndim = axis_a.len();
     if ndim != 3 {
-        return Err("center.len() == ndim must be 3");
+        return Err("axis_a.len() == ndim must be 3");
+    }
+    if axis_b.len() != ndim {
+        return Err("axis_b.len() must equal center.len() == ndim");
     }
     if p.len() != ndim {
-        return Err("x.len() must equal center.len() == ndim");
+        return Err("p.len() must equal center.len() == ndim");
     }
-    let center_distance = point_segment_distance(center, &[center[0] + 1.0, center[1], center[2]], p)?;
-    let distance = center_distance - radius;
-    Ok(distance)
-}
-
-/// Computes the signed distance from point to the surface of a cylinder parallel to y (negative is inside)
-///
-/// # Note
-///
-/// This works in 3D only.
-pub fn point_cylinder_y_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
-    let ndim = center.len();
-    if ndim != 3 {
-        return Err("center.len() == ndim must be 3");
-    }
-    if p.len() != ndim {
-        return Err("x.len() must equal center.len() == ndim");
-    }
-    let center_distance = point_segment_distance(center, &[center[0], center[1] + 1.0, center[2]], p)?;
-    let distance = center_distance - radius;
-    Ok(distance)
-}
-
-/// Computes the signed distance from point to the surface of a cylinder parallel to z (negative is inside)
-///
-/// # Note
-///
-/// This works in 3D only.
-pub fn point_cylinder_z_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
-    let ndim = center.len();
-    if ndim != 3 {
-        return Err("center.len() == ndim must be 3");
-    }
-    if p.len() != ndim {
-        return Err("x.len() must equal center.len() == ndim");
-    }
-    let center_distance = point_segment_distance(center, &[center[0], center[1], center[2] + 1.0], p)?;
+    let center_distance = point_line_distance(axis_a, axis_b, p)?;
     let distance = center_distance - radius;
     Ok(distance)
 }
@@ -213,253 +211,227 @@ mod tests {
     }
 
     #[test]
-    fn point_segment_distance_fails_on_wrong_input() {
+    fn point_line_distance_fails_on_wrong_input() {
         assert_eq!(
-            point_segment_distance(&[0.0], &[1.0, 1.0], &[2.0, 2.0]).err(),
+            point_line_distance(&[0.0], &[1.0, 1.0], &[2.0, 2.0]).err(),
             Some("a.len() == ndim must be 2 or 3")
         );
         assert_eq!(
-            point_segment_distance(&[0.0, 0.0], &[1.0], &[2.0, 2.0]).err(),
+            point_line_distance(&[0.0, 0.0], &[1.0], &[2.0, 2.0]).err(),
             Some("b.len() must equal a.len() == ndim")
         );
         assert_eq!(
-            point_segment_distance(&[0.0, 0.0], &[1.0, 1.0], &[2.0]).err(),
+            point_line_distance(&[0.0, 0.0], &[1.0, 1.0], &[2.0]).err(),
             Some("c.len() must equal a.len() == ndim")
         );
     }
 
     #[test]
-    fn point_segment_distance_2d_fails_on_short_segment() -> Result<(), StrError> {
+    fn point_line_distance_2d_fails_on_short_segment() -> Result<(), StrError> {
         let a = &[0.0, 0.0];
         let b = &[0.0, f64::EPSILON];
         let c = &[1.0, 1.0];
-        assert_eq!(point_segment_distance(a, b, c).err(), Some("segment is too short"));
+        assert_eq!(point_line_distance(a, b, c).err(), Some("a-to-b segment is too short"));
         Ok(())
     }
 
     #[test]
-    fn point_segment_distance_3d_fails_on_short_segment() -> Result<(), StrError> {
+    fn point_line_distance_3d_fails_on_short_segment() -> Result<(), StrError> {
         let a = &[0.0, 0.0, 0.0];
         let b = &[0.0, 0.0, f64::EPSILON];
         let c = &[1.0, 1.0, 1.0];
-        assert_eq!(point_segment_distance(a, b, c).err(), Some("segment is too short"));
+        assert_eq!(point_line_distance(a, b, c).err(), Some("a-to-b segment is too short"));
         Ok(())
     }
 
     #[test]
-    fn point_segment_distance_2d_works() -> Result<(), StrError> {
+    fn point_line_distance_2d_works() -> Result<(), StrError> {
         let a = &[0.0, 0.0];
         let b = &[2.0, 2.0];
         let c = &a.clone();
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.0);
 
         let c = &b.clone();
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.0);
 
         let c = &[1.0, 0.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_approx_eq!(distance, SQRT_2 / 2.0, 1e-15);
 
         let c = &[0.0, 1.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_approx_eq!(distance, SQRT_2 / 2.0, 1e-15);
 
         let c = &[0.5, 0.5];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.0);
 
         let a = &[0.0, 0.0];
         let b = &[8.0, 0.0];
         let c = &[1.0, 0.5];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
 
         let a = &[0.0, 0.0];
         let b = &[0.0, 3.0];
         let c = &[0.5, 1.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
 
         let a = &[0.6, 0.0];
         let b = &[0.6, 1.8];
         let c = &[0.3, 1.2];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.3);
         Ok(())
     }
 
     #[test]
-    fn point_segment_distance_3d_works() -> Result<(), StrError> {
+    fn point_line_distance_3d_works() -> Result<(), StrError> {
         let a = &[0.0, 0.0, 0.0];
         let b = &[2.0, 2.0, 2.0];
         let c = &a.clone();
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.0);
 
         let c = &b.clone();
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.0);
 
         let c = &[1.0, 1.0, 0.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_approx_eq!(distance, SQRT_2_BY_3, 1e-15);
 
         let c = &[0.0, 1.0, 1.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_approx_eq!(distance, SQRT_2_BY_3, 1e-15);
 
         let c = &[1.0, 0.0, 1.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_approx_eq!(distance, SQRT_2_BY_3, 1e-15);
 
         let c = &[0.5, 0.5, 0.5];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.0);
 
         let a = &[0.0, 0.0, 0.0];
         let b = &[2.0, 0.0, 0.0];
         let c = &[1.0, 0.5, 0.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
 
         let a = &[0.0, 0.0, 0.0];
         let b = &[0.0, 3.0, 0.0];
         let c = &[0.5, 1.0, 0.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
 
         let a = &[0.0, 0.0, 0.0];
         let b = &[0.0, 0.0, 4.0];
         let c = &[0.0, 0.5, 1.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 0.5);
 
         let a = &[1.0, 2.0, 1.0];
         let b = &[1.0, 2.0, 5.0];
         let c = &[1.0, 1.0, 2.0];
-        let distance = point_segment_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c)?;
         assert_eq!(distance, 1.0);
         Ok(())
     }
 
     #[test]
-    fn point_circumference_distance_fails_on_wrong_input() {
+    fn point_circle_distance_fails_on_wrong_input() {
         assert_eq!(
-            point_circumference_distance(&[0.0], 1.0, &[2.0, 2.0]).err(),
+            point_circle_distance(&[0.0], 1.0, &[2.0, 2.0]).err(),
             Some("center.len() == ndim must be 2")
         );
         assert_eq!(
-            point_circumference_distance(&[0.0, 0.0], 1.0, &[2.0]).err(),
+            point_circle_distance(&[0.0, 0.0], 1.0, &[2.0]).err(),
             Some("x.len() must equal center.len() == ndim")
         );
     }
 
     #[test]
-    fn point_circumference_distance_works() -> Result<(), StrError> {
+    fn point_circle_distance_works() -> Result<(), StrError> {
         let center = &[3.0, 4.0];
         let radius = 5.0;
-        let distance = point_circumference_distance(center, radius, &[0.0, 0.0])?;
+        let distance = point_circle_distance(center, radius, &[0.0, 0.0])?;
         assert_eq!(distance, 0.0);
 
-        let distance = point_circumference_distance(center, radius, &[3.0, 4.0])?;
+        let distance = point_circle_distance(center, radius, &[3.0, 4.0])?;
         assert_eq!(distance, -5.0);
 
-        let distance = point_circumference_distance(center, radius, &[6.0, 8.0])?;
+        let distance = point_circle_distance(center, radius, &[6.0, 8.0])?;
         assert_eq!(distance, 0.0);
 
-        let distance = point_circumference_distance(center, radius, &[9.0, 12.0])?;
+        let distance = point_circle_distance(center, radius, &[9.0, 12.0])?;
         assert_eq!(distance, 5.0);
         Ok(())
     }
 
     #[test]
-    fn point_cylinder_x_distance_fails_on_wrong_input() {
+    fn point_cylinder_distance_fails_on_wrong_input() {
         assert_eq!(
-            point_cylinder_x_distance(&[0.0, 0.0], 1.0, &[2.0, 2.0, 2.0]).err(),
-            Some("center.len() == ndim must be 3")
+            point_cylinder_distance(&[0.0, 0.0], &[1.0, 0.0, 0.0], 1.0, &[2.0, 2.0, 2.0]).err(),
+            Some("axis_a.len() == ndim must be 3")
         );
         assert_eq!(
-            point_cylinder_x_distance(&[0.0, 0.0, 0.0], 1.0, &[2.0, 2.0]).err(),
-            Some("x.len() must equal center.len() == ndim")
+            point_cylinder_distance(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0, &[2.0, 2.0]).err(),
+            Some("p.len() must equal center.len() == ndim")
         );
     }
 
     #[test]
-    fn point_cylinder_x_distance_works() -> Result<(), StrError> {
-        let center = &[10.0, 3.0, 4.0];
+    fn point_cylinder_distance_works() -> Result<(), StrError> {
+        // parallel to x
+        let axis_a = &[10.0, 3.0, 4.0];
+        let axis_b = &[20.0, 3.0, 4.0];
         let radius = 5.0;
-        let distance = point_cylinder_x_distance(center, radius, &[0.0, 0.0, 0.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[0.0, 0.0, 0.0])?;
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_x_distance(center, radius, &[80.0, 3.0, 4.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[80.0, 3.0, 4.0])?;
         assert_eq!(distance, -5.0);
 
-        let distance = point_cylinder_x_distance(center, radius, &[-11.0, 6.0, 8.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[-11.0, 6.0, 8.0])?;
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_x_distance(center, radius, &[-5.0, 9.0, 12.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[-5.0, 9.0, 12.0])?;
         assert_eq!(distance, 5.0);
-        Ok(())
-    }
 
-    #[test]
-    fn point_cylinder_y_distance_fails_on_wrong_input() {
-        assert_eq!(
-            point_cylinder_y_distance(&[0.0, 0.0], 1.0, &[2.0, 2.0, 2.0]).err(),
-            Some("center.len() == ndim must be 3")
-        );
-        assert_eq!(
-            point_cylinder_y_distance(&[0.0, 0.0, 0.0], 1.0, &[2.0, 2.0]).err(),
-            Some("x.len() must equal center.len() == ndim")
-        );
-    }
-
-    #[test]
-    fn point_cylinder_y_distance_works() -> Result<(), StrError> {
-        let center = &[3.0, 10.0, 4.0];
+        // parallel to y
+        let axis_a = &[3.0, 10.0, 4.0];
+        let axis_b = &[3.0, -10.0, 4.0];
         let radius = 5.0;
-        let distance = point_cylinder_y_distance(center, radius, &[0.0, 0.0, 0.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[0.0, 0.0, 0.0])?;
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_y_distance(center, radius, &[3.0, 80.0, 4.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[3.0, 80.0, 4.0])?;
         assert_eq!(distance, -5.0);
 
-        let distance = point_cylinder_y_distance(center, radius, &[6.0, -11.0, 8.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[6.0, -11.0, 8.0])?;
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_y_distance(center, radius, &[9.0, -5.0, 12.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[9.0, -5.0, 12.0])?;
         assert_eq!(distance, 5.0);
-        Ok(())
-    }
 
-    #[test]
-    fn point_cylinder_z_distance_fails_on_wrong_input() {
-        assert_eq!(
-            point_cylinder_z_distance(&[0.0, 0.0], 1.0, &[2.0, 2.0, 2.0]).err(),
-            Some("center.len() == ndim must be 3")
-        );
-        assert_eq!(
-            point_cylinder_z_distance(&[0.0, 0.0, 0.0], 1.0, &[2.0, 2.0]).err(),
-            Some("x.len() must equal center.len() == ndim")
-        );
-    }
-
-    #[test]
-    fn point_cylinder_z_distance_works() -> Result<(), StrError> {
-        let center = &[3.0, 4.0, 10.0];
+        // parallel to z
+        let axis_a = &[3.0, 4.0, 10.0];
+        let axis_b = &[3.0, 4.0, 30.0];
         let radius = 5.0;
-        let distance = point_cylinder_z_distance(center, radius, &[0.0, 0.0, 0.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[0.0, 0.0, 0.0])?;
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_z_distance(center, radius, &[3.0, 4.0, 80.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[3.0, 4.0, 80.0])?;
         assert_eq!(distance, -5.0);
 
-        let distance = point_cylinder_z_distance(center, radius, &[6.0, 8.0, -11.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[6.0, 8.0, -11.0])?;
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_z_distance(center, radius, &[9.0, 12.0, -5.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[9.0, 12.0, -5.0])?;
         assert_eq!(distance, 5.0);
         Ok(())
     }

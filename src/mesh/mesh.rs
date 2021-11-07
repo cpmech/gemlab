@@ -335,9 +335,56 @@ impl Mesh {
     fn find_points(&mut self, at: &At) -> HashSet<Index> {
         let mut points: HashSet<Index> = HashSet::new();
         match at {
+            At::X(x) => {
+                if self.ndim == 2 {
+                    for id in self.grid.find_on_line(&[*x, 0.0], &[*x, 1.0]).unwrap() {
+                        points.insert(id);
+                    }
+                } else {
+                    for id in self.grid.find_on_plane_yz(*x).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::Y(y) => {
+                if self.ndim == 2 {
+                    for id in self.grid.find_on_line(&[0.0, *y], &[1.0, *y]).unwrap() {
+                        points.insert(id);
+                    }
+                } else {
+                    for id in self.grid.find_on_plane_xz(*y).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::Z(z) => {
+                if self.ndim == 3 {
+                    for id in self.grid.find_on_plane_xy(*z).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
             At::XY(x, y) => {
                 if self.ndim == 2 {
                     if let Some(id) = self.grid.find(&[*x, *y]).unwrap() {
+                        points.insert(id);
+                    }
+                } else {
+                    for id in self.grid.find_on_line(&[*x, *y, 0.0], &[*x, *y, 1.0]).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::YZ(y, z) => {
+                if self.ndim == 3 {
+                    for id in self.grid.find_on_line(&[0.0, *y, *z], &[1.0, *y, *z]).unwrap() {
+                        points.insert(id);
+                    }
+                }
+            }
+            At::XZ(x, z) => {
+                if self.ndim == 3 {
+                    for id in self.grid.find_on_line(&[*x, 0.0, *z], &[*x, 1.0, *z]).unwrap() {
                         points.insert(id);
                     }
                 }
@@ -349,56 +396,23 @@ impl Mesh {
                     }
                 }
             }
-            At::Horizontal(x, y) => {
-                if self.ndim == 2 {
-                    let ids = self.grid.find_on_segment(&[*x, *y], &[*x + 1.0, *y]).unwrap();
-                    for id in ids {
-                        points.insert(id);
-                    }
-                }
-            }
-            At::Vertical(x, y) => {
-                if self.ndim == 2 {
-                    for id in self.grid.find_on_segment(&[*x, *y], &[*x, *y + 1.0]).unwrap() {
-                        points.insert(id);
-                    }
-                }
-            }
             At::Circle(x, y, r) => {
                 if self.ndim == 2 {
-                    for id in self.grid.find_on_circumference(&[*x, *y], *r).unwrap() {
+                    for id in self.grid.find_on_circle(&[*x, *y], *r).unwrap() {
                         points.insert(id);
                     }
                 }
             }
-            At::Circle3D(x, y, z, r) => {
+            At::Cylinder(ax, ay, az, bx, by, bz, r) => {
                 if self.ndim == 3 {
-                    for id in self.grid.find_on_circumference(&[*x, *y, *z], *r).unwrap() {
+                    for id in self
+                        .grid
+                        .find_on_cylinder(&[*ax, *ay, *az], &[*bx, *by, *bz], *r)
+                        .unwrap()
+                    {
                         points.insert(id);
                     }
                 }
-            }
-            At::CylinderX(x, y, z, r) => {
-                if self.ndim == 3 {
-                    for id in self.grid.find_on_cylinder_x(&[*x, *y, *z], *r).unwrap() {
-                        points.insert(id);
-                    }
-                }
-            }
-            At::CylinderY(x, y, z, r) => {
-                println!("{} {} {} {}", x, y, z, r);
-            }
-            At::CylinderZ(x, y, z, r) => {
-                println!("{} {} {} {}", x, y, z, r);
-            }
-            At::PlaneNormalX(x, y, z) => {
-                println!("{} {} {}", x, y, z);
-            }
-            At::PlaneNormalY(x, y, z) => {
-                println!("{} {} {}", x, y, z);
-            }
-            At::PlaneNormalZ(x, y, z) => {
-                println!("{} {} {}", x, y, z);
             }
         }
         points
@@ -572,6 +586,7 @@ mod tests {
         // todo
     }
 
+    /*
     #[test]
     fn set_group_works() -> Result<(), StrError> {
         return Ok(());
@@ -603,4 +618,5 @@ mod tests {
 
         Ok(())
     }
+    */
 }
