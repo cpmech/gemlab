@@ -153,7 +153,7 @@ impl GridSearch {
             if self.size[i] <= 10.0 * self.tol[i] {
                 return Err("ndiv is too high; ndiv must be such that the grid size is greater than 10 * tol");
             }
-            self.radius += self.size[i] * self.size[i];
+            self.radius += self.size[i] * self.size[i] / 4.0;
         }
         self.radius = f64::sqrt(self.radius);
 
@@ -482,7 +482,8 @@ impl GridSearch {
             let (i, j, k) = self.container_pivot_indices(*index);
             self.container_center(&mut cen, i, j, k);
             // check if the center of container is near the segment
-            if point_segment_distance(a, b, &cen)? < self.radius + self.radius_tol {
+            let distance = point_segment_distance(a, b, &cen)?;
+            if distance < self.radius + self.radius_tol {
                 nearest_containers.push(*index);
             }
         }
@@ -583,6 +584,7 @@ impl fmt::Display for GridSearch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use plotpy::Shapes;
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     struct TestData<'a> {
@@ -594,14 +596,12 @@ mod tests {
 
     fn get_test_grid_2d() -> GridSearch {
         let mut grid = GridSearch::new(2).unwrap();
-        grid.set_tolerances(&[1e-2, 1e-2]).unwrap();
         grid.initialize(&[5, 5], &[-0.2, -0.2], &[0.8, 1.8]).unwrap();
         grid
     }
 
     fn get_test_grid_3d() -> GridSearch {
         let mut grid = GridSearch::new(3).unwrap();
-        grid.set_tolerances(&[1e-2, 1e-2, 1e-2]).unwrap();
         grid.initialize(&[3, 3, 3], &[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])
             .unwrap();
         grid
@@ -703,6 +703,7 @@ mod tests {
         let mut grid = GridSearch::new(2)?;
         grid.set_tolerances(&[0.2, 0.2])?;
         assert_eq!(grid.tol, &[0.2, 0.2]);
+        assert_eq!(grid.radius_tol, f64::sqrt(0.2 * 0.2 + 0.2 * 0.2));
         Ok(())
     }
 
@@ -749,13 +750,13 @@ mod tests {
         assert_eq!(g2d.size, [0.2, 0.4]);
         assert_eq!(g2d.cf, [1, 5, 25]);
         assert_eq!(g2d.ratio, [0, 0]);
-        assert_eq!(g2d.tol, [1e-2, 1e-2]);
+        assert_eq!(g2d.tol, [1e-4, 1e-4]);
         assert_eq!(g2d.halo.len(), 4);
         assert_eq!(g2d.ncorner, 4);
         assert_eq!(g2d.containers.len(), 0);
         assert_eq!(g2d.initialized, true);
-        assert_approx_eq!(g2d.radius, f64::sqrt(0.2), 1e-15);
-        assert_approx_eq!(g2d.radius_tol, f64::sqrt(2.0 * 1e-4), 1e-15);
+        assert_approx_eq!(g2d.radius, f64::sqrt(0.1 * 0.1 + 0.2 * 0.2), 1e-15);
+        assert_approx_eq!(g2d.radius_tol, f64::sqrt(2.0 * 1e-4 * 1e-4), 1e-15);
 
         let g3d = get_test_grid_3d();
         assert_eq!(g3d.ndim, 3);
@@ -766,13 +767,55 @@ mod tests {
         assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
         assert_eq!(g3d.cf, [1, 3, 9]);
         assert_eq!(g3d.ratio, [0, 0, 0]);
-        assert_eq!(g3d.tol, [1e-2, 1e-2, 1e-2]);
+        assert_eq!(g3d.tol, [1e-4, 1e-4, 1e-4]);
+        assert_eq!(g3d.halo.len(), 8);
+        assert_eq!(g3d.ncorner, 8);
+        assert_eq!(g3d.containers.len(), 0);
+        assert_eq!(g2d.initialized, true);
+        assert_approx_eq!(g3d.radius, f64::sqrt(3.0 * (1.0 / 3.0) * (1.0 / 3.0)), 1e-15);
+        assert_approx_eq!(g3d.radius_tol, f64::sqrt(3.0 * 1e-4 * 1e-4), 1e-15);
+    }
+
+    #[test]
+    fn encode_decode_work() -> Result<(), StrError> {
+        let original2d = get_test_grid_2d();
+        let data2d = original2d.encode()?;
+        let g2d = GridSearch::decode(&data2d)?;
+        assert_eq!(g2d.ndim, 2);
+        assert_eq!(g2d.ndiv, [5, 5]);
+        assert_eq!(g2d.min, [-0.2, -0.2]);
+        assert_eq!(g2d.max, [0.8, 1.8]);
+        assert_eq!(g2d.delta, [1.0, 2.0]);
+        assert_eq!(g2d.size, [0.2, 0.4]);
+        assert_eq!(g2d.cf, [1, 5, 25]);
+        assert_eq!(g2d.ratio, [0, 0]);
+        assert_eq!(g2d.tol, [1e-4, 1e-4]);
+        assert_eq!(g2d.halo.len(), 4);
+        assert_eq!(g2d.ncorner, 4);
+        assert_eq!(g2d.containers.len(), 0);
+        assert_eq!(g2d.initialized, true);
+        assert_approx_eq!(g2d.radius, f64::sqrt(0.2), 1e-15);
+        assert_approx_eq!(g2d.radius_tol, f64::sqrt(2.0 * 1e-4 * 1e-4), 1e-15);
+
+        let original3d = get_test_grid_3d();
+        let data3d = original3d.encode()?;
+        let g3d = GridSearch::decode(&data3d)?;
+        assert_eq!(g3d.ndim, 3);
+        assert_eq!(g3d.ndiv, [3, 3, 3]);
+        assert_eq!(g3d.min, [-1.0, -1.0, -1.0]);
+        assert_eq!(g3d.max, [1.0, 1.0, 1.0]);
+        assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
+        assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
+        assert_eq!(g3d.cf, [1, 3, 9]);
+        assert_eq!(g3d.ratio, [0, 0, 0]);
+        assert_eq!(g3d.tol, [1e-4, 1e-4, 1e-4]);
         assert_eq!(g3d.halo.len(), 8);
         assert_eq!(g3d.ncorner, 8);
         assert_eq!(g3d.containers.len(), 0);
         assert_eq!(g2d.initialized, true);
         assert_approx_eq!(g3d.radius, f64::sqrt(12.0 / 9.0), 1e-15);
-        assert_approx_eq!(g3d.radius_tol, f64::sqrt(3.0 * 1e-4), 1e-15);
+        assert_approx_eq!(g3d.radius_tol, f64::sqrt(3.0 * 1e-4 * 1e-4), 1e-15);
+        Ok(())
     }
 
     #[test]
@@ -798,21 +841,21 @@ mod tests {
     fn set_halo_works() {
         let mut g2d = get_test_grid_2d();
         g2d.set_halo(&[0.5, 0.5]);
-        assert_eq!(g2d.halo[0], [0.49, 0.49]);
-        assert_eq!(g2d.halo[1], [0.51, 0.49]);
-        assert_eq!(g2d.halo[2], [0.51, 0.51]);
-        assert_eq!(g2d.halo[3], [0.49, 0.51]);
+        assert_eq!(g2d.halo[0], [0.4999, 0.4999]);
+        assert_eq!(g2d.halo[1], [0.5001, 0.4999]);
+        assert_eq!(g2d.halo[2], [0.5001, 0.5001]);
+        assert_eq!(g2d.halo[3], [0.4999, 0.5001]);
 
         let mut g3d = get_test_grid_3d();
         g3d.set_halo(&[0.5, 0.5, 0.5]);
-        assert_eq!(g3d.halo[0], [0.49, 0.49, 0.49]);
-        assert_eq!(g3d.halo[1], [0.51, 0.49, 0.49]);
-        assert_eq!(g3d.halo[2], [0.51, 0.51, 0.49]);
-        assert_eq!(g3d.halo[3], [0.49, 0.51, 0.49]);
-        assert_eq!(g3d.halo[4], [0.49, 0.49, 0.51]);
-        assert_eq!(g3d.halo[5], [0.51, 0.49, 0.51]);
-        assert_eq!(g3d.halo[6], [0.51, 0.51, 0.51]);
-        assert_eq!(g3d.halo[7], [0.49, 0.51, 0.51]);
+        assert_eq!(g3d.halo[0], [0.4999, 0.4999, 0.4999]);
+        assert_eq!(g3d.halo[1], [0.5001, 0.4999, 0.4999]);
+        assert_eq!(g3d.halo[2], [0.5001, 0.5001, 0.4999]);
+        assert_eq!(g3d.halo[3], [0.4999, 0.5001, 0.4999]);
+        assert_eq!(g3d.halo[4], [0.4999, 0.4999, 0.5001]);
+        assert_eq!(g3d.halo[5], [0.5001, 0.4999, 0.5001]);
+        assert_eq!(g3d.halo[6], [0.5001, 0.5001, 0.5001]);
+        assert_eq!(g3d.halo[7], [0.4999, 0.5001, 0.5001]);
     }
 
     #[test]
@@ -1017,6 +1060,30 @@ mod tests {
     }
 
     #[test]
+    fn containers_near_segment_works() -> Result<(), StrError> {
+        let mut g2d = get_test_grid_2d();
+        for data in get_test_data_2d() {
+            g2d.insert(data.id, data.x)?;
+        }
+        let mut indices = g2d.containers_near_segment(&[0.6, 0.0], &[0.6, 1.8])?;
+        indices.sort();
+        assert_eq!(indices, &[3, 4, 13, 18, 19, 23, 24]);
+
+        let mut indices = g2d.containers_near_segment(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
+        indices.sort();
+        assert_eq!(indices, &[1, 3, 6, 7, 11, 12, 13, 17, 18, 23]);
+
+        let mut indices = g2d.containers_near_segment(&[-0.2, 1.8], &[0.8, 1.8])?;
+        indices.sort();
+        assert_eq!(indices, &[23, 24]);
+
+        let mut indices = g2d.containers_near_segment(&[0.2, -0.2], &[0.8, 0.1])?;
+        indices.sort();
+        assert_eq!(indices, &[1, 3, 4]);
+        Ok(())
+    }
+
+    #[test]
     fn find_along_segment_works() -> Result<(), StrError> {
         // todo
         Ok(())
@@ -1042,7 +1109,23 @@ mod tests {
             g2d.insert(data.id, data.x)?;
         }
         let mut plot = g2d.plot()?;
-        plot.set_yrange(-0.4, 2.0).set_num_ticks_y(12).grid_and_labels("x", "y");
+        let mut shapes = Shapes::new();
+        shapes.set_face_color("None").set_edge_color("magenta");
+        shapes.draw_circle(0.5, 0.8, g2d.radius);
+        shapes.draw_circle(0.1, 0.4, g2d.radius);
+        shapes.draw_circle(0.5, 0.0, g2d.radius);
+        shapes.set_edge_color("#fab32f").set_line_width(1.5);
+        shapes.draw_polyline(&vec![vec![0.6, -0.2], vec![0.6, 1.8]], false);
+        shapes.draw_polyline(&vec![vec![-0.2, 1.8], vec![0.8, 1.8]], false);
+        shapes.draw_polyline(&vec![vec![0.2, -0.2], vec![0.8, 0.1]], false);
+        shapes.draw_polyline(&vec![vec![0.1 + g2d.radius, -0.2], vec![0.1 + g2d.radius, 1.8]], false);
+        plot.add(&shapes);
+        plot.set_equal_axes(true)
+            .set_range(-0.4, 1.0, -0.4, 2.0)
+            .set_ticks_x(0.1, 0.0, "")
+            .set_num_ticks_y(12)
+            .grid_and_labels("x", "y")
+            .set_figure_size_points(400.0, 800.0);
         plot.save("/tmp/gemlab/search_grid_plot_2d_works.svg")?;
 
         let mut g3d = get_test_grid_3d();
@@ -1076,44 +1159,6 @@ mod tests {
         let res = grid.plot();
         assert_eq!(res.err(), Some("initialize must be called first"));
 
-        Ok(())
-    }
-
-    #[test]
-    fn encode_decode_work() -> Result<(), StrError> {
-        let original2d = get_test_grid_2d();
-        let data2d = original2d.encode()?;
-        let g2d = GridSearch::decode(&data2d)?;
-        assert_eq!(g2d.ndim, 2);
-        assert_eq!(g2d.ndiv, [5, 5]);
-        assert_eq!(g2d.min, [-0.2, -0.2]);
-        assert_eq!(g2d.max, [0.8, 1.8]);
-        assert_eq!(g2d.delta, [1.0, 2.0]);
-        assert_eq!(g2d.size, [0.2, 0.4]);
-        assert_eq!(g2d.cf, [1, 5, 25]);
-        assert_eq!(g2d.ratio, [0, 0]);
-        assert_eq!(g2d.tol, [1e-2, 1e-2]);
-        assert_eq!(g2d.halo.len(), 4);
-        assert_eq!(g2d.ncorner, 4);
-        assert_eq!(g2d.containers.len(), 0);
-        assert_eq!(g2d.initialized, true);
-
-        let original3d = get_test_grid_3d();
-        let data3d = original3d.encode()?;
-        let g3d = GridSearch::decode(&data3d)?;
-        assert_eq!(g3d.ndim, 3);
-        assert_eq!(g3d.ndiv, [3, 3, 3]);
-        assert_eq!(g3d.min, [-1.0, -1.0, -1.0]);
-        assert_eq!(g3d.max, [1.0, 1.0, 1.0]);
-        assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
-        assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
-        assert_eq!(g3d.cf, [1, 3, 9]);
-        assert_eq!(g3d.ratio, [0, 0, 0]);
-        assert_eq!(g3d.tol, [1e-2, 1e-2, 1e-2]);
-        assert_eq!(g3d.halo.len(), 8);
-        assert_eq!(g3d.ncorner, 8);
-        assert_eq!(g3d.containers.len(), 0);
-        assert_eq!(g2d.initialized, true);
         Ok(())
     }
 }
