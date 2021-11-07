@@ -3,7 +3,7 @@
 /// # Example
 ///
 /// ```
-/// use gemlab::AsArray1D;
+/// use gemlab::util::AsArray1D;
 ///
 /// fn sum<'a, T, U>(array: &'a T) -> f64
 /// where
@@ -82,7 +82,7 @@ where
 /// # Example
 ///
 /// ```
-/// use gemlab::AsArray2D;
+/// use gemlab::util::AsArray2D;
 ///
 /// fn sum<'a, T, U>(array: &'a T) -> f64
 /// where

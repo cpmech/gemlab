@@ -4,7 +4,7 @@
 //!
 //! ```
 //! // import
-//! use gemlab::*;
+//! use gemlab::shapes::*;
 //! use russell_lab::Vector;
 //!
 //! // shape object
