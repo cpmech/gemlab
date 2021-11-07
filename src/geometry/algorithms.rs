@@ -105,6 +105,24 @@ pub fn point_circumference_distance(center: &[f64], radius: f64, x: &[f64]) -> R
     Ok(distance)
 }
 
+/// Computes the signed distance from point to the surface of a cylinder parallel to x (negative is inside)
+///
+/// # Note
+///
+/// This works in 3D only
+pub fn point_cylinder_x_distance(center: &[f64], radius: f64, x: &[f64]) -> Result<f64, StrError> {
+    let ndim = center.len();
+    if ndim != 3 {
+        return Err("center.len() == ndim must be 3");
+    }
+    if x.len() != ndim {
+        return Err("x.len() must equal center.len() == ndim");
+    }
+    let center_distance = point_segment_distance(center, &[center[0] + 1.0, center[1], center[2]], x)?;
+    let distance = center_distance - radius;
+    Ok(distance)
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -316,6 +334,36 @@ mod tests {
         assert_eq!(distance, 0.0);
 
         let distance = point_circumference_distance(center, radius, &[9.0, 12.0])?;
+        assert_eq!(distance, 5.0);
+        Ok(())
+    }
+
+    #[test]
+    fn point_cylinder_x_distance_fails_on_wrong_input() {
+        assert_eq!(
+            point_cylinder_x_distance(&[0.0, 0.0], 1.0, &[2.0, 2.0, 2.0]).err(),
+            Some("center.len() == ndim must be 3")
+        );
+        assert_eq!(
+            point_cylinder_x_distance(&[0.0, 0.0, 0.0], 1.0, &[2.0, 2.0]).err(),
+            Some("x.len() must equal center.len() == ndim")
+        );
+    }
+
+    #[test]
+    fn point_cylinder_x_distance_works() -> Result<(), StrError> {
+        let center = &[10.0, 3.0, 4.0];
+        let radius = 5.0;
+        let distance = point_cylinder_x_distance(center, radius, &[0.0, 0.0, 0.0])?;
+        assert_eq!(distance, 0.0);
+
+        let distance = point_cylinder_x_distance(center, radius, &[80.0, 3.0, 4.0])?;
+        assert_eq!(distance, -5.0);
+
+        let distance = point_cylinder_x_distance(center, radius, &[-11.0, 6.0, 8.0])?;
+        assert_eq!(distance, 0.0);
+
+        let distance = point_cylinder_x_distance(center, radius, &[-5.0, 9.0, 12.0])?;
         assert_eq!(distance, 5.0);
         Ok(())
     }
