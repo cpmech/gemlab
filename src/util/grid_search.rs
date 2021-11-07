@@ -285,7 +285,8 @@ impl GridSearch {
         for index in nearest_containers {
             let container = self.containers.get(&index).unwrap();
             for item in &container.items {
-                if point_segment_distance(a, b, &item.x)? <= self.radius_tol {
+                let distance = point_segment_distance(a, b, &item.x)?;
+                if distance <= self.radius_tol {
                     ids.insert(item.id.clone());
                 }
             }
@@ -1100,8 +1101,47 @@ mod tests {
     }
 
     #[test]
-    fn find_along_segment_works() -> Result<(), StrError> {
-        // todo
+    fn find_along_segment_2d_works() -> Result<(), StrError> {
+        let mut g2d = get_test_grid_2d();
+        for data in get_test_data_2d() {
+            g2d.insert(data.id, data.x)?;
+        }
+        let map = g2d.find_along_segment(&[0.6, 0.0], &[0.6, 1.8])?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&400, &600]);
+
+        let map = g2d.find_along_segment(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
+        let ids: Vec<_> = map.iter().collect();
+        assert_eq!(ids.len(), 0);
+
+        let map = g2d.find_along_segment(&[-0.2, 1.8], &[0.8, 1.8])?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&500]);
+
+        let map = g2d.find_along_segment(&[0.2, -0.2], &[0.8, 0.1])?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&600]);
+        Ok(())
+    }
+
+    #[test]
+    fn find_along_segment_3d_works() -> Result<(), StrError> {
+        let mut g3d = get_test_grid_3d();
+        for data in get_test_data_3d() {
+            g3d.insert(data.id, data.x)?;
+        }
+        let map = g3d.find_along_segment(&[-1.0, -1.0, -1.0], &[1.0, -1.0, -1.0])?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&100]);
+
+        let map = g3d.find_along_segment(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&100, &200, &300]);
         Ok(())
     }
 
