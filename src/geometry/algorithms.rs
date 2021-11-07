@@ -91,7 +91,7 @@ pub fn point_segment_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, St
 ///
 /// # Note
 ///
-/// This works in 2D only
+/// This works in 2D only.
 pub fn point_circumference_distance(center: &[f64], radius: f64, x: &[f64]) -> Result<f64, StrError> {
     let ndim = center.len();
     if ndim != 2 {
@@ -109,16 +109,52 @@ pub fn point_circumference_distance(center: &[f64], radius: f64, x: &[f64]) -> R
 ///
 /// # Note
 ///
-/// This works in 3D only
-pub fn point_cylinder_x_distance(center: &[f64], radius: f64, x: &[f64]) -> Result<f64, StrError> {
+/// This works in 3D only.
+pub fn point_cylinder_x_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
     let ndim = center.len();
     if ndim != 3 {
         return Err("center.len() == ndim must be 3");
     }
-    if x.len() != ndim {
+    if p.len() != ndim {
         return Err("x.len() must equal center.len() == ndim");
     }
-    let center_distance = point_segment_distance(center, &[center[0] + 1.0, center[1], center[2]], x)?;
+    let center_distance = point_segment_distance(center, &[center[0] + 1.0, center[1], center[2]], p)?;
+    let distance = center_distance - radius;
+    Ok(distance)
+}
+
+/// Computes the signed distance from point to the surface of a cylinder parallel to y (negative is inside)
+///
+/// # Note
+///
+/// This works in 3D only.
+pub fn point_cylinder_y_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
+    let ndim = center.len();
+    if ndim != 3 {
+        return Err("center.len() == ndim must be 3");
+    }
+    if p.len() != ndim {
+        return Err("x.len() must equal center.len() == ndim");
+    }
+    let center_distance = point_segment_distance(center, &[center[0], center[1] + 1.0, center[2]], p)?;
+    let distance = center_distance - radius;
+    Ok(distance)
+}
+
+/// Computes the signed distance from point to the surface of a cylinder parallel to z (negative is inside)
+///
+/// # Note
+///
+/// This works in 3D only.
+pub fn point_cylinder_z_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
+    let ndim = center.len();
+    if ndim != 3 {
+        return Err("center.len() == ndim must be 3");
+    }
+    if p.len() != ndim {
+        return Err("x.len() must equal center.len() == ndim");
+    }
+    let center_distance = point_segment_distance(center, &[center[0], center[1], center[2] + 1.0], p)?;
     let distance = center_distance - radius;
     Ok(distance)
 }
@@ -364,6 +400,66 @@ mod tests {
         assert_eq!(distance, 0.0);
 
         let distance = point_cylinder_x_distance(center, radius, &[-5.0, 9.0, 12.0])?;
+        assert_eq!(distance, 5.0);
+        Ok(())
+    }
+
+    #[test]
+    fn point_cylinder_y_distance_fails_on_wrong_input() {
+        assert_eq!(
+            point_cylinder_y_distance(&[0.0, 0.0], 1.0, &[2.0, 2.0, 2.0]).err(),
+            Some("center.len() == ndim must be 3")
+        );
+        assert_eq!(
+            point_cylinder_y_distance(&[0.0, 0.0, 0.0], 1.0, &[2.0, 2.0]).err(),
+            Some("x.len() must equal center.len() == ndim")
+        );
+    }
+
+    #[test]
+    fn point_cylinder_y_distance_works() -> Result<(), StrError> {
+        let center = &[3.0, 10.0, 4.0];
+        let radius = 5.0;
+        let distance = point_cylinder_y_distance(center, radius, &[0.0, 0.0, 0.0])?;
+        assert_eq!(distance, 0.0);
+
+        let distance = point_cylinder_y_distance(center, radius, &[3.0, 80.0, 4.0])?;
+        assert_eq!(distance, -5.0);
+
+        let distance = point_cylinder_y_distance(center, radius, &[6.0, -11.0, 8.0])?;
+        assert_eq!(distance, 0.0);
+
+        let distance = point_cylinder_y_distance(center, radius, &[9.0, -5.0, 12.0])?;
+        assert_eq!(distance, 5.0);
+        Ok(())
+    }
+
+    #[test]
+    fn point_cylinder_z_distance_fails_on_wrong_input() {
+        assert_eq!(
+            point_cylinder_z_distance(&[0.0, 0.0], 1.0, &[2.0, 2.0, 2.0]).err(),
+            Some("center.len() == ndim must be 3")
+        );
+        assert_eq!(
+            point_cylinder_z_distance(&[0.0, 0.0, 0.0], 1.0, &[2.0, 2.0]).err(),
+            Some("x.len() must equal center.len() == ndim")
+        );
+    }
+
+    #[test]
+    fn point_cylinder_z_distance_works() -> Result<(), StrError> {
+        let center = &[3.0, 4.0, 10.0];
+        let radius = 5.0;
+        let distance = point_cylinder_z_distance(center, radius, &[0.0, 0.0, 0.0])?;
+        assert_eq!(distance, 0.0);
+
+        let distance = point_cylinder_z_distance(center, radius, &[3.0, 4.0, 80.0])?;
+        assert_eq!(distance, -5.0);
+
+        let distance = point_cylinder_z_distance(center, radius, &[6.0, 8.0, -11.0])?;
+        assert_eq!(distance, 0.0);
+
+        let distance = point_cylinder_z_distance(center, radius, &[9.0, 12.0, -5.0])?;
         assert_eq!(distance, 5.0);
         Ok(())
     }
