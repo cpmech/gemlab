@@ -235,17 +235,9 @@ impl GridSearch {
 
         // find closest point to `x` in the container
         for item in &container.items {
-            if self.ndim == 2 {
-                if f64::abs(x[0] - item.x[0]) <= self.tol[0] && f64::abs(x[1] - item.x[1]) <= self.tol[1] {
-                    return Ok(Some(item.id));
-                }
-            } else {
-                if f64::abs(x[0] - item.x[0]) <= self.tol[0]
-                    && f64::abs(x[1] - item.x[1]) <= self.tol[1]
-                    && f64::abs(x[2] - item.x[2]) <= self.tol[2]
-                {
-                    return Ok(Some(item.id));
-                }
+            let distance = point_point_distance(&item.x, x)?;
+            if distance <= self.radius_tol {
+                return Ok(Some(item.id));
             }
         }
         Ok(None)
@@ -795,7 +787,7 @@ mod tests {
         assert_eq!(g2d.ncorner, 4);
         assert_eq!(g2d.containers.len(), 0);
         assert_eq!(g2d.initialized, true);
-        assert_approx_eq!(g2d.radius, f64::sqrt(0.2), 1e-15);
+        assert_approx_eq!(g2d.radius, f64::sqrt(0.1 * 0.1 + 0.2 * 0.2), 1e-15);
         assert_approx_eq!(g2d.radius_tol, f64::sqrt(2.0 * 1e-4 * 1e-4), 1e-15);
 
         let original3d = get_test_grid_3d();
@@ -814,7 +806,7 @@ mod tests {
         assert_eq!(g3d.ncorner, 8);
         assert_eq!(g3d.containers.len(), 0);
         assert_eq!(g2d.initialized, true);
-        assert_approx_eq!(g3d.radius, f64::sqrt(12.0 / 9.0), 1e-15);
+        assert_approx_eq!(g3d.radius, f64::sqrt(3.0 * (1.0 / 3.0) * (1.0 / 3.0)), 1e-15);
         assert_approx_eq!(g3d.radius_tol, f64::sqrt(3.0 * 1e-4 * 1e-4), 1e-15);
         Ok(())
     }
