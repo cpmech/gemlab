@@ -1,5 +1,24 @@
 use crate::StrError;
 
+/// Computes the point-to-point distance
+pub fn point_point_distance(a: &[f64], b: &[f64]) -> Result<f64, StrError> {
+    let ndim = a.len();
+    if ndim < 2 || ndim > 3 {
+        return Err("a.len() == ndim must be 2 or 3");
+    }
+    if b.len() != ndim {
+        return Err("b.len() must equal a.len() == ndim");
+    }
+    let distance: f64;
+    if ndim == 2 {
+        distance = f64::sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]));
+    } else {
+        distance =
+            f64::sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]) + (b[2] - a[2]) * (b[2] - a[2]));
+    }
+    Ok(distance)
+}
+
 /// Computes the distance between a point and a segment
 ///
 /// ```text
@@ -73,11 +92,56 @@ pub fn point_segment_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, St
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::{SQRT_2, SQRT_2_BY_3};
+    use crate::util::{SQRT_2, SQRT_2_BY_3, SQRT_3};
     use russell_chk::assert_approx_eq;
 
     #[test]
-    fn point_segment_distance_fails_on_wrong_input() -> Result<(), StrError> {
+    fn point_point_distance_fails_on_wrong_input() {
+        assert_eq!(
+            point_point_distance(&[0.0], &[1.0, 1.0]).err(),
+            Some("a.len() == ndim must be 2 or 3")
+        );
+        assert_eq!(
+            point_point_distance(&[0.0, 0.0], &[1.0]).err(),
+            Some("b.len() must equal a.len() == ndim")
+        );
+    }
+
+    #[test]
+    fn point_point_distance_2d_works() -> Result<(), StrError> {
+        let a = &[0.0, 0.0];
+        let b = &[1.0, 0.0];
+        assert_approx_eq!(point_point_distance(a, b)?, 1.0, 1e-15);
+
+        let b = &[0.0, 2.0];
+        assert_approx_eq!(point_point_distance(a, b)?, 2.0, 1e-15);
+
+        let a = &[1.0, 1.0];
+        let b = &[2.0, 2.0];
+        assert_approx_eq!(point_point_distance(a, b)?, SQRT_2, 1e-15);
+        Ok(())
+    }
+
+    #[test]
+    fn point_point_distance_3d_works() -> Result<(), StrError> {
+        let a = &[0.0, 0.0, 0.0];
+        let b = &[1.0, 0.0, 0.0];
+        assert_approx_eq!(point_point_distance(a, b)?, 1.0, 1e-15);
+
+        let b = &[0.0, 2.0, 0.0];
+        assert_approx_eq!(point_point_distance(a, b)?, 2.0, 1e-15);
+
+        let b = &[0.0, 0.0, 3.0];
+        assert_approx_eq!(point_point_distance(a, b)?, 3.0, 1e-15);
+
+        let a = &[1.0, 1.0, 1.0];
+        let b = &[2.0, 2.0, 2.0];
+        assert_approx_eq!(point_point_distance(a, b)?, SQRT_3, 1e-15);
+        Ok(())
+    }
+
+    #[test]
+    fn point_segment_distance_fails_on_wrong_input() {
         assert_eq!(
             point_segment_distance(&[0.0], &[1.0, 1.0], &[2.0, 2.0]).err(),
             Some("a.len() == ndim must be 2 or 3")
@@ -90,7 +154,6 @@ mod tests {
             point_segment_distance(&[0.0, 0.0], &[1.0, 1.0], &[2.0]).err(),
             Some("c.len() must equal a.len() == ndim")
         );
-        Ok(())
     }
 
     #[test]
