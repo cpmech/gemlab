@@ -1,3 +1,4 @@
+use crate::geometry::{point_point_distance, point_segment_distance};
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
 use serde::{Deserialize, Serialize};
@@ -33,7 +34,6 @@ pub struct GridSearch {
     max: Vec<f64>,    // (ndim) max values
     delta: Vec<f64>,  // (ndim) difference between max and min
     size: Vec<f64>,   // (ndim) side lengths of each container
-    radius: f64,      // radius of the circumscribed circle of containers
     cf: Vec<usize>,   // (3) coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
 
     // auxiliary variable
@@ -50,9 +50,16 @@ pub struct GridSearch {
 
     // indicates whether initialize has been called or not
     initialized: bool,
+
+    // constants
+    radius: f64,     // radius of the circumscribed circle of containers
+    radius_tol: f64, // radius of the bounding box defined by the tolerances
 }
 
 impl GridSearch {
+    // constants
+    const DEFAULT_TOLERANCE: f64 = 1e-4; // default point-search tolerance for all directions
+
     /// Creates a new GridSearch
     pub fn new(ndim: usize) -> Result<Self, StrError> {
         // check
@@ -60,27 +67,33 @@ impl GridSearch {
             return Err("ndim must be 2 or 3");
         }
 
-        // constants
-        const DEFAULT_TOLERANCE: f64 = 1e-4;
+        // number of halo corners
         let ncorner = usize::pow(2, ndim as u32);
 
-        // done
-        Ok(GridSearch {
+        // allocate grid
+        let mut grid = GridSearch {
             ndim,
             ndiv: vec![0; ndim],
             min: vec![0.0; ndim],
             max: vec![0.0; ndim],
             delta: vec![0.0; ndim],
             size: vec![0.0; ndim],
-            radius: 0.0,
             cf: vec![0; 3], // << must be 3
             ratio: vec![0; ndim],
-            tol: vec![DEFAULT_TOLERANCE; ndim],
+            tol: vec![0.0; ndim],
             halo: vec![vec![0.0; ndim]; ncorner],
             ncorner,
             containers: HashMap::new(),
             initialized: false,
-        })
+            radius: 0.0,
+            radius_tol: 0.0,
+        };
+
+        // set tolerances
+        grid.set_tolerances(&vec![GridSearch::DEFAULT_TOLERANCE; ndim])?;
+
+        // done
+        Ok(grid)
     }
 
     /// Sets the tolerances to compare coordinates (len = ndim)
@@ -93,6 +106,11 @@ impl GridSearch {
             return Err("tol.len() must equal ndim");
         }
         self.tol.copy_from_slice(tol);
+        self.radius_tol = 0.0;
+        for i in 0..self.ndim {
+            self.radius_tol += self.tol[i] * self.tol[i];
+        }
+        self.radius_tol = f64::sqrt(self.radius_tol);
         self.initialized = false;
         Ok(())
     }
@@ -258,18 +276,20 @@ impl GridSearch {
         if b.len() != self.ndim {
             return Err("b.len() must equal ndim");
         }
-        let ids = HashSet::new();
 
-        // loop over all containers
-        let mut cen = vec![0.0; self.ndim];
-        for (index, container) in &self.containers {
-            // compute center
-            let (i, j, k) = self.container_pivot_indices(*index);
-            self.container_center(&mut cen, i, j, k);
+        // find containers near the segment
+        let nearest_containers = self.containers_near_segment(a, b)?;
 
-            // check if container is near the segment
+        // find container points near the segment
+        let mut ids = HashSet::new();
+        for index in nearest_containers {
+            let container = self.containers.get(&index).unwrap();
+            for item in &container.items {
+                if point_segment_distance(a, b, &item.x)? <= self.radius_tol {
+                    ids.insert(item.id.clone());
+                }
+            }
         }
-
         Ok(ids)
     }
 
@@ -450,6 +470,23 @@ impl GridSearch {
         if self.ndim == 3 {
             cen[2] = self.min[2] + (k as f64) * self.size[2] + self.size[2] / 2.0;
         }
+    }
+
+    /// Returns the indices of containers near a segment
+    #[inline]
+    fn containers_near_segment(&self, a: &[f64], b: &[f64]) -> Result<Vec<usize>, StrError> {
+        let mut nearest_containers = Vec::new();
+        let mut cen = vec![0.0; self.ndim];
+        for index in self.containers.keys() {
+            // compute center
+            let (i, j, k) = self.container_pivot_indices(*index);
+            self.container_center(&mut cen, i, j, k);
+            // check if the center of container is near the segment
+            if point_segment_distance(a, b, &cen)? < self.radius + self.radius_tol {
+                nearest_containers.push(*index);
+            }
+        }
+        Ok(nearest_containers)
     }
 
     /// Update container or insert point in container
@@ -710,7 +747,6 @@ mod tests {
         assert_eq!(g2d.max, [0.8, 1.8]);
         assert_eq!(g2d.delta, [1.0, 2.0]);
         assert_eq!(g2d.size, [0.2, 0.4]);
-        assert_approx_eq!(g2d.radius, f64::sqrt(0.2), 1e-15);
         assert_eq!(g2d.cf, [1, 5, 25]);
         assert_eq!(g2d.ratio, [0, 0]);
         assert_eq!(g2d.tol, [1e-2, 1e-2]);
@@ -718,6 +754,8 @@ mod tests {
         assert_eq!(g2d.ncorner, 4);
         assert_eq!(g2d.containers.len(), 0);
         assert_eq!(g2d.initialized, true);
+        assert_approx_eq!(g2d.radius, f64::sqrt(0.2), 1e-15);
+        assert_approx_eq!(g2d.radius_tol, f64::sqrt(2.0 * 1e-4), 1e-15);
 
         let g3d = get_test_grid_3d();
         assert_eq!(g3d.ndim, 3);
@@ -726,7 +764,6 @@ mod tests {
         assert_eq!(g3d.max, [1.0, 1.0, 1.0]);
         assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
         assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
-        assert_approx_eq!(g3d.radius, f64::sqrt(12.0 / 9.0), 1e-15);
         assert_eq!(g3d.cf, [1, 3, 9]);
         assert_eq!(g3d.ratio, [0, 0, 0]);
         assert_eq!(g3d.tol, [1e-2, 1e-2, 1e-2]);
@@ -734,6 +771,8 @@ mod tests {
         assert_eq!(g3d.ncorner, 8);
         assert_eq!(g3d.containers.len(), 0);
         assert_eq!(g2d.initialized, true);
+        assert_approx_eq!(g3d.radius, f64::sqrt(12.0 / 9.0), 1e-15);
+        assert_approx_eq!(g3d.radius_tol, f64::sqrt(3.0 * 1e-4), 1e-15);
     }
 
     #[test]
@@ -974,6 +1013,12 @@ mod tests {
         }
         let id = g3d.find(&[0.5, 0.5, 0.5])?;
         assert_eq!(id, None);
+        Ok(())
+    }
+
+    #[test]
+    fn find_along_segment_works() -> Result<(), StrError> {
+        // todo
         Ok(())
     }
 
