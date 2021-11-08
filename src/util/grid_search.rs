@@ -1,4 +1,4 @@
-use crate::geometry::{point_line_distance, point_point_distance};
+use crate::geometry::{point_circle_distance, point_line_distance, point_point_distance};
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
 use serde::{Deserialize, Serialize};
@@ -307,8 +307,21 @@ impl GridSearch {
         if center.len() != self.ndim {
             return Err("c.len() must equal ndim");
         }
-        // todo
-        let ids = HashSet::new();
+
+        // find containers near the circle
+        let nearest_containers = self.containers_near_circle(center, radius)?;
+
+        // find container points near the circle
+        let mut ids = HashSet::new();
+        for index in nearest_containers {
+            let container = self.containers.get(&index).unwrap();
+            for item in &container.items {
+                let distance = point_circle_distance(center, radius, &item.x)?;
+                if f64::abs(distance) <= self.radius_tol {
+                    ids.insert(item.id.clone());
+                }
+            }
+        }
         Ok(ids)
     }
 
@@ -568,12 +581,30 @@ impl GridSearch {
         let mut nearest_containers = Vec::new();
         let mut cen = vec![0.0; self.ndim];
         for index in self.containers.keys() {
-            // compute center
+            // compute container center
             let (i, j, k) = self.container_pivot_indices(*index);
             self.container_center(&mut cen, i, j, k);
             // check if the center of container is near the segment
             let distance = point_line_distance(a, b, &cen)?;
-            if distance < self.radius + self.radius_tol {
+            if distance <= self.radius + self.radius_tol {
+                nearest_containers.push(*index);
+            }
+        }
+        Ok(nearest_containers)
+    }
+
+    /// Returns the indices of containers near a circle
+    #[inline]
+    fn containers_near_circle(&self, circle_center: &[f64], radius: f64) -> Result<Vec<usize>, StrError> {
+        let mut nearest_containers = Vec::new();
+        let mut cen = vec![0.0; self.ndim];
+        for index in self.containers.keys() {
+            // compute container center
+            let (i, j, k) = self.container_pivot_indices(*index);
+            self.container_center(&mut cen, i, j, k);
+            // check if the center of container is near the circle
+            let distance = point_circle_distance(circle_center, radius, &cen)?;
+            if distance <= self.radius + self.radius_tol {
                 nearest_containers.push(*index);
             }
         }
@@ -1261,6 +1292,31 @@ mod tests {
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&100, &200, &300]);
+        Ok(())
+    }
+
+    #[test]
+    fn containers_near_circle_works() -> Result<(), StrError> {
+        let mut g2d = get_test_grid_2d();
+        for data in get_test_data_2d() {
+            g2d.insert(data.id, data.x)?;
+        }
+        let mut indices = g2d.containers_near_circle(&[-0.2, 1.8], 0.3)?;
+        indices.sort();
+        assert_eq!(indices, &[20, 21]);
+        Ok(())
+    }
+
+    #[test]
+    fn find_on_circle_works() -> Result<(), StrError> {
+        let mut g2d = get_test_grid_2d();
+        for data in get_test_data_2d() {
+            g2d.insert(data.id, data.x)?;
+        }
+        let map = g2d.find_on_circle(&[-0.2, 1.8], 0.3)?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&101, &102, &103]);
         Ok(())
     }
 
