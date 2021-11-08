@@ -674,6 +674,7 @@ impl fmt::Display for GridSearch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::SQRT_2;
     use plotpy::{Curve, Shapes};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
@@ -740,6 +741,25 @@ mod tests {
                 x: &[0.6, 0.0],
                 container: 4,
                 containers: &[3, 4], // will be on 3 twice
+            },
+            // circle @ (-0.2,1.8) radius 0.3
+            TestData {
+                id: 101,
+                x: &[-0.2, 1.5],
+                container: 20,
+                containers: &[20],
+            },
+            TestData {
+                id: 102,
+                x: &[-0.2 + 0.3 * SQRT_2 / 2.0, 1.8 - 0.3 * SQRT_2 / 2.0],
+                container: 21,
+                containers: &[21],
+            },
+            TestData {
+                id: 103,
+                x: &[0.1, 1.8],
+                container: 21,
+                containers: &[21],
             },
         ]
     }
@@ -1067,15 +1087,17 @@ mod tests {
              17: [300]\n\
              18: [300, 400]\n\
              19: [400]\n\
+             20: [101]\n\
+             21: [102, 103]\n\
              23: [400]\n\
              24: [400, 500]\n\
-             ids = [100, 200, 300, 400, 500, 600]\n\
-             nitem = 6\n\
-             ncontainer = 15\n"
+             ids = [100, 101, 102, 103, 200, 300, 400, 500, 600]\n\
+             nitem = 9\n\
+             ncontainer = 17\n"
         );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
-        assert_eq!(indices, &[0, 1, 3, 4, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23, 24]);
+        assert_eq!(indices, &[0, 1, 3, 4, 5, 6, 7, 11, 12, 13, 17, 18, 19, 20, 21, 23, 24]);
         Ok(())
     }
 
@@ -1155,18 +1177,22 @@ mod tests {
         for data in get_test_data_2d() {
             g2d.insert(data.id, data.x)?;
         }
+        // vertical right-most
         let mut indices = g2d.containers_near_line(&[0.6, 0.0], &[0.6, 1.8])?;
         indices.sort();
         assert_eq!(indices, &[3, 4, 13, 18, 19, 23, 24]);
 
+        // vertical middle
         let mut indices = g2d.containers_near_line(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
         indices.sort();
-        assert_eq!(indices, &[1, 3, 6, 7, 11, 12, 13, 17, 18, 23]);
+        assert_eq!(indices, &[1, 3, 6, 7, 11, 12, 13, 17, 18, 21, 23]);
 
+        // horizontal top-most
         let mut indices = g2d.containers_near_line(&[-0.2, 1.8], &[0.8, 1.8])?;
         indices.sort();
-        assert_eq!(indices, &[23, 24]);
+        assert_eq!(indices, &[20, 21, 23, 24]);
 
+        // sloped
         let mut indices = g2d.containers_near_line(&[0.2, -0.2], &[0.8, 0.1])?;
         indices.sort();
         assert_eq!(indices, &[1, 3, 4]);
@@ -1195,20 +1221,24 @@ mod tests {
         for data in get_test_data_2d() {
             g2d.insert(data.id, data.x)?;
         }
+        // vertical right-most
         let map = g2d.find_on_line(&[0.6, 0.0], &[0.6, 1.8])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&400, &600]);
 
+        // vertical middle
         let map = g2d.find_on_line(&[0.1 + g2d.radius, 0.0], &[0.1 + g2d.radius, 1.8])?;
         let ids: Vec<_> = map.iter().collect();
         assert_eq!(ids.len(), 0);
 
+        // horizontal top-most
         let map = g2d.find_on_line(&[-0.2, 1.8], &[0.8, 1.8])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
-        assert_eq!(ids, [&500]);
+        assert_eq!(ids, [&103, &500]);
 
+        // sloped
         let map = g2d.find_on_line(&[0.2, -0.2], &[0.8, 0.1])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
@@ -1259,11 +1289,14 @@ mod tests {
         shapes.draw_circle(0.5, 0.8, g2d.radius);
         shapes.draw_circle(0.1, 0.4, g2d.radius);
         shapes.draw_circle(0.5, 0.0, g2d.radius);
+        shapes.draw_circle(0.1, 1.6, g2d.radius);
         shapes.set_edge_color("#fab32f").set_line_width(1.5);
         shapes.draw_polyline(&vec![vec![0.6, -0.2], vec![0.6, 1.8]], false);
         shapes.draw_polyline(&vec![vec![-0.2, 1.8], vec![0.8, 1.8]], false);
         shapes.draw_polyline(&vec![vec![0.2, -0.2], vec![0.8, 0.1]], false);
         shapes.draw_polyline(&vec![vec![0.1 + g2d.radius, -0.2], vec![0.1 + g2d.radius, 1.8]], false);
+        shapes.set_edge_color("green").set_line_width(0.5);
+        shapes.draw_circle(-0.2, 1.8, 0.3);
         plot.add(&shapes);
         plot.set_equal_axes(true)
             .set_range(-0.4, 1.0, -0.4, 2.0)
