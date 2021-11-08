@@ -586,11 +586,8 @@ mod tests {
         // todo
     }
 
-    /*
     #[test]
     fn set_group_works() -> Result<(), StrError> {
-        return Ok(());
-
         let mut mesh = parse_mesh(
             r"
             2 4 1
@@ -603,20 +600,13 @@ mod tests {
         )?;
 
         mesh.set_group("origin", Geo::Point(At::XY(0.0, 0.0)))?;
-        mesh.set_group("origin", Geo::Point(At::Horizontal(0.0, 0.0)))?;
-        mesh.set_group("origin", Geo::Point(At::Vertical(0.0, 0.0)))?;
-        mesh.set_group("origin", Geo::Point(At::XYZ(0.0, 0.0, 0.0)))?;
-        mesh.set_group("bedrock", Geo::Edge(At::Horizontal(0.0, 0.0)))?;
-        mesh.set_group("left", Geo::Edge(At::Vertical(0.0, 0.0)))?;
-        mesh.set_group("right", Geo::Edge(At::Vertical(0.0, 0.0)))?;
-        mesh.set_group("tunnel", Geo::Face(At::Circle(0.0, 0.0, 0.5)))?;
-        mesh.set_group("tunnel", Geo::Face(At::Circle3D(0.0, 0.0, 0.0, 0.5)))?;
-        mesh.set_group("tunnel", Geo::Face(At::CylinderX(0.0, 0.0, 0.0, 0.5)))?;
-        mesh.set_group("bedrock", Geo::Face(At::PlaneNormalZ(0.0, 0.0, 0.0)))?;
+        mesh.set_group("left", Geo::Point(At::X(0.0)))?;
+        mesh.set_group("right", Geo::Point(At::X(1.0)))?;
+        mesh.set_group("bottom", Geo::Point(At::Y(0.0)))?;
+        mesh.set_group("top", Geo::Point(At::Y(1.0)))?;
 
         println!("{}", mesh);
 
         Ok(())
     }
-    */
 }
