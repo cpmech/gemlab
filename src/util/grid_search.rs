@@ -1,4 +1,4 @@
-use crate::geometry::{point_circle_distance, point_line_distance, point_point_distance};
+use crate::geometry::{point_circle_distance, point_cylinder_distance, point_line_distance, point_point_distance};
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
 use serde::{Deserialize, Serialize};
@@ -329,8 +329,8 @@ impl GridSearch {
     ///
     /// # Input
     ///
-    /// `axis_a` -- 3D point on the cylinder axis
-    /// `axis_b` -- 3D point on the cylinder axis
+    /// `a` -- 3D point on the cylinder axis
+    /// `b` -- 3D point on the cylinder axis
     /// `radius` -- cylinder radius
     ///
     /// # Output
@@ -340,12 +340,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_cylinder(
-        &mut self,
-        axis_a: &[f64],
-        axis_b: &[f64],
-        radius: f64,
-    ) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_cylinder(&mut self, a: &[f64], b: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -353,14 +348,27 @@ impl GridSearch {
         if self.ndim != 3 {
             return Err("this works in 3D only");
         }
-        if axis_a.len() != self.ndim {
-            return Err("axis_a.len() must equal ndim");
+        if a.len() != self.ndim {
+            return Err("a.len() must equal ndim");
         }
-        if axis_b.len() != self.ndim {
-            return Err("axis_b.len() must equal ndim");
+        if b.len() != self.ndim {
+            return Err("b.len() must equal ndim");
         }
-        // todo
-        let ids = HashSet::new();
+
+        // find containers near the circle
+        let nearest_containers = self.containers_near_cylinder(a, b, radius)?;
+
+        // find container points near the circle
+        let mut ids = HashSet::new();
+        for index in nearest_containers {
+            let container = self.containers.get(&index).unwrap();
+            for item in &container.items {
+                let distance = point_cylinder_distance(a, b, radius, &item.x)?;
+                if f64::abs(distance) <= self.radius_tol {
+                    ids.insert(item.id.clone());
+                }
+            }
+        }
         Ok(ids)
     }
 
@@ -611,6 +619,24 @@ impl GridSearch {
         Ok(nearest_containers)
     }
 
+    /// Returns the indices of containers near a circle
+    #[inline]
+    fn containers_near_cylinder(&self, a: &[f64], b: &[f64], radius: f64) -> Result<Vec<usize>, StrError> {
+        let mut nearest_containers = Vec::new();
+        let mut cen = vec![0.0; self.ndim];
+        for index in self.containers.keys() {
+            // compute container center
+            let (i, j, k) = self.container_pivot_indices(*index);
+            self.container_center(&mut cen, i, j, k);
+            // check if the center of container is near the cylinder
+            let distance = point_cylinder_distance(a, b, radius, &cen)?;
+            if distance <= self.radius + self.radius_tol {
+                nearest_containers.push(*index);
+            }
+        }
+        Ok(nearest_containers)
+    }
+
     /// Update container or insert point in container
     #[inline]
     fn update_or_insert(&mut self, index: usize, id: usize, x: &[f64]) {
@@ -706,7 +732,7 @@ impl fmt::Display for GridSearch {
 mod tests {
     use super::*;
     use crate::util::SQRT_2;
-    use plotpy::{Curve, Shapes};
+    use plotpy::{Curve, Shapes, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     struct TestData<'a> {
@@ -821,6 +847,49 @@ mod tests {
                 x: &[-1.0 + L * 2.0 / 3.0, -0.7, -0.7],
                 container: 2,
                 containers: &[1, 2], // will be on 1 four times
+            },
+            TestData {
+                id: 500,
+                x: &[0.75, -1.0, -0.75],
+                container: 2,
+                containers: &[2],
+            },
+            // cylinder with 0.4 radius parallel to y passing through (1,-1,-1) and (1,1,-1)
+            TestData {
+                id: 101,
+                x: &[1.0 - 0.4, -1.0, -1.0],
+                container: 2,
+                containers: &[2],
+            },
+            TestData {
+                id: 102,
+                x: &[1.0 - 0.4 * SQRT_2 / 2.0, -1.0, -1.0 + 0.4 * SQRT_2 / 2.0],
+                container: 2,
+                containers: &[2],
+            },
+            TestData {
+                id: 103,
+                x: &[1.0, -1.0, -1.0 + 0.4],
+                container: 2,
+                containers: &[2],
+            },
+            TestData {
+                id: 104,
+                x: &[1.0 - 0.4, 0.75, -1.0],
+                container: 8,
+                containers: &[8],
+            },
+            TestData {
+                id: 105,
+                x: &[1.0 - 0.4 * SQRT_2 / 2.0, 0.75, -1.0 + 0.4 * SQRT_2 / 2.0],
+                container: 8,
+                containers: &[8],
+            },
+            TestData {
+                id: 106,
+                x: &[1.0, 0.75, -1.0 + 0.4],
+                container: 8,
+                containers: &[8],
             },
         ]
     }
@@ -1173,7 +1242,8 @@ mod tests {
             format!("{}", grid),
             "0: [100]\n\
              1: [400, 400, 400, 400]\n\
-             2: [400]\n\
+             2: [101, 102, 103, 400, 500]\n\
+             8: [104, 105, 106]\n\
              13: [200, 300]\n\
              14: [300]\n\
              16: [300]\n\
@@ -1182,13 +1252,13 @@ mod tests {
              23: [300]\n\
              25: [300]\n\
              26: [300]\n\
-             ids = [100, 200, 300, 400]\n\
-             nitem = 4\n\
-             ncontainer = 11\n"
+             ids = [100, 101, 102, 103, 104, 105, 106, 200, 300, 400, 500]\n\
+             nitem = 11\n\
+             ncontainer = 12\n"
         );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
-        assert_eq!(indices, &[0, 1, 2, 13, 14, 16, 17, 22, 23, 25, 26]);
+        assert_eq!(indices, &[0, 1, 2, 8, 13, 14, 16, 17, 22, 23, 25, 26]);
         Ok(())
     }
 
@@ -1330,7 +1400,7 @@ mod tests {
         let map = g3d.find_on_line(&[-1.0, -1.0, -1.0], &[1.0, -1.0, -1.0])?;
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
-        assert_eq!(ids, [&100]);
+        assert_eq!(ids, [&100, &101]);
 
         let map = g3d.find_on_line(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0])?;
         let mut ids: Vec<_> = map.iter().collect();
@@ -1376,6 +1446,48 @@ mod tests {
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&101, &102, &103]);
+        Ok(())
+    }
+
+    #[test]
+    fn containers_near_cylinder_works() -> Result<(), StrError> {
+        let mut g3d = get_test_grid_3d();
+        for data in get_test_data_3d() {
+            g3d.insert(data.id, data.x)?;
+        }
+        let mut indices = g3d.containers_near_cylinder(&[1.0, -1.0, -1.0], &[1.0, 1.0, -1.0], 0.4)?;
+        indices.sort();
+        assert_eq!(indices, &[2, 8]);
+        Ok(())
+    }
+
+    #[test]
+    fn find_on_cylinder_fails_on_wrong_input() {
+        let mut g3d = get_test_grid_3d();
+        g3d.initialized = false;
+        let res = g3d.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0);
+        assert_eq!(res, Err("initialize must be called first"));
+        g3d.initialized = true;
+        let res = g3d.find_on_cylinder(&[0.0, 0.0], &[1.0, 0.0, 0.0], 1.0);
+        assert_eq!(res, Err("a.len() must equal ndim"));
+        let res = g3d.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0);
+        assert_eq!(res, Err("b.len() must equal ndim"));
+
+        let mut g2d = get_test_grid_2d();
+        let res = g2d.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0);
+        assert_eq!(res, Err("this works in 3D only"));
+    }
+
+    #[test]
+    fn find_on_cylinder_works() -> Result<(), StrError> {
+        let mut g3d = get_test_grid_3d();
+        for data in get_test_data_3d() {
+            g3d.insert(data.id, data.x)?;
+        }
+        let map = g3d.find_on_cylinder(&[1.0, -1.0, -1.0], &[1.0, 1.0, -1.0], 0.4)?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&101, &102, &103, &104, &105, &106]);
         Ok(())
     }
 
@@ -1430,9 +1542,14 @@ mod tests {
         curve.set_line_color("#fab32f").set_line_width(1.5);
         curve.draw_3d(&[-1.0, 1.0], &[-1.0, -1.0], &[-1.0, -1.0]);
         curve.draw_3d(&[-1.0, 1.0], &[-1.0, 1.0], &[-1.0, 1.0]);
+        let mut surface = Surface::new();
+        surface.set_with_surface(false).set_with_wireframe(true);
+        surface.draw_cylinder(&[1.0, -1.0, -1.0], &[1.0, 1.0, -1.0], 0.4, 1, 20)?;
         plot.add(&curve);
+        plot.add(&surface);
         plot.set_figure_size_points(600.0, 600.0);
         plot.save("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
+        // plot.save_and_show("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
         Ok(())
     }
 

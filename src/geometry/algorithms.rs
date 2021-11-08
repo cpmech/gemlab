@@ -129,8 +129,8 @@ pub fn point_circle_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f
 ///
 /// # Input
 ///
-/// `axis_a` -- 3D point on the cylinder axis
-/// `axis_b` -- 3D point on the cylinder axis
+/// `a` -- First 3D point on the cylinder axis
+/// `b` -- Second 3D point on the cylinder axis (must be different than `a`)
 /// `radius` -- cylinder radius
 /// `p` -- 3D point
 ///
@@ -141,18 +141,18 @@ pub fn point_circle_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f
 /// # Note
 ///
 /// This works in 3D only.
-pub fn point_cylinder_distance(axis_a: &[f64], axis_b: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
-    let ndim = axis_a.len();
+pub fn point_cylinder_distance(a: &[f64], b: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
+    let ndim = a.len();
     if ndim != 3 {
         return Err("axis_a.len() == ndim must be 3");
     }
-    if axis_b.len() != ndim {
+    if b.len() != ndim {
         return Err("axis_b.len() must equal center.len() == ndim");
     }
     if p.len() != ndim {
         return Err("p.len() must equal center.len() == ndim");
     }
-    let center_distance = point_line_distance(axis_a, axis_b, p)?;
+    let center_distance = point_line_distance(a, b, p)?;
     let distance = center_distance - radius;
     Ok(distance)
 }
