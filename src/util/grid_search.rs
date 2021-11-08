@@ -355,10 +355,10 @@ impl GridSearch {
             return Err("b.len() must equal ndim");
         }
 
-        // find containers near the circle
+        // find containers near the cylinder
         let nearest_containers = self.containers_near_cylinder(a, b, radius)?;
 
-        // find container points near the circle
+        // find container points near the cylinder
         let mut ids = HashSet::new();
         for index in nearest_containers {
             let container = self.containers.get(&index).unwrap();
@@ -393,8 +393,21 @@ impl GridSearch {
         if self.ndim != 3 {
             return Err("this works in 3D only");
         }
-        // todo
-        let ids = HashSet::new();
+
+        // find containers near the plane
+        let nearest_containers = self.containers_near_plane(2, z);
+
+        // find container points near the plane
+        let mut ids = HashSet::new();
+        for index in nearest_containers {
+            let container = self.containers.get(&index).unwrap();
+            for item in &container.items {
+                let distance = f64::abs(item.x[2] - z);
+                if f64::abs(distance) <= self.radius_tol {
+                    ids.insert(item.id.clone());
+                }
+            }
+        }
         Ok(ids)
     }
 
@@ -419,8 +432,21 @@ impl GridSearch {
         if self.ndim != 3 {
             return Err("this works in 3D only");
         }
-        // todo
-        let ids = HashSet::new();
+
+        // find containers near the plane
+        let nearest_containers = self.containers_near_plane(0, x);
+
+        // find container points near the plane
+        let mut ids = HashSet::new();
+        for index in nearest_containers {
+            let container = self.containers.get(&index).unwrap();
+            for item in &container.items {
+                let distance = f64::abs(item.x[0] - x);
+                if f64::abs(distance) <= self.radius_tol {
+                    ids.insert(item.id.clone());
+                }
+            }
+        }
         Ok(ids)
     }
 
@@ -445,8 +471,21 @@ impl GridSearch {
         if self.ndim != 3 {
             return Err("this works in 3D only");
         }
-        // todo
-        let ids = HashSet::new();
+
+        // find containers near the plane
+        let nearest_containers = self.containers_near_plane(1, y);
+
+        // find container points near the plane
+        let mut ids = HashSet::new();
+        for index in nearest_containers {
+            let container = self.containers.get(&index).unwrap();
+            for item in &container.items {
+                let distance = f64::abs(item.x[1] - y);
+                if f64::abs(distance) <= self.radius_tol {
+                    ids.insert(item.id.clone());
+                }
+            }
+        }
         Ok(ids)
     }
 
@@ -635,6 +674,24 @@ impl GridSearch {
             }
         }
         Ok(nearest_containers)
+    }
+
+    /// Returns the indices of containers near plane xy
+    #[inline]
+    fn containers_near_plane(&self, fixed_dim: usize, fixed_coord: f64) -> Vec<usize> {
+        let mut nearest_containers = Vec::new();
+        let mut cen = vec![0.0; self.ndim];
+        for index in self.containers.keys() {
+            // compute container center
+            let (i, j, k) = self.container_pivot_indices(*index);
+            self.container_center(&mut cen, i, j, k);
+            // check if the center of container is near the plane
+            let distance = f64::abs(cen[fixed_dim] - fixed_coord);
+            if distance <= self.radius + self.radius_tol {
+                nearest_containers.push(*index);
+            }
+        }
+        nearest_containers
     }
 
     /// Update container or insert point in container
@@ -850,7 +907,7 @@ mod tests {
             },
             TestData {
                 id: 500,
-                x: &[0.75, -1.0, -0.75],
+                x: &[0.75, -0.75, -0.75],
                 container: 2,
                 containers: &[2],
             },
@@ -1488,6 +1545,79 @@ mod tests {
         let mut ids: Vec<_> = map.iter().collect();
         ids.sort();
         assert_eq!(ids, [&101, &102, &103, &104, &105, &106]);
+        Ok(())
+    }
+
+    #[test]
+    fn containers_near_plane_works() -> Result<(), StrError> {
+        let mut g3d = get_test_grid_3d();
+        for data in get_test_data_3d() {
+            g3d.insert(data.id, data.x)?;
+        }
+        let mut indices = g3d.containers_near_plane(0, -1.0);
+        indices.sort();
+        assert_eq!(indices, &[0]);
+
+        let mut indices = g3d.containers_near_plane(1, -1.0);
+        indices.sort();
+        assert_eq!(indices, &[0, 1, 2]);
+
+        let mut indices = g3d.containers_near_plane(2, -1.0);
+        indices.sort();
+        assert_eq!(indices, &[0, 1, 2, 8]);
+
+        let mut indices = g3d.containers_near_plane(2, 0.0);
+        indices.sort();
+        assert_eq!(indices, &[13, 14, 16, 17]);
+        Ok(())
+    }
+
+    #[test]
+    fn find_on_plane_fails_on_wrong_input() {
+        let mut g2d = get_test_grid_2d();
+        let mut g3d = get_test_grid_3d();
+        g3d.initialized = false;
+        let res = g3d.find_on_plane_xy(-1.0);
+        assert_eq!(res, Err("initialize must be called first"));
+        g3d.initialized = true;
+        let res = g2d.find_on_plane_xy(-1.0);
+        assert_eq!(res, Err("this works in 3D only"));
+
+        g3d.initialized = false;
+        let res = g3d.find_on_plane_yz(-1.0);
+        assert_eq!(res, Err("initialize must be called first"));
+        g3d.initialized = true;
+        let res = g2d.find_on_plane_yz(-1.0);
+        assert_eq!(res, Err("this works in 3D only"));
+
+        g3d.initialized = false;
+        let res = g3d.find_on_plane_xz(-1.0);
+        assert_eq!(res, Err("initialize must be called first"));
+        g3d.initialized = true;
+        let res = g2d.find_on_plane_xz(-1.0);
+        assert_eq!(res, Err("this works in 3D only"));
+    }
+
+    #[test]
+    fn find_on_plane_works() -> Result<(), StrError> {
+        let mut g3d = get_test_grid_3d();
+        for data in get_test_data_3d() {
+            g3d.insert(data.id, data.x)?;
+        }
+        let map = g3d.find_on_plane_xy(-1.0)?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&100, &101, &104]);
+
+        let map = g3d.find_on_plane_yz(-1.0)?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&100]);
+
+        let map = g3d.find_on_plane_xz(-1.0)?;
+        let mut ids: Vec<_> = map.iter().collect();
+        ids.sort();
+        assert_eq!(ids, [&100, &101, &102, &103]);
         Ok(())
     }
 
