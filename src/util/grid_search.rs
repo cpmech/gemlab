@@ -305,7 +305,7 @@ impl GridSearch {
             return Err("this works in 2D only");
         }
         if center.len() != self.ndim {
-            return Err("c.len() must equal ndim");
+            return Err("center.len() must equal ndim");
         }
 
         // find containers near the circle
@@ -919,6 +919,33 @@ mod tests {
 
     #[test]
     fn encode_decode_work() -> Result<(), StrError> {
+        let item = Item {
+            id: 123,
+            x: vec![1.0, 2.0],
+        };
+        let mut serialized = Vec::new();
+        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
+        item.serialize(&mut serializer).map_err(|_| "serialize failed")?;
+        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
+        let res: Item = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
+        assert_eq!(res.id, item.id);
+        assert_eq!(res.x, item.x);
+
+        let container = Container {
+            items: vec![Item {
+                id: 456,
+                x: vec![2.0, 3.0],
+            }],
+        };
+        let mut serialized = Vec::new();
+        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
+        container.serialize(&mut serializer).map_err(|_| "serialize failed")?;
+        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
+        let res: Container = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
+        assert_eq!(res.items.len(), 1);
+        assert_eq!(res.items[0].id, 456);
+        assert_eq!(res.items[0].x, &[2.0, 3.0]);
+
         let original2d = get_test_grid_2d();
         let data2d = original2d.encode()?;
         let g2d = GridSearch::decode(&data2d)?;
@@ -1168,6 +1195,10 @@ mod tests {
     #[test]
     fn find_fails_on_wrong_input() {
         let mut g2d = get_test_grid_2d();
+        g2d.initialized = false;
+        let res = g2d.find(&[0.0, 0.0, 0.0]);
+        assert_eq!(res, Err("initialize must be called first"));
+        g2d.initialized = true;
         let res = g2d.find(&[0.0, 0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
         let res = g2d.find(&[0.80001, 0.0]);
@@ -1247,6 +1278,19 @@ mod tests {
     }
 
     #[test]
+    fn find_on_line_fails_on_wrong_input() {
+        let mut g2d = get_test_grid_2d();
+        g2d.initialized = false;
+        let res = g2d.find_on_line(&[0.0, 0.0], &[1.0, 1.0]);
+        assert_eq!(res, Err("initialize must be called first"));
+        g2d.initialized = true;
+        let res = g2d.find_on_line(&[0.0], &[1.0, 1.0]);
+        assert_eq!(res, Err("a.len() must equal ndim"));
+        let res = g2d.find_on_line(&[0.0, 0.0], &[1.0]);
+        assert_eq!(res, Err("b.len() must equal ndim"));
+    }
+
+    #[test]
     fn find_on_line_2d_works() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
@@ -1305,6 +1349,21 @@ mod tests {
         indices.sort();
         assert_eq!(indices, &[20, 21]);
         Ok(())
+    }
+
+    #[test]
+    fn find_on_circle_fails_on_wrong_input() {
+        let mut g2d = get_test_grid_2d();
+        g2d.initialized = false;
+        let res = g2d.find_on_circle(&[0.0, 0.0], 1.0);
+        assert_eq!(res, Err("initialize must be called first"));
+        g2d.initialized = true;
+        let res = g2d.find_on_circle(&[-0.2], 0.3);
+        assert_eq!(res, Err("center.len() must equal ndim"));
+
+        let mut g3d = get_test_grid_3d();
+        let res = g3d.find_on_circle(&[0.0, 0.0, 0.0], 1.0);
+        assert_eq!(res, Err("this works in 2D only"));
     }
 
     #[test]
