@@ -165,6 +165,9 @@ pub struct Mesh {
 
     /// Allows searching using point coordinates
     pub grid: GridSearch,
+
+    /// Indicates whether the derived variables and maps have been computed or not
+    derived_props_computed: bool,
 }
 
 impl Mesh {
@@ -186,6 +189,7 @@ impl Mesh {
             min: Vec::new(),
             max: Vec::new(),
             grid: GridSearch::new(ndim)?,
+            derived_props_computed: false,
         })
     }
 
@@ -229,10 +233,13 @@ impl Mesh {
             min: Vec::new(),
             max: Vec::new(),
             grid: GridSearch::new(ndim)?,
+            derived_props_computed: false,
         })
     }
 
-    pub(crate) fn compute_derived_props(&mut self) -> Result<(), StrError> {
+    pub fn compute_derived_props(&mut self) -> Result<(), StrError> {
+        self.derived_props_computed = false;
+
         // auxiliary maps
         let mut all_shapes: HashMap<Kind, Box<dyn Shape>> = HashMap::new();
         let mut all_edges: HashMap<EdgeKey, Edge> = HashMap::new();
@@ -353,6 +360,7 @@ impl Mesh {
             }
         }
 
+        self.derived_props_computed = true;
         Ok(())
     }
 
@@ -384,15 +392,19 @@ impl Mesh {
     }
 
     pub fn set_group(&mut self, group: Group, geo: Geo) -> Result<(), StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+
         match geo {
             Geo::Point(at) => {
                 // find all points near the geometric feature
-                for index in self.find_points(&at) {
-                    // new map
-                    if self.point_groups.contains_key(&group) {
-                        let group = self.point_groups.get_mut(&group).unwrap();
-                        group.insert(index);
+                for index in self.find_points(&at)? {
                     // update map
+                    if self.point_groups.contains_key(&group) {
+                        let indices = self.point_groups.get_mut(&group).unwrap();
+                        indices.insert(index);
+                    // new map
                     } else {
                         let mut indices = HashSet::new();
                         indices.insert(index);
@@ -402,18 +414,18 @@ impl Mesh {
             }
             Geo::Edge(at) => {
                 // find all points near the geometric feature
-                let points = self.find_points(&at);
-                for index in &points {
+                let indices = &self.find_points(&at)?;
+                for index in indices {
                     // loop over all edges touching this point
                     let point = &self.points[*index];
                     for key in &point.shared_by_edges {
                         // check if two edge points pass through the geometric feature
-                        if points.contains(&key.0) && points.contains(&key.1) {
-                            // new map
-                            if self.edge_groups.contains_key(&group) {
-                                let group = self.edge_groups.get_mut(&group).unwrap();
-                                group.insert(key.clone());
+                        if indices.contains(&key.0) && indices.contains(&key.1) {
                             // update map
+                            if self.edge_groups.contains_key(&group) {
+                                let keys = self.edge_groups.get_mut(&group).unwrap();
+                                keys.insert(key.clone());
+                            // new map
                             } else {
                                 let mut keys = HashSet::new();
                                 keys.insert(key.clone());
@@ -430,7 +442,11 @@ impl Mesh {
         Ok(())
     }
 
-    fn find_points(&mut self, at: &At) -> HashSet<Index> {
+    fn find_points(&mut self, at: &At) -> Result<HashSet<Index>, StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+
         let mut points: HashSet<Index> = HashSet::new();
         match at {
             At::X(x) => {
@@ -456,7 +472,9 @@ impl Mesh {
                 }
             }
             At::Z(z) => {
-                if self.ndim == 3 {
+                if self.ndim == 2 {
+                    return Err("At::Z works in 3D only");
+                } else {
                     for id in self.grid.find_on_plane_xy(*z).unwrap() {
                         points.insert(id);
                     }
@@ -474,21 +492,27 @@ impl Mesh {
                 }
             }
             At::YZ(y, z) => {
-                if self.ndim == 3 {
+                if self.ndim == 2 {
+                    return Err("At::YZ works in 3D only");
+                } else {
                     for id in self.grid.find_on_line(&[0.0, *y, *z], &[1.0, *y, *z]).unwrap() {
                         points.insert(id);
                     }
                 }
             }
             At::XZ(x, z) => {
-                if self.ndim == 3 {
+                if self.ndim == 2 {
+                    return Err("At::XZ works in 3D only");
+                } else {
                     for id in self.grid.find_on_line(&[*x, 0.0, *z], &[*x, 1.0, *z]).unwrap() {
                         points.insert(id);
                     }
                 }
             }
             At::XYZ(x, y, z) => {
-                if self.ndim == 3 {
+                if self.ndim == 2 {
+                    return Err("At::XYZ works in 3D only");
+                } else {
                     if let Some(id) = self.grid.find(&[*x, *y, *z]).unwrap() {
                         points.insert(id);
                     }
@@ -499,10 +523,14 @@ impl Mesh {
                     for id in self.grid.find_on_circle(&[*x, *y], *r).unwrap() {
                         points.insert(id);
                     }
+                } else {
+                    return Err("At::Circle works in 2D only");
                 }
             }
             At::Cylinder(ax, ay, az, bx, by, bz, r) => {
-                if self.ndim == 3 {
+                if self.ndim == 2 {
+                    return Err("At::Cylinder works in 3D only");
+                } else {
                     for id in self
                         .grid
                         .find_on_cylinder(&[*ax, *ay, *az], &[*bx, *by, *bz], *r)
@@ -513,7 +541,7 @@ impl Mesh {
                 }
             }
         }
-        points
+        Ok(points)
     }
 }
 
@@ -606,7 +634,6 @@ impl fmt::Display for Mesh {
 mod tests {
     use super::*;
     use crate::mesh::parse_mesh;
-    use std::collections::{HashMap, HashSet};
 
     #[test]
     fn new_works() {
@@ -620,61 +647,16 @@ mod tests {
 
     #[test]
     fn compute_derived_props_works() -> Result<(), StrError> {
-        let mut mesh = Mesh {
-            ndim: 2,
-            points: vec![
-                Point {
-                    id: 0,
-                    group: 1,
-                    coords: vec![0.0, 0.0],
-                    shared_by_cells: HashSet::new(),
-                    shared_by_edges: HashSet::new(),
-                    shared_by_faces: HashSet::new(),
-                },
-                Point {
-                    id: 1,
-                    group: 1,
-                    coords: vec![1.0, 0.0],
-                    shared_by_cells: HashSet::new(),
-                    shared_by_edges: HashSet::new(),
-                    shared_by_faces: HashSet::new(),
-                },
-                Point {
-                    id: 2,
-                    group: 1,
-                    coords: vec![1.0, 1.0],
-                    shared_by_cells: HashSet::new(),
-                    shared_by_edges: HashSet::new(),
-                    shared_by_faces: HashSet::new(),
-                },
-                Point {
-                    id: 3,
-                    group: 1,
-                    coords: vec![0.0, 1.0],
-                    shared_by_cells: HashSet::new(),
-                    shared_by_edges: HashSet::new(),
-                    shared_by_faces: HashSet::new(),
-                },
-            ],
-            cells: vec![Cell {
-                id: 0,
-                group: 1,
-                ndim: 2,
-                points: vec![0, 1, 2, 3],
-                boundary_edges: HashSet::new(),
-                boundary_faces: HashSet::new(),
-            }],
-            boundary_points: HashSet::new(),
-            boundary_edges: HashMap::new(),
-            boundary_faces: HashMap::new(),
-            point_groups: HashMap::new(),
-            cell_groups: HashMap::new(),
-            edge_groups: HashMap::new(),
-            face_groups: HashMap::new(),
-            min: Vec::new(),
-            max: Vec::new(),
-            grid: GridSearch::new(2)?,
-        };
+        let mut mesh = parse_mesh(
+            r"
+            2 4 1
+            0 1 0.0 0.0
+            1 1 1.0 0.0
+            2 1 1.0 1.0
+            3 1 0.0 1.0
+            0 1  2 4  0 1 2 3
+        ",
+        )?;
         mesh.compute_derived_props()?;
         Ok(())
     }
