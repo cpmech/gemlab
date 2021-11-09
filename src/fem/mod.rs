@@ -20,9 +20,9 @@ enum Condition {
 }
 
 enum Boundary {
-    Point(&'static str, Condition), // String is Group
-    Edge(&'static str, Condition),  // String is Group
-    Face(&'static str, Condition),  // String is Group
+    Point(Group, Condition), // String is Group
+    Edge(Group, Condition),  // String is Group
+    Face(Group, Condition),  // String is Group
 }
 
 pub struct Simulation {
@@ -36,10 +36,10 @@ impl Simulation {
 
     pub fn run(&mut self) {
         let boundary_conditions = vec![
-            Boundary::Point("origin", Condition::Essential(|t, x| 1.0)),
-            Boundary::Edge("left", Condition::Essential(|t, x| 2.0)),
-            Boundary::Edge("right", Condition::Natural(|t, x| 3.0)),
-            Boundary::Face("bottom", Condition::Essential(|t, x| 4.0)),
+            Boundary::Point(1, Condition::Essential(|t, x| 1.0)),
+            Boundary::Edge(2, Condition::Essential(|t, x| 2.0)),
+            Boundary::Edge(3, Condition::Natural(|t, x| 3.0)),
+            Boundary::Face(4, Condition::Essential(|t, x| 4.0)),
         ];
         let time = 0.0; // time
         for boundary_condition in boundary_conditions {
@@ -57,7 +57,7 @@ impl Simulation {
 
                 Boundary::Edge(group, condition) => match condition {
                     Condition::Essential(f) => {
-                        if let Some(edges) = self.mesh.edge_groups.get(group) {
+                        if let Some(edges) = self.mesh.edge_groups.get(&group) {
                             for key in edges {
                                 print_bc!("edge", "essential", group, time, 0, 0);
                             }

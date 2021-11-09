@@ -12,60 +12,158 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
+/// Aliases usize as the group of Point, Edge, Face, or Cell
 pub type Group = usize;
+
+/// Aliases usize as the index (==id) of Point and Cell
 pub type Index = usize;
-pub type CellId = usize;
+
+/// Aliases (usize,usize) as the key of Edge
 pub type EdgeKey = (usize, usize);
+
+/// Aliases (usize,usize,usize) as the key of Face
 pub type FaceKey = (usize, usize, usize);
 
+/// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Point {
+    /// Identification number which equals the index of the point in the mesh
+    ///
+    /// **raw data**
     pub id: Index,
+
+    /// Group in which this point belongs to
+    ///
+    /// **raw data**
     pub group: Group,
+
+    /// Point coordinates (2D or 3D)
+    ///
+    /// **raw data**
     pub coords: Vec<f64>,
+
+    /// Set of cells sharing this point
     pub shared_by_cells: HashSet<Index>,
+
+    /// Set of edges sharing this point
     pub shared_by_edges: HashSet<EdgeKey>,
+
+    /// Set of faces sharing this point
     pub shared_by_faces: HashSet<FaceKey>,
 }
 
+/// Holds edge data (derived data structure)
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
+    /// Group in which this edge belongs to
     pub group: Group,
-    pub points: Vec<Index>, // in the right order (unsorted)
+
+    /// List of points defining this edge; in the right order (unsorted)
+    pub points: Vec<Index>,
+
+    /// Set of cells sharing this edge
     pub shared_by_cells: HashSet<Index>,
 }
 
+/// Holds face data (derived data structure)
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Face {
+    /// Group in which this face belongs to
     pub group: Group,
-    pub points: Vec<Index>, // in the right order (unsorted)
+
+    /// List of points defining this face; in the right order (unsorted)
+    pub points: Vec<Index>,
+
+    /// Set of cells sharing this edge
     pub shared_by_cells: HashSet<Index>,
 }
 
+/// Holds cell (aka geometric shape, polygon, polyhedra) data
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Cell {
+    /// Identification number which equals the index of the cell in the mesh
+    ///
+    /// **raw data**
     pub id: Index,
+
+    /// Group in which this face belongs to
+    ///
+    /// **raw data**
     pub group: Group,
+
+    /// Space dimension of this cell
+    ///
+    /// # Note
+    ///
+    /// The cell's ndim may be different than the space dimension of the mesh.
+    /// For example, a 1D line in the 2D or 3D space or a 2D triangle in the 3D space.
+    ///
+    /// **raw data**
     pub ndim: usize,
+
+    /// List of points defining this cell; in the right order (unsorted)
+    ///
+    /// **raw data**
     pub points: Vec<Index>,
+
+    /// Set of edges defining the boundary of this cell; in the right order
     pub boundary_edges: HashSet<EdgeKey>,
+
+    /// Set of faces defining the boundary of this cell; in the right order
     pub boundary_faces: HashSet<FaceKey>,
 }
 
+/// Holds mesh data
 #[derive(Deserialize, Serialize)]
 pub struct Mesh {
+    /// Space dimension of the mesh
+    ///
+    /// # Note
+    ///
+    /// The mesh's ndim may be different that an cell's ndim.
+    /// For example, a 3D mesh may contain 1D lines or 2D triangles.
+    ///
+    /// **raw data**
     pub ndim: usize,
+
+    /// All points in the mesh
+    ///
+    /// **raw data**
     pub points: Vec<Point>,
+
+    /// All cells (aka geometric shape, polygon, polyhedra) in the mesh
+    ///
+    /// **raw data**
     pub cells: Vec<Cell>,
+
+    /// Set of points on the boundaries
     pub boundary_points: HashSet<Index>,
+
+    /// Set of edges on the boundaries
     pub boundary_edges: HashMap<EdgeKey, Edge>,
+
+    /// Set of faces on the boundaries
     pub boundary_faces: HashMap<FaceKey, Face>,
-    pub point_groups: HashMap<String, HashSet<Index>>,
-    pub cell_groups: HashMap<String, HashSet<Index>>,
-    pub edge_groups: HashMap<String, HashSet<EdgeKey>>,
-    pub face_groups: HashMap<String, HashSet<FaceKey>>,
+
+    /// Maps group index to a set of points
+    pub point_groups: HashMap<Group, HashSet<Index>>,
+
+    /// Maps group index to a set of edges
+    pub edge_groups: HashMap<Group, HashSet<EdgeKey>>,
+
+    /// Maps group index to a set of faces
+    pub face_groups: HashMap<Group, HashSet<FaceKey>>,
+
+    /// Maps group index to a set of cells
+    pub cell_groups: HashMap<Group, HashSet<Index>>,
+
+    /// Min coordinates
     pub min: Vec<f64>,
+
+    /// Max coordinates
     pub max: Vec<f64>,
+
+    /// Allows searching using point coordinates
     pub grid: GridSearch,
 }
 
@@ -91,7 +189,7 @@ impl Mesh {
         })
     }
 
-    pub(crate) fn new_zeroed(ndim: usize, npoint: usize, ncell: usize) -> Result<Self, StrError> {
+    pub(crate) fn new_sized(ndim: usize, npoint: usize, ncell: usize) -> Result<Self, StrError> {
         if ndim < 2 || ndim > 3 {
             return Err("ndim must be 2 or 3");
         }
@@ -285,20 +383,20 @@ impl Mesh {
         Ok(())
     }
 
-    pub fn set_group(&mut self, name: &str, geo: Geo) -> Result<(), StrError> {
+    pub fn set_group(&mut self, group: Group, geo: Geo) -> Result<(), StrError> {
         match geo {
             Geo::Point(at) => {
                 // find all points near the geometric feature
                 for index in self.find_points(&at) {
                     // new map
-                    if self.point_groups.contains_key(name) {
-                        let group = self.point_groups.get_mut(name).unwrap();
+                    if self.point_groups.contains_key(&group) {
+                        let group = self.point_groups.get_mut(&group).unwrap();
                         group.insert(index);
                     // update map
                     } else {
                         let mut indices = HashSet::new();
                         indices.insert(index);
-                        self.point_groups.insert(name.to_string(), indices);
+                        self.point_groups.insert(group, indices);
                     }
                 }
             }
@@ -312,14 +410,14 @@ impl Mesh {
                         // check if two edge points pass through the geometric feature
                         if points.contains(&key.0) && points.contains(&key.1) {
                             // new map
-                            if self.edge_groups.contains_key(name) {
-                                let group = self.edge_groups.get_mut(name).unwrap();
+                            if self.edge_groups.contains_key(&group) {
+                                let group = self.edge_groups.get_mut(&group).unwrap();
                                 group.insert(key.clone());
                             // update map
                             } else {
                                 let mut keys = HashSet::new();
                                 keys.insert(key.clone());
-                                self.edge_groups.insert(name.to_string(), keys);
+                                self.edge_groups.insert(group, keys);
                             }
                         }
                     }
@@ -599,11 +697,11 @@ mod tests {
         ",
         )?;
 
-        mesh.set_group("origin", Geo::Point(At::XY(0.0, 0.0)))?;
-        mesh.set_group("left", Geo::Point(At::X(0.0)))?;
-        mesh.set_group("right", Geo::Point(At::X(1.0)))?;
-        mesh.set_group("bottom", Geo::Point(At::Y(0.0)))?;
-        mesh.set_group("top", Geo::Point(At::Y(1.0)))?;
+        mesh.set_group(1, Geo::Point(At::XY(0.0, 0.0)))?;
+        mesh.set_group(2, Geo::Point(At::X(0.0)))?;
+        mesh.set_group(3, Geo::Point(At::X(1.0)))?;
+        mesh.set_group(4, Geo::Point(At::Y(0.0)))?;
+        mesh.set_group(5, Geo::Point(At::Y(1.0)))?;
 
         println!("{}", mesh);
 

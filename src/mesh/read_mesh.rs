@@ -3,7 +3,7 @@ use crate::StrError;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-struct ReadMeshData {
+struct DataForReadMesh {
     ndim: usize,
     npoint: usize,
     ncell: usize,
@@ -11,9 +11,9 @@ struct ReadMeshData {
     current_ncell: usize,
 }
 
-impl ReadMeshData {
+impl DataForReadMesh {
     fn new() -> Self {
-        ReadMeshData {
+        DataForReadMesh {
             ndim: 0,
             npoint: 0,
             ncell: 0,
@@ -153,7 +153,7 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, StrError> {
     let mut lines_iter = buffered.lines();
 
     // auxiliary data structure
-    let mut data = ReadMeshData::new();
+    let mut data = DataForReadMesh::new();
 
     // read and parse sizes
     loop {
@@ -169,7 +169,7 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, StrError> {
     }
 
     // allocate mesh
-    let mut mesh = Mesh::new_zeroed(data.ndim, data.npoint, data.ncell)?;
+    let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
 
     // read and parse points
     loop {
@@ -217,7 +217,7 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, StrError> {
 
 pub fn parse_mesh(text: &str) -> Result<Mesh, StrError> {
     // auxiliary data structure
-    let mut data = ReadMeshData::new();
+    let mut data = DataForReadMesh::new();
 
     // read and parse sizes
     let mut lines_iter = text.lines();
@@ -233,7 +233,7 @@ pub fn parse_mesh(text: &str) -> Result<Mesh, StrError> {
     }
 
     // allocate mesh
-    let mut mesh = Mesh::new_zeroed(data.ndim, data.npoint, data.ncell)?;
+    let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
 
     // read and parse points
     loop {
@@ -281,11 +281,11 @@ pub fn parse_mesh(text: &str) -> Result<Mesh, StrError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_mesh, read_mesh, Mesh, ReadMeshData, StrError};
+    use super::{parse_mesh, read_mesh, DataForReadMesh, Mesh, StrError};
 
     #[test]
     fn parse_sizes_captures_errors() -> Result<(), StrError> {
-        let mut data = ReadMeshData::new();
+        let mut data = DataForReadMesh::new();
 
         assert_eq!(
             data.parse_sizes(&String::from(" wrong \n")).err(),
@@ -314,12 +314,12 @@ mod tests {
 
     #[test]
     fn parse_point_captures_errors() -> Result<(), StrError> {
-        let mut data = ReadMeshData::new();
+        let mut data = DataForReadMesh::new();
         data.ndim = 3;
         data.npoint = 2;
         data.ncell = 1;
 
-        let mut mesh = Mesh::new_zeroed(data.ndim, data.npoint, data.ncell)?;
+        let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
 
         assert_eq!(
             data.parse_point(&mut mesh, &String::from(" wrong \n")).err(),
@@ -371,12 +371,12 @@ mod tests {
 
     #[test]
     fn parse_cell_captures_errors() -> Result<(), StrError> {
-        let mut data = ReadMeshData::new();
+        let mut data = DataForReadMesh::new();
         data.ndim = 3;
         data.npoint = 2;
         data.ncell = 1;
 
-        let mut mesh = Mesh::new_zeroed(data.ndim, data.npoint, data.ncell)?;
+        let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
 
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" wrong \n")).err(),
