@@ -1,7 +1,9 @@
 use super::Mesh;
 use crate::StrError;
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 
 struct DataForReadMesh {
     ndim: usize,
@@ -147,8 +149,13 @@ impl DataForReadMesh {
     }
 }
 
-pub fn read_mesh(filepath: &String) -> Result<Mesh, StrError> {
-    let input = File::open(filepath).map_err(|_| "cannot open file")?;
+/// Reads raw mesh data from text file
+pub(super) fn read_mesh<P>(full_path: &P) -> Result<Mesh, StrError>
+where
+    P: AsRef<OsStr> + ?Sized,
+{
+    let path = Path::new(full_path).to_path_buf();
+    let input = File::open(path).map_err(|_| "cannot open file")?;
     let buffered = BufReader::new(input);
     let mut lines_iter = buffered.lines();
 
@@ -215,7 +222,8 @@ pub fn read_mesh(filepath: &String) -> Result<Mesh, StrError> {
     Ok(mesh)
 }
 
-pub fn parse_mesh(text: &str) -> Result<Mesh, StrError> {
+/// Parses raw mesh data from text string
+pub(super) fn parse_mesh(text: &str) -> Result<Mesh, StrError> {
     // auxiliary data structure
     let mut data = DataForReadMesh::new();
 
@@ -451,8 +459,7 @@ mod tests {
 
     #[test]
     fn read_mesh_2d_works() -> Result<(), StrError> {
-        let filepath = "./data/meshes/ok1.msh".to_string();
-        let mesh = read_mesh(&filepath)?;
+        let mesh = read_mesh("./data/meshes/ok1.msh")?;
         println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
@@ -464,16 +471,16 @@ mod tests {
              n_boundary_face = 0\n\
              \n\
              points\n\
-             i:0 g:1 x:[0.0, 0.0] c:[]\n\
-             i:1 g:1 x:[1.0, 0.0] c:[]\n\
-             i:2 g:11 x:[1.0, 1.0] c:[]\n\
-             i:3 g:1 x:[0.0, 1.0] c:[]\n\
-             i:4 g:1 x:[2.0, 0.0] c:[]\n\
-             i:5 g:1 x:[2.0, 1.0] c:[]\n\
+             i:0 g:0 x:[0.0, 0.0] e:[] f:[]\n\
+             i:1 g:0 x:[1.0, 0.0] e:[] f:[]\n\
+             i:2 g:1 x:[1.0, 1.0] e:[] f:[]\n\
+             i:3 g:0 x:[0.0, 1.0] e:[] f:[]\n\
+             i:4 g:0 x:[2.0, 0.0] e:[] f:[]\n\
+             i:5 g:0 x:[2.0, 1.0] e:[] f:[]\n\
              \n\
              cells\n\
-             i:0 g:1 n:2 p:[0, 1, 2, 3] e:[] f:[]\n\
-             i:1 g:8 n:2 p:[1, 4, 5, 2] e:[] f:[]\n\
+             i:0 g:1 n:2 p:[0, 1, 2, 3]\n\
+             i:1 g:0 n:2 p:[1, 4, 5, 2]\n\
              \n\
              boundary_points\n\
              \n\
@@ -486,8 +493,7 @@ mod tests {
 
     #[test]
     fn read_mesh_3d_works() -> Result<(), StrError> {
-        let filepath = "./data/meshes/ok2.msh".to_string();
-        let mesh = read_mesh(&filepath)?;
+        let mesh = read_mesh("./data/meshes/ok2.msh")?;
         println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
@@ -499,22 +505,22 @@ mod tests {
              n_boundary_face = 0\n\
              \n\
              points\n\
-             i:0 g:1 x:[0.0, 0.0, 0.0] c:[]\n\
-             i:1 g:1 x:[1.0, 0.0, 0.0] c:[]\n\
-             i:2 g:1 x:[1.0, 1.0, 0.0] c:[]\n\
-             i:3 g:1 x:[0.0, 1.0, 0.0] c:[]\n\
-             i:4 g:1 x:[0.0, 0.0, 1.0] c:[]\n\
-             i:5 g:1 x:[1.0, 0.0, 1.0] c:[]\n\
-             i:6 g:111 x:[1.0, 1.0, 1.0] c:[]\n\
-             i:7 g:1 x:[0.0, 1.0, 1.0] c:[]\n\
-             i:8 g:1 x:[0.0, 0.0, 2.0] c:[]\n\
-             i:9 g:1 x:[1.0, 0.0, 2.0] c:[]\n\
-             i:10 g:1 x:[1.0, 1.0, 2.0] c:[]\n\
-             i:11 g:1 x:[0.0, 1.0, 2.0] c:[]\n\
+             i:0 g:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
+             i:1 g:0 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
+             i:2 g:0 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
+             i:3 g:0 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
+             i:4 g:0 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
+             i:5 g:0 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
+             i:6 g:1 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
+             i:7 g:0 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
+             i:8 g:0 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
+             i:9 g:0 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
+             i:10 g:0 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
+             i:11 g:0 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
              \n\
              cells\n\
-             i:0 g:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
-             i:1 g:8 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11] e:[] f:[]\n\
+             i:0 g:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
+             i:1 g:0 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
              \n\
              boundary_points\n\
              \n\
@@ -558,12 +564,12 @@ mod tests {
                  \n\
                  # points\n\
                  # id group x y\n\
-                 0 1  0.0 0.0\n\
-                 1 1  1.0 0.0\n\
-                 2 11 1.0 1.0\n\
-                 3 1  0.0 1.0\n\
-                 4 1  2.0 0.0\n\
-                 5 1  2.0 1.0\n\
+                 0 0  0.0 0.0\n\
+                 1 0  1.0 0.0\n\
+                 2 1  1.0 1.0\n\
+                 3 0  0.0 1.0\n\
+                 4 0  2.0 0.0\n\
+                 5 0  2.0 1.0\n\
                  \n\
                  # cells\n\
                  # idx group point_ids...\n\
@@ -584,17 +590,17 @@ mod tests {
             
             # points
             # id group x y
-            0 1  0.0 0.0
-            1 1  1.0 0.0
-            2 11 1.0 1.0
-            3 1  0.0 1.0
-            4 1  2.0 0.0
-            5 1  2.0 1.0
+            0 0  0.0 0.0
+            1 0  1.0 0.0
+            2 1  1.0 1.0
+            3 0  0.0 1.0
+            4 0  2.0 0.0
+            5 0  2.0 1.0
             
             # cells
             # id group ndim npoint point_ids...
             0 1  2 4  0 1 2 3
-            1 8  2 4  1 4 5 2",
+            1 0  2 4  1 4 5 2",
         )?;
         println!("{}", mesh);
         assert_eq!(
@@ -607,16 +613,16 @@ mod tests {
              n_boundary_face = 0\n\
              \n\
              points\n\
-             i:0 g:1 x:[0.0, 0.0] c:[]\n\
-             i:1 g:1 x:[1.0, 0.0] c:[]\n\
-             i:2 g:11 x:[1.0, 1.0] c:[]\n\
-             i:3 g:1 x:[0.0, 1.0] c:[]\n\
-             i:4 g:1 x:[2.0, 0.0] c:[]\n\
-             i:5 g:1 x:[2.0, 1.0] c:[]\n\
+             i:0 g:0 x:[0.0, 0.0] e:[] f:[]\n\
+             i:1 g:0 x:[1.0, 0.0] e:[] f:[]\n\
+             i:2 g:1 x:[1.0, 1.0] e:[] f:[]\n\
+             i:3 g:0 x:[0.0, 1.0] e:[] f:[]\n\
+             i:4 g:0 x:[2.0, 0.0] e:[] f:[]\n\
+             i:5 g:0 x:[2.0, 1.0] e:[] f:[]\n\
              \n\
              cells\n\
-             i:0 g:1 n:2 p:[0, 1, 2, 3] e:[] f:[]\n\
-             i:1 g:8 n:2 p:[1, 4, 5, 2] e:[] f:[]\n\
+             i:0 g:1 n:2 p:[0, 1, 2, 3]\n\
+             i:1 g:0 n:2 p:[1, 4, 5, 2]\n\
              \n\
              boundary_points\n\
              \n\
@@ -636,23 +642,23 @@ mod tests {
             
             # points
             # id group x y z
-            0 1   0.0 0.0 0.0
-            1 1   1.0 0.0 0.0
-            2 1   1.0 1.0 0.0
-            3 1   0.0 1.0 0.0
-            4 1   0.0 0.0 1.0
-            5 1   1.0 0.0 1.0
-            6 111 1.0 1.0 1.0
-            7 1   0.0 1.0 1.0
-            8 1   0.0 0.0 2.0
-            9 1   1.0 0.0 2.0
-            10 1   1.0 1.0 2.0
-            11 1   0.0 1.0 2.0
+             0 0  0.0 0.0 0.0
+             1 0  1.0 0.0 0.0
+             2 0  1.0 1.0 0.0
+             3 0  0.0 1.0 0.0
+             4 0  0.0 0.0 1.0
+             5 0  1.0 0.0 1.0
+             6 1  1.0 1.0 1.0
+             7 0  0.0 1.0 1.0
+             8 0  0.0 0.0 2.0
+             9 0  1.0 0.0 2.0
+            10 0  1.0 1.0 2.0
+            11 0  0.0 1.0 2.0
             
             # cells
             # id group ndim npoint point_ids...
             0 1  3 8  0 1 2 3 4 5  6  7
-            1 8  3 8  4 5 6 7 8 9 10 11",
+            1 0  3 8  4 5 6 7 8 9 10 11",
         )?;
         println!("{}", mesh);
         assert_eq!(
@@ -665,22 +671,22 @@ mod tests {
              n_boundary_face = 0\n\
              \n\
              points\n\
-             i:0 g:1 x:[0.0, 0.0, 0.0] c:[]\n\
-             i:1 g:1 x:[1.0, 0.0, 0.0] c:[]\n\
-             i:2 g:1 x:[1.0, 1.0, 0.0] c:[]\n\
-             i:3 g:1 x:[0.0, 1.0, 0.0] c:[]\n\
-             i:4 g:1 x:[0.0, 0.0, 1.0] c:[]\n\
-             i:5 g:1 x:[1.0, 0.0, 1.0] c:[]\n\
-             i:6 g:111 x:[1.0, 1.0, 1.0] c:[]\n\
-             i:7 g:1 x:[0.0, 1.0, 1.0] c:[]\n\
-             i:8 g:1 x:[0.0, 0.0, 2.0] c:[]\n\
-             i:9 g:1 x:[1.0, 0.0, 2.0] c:[]\n\
-             i:10 g:1 x:[1.0, 1.0, 2.0] c:[]\n\
-             i:11 g:1 x:[0.0, 1.0, 2.0] c:[]\n\
+             i:0 g:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
+             i:1 g:0 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
+             i:2 g:0 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
+             i:3 g:0 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
+             i:4 g:0 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
+             i:5 g:0 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
+             i:6 g:1 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
+             i:7 g:0 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
+             i:8 g:0 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
+             i:9 g:0 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
+             i:10 g:0 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
+             i:11 g:0 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
              \n\
              cells\n\
-             i:0 g:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7] e:[] f:[]\n\
-             i:1 g:8 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11] e:[] f:[]\n\
+             i:0 g:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
+             i:1 g:0 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
              \n\
              boundary_points\n\
              \n\
