@@ -35,8 +35,6 @@ pub struct Point {
 
     /// Group in which this point belongs to
     ///
-    /// # Note
-    ///
     /// A good strategy is to leave all point groups set to zero and then mark some
     /// points with a non-zero group to indicate that a selection has been made.
     ///
@@ -74,8 +72,6 @@ pub struct Cell {
 
     /// Space dimension of this cell
     ///
-    /// # Note
-    ///
     /// The cell's ndim may be different than the space dimension of the mesh.
     /// For example, a 1D line in the 2D or 3D space or a 2D triangle in the 3D space.
     ///
@@ -92,8 +88,6 @@ pub struct Cell {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
     /// Group in which this edge belongs to
-    ///
-    /// # Note
     ///
     /// A good strategy is to leave all edge groups set to zero and then mark some
     /// edge with a non-zero group to indicate that a selection has been made.
@@ -116,8 +110,6 @@ pub struct Edge {
 pub struct Face {
     /// Group in which this face belongs to
     ///
-    /// # Note
-    ///
     /// A good strategy is to leave all face groups set to zero and then mark some
     /// face with a non-zero group to indicate that a selection has been made.
     pub group: Group,
@@ -133,8 +125,6 @@ pub struct Face {
 #[derive(Deserialize, Serialize)]
 pub struct Mesh {
     /// Space dimension of the mesh
-    ///
-    /// # Note
     ///
     /// The mesh's ndim may be different that an cell's ndim.
     /// For example, a 3D mesh may contain 1D lines or 2D triangles.
@@ -154,28 +144,23 @@ pub struct Mesh {
 
     /// Set of points on the boundaries
     ///
-    /// # Definition
-    ///
-    /// * A boundary point belongs to a boundary edge or a boundary face
+    /// Note: a boundary point belongs to a boundary edge or a boundary face
     ///
     /// (derived property)
     pub boundary_points: HashSet<Index>,
 
     /// Set of edges on the boundaries
     ///
-    /// # Definition
+    /// Note: In 2D, a boundary edge is such that it's shared by one 2D cell only (ignore 1D cells)
     ///
-    /// * In 2D: a boundary edge is such that it's shared by one 2D cell only (ignore 1D cells)
-    /// * In 3D: a boundary edge belongs to a boundary face
+    /// Note: In 3D, a boundary edge belongs to a boundary face
     ///
     /// (derived property)
     pub boundary_edges: HashMap<EdgeKey, Edge>,
 
     /// Set of faces on the boundaries
     ///
-    /// # Definition
-    ///
-    /// * A boundary face is such that it's shared by one 3D cell only
+    /// Note: A boundary face is such that it's shared by one 3D cell only
     ///
     /// (derived property)
     pub boundary_faces: HashMap<FaceKey, Face>,
