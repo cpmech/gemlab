@@ -9,6 +9,8 @@
 //     }};
 // }
 
+use std::collections::HashMap;
+
 use crate::mesh::{EdgeKey, Index, Mesh};
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
@@ -75,11 +77,28 @@ impl Element {
     }
 }
 
+pub enum ProblemElement {
+    MechanicalBeam,
+    MechanicalTruss,
+    MechanicalSolid,
+    PorousLiquid,
+    PorousLiquidGas,
+    PorousSolidLiquidGas,
+    DiffusionTemperature,
+}
+
+pub struct Attribute {
+    inactive: bool,
+    kind: ProblemElement,
+    properties: HashMap<String, f64>,
+}
+
 pub struct Simulation {
     mesh: Mesh,
     point_bcs: Vec<PointBC>,
     edge_bcs: Vec<EdgeBC>,
     elements: Vec<Element>,
+    attributes: HashMap<usize, Attribute>,
 }
 
 impl Simulation {
@@ -89,6 +108,7 @@ impl Simulation {
             point_bcs: Vec::new(),
             edge_bcs: Vec::new(),
             elements: Vec::new(),
+            attributes: HashMap::new(),
         })
     }
 
@@ -106,6 +126,23 @@ impl Simulation {
             self.edge_bcs.push(EdgeBC { bc, dof, f, key });
         }
         self
+    }
+
+    pub fn initialize(&mut self) -> Result<(), StrError> {
+        // allocate all elements and assign numbers to the DOFs
+        for cell in &self.mesh.cells {
+            let props = match self.attributes.get(&cell.attribute_id) {
+                Some(a) => {
+                    if a.inactive {
+                        continue;
+                    }
+                    &a.properties
+                }
+                None => return Err("cannot find cell with a specific attribute id"),
+            };
+            // how to get tne DOFs for each element/problem?
+        }
+        Ok(())
     }
 
     pub fn run(&mut self) -> Result<(), StrError> {
