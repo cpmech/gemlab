@@ -385,8 +385,8 @@ impl Block {
                         group: self.group,
                         ndim: shape_out.get_ndim(),
                         points,
-                        boundary_edges,
-                        boundary_faces,
+                        // boundary_edges,
+                        // boundary_faces,
                     };
                     mesh.cells.push(cell);
 
@@ -433,7 +433,7 @@ impl Block {
         // handle existent point
         let ksi = &ksi_vec.as_data()[0..self.ndim];
         if let Some(index) = self.grid_ksi.find(ksi)? {
-            mesh.points[index].shared_by_cells.insert(cell_id);
+            // mesh.points[index].shared_by_cells.insert(cell_id);
             return Ok(index);
         }
 
@@ -452,9 +452,9 @@ impl Block {
             id: index,
             group: self.group,
             coords: x.as_data().clone(),
-            shared_by_cells,
-            shared_by_edges: HashSet::new(),
-            shared_by_faces: HashSet::new(),
+            // shared_by_cells,
+            shared_by_boundary_edges: HashSet::new(),
+            shared_by_boundary_faces: HashSet::new(),
         });
 
         // done
@@ -527,7 +527,7 @@ impl Block {
             // existing item
             if mesh.boundary_edges.contains_key(&edge_key) {
                 let edge = mesh.boundary_edges.get_mut(&edge_key).unwrap();
-                edge.shared_by_cells.insert(cell_id);
+                edge.shared_by_2d_cells.insert(cell_id);
 
             // new item
             } else {
@@ -538,7 +538,8 @@ impl Block {
                     Edge {
                         group: self.group,
                         points,
-                        shared_by_cells,
+                        shared_by_2d_cells: shared_by_cells,
+                        shared_by_boundary_faces: HashSet::new(),
                     },
                 );
             }
