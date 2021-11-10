@@ -1,41 +1,85 @@
 //! Implements a simple linear finite element solver
 
-// #![allow(dead_code)]
+#![allow(dead_code)]
 #![allow(unused_variables)]
 
-macro_rules! print_bc {
-    ($b:expr, $c:expr, $k:expr, $g:expr, $t:expr, $x:expr, $f:expr) => {{
-        println!("{} {} k:{:?} g:{} p:{} t:{} x:{:?} f:{}", $b, $c, $k, $g, 0, $t, $x, $f);
-    }};
-}
+// macro_rules! print_bc {
+//     ($b:expr, $c:expr, $k:expr, $g:expr, $t:expr, $x:expr, $f:expr) => {{
+//         println!("{} {} k:{:?} g:{} p:{} t:{} x:{:?} f:{}", $b, $c, $k, $g, 0, $t, $x, $f);
+//     }};
+// }
 
-use crate::mesh::{At, EdgeKey, Group, Index, Mesh};
+use crate::mesh::{EdgeKey, Index, Mesh};
 use crate::StrError;
+use russell_lab::{Matrix, Vector};
+use russell_sparse::{SparseTriplet, Symmetry};
+
+#[derive(Clone, Copy)]
+pub enum DOF {
+    T,     // temperature or any other scalar such as hydraulic head
+    Pl,    // liquid pressure
+    Pg,    // gas pressure
+    Ux,    // displacement along x
+    Uy,    // displacement along y
+    Uz,    // displacement along z
+    Rx,    // rotation around x
+    Ry,    // rotation around y
+    Rz,    // rotation around z
+    Wlx,   // relative liquid velocity along x
+    Wly,   // relative liquid velocity along y
+    Wlz,   // relative liquid velocity along z
+    Extra, // extra (enriched) degree of freedom
+}
 
 pub type FnTimeSpace = fn(f64, &[f64]) -> f64;
 
 #[derive(Clone, Copy)]
 pub enum BC {
-    Essential(FnTimeSpace),
-    Natural(FnTimeSpace),
+    Essential,
+    Natural,
 }
 
 #[derive(Clone, Copy)]
 pub struct PointBC {
+    bc: BC,
+    dof: DOF,
+    f: FnTimeSpace,
     id: Index,
-    condition: BC,
 }
 
 #[derive(Clone, Copy)]
 pub struct EdgeBC {
+    bc: BC,
+    dof: DOF,
+    f: FnTimeSpace,
     key: EdgeKey,
-    condition: BC,
+}
+
+pub struct Node {
+    dofs: Vec<DOF>,
+}
+
+pub struct Element {
+    //
+}
+
+impl Element {
+    fn compute_ke(&mut self) -> Result<(), StrError> {
+        Ok(())
+    }
+    fn add_ke_to_kk(&self, kk: &mut SparseTriplet) -> Result<(), StrError> {
+        Ok(())
+    }
+    fn add_fe_to_ff(&self, ff: &mut Vector) -> Result<(), StrError> {
+        Ok(())
+    }
 }
 
 pub struct Simulation {
     mesh: Mesh,
     point_bcs: Vec<PointBC>,
     edge_bcs: Vec<EdgeBC>,
+    elements: Vec<Element>,
 }
 
 impl Simulation {
@@ -44,73 +88,91 @@ impl Simulation {
             mesh,
             point_bcs: Vec::new(),
             edge_bcs: Vec::new(),
+            elements: Vec::new(),
         })
     }
 
-    pub fn add_point_bc(&mut self, group: &str, condition: BC) -> &mut Self {
+    pub fn add_point_bc(&mut self, group: &str, bc: BC, dof: DOF, f: FnTimeSpace) -> &mut Self {
         let ids = self.mesh.get_boundary_point_ids_sorted(group);
         for id in ids {
-            self.point_bcs.push(PointBC { id, condition });
+            self.point_bcs.push(PointBC { bc, dof, f, id });
         }
         self
     }
 
-    pub fn add_edge_bc(&mut self, group: &str, condition: BC) -> &mut Self {
+    pub fn add_edge_bc(&mut self, group: &str, bc: BC, dof: DOF, f: FnTimeSpace) -> &mut Self {
         let keys = self.mesh.get_boundary_edge_keys_sorted(group);
         for key in keys {
-            self.edge_bcs.push(EdgeBC { key, condition });
+            self.edge_bcs.push(EdgeBC { bc, dof, f, key });
         }
         self
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> Result<(), StrError> {
         let time = 0.0; // time
-                        /*
-                        for boundary_condition in &self.boundary_conditions {
-                            match boundary_condition {
-                                Boundary::Point(group, condition) => match condition {
-                                    Condition::Essential(f) => {
-                                        let x = &[0.0, 0.0];
-                                        println!("point {} essential {}", group, f(0.0, x));
-                                    }
-                                    Condition::Natural(f) => {
-                                        let x = &[0.0, 0.0];
-                                        println!("point {} natural {}", group, f(0.0, x));
-                                    }
-                                },
-                                Boundary::Edge(group, condition) => match condition {
-                                    Condition::Essential(f) => {
-                                        if let Some(edges) = self.mesh.groups_boundary_edges.get(&group) {
-                                            for key in edges {
-                                                if let Some(edge) = self.mesh.boundary_edges.get(key) {
-                                                    for id in &edge.points {
-                                                        let point = &self.mesh.points[*id];
-                                                        let x = &point.coords;
-                                                        let f_val = f(time, x);
-                                                        print_bc!("edge", "essential", key, group, time, x, f_val);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Condition::Natural(f) => {
-                                        let x = &[0.0, 0.0];
-                                        println!("edge {} natural {}", group, f(0.0, x));
-                                    }
-                                },
-                                Boundary::Face(group, condition) => match condition {
-                                    Condition::Essential(f) => {
-                                        let x = &[0.0, 0.0];
-                                        println!("face {} essential {}", group, f(0.0, x));
-                                    }
-                                    Condition::Natural(f) => {
-                                        let x = &[0.0, 0.0];
-                                        println!("face {} natural {}", group, f(0.0, x));
-                                    }
-                                },
-                            }
-                        }
-                        */
+
+        let n = 2;
+        let nnz = 2;
+        let mut uu = Vector::new(n);
+        let mut ff = Vector::new(n);
+        let mut kk = SparseTriplet::new(n, n, nnz, Symmetry::No)?;
+
+        // assemble element Ke matrices (can be done in parallel)
+        for element in &mut self.elements {
+            element.compute_ke()?;
+        }
+
+        // add element Ke matrix to global K matrix (must be serial)
+        for element in &self.elements {
+            element.add_ke_to_kk(&mut kk)?;
+        }
+
+        // add element Fe vector to global F vector (must be serial)
+        for element in &self.elements {
+            element.add_fe_to_ff(&mut ff)?;
+        }
+
+        let i = 0;
+
+        // handle point boundary conditions
+        for item in &self.point_bcs {
+            let x = &self.mesh.points[item.id].coords;
+            let val = (item.f)(time, x);
+            match item.bc {
+                BC::Essential => {
+                    kk.put(i, i, 1.0);
+                    uu[i] = val;
+                    ff[i] = val;
+                }
+                BC::Natural => {
+                    ff[i] = val;
+                }
+            }
+        }
+
+        // handle edge boundary conditions
+        for item in &self.edge_bcs {
+            let edge = match self.mesh.boundary_edges.get(&item.key) {
+                Some(e) => e,
+                None => return Err("cannot find boundary edge"),
+            };
+            match item.bc {
+                BC::Essential => {
+                    for id in &edge.points {
+                        let x = &self.mesh.points[*id].coords;
+                        let val = (item.f)(time, x);
+                        kk.put(i, i, 1.0);
+                        uu[i] = val;
+                        ff[i] = val;
+                    }
+                }
+                BC::Natural => {
+                    // perform integration
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -119,9 +181,11 @@ impl Simulation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mesh::At;
 
     #[test]
     fn run_works() -> Result<(), StrError> {
+        // create mesh
         let mut mesh = Mesh::from_text(
             r"
             # header
@@ -144,20 +208,24 @@ mod tests {
             ",
         )?;
 
-        mesh.set_group_points("origin", At::XY(0.0, 0.0))?
-            .set_group_edges("left", At::X(0.0))?
-            .set_group_edges("right", At::X(1.0))?
-            .set_group_edges("bottom", At::Y(0.0))?
-            .set_group_edges("top", At::Y(1.0))?;
+        // set groups of points and edges at boundaries
+        mesh.set_points("origin", At::XY(0.0, 0.0))?
+            .set_edges("left", At::X(0.0))?
+            .set_edges("right", At::X(1.0))?
+            .set_edges("bottom", At::Y(0.0))?
+            .set_edges("top", At::Y(1.0))?;
 
+        // create simulation
         let mut sim = Simulation::new(mesh)?;
 
-        sim.add_point_bc("origin", BC::Essential(|t, x| 1.0))
-            .add_edge_bc("left", BC::Essential(|t, x| 2.0))
-            .add_edge_bc("right", BC::Essential(|t, x| 3.0))
-            .add_edge_bc("bottom", BC::Essential(|t, x| 3.0))
-            .add_edge_bc("top", BC::Natural(|t, x| 3.0));
+        // set boundary conditions
+        sim.add_point_bc("origin", BC::Essential, DOF::Ux, |_, _| 0.0)
+            .add_point_bc("origin", BC::Essential, DOF::Uy, |_, _| 0.0)
+            .add_edge_bc("left", BC::Essential, DOF::Ux, |_, _| 0.0)
+            .add_edge_bc("right", BC::Essential, DOF::Ux, |_, _| 0.0)
+            .add_edge_bc("bottom", BC::Essential, DOF::Uy, |_, _| 0.0);
 
+        // run simulation
         sim.run();
 
         Ok(())

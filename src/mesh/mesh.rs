@@ -305,6 +305,8 @@ impl Mesh {
             self.compute_derived_props_3d()?;
         }
         self.compute_limits()?;
+        self.grid_boundary_points
+            .initialize(&vec![10; self.ndim], &self.min, &self.max)?;
         self.derived_props_computed = true;
         Ok(())
     }
@@ -317,7 +319,7 @@ impl Mesh {
     }
 
     /// Sets group of points on the boundary
-    pub fn set_group_points(&mut self, group: &str, at: At) -> Result<&mut Self, StrError> {
+    pub fn set_points(&mut self, group: &str, at: At) -> Result<&mut Self, StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
@@ -338,7 +340,7 @@ impl Mesh {
     }
 
     /// Sets group of edges on the boundary
-    pub fn set_group_edges(&mut self, group: &str, at: At) -> Result<&mut Self, StrError> {
+    pub fn set_edges(&mut self, group: &str, at: At) -> Result<&mut Self, StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
@@ -902,11 +904,11 @@ mod tests {
         ",
         )?;
 
-        mesh.set_group_points("origin", At::XY(0.0, 0.0))?
-            .set_group_edges("left", At::X(0.0))?
-            .set_group_edges("right", At::X(1.0))?
-            .set_group_edges("bottom", At::Y(0.0))?
-            .set_group_edges("top", At::Y(1.0))?;
+        mesh.set_points("origin", At::XY(0.0, 0.0))?
+            .set_edges("left", At::X(0.0))?
+            .set_edges("right", At::X(1.0))?
+            .set_edges("bottom", At::Y(0.0))?
+            .set_edges("top", At::Y(1.0))?;
 
         println!("{}", mesh);
 
