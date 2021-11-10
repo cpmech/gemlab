@@ -374,15 +374,15 @@ impl Block {
                     }
 
                     // new edge
-                    let boundary_edges = self.maybe_append_new_edge(&mut mesh, &shape_out, &points, cell_id)?;
+                    // let boundary_edges = self.maybe_append_new_edge(&mut mesh, &shape_out, &points, cell_id)?;
 
                     // new face
-                    let boundary_faces = self.maybe_append_new_face(&mut mesh, &shape_out, &points, cell_id)?;
+                    // let boundary_faces = self.maybe_append_new_face(&mut mesh, &shape_out, &points, cell_id)?;
 
                     // new cell
                     let cell = Cell {
                         id: cell_id,
-                        group: self.group,
+                        attribute_id: self.group,
                         ndim: shape_out.get_ndim(),
                         points,
                         // boundary_edges,
@@ -450,9 +450,7 @@ impl Block {
         shared_by_cells.insert(cell_id);
         mesh.points.push(Point {
             id: index,
-            group: self.group,
             coords: x.as_data().clone(),
-            // shared_by_cells,
             shared_by_boundary_edges: HashSet::new(),
             shared_by_boundary_faces: HashSet::new(),
         });
@@ -536,7 +534,6 @@ impl Block {
                 mesh.boundary_edges.insert(
                     edge_key,
                     Edge {
-                        group: self.group,
                         points,
                         shared_by_2d_cells: shared_by_cells,
                         shared_by_boundary_faces: HashSet::new(),
@@ -629,7 +626,6 @@ impl Block {
                 mesh.boundary_faces.insert(
                     face_key,
                     Face {
-                        group: self.group,
                         points,
                         shared_by_cells,
                     },

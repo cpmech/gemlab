@@ -72,11 +72,6 @@ impl DataForReadMesh {
         mesh.points[i].id = i;
 
         match data.next() {
-            Some(v) => mesh.points[i].group = v.parse().map_err(|_| "cannot parse point group")?,
-            None => return Err("cannot read point group"),
-        };
-
-        match data.next() {
             Some(v) => mesh.points[i].coords[0] = v.parse().map_err(|_| "cannot parse point x coordinate")?,
             None => return Err("cannot read point x coordinate"),
         };
@@ -119,8 +114,8 @@ impl DataForReadMesh {
         mesh.cells[i].id = i;
 
         match data.next() {
-            Some(v) => mesh.cells[i].group = v.parse().map_err(|_| "cannot parse cell group")?,
-            None => return Err("cannot read cell group"),
+            Some(v) => mesh.cells[i].attribute_id = v.parse().map_err(|_| "cannot parse cell attribute id")?,
+            None => return Err("cannot read cell attribute id"),
         };
 
         match data.next() {
@@ -335,43 +330,34 @@ mod tests {
         );
 
         assert_eq!(
-            data.parse_point(&mut mesh, &String::from(" 2 1 0.0 0.0 0.0 \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" 2 0.0 0.0 0.0 \n")).err(),
             Some("the id and index of points must equal each other")
         );
 
         assert_eq!(
-            data.parse_point(&mut mesh, &String::from(" 0 \n")).err(),
-            Some("cannot read point group")
-        );
-        assert_eq!(
-            data.parse_point(&mut mesh, &String::from(" 0 wrong")).err(),
-            Some("cannot parse point group")
-        );
-
-        assert_eq!(
-            data.parse_point(&mut mesh, &String::from(" 0 1   \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0    \n")).err(),
             Some("cannot read point x coordinate")
         );
         assert_eq!(
-            data.parse_point(&mut mesh, &String::from(" 0 1  wrong")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0   wrong")).err(),
             Some("cannot parse point x coordinate")
         );
 
         assert_eq!(
-            data.parse_point(&mut mesh, &String::from(" 0 1 0.0  \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0  0.0  \n")).err(),
             Some("cannot read point y coordinate")
         );
         assert_eq!(
-            data.parse_point(&mut mesh, &String::from(" 0 1 0.0 wrong")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0  0.0 wrong")).err(),
             Some("cannot parse point y coordinate")
         );
 
         assert_eq!(
-            data.parse_point(&mut mesh, &String::from(" 0 1 0.0 0.0 \n")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0  0.0 0.0 \n")).err(),
             Some("cannot read point z coordinate")
         );
         assert_eq!(
-            data.parse_point(&mut mesh, &String::from(" 0 1 0.0 0.0 wrong")).err(),
+            data.parse_point(&mut mesh, &String::from(" 0  0.0 0.0 wrong")).err(),
             Some("cannot parse point z coordinate")
         );
         Ok(())
@@ -398,11 +384,11 @@ mod tests {
 
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 \n")).err(),
-            Some("cannot read cell group")
+            Some("cannot read cell attribute id")
         );
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 wrong")).err(),
-            Some("cannot parse cell group")
+            Some("cannot parse cell attribute id")
         );
 
         assert_eq!(
@@ -471,16 +457,16 @@ mod tests {
              n_boundary_face = 0\n\
              \n\
              points\n\
-             i:0 g:0 x:[0.0, 0.0] e:[] f:[]\n\
-             i:1 g:0 x:[1.0, 0.0] e:[] f:[]\n\
-             i:2 g:1 x:[1.0, 1.0] e:[] f:[]\n\
-             i:3 g:0 x:[0.0, 1.0] e:[] f:[]\n\
-             i:4 g:0 x:[2.0, 0.0] e:[] f:[]\n\
-             i:5 g:0 x:[2.0, 1.0] e:[] f:[]\n\
+             i:0 x:[0.0, 0.0] e:[] f:[]\n\
+             i:1 x:[1.0, 0.0] e:[] f:[]\n\
+             i:2 x:[1.0, 1.0] e:[] f:[]\n\
+             i:3 x:[0.0, 1.0] e:[] f:[]\n\
+             i:4 x:[2.0, 0.0] e:[] f:[]\n\
+             i:5 x:[2.0, 1.0] e:[] f:[]\n\
              \n\
              cells\n\
-             i:0 g:1 n:2 p:[0, 1, 2, 3]\n\
-             i:1 g:0 n:2 p:[1, 4, 5, 2]\n\
+             i:0 a:1 n:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 n:2 p:[1, 4, 5, 2]\n\
              \n\
              boundary_points\n\
              \n\
@@ -505,22 +491,22 @@ mod tests {
              n_boundary_face = 0\n\
              \n\
              points\n\
-             i:0 g:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
-             i:1 g:0 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
-             i:2 g:0 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
-             i:3 g:0 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
-             i:4 g:0 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
-             i:5 g:0 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
-             i:6 g:1 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
-             i:7 g:0 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
-             i:8 g:0 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
-             i:9 g:0 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
-             i:10 g:0 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
-             i:11 g:0 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
+             i:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
+             i:1 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
+             i:2 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
+             i:3 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
+             i:4 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
+             i:5 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
+             i:6 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
+             i:7 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
+             i:8 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
+             i:9 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
+             i:10 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
+             i:11 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
              \n\
              cells\n\
-             i:0 g:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
-             i:1 g:0 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
+             i:0 a:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
+             i:1 a:0 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
              \n\
              boundary_points\n\
              \n\
@@ -549,8 +535,8 @@ mod tests {
                  2 4 1\n\
                  \n\
                  # points\n\
-                 # id group x y\n\
-                 0 1 0.0 0.0\n"
+                 # id x y\n\
+                 0 0.0 0.0\n"
             )
             .err(),
             Some("not all points have been found")
@@ -563,16 +549,16 @@ mod tests {
                  2 6 2\n\
                  \n\
                  # points\n\
-                 # id group x y\n\
-                 0 0  0.0 0.0\n\
-                 1 0  1.0 0.0\n\
-                 2 1  1.0 1.0\n\
-                 3 0  0.0 1.0\n\
-                 4 0  2.0 0.0\n\
-                 5 0  2.0 1.0\n\
+                 # id x y\n\
+                 0  0.0 0.0\n\
+                 1  1.0 0.0\n\
+                 2  1.0 1.0\n\
+                 3  0.0 1.0\n\
+                 4  2.0 0.0\n\
+                 5  2.0 1.0\n\
                  \n\
                  # cells\n\
-                 # idx group point_ids...\n\
+                 # idx attribute point_ids...\n\
                  0 1  2 4  0 1 2 3\n"
             )
             .err(),
@@ -589,16 +575,16 @@ mod tests {
             2 6 2
             
             # points
-            # id group x y
-            0 0  0.0 0.0
-            1 0  1.0 0.0
-            2 1  1.0 1.0
-            3 0  0.0 1.0
-            4 0  2.0 0.0
-            5 0  2.0 1.0
+            # id x y
+            0  0.0 0.0
+            1  1.0 0.0
+            2  1.0 1.0
+            3  0.0 1.0
+            4  2.0 0.0
+            5  2.0 1.0
             
             # cells
-            # id group ndim npoint point_ids...
+            # id attribute ndim npoint point_ids...
             0 1  2 4  0 1 2 3
             1 0  2 4  1 4 5 2",
         )?;
@@ -613,16 +599,16 @@ mod tests {
              n_boundary_face = 0\n\
              \n\
              points\n\
-             i:0 g:0 x:[0.0, 0.0] e:[] f:[]\n\
-             i:1 g:0 x:[1.0, 0.0] e:[] f:[]\n\
-             i:2 g:1 x:[1.0, 1.0] e:[] f:[]\n\
-             i:3 g:0 x:[0.0, 1.0] e:[] f:[]\n\
-             i:4 g:0 x:[2.0, 0.0] e:[] f:[]\n\
-             i:5 g:0 x:[2.0, 1.0] e:[] f:[]\n\
+             i:0 x:[0.0, 0.0] e:[] f:[]\n\
+             i:1 x:[1.0, 0.0] e:[] f:[]\n\
+             i:2 x:[1.0, 1.0] e:[] f:[]\n\
+             i:3 x:[0.0, 1.0] e:[] f:[]\n\
+             i:4 x:[2.0, 0.0] e:[] f:[]\n\
+             i:5 x:[2.0, 1.0] e:[] f:[]\n\
              \n\
              cells\n\
-             i:0 g:1 n:2 p:[0, 1, 2, 3]\n\
-             i:1 g:0 n:2 p:[1, 4, 5, 2]\n\
+             i:0 a:1 n:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 n:2 p:[1, 4, 5, 2]\n\
              \n\
              boundary_points\n\
              \n\
@@ -641,22 +627,22 @@ mod tests {
             3 12 2
             
             # points
-            # id group x y z
-             0 0  0.0 0.0 0.0
-             1 0  1.0 0.0 0.0
-             2 0  1.0 1.0 0.0
-             3 0  0.0 1.0 0.0
-             4 0  0.0 0.0 1.0
-             5 0  1.0 0.0 1.0
-             6 1  1.0 1.0 1.0
-             7 0  0.0 1.0 1.0
-             8 0  0.0 0.0 2.0
-             9 0  1.0 0.0 2.0
-            10 0  1.0 1.0 2.0
-            11 0  0.0 1.0 2.0
+            # id x y z
+             0  0.0 0.0 0.0
+             1  1.0 0.0 0.0
+             2  1.0 1.0 0.0
+             3  0.0 1.0 0.0
+             4  0.0 0.0 1.0
+             5  1.0 0.0 1.0
+             6  1.0 1.0 1.0
+             7  0.0 1.0 1.0
+             8  0.0 0.0 2.0
+             9  1.0 0.0 2.0
+            10  1.0 1.0 2.0
+            11  0.0 1.0 2.0
             
             # cells
-            # id group ndim npoint point_ids...
+            # id attribute ndim npoint point_ids...
             0 1  3 8  0 1 2 3 4 5  6  7
             1 0  3 8  4 5 6 7 8 9 10 11",
         )?;
@@ -671,22 +657,22 @@ mod tests {
              n_boundary_face = 0\n\
              \n\
              points\n\
-             i:0 g:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
-             i:1 g:0 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
-             i:2 g:0 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
-             i:3 g:0 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
-             i:4 g:0 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
-             i:5 g:0 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
-             i:6 g:1 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
-             i:7 g:0 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
-             i:8 g:0 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
-             i:9 g:0 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
-             i:10 g:0 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
-             i:11 g:0 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
+             i:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
+             i:1 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
+             i:2 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
+             i:3 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
+             i:4 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
+             i:5 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
+             i:6 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
+             i:7 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
+             i:8 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
+             i:9 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
+             i:10 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
+             i:11 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
              \n\
              cells\n\
-             i:0 g:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
-             i:1 g:0 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
+             i:0 a:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
+             i:1 a:0 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
              \n\
              boundary_points\n\
              \n\

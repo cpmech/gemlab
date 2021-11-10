@@ -13,9 +13,6 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 
-/// Aliases usize as the group of Point, Edge, Face, or Cell
-pub type Group = usize;
-
 /// Aliases usize as the index (==id) of Point and Cell
 pub type Index = usize;
 
@@ -25,6 +22,9 @@ pub type EdgeKey = (usize, usize);
 /// Aliases (usize,usize,usize) as the key of Face
 pub type FaceKey = (usize, usize, usize);
 
+/// Aliases usize as the group of boundary Point, Edge or Face
+pub type Group = usize;
+
 /// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Point {
@@ -32,14 +32,6 @@ pub struct Point {
     ///
     /// **raw data**
     pub id: Index,
-
-    /// Group in which this point belongs to
-    ///
-    /// A good strategy is to leave all point groups set to zero and then mark some
-    /// points with a non-zero group to indicate that a selection has been made.
-    ///
-    /// **raw data**
-    pub group: Group,
 
     /// Point coordinates (2D or 3D)
     ///
@@ -65,10 +57,10 @@ pub struct Cell {
     /// **raw data**
     pub id: Index,
 
-    /// Group in which this face belongs to
+    /// Attribute identification number
     ///
     /// **raw data**
-    pub group: Group,
+    pub attribute_id: usize,
 
     /// Space dimension of this cell
     ///
@@ -87,12 +79,6 @@ pub struct Cell {
 /// Holds edge data (derived data structure)
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
-    /// Group in which this edge belongs to
-    ///
-    /// A good strategy is to leave all edge groups set to zero and then mark some
-    /// edge with a non-zero group to indicate that a selection has been made.
-    pub group: Group,
-
     /// List of points defining this edge; in the right order (unsorted)
     pub points: Vec<Index>,
 
@@ -108,12 +94,6 @@ pub struct Edge {
 /// Holds face data (derived data structure)
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Face {
-    /// Group in which this face belongs to
-    ///
-    /// A good strategy is to leave all face groups set to zero and then mark some
-    /// face with a non-zero group to indicate that a selection has been made.
-    pub group: Group,
-
     /// List of points defining this face; in the right order (unsorted)
     pub points: Vec<Index>,
 
@@ -233,14 +213,13 @@ impl Mesh {
         }
         let zero_point = Point {
             id: 0,
-            group: 0,
             coords: vec![0.0; ndim],
             shared_by_boundary_edges: HashSet::new(),
             shared_by_boundary_faces: HashSet::new(),
         };
         let zero_cell = Cell {
             id: 0,
-            group: 0,
+            attribute_id: 0,
             ndim: 0,
             points: Vec::new(),
         };
@@ -316,12 +295,18 @@ impl Mesh {
 
     /// Computes derived properties such as boundaries and limits
     pub fn compute_derived_props(&mut self) -> Result<(), StrError> {
-        self.compute_limits()?;
+        self.derived_props_computed = false;
+        self.boundary_points.clear();
+        self.boundary_edges.clear();
+        self.boundary_faces.clear();
         if self.ndim == 2 {
-            self.compute_derived_props_2d()
+            self.compute_derived_props_2d()?;
         } else {
-            self.compute_derived_props_3d()
+            self.compute_derived_props_3d()?;
         }
+        self.compute_limits()?;
+        self.derived_props_computed = true;
+        Ok(())
     }
 
     /// Clears all boundary groups
@@ -344,8 +329,6 @@ impl Mesh {
             Geo::Point(at) => {
                 // find all points near the geometric feature
                 for id in self.find_points(&at)? {
-                    // set group of point
-                    self.points[id].group = group;
                     // update groups map
                     if self.groups_boundary_points.contains_key(&group) {
                         let ids = self.groups_boundary_points.get_mut(&group).unwrap();
@@ -368,9 +351,6 @@ impl Mesh {
                         // check if two edge points pass through the geometric feature
                         if indices.contains(&key.0) && indices.contains(&key.1) {
                             if self.boundary_edges.contains_key(&key) {
-                                // set group of edge
-                                let edge = self.boundary_edges.get_mut(&key).unwrap();
-                                edge.group = group;
                                 // update groups map
                                 if self.groups_boundary_edges.contains_key(&group) {
                                     let keys = self.groups_boundary_edges.get_mut(&group).unwrap();
@@ -514,11 +494,6 @@ impl Mesh {
 
     /// Computes derived properties of 2D mesh
     fn compute_derived_props_2d(&mut self) -> Result<(), StrError> {
-        // reset data
-        self.derived_props_computed = false;
-        self.boundary_points = HashSet::new();
-        self.boundary_edges = HashMap::new();
-
         // auxiliary maps
         let mut all_shapes: HashMap<Kind, Box<dyn Shape>> = HashMap::new();
         let mut all_edges: HashMap<EdgeKey, Edge> = HashMap::new();
@@ -569,7 +544,6 @@ impl Mesh {
                     all_edges.insert(
                         edge_key,
                         Edge {
-                            group: 0,
                             points: edge_points,
                             shared_by_2d_cells,
                             shared_by_boundary_faces: HashSet::new(),
@@ -588,20 +562,11 @@ impl Mesh {
                 }
             }
         }
-
-        // done
-        self.derived_props_computed = true;
         Ok(())
     }
 
     /// Computes derived properties of 3D mesh
     fn compute_derived_props_3d(&mut self) -> Result<(), StrError> {
-        // reset data
-        self.derived_props_computed = false;
-        self.boundary_points = HashSet::new();
-        self.boundary_edges = HashMap::new();
-        self.boundary_faces = HashMap::new();
-
         // auxiliary maps
         let mut all_shapes: HashMap<Kind, Box<dyn Shape>> = HashMap::new();
         let mut all_faces: HashMap<FaceKey, Face> = HashMap::new();
@@ -652,7 +617,6 @@ impl Mesh {
                     all_faces.insert(
                         face_key,
                         Face {
-                            group: 0,
                             points: face_points,
                             shared_by_cells,
                         },
@@ -714,7 +678,6 @@ impl Mesh {
                     self.boundary_edges.insert(
                         edge_key,
                         Edge {
-                            group: 0,
                             points: edge_points,
                             shared_by_2d_cells: HashSet::new(),
                             shared_by_boundary_faces,
@@ -723,9 +686,6 @@ impl Mesh {
                 }
             }
         }
-
-        // done
-        self.derived_props_computed = true;
         Ok(())
     }
 
@@ -787,19 +747,19 @@ impl fmt::Display for Mesh {
             shared_by_boundary_faces.sort();
             write!(
                 f,
-                "i:{} g:{} x:{:?} e:{:?} f:{:?}\n",
-                point.id, point.group, point.coords, shared_by_boundary_edges, shared_by_boundary_faces,
+                "i:{} x:{:?} e:{:?} f:{:?}\n",
+                point.id, point.coords, shared_by_boundary_edges, shared_by_boundary_faces,
             )
             .unwrap();
         }
 
-        // cells: i=index, g=group, p=points
+        // cells: i=index, a=attribute_id, p=points
         write!(f, "\ncells\n").unwrap();
         for cell in &self.cells {
             write!(
                 f,
-                "i:{} g:{} n:{} p:{:?}\n",
-                cell.id, cell.group, cell.ndim, cell.points,
+                "i:{} a:{} n:{} p:{:?}\n",
+                cell.id, cell.attribute_id, cell.ndim, cell.points,
             )
             .unwrap();
         }
@@ -815,7 +775,7 @@ impl fmt::Display for Mesh {
             write!(f, "\n").unwrap();
         }
 
-        // boundary edges: i=index, g=group, k=key(point,point), p=point_ids c=shared_by_2d_cells f=shared_by_boundary_faces
+        // boundary edges: k=key(point,point), p=point_ids c=shared_by_2d_cells f=shared_by_boundary_faces
         write!(f, "\nboundary_edges\n").unwrap();
         let mut keys_and_edges: Vec<_> = self.boundary_edges.keys().zip(self.boundary_edges.values()).collect();
         keys_and_edges.sort_by(|left, right| left.0.cmp(&right.0));
@@ -826,13 +786,13 @@ impl fmt::Display for Mesh {
             shared_by_boundary_faces.sort();
             write!(
                 f,
-                "g:{} k:({},{}) p:{:?} c:{:?} f:{:?}\n",
-                edge.group, key.0, key.1, edge.points, shared_by_2d_cells, shared_by_boundary_faces,
+                "k:({},{}) p:{:?} c:{:?} f:{:?}\n",
+                key.0, key.1, edge.points, shared_by_2d_cells, shared_by_boundary_faces,
             )
             .unwrap();
         }
 
-        // boundary_faces: i=index, g=group, k=key(point,point,point), p=point_ids, c=shared_by_cells
+        // boundary_faces: k=key(point,point,point), p=point_ids, c=shared_by_cells
         write!(f, "\nboundary_faces\n").unwrap();
         let mut keys_and_faces: Vec<_> = self.boundary_faces.keys().zip(self.boundary_faces.values()).collect();
         keys_and_faces.sort_by(|left, right| left.0.cmp(&right.0));
@@ -841,8 +801,8 @@ impl fmt::Display for Mesh {
             shared_by_cells.sort();
             write!(
                 f,
-                "g:{} k:({},{},{}) p:{:?} c:{:?}\n",
-                face.group, key.0, key.1, key.2, face.points, shared_by_cells
+                "k:({},{},{}) p:{:?} c:{:?}\n",
+                key.0, key.1, key.2, face.points, shared_by_cells
             )
             .unwrap();
         }
@@ -871,10 +831,10 @@ mod tests {
         let mesh = Mesh::from_text(
             r"
             2 4 1
-            0 0  0.0 0.0
-            1 0  1.0 0.0
-            2 0  1.0 1.0
-            3 0  0.0 1.0
+            0  0.0 0.0
+            1  1.0 0.0
+            2  1.0 1.0
+            3  0.0 1.0
             0 0  2 4  0 1 2 3
         ",
         )?;
@@ -889,22 +849,22 @@ mod tests {
              n_boundary_face = 0\n\
              \n\
              points\n\
-             i:0 g:0 x:[0.0, 0.0] e:[] f:[]\n\
-             i:1 g:0 x:[1.0, 0.0] e:[] f:[]\n\
-             i:2 g:0 x:[1.0, 1.0] e:[] f:[]\n\
-             i:3 g:0 x:[0.0, 1.0] e:[] f:[]\n\
+             i:0 x:[0.0, 0.0] e:[] f:[]\n\
+             i:1 x:[1.0, 0.0] e:[] f:[]\n\
+             i:2 x:[1.0, 1.0] e:[] f:[]\n\
+             i:3 x:[0.0, 1.0] e:[] f:[]\n\
              \n\
              cells\n\
-             i:0 g:0 n:2 p:[0, 1, 2, 3]\n\
+             i:0 a:0 n:2 p:[0, 1, 2, 3]\n\
              \n\
              boundary_points\n\
              0 1 2 3 \n\
              \n\
              boundary_edges\n\
-             g:0 k:(0,1) p:[0, 1] c:[0] f:[]\n\
-             g:0 k:(0,3) p:[3, 0] c:[0] f:[]\n\
-             g:0 k:(1,2) p:[1, 2] c:[0] f:[]\n\
-             g:0 k:(2,3) p:[2, 3] c:[0] f:[]\n\
+             k:(0,1) p:[0, 1] c:[0] f:[]\n\
+             k:(0,3) p:[3, 0] c:[0] f:[]\n\
+             k:(1,2) p:[1, 2] c:[0] f:[]\n\
+             k:(2,3) p:[2, 3] c:[0] f:[]\n\
              \n\
              boundary_faces\n"
         );
