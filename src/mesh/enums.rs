@@ -29,10 +29,3 @@ pub enum At {
     /// Holds: (axis_1_x, axis_1_y, axis_1_z, axis_2_x, axis_2_y, axis_2_z, radius).
     Cylinder(f64, f64, f64, f64, f64, f64, f64),
 }
-
-/// Defines geometric features by locating individual points or points along edges or faces
-pub enum Geo {
-    Point(At),
-    Edge(At),
-    Face(At),
-}

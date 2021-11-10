@@ -1,5 +1,5 @@
 use super::read_mesh::{parse_mesh, read_mesh};
-use super::{At, Geo};
+use super::At;
 use crate::shapes::{kind_from_ndim_npoint, new_shape, Kind, Shape};
 use crate::util::GridSearch;
 use crate::StrError;
@@ -23,7 +23,7 @@ pub type EdgeKey = (usize, usize);
 pub type FaceKey = (usize, usize, usize);
 
 /// Aliases usize as the group of boundary Point, Edge or Face
-pub type Group = usize;
+pub type Group = String;
 
 /// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -145,17 +145,17 @@ pub struct Mesh {
     /// (derived property)
     pub boundary_faces: HashMap<FaceKey, Face>,
 
-    /// Collects all boundary point (non-zero) groups
+    /// Collects all boundary point groups
     ///
     /// (derived property)
     pub groups_boundary_points: HashMap<Group, HashSet<Index>>,
 
-    /// Collects all boundary edge (non-zero) groups
+    /// Collects all boundary edge groups
     ///
     /// (derived property)
     pub groups_boundary_edges: HashMap<Group, HashSet<EdgeKey>>,
 
-    /// Collects all boundary face (non-zero) groups
+    /// Collects all boundary face groups
     ///
     /// (derived property)
     pub groups_boundary_faces: HashMap<Group, HashSet<FaceKey>>,
@@ -316,61 +316,74 @@ impl Mesh {
         self.groups_boundary_faces.clear();
     }
 
-    /// Sets a non-zero group of geometric shapes on the boundaries
-    pub fn set_boundary_group(&mut self, group: Group, geo: Geo) -> Result<(), StrError> {
+    /// Sets group of points on the boundary
+    pub fn set_group_points(&mut self, group: &str, at: At) -> Result<&mut Self, StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
-        if group == 0 {
-            return Err("the group must be greater than zero");
-        }
-
-        match geo {
-            Geo::Point(at) => {
-                // find all points near the geometric feature
-                for id in self.find_points(&at)? {
-                    // update groups map
-                    if self.groups_boundary_points.contains_key(&group) {
-                        let ids = self.groups_boundary_points.get_mut(&group).unwrap();
-                        ids.insert(id);
-                    // new groups map
-                    } else {
-                        let mut ids = HashSet::new();
-                        ids.insert(id);
-                        self.groups_boundary_points.insert(group, ids);
-                    }
-                }
+        // find all points near the geometric feature
+        for id in self.find_points(&at)? {
+            // update groups map
+            if self.groups_boundary_points.contains_key(group) {
+                let ids = self.groups_boundary_points.get_mut(group).unwrap();
+                ids.insert(id);
+            // new groups map
+            } else {
+                let mut ids = HashSet::new();
+                ids.insert(id);
+                self.groups_boundary_points.insert(group.to_string(), ids);
             }
-            Geo::Edge(at) => {
-                // find all points near the geometric feature
-                let indices = &self.find_points(&at)?;
-                for id in indices {
-                    // loop over all boundary edges touching this point
-                    let point = &self.points[*id];
-                    for key in &point.shared_by_boundary_edges {
-                        // check if two edge points pass through the geometric feature
-                        if indices.contains(&key.0) && indices.contains(&key.1) {
-                            if self.boundary_edges.contains_key(&key) {
-                                // update groups map
-                                if self.groups_boundary_edges.contains_key(&group) {
-                                    let keys = self.groups_boundary_edges.get_mut(&group).unwrap();
-                                    keys.insert(key.clone());
-                                // new groups map
-                                } else {
-                                    let mut keys = HashSet::new();
-                                    keys.insert(key.clone());
-                                    self.groups_boundary_edges.insert(group, keys);
-                                }
-                            }
+        }
+        Ok(self)
+    }
+
+    /// Sets group of edges on the boundary
+    pub fn set_group_edges(&mut self, group: &str, at: At) -> Result<&mut Self, StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+        // find all points near the geometric feature
+        let indices = &self.find_points(&at)?;
+        for id in indices {
+            // loop over all boundary edges touching this point
+            let point = &self.points[*id];
+            for key in &point.shared_by_boundary_edges {
+                // check if two edge points pass through the geometric feature
+                if indices.contains(&key.0) && indices.contains(&key.1) {
+                    if self.boundary_edges.contains_key(&key) {
+                        // update groups map
+                        if self.groups_boundary_edges.contains_key(group) {
+                            let keys = self.groups_boundary_edges.get_mut(group).unwrap();
+                            keys.insert(key.clone());
+                        // new groups map
+                        } else {
+                            let mut keys = HashSet::new();
+                            keys.insert(key.clone());
+                            self.groups_boundary_edges.insert(group.to_string(), keys);
                         }
                     }
                 }
             }
-            Geo::Face(_) => {
-                // todo
-            }
-        };
-        Ok(())
+        }
+        Ok(self)
+    }
+
+    pub fn get_boundary_point_ids_sorted(&self, group: &str) -> Vec<Index> {
+        if let Some(points) = self.groups_boundary_points.get(group) {
+            let mut ids: Vec<_> = points.iter().map(|id| *id).collect();
+            ids.sort();
+            return ids;
+        }
+        Vec::new()
+    }
+
+    pub fn get_boundary_edge_keys_sorted(&self, group: &str) -> Vec<EdgeKey> {
+        if let Some(edges) = self.groups_boundary_edges.get(group) {
+            let mut keys: Vec<_> = edges.iter().map(|key| *key).collect();
+            keys.sort();
+            return keys;
+        }
+        Vec::new()
     }
 
     // ======================================================================================================
@@ -889,11 +902,11 @@ mod tests {
         ",
         )?;
 
-        mesh.set_boundary_group(1, Geo::Point(At::XY(0.0, 0.0)))?;
-        mesh.set_boundary_group(2, Geo::Point(At::X(0.0)))?;
-        mesh.set_boundary_group(3, Geo::Point(At::X(1.0)))?;
-        mesh.set_boundary_group(4, Geo::Point(At::Y(0.0)))?;
-        mesh.set_boundary_group(5, Geo::Point(At::Y(1.0)))?;
+        mesh.set_group_points("origin", At::XY(0.0, 0.0))?
+            .set_group_edges("left", At::X(0.0))?
+            .set_group_edges("right", At::X(1.0))?
+            .set_group_edges("bottom", At::Y(0.0))?
+            .set_group_edges("top", At::Y(1.0))?;
 
         println!("{}", mesh);
 
