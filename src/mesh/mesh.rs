@@ -165,20 +165,20 @@ pub struct Mesh {
     /// (derived property)
     pub boundary_faces: HashMap<FaceKey, Face>,
 
-    /// Collects all non-zero point groups
+    /// Collects all boundary point (non-zero) groups
     ///
     /// (derived property)
-    pub non_zero_point_groups: HashMap<Group, HashSet<Index>>,
+    pub groups_boundary_points: HashMap<Group, HashSet<Index>>,
 
-    /// Collects all non-zero edge groups
+    /// Collects all boundary edge (non-zero) groups
     ///
     /// (derived property)
-    pub non_zero_edge_groups: HashMap<Group, HashSet<EdgeKey>>,
+    pub groups_boundary_edges: HashMap<Group, HashSet<EdgeKey>>,
 
-    /// Collects all non-zero face groups
+    /// Collects all boundary face (non-zero) groups
     ///
     /// (derived property)
-    pub non_zero_face_groups: HashMap<Group, HashSet<FaceKey>>,
+    pub groups_boundary_faces: HashMap<Group, HashSet<FaceKey>>,
 
     /// Min coordinates
     ///
@@ -190,8 +190,8 @@ pub struct Mesh {
     /// (derived property)
     pub max: Vec<f64>,
 
-    /// Allows searching using point coordinates
-    pub grid: GridSearch,
+    /// Allows searching boundary points using their coordinates
+    grid_boundary_points: GridSearch,
 
     /// Indicates whether the derived variables and maps have been computed or not
     derived_props_computed: bool,
@@ -210,12 +210,12 @@ impl Mesh {
             boundary_points: HashSet::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
-            non_zero_point_groups: HashMap::new(),
-            non_zero_edge_groups: HashMap::new(),
-            non_zero_face_groups: HashMap::new(),
+            groups_boundary_points: HashMap::new(),
+            groups_boundary_edges: HashMap::new(),
+            groups_boundary_faces: HashMap::new(),
             min: Vec::new(),
             max: Vec::new(),
-            grid: GridSearch::new(ndim)?,
+            grid_boundary_points: GridSearch::new(ndim)?,
             derived_props_computed: false,
         })
     }
@@ -251,12 +251,12 @@ impl Mesh {
             boundary_points: HashSet::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
-            non_zero_point_groups: HashMap::new(),
-            non_zero_edge_groups: HashMap::new(),
-            non_zero_face_groups: HashMap::new(),
+            groups_boundary_points: HashMap::new(),
+            groups_boundary_edges: HashMap::new(),
+            groups_boundary_faces: HashMap::new(),
             min: Vec::new(),
             max: Vec::new(),
-            grid: GridSearch::new(ndim)?,
+            grid_boundary_points: GridSearch::new(ndim)?,
             derived_props_computed: false,
         })
     }
@@ -324,8 +324,15 @@ impl Mesh {
         }
     }
 
-    /// Sets a non-zero group of geometric shapes
-    pub fn set_group(&mut self, group: Group, geo: Geo) -> Result<(), StrError> {
+    /// Clears all boundary groups
+    pub fn clear_boundary_groups(&mut self) {
+        self.groups_boundary_points.clear();
+        self.groups_boundary_edges.clear();
+        self.groups_boundary_faces.clear();
+    }
+
+    /// Sets a non-zero group of geometric shapes on the boundaries
+    pub fn set_boundary_group(&mut self, group: Group, geo: Geo) -> Result<(), StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
@@ -337,47 +344,44 @@ impl Mesh {
             Geo::Point(at) => {
                 // find all points near the geometric feature
                 for id in self.find_points(&at)? {
+                    // set group of point
                     self.points[id].group = group;
-                    /*
-                    // update map
-                    if self.point_groups.contains_key(&group) {
-                        let indices = self.point_groups.get_mut(&group).unwrap();
-                        indices.insert(id);
-                    // new map
+                    // update groups map
+                    if self.groups_boundary_points.contains_key(&group) {
+                        let ids = self.groups_boundary_points.get_mut(&group).unwrap();
+                        ids.insert(id);
+                    // new groups map
                     } else {
-                        let mut indices = HashSet::new();
-                        indices.insert(id);
-                        self.point_groups.insert(group, indices);
+                        let mut ids = HashSet::new();
+                        ids.insert(id);
+                        self.groups_boundary_points.insert(group, ids);
                     }
-                    */
                 }
             }
             Geo::Edge(at) => {
                 // find all points near the geometric feature
                 let indices = &self.find_points(&at)?;
                 for id in indices {
-                    // loop over all edges touching this point
+                    // loop over all boundary edges touching this point
                     let point = &self.points[*id];
                     for key in &point.shared_by_boundary_edges {
                         // check if two edge points pass through the geometric feature
                         if indices.contains(&key.0) && indices.contains(&key.1) {
-                            // update map
                             if self.boundary_edges.contains_key(&key) {
+                                // set group of edge
                                 let edge = self.boundary_edges.get_mut(&key).unwrap();
                                 edge.group = group;
-                            }
-                            /*
-                                // update map
-                                if self.edge_groups.contains_key(&group) {
-                                    let keys = self.edge_groups.get_mut(&group).unwrap();
+                                // update groups map
+                                if self.groups_boundary_edges.contains_key(&group) {
+                                    let keys = self.groups_boundary_edges.get_mut(&group).unwrap();
                                     keys.insert(key.clone());
-                                // new map
+                                // new groups map
                                 } else {
                                     let mut keys = HashSet::new();
                                     keys.insert(key.clone());
-                                    self.edge_groups.insert(group, keys);
+                                    self.groups_boundary_edges.insert(group, keys);
                                 }
-                            */
+                            }
                         }
                     }
                 }
@@ -403,22 +407,22 @@ impl Mesh {
         match at {
             At::X(x) => {
                 if self.ndim == 2 {
-                    for id in self.grid.find_on_line(&[*x, 0.0], &[*x, 1.0]).unwrap() {
+                    for id in self.grid_boundary_points.find_on_line(&[*x, 0.0], &[*x, 1.0]).unwrap() {
                         points.insert(id);
                     }
                 } else {
-                    for id in self.grid.find_on_plane_yz(*x).unwrap() {
+                    for id in self.grid_boundary_points.find_on_plane_yz(*x).unwrap() {
                         points.insert(id);
                     }
                 }
             }
             At::Y(y) => {
                 if self.ndim == 2 {
-                    for id in self.grid.find_on_line(&[0.0, *y], &[1.0, *y]).unwrap() {
+                    for id in self.grid_boundary_points.find_on_line(&[0.0, *y], &[1.0, *y]).unwrap() {
                         points.insert(id);
                     }
                 } else {
-                    for id in self.grid.find_on_plane_xz(*y).unwrap() {
+                    for id in self.grid_boundary_points.find_on_plane_xz(*y).unwrap() {
                         points.insert(id);
                     }
                 }
@@ -427,18 +431,22 @@ impl Mesh {
                 if self.ndim == 2 {
                     return Err("At::Z works in 3D only");
                 } else {
-                    for id in self.grid.find_on_plane_xy(*z).unwrap() {
+                    for id in self.grid_boundary_points.find_on_plane_xy(*z).unwrap() {
                         points.insert(id);
                     }
                 }
             }
             At::XY(x, y) => {
                 if self.ndim == 2 {
-                    if let Some(id) = self.grid.find(&[*x, *y]).unwrap() {
+                    if let Some(id) = self.grid_boundary_points.find(&[*x, *y]).unwrap() {
                         points.insert(id);
                     }
                 } else {
-                    for id in self.grid.find_on_line(&[*x, *y, 0.0], &[*x, *y, 1.0]).unwrap() {
+                    for id in self
+                        .grid_boundary_points
+                        .find_on_line(&[*x, *y, 0.0], &[*x, *y, 1.0])
+                        .unwrap()
+                    {
                         points.insert(id);
                     }
                 }
@@ -447,7 +455,11 @@ impl Mesh {
                 if self.ndim == 2 {
                     return Err("At::YZ works in 3D only");
                 } else {
-                    for id in self.grid.find_on_line(&[0.0, *y, *z], &[1.0, *y, *z]).unwrap() {
+                    for id in self
+                        .grid_boundary_points
+                        .find_on_line(&[0.0, *y, *z], &[1.0, *y, *z])
+                        .unwrap()
+                    {
                         points.insert(id);
                     }
                 }
@@ -456,7 +468,11 @@ impl Mesh {
                 if self.ndim == 2 {
                     return Err("At::XZ works in 3D only");
                 } else {
-                    for id in self.grid.find_on_line(&[*x, 0.0, *z], &[*x, 1.0, *z]).unwrap() {
+                    for id in self
+                        .grid_boundary_points
+                        .find_on_line(&[*x, 0.0, *z], &[*x, 1.0, *z])
+                        .unwrap()
+                    {
                         points.insert(id);
                     }
                 }
@@ -465,14 +481,14 @@ impl Mesh {
                 if self.ndim == 2 {
                     return Err("At::XYZ works in 3D only");
                 } else {
-                    if let Some(id) = self.grid.find(&[*x, *y, *z]).unwrap() {
+                    if let Some(id) = self.grid_boundary_points.find(&[*x, *y, *z]).unwrap() {
                         points.insert(id);
                     }
                 }
             }
             At::Circle(x, y, r) => {
                 if self.ndim == 2 {
-                    for id in self.grid.find_on_circle(&[*x, *y], *r).unwrap() {
+                    for id in self.grid_boundary_points.find_on_circle(&[*x, *y], *r).unwrap() {
                         points.insert(id);
                     }
                 } else {
@@ -484,7 +500,7 @@ impl Mesh {
                     return Err("At::Cylinder works in 3D only");
                 } else {
                     for id in self
-                        .grid
+                        .grid_boundary_points
                         .find_on_cylinder(&[*ax, *ay, *az], &[*bx, *by, *bz], *r)
                         .unwrap()
                     {
@@ -913,11 +929,11 @@ mod tests {
         ",
         )?;
 
-        mesh.set_group(1, Geo::Point(At::XY(0.0, 0.0)))?;
-        mesh.set_group(2, Geo::Point(At::X(0.0)))?;
-        mesh.set_group(3, Geo::Point(At::X(1.0)))?;
-        mesh.set_group(4, Geo::Point(At::Y(0.0)))?;
-        mesh.set_group(5, Geo::Point(At::Y(1.0)))?;
+        mesh.set_boundary_group(1, Geo::Point(At::XY(0.0, 0.0)))?;
+        mesh.set_boundary_group(2, Geo::Point(At::X(0.0)))?;
+        mesh.set_boundary_group(3, Geo::Point(At::X(1.0)))?;
+        mesh.set_boundary_group(4, Geo::Point(At::Y(0.0)))?;
+        mesh.set_boundary_group(5, Geo::Point(At::Y(1.0)))?;
 
         println!("{}", mesh);
 
