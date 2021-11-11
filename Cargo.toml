@@ -15,6 +15,6 @@ keywords = ["geometry", "mesh", "fem"]
 plotpy = { path = "../plotpy", version = "0.2" }
 russell_chk = "0.2"
 russell_lab = { path = "../russell/russell_lab", version = "0.2" }
-russell_sparse = "0.2"
+russell_sparse = { path = "../russell/russell_sparse", version = "0.2" }
 serde = { version = "1.0", features = ["derive"] }
 rmp-serde = "1.0.0-beta.2"

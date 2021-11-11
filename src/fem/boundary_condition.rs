@@ -14,7 +14,7 @@ pub struct PointBc {
     pub bc: Bc,
     pub dof: Dof,
     pub f: FnTimeSpace,
-    pub id: Index,
+    pub point_id: Index,
 }
 
 #[derive(Clone, Copy)]
@@ -22,5 +22,5 @@ pub struct EdgeBc {
     pub bc: Bc,
     pub dof: Dof,
     pub f: FnTimeSpace,
-    pub key: EdgeKey,
+    pub edge_key: EdgeKey,
 }

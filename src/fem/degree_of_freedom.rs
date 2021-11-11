@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use crate::StrError;
+
 /// Defines the type of degree-of-freedom
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Dof {
@@ -55,6 +57,13 @@ impl SystemDofs {
 
     pub fn get_number_of_equations(&self) -> usize {
         self.reverse_map.len()
+    }
+
+    pub fn get_equation(&self, point_id: usize, dof: Dof) -> Result<usize, StrError> {
+        match self.map.get(&(point_id, dof)) {
+            Some(equation) => Ok(*equation),
+            None => Err("cannot get equation for given point_id and dof"),
+        }
     }
 }
 

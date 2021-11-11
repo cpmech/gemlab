@@ -49,6 +49,10 @@ impl Element for ElementSolid {
         }
     }
 
+    fn get_nnz(&self) -> usize {
+        0
+    }
+
     fn compute_ke(&mut self) -> Result<(), StrError> {
         Ok(())
     }

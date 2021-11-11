@@ -22,6 +22,8 @@ pub enum ElementKind {
 pub trait Element {
     fn assign_dofs(&self, dofs: &mut SystemDofs);
 
+    fn get_nnz(&self) -> usize;
+
     fn compute_ke(&mut self) -> Result<(), StrError>;
 
     fn add_ke_to_kk(&self, kk: &mut SparseTriplet) -> Result<(), StrError>;

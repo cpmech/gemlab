@@ -2,7 +2,7 @@ use super::{new_element, Attribute, Bc, Dof, EdgeBc, Element, FnTimeSpace, Point
 use crate::mesh::Mesh;
 use crate::StrError;
 use russell_lab::Vector;
-use russell_sparse::{SparseTriplet, Symmetry};
+use russell_sparse::{ConfigSolver, Solver, SparseTriplet, Symmetry};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -13,6 +13,9 @@ pub struct Simulation {
     attributes: HashMap<usize, Attribute>,
     elements: Vec<Box<dyn Element>>,
     system_dofs: SystemDofs,
+    system_kk: SparseTriplet,
+    system_uu: Vector,
+    system_ff: Vector,
 }
 
 impl Simulation {
@@ -24,13 +27,21 @@ impl Simulation {
             attributes: HashMap::new(),
             elements: Vec::new(),
             system_dofs: SystemDofs::new(),
+            system_kk: SparseTriplet::new(0, 0, 0, Symmetry::No)?,
+            system_uu: Vector::new(0),
+            system_ff: Vector::new(0),
         })
     }
 
     pub fn add_point_bc(&mut self, group: &str, bc: Bc, dof: Dof, f: FnTimeSpace) -> &mut Self {
         let ids = self.mesh.get_boundary_point_ids_sorted(group);
         for id in ids {
-            self.point_bcs.push(PointBc { bc, dof, f, id });
+            self.point_bcs.push(PointBc {
+                bc,
+                dof,
+                f,
+                point_id: id,
+            });
         }
         self
     }
@@ -38,7 +49,12 @@ impl Simulation {
     pub fn add_edge_bc(&mut self, group: &str, bc: Bc, dof: Dof, f: FnTimeSpace) -> &mut Self {
         let keys = self.mesh.get_boundary_edge_keys_sorted(group);
         for key in keys {
-            self.edge_bcs.push(EdgeBc { bc, dof, f, key });
+            self.edge_bcs.push(EdgeBc {
+                bc,
+                dof,
+                f,
+                edge_key: key,
+            });
         }
         self
     }
@@ -49,7 +65,8 @@ impl Simulation {
     }
 
     pub fn initialize(&mut self) -> Result<(), StrError> {
-        // allocate all elements and DOFs
+        // allocate all elements and DOFs and count the number of non-zeros in the kk matrix
+        let mut nnz = 0;
         for cell in &self.mesh.cells {
             match self.attributes.get(&cell.attribute_id) {
                 Some(attribute) => {
@@ -58,22 +75,22 @@ impl Simulation {
                     }
                     let element = new_element(attribute.kind, &self.mesh, cell.id)?;
                     element.assign_dofs(&mut self.system_dofs);
+                    nnz += element.get_nnz();
                     self.elements.push(element);
                 }
                 None => return Err("cannot find cell with a specific attribute id"),
             };
         }
+
+        // allocate system vector and matrix
+        let nequation = self.system_dofs.get_number_of_equations();
+        self.system_ff = Vector::new(nequation);
+        self.system_kk = SparseTriplet::new(nequation, nequation, nnz, Symmetry::No)?;
         Ok(())
     }
 
     pub fn run(&mut self) -> Result<(), StrError> {
         let time = 0.0; // time
-
-        let n = 2;
-        let nnz = 2;
-        let mut uu = Vector::new(n);
-        let mut ff = Vector::new(n);
-        let mut kk = SparseTriplet::new(n, n, nnz, Symmetry::No)?;
 
         // assemble element Ke matrices (can be done in parallel)
         for element in &mut self.elements {
@@ -82,46 +99,29 @@ impl Simulation {
 
         // add element Ke matrix to global K matrix (must be serial)
         for element in &self.elements {
-            element.add_ke_to_kk(&mut kk)?;
+            element.add_ke_to_kk(&mut self.system_kk)?;
         }
 
         // add element Fe vector to global F vector (must be serial)
         for element in &self.elements {
-            element.add_fe_to_ff(&mut ff)?;
-        }
-
-        let i = 0;
-
-        // handle point boundary conditions
-        for item in &self.point_bcs {
-            let x = &self.mesh.points[item.id].coords;
-            let val = (item.f)(time, x);
-            match item.bc {
-                Bc::Essential => {
-                    kk.put(i, i, 1.0);
-                    uu[i] = val;
-                    ff[i] = val;
-                }
-                Bc::Natural => {
-                    ff[i] = val;
-                }
-            }
+            element.add_fe_to_ff(&mut self.system_ff)?;
         }
 
         // handle edge boundary conditions
         for item in &self.edge_bcs {
-            let edge = match self.mesh.boundary_edges.get(&item.key) {
+            let edge = match self.mesh.boundary_edges.get(&item.edge_key) {
                 Some(e) => e,
                 None => return Err("cannot find boundary edge"),
             };
             match item.bc {
                 Bc::Essential => {
-                    for id in &edge.points {
-                        let x = &self.mesh.points[*id].coords;
+                    for point_id in &edge.points {
+                        let x = &self.mesh.points[*point_id].coords;
                         let val = (item.f)(time, x);
-                        kk.put(i, i, 1.0);
-                        uu[i] = val;
-                        ff[i] = val;
+                        let eq = self.system_dofs.get_equation(*point_id, item.dof)?;
+                        self.system_kk.put(eq, eq, 1.0);
+                        self.system_uu[eq] = val;
+                        self.system_ff[eq] = val;
                     }
                 }
                 Bc::Natural => {
@@ -129,6 +129,30 @@ impl Simulation {
                 }
             }
         }
+
+        // handle point boundary conditions
+        for item in &self.point_bcs {
+            let x = &self.mesh.points[item.point_id].coords;
+            let val = (item.f)(time, x);
+            let eq = self.system_dofs.get_equation(item.point_id, item.dof)?;
+            match item.bc {
+                Bc::Essential => {
+                    self.system_kk.put(eq, eq, 1.0);
+                    self.system_uu[eq] = val;
+                    self.system_ff[eq] = val;
+                }
+                Bc::Natural => {
+                    self.system_ff[eq] = val;
+                }
+            }
+        }
+
+        // solve system
+        let config = ConfigSolver::new();
+        let mut solver = Solver::new(config)?;
+        solver.initialize(&self.system_kk)?;
+        solver.factorize()?;
+        solver.solve(&mut self.system_uu, &self.system_ff)?;
 
         Ok(())
     }
