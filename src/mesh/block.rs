@@ -78,8 +78,8 @@ pub enum Constraint {
 ///               1
 ///  
 pub struct Block {
-    group: usize,             // group of all elements in this block
-    ndim: usize,              // space dimension
+    attribute_id: usize,      // attribute ID of all elements in this block
+    space_ndim: usize,        // space dimension
     npoint: usize,            // number of points (8 or 20) (quadratic block internally)
     nedge: usize,             // number of edges (4 or 12)
     nface: usize,             // number of faces (4 or 6)
@@ -112,15 +112,17 @@ impl Block {
     const VALID_OUTPUT_NPOINT_3D: [usize; 2] = [8, 20];
 
     /// Creates a new Block with default options
-    pub fn new(ndim: usize) -> Result<Self, StrError> {
+    pub fn new(space_ndim: usize) -> Result<Self, StrError> {
         // check
-        if ndim < 2 || ndim > 3 {
-            return Err("ndim must be 2 or 3");
+        if space_ndim < 2 || space_ndim > 3 {
+            return Err("space_ndim must be 2 or 3");
         }
 
         // shape
-        let shape = if ndim == 2 { new_shape(2, 8)? } else { new_shape(3, 20)? };
-        let (npoint, nedge, nface) = (shape.get_npoint(), shape.get_nedge(), shape.get_nface());
+        let shape_ndim = space_ndim;
+        let npoint = if shape_ndim == 2 { 8 } else { 20 };
+        let shape = new_shape(space_ndim, shape_ndim, npoint)?;
+        let (nedge, nface) = (shape.get_nedge(), shape.get_nface());
 
         // constants
         const NDIV: usize = 2;
@@ -129,23 +131,27 @@ impl Block {
         const GRID_MAX: f64 = 1.0;
 
         // grid
-        let mut grid_ksi = GridSearch::new(ndim)?;
-        grid_ksi.set_tolerances(&vec![Block::NAT_TOLERANCE; ndim])?;
-        grid_ksi.initialize(&vec![GRID_NDIV; ndim], &vec![GRID_MIN; ndim], &vec![GRID_MAX; ndim])?;
+        let mut grid_ksi = GridSearch::new(space_ndim)?;
+        grid_ksi.set_tolerances(&vec![Block::NAT_TOLERANCE; space_ndim])?;
+        grid_ksi.initialize(
+            &vec![GRID_NDIV; space_ndim],
+            &vec![GRID_MIN; space_ndim],
+            &vec![GRID_MAX; space_ndim],
+        )?;
 
         // done
         Ok(Block {
-            group: 1,
-            ndim,
+            attribute_id: 1,
+            space_ndim,
             npoint,
             nedge,
             nface,
-            coords: Matrix::new(npoint, ndim),
+            coords: Matrix::new(npoint, space_ndim),
             point_groups: vec![0; npoint],
             edge_groups: vec![0; nedge],
             face_groups: vec![0; nface],
-            ndiv: vec![NDIV; ndim],
-            delta_ksi: vec![vec![1.0; NDIV]; ndim],
+            ndiv: vec![NDIV; space_ndim],
+            delta_ksi: vec![vec![1.0; NDIV]; space_ndim],
             edge_constraints: vec![None; nedge],
             face_constraints: vec![None; nface],
             shape,
@@ -155,7 +161,7 @@ impl Block {
 
     /// Sets group
     pub fn set_group(&mut self, group: usize) -> &mut Self {
-        self.group = group;
+        self.attribute_id = group;
         self
     }
 
@@ -175,8 +181,8 @@ impl Block {
     {
         // check
         let (nrow, ncol) = coords.size();
-        assert_eq!(ncol, self.ndim);
-        if self.ndim == 2 {
+        assert_eq!(ncol, self.space_ndim);
+        if self.space_ndim == 2 {
             assert!(nrow == 4 || nrow == 8);
         } else {
             assert!(nrow == 8 || nrow == 20);
@@ -188,16 +194,16 @@ impl Block {
             }
         }
         // generate mid points
-        if self.ndim == 2 && nrow == 4 {
-            for i in 0..self.ndim {
+        if self.space_ndim == 2 && nrow == 4 {
+            for i in 0..self.space_ndim {
                 self.coords[4][i] = (self.coords[0][i] + self.coords[1][i]) / 2.0;
                 self.coords[5][i] = (self.coords[1][i] + self.coords[2][i]) / 2.0;
                 self.coords[6][i] = (self.coords[2][i] + self.coords[3][i]) / 2.0;
                 self.coords[7][i] = (self.coords[3][i] + self.coords[0][i]) / 2.0;
             }
         }
-        if self.ndim == 3 && nrow == 8 {
-            for i in 0..self.ndim {
+        if self.space_ndim == 3 && nrow == 8 {
+            for i in 0..self.space_ndim {
                 self.coords[8][i] = (self.coords[0][i] + self.coords[1][i]) / 2.0;
                 self.coords[9][i] = (self.coords[1][i] + self.coords[2][i]) / 2.0;
                 self.coords[10][i] = (self.coords[2][i] + self.coords[3][i]) / 2.0;
@@ -261,8 +267,8 @@ impl Block {
     /// where `L=2` is the edge-length (in natural coordinates) and `wᵐ` are
     /// the weights for each division `m`.
     pub fn set_ndiv(&mut self, ndiv: &[usize]) -> &mut Self {
-        assert_eq!(ndiv.len(), self.ndim);
-        for i in 0..self.ndim {
+        assert_eq!(ndiv.len(), self.space_ndim);
+        for i in 0..self.space_ndim {
             assert!(ndiv[i] > 0);
             self.ndiv[i] = ndiv[i];
             let w = 1.0;
@@ -304,7 +310,8 @@ impl Block {
     /// * 3D: [8, 20]
     pub fn subdivide(&mut self, output_npoint: usize) -> Result<Mesh, StrError> {
         // check
-        if self.ndim == 2 {
+        let space_ndim = self.space_ndim;
+        if space_ndim == 2 {
             if !Block::VALID_OUTPUT_NPOINT_2D.contains(&output_npoint) {
                 return Err("output_npoint is invalid");
             }
@@ -315,10 +322,11 @@ impl Block {
         }
 
         // results
-        let mut mesh = Mesh::new(self.ndim)?;
+        let mut mesh = Mesh::new(space_ndim)?;
 
         // auxiliary variables
-        let shape_out = new_shape(self.ndim, output_npoint)?;
+        let shape_ndim = 2;
+        let shape_out = new_shape(space_ndim, shape_ndim, output_npoint)?;
         let npoint_out = shape_out.get_npoint();
 
         // transformation matrix: scale and translate natural space
@@ -327,49 +335,46 @@ impl Block {
         //  |    0.0   scale_y  0.0    translation_y  |
         //  |    0.0     0.0   scale_z translation_z  |
         //  |_   0.0     0.0    0.0         1.0      _|
-        let mut transform = Matrix::identity(self.ndim + 1);
+        let ndim = space_ndim;
+        let mut transform = Matrix::identity(ndim + 1);
 
         // augmented natural coordinates [r,s,1] or [r,s,t,1]
-        let mut ksi_aug = Vector::new(self.ndim + 1);
-        ksi_aug[self.ndim] = 1.0;
+        let mut ksi_aug = Vector::new(ndim + 1);
+        ksi_aug[ndim] = 1.0;
 
         // augmented transformed nat-coordinates
-        let mut ksi = Vector::new(self.ndim + 1);
+        let mut ksi = Vector::new(ndim + 1);
 
         // center of shape in nat-coords
-        let mut center = vec![0.0; self.ndim];
+        let mut center = vec![0.0; ndim];
 
         // real point coordinates
-        let mut x = Vector::new(self.ndim);
+        let mut x = Vector::new(ndim);
 
         // number of divisions along each direction
-        let (nx, ny, nz) = (
-            self.ndiv[0],
-            self.ndiv[1],
-            if self.ndim == 2 { 1 } else { self.ndiv[2] },
-        );
+        let (nx, ny, nz) = (self.ndiv[0], self.ndiv[1], if ndim == 2 { 1 } else { self.ndiv[2] });
 
         // for each z-division
-        if self.ndim == 3 {
+        if ndim == 3 {
             center[2] = -1.0 + self.delta_ksi[2][0] / 2.0;
         }
         for k in 0..nz {
-            if self.ndim == 3 {
+            if ndim == 3 {
                 transform[2][2] = self.delta_ksi[2][k] / Block::NAT_LENGTH; // scale
-                transform[2][self.ndim] = center[2]; // translation
+                transform[2][ndim] = center[2]; // translation
             }
 
             // for each y-division
             center[1] = -1.0 + self.delta_ksi[1][0] / 2.0;
             for j in 0..ny {
                 transform[1][1] = self.delta_ksi[1][j] / Block::NAT_LENGTH; // scale
-                transform[1][self.ndim] = center[1]; // translation
+                transform[1][ndim] = center[1]; // translation
 
                 // for each x-division
                 center[0] = -1.0 + self.delta_ksi[0][0] / 2.0;
                 for i in 0..nx {
                     transform[0][0] = self.delta_ksi[0][i] / Block::NAT_LENGTH; // scale
-                    transform[0][self.ndim] = center[0]; // translation
+                    transform[0][ndim] = center[0]; // translation
 
                     // new cell id
                     let cell_id = mesh.cells.len();
@@ -400,8 +405,8 @@ impl Block {
                     // new cell
                     let cell = Cell {
                         id: cell_id,
-                        attribute_id: self.group,
-                        ndim: shape_out.get_ndim(),
+                        attribute_id: self.attribute_id,
+                        shape_ndim: shape_out.get_ndim(),
                         points,
                         // boundary_edges,
                         // boundary_faces,
@@ -417,7 +422,7 @@ impl Block {
             }
 
             // next z-center
-            if self.ndim == 3 {
+            if ndim == 3 {
                 center[2] += self.delta_ksi[2][k];
             }
         }
@@ -449,7 +454,8 @@ impl Block {
         cell_id: usize,
     ) -> Result<usize, StrError> {
         // handle existent point
-        let ksi = &ksi_vec.as_data()[0..self.ndim];
+        let ndim = self.space_ndim;
+        let ksi = &ksi_vec.as_data()[0..ndim];
         if let Some(index) = self.grid_ksi.find(ksi)? {
             // mesh.points[index].shared_by_cells.insert(cell_id);
             return Ok(index);
@@ -657,7 +663,7 @@ impl Block {
 
     /// Returns whether or not a point is on boundary given its natural coordinates
     fn is_boundary_point(&self, ksi: &Vector) -> bool {
-        for i in 0..self.ndim {
+        for i in 0..self.space_ndim {
             if f64::abs(ksi[i] - Block::NAT_MIN) <= Block::NAT_TOLERANCE {
                 return true;
             }
@@ -699,8 +705,8 @@ mod tests {
     #[test]
     fn new_works() -> Result<(), StrError> {
         let b2d = Block::new(2)?;
-        assert_eq!(b2d.group, 1);
-        assert_eq!(b2d.ndim, 2);
+        assert_eq!(b2d.attribute_id, 1);
+        assert_eq!(b2d.space_ndim, 2);
         assert_eq!(b2d.npoint, 8);
         assert_eq!(b2d.nedge, 4);
         assert_eq!(b2d.nface, 0);
@@ -725,8 +731,8 @@ mod tests {
         assert_eq!(b2d.shape.get_npoint(), 8);
 
         let b3d = Block::new(3)?;
-        assert_eq!(b3d.group, 1);
-        assert_eq!(b3d.ndim, 3);
+        assert_eq!(b3d.attribute_id, 1);
+        assert_eq!(b3d.space_ndim, 3);
         assert_eq!(b3d.npoint, 20);
         assert_eq!(b3d.nedge, 12);
         assert_eq!(b3d.nface, 6);
@@ -771,7 +777,7 @@ mod tests {
     fn set_group_works() -> Result<(), StrError> {
         let mut block = Block::new(2)?;
         block.set_group(2);
-        assert_eq!(block.group, 2);
+        assert_eq!(block.attribute_id, 2);
         Ok(())
     }
 

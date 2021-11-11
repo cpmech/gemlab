@@ -62,14 +62,22 @@ const POINT_NATURAL_COORDS: [[f64; NDIM]; NPOINT] = [
 pub struct Qua8 {
     interp: Vector, // interpolation functions @ natural coordinate (npoint)
     deriv: Matrix,  // derivatives of interpolation functions w.r.t natural coordinate (npoint, ndim)
+    coords: Matrix, // (npoint, space_ndim) real coordinates matrix
 }
 
 impl Qua8 {
-    pub fn new() -> Self {
-        Qua8 {
+    /// Creates a new Qua8
+    ///
+    /// **space_ndim** must be equal to 2 or 3
+    pub fn new(space_ndim: usize) -> Result<Self, StrError> {
+        if space_ndim < 2 || space_ndim > 3 {
+            return Err("space_ndim must be 2 or 3 for Qua8");
+        }
+        Ok(Qua8 {
             interp: Vector::new(NPOINT),
             deriv: Matrix::new(NPOINT, NDIM),
-        }
+            coords: Matrix::new(NPOINT, space_ndim),
+        })
     }
 }
 
@@ -166,6 +174,14 @@ impl Shape for Qua8 {
     fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), StrError> {
         vec_mat_mul(v, 1.0, &self.interp, a)
     }
+
+    fn set_coords(&mut self, m: usize, i: usize, val: f64) {
+        self.coords[m][i] = val;
+    }
+
+    fn get_coords_matrix(&self) -> &Matrix {
+        &self.coords
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -175,9 +191,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn new_works() {
-        let shape = Qua8::new();
+    fn new_works() -> Result<(), StrError> {
+        let shape = Qua8::new(3)?;
         assert_eq!(shape.interp.dim(), NPOINT);
         assert_eq!(shape.deriv.dims(), (NPOINT, NDIM));
+        Ok(())
     }
 }

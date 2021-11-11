@@ -119,7 +119,7 @@ impl DataForReadMesh {
         };
 
         match data.next() {
-            Some(v) => mesh.cells[i].ndim = v.parse().map_err(|_| "cannot parse cell ndim")?,
+            Some(v) => mesh.cells[i].shape_ndim = v.parse().map_err(|_| "cannot parse cell ndim")?,
             None => return Err("cannot read cell ndim"),
         };
 

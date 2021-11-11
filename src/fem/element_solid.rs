@@ -1,4 +1,4 @@
-use super::{Dof, Element, PointDofs};
+use super::{Dof, Element, Nodes, PointDofs};
 use crate::mesh::Mesh;
 use crate::shapes::{new_shape, Shape};
 use crate::StrError;
@@ -12,26 +12,33 @@ pub struct Node {
 }
 
 pub struct ElementSolid {
-    ndim: usize,
+    space_ndim: usize,
     shape: Box<dyn Shape>,
-    nodes: Vec<Node>,
+    // nodes: Vec<Node>,
 }
 
 impl ElementSolid {
     pub fn new(mesh: &Mesh, cell_id: usize) -> Result<Self, StrError> {
         // shape
         let cell = &mesh.cells[cell_id];
-        let ndim = mesh.ndim;
+        let space_ndim = mesh.space_ndim;
+        let shape_ndim = cell.shape_ndim;
         let npoint = cell.points.len();
-        let shape = new_shape(ndim, npoint)?;
+        let mut shape = new_shape(space_ndim, shape_ndim, npoint)?;
+        for m in 0..npoint {
+            for i in 0..space_ndim {
+                shape.set_coords(m, i, mesh.points[cell.points[m]].coords[i]);
+            }
+        }
 
         // node DOFs
-        let node_dofs = if ndim == 2 {
+        let node_dofs = if space_ndim == 2 {
             vec![Dof::Ux, Dof::Uy]
         } else {
             vec![Dof::Ux, Dof::Uy, Dof::Uz]
         };
 
+        /*
         // nodes
         let nodes: Vec<_> = cell
             .points
@@ -42,10 +49,15 @@ impl ElementSolid {
                 coords: mesh.points[*id].coords.clone(),
             })
             .collect();
+            */
+
+        // let coords:Vec<_>=cell.points.iter().map(|id| mesh.points[*id].coords)
 
         // done
-        Ok(ElementSolid { ndim, shape, nodes })
+        Ok(ElementSolid { space_ndim, shape })
     }
+
+    fn assign_dofs(&self, nodes: &mut Nodes) {}
 }
 
 impl Element for ElementSolid {

@@ -18,6 +18,12 @@ pub enum Dof {
     Extra, // extra degree of freedom (e.g., enriched)
 }
 
+/// Defines a key using the point index (ID) and the DOF type
+pub type PointDofKey = (usize, Dof);
+
+/// Holds the number of a DOF in the global system of equations
+pub type EquationNumber = usize;
+
 pub type PointDofs = (Index, Vec<Dof>);
 
 #[derive(Clone, Copy, Debug)]

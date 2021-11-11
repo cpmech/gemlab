@@ -109,11 +109,27 @@ pub trait Shape {
     ///
     /// The interpolation vector must be computed first by calling `calc_interp`.
     fn mul_interp_by_matrix(&self, v: &mut Vector, a: &Matrix) -> Result<(), StrError>;
+
+    /// Sets the real coordinates i (0..space_ndim-1) of a point (0..npoint-1)
+    fn set_coords(&mut self, m: usize, i: usize, val: f64);
+
+    /// Returns a read-only access to the real coordinates matrix (npoint, space_ndim)
+    fn get_coords_matrix(&self) -> &Matrix;
+
+    /// Calculates the real coordinates of ksi
+    ///
+    /// ```text
+    /// x[i] := Σ_m Sᵐ(ksi) ⋅ point_coords[m][i]
+    /// ```
+    fn calc_real_ksi_coords(&mut self, x: &mut Vector, ksi: &Vector) -> Result<(), StrError> {
+        self.calc_interp(ksi);
+        self.mul_interp_by_matrix(x, self.get_coords_matrix())
+    }
 }
 
 /// Returns new Shape
-pub fn new_shape(ndim: usize, npoint: usize) -> Result<Box<dyn Shape>, StrError> {
-    match (ndim, npoint) {
+pub fn new_shape(space_ndim: usize, shape_ndim: usize, npoint: usize) -> Result<Box<dyn Shape>, StrError> {
+    match (shape_ndim, npoint) {
         (1, 2) => Err("Lin2 is not available yet"),
         (1, 3) => Err("Lin3 is not available yet"),
         (1, 4) => Err("Lin4 is not available yet"),
@@ -122,15 +138,16 @@ pub fn new_shape(ndim: usize, npoint: usize) -> Result<Box<dyn Shape>, StrError>
         (2, 6) => Err("Tri6 is not available yet"),
         (2, 10) => Err("Tri10 is not available yet"),
         (2, 15) => Err("Tri15 is not available yet"),
-        (2, 4) => Ok(Box::new(Qua4::new())),
-        (2, 8) => Ok(Box::new(Qua8::new())),
+        (2, 4) => Ok(Box::new(Qua4::new(space_ndim)?)),
+        (2, 8) => Ok(Box::new(Qua8::new(space_ndim)?)),
         (2, 9) => Err("Qua9 is not available yet"),
         (2, 12) => Err("Qua12 is not available yet"),
         (2, 16) => Err("Qua16 is not available yet"),
         (3, 4) => Err("Tet4 is not available yet"),
         (3, 10) => Err("Tet10 is not available yet"),
-        (3, 8) => Ok(Box::new(Hex8::new())),
-        (3, 20) => Ok(Box::new(Hex20::new())),
+        (3, 8) => Ok(Box::new(Hex8::new(space_ndim)?)),
+        (3, 20) => Ok(Box::new(Hex20::new(space_ndim)?)),
+        _ => Err("(ndim, npoint) combination is invalid"),
     }
 }
 
@@ -168,7 +185,7 @@ mod tests {
     fn calc_interp_works() -> Result<(), StrError> {
         let ndim_npoint = gen_ndim_npoint();
         for (ndim, npoint) in ndim_npoint {
-            let mut shape = new_shape(ndim, npoint)?;
+            let mut shape = new_shape(ndim, ndim, npoint)?;
             assert_eq!(shape.get_ndim(), ndim);
             assert_eq!(shape.get_npoint(), npoint);
             let mut ksi = Vector::new(ndim);
@@ -192,13 +209,13 @@ mod tests {
     fn calc_deriv_works() -> Result<(), StrError> {
         let ndim_npoint = gen_ndim_npoint();
         for (ndim, npoint) in ndim_npoint {
-            let mut shape = new_shape(ndim, npoint)?;
+            let mut shape = new_shape(ndim, ndim, npoint)?;
             let mut at_ksi = Vector::new(ndim);
             for i in 0..ndim {
                 at_ksi[i] = 0.25;
             }
             let args = &mut Arguments {
-                shape: new_shape(ndim, npoint)?,
+                shape: new_shape(ndim, ndim, npoint)?,
                 at_ksi,
                 ksi: Vector::new(ndim),
                 m: 0,
@@ -224,7 +241,7 @@ mod tests {
         // where c is a matrix of coordinates
         let ndim_npoint = gen_ndim_npoint();
         for (ndim, npoint) in ndim_npoint {
-            let mut shape = new_shape(ndim, npoint)?;
+            let mut shape = new_shape(ndim, ndim, npoint)?;
             let ndim = shape.get_ndim();
             let npoint = shape.get_npoint();
             let mut ksi = Vector::new(ndim);

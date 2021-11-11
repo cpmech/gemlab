@@ -68,7 +68,7 @@ pub struct Cell {
     /// For example, a 1D line in the 2D or 3D space or a 2D triangle in the 3D space.
     ///
     /// **raw data**
-    pub ndim: usize,
+    pub shape_ndim: usize,
 
     /// List of points defining this cell; in the right order (unsorted)
     ///
@@ -110,7 +110,7 @@ pub struct Mesh {
     /// For example, a 3D mesh may contain 1D lines or 2D triangles.
     ///
     /// **raw data**
-    pub ndim: usize,
+    pub space_ndim: usize,
 
     /// All points in the mesh
     ///
@@ -184,7 +184,7 @@ impl Mesh {
             return Err("ndim must be 2 or 3");
         }
         Ok(Mesh {
-            ndim,
+            space_ndim: ndim,
             points: Vec::new(),
             cells: Vec::new(),
             boundary_points: HashSet::new(),
@@ -220,11 +220,11 @@ impl Mesh {
         let zero_cell = Cell {
             id: 0,
             attribute_id: 0,
-            ndim: 0,
+            shape_ndim: 0,
             points: Vec::new(),
         };
         Ok(Mesh {
-            ndim,
+            space_ndim: ndim,
             points: vec![zero_point; npoint],
             cells: vec![zero_cell; ncell],
             boundary_points: HashSet::new(),
@@ -299,14 +299,14 @@ impl Mesh {
         self.boundary_points.clear();
         self.boundary_edges.clear();
         self.boundary_faces.clear();
-        if self.ndim == 2 {
+        if self.space_ndim == 2 {
             self.compute_derived_props_2d()?;
         } else {
             self.compute_derived_props_3d()?;
         }
         self.compute_limits()?;
         self.grid_boundary_points
-            .initialize(&vec![10; self.ndim], &self.min, &self.max)?;
+            .initialize(&vec![10; self.space_ndim], &self.min, &self.max)?;
         self.derived_props_computed = true;
         Ok(())
     }
@@ -401,7 +401,7 @@ impl Mesh {
         let mut points: HashSet<Index> = HashSet::new();
         match at {
             At::X(x) => {
-                if self.ndim == 2 {
+                if self.space_ndim == 2 {
                     for id in self.grid_boundary_points.find_on_line(&[*x, 0.0], &[*x, 1.0]).unwrap() {
                         points.insert(id);
                     }
@@ -412,7 +412,7 @@ impl Mesh {
                 }
             }
             At::Y(y) => {
-                if self.ndim == 2 {
+                if self.space_ndim == 2 {
                     for id in self.grid_boundary_points.find_on_line(&[0.0, *y], &[1.0, *y]).unwrap() {
                         points.insert(id);
                     }
@@ -423,7 +423,7 @@ impl Mesh {
                 }
             }
             At::Z(z) => {
-                if self.ndim == 2 {
+                if self.space_ndim == 2 {
                     return Err("At::Z works in 3D only");
                 } else {
                     for id in self.grid_boundary_points.find_on_plane_xy(*z).unwrap() {
@@ -432,7 +432,7 @@ impl Mesh {
                 }
             }
             At::XY(x, y) => {
-                if self.ndim == 2 {
+                if self.space_ndim == 2 {
                     if let Some(id) = self.grid_boundary_points.find(&[*x, *y]).unwrap() {
                         points.insert(id);
                     }
@@ -447,7 +447,7 @@ impl Mesh {
                 }
             }
             At::YZ(y, z) => {
-                if self.ndim == 2 {
+                if self.space_ndim == 2 {
                     return Err("At::YZ works in 3D only");
                 } else {
                     for id in self
@@ -460,7 +460,7 @@ impl Mesh {
                 }
             }
             At::XZ(x, z) => {
-                if self.ndim == 2 {
+                if self.space_ndim == 2 {
                     return Err("At::XZ works in 3D only");
                 } else {
                     for id in self
@@ -473,7 +473,7 @@ impl Mesh {
                 }
             }
             At::XYZ(x, y, z) => {
-                if self.ndim == 2 {
+                if self.space_ndim == 2 {
                     return Err("At::XYZ works in 3D only");
                 } else {
                     if let Some(id) = self.grid_boundary_points.find(&[*x, *y, *z]).unwrap() {
@@ -482,7 +482,7 @@ impl Mesh {
                 }
             }
             At::Circle(x, y, r) => {
-                if self.ndim == 2 {
+                if self.space_ndim == 2 {
                     for id in self.grid_boundary_points.find_on_circle(&[*x, *y], *r).unwrap() {
                         points.insert(id);
                     }
@@ -491,7 +491,7 @@ impl Mesh {
                 }
             }
             At::Cylinder(ax, ay, az, bx, by, bz, r) => {
-                if self.ndim == 2 {
+                if self.space_ndim == 2 {
                     return Err("At::Cylinder works in 3D only");
                 } else {
                     for id in self
@@ -509,23 +509,24 @@ impl Mesh {
 
     /// Computes derived properties of 2D mesh
     fn compute_derived_props_2d(&mut self) -> Result<(), StrError> {
-        // auxiliary maps
+        // auxiliary
         let mut all_shapes: HashMap<(usize, usize), Box<dyn Shape>> = HashMap::new();
         let mut all_edges: HashMap<EdgeKey, Edge> = HashMap::new();
+        let space_ndim = self.space_ndim;
 
         // loop over 2D cells
         for cell in &self.cells {
             // check ndim
-            let ndim = cell.ndim;
-            if ndim != 2 {
+            let shape_ndim = cell.shape_ndim;
+            if shape_ndim != 2 {
                 continue; // e.g., 1D line in 2D space
             }
 
             // shape
             let npoint = cell.points.len();
-            let shape_key = (ndim, npoint);
+            let shape_key = (shape_ndim, npoint);
             if !all_shapes.contains_key(&shape_key) {
-                all_shapes.insert(shape_key, new_shape(ndim, npoint)?);
+                all_shapes.insert(shape_key, new_shape(space_ndim, shape_ndim, npoint)?);
             }
             let shape = all_shapes.get(&shape_key).unwrap();
 
@@ -579,23 +580,24 @@ impl Mesh {
 
     /// Computes derived properties of 3D mesh
     fn compute_derived_props_3d(&mut self) -> Result<(), StrError> {
-        // auxiliary maps
+        // auxiliary
         let mut all_shapes: HashMap<(usize, usize), Box<dyn Shape>> = HashMap::new();
         let mut all_faces: HashMap<FaceKey, Face> = HashMap::new();
+        let space_ndim = self.space_ndim;
 
         // loop over 3D cells
         for cell in &self.cells {
             // check ndim
-            let ndim = cell.ndim;
-            if ndim != 3 {
+            let shape_ndim = cell.shape_ndim;
+            if shape_ndim != 3 {
                 continue; // e.g., 1D line in 3D space or 2D quad in 3D space
             }
 
             // shape
             let npoint = cell.points.len();
-            let shape_key = (ndim, npoint);
+            let shape_key = (shape_ndim, npoint);
             if !all_shapes.contains_key(&shape_key) {
-                all_shapes.insert(shape_key, new_shape(ndim, npoint)?);
+                all_shapes.insert(shape_key, new_shape(space_ndim, shape_ndim, npoint)?);
             }
             let shape = all_shapes.get(&shape_key).unwrap();
 
@@ -654,7 +656,7 @@ impl Mesh {
             let face_npoint = face.points.len();
             let face_shape_key = (face_ndim, face_npoint);
             if !all_shapes.contains_key(&face_shape_key) {
-                all_shapes.insert(face_shape_key, new_shape(face_ndim, face_npoint)?);
+                all_shapes.insert(face_shape_key, new_shape(space_ndim, face_ndim, face_npoint)?);
             }
             let face_shape = all_shapes.get(&face_shape_key).unwrap();
 
@@ -698,10 +700,10 @@ impl Mesh {
 
     /// Computes the range of coordinates
     fn compute_limits(&mut self) -> Result<(), StrError> {
-        self.min = vec![f64::MAX; self.ndim];
-        self.max = vec![f64::MIN; self.ndim];
+        self.min = vec![f64::MAX; self.space_ndim];
+        self.max = vec![f64::MIN; self.space_ndim];
         for point in &self.points {
-            for i in 0..self.ndim {
+            for i in 0..self.space_ndim {
                 if point.coords[i] < self.min[i] {
                     self.min[i] = point.coords[i];
                 }
@@ -710,7 +712,7 @@ impl Mesh {
                 }
             }
         }
-        for i in 0..self.ndim {
+        for i in 0..self.space_ndim {
             if self.min[i] >= self.max[i] {
                 return Err("mesh limits are invalid");
             }
@@ -738,7 +740,7 @@ impl fmt::Display for Mesh {
     /// Prints mesh data (may be large)
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // summary
-        write!(f, "ndim = {}\n", self.ndim).unwrap();
+        write!(f, "ndim = {}\n", self.space_ndim).unwrap();
         write!(f, "npoint = {}\n", self.points.len()).unwrap();
         write!(f, "ncell = {}\n", self.cells.len()).unwrap();
         write!(f, "n_boundary_point = {}\n", self.boundary_points.len()).unwrap();
@@ -766,7 +768,7 @@ impl fmt::Display for Mesh {
             write!(
                 f,
                 "i:{} a:{} n:{} p:{:?}\n",
-                cell.id, cell.attribute_id, cell.ndim, cell.points,
+                cell.id, cell.attribute_id, cell.shape_ndim, cell.points,
             )
             .unwrap();
         }
