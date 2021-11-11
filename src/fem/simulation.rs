@@ -4,6 +4,7 @@ use crate::StrError;
 use russell_lab::Vector;
 use russell_sparse::{SparseTriplet, Symmetry};
 use std::collections::HashMap;
+use std::fmt;
 
 pub struct Simulation {
     mesh: Mesh,
@@ -133,6 +134,14 @@ impl Simulation {
     }
 }
 
+impl fmt::Display for Simulation {
+    /// Prints the simulation data (may be large)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "system_dofs:\n{}", self.system_dofs).unwrap();
+        Ok(())
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -197,6 +206,8 @@ mod tests {
 
         // run simulation
         sim.run()?;
+
+        println!("{}", sim);
 
         Ok(())
     }

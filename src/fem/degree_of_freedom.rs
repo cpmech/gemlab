@@ -1,7 +1,8 @@
 use std::collections::HashMap;
+use std::fmt;
 
 /// Defines the type of degree-of-freedom
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Dof {
     T,     // temperature or any other scalar
     Pl,    // liquid pressure
@@ -50,5 +51,23 @@ impl SystemDofs {
             self.reverse_map.push(key);
         }
         self
+    }
+
+    pub fn get_number_of_equations(&self) -> usize {
+        self.reverse_map.len()
+    }
+}
+
+impl fmt::Display for SystemDofs {
+    /// Prints all degrees of freedom (may be large)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut keys_equations: Vec<_> = self.map.keys().zip(self.map.values()).collect();
+        keys_equations.sort_by(|a, b| a.0.cmp(&b.0));
+        write!(f, "point dof equation\n").unwrap();
+        for (key, equation) in keys_equations {
+            write!(f, "{} {:?} {}\n", key.0, key.1, equation).unwrap();
+        }
+        write!(f, "number of equations = {}\n", self.get_number_of_equations()).unwrap();
+        Ok(())
     }
 }
