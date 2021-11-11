@@ -1,10 +1,7 @@
 use crate::mesh::{EdgeKey, Index};
-use crate::StrError;
-use russell_lab::Vector;
-use russell_sparse::SparseTriplet;
 use std::collections::HashMap;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Dof {
     T,     // temperature or any other scalar
     Pl,    // liquid pressure
@@ -21,7 +18,10 @@ pub enum Dof {
     Extra, // extra degree of freedom (e.g., enriched)
 }
 
-pub enum ElementType {
+pub type PointDofs = (Index, Vec<Dof>);
+
+#[derive(Clone, Copy, Debug)]
+pub enum ElementKind {
     Diffusion,
     Truss,
     Beam,
@@ -59,86 +59,93 @@ pub(super) struct EdgeBc {
     pub(super) key: EdgeKey,
 }
 
-pub struct Node {
-    // dofs: Vec<(DOF, usize)>, // (dof, equation_number)
-}
-
-pub struct Element {
-    //
-}
-
-impl Element {
-    pub fn compute_ke(&mut self) -> Result<(), StrError> {
-        Ok(())
-    }
-    pub fn add_ke_to_kk(&self, kk: &mut SparseTriplet) -> Result<(), StrError> {
-        Ok(())
-    }
-    pub fn add_fe_to_ff(&self, ff: &mut Vector) -> Result<(), StrError> {
-        Ok(())
-    }
-}
-
+#[derive(Clone, Debug)]
 pub struct Attribute {
-    pub inactive: bool,
-    pub element_type: ElementType,
-    pub properties: HashMap<String, f64>,
+    pub(super) kind: ElementKind,
+    pub(super) inactive: bool,
+    pub(super) parameters: HashMap<String, f64>,
+    pub(super) flags: HashMap<String, bool>,
 }
 
-pub(super) fn possible_dofs(ndim: usize, element_type: &ElementType) -> Vec<Dof> {
-    match element_type {
-        ElementType::Diffusion => {
+impl Attribute {
+    pub fn new(kind: ElementKind) -> Self {
+        Attribute {
+            kind,
+            inactive: false,
+            parameters: HashMap::new(),
+            flags: HashMap::new(),
+        }
+    }
+
+    pub fn set_parameter(&mut self, name: &str, value: f64) -> &mut Self {
+        if let Some(parameter) = self.parameters.get_mut(name) {
+            *parameter = value;
+        }
+        self
+    }
+
+    pub fn set_flag(&mut self, name: &str, value: bool) -> &mut Self {
+        if let Some(flag) = self.flags.get_mut(name) {
+            *flag = value;
+        }
+        self
+    }
+}
+
+pub(super) fn possible_dofs(ndim: usize, kind: &ElementKind) -> Vec<Dof> {
+    match kind {
+        ElementKind::Diffusion => {
             vec![Dof::T]
         }
-        ElementType::Truss => {
+        ElementKind::Truss => {
             if ndim == 2 {
                 vec![Dof::Ux, Dof::Uy]
             } else {
                 vec![Dof::Ux, Dof::Uy, Dof::Uz]
             }
         }
-        ElementType::Beam => {
+        ElementKind::Beam => {
             if ndim == 2 {
                 vec![Dof::Ux, Dof::Uy, Dof::Rz]
             } else {
                 vec![Dof::Ux, Dof::Uy, Dof::Uz, Dof::Rx, Dof::Ry, Dof::Rz]
             }
         }
-        ElementType::Solid => {
+        ElementKind::Solid => {
             if ndim == 2 {
                 vec![Dof::Ux, Dof::Uy]
             } else {
                 vec![Dof::Ux, Dof::Uy, Dof::Uz]
             }
         }
-        ElementType::SeepageLiq => {
+        ElementKind::SeepageLiq => {
             vec![Dof::Pl, Dof::Extra]
         }
-        ElementType::SeepageLiqGas => {
+        ElementKind::SeepageLiqGas => {
             vec![Dof::Pl, Dof::Pg, Dof::Extra]
         }
-        ElementType::PorousLiq => {
+        ElementKind::PorousLiq => {
             if ndim == 2 {
                 vec![Dof::Ux, Dof::Uy, Dof::Pl, Dof::Extra]
             } else {
                 vec![Dof::Ux, Dof::Uy, Dof::Uz, Dof::Pl, Dof::Extra]
             }
         }
-        ElementType::PorousLiqGas => {
+        ElementKind::PorousLiqGas => {
             if ndim == 2 {
                 vec![Dof::Ux, Dof::Uy, Dof::Pl, Dof::Pg, Dof::Extra]
             } else {
                 vec![Dof::Ux, Dof::Uy, Dof::Uz, Dof::Pl, Dof::Pg, Dof::Extra]
             }
         }
-        ElementType::PorousLiqGasTemp => {
+        ElementKind::PorousLiqGasTemp => {
             if ndim == 2 {
                 vec![Dof::Ux, Dof::Uy, Dof::Pl, Dof::Pg, Dof::Extra, Dof::T]
             } else {
                 vec![Dof::Ux, Dof::Uy, Dof::Uz, Dof::Pl, Dof::Pg, Dof::Extra, Dof::T]
             }
         }
-        ElementType::PorousLiqVel => {
+        ElementKind::PorousLiqVel => {
             if ndim == 2 {
                 vec![Dof::Ux, Dof::Uy, Dof::Pl, Dof::Extra, Dof::Wlx, Dof::Wly]
             } else {
@@ -154,7 +161,7 @@ pub(super) fn possible_dofs(ndim: usize, element_type: &ElementType) -> Vec<Dof>
                 ]
             }
         }
-        ElementType::PorousLiqGasVel => {
+        ElementKind::PorousLiqGasVel => {
             if ndim == 2 {
                 vec![Dof::Ux, Dof::Uy, Dof::Pl, Dof::Pg, Dof::Extra, Dof::Wlx, Dof::Wly]
             } else {

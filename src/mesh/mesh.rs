@@ -1,6 +1,6 @@
 use super::read_mesh::{parse_mesh, read_mesh};
 use super::At;
-use crate::shapes::{kind_from_ndim_npoint, new_shape, Kind, Shape};
+use crate::shapes::{new_shape, Shape};
 use crate::util::GridSearch;
 use crate::StrError;
 use russell_lab::{sort2, sort3};
@@ -510,7 +510,7 @@ impl Mesh {
     /// Computes derived properties of 2D mesh
     fn compute_derived_props_2d(&mut self) -> Result<(), StrError> {
         // auxiliary maps
-        let mut all_shapes: HashMap<Kind, Box<dyn Shape>> = HashMap::new();
+        let mut all_shapes: HashMap<(usize, usize), Box<dyn Shape>> = HashMap::new();
         let mut all_edges: HashMap<EdgeKey, Edge> = HashMap::new();
 
         // loop over 2D cells
@@ -521,16 +521,13 @@ impl Mesh {
                 continue; // e.g., 1D line in 2D space
             }
 
-            // kind and shape
+            // shape
             let npoint = cell.points.len();
-            let kind = match kind_from_ndim_npoint(ndim, npoint) {
-                Some(v) => v,
-                None => return Err("cannot find the Kind of cell"),
-            };
-            if !all_shapes.contains_key(&kind) {
-                all_shapes.insert(kind, new_shape(kind));
+            let shape_key = (ndim, npoint);
+            if !all_shapes.contains_key(&shape_key) {
+                all_shapes.insert(shape_key, new_shape(ndim, npoint)?);
             }
-            let shape = all_shapes.get(&kind).unwrap();
+            let shape = all_shapes.get(&shape_key).unwrap();
 
             // edges (new derived data)
             let nedge = shape.get_nedge();
@@ -583,7 +580,7 @@ impl Mesh {
     /// Computes derived properties of 3D mesh
     fn compute_derived_props_3d(&mut self) -> Result<(), StrError> {
         // auxiliary maps
-        let mut all_shapes: HashMap<Kind, Box<dyn Shape>> = HashMap::new();
+        let mut all_shapes: HashMap<(usize, usize), Box<dyn Shape>> = HashMap::new();
         let mut all_faces: HashMap<FaceKey, Face> = HashMap::new();
 
         // loop over 3D cells
@@ -594,16 +591,13 @@ impl Mesh {
                 continue; // e.g., 1D line in 3D space or 2D quad in 3D space
             }
 
-            // kind and shape
+            // shape
             let npoint = cell.points.len();
-            let kind = match kind_from_ndim_npoint(ndim, npoint) {
-                Some(v) => v,
-                None => return Err("cannot find the Kind of cell"),
-            };
-            if !all_shapes.contains_key(&kind) {
-                all_shapes.insert(kind, new_shape(kind));
+            let shape_key = (ndim, npoint);
+            if !all_shapes.contains_key(&shape_key) {
+                all_shapes.insert(shape_key, new_shape(ndim, npoint)?);
             }
-            let shape = all_shapes.get(&kind).unwrap();
+            let shape = all_shapes.get(&shape_key).unwrap();
 
             // faces (new derived data)
             let nface = shape.get_nface();
@@ -655,16 +649,14 @@ impl Mesh {
                 self.boundary_points.insert(*id);
             }
 
-            // kind and shape of face
-            let npoint = face.points.len();
-            let kind = match kind_from_ndim_npoint(2, npoint) {
-                Some(v) => v,
-                None => return Err("cannot find the Kind of face"),
-            };
-            if !all_shapes.contains_key(&kind) {
-                all_shapes.insert(kind, new_shape(kind));
+            // face shape
+            let face_ndim = 2;
+            let face_npoint = face.points.len();
+            let face_shape_key = (face_ndim, face_npoint);
+            if !all_shapes.contains_key(&face_shape_key) {
+                all_shapes.insert(face_shape_key, new_shape(face_ndim, face_npoint)?);
             }
-            let face_shape = all_shapes.get(&kind).unwrap();
+            let face_shape = all_shapes.get(&face_shape_key).unwrap();
 
             // boundary edges
             let face_nedge = face_shape.get_nedge();

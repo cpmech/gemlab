@@ -1,4 +1,4 @@
-use super::{Hex20, Hex8, Kind, KindHex, KindQua, KindQuaOrHex, Qua4, Qua8};
+use super::{Hex20, Hex8, Qua4, Qua8};
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
@@ -112,41 +112,25 @@ pub trait Shape {
 }
 
 /// Returns new Shape
-pub fn new_shape(kind: Kind) -> Box<dyn Shape> {
-    match kind {
-        Kind::Qua4 => Box::new(Qua4::new()),
-        Kind::Qua8 => Box::new(Qua8::new()),
-        Kind::Hex8 => Box::new(Hex8::new()),
-        Kind::Hex20 => Box::new(Hex20::new()),
-        _ => panic!("Shape kind {:?} is not available yet", kind),
-    }
-}
-
-/// Returns new Qua Shape
-pub fn new_shape_qua(kind: KindQua) -> Box<dyn Shape> {
-    match kind {
-        KindQua::Qua4 => Box::new(Qua4::new()),
-        KindQua::Qua8 => Box::new(Qua8::new()),
-        _ => panic!("Shape kind {:?} is not available yet", kind),
-    }
-}
-
-/// Returns new Hex Shape
-pub fn new_shape_hex(kind: KindHex) -> Box<dyn Shape> {
-    match kind {
-        KindHex::Hex8 => Box::new(Hex8::new()),
-        KindHex::Hex20 => Box::new(Hex20::new()),
-    }
-}
-
-/// Returns new Qua or Hex Shape
-pub fn new_shape_qua_or_hex(kind: KindQuaOrHex) -> Box<dyn Shape> {
-    match kind {
-        KindQuaOrHex::Qua4 => Box::new(Qua4::new()),
-        KindQuaOrHex::Qua8 => Box::new(Qua8::new()),
-        KindQuaOrHex::Hex8 => Box::new(Hex8::new()),
-        KindQuaOrHex::Hex20 => Box::new(Hex20::new()),
-        _ => panic!("Shape kind {:?} is not available yet", kind),
+pub fn new_shape(ndim: usize, npoint: usize) -> Result<Box<dyn Shape>, StrError> {
+    match (ndim, npoint) {
+        (1, 2) => Err("Lin2 is not available yet"),
+        (1, 3) => Err("Lin3 is not available yet"),
+        (1, 4) => Err("Lin4 is not available yet"),
+        (1, 5) => Err("Lin5 is not available yet"),
+        (2, 3) => Err("Tri3 is not available yet"),
+        (2, 6) => Err("Tri6 is not available yet"),
+        (2, 10) => Err("Tri10 is not available yet"),
+        (2, 15) => Err("Tri15 is not available yet"),
+        (2, 4) => Ok(Box::new(Qua4::new())),
+        (2, 8) => Ok(Box::new(Qua8::new())),
+        (2, 9) => Err("Qua9 is not available yet"),
+        (2, 12) => Err("Qua12 is not available yet"),
+        (2, 16) => Err("Qua16 is not available yet"),
+        (3, 4) => Err("Tet4 is not available yet"),
+        (3, 10) => Err("Tet10 is not available yet"),
+        (3, 8) => Ok(Box::new(Hex8::new())),
+        (3, 20) => Ok(Box::new(Hex20::new())),
     }
 }
 
@@ -157,8 +141,8 @@ mod tests {
     use super::*;
     use russell_chk::*;
 
-    fn gen_kinds() -> Vec<Kind> {
-        vec![Kind::Qua4, Kind::Qua8, Kind::Hex8, Kind::Hex20]
+    fn gen_ndim_npoint() -> Vec<(usize, usize)> {
+        vec![(2, 4), (2, 8), (3, 8), (3, 20)]
     }
 
     // Holds arguments for numerical differentiation
@@ -181,12 +165,12 @@ mod tests {
     }
 
     #[test]
-    fn calc_interp_works() {
-        let kinds = gen_kinds();
-        for kind in kinds {
-            let mut shape = new_shape(kind);
-            let ndim = shape.get_ndim();
-            let npoint = shape.get_npoint();
+    fn calc_interp_works() -> Result<(), StrError> {
+        let ndim_npoint = gen_ndim_npoint();
+        for (ndim, npoint) in ndim_npoint {
+            let mut shape = new_shape(ndim, npoint)?;
+            assert_eq!(shape.get_ndim(), ndim);
+            assert_eq!(shape.get_npoint(), npoint);
             let mut ksi = Vector::new(ndim);
             for m in 0..npoint {
                 shape.get_ksi(&mut ksi, m);
@@ -201,21 +185,20 @@ mod tests {
                 }
             }
         }
+        Ok(())
     }
 
     #[test]
-    fn calc_deriv_works() {
-        let kinds = gen_kinds();
-        for kind in kinds {
-            let mut shape = new_shape(kind);
-            let ndim = shape.get_ndim();
-            let npoint = shape.get_npoint();
+    fn calc_deriv_works() -> Result<(), StrError> {
+        let ndim_npoint = gen_ndim_npoint();
+        for (ndim, npoint) in ndim_npoint {
+            let mut shape = new_shape(ndim, npoint)?;
             let mut at_ksi = Vector::new(ndim);
             for i in 0..ndim {
                 at_ksi[i] = 0.25;
             }
             let args = &mut Arguments {
-                shape: new_shape(kind),
+                shape: new_shape(ndim, npoint)?,
                 at_ksi,
                 ksi: Vector::new(ndim),
                 m: 0,
@@ -232,38 +215,16 @@ mod tests {
                 }
             }
         }
-    }
-
-    #[test]
-    fn getters_work() {
-        let kinds = vec![Kind::Hex8, Kind::Qua4];
-        for kind in kinds {
-            let shape = new_shape(kind);
-            match kind {
-                Kind::Qua4 => {
-                    assert_eq!(shape.get_ndim(), 2);
-                    assert_eq!(shape.get_npoint(), 4);
-                    assert_eq!(shape.get_nedge(), 4);
-                    assert_eq!(shape.get_nface(), 0);
-                }
-                Kind::Hex8 => {
-                    assert_eq!(shape.get_ndim(), 3);
-                    assert_eq!(shape.get_npoint(), 8);
-                    assert_eq!(shape.get_nedge(), 12);
-                    assert_eq!(shape.get_nface(), 6);
-                }
-                _ => panic!("Shape kind \"{:?}\" is not available yet", kind),
-            }
-        }
+        Ok(())
     }
 
     #[test]
     fn mul_interp_by_matrix_works() -> Result<(), StrError> {
         // iso-parametric elements: xᵢ = Σ_m Sᵐ ⋅ cᵐᵢ
         // where c is a matrix of coordinates
-        let kinds = gen_kinds();
-        for kind in kinds {
-            let mut shape = new_shape(kind);
+        let ndim_npoint = gen_ndim_npoint();
+        for (ndim, npoint) in ndim_npoint {
+            let mut shape = new_shape(ndim, npoint)?;
             let ndim = shape.get_ndim();
             let npoint = shape.get_npoint();
             let mut ksi = Vector::new(ndim);

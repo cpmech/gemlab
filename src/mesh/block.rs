@@ -1,6 +1,6 @@
 use super::{Cell, Edge, EdgeKey, Face, FaceKey, Mesh, Point};
 use crate::geometry::Circle;
-use crate::shapes::{new_shape_qua_or_hex, KindQuaOrHex, Shape};
+use crate::shapes::{new_shape, Shape};
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use russell_lab::{mat_vec_mul, sort2, sort3, Matrix, Vector};
@@ -107,6 +107,10 @@ impl Block {
     const NAT_LENGTH: f64 = 2.0; // length of shape along each direction in natural coords space
     const NAT_TOLERANCE: f64 = 1e-4; // tolerance to compare coordinates in the natural space
 
+    // valid output npoint
+    const VALID_OUTPUT_NPOINT_2D: [usize; 5] = [4, 8, 9, 12, 16];
+    const VALID_OUTPUT_NPOINT_3D: [usize; 2] = [8, 20];
+
     /// Creates a new Block with default options
     pub fn new(ndim: usize) -> Result<Self, StrError> {
         // check
@@ -115,11 +119,7 @@ impl Block {
         }
 
         // shape
-        let shape = if ndim == 2 {
-            new_shape_qua_or_hex(KindQuaOrHex::Qua8)
-        } else {
-            new_shape_qua_or_hex(KindQuaOrHex::Hex20)
-        };
+        let shape = if ndim == 2 { new_shape(2, 8)? } else { new_shape(3, 20)? };
         let (npoint, nedge, nface) = (shape.get_npoint(), shape.get_nedge(), shape.get_nface());
 
         // constants
@@ -295,12 +295,30 @@ impl Block {
     }
 
     /// Subdivide block into vertices and cells (mesh)
-    pub fn subdivide(&mut self, output: KindQuaOrHex) -> Result<Mesh, StrError> {
+    ///
+    /// # Input
+    ///
+    /// Valid output_npoint:
+    ///
+    /// * 2D: [4, 8, 9, 12, 16]
+    /// * 3D: [8, 20]
+    pub fn subdivide(&mut self, output_npoint: usize) -> Result<Mesh, StrError> {
+        // check
+        if self.ndim == 2 {
+            if !Block::VALID_OUTPUT_NPOINT_2D.contains(&output_npoint) {
+                return Err("output_npoint is invalid");
+            }
+        } else {
+            if !Block::VALID_OUTPUT_NPOINT_3D.contains(&output_npoint) {
+                return Err("output_npoint is invalid");
+            }
+        }
+
         // results
         let mut mesh = Mesh::new(self.ndim)?;
 
         // auxiliary variables
-        let shape_out = new_shape_qua_or_hex(output);
+        let shape_out = new_shape(self.ndim, output_npoint)?;
         let npoint_out = shape_out.get_npoint();
 
         // transformation matrix: scale and translate natural space
@@ -655,7 +673,7 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
-    use super::{Block, Circle, Constraint, KindQuaOrHex, StrError};
+    use super::{Block, Circle, Constraint, StrError};
 
     #[test]
     fn constraint_traits_work() {
@@ -890,7 +908,7 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ]);
-        let mesh = block.subdivide(KindQuaOrHex::Qua4)?;
+        let mesh = block.subdivide(4)?;
         println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
@@ -946,7 +964,7 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ]);
-        let mesh = block.subdivide(KindQuaOrHex::Qua8)?;
+        let mesh = block.subdivide(8)?;
         println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
@@ -1018,7 +1036,7 @@ mod tests {
             [2.0, 2.0, 2.0],
             [0.0, 2.0, 2.0],
         ]);
-        let mesh = block.subdivide(KindQuaOrHex::Hex8)?;
+        let mesh = block.subdivide(8)?;
         println!("{}", mesh);
         assert_eq!(
         format!("{}", mesh),
@@ -1164,7 +1182,7 @@ mod tests {
             [2.0, 2.0, 2.0],
             [0.0, 2.0, 2.0],
         ]);
-        let mesh = block.subdivide(KindQuaOrHex::Hex20)?;
+        let mesh = block.subdivide(20)?;
         println!("{}", mesh);
         assert_eq!(
         format!("{}", mesh),

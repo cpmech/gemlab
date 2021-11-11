@@ -1,5 +1,4 @@
-use super::definitions::{Attribute, Bc, Dof, EdgeBc, Element, FnTimeSpace, PointBc};
-use super::possible_dofs;
+use super::{new_element, Attribute, Bc, Dof, EdgeBc, Element, FnTimeSpace, PointBc};
 use crate::mesh::Mesh;
 use crate::StrError;
 use russell_lab::Vector;
@@ -10,7 +9,7 @@ pub struct Simulation {
     mesh: Mesh,
     point_bcs: Vec<PointBc>,
     edge_bcs: Vec<EdgeBc>,
-    elements: Vec<Element>,
+    elements: Vec<Box<dyn Element>>,
     attributes: HashMap<usize, Attribute>,
 }
 
@@ -23,10 +22,6 @@ impl Simulation {
             elements: Vec::new(),
             attributes: HashMap::new(),
         })
-    }
-
-    pub fn add_attribute(&mut self, attribute_id: usize, a: Attribute) -> &mut Self {
-        self
     }
 
     pub fn add_point_bc(&mut self, group: &str, bc: Bc, dof: Dof, f: FnTimeSpace) -> &mut Self {
@@ -45,21 +40,27 @@ impl Simulation {
         self
     }
 
+    pub fn set_attribute(&mut self, id: usize, a: Attribute) -> &mut Self {
+        self.attributes.insert(id, a);
+        self
+    }
+
     pub fn initialize(&mut self) -> Result<(), StrError> {
         // allocate all elements and assign numbers to the DOFs
-        let ndof = 0_usize;
+        let ndof_total = 0_usize;
         for cell in &self.mesh.cells {
-            let props = match self.attributes.get(&cell.attribute_id) {
-                Some(a) => {
-                    if a.inactive {
+            match self.attributes.get(&cell.attribute_id) {
+                Some(attribute) => {
+                    if attribute.inactive {
                         continue;
                     }
-                    let dofs = possible_dofs(self.mesh.ndim, &a.element_type);
-                    &a.properties
+                    let element = new_element(attribute.kind, &self.mesh, cell.id)?;
+                    let dofs = element.get_dofs()?;
+                    self.elements.push(element);
+                    println!("{} {:?}", ndof_total, dofs);
                 }
                 None => return Err("cannot find cell with a specific attribute id"),
             };
-            // how to get tne DOFs for each element/problem?
         }
         Ok(())
     }
@@ -137,6 +138,7 @@ impl Simulation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fem::ElementKind;
     use crate::mesh::At;
 
     #[test]
@@ -159,7 +161,7 @@ mod tests {
 
             # cells
             # id attribute ndim npoint point_ids...
-            0 1  2 4  0 1 2 3
+            0 0  2 4  0 1 2 3
             1 0  2 4  1 4 5 2
             ",
         )?;
@@ -174,15 +176,27 @@ mod tests {
         // create simulation
         let mut sim = Simulation::new(mesh)?;
 
-        // set boundary conditions
+        // add boundary conditions
         sim.add_point_bc("origin", Bc::Essential, Dof::Ux, |_, _| 0.0)
             .add_point_bc("origin", Bc::Essential, Dof::Uy, |_, _| 0.0)
             .add_edge_bc("left", Bc::Essential, Dof::Ux, |_, _| 0.0)
             .add_edge_bc("right", Bc::Essential, Dof::Ux, |_, _| 0.0)
             .add_edge_bc("bottom", Bc::Essential, Dof::Uy, |_, _| 0.0);
 
+        // define attributes
+        let mut att0 = Attribute::new(ElementKind::Solid);
+        att0.set_parameter("Young modulus", 1000.0)
+            .set_parameter("Poisson's coefficient", 0.25)
+            .set_flag("Plane-stress", true);
+
+        // set attributes
+        sim.set_attribute(0, att0);
+
+        // initialize simulation
+        sim.initialize()?;
+
         // run simulation
-        sim.run();
+        sim.run()?;
 
         Ok(())
     }
