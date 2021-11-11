@@ -1,4 +1,4 @@
-use super::{new_element, Attribute, Bc, Dof, EdgeBc, Element, FnTimeSpace, PointBc};
+use super::{new_element, Attribute, Bc, Dof, EdgeBc, Element, FnTimeSpace, PointBc, SystemDofs};
 use crate::mesh::Mesh;
 use crate::StrError;
 use russell_lab::Vector;
@@ -9,8 +9,9 @@ pub struct Simulation {
     mesh: Mesh,
     point_bcs: Vec<PointBc>,
     edge_bcs: Vec<EdgeBc>,
-    elements: Vec<Box<dyn Element>>,
     attributes: HashMap<usize, Attribute>,
+    elements: Vec<Box<dyn Element>>,
+    system_dofs: SystemDofs,
 }
 
 impl Simulation {
@@ -19,8 +20,9 @@ impl Simulation {
             mesh,
             point_bcs: Vec::new(),
             edge_bcs: Vec::new(),
-            elements: Vec::new(),
             attributes: HashMap::new(),
+            elements: Vec::new(),
+            system_dofs: SystemDofs::new(),
         })
     }
 
@@ -46,8 +48,7 @@ impl Simulation {
     }
 
     pub fn initialize(&mut self) -> Result<(), StrError> {
-        // allocate all elements and assign numbers to the DOFs
-        let ndof_total = 0_usize;
+        // allocate all elements and DOFs
         for cell in &self.mesh.cells {
             match self.attributes.get(&cell.attribute_id) {
                 Some(attribute) => {
@@ -55,9 +56,8 @@ impl Simulation {
                         continue;
                     }
                     let element = new_element(attribute.kind, &self.mesh, cell.id)?;
-                    let dofs = element.get_dofs()?;
+                    element.assign_dofs(&mut self.system_dofs);
                     self.elements.push(element);
-                    println!("{} {:?}", ndof_total, dofs);
                 }
                 None => return Err("cannot find cell with a specific attribute id"),
             };

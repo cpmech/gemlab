@@ -1,13 +1,31 @@
-use super::{ElementKind, ElementSolid, PointDofs};
+use super::{ElementSolid, SystemDofs};
 use crate::mesh::Mesh;
 use crate::StrError;
 use russell_lab::Vector;
 use russell_sparse::SparseTriplet;
 
+#[derive(Clone, Copy, Debug)]
+pub enum ElementKind {
+    Diffusion,
+    Truss,
+    Beam,
+    Solid,
+    SeepageLiq,
+    SeepageLiqGas,
+    PorousLiq,
+    PorousLiqGas,
+    PorousLiqGasTemp,
+    PorousLiqVel,
+    PorousLiqGasVel,
+}
+
 pub trait Element {
-    fn get_dofs(&self) -> Result<Vec<PointDofs>, StrError>;
+    fn assign_dofs(&self, dofs: &mut SystemDofs);
+
     fn compute_ke(&mut self) -> Result<(), StrError>;
+
     fn add_ke_to_kk(&self, kk: &mut SparseTriplet) -> Result<(), StrError>;
+
     fn add_fe_to_ff(&self, ff: &mut Vector) -> Result<(), StrError>;
 }
 

@@ -1,20 +1,14 @@
-use super::{Dof, Element, Nodes, PointDofs};
+use super::{Dof, Element, SystemDofs};
 use crate::mesh::Mesh;
 use crate::shapes::{new_shape, Shape};
 use crate::StrError;
 use russell_lab::Vector;
 use russell_sparse::SparseTriplet;
 
-pub struct Node {
-    id: usize,
-    dofs: Vec<Dof>,
-    coords: Vec<f64>,
-}
-
 pub struct ElementSolid {
     space_ndim: usize,
     shape: Box<dyn Shape>,
-    // nodes: Vec<Node>,
+    point_ids: Vec<usize>,
 }
 
 impl ElementSolid {
@@ -31,38 +25,28 @@ impl ElementSolid {
             }
         }
 
-        // node DOFs
-        let node_dofs = if space_ndim == 2 {
+        // done
+        Ok(ElementSolid {
+            space_ndim,
+            shape,
+            point_ids: cell.points.clone(),
+        })
+    }
+}
+
+impl Element for ElementSolid {
+    fn assign_dofs(&self, dofs: &mut SystemDofs) {
+        let dof_per_point = if self.space_ndim == 2 {
             vec![Dof::Ux, Dof::Uy]
         } else {
             vec![Dof::Ux, Dof::Uy, Dof::Uz]
         };
-
-        /*
-        // nodes
-        let nodes: Vec<_> = cell
-            .points
-            .iter()
-            .map(|id| Node {
-                id: *id,
-                dofs: node_dofs.clone(),
-                coords: mesh.points[*id].coords.clone(),
-            })
-            .collect();
-            */
-
-        // let coords:Vec<_>=cell.points.iter().map(|id| mesh.points[*id].coords)
-
-        // done
-        Ok(ElementSolid { space_ndim, shape })
-    }
-
-    fn assign_dofs(&self, nodes: &mut Nodes) {}
-}
-
-impl Element for ElementSolid {
-    fn get_dofs(&self) -> Result<Vec<PointDofs>, StrError> {
-        Ok(Vec::new())
+        let npoint = self.shape.get_npoint();
+        for m in 0..npoint {
+            for dof in &dof_per_point {
+                dofs.update(self.point_ids[m], *dof);
+            }
+        }
     }
 
     fn compute_ke(&mut self) -> Result<(), StrError> {
