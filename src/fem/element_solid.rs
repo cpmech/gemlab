@@ -1,13 +1,13 @@
 use super::{Dof, Element, SystemDofs};
 use crate::mesh::Mesh;
-use crate::shapes::{new_shape, Shape};
+use crate::shapes::Shape;
 use crate::StrError;
 use russell_lab::Vector;
 use russell_sparse::SparseTriplet;
 
 pub struct ElementSolid {
     space_ndim: usize,
-    shape: Box<dyn Shape>,
+    shape: Shape,
     point_ids: Vec<usize>,
 }
 
@@ -18,7 +18,7 @@ impl ElementSolid {
         let space_ndim = mesh.space_ndim;
         let shape_ndim = cell.shape_ndim;
         let npoint = cell.points.len();
-        let mut shape = new_shape(space_ndim, shape_ndim, npoint)?;
+        let mut shape = Shape::new(space_ndim, shape_ndim, npoint)?;
         for m in 0..npoint {
             for i in 0..space_ndim {
                 shape.set_coords(m, i, mesh.points[cell.points[m]].coords[i]);

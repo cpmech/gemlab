@@ -1,6 +1,6 @@
 use super::{Cell, Edge, EdgeKey, Face, FaceKey, Mesh, Point};
 use crate::geometry::Circle;
-use crate::shapes::{new_shape, Shape};
+use crate::shapes::Shape;
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use russell_lab::{mat_vec_mul, sort2, sort3, Matrix, Vector};
@@ -94,7 +94,7 @@ pub struct Block {
     face_constraints: Vec<Option<Constraint>>, // constraints (nface)
 
     // shape and interpolation functions
-    shape: Box<dyn Shape>,
+    shape: Shape,
 
     // grid to search natural coordinates
     grid_ksi: GridSearch,
@@ -121,7 +121,7 @@ impl Block {
         // shape
         let shape_ndim = space_ndim;
         let npoint = if shape_ndim == 2 { 8 } else { 20 };
-        let shape = new_shape(space_ndim, shape_ndim, npoint)?;
+        let shape = Shape::new(space_ndim, shape_ndim, npoint)?;
         let (nedge, nface) = (shape.get_nedge(), shape.get_nface());
 
         // constants
@@ -326,7 +326,7 @@ impl Block {
 
         // auxiliary variables
         let shape_ndim = 2;
-        let shape_out = new_shape(space_ndim, shape_ndim, output_npoint)?;
+        let shape_out = Shape::new(space_ndim, shape_ndim, output_npoint)?;
         let npoint_out = shape_out.get_npoint();
 
         // transformation matrix: scale and translate natural space
@@ -501,7 +501,7 @@ impl Block {
     fn maybe_append_new_edge(
         &mut self,
         mesh: &mut Mesh,
-        shape_out: &Box<dyn Shape>,
+        shape_out: &Shape,
         point_ids: &Vec<usize>,
         cell_id: usize,
     ) -> Result<HashSet<EdgeKey>, StrError> {
@@ -517,7 +517,7 @@ impl Block {
             // check if at least two points of edge are on the boundary
             let mut npoint_on_boundary = 0;
             for i in 0..edge_npoint {
-                let local_point_id = self.shape.get_edge_local_point_id(e, i);
+                let local_point_id = self.shape.get_edge_point_id(e, i);
                 let point_id = point_ids[local_point_id];
                 if mesh.boundary_points.contains(&point_id) {
                     npoint_on_boundary += 1;
@@ -535,7 +535,7 @@ impl Block {
             // collect point ids
             let mut points = vec![0; edge_npoint];
             for i in 0..edge_npoint {
-                let local_point_id = self.shape.get_edge_local_point_id(e, i);
+                let local_point_id = self.shape.get_edge_point_id(e, i);
                 points[i] = point_ids[local_point_id];
             }
 
@@ -588,7 +588,7 @@ impl Block {
     fn maybe_append_new_face(
         &mut self,
         mesh: &mut Mesh,
-        shape_out: &Box<dyn Shape>,
+        shape_out: &Shape,
         point_ids: &Vec<usize>,
         cell_id: usize,
     ) -> Result<HashSet<FaceKey>, StrError> {
@@ -605,8 +605,8 @@ impl Block {
             // check if at least three edges of face are on the boundary
             let mut nedge_on_boundary = 0;
             for k in 0..face_nedge {
-                let local_point_id_0 = self.shape.get_face_edge_local_point_id(f, k, 0);
-                let local_point_id_1 = self.shape.get_face_edge_local_point_id(f, k, 1);
+                let local_point_id_0 = self.shape.get_face_edge_point_id(f, k, 0);
+                let local_point_id_1 = self.shape.get_face_edge_point_id(f, k, 1);
                 let point_id_0 = point_ids[local_point_id_0];
                 let point_id_1 = point_ids[local_point_id_1];
                 let mut edge_key = (point_id_0, point_id_1);
@@ -627,7 +627,7 @@ impl Block {
             // collect point ids
             let mut points = vec![0; face_npoint];
             for i in 0..face_npoint {
-                let local_point_id = self.shape.get_face_local_point_id(f, i);
+                let local_point_id = self.shape.get_face_point_id(f, i);
                 points[i] = point_ids[local_point_id];
             }
 
