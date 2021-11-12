@@ -335,14 +335,14 @@ impl Shape {
         &self.coords
     }
 
-    /// Calculates the real coordinates of ksi
+    /// Calculates the real coordinates of ksi (iso-parametric shapes)
     ///
     /// ```text
-    /// x[i] := Σ_m Sᵐ(ksi) ⋅ point_coords[m][i]
+    /// x[i] := Σ_m Sᵐ(ξ) ⋅ point_coords[m][i]
     /// ```
     pub fn calc_real_ksi_coords(&mut self, x: &mut Vector, ksi: &Vector) -> Result<(), StrError> {
-        self.calc_interp(ksi);
-        self.mul_interp_by_matrix(x, self.get_coords_matrix())
+        (self.fn_interp)(&mut self.interp, ksi);
+        vec_mat_mul(x, 1.0, &self.interp, &self.coords)
     }
 }
 
