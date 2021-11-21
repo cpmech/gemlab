@@ -6,7 +6,6 @@ use russell_lab::Vector;
 use russell_sparse::SparseTriplet;
 
 pub struct ElementSolid {
-    space_ndim: usize,
     shape: Shape,
     point_ids: Vec<usize>,
 }
@@ -19,15 +18,10 @@ impl ElementSolid {
         let shape_ndim = cell.shape_ndim;
         let npoint = cell.points.len();
         let mut shape = Shape::new(space_ndim, shape_ndim, npoint)?;
-        for m in 0..npoint {
-            for i in 0..space_ndim {
-                shape.set_coords(m, i, mesh.points[cell.points[m]].coords[i]);
-            }
-        }
-
-        // done
+        let xx = mesh.get_cell_coords_matrix(cell_id);
+        shape.set_coords_matrix(&xx)?;
+        // element
         Ok(ElementSolid {
-            space_ndim,
             shape,
             point_ids: cell.points.clone(),
         })
@@ -36,7 +30,7 @@ impl ElementSolid {
 
 impl Element for ElementSolid {
     fn assign_dofs(&self, dofs: &mut SystemDofs) {
-        let dof_per_point = if self.space_ndim == 2 {
+        let dof_per_point = if self.shape.get_space_ndim() == 2 {
             vec![Dof::Ux, Dof::Uy]
         } else {
             vec![Dof::Ux, Dof::Uy, Dof::Uz]

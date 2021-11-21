@@ -406,7 +406,7 @@ impl Block {
                     let cell = Cell {
                         id: cell_id,
                         attribute_id: self.attribute_id,
-                        shape_ndim: shape_out.get_ndim(),
+                        shape_ndim: shape_out.get_shape_ndim(),
                         points,
                         // boundary_edges,
                         // boundary_faces,
@@ -466,8 +466,9 @@ impl Block {
         self.grid_ksi.insert(index, ksi)?;
 
         // compute real coords
-        self.shape.calc_interp(ksi_vec);
-        self.shape.mul_interp_by_matrix(x, &self.coords)?;
+        self.shape.calc_coords(x, ksi_vec)?;
+        // self.shape.calc_ss_vec(ksi_vec);
+        // self.shape.mul_interp_by_matrix(x, &self.coords)?;
 
         // add new point to mesh
         let mut shared_by_cells = HashSet::new();

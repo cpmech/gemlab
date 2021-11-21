@@ -3,7 +3,7 @@ use super::At;
 use crate::shapes::Shape;
 use crate::util::GridSearch;
 use crate::StrError;
-use russell_lab::{sort2, sort3};
+use russell_lab::{sort2, sort3, Matrix};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
@@ -386,6 +386,18 @@ impl Mesh {
             return keys;
         }
         Vec::new()
+    }
+
+    pub fn get_cell_coords_matrix(&self, cell_id: usize) -> Matrix {
+        let npoint = self.cells[cell_id].points.len();
+        let mut xx = Matrix::new(self.space_ndim, npoint);
+        for m in 0..npoint {
+            let point_id = self.cells[cell_id].points[m];
+            for i in 0..self.space_ndim {
+                xx[m][i] = self.points[point_id].coords[i];
+            }
+        }
+        xx
     }
 
     // ======================================================================================================
