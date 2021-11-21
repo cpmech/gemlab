@@ -41,7 +41,8 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 ///        m         
 /// ```
 ///
-/// where x is the mapped vector of real coordinates and ξ is the vector of natural (reference) coordinates.
+/// where x is the (space_ndim) mapped vector of real coordinates
+/// and ξ is the (space_ndim) vector of natural (reference) coordinates.
 /// Above, xm are the coordinates of each m-point of the geometric shape.
 ///
 /// Given the matrix of coordinates X, we can calculate the mapped coordinates vector x by means of
@@ -76,7 +77,7 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// J = Xᵀ · g
 /// ```
 ///
-/// where X is the matrix of coordinates and g is a (npoint,shape_ndim) matrix.
+/// where X is the (npoint,space_ndim) matrix of coordinates and g is a (npoint,shape_ndim) matrix.
 ///
 /// The gradient of interpolation functions (derivatives w.r.t real coordinates) is given by
 ///
