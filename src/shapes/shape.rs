@@ -32,6 +32,76 @@ type FnInterp = fn(&mut Vector, &Vector);
 type FnDeriv = fn(&mut Matrix, &Vector);
 
 /// Defines an isoparametric geometric shape for numerical integration and more
+///
+/// The isoparametric formulation establishes that
+///
+/// ```text
+/// → →         →  →
+/// x(ξ) = Σ Sᵐ(ξ) xᵐ
+///        m         
+/// ```
+///
+/// where x is the mapped vector of real coordinates and ξ is the vector of natural (reference) coordinates.
+/// Above, xm are the coordinates of each m-point of the geometric shape.
+///
+/// Given the matrix of coordinates X, we can calculate the mapped coordinates vector x by means of
+///
+/// ```text
+/// x = Xᵀ ⋅ S
+/// ```
+///
+/// The Jacobian tensor is
+///
+/// ```text
+///         →
+///   →    dx     →    →
+/// J(ξ) = —— = Σ xᵐ ⊗ gᵐ
+///         →   m
+///        dξ
+/// ```
+///
+/// where
+///
+/// ```text
+///             →
+/// →       dSᵐ(ξ)
+/// gᵐ(ξ) = ——————
+///            →
+///           dξ
+/// ```
+///
+/// We can write the Jacobian in matrix notation as follows
+///
+/// ```text
+/// J = Xᵀ · g
+/// ```
+///
+/// where X is the matrix of coordinates and g is a (npoint,shape_ndim) matrix.
+///
+/// The gradient of interpolation functions (derivatives w.r.t real coordinates) is given by
+///
+/// ```text
+///             →
+/// →       dSᵐ(ξ)
+/// Gᵐ(ξ) = ——————
+///            →
+///           dx
+/// ```
+///
+/// The inverse Jacobian allows us to determine the gradient vectors G as follows
+///
+/// ```text
+/// →       →  →        →
+/// Gᵐ(ξ) = gᵐ(ξ) · J⁻¹(ξ)
+/// ```
+///
+/// Or, in matrix notation,
+///
+/// ```text
+/// G = g · J⁻¹
+/// ```
+///
+/// where G is a (npoint,space_ndim) matrix.
 pub struct Shape {
     // space ndim and shape kind
     space_ndim: usize, // space ndim (not shape ndim)
@@ -56,7 +126,7 @@ pub struct Shape {
 
     // sandbox (temporary) variables
     ss: Vector,     // (npoint) interpolation functions @ natural coordinate ksi
-    g: Matrix,      // (npoint, space_ndim) derivatives of interpolation functions w.r.t natural coordinate ksi
+    g: Matrix,      // (npoint, shape_ndim) derivatives of interpolation functions w.r.t natural coordinate ksi
     jj: Matrix,     // (space_ndim, space_ndim) Jacobian matrix
     jj_inv: Matrix, // (space_ndim, space_ndim) Inverse Jacobian matrix
 }
@@ -217,27 +287,7 @@ impl Shape {
 
     /// Calculates the Jacobian matrix of the mapping from general to natural space
     ///
-    /// The isoparametric formulation establishes:
-    ///
-    /// ```text
-    ///                             →
-    /// → →         →  →           dx     →    dSᵐ
-    /// x(ξ) = Σ Sᵐ(ξ) xᵐ    ⇒     —— = Σ xᵐ ⊗ ———
-    ///        m                    →   m       →
-    ///                            dξ          dξ
-    /// ```
-    ///
-    /// Thus, the Jacobian tensor is
-    ///
-    /// ```text
-    ///       →
-    ///      dx     →    →
-    /// J := —— = Σ xᵐ ⊗ gᵐ
-    ///       →   m
-    ///      dξ
-    /// ```
-    ///
-    /// Or, in terms of Cartesian ortho-normal components,
+    /// In terms of Cartesian ortho-normal components, the Jacobian is
     ///
     /// ```text
     ///        ∂xᵢ
@@ -404,6 +454,23 @@ impl Shape {
             _ => panic!("ShapeKind is not available yet"),
         }
     }
+
+    // --- private ------------------------------------------------------------------------------
+
+    ///
+    ///
+    ///
+    ///
+    ///
+    fn calc_ss(&mut self) {}
+
+    /// ```text
+    /// →       dSᵐ(ξ)
+    /// gᵐ(ξ) = ——————
+    ///            →
+    ///           dξ
+    /// ```
+    fn calc_g(&mut self) {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
