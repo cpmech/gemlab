@@ -140,19 +140,18 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// We can then perform integrations in the reference space as follows:
 ///
 /// ```text
-/// ⌠   →       ⌠   → →            →
-/// │ f(x) dΩ = │ f(x(ξ)) ⋅ det(J)(ξ) dΩ
-/// ⌡           ⌡
-/// Ω           Ωref
+///       ⌠   →       ⌠   → →            →
+/// res = │ f(x) dΩ = │ f(x(ξ)) ⋅ det(J)(ξ) dΩ
+///       ⌡           ⌡
+///       Ω           Ωref
 /// ```
 ///
 /// which is replaced by numerical integration according to:
 ///
 /// ```text
-/// ⌠   → →            →        nip-1   →             →
-/// │ f(x(ξ)) ⋅ det(J)(ξ) dΩ  ≈   Σ   f(ιp)) ⋅ det(J)(ιp) ⋅ wp
-/// ⌡                            p=0
-/// Ωref
+///       nip-1  →             →
+/// res ≈  Σ   f(ιp)) ⋅ det(J)(ιp) ⋅ wp
+///       p=0
 /// ```
 ///
 /// where `nip` is the number of integration points, `ιp := ξp` is the reference
@@ -167,12 +166,12 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// If `geom_ndim < space_ndim`, we must consider some particular cases. For now, the only
 /// cases we can handle are:
 ///
-/// * `geom_ndim = 1` and `space_ndim = 2 or 3` -- Line in multi-dimensions
-/// * `geom_ndim = 2` and `space_ndim = 3` -- 3D surface
+/// * `geom_ndim = 1` and `space_ndim = 2 or 3` -- Line in multi-dimensions (boundary or not)
+/// * `geom_ndim = 2` and `space_ndim = 3` -- 3D surface (boundary only)
 ///
 /// ### Line in multi-dimensions (geom_ndim = 1 and space_ndim > 1)
 ///
-/// In this case, the Jacobian equals the (space_ndim) base vector `g1` aligned
+/// In this case, the Jacobian equals the (space_ndim,1) base vector `g1` aligned
 /// with the line element, i.e.,
 ///
 /// ```text
@@ -183,36 +182,120 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// ```
 ///
 /// We further consider a parametric coordinate `ell` which varies from 0 to `ell_max`
-/// (the length of the line). Then, we replace the line integrals over the real space
-/// with line integrals over the mapped space as follows:
+/// (the length of the line) according to
 ///
 /// ```text
-/// ⌠               ⌠
-/// │ f(ell) dell = │ f(ξ(ell)) ⋅ ||g1||(ξ) dξ
-/// ⌡               ⌡
-/// Ω               Ωref
+///                  ell_max
+/// ell(ξ) = (1 + ξ) ———————
+///                     2
+///
+///          2 · ell
+/// ξ(ell) = ——————— - 1
+///          ell_max
 /// ```
 ///
-/// where `||g1||` is the Euclidean norm of `g1`.
+/// ```text
+/// 0 ≤ ell ≤ ell_max
 ///
-/// The integral above is replaced by numerical integration according to:
+/// -1 ≤ ξ ≤ +1
+/// ```
+///
+/// Then, we replace the line integrals over the real space with line integrals over the mapped space as follows:
 ///
 /// ```text
-/// ⌠                             nip-1   →             →
-/// │ f(ξ(ell)) ⋅ ||g1||(ξ) dξ  ≈   Σ   f(ιp)) ⋅ ||g1||(ιp) ⋅ wp
-/// ⌡                              p=0
-/// Ωref
+///       ⌠               ⌠
+/// res = │ f(ell) dell = │ f(ξ(ell)) ⋅ ||Jline||(ξ) dξ
+///       ⌡               ⌡
+///       Ω               Ωref
+/// ```
+///
+/// where `||Jline||` is the Euclidean norm of `Jline`.
+///
+/// The above integral is replaced by numerical integration according to:
+///
+/// ```text
+///       nip-1  →               →
+/// res ≈  Σ   f(ιp) ⋅ ||Jline||(ιp) ⋅ wp
+///       p=0
 /// ```
 ///
 /// where `nip` is the number of integration points, `ιp := ξp` is the reference
 /// coordinate of the integration point, and `wp` is the weight attached to the
 /// p-th integration point.
 ///
-/// ### 3D surface (geom_ndim = 2 and space_ndim = 3)
+/// **Boundary line in 2D (geom_ndim = 1 and space_ndim = 2)**
+///
+/// If the line defines a boundary in 2D, we compute a normal vector by means of
+///
+/// ```text
+/// →   →    →
+/// n = e3 × g1
+/// ```
+///
+/// Then, we can compute the following boundary integral
+///
+/// ```text
+///       ⌠             →        ⌠           →    →
+/// res = │ q(ell) unit_n dell = │ q(ell) ⋅ (e3 × g1) dξ
+///       ⌡                      ⌡
+///       Γ                      Γref
+/// ```
+///
+/// where `unit_n` is the unit normal vector.
+///
+/// The above integral is replaced by numerical integration according to:
+///
+/// ```text
+///       nip-1   →     →  →     →  →
+/// res ≈  Σ   q(ιp) ⋅ (e3(ιp) × g1(ιp)) ⋅ wp
+///       p=0
+/// ```
+///
+/// ### 3D surface (boundary only) (geom_ndim = 2 and space_ndim = 3)
 ///
 /// In this case, we use the normal vector to the surface to replace the surface
 /// integrations in the real space with integrations over the mapped space.
 /// Instead of using the Jacobian, we use the normal vector.
+///
+/// Considering convective coordinates (ξ1,ξ2) on the surface, we compute the
+/// following base vectors
+///
+/// ```text
+///          →
+/// →  →    dx
+/// g1(ξ) = ——— = first_column(Jsurf)
+///         dξ1
+///
+///          →
+/// →  →    dx
+/// g2(ξ) = ——— = second_column(Jsurf)
+///         dξ1
+/// ```
+///
+/// where we defined
+///
+/// ```text
+/// Jsurf = Xᵀ · L
+/// ```
+///
+/// We can then perform integrations in the reference space as follows:
+///
+/// ```text
+///       ⌠   →       →      ⌠   → →      →    →
+/// res = │ f(x) unit_n dA = │ f(x(ξ)) ⋅ (g1 × g2) dξ1 dξ2
+///       ⌡                  ⌡
+///       Γ                  Γref
+/// ```
+///
+/// where `unit_n` is the unit normal vector.
+///
+/// The above integral is replaced by numerical integration according to:
+///
+/// ```text
+///       nip-1   →      →   →    →   →
+/// res ≈  Σ   f(ιp)) ⋅ (g1(ιp) × g2(ιp)) ⋅ wp
+///       p=0
+/// ```
 ///
 /// ## Third case: geom_ndim > space_ndim
 ///
@@ -233,17 +316,20 @@ pub struct Shape {
 
     // functions (from each specific shape)
     fn_interp: FnInterp, // function to calculate interpolation functions
-    fn_deriv: FnDeriv,   // function to calculate derivatives of interpolation functions
+    fn_deriv: FnDeriv,   // function to calculate local derivatives of interpolation functions
 
     // input data
     xx_tra: Matrix, // (space_ndim, npoint) transposed coordinates matrix (real space)
     ok_xx: bool,    // User has provided X matrix
 
     // sandbox (temporary) variables
-    ss: Vector,     // (npoint) interpolation functions @ natural coordinate ksi
-    g: Matrix,      // (npoint, geom_ndim) derivatives of interpolation functions w.r.t natural coordinate ksi
-    jj: Matrix,     // (space_ndim, space_ndim) Jacobian matrix
-    jj_inv: Matrix, // (space_ndim, space_ndim) Inverse Jacobian matrix
+    nn: Vector,     // (npoint) interpolation functions @ natural coordinate ksi
+    ll: Matrix,     // (npoint, geom_ndim) derivatives of interpolation functions w.r.t natural coordinate ksi
+    jj: Matrix,     // (space_ndim, geom_ndim) Jacobian matrix
+    jj_inv: Matrix, // (space_ndim, space_ndim) Inverse Jacobian matrix (only if geom_ndim == space_ndim)
+    g1: Vector,     // (space_ndim) convective base vector
+    g2: Vector,     // (space_ndim) convective base vector
+    g3: Vector,     // (space_ndim) convective base vector
 }
 
 impl Shape {
@@ -279,8 +365,8 @@ impl Shape {
                     fn_deriv: Qua4::calc_deriv,
                     xx_tra: Matrix::new(space_ndim, Qua4::NPOINT),
                     ok_xx: false,
-                    ss: Vector::new(Qua4::NPOINT),
-                    g: Matrix::new(Qua4::NPOINT, Qua4::NDIM),
+                    nn: Vector::new(Qua4::NPOINT),
+                    ll: Matrix::new(Qua4::NPOINT, Qua4::NDIM),
                     jj: Matrix::new(space_ndim, space_ndim),
                     jj_inv: Matrix::new(space_ndim, space_ndim),
                 });
@@ -300,8 +386,8 @@ impl Shape {
                     fn_deriv: Qua8::calc_deriv,
                     xx_tra: Matrix::new(space_ndim, Qua8::NPOINT),
                     ok_xx: false,
-                    ss: Vector::new(Qua8::NPOINT),
-                    g: Matrix::new(Qua8::NPOINT, Qua8::NDIM),
+                    nn: Vector::new(Qua8::NPOINT),
+                    ll: Matrix::new(Qua8::NPOINT, Qua8::NDIM),
                     jj: Matrix::new(space_ndim, space_ndim),
                     jj_inv: Matrix::new(space_ndim, space_ndim),
                 });
@@ -327,8 +413,8 @@ impl Shape {
                     fn_deriv: Hex8::calc_deriv,
                     xx_tra: Matrix::new(space_ndim, Hex8::NPOINT),
                     ok_xx: false,
-                    ss: Vector::new(Hex8::NPOINT),
-                    g: Matrix::new(Hex8::NPOINT, Hex8::NDIM),
+                    nn: Vector::new(Hex8::NPOINT),
+                    ll: Matrix::new(Hex8::NPOINT, Hex8::NDIM),
                     jj: Matrix::new(space_ndim, space_ndim),
                     jj_inv: Matrix::new(space_ndim, space_ndim),
                 });
@@ -348,8 +434,8 @@ impl Shape {
                     fn_deriv: Hex20::calc_deriv,
                     xx_tra: Matrix::new(space_ndim, Hex20::NPOINT),
                     ok_xx: false,
-                    ss: Vector::new(Hex20::NPOINT),
-                    g: Matrix::new(Hex20::NPOINT, Hex20::NDIM),
+                    nn: Vector::new(Hex20::NPOINT),
+                    ll: Matrix::new(Hex20::NPOINT, Hex20::NDIM),
                     jj: Matrix::new(space_ndim, space_ndim),
                     jj_inv: Matrix::new(space_ndim, space_ndim),
                 });
@@ -396,8 +482,8 @@ impl Shape {
         if !self.ok_xx {
             return Err("the coordinates matrix (xx_mat) must be set first");
         }
-        (self.fn_interp)(&mut self.ss, ksi);
-        mat_vec_mul(x, 1.0, &self.xx_tra, &self.ss)
+        (self.fn_interp)(&mut self.nn, ksi);
+        mat_vec_mul(x, 1.0, &self.xx_tra, &self.nn)
     }
 
     /// Calculates the Jacobian matrix of the mapping from general to natural space
@@ -437,8 +523,8 @@ impl Shape {
         if !self.ok_xx {
             return Err("the coordinates matrix (xx_mat) must be set first");
         }
-        (self.fn_deriv)(&mut self.g, ksi);
-        mat_mat_mul(&mut self.jj, 1.0, &self.xx_tra, &self.g)?;
+        (self.fn_deriv)(&mut self.ll, ksi);
+        mat_mat_mul(&mut self.jj, 1.0, &self.xx_tra, &self.ll)?;
         inverse(&mut self.jj_inv, &self.jj)
     }
 
@@ -614,8 +700,8 @@ mod tests {
             args.ksi[i] = args.at_ksi[i];
         }
         args.ksi[args.i] = v;
-        (args.shape.fn_interp)(&mut args.shape.ss, &args.ksi);
-        args.shape.ss[args.m]
+        (args.shape.fn_interp)(&mut args.shape.nn, &args.ksi);
+        args.shape.nn[args.m]
     }
 
     #[test]
@@ -628,9 +714,9 @@ mod tests {
             let mut ksi = Vector::new(ndim);
             for m in 0..npoint {
                 shape.get_ksi(&mut ksi, m);
-                (shape.fn_interp)(&mut shape.ss, &ksi);
+                (shape.fn_interp)(&mut shape.nn, &ksi);
                 for n in 0..npoint {
-                    let smn = shape.ss[n];
+                    let smn = shape.nn[n];
                     if m == n {
                         assert_approx_eq!(smn, 1.0, 1e-15);
                     } else {
@@ -658,13 +744,13 @@ mod tests {
                 m: 0,
                 i: 0,
             };
-            (shape.fn_deriv)(&mut shape.g, &args.at_ksi);
+            (shape.fn_deriv)(&mut shape.ll, &args.at_ksi);
             for m in 0..npoint {
                 args.m = m;
                 for i in 0..ndim {
                     args.i = i;
                     // gᵐᵢ := dSᵐ/dξᵢ
-                    assert_deriv_approx_eq!(shape.g[m][i], args.at_ksi[i], sm, args, 1e-12);
+                    assert_deriv_approx_eq!(shape.ll[m][i], args.at_ksi[i], sm, args, 1e-12);
                 }
             }
         }
