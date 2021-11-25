@@ -200,7 +200,8 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// -1 ≤ ξ ≤ +1
 /// ```
 ///
-/// Then, we replace the line integrals over the real space with line integrals over the mapped space as follows:
+/// Then, we replace the line integrals over the real space with line integrals over
+/// the mapped space as follows:
 ///
 /// ```text
 ///       ⌠               ⌠
@@ -214,14 +215,14 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// The above integral is replaced by numerical integration according to:
 ///
 /// ```text
-///       nip-1  →               →
-/// res ≈  Σ   f(ιp) ⋅ ||Jline||(ιp) ⋅ wp
+///       nip-1      →               →
+/// res ≈  Σ   f(ell(ιp)) ⋅ ||Jline||(ιp) ⋅ wp
 ///       p=0
 /// ```
 ///
-/// where `nip` is the number of integration points, `ιp := ξp` is the reference
-/// coordinate of the integration point, and `wp` is the weight attached to the
-/// p-th integration point.
+/// where `nip` is the number of integration points, `ιp := ξp` is the reference coordinate
+/// of the integration point, and `wp` is the weight attached to the p-th integration point.
+/// Furthermore, we can use the definition of `ell` to compute `ell(ξ:=ιp)`.
 ///
 /// **Boundary line in 2D (geom_ndim = 1 and space_ndim = 2)**
 ///
@@ -246,10 +247,12 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// The above integral is replaced by numerical integration according to:
 ///
 /// ```text
-///       nip-1   →     →  →     →  →
-/// res ≈  Σ   q(ιp) ⋅ (e3(ιp) × g1(ιp)) ⋅ wp
+///       nip-1      →       →  →     →  →
+/// res ≈  Σ   q(ell(ιp)) ⋅ (e3(ιp) × g1(ιp)) ⋅ wp
 ///       p=0
 /// ```
+///
+/// where we can use the definition of `ell` to compute `ell(ξ:=ιp)`.
 ///
 /// ### 3D surface (boundary only) (geom_ndim = 2 and space_ndim = 3)
 ///
