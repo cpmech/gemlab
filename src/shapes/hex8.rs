@@ -2,7 +2,7 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a hexahedron with 8 points
 ///
-/// The natural coordinates range from -1 to +1 with the geometry centred @ 0.
+/// The reference coordinates range from -1 to +1 with the geometry centred @ 0.
 ///
 /// # Local IDs of points
 ///
@@ -113,7 +113,7 @@ impl Hex8 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_NATURAL_COORDS: [[f64; Hex8::NDIM]; Hex8::NPOINT] = [
+    pub const POINT_REFERENCE_COORDS: [[f64; Hex8::NDIM]; Hex8::NPOINT] = [
         [-1.0, -1.0, -1.0],
         [ 1.0, -1.0, -1.0],
         [ 1.0,  1.0, -1.0],

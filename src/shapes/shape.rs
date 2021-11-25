@@ -3,8 +3,7 @@ use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, Vector};
 
 /// Defines the kind of shape
-#[allow(dead_code)]
-enum ShapeKind {
+pub enum GeoKind {
     Lin2,
     Lin3,
     Lin4,
@@ -38,10 +37,10 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// Here, we consider the following dimensions:
 ///
 /// * `space_ndim` -- is the number of dimensions of the space under study
-/// * `geom_ndim` -- is the number of dimensions of the geometry element (shape),
-///                  for instance, a line in the 2D space has `geom_ndim = 1` and
+/// * `geo_ndim` -- is the number of dimensions of the geometry element (shape),
+///                  for instance, a line in the 2D space has `geo_ndim = 1` and
 ///                  `space_ndim = 2`. Another example is a triangle in the 3D space
-///                  which has `geom_ndim = 2` and `space_ndim = 3`.
+///                  which has `geo_ndim = 2` and `space_ndim = 3`.
 ///
 /// We also consider the following counting variables:
 ///
@@ -62,7 +61,7 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 ///        m         
 /// ```
 ///
-/// where `x` is the (space_ndim) vector of real coordinates, `ξ` is the (geom_ndim)
+/// where `x` is the (space_ndim) vector of real coordinates, `ξ` is the (geo_ndim)
 /// vector of reference coordinates, `Nm` are the (npoint) interpolation functions,
 /// and `xm` are the (npoint) coordinates of each m-point of the geometric shape.
 ///
@@ -75,9 +74,9 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 ///
 /// where `N` is an (npoint) array formed with all `Nm`.
 ///
-/// ## First case: geom_ndim = space_ndim
+/// ## First case: geo_ndim = space_ndim
 ///
-/// If `geom_ndim == space_ndim`, we define the Jacobian tensor as
+/// If `geo_ndim == space_ndim`, we define the Jacobian tensor as
 ///
 /// ```text
 ///         →
@@ -98,8 +97,8 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// ```
 ///
 /// are the derivatives of each interpolation function `Nm` with respect to the
-/// reference coordinate. `Lm` are (geom_ndim) vectors and can be organized in
-/// an (npoint,geom_ndim) matrix `L` of "local" derivatives.
+/// reference coordinate. `Lm` are (geo_ndim) vectors and can be organized in
+/// an (npoint,geo_ndim) matrix `L` of "local" derivatives.
 ///
 /// We can write the Jacobian in matrix notation as follows
 ///
@@ -107,7 +106,7 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// J = Xᵀ · L
 /// ```
 ///
-/// where X is the (npoint,space_ndim) matrix of coordinates and L is the (npoint,geom_ndim) matrix.
+/// where X is the (npoint,space_ndim) matrix of coordinates and L is the (npoint,geo_ndim) matrix.
 ///
 /// We define the gradient of interpolation functions (i.e., derivatives of interpolation
 /// functions w.r.t real coordinates) by means of
@@ -158,18 +157,18 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// coordinate of the integration point, and `wp` is the weight attached to the
 /// p-th integration point.
 ///
-/// ## Second case: geom_ndim < space_ndim
+/// ## Second case: geo_ndim < space_ndim
 ///
 /// This case corresponds to a line or surface in a multi-dimensional space.
 /// For instance, a line in 2D or 3D or a triangle in 3D.
 ///
-/// If `geom_ndim < space_ndim`, we must consider some particular cases. For now, the only
+/// If `geo_ndim < space_ndim`, we must consider some particular cases. For now, the only
 /// cases we can handle are:
 ///
-/// * `geom_ndim = 1` and `space_ndim = 2 or 3` -- Line in multi-dimensions (boundary or not)
-/// * `geom_ndim = 2` and `space_ndim = 3` -- 3D surface (boundary only)
+/// * `geo_ndim = 1` and `space_ndim = 2 or 3` -- Line in multi-dimensions (boundary or not)
+/// * `geo_ndim = 2` and `space_ndim = 3` -- 3D surface (boundary only)
 ///
-/// ### Line in multi-dimensions (geom_ndim = 1 and space_ndim > 1)
+/// ### Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
 ///
 /// In this case, the Jacobian equals the (space_ndim,1) base vector `g1` aligned
 /// with the line element, i.e.,
@@ -224,7 +223,7 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// of the integration point, and `wp` is the weight attached to the p-th integration point.
 /// Furthermore, we can use the definition of `ell` to compute `ell(ξ:=ιp)`.
 ///
-/// **Boundary line in 2D (geom_ndim = 1 and space_ndim = 2)**
+/// **Boundary line in 2D (geo_ndim = 1 and space_ndim = 2)**
 ///
 /// If the line defines a boundary in 2D, we compute a normal vector by means of
 ///
@@ -254,7 +253,7 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 ///
 /// where we can use the definition of `ell` to compute `ell(ξ:=ιp)`.
 ///
-/// ### 3D surface (boundary only) (geom_ndim = 2 and space_ndim = 3)
+/// ### 3D surface (boundary only) (geo_ndim = 2 and space_ndim = 3)
 ///
 /// In this case, we use the normal vector to the surface to replace the surface
 /// integrations in the real space with integrations over the mapped space.
@@ -300,39 +299,36 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 ///       p=0
 /// ```
 ///
-/// ## Third case: geom_ndim > space_ndim
+/// ## Third case: geo_ndim > space_ndim
 ///
 /// This case (e.g., a cube in the 1D space) is not allowed.
 pub struct Shape {
-    // space ndim and shape kind
-    space_ndim: usize, // space ndim (not shape ndim)
-    kind: ShapeKind,   // shape kind
+    // geometry kind and space ndim
+    pub kind: GeoKind,     // geometry kind
+    pub space_ndim: usize, // space ndim (not shape ndim)
 
     // constants (from each specific shape)
-    geom_ndim: usize,   // shape ndim (not space ndim)
-    npoint: usize,      // number of points
-    nedge: usize,       // number of edges
-    nface: usize,       // number of faces
-    edge_npoint: usize, // edge's number of points
-    face_npoint: usize, // face's number of points
-    face_nedge: usize,  // face's number of edges
+    pub geo_ndim: usize,    // geometry ndim (not space ndim)
+    pub npoint: usize,      // number of points
+    pub nedge: usize,       // number of edges
+    pub nface: usize,       // number of faces
+    pub edge_npoint: usize, // edge's number of points
+    pub face_npoint: usize, // face's number of points
+    pub face_nedge: usize,  // face's number of edges
 
     // functions (from each specific shape)
-    fn_interp: FnInterp, // function to calculate interpolation functions
-    fn_deriv: FnDeriv,   // function to calculate local derivatives of interpolation functions
+    pub fn_interp: FnInterp, // function to calculate interpolation functions
+    pub fn_deriv: FnDeriv,   // function to calculate local derivatives of interpolation functions
 
     // input data
-    xx_tra: Matrix, // (space_ndim, npoint) transposed coordinates matrix (real space)
-    ok_xx: bool,    // User has provided X matrix
+    // ok_xx: bool,    // User has provided X matrix
+    pub xx_tra: Matrix, // (space_ndim, npoint) transposed coordinates matrix (real space)
 
     // sandbox (temporary) variables
-    nn: Vector,     // (npoint) interpolation functions @ natural coordinate ksi
-    ll: Matrix,     // (npoint, geom_ndim) derivatives of interpolation functions w.r.t natural coordinate ksi
-    jj: Matrix,     // (space_ndim, geom_ndim) Jacobian matrix
-    jj_inv: Matrix, // (space_ndim, space_ndim) Inverse Jacobian matrix (only if geom_ndim == space_ndim)
-    g1: Vector,     // (space_ndim) convective base vector
-    g2: Vector,     // (space_ndim) convective base vector
-    g3: Vector,     // (space_ndim) convective base vector
+    pub nn: Vector,     // (npoint) interpolation functions @ reference coordinate ksi
+    pub ll: Matrix,     // (npoint, geo_ndim) derivatives of interpolation functions w.r.t reference coordinate ksi
+    pub jj: Matrix,     // (space_ndim, geo_ndim) Jacobian matrix
+    pub jj_inv: Matrix, // (space_ndim, space_ndim) Inverse Jacobian matrix (only if geo_ndim == space_ndim)
 }
 
 impl Shape {
@@ -341,194 +337,210 @@ impl Shape {
     /// # Input
     ///
     /// * `space_ndim` -- the space dimension (1, 2, or 3)
-    /// * `geom_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space
+    /// * `geo_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space
     /// * `npoint` -- the number of points defining the shape
-    pub fn new(space_ndim: usize, geom_ndim: usize, npoint: usize) -> Result<Self, StrError> {
-        match (geom_ndim, npoint) {
-            (1, 2) => return Err("Lin2 is not available yet"),
-            (1, 3) => return Err("Lin3 is not available yet"),
-            (1, 4) => return Err("Lin4 is not available yet"),
-            (1, 5) => return Err("Lin5 is not available yet"),
-            (2, 3) => return Err("Tri3 is not available yet"),
-            (2, 6) => return Err("Tri6 is not available yet"),
-            (2, 10) => return Err("Tri10 is not available yet"),
-            (2, 15) => return Err("Tri15 is not available yet"),
-            (2, 4) => {
-                return Ok(Shape {
-                    space_ndim,
-                    kind: ShapeKind::Qua4,
-                    geom_ndim: Qua4::NDIM,
-                    npoint: Qua4::NPOINT,
-                    nedge: Qua4::NEDGE,
-                    nface: Qua4::NFACE,
-                    edge_npoint: Qua4::EDGE_NPOINT,
-                    face_npoint: Qua4::FACE_NPOINT,
-                    face_nedge: Qua4::FACE_NEDGE,
-                    fn_interp: Qua4::calc_interp,
-                    fn_deriv: Qua4::calc_deriv,
-                    xx_tra: Matrix::new(space_ndim, Qua4::NPOINT),
-                    ok_xx: false,
-                    nn: Vector::new(Qua4::NPOINT),
-                    ll: Matrix::new(Qua4::NPOINT, Qua4::NDIM),
-                    jj: Matrix::new(space_ndim, space_ndim),
-                    jj_inv: Matrix::new(space_ndim, space_ndim),
-                });
-            }
-            (2, 8) => {
-                return Ok(Shape {
-                    space_ndim,
-                    kind: ShapeKind::Qua8,
-                    geom_ndim: Qua8::NDIM,
-                    npoint: Qua8::NPOINT,
-                    nedge: Qua8::NEDGE,
-                    nface: Qua8::NFACE,
-                    edge_npoint: Qua8::EDGE_NPOINT,
-                    face_npoint: Qua8::FACE_NPOINT,
-                    face_nedge: Qua8::FACE_NEDGE,
-                    fn_interp: Qua8::calc_interp,
-                    fn_deriv: Qua8::calc_deriv,
-                    xx_tra: Matrix::new(space_ndim, Qua8::NPOINT),
-                    ok_xx: false,
-                    nn: Vector::new(Qua8::NPOINT),
-                    ll: Matrix::new(Qua8::NPOINT, Qua8::NDIM),
-                    jj: Matrix::new(space_ndim, space_ndim),
-                    jj_inv: Matrix::new(space_ndim, space_ndim),
-                });
-            }
-            (2, 9) => return Err("Qua9 is not available yet"),
-            (2, 12) => return Err("Qua12 is not available yet"),
-            (2, 16) => return Err("Qua16 is not available yet"),
-            (2, 17) => return Err("Qua17 is not available yet"),
-            (3, 4) => return Err("Tet4 is not available yet"),
-            (3, 10) => return Err("Tet10 is not available yet"),
-            (3, 8) => {
-                return Ok(Shape {
-                    space_ndim,
-                    kind: ShapeKind::Hex8,
-                    geom_ndim: Hex8::NDIM,
-                    npoint: Hex8::NPOINT,
-                    nedge: Hex8::NEDGE,
-                    nface: Hex8::NFACE,
-                    edge_npoint: Hex8::EDGE_NPOINT,
-                    face_npoint: Hex8::FACE_NPOINT,
-                    face_nedge: Hex8::FACE_NEDGE,
-                    fn_interp: Hex8::calc_interp,
-                    fn_deriv: Hex8::calc_deriv,
-                    xx_tra: Matrix::new(space_ndim, Hex8::NPOINT),
-                    ok_xx: false,
-                    nn: Vector::new(Hex8::NPOINT),
-                    ll: Matrix::new(Hex8::NPOINT, Hex8::NDIM),
-                    jj: Matrix::new(space_ndim, space_ndim),
-                    jj_inv: Matrix::new(space_ndim, space_ndim),
-                });
-            }
-            (3, 20) => {
-                return Ok(Shape {
-                    space_ndim,
-                    kind: ShapeKind::Hex20,
-                    geom_ndim: Hex20::NDIM,
-                    npoint: Hex20::NPOINT,
-                    nedge: Hex20::NEDGE,
-                    nface: Hex20::NFACE,
-                    edge_npoint: Hex20::EDGE_NPOINT,
-                    face_npoint: Hex20::FACE_NPOINT,
-                    face_nedge: Hex20::FACE_NEDGE,
-                    fn_interp: Hex20::calc_interp,
-                    fn_deriv: Hex20::calc_deriv,
-                    xx_tra: Matrix::new(space_ndim, Hex20::NPOINT),
-                    ok_xx: false,
-                    nn: Vector::new(Hex20::NPOINT),
-                    ll: Matrix::new(Hex20::NPOINT, Hex20::NDIM),
-                    jj: Matrix::new(space_ndim, space_ndim),
-                    jj_inv: Matrix::new(space_ndim, space_ndim),
-                });
-            }
-            _ => return Err("(space_ndim, geom_ndim, npoint) combination is invalid"),
+    pub fn new(space_ndim: usize, geo_ndim: usize, npoint: usize) -> Result<Self, StrError> {
+        let ok_xx = false;
+        let xx_tra = Matrix::new(space_ndim, npoint);
+        let nn = Vector::new(npoint);
+        let ll = Matrix::new(npoint, geo_ndim);
+        let jj = Matrix::new(space_ndim, geo_ndim);
+        let jj_inv = if geo_ndim == space_ndim {
+            Matrix::new(space_ndim, space_ndim)
+        } else {
+            Matrix::new(0, 0)
         };
+        match (geo_ndim, npoint) {
+            (1, 2) => Err("Lin2 is not available yet"),
+            (1, 3) => Err("Lin3 is not available yet"),
+            (1, 4) => Err("Lin4 is not available yet"),
+            (1, 5) => Err("Lin5 is not available yet"),
+            (2, 3) => Err("Tri3 is not available yet"),
+            (2, 6) => Err("Tri6 is not available yet"),
+            (2, 10) => Err("Tri10 is not available yet"),
+            (2, 15) => Err("Tri15 is not available yet"),
+            (2, 4) => Ok(Shape {
+                kind: GeoKind::Qua4,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Qua4::NEDGE,
+                nface: Qua4::NFACE,
+                edge_npoint: Qua4::EDGE_NPOINT,
+                face_npoint: Qua4::FACE_NPOINT,
+                face_nedge: Qua4::FACE_NEDGE,
+                fn_interp: Qua4::calc_interp,
+                fn_deriv: Qua4::calc_deriv,
+                xx_tra,
+                nn,
+                ll,
+                jj,
+                jj_inv,
+            }),
+            (2, 8) => Ok(Shape {
+                kind: GeoKind::Qua8,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Qua8::NEDGE,
+                nface: Qua8::NFACE,
+                edge_npoint: Qua8::EDGE_NPOINT,
+                face_npoint: Qua8::FACE_NPOINT,
+                face_nedge: Qua8::FACE_NEDGE,
+                fn_interp: Qua8::calc_interp,
+                fn_deriv: Qua8::calc_deriv,
+                xx_tra,
+                nn,
+                ll,
+                jj,
+                jj_inv,
+            }),
+            (2, 9) => Err("Qua9 is not available yet"),
+            (2, 12) => Err("Qua12 is not available yet"),
+            (2, 16) => Err("Qua16 is not available yet"),
+            (2, 17) => Err("Qua17 is not available yet"),
+            (3, 4) => Err("Tet4 is not available yet"),
+            (3, 10) => Err("Tet10 is not available yet"),
+            (3, 8) => Ok(Shape {
+                kind: GeoKind::Hex8,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Hex8::NEDGE,
+                nface: Hex8::NFACE,
+                edge_npoint: Hex8::EDGE_NPOINT,
+                face_npoint: Hex8::FACE_NPOINT,
+                face_nedge: Hex8::FACE_NEDGE,
+                fn_interp: Hex8::calc_interp,
+                fn_deriv: Hex8::calc_deriv,
+                xx_tra,
+                nn,
+                ll,
+                jj,
+                jj_inv,
+            }),
+            (3, 20) => Ok(Shape {
+                kind: GeoKind::Hex20,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Hex20::NEDGE,
+                nface: Hex20::NFACE,
+                edge_npoint: Hex20::EDGE_NPOINT,
+                face_npoint: Hex20::FACE_NPOINT,
+                face_nedge: Hex20::FACE_NEDGE,
+                fn_interp: Hex20::calc_interp,
+                fn_deriv: Hex20::calc_deriv,
+                xx_tra,
+                nn,
+                ll,
+                jj,
+                jj_inv,
+            }),
+            _ => Err("(space_ndim, geo_ndim, npoint) combination is invalid"),
+        }
     }
 
-    /// Sets the coordinates matrix
-    ///
-    /// # Input
-    ///
-    /// * `xx` -- (npoint, space_ndim) matrix of coordinates
-    pub fn set_coords_matrix(&mut self, xx: &Matrix) -> Result<(), StrError> {
-        let (m, n) = xx.dims();
-        if m != self.npoint || n != self.space_ndim {
-            return Err("matrix of coordinates has invalid dimensions");
-        }
-        for i in 0..self.npoint {
-            for j in 0..self.space_ndim {
-                self.xx_tra[j][i] = xx[i][j];
-            }
-        }
-        self.ok_xx = true;
-        Ok(())
-    }
+    // Sets the coordinates matrix
+    //
+    // # Input
+    //
+    // * `xx` -- (npoint, space_ndim) matrix of coordinates
+    // pub fn set_coords_matrix(&mut self, xx: &Matrix) -> Result<(), StrError> {
+    //     let (nrow, ncol) = xx.dims();
+    //     if nrow != self.npoint || ncol != self.space_ndim {
+    //         return Err("matrix of coordinates has invalid dimensions");
+    //     }
+    //     for i in 0..self.npoint {
+    //         for j in 0..self.space_ndim {
+    //             self.xx_tra[j][i] = xx[i][j];
+    //         }
+    //     }
+    //     self.ok_xx = true;
+    //     Ok(())
+    // }
 
-    /// Calculates the real coordinates x from natural coordinates ξ
+    /// Calculates the real coordinates x from reference coordinates ξ
     ///
     /// The isoparametric formulation establishes:
     ///
     /// ```text
     /// → →         →  →
-    /// x(ξ) = Σ Sᵐ(ξ) xᵐ
+    /// x(ξ) = Σ Nᵐ(ξ) xᵐ
     ///        m         
     /// ```
     ///
     /// or
     ///
     /// ```text
-    /// x := Xᵀ ⋅ S
+    /// x := Xᵀ ⋅ N
     /// ```
+    ///
+    /// # Warning
+    ///
+    /// You must set the coordinates matrix first, otherwise the computations
+    /// will generate wrong results.
     pub fn calc_coords(&mut self, x: &mut Vector, ksi: &Vector) -> Result<(), StrError> {
-        if !self.ok_xx {
-            return Err("the coordinates matrix (xx_mat) must be set first");
-        }
         (self.fn_interp)(&mut self.nn, ksi);
         mat_vec_mul(x, 1.0, &self.xx_tra, &self.nn)
     }
 
-    /// Calculates the Jacobian matrix of the mapping from general to natural space
+    /// Calculates the Jacobian of the mapping from general to reference space
     ///
-    /// In terms of Cartesian ortho-normal components, the Jacobian is
+    /// The components of the Jacobian matrix are
     ///
     /// ```text
     ///        ∂xᵢ
-    /// Jᵢⱼ := ——— = Σ X[m][i] * g[m][j]
+    /// Jᵢⱼ := ——— = Σ X[m][i] * L[m][j]
     ///        ∂ξⱼ   m
     /// ```
     ///
-    /// Therefore, in matrix notation,
+    /// Thus
     ///
     /// ```text
-    ///               ∂xi
-    /// J_mat[i][j] = ———
-    ///               ∂rj
-    ///          _                           _
-    ///         |  ∂x0/∂ξ0  ∂x0/∂ξ1  ∂x0/∂ξ2  |     
-    /// J_mat = |  ∂x1/∂ξ0  ∂x1/∂ξ1  ∂x1/∂ξ2  |     
-    ///         |_ ∂x2/∂ξ0  ∂x2/∂ξ1  ∂x2/∂ξ2 _|     
+    /// jj := J = Xᵀ · L
     ///
-    /// J_mat = Xᵀ · g
+    /// or (line in multi-dimensions, geom_ndim < space_ndim)
+    ///
+    /// jj := Jline = Xᵀ · L
+    ///
+    /// or (3D surface, geo_ndim = 2 and space_ndim = 3)
+    ///
+    /// jj := Jsurf = Xᵀ · L
+    /// ```
+    ///
+    /// If `geo_ndim = space_ndim`, we also compute the inverse Jacobian
+    ///
+    /// ```text
+    /// jj_inv := J⁻¹
     /// ```
     ///
     /// # Input
     ///
-    /// * `ksi` -- ξ (natural) coordinate
+    /// * `ksi` -- ξ reference coordinate
     ///
     /// # Output
     ///
-    /// * Returns the determinant of the Jacobian
-    /// * stored: `jj` -- (space_ndim,space_ndim) Jacobian matrix
-    /// * stored: `jj_inv` -- (space_ndim,space_ndim) inverse of the Jacobian matrix
+    /// If `geo_ndim = space_ndim`, returns the determinant of the Jacobian.
+    /// Otherwise, returns zero.
+    ///
+    /// # Updated variables
+    ///
+    /// * `jj` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `jj_inv` -- If `geo_ndim = space_ndim`: inverse Jacobian matrix (space_ndim,space_ndim)
+    ///
+    /// # Warning
+    ///
+    /// You must set the coordinates matrix first, otherwise the computations
+    /// will generate wrong results.
     pub fn calc_jacobian(&mut self, ksi: &Vector) -> Result<f64, StrError> {
-        if !self.ok_xx {
-            return Err("the coordinates matrix (xx_mat) must be set first");
-        }
         (self.fn_deriv)(&mut self.ll, ksi);
         mat_mat_mul(&mut self.jj, 1.0, &self.xx_tra, &self.ll)?;
-        inverse(&mut self.jj_inv, &self.jj)
+        if self.geo_ndim == self.space_ndim {
+            inverse(&mut self.jj_inv, &self.jj)
+        } else {
+            Ok(0.0)
+        }
     }
 
     // --- getters ------------------------------------------------------------------------------
@@ -541,8 +553,8 @@ impl Shape {
 
     /// Returns the number of dimensions of the shape (not space)
     #[inline]
-    pub fn get_geom_ndim(&self) -> usize {
-        self.geom_ndim
+    pub fn get_geo_ndim(&self) -> usize {
+        self.geo_ndim
     }
 
     /// Returns the number of points
@@ -589,10 +601,10 @@ impl Shape {
     /// * `i` -- index of local point [0, edge_npoint-1]
     pub fn get_edge_point_id(&self, e: usize, i: usize) -> usize {
         match self.kind {
-            ShapeKind::Qua4 => Qua4::EDGE_POINT_IDS[e][i],
-            ShapeKind::Qua8 => Qua8::EDGE_POINT_IDS[e][i],
-            ShapeKind::Hex8 => Hex8::EDGE_POINT_IDS[e][i],
-            ShapeKind::Hex20 => Hex20::EDGE_POINT_IDS[e][i],
+            GeoKind::Qua4 => Qua4::EDGE_POINT_IDS[e][i],
+            GeoKind::Qua8 => Qua8::EDGE_POINT_IDS[e][i],
+            GeoKind::Hex8 => Hex8::EDGE_POINT_IDS[e][i],
+            GeoKind::Hex20 => Hex20::EDGE_POINT_IDS[e][i],
             _ => panic!("ShapeKind is not available yet"),
         }
     }
@@ -605,10 +617,10 @@ impl Shape {
     /// * `i` -- index of local point [0, face_npoint-1]
     pub fn get_face_point_id(&self, f: usize, i: usize) -> usize {
         match self.kind {
-            ShapeKind::Qua4 => 0,
-            ShapeKind::Qua8 => 0,
-            ShapeKind::Hex8 => Hex8::FACE_POINT_IDS[f][i],
-            ShapeKind::Hex20 => Hex20::FACE_POINT_IDS[f][i],
+            GeoKind::Qua4 => 0,
+            GeoKind::Qua8 => 0,
+            GeoKind::Hex8 => Hex8::FACE_POINT_IDS[f][i],
+            GeoKind::Hex20 => Hex20::FACE_POINT_IDS[f][i],
             _ => panic!("ShapeKind is not available yet"),
         }
     }
@@ -622,38 +634,38 @@ impl Shape {
     /// * `i` -- index of local point [0, edge_npoint-1]
     pub fn get_face_edge_point_id(&self, f: usize, k: usize, i: usize) -> usize {
         match self.kind {
-            ShapeKind::Qua4 => 0,
-            ShapeKind::Qua8 => 0,
-            ShapeKind::Hex8 => Hex8::FACE_EDGE_POINT_IDS[f][k][i],
-            ShapeKind::Hex20 => Hex20::FACE_EDGE_POINT_IDS[f][k][i],
+            GeoKind::Qua4 => 0,
+            GeoKind::Qua8 => 0,
+            GeoKind::Hex8 => Hex8::FACE_EDGE_POINT_IDS[f][k][i],
+            GeoKind::Hex20 => Hex20::FACE_EDGE_POINT_IDS[f][k][i],
             _ => panic!("ShapeKind is not available yet"),
         }
     }
 
-    /// Returns natural coordinates @ point m
+    /// Returns reference coordinates @ point m
     ///
     /// ```text
     /// coord = ξᵐ = vector{r, s, t} @ point m
     /// ```
     pub fn get_ksi(&self, ksi: &mut Vector, m: usize) {
         match self.kind {
-            ShapeKind::Qua4 => {
-                ksi[0] = Qua4::POINT_NATURAL_COORDS[m][0];
-                ksi[1] = Qua4::POINT_NATURAL_COORDS[m][1];
+            GeoKind::Qua4 => {
+                ksi[0] = Qua4::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Qua4::POINT_REFERENCE_COORDS[m][1];
             }
-            ShapeKind::Qua8 => {
-                ksi[0] = Qua8::POINT_NATURAL_COORDS[m][0];
-                ksi[1] = Qua8::POINT_NATURAL_COORDS[m][1];
+            GeoKind::Qua8 => {
+                ksi[0] = Qua8::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Qua8::POINT_REFERENCE_COORDS[m][1];
             }
-            ShapeKind::Hex8 => {
-                ksi[0] = Hex8::POINT_NATURAL_COORDS[m][0];
-                ksi[1] = Hex8::POINT_NATURAL_COORDS[m][1];
-                ksi[2] = Hex8::POINT_NATURAL_COORDS[m][2];
+            GeoKind::Hex8 => {
+                ksi[0] = Hex8::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Hex8::POINT_REFERENCE_COORDS[m][1];
+                ksi[2] = Hex8::POINT_REFERENCE_COORDS[m][2];
             }
-            ShapeKind::Hex20 => {
-                ksi[0] = Hex20::POINT_NATURAL_COORDS[m][0];
-                ksi[1] = Hex20::POINT_NATURAL_COORDS[m][1];
-                ksi[2] = Hex20::POINT_NATURAL_COORDS[m][2];
+            GeoKind::Hex20 => {
+                ksi[0] = Hex20::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Hex20::POINT_REFERENCE_COORDS[m][1];
+                ksi[2] = Hex20::POINT_REFERENCE_COORDS[m][2];
             }
             _ => panic!("ShapeKind is not available yet"),
         }
@@ -699,7 +711,7 @@ mod tests {
 
     // Computes Sᵐ(ξ) with variable ξ
     fn sm(v: f64, args: &mut Arguments) -> f64 {
-        for i in 0..args.shape.get_geom_ndim() {
+        for i in 0..args.shape.get_geo_ndim() {
             args.ksi[i] = args.at_ksi[i];
         }
         args.ksi[args.i] = v;
@@ -712,7 +724,7 @@ mod tests {
         let ndim_npoint = gen_ndim_npoint();
         for (ndim, npoint) in ndim_npoint {
             let mut shape = Shape::new(ndim, ndim, npoint)?;
-            assert_eq!(shape.get_geom_ndim(), ndim);
+            assert_eq!(shape.get_geo_ndim(), ndim);
             assert_eq!(shape.get_npoint(), npoint);
             let mut ksi = Vector::new(ndim);
             for m in 0..npoint {
@@ -765,7 +777,7 @@ mod tests {
         let ndim_npoint = gen_ndim_npoint();
         for (ndim, npoint) in ndim_npoint {
             let mut shape = Shape::new(ndim, ndim, npoint)?;
-            let ndim = shape.get_geom_ndim();
+            let ndim = shape.get_geo_ndim();
             let npoint = shape.get_npoint();
             let mut ksi = Vector::new(ndim);
             // create matrix of coordinates with shifted nat-coords: edges = [0, 2]

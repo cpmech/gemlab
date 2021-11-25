@@ -96,16 +96,16 @@ pub struct Block {
     // shape and interpolation functions
     shape: Shape,
 
-    // grid to search natural coordinates
+    // grid to search reference coordinates
     grid_ksi: GridSearch,
 }
 
 impl Block {
     // constants
-    const NAT_MIN: f64 = -1.0; // min natural coordinate value
-    const NAT_MAX: f64 = 1.0; // max natural coordinate value
-    const NAT_LENGTH: f64 = 2.0; // length of shape along each direction in natural coords space
-    const NAT_TOLERANCE: f64 = 1e-4; // tolerance to compare coordinates in the natural space
+    const NAT_MIN: f64 = -1.0; // min reference coordinate value
+    const NAT_MAX: f64 = 1.0; // max reference coordinate value
+    const NAT_LENGTH: f64 = 2.0; // length of shape along each direction in reference coords space
+    const NAT_TOLERANCE: f64 = 1e-4; // tolerance to compare coordinates in the reference space
 
     // valid output npoint
     const VALID_OUTPUT_NPOINT_2D: [usize; 5] = [4, 8, 9, 12, 16];
@@ -264,7 +264,7 @@ impl Block {
     /// Δξᵐ = wᵐ ⋅ L / Σ_m wᵐ
     /// ```
     ///
-    /// where `L=2` is the edge-length (in natural coordinates) and `wᵐ` are
+    /// where `L=2` is the edge-length (in reference coordinates) and `wᵐ` are
     /// the weights for each division `m`.
     pub fn set_ndiv(&mut self, ndiv: &[usize]) -> &mut Self {
         assert_eq!(ndiv.len(), self.space_ndim);
@@ -329,7 +329,7 @@ impl Block {
         let shape_out = Shape::new(space_ndim, shape_ndim, output_npoint)?;
         let npoint_out = shape_out.get_npoint();
 
-        // transformation matrix: scale and translate natural space
+        // transformation matrix: scale and translate reference space
         //   _                                       _
         //  |  scale_x   0.0    0.0    translation_x  |
         //  |    0.0   scale_y  0.0    translation_y  |
@@ -338,7 +338,7 @@ impl Block {
         let ndim = space_ndim;
         let mut transform = Matrix::identity(ndim + 1);
 
-        // augmented natural coordinates [r,s,1] or [r,s,t,1]
+        // augmented reference coordinates [r,s,1] or [r,s,t,1]
         let mut ksi_aug = Vector::new(ndim + 1);
         ksi_aug[ndim] = 1.0;
 
@@ -382,7 +382,7 @@ impl Block {
                     // for each point
                     let mut points = vec![0; npoint_out];
                     for m in 0..npoint_out {
-                        // transform natural coords: scale and translate
+                        // transform reference coords: scale and translate
                         shape_out.get_ksi(&mut ksi_aug, m);
                         mat_vec_mul(&mut ksi, 1.0, &transform, &ksi_aug)?;
 
@@ -440,7 +440,7 @@ impl Block {
     ///
     /// # Input
     ///
-    /// * `ksi_vec` -- (augmented) natural coordinates of the point (scaled and translated already)
+    /// * `ksi_vec` -- (augmented) reference coordinates of the point (scaled and translated already)
     /// * `cell_id` -- ID of the cell adding this point (to set shared-by information)
     ///
     /// # Returns
@@ -662,7 +662,7 @@ impl Block {
         Ok(boundary_faces)
     }
 
-    /// Returns whether or not a point is on boundary given its natural coordinates
+    /// Returns whether or not a point is on boundary given its reference coordinates
     fn is_boundary_point(&self, ksi: &Vector) -> bool {
         for i in 0..self.space_ndim {
             if f64::abs(ksi[i] - Block::NAT_MIN) <= Block::NAT_TOLERANCE {

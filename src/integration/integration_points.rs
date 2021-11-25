@@ -1,6 +1,6 @@
 // This file defines several constants with integration points data.
 //
-// Each integration point (IP) is defined by 3 natural
+// Each integration point (IP) is defined by 3 reference
 // coordinates (r, s, t) and the weight (w).
 //
 // The 1D and 2D geometries have s and/or t equal to zero as appropriate.

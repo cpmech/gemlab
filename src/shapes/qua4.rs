@@ -2,7 +2,7 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a quadrilateral with 4 points
 ///
-/// The natural coordinates range from -1 to +1 with the geometry centred @ 0
+/// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
 /// # Local IDs of points
 ///
@@ -49,7 +49,7 @@ impl Qua4 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_NATURAL_COORDS: [[f64; Qua4::NDIM]; Qua4::NPOINT] = [
+    pub const POINT_REFERENCE_COORDS: [[f64; Qua4::NDIM]; Qua4::NPOINT] = [
         [-1.0, -1.0],
         [ 1.0, -1.0],
         [ 1.0,  1.0],
