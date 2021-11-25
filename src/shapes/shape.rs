@@ -31,32 +31,58 @@ type FnInterp = fn(&mut Vector, &Vector);
 // alias for derivative of interpolation functions
 type FnDeriv = fn(&mut Matrix, &Vector);
 
-/// Defines an isoparametric geometric shape for numerical integration and more
+/// Implements an isoparametric geometric shape for numerical integration and more
+///
+/// # Definitions
+///
+/// Here, we consider the following dimensions:
+///
+/// * `space_ndim` -- is the number of dimensions of the space under study
+/// * `geom_ndim` -- is the number of dimensions of the geometry element (shape),
+///                  for instance, a line in the 2D space has `geom_ndim = 1` and
+///                  `space_ndim = 2`. Another example is a triangle in the 3D space
+///                  which has `geom_ndim = 2` and `space_ndim = 3`.
+///
+/// We also consider the following counting variables:
+///
+/// * `npoint` -- number of points
+/// * `nedge` -- number of edges
+/// * `nface` -- number of faces
+/// * `edge_npoint` -- edge's number of points
+/// * `face_npoint` -- face's number of points
+/// * `face_nedge` -- face's number of edges
+///
+/// # Formulae
 ///
 /// The isoparametric formulation establishes that
 ///
 /// ```text
 /// → →         →  →
-/// x(ξ) = Σ Sᵐ(ξ) xᵐ
+/// x(ξ) = Σ Nᵐ(ξ) xᵐ
 ///        m         
 /// ```
 ///
-/// where x is the (space_ndim) mapped vector of real coordinates
-/// and ξ is the (space_ndim) vector of natural (reference) coordinates.
-/// Above, xm are the coordinates of each m-point of the geometric shape.
+/// where `x` is the (space_ndim) vector of real coordinates, `ξ` is the (geom_ndim)
+/// vector of reference coordinates, `Nm` are the (npoint) interpolation functions,
+/// and `xm` are the (npoint) coordinates of each m-point of the geometric shape.
 ///
-/// Given the matrix of coordinates X, we can calculate the mapped coordinates vector x by means of
+/// Given an (npoint,space_ndim) matrix of coordinates X, we can calculate the
+/// (space_ndim) vector of coordinates x by means of
 ///
 /// ```text
-/// x = Xᵀ ⋅ S
+/// x = Xᵀ ⋅ N
 /// ```
 ///
-/// The Jacobian tensor is
+/// where `N` is an (npoint) array formed with all `Nm`.
+///
+/// ## First case: geom_ndim = space_ndim
+///
+/// If `geom_ndim == space_ndim`, we define the Jacobian tensor as
 ///
 /// ```text
 ///         →
 ///   →    dx     →    →
-/// J(ξ) = —— = Σ xᵐ ⊗ gᵐ
+/// J(ξ) = —— = Σ xᵐ ⊗ Lᵐ
 ///         →   m
 ///        dξ
 /// ```
@@ -65,51 +91,139 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 ///
 /// ```text
 ///             →
-/// →       dSᵐ(ξ)
-/// gᵐ(ξ) = ——————
+/// →       dNᵐ(ξ)
+/// Lᵐ(ξ) = ——————
 ///            →
 ///           dξ
 /// ```
 ///
+/// are the derivatives of each interpolation function `Nm` with respect to the
+/// reference coordinate. `Lm` are (geom_ndim) vectors and can be organized in
+/// an (npoint,geom_ndim) matrix `L` of "local" derivatives.
+///
 /// We can write the Jacobian in matrix notation as follows
 ///
 /// ```text
-/// J = Xᵀ · g
+/// J = Xᵀ · L
 /// ```
 ///
-/// where X is the (npoint,space_ndim) matrix of coordinates and g is a (npoint,shape_ndim) matrix.
+/// where X is the (npoint,space_ndim) matrix of coordinates and L is the (npoint,geom_ndim) matrix.
 ///
-/// The gradient of interpolation functions (derivatives w.r.t real coordinates) is given by
+/// We define the gradient of interpolation functions (i.e., derivatives of interpolation
+/// functions w.r.t real coordinates) by means of
 ///
 /// ```text
 ///             →
-/// →       dSᵐ(ξ)
+/// →       dNᵐ(ξ)
 /// Gᵐ(ξ) = ——————
 ///            →
 ///           dx
 /// ```
 ///
+/// which can be organized in an (npoint,space_ndim) matrix `G`.
+///
 /// The inverse Jacobian allows us to determine the gradient vectors G as follows
 ///
 /// ```text
 /// →       →  →        →
-/// Gᵐ(ξ) = gᵐ(ξ) · J⁻¹(ξ)
+/// Gᵐ(ξ) = Lᵐ(ξ) · J⁻¹(ξ)
 /// ```
 ///
 /// Or, in matrix notation,
 ///
 /// ```text
-/// G = g · J⁻¹
+/// G = L · J⁻¹
 /// ```
 ///
-/// where G is a (npoint,space_ndim) matrix.
+/// where G is an (npoint,space_ndim) matrix.
+///
+/// We can then perform integrations in the reference space as follows:
+///
+/// ```text
+/// ⌠   →       ⌠   → →            →
+/// │ f(x) dΩ = │ f(x(ξ)) ⋅ det(J)(ξ) dΩ
+/// ⌡           ⌡
+/// Ω           Ωref
+/// ```
+///
+/// which is replaced by numerical integration according to:
+///
+/// ```text
+/// ⌠   → →            →        nip-1   →             →
+/// │ f(x(ξ)) ⋅ det(J)(ξ) dΩ  ≈   Σ   f(ιp)) ⋅ det(J)(ιp) ⋅ wp
+/// ⌡                            p=0
+/// Ωref
+/// ```
+///
+/// where `nip` is the number of integration points, `ιp := ξp` is the reference
+/// coordinate of the integration point, and `wp` is the weight attached to the
+/// p-th integration point.
+///
+/// ## Second case: geom_ndim < space_ndim
+///
+/// This case corresponds to a line or surface in a multi-dimensional space.
+/// For instance, a line in 2D or 3D or a triangle in 3D.
+///
+/// If `geom_ndim < space_ndim`, we must consider some particular cases. For now, the only
+/// cases we can handle are:
+///
+/// * `geom_ndim = 1` and `space_ndim = 2 or 3` -- Line in multi-dimensions
+/// * `geom_ndim = 2` and `space_ndim = 3` -- 3D surface
+///
+/// ### Line in multi-dimensions (geom_ndim = 1 and space_ndim > 1)
+///
+/// In this case, the Jacobian equals the (space_ndim) base vector `g1` aligned
+/// with the line element, i.e.,
+///
+/// ```text
+///                     →
+/// →          →       dx
+/// Jline(ξ) = g1(ξ) = —— = Xᵀ · L
+///                    dξ
+/// ```
+///
+/// We further consider a parametric coordinate `ell` which varies from 0 to `ell_max`
+/// (the length of the line). Then, we replace the line integrals over the real space
+/// with line integrals over the mapped space as follows:
+///
+/// ```text
+/// ⌠               ⌠
+/// │ f(ell) dell = │ f(ξ(ell)) ⋅ ||g1||(ξ) dξ
+/// ⌡               ⌡
+/// Ω               Ωref
+/// ```
+///
+/// where `||g1||` is the Euclidean norm of `g1`.
+///
+/// The integral above is replaced by numerical integration according to:
+///
+/// ```text
+/// ⌠                             nip-1   →             →
+/// │ f(ξ(ell)) ⋅ ||g1||(ξ) dξ  ≈   Σ   f(ιp)) ⋅ ||g1||(ιp) ⋅ wp
+/// ⌡                              p=0
+/// Ωref
+/// ```
+///
+/// where `nip` is the number of integration points, `ιp := ξp` is the reference
+/// coordinate of the integration point, and `wp` is the weight attached to the
+/// p-th integration point.
+///
+/// ### 3D surface (geom_ndim = 2 and space_ndim = 3)
+///
+/// In this case, we use the normal vector to the surface to replace the surface
+/// integrations in the real space with integrations over the mapped space.
+/// Instead of using the Jacobian, we use the normal vector.
+///
+/// ## Third case: geom_ndim > space_ndim
+///
+/// This case (e.g., a cube in the 1D space) is not allowed.
 pub struct Shape {
     // space ndim and shape kind
     space_ndim: usize, // space ndim (not shape ndim)
     kind: ShapeKind,   // shape kind
 
     // constants (from each specific shape)
-    shape_ndim: usize,  // shape ndim (not space ndim)
+    geom_ndim: usize,   // shape ndim (not space ndim)
     npoint: usize,      // number of points
     nedge: usize,       // number of edges
     nface: usize,       // number of faces
@@ -127,7 +241,7 @@ pub struct Shape {
 
     // sandbox (temporary) variables
     ss: Vector,     // (npoint) interpolation functions @ natural coordinate ksi
-    g: Matrix,      // (npoint, shape_ndim) derivatives of interpolation functions w.r.t natural coordinate ksi
+    g: Matrix,      // (npoint, geom_ndim) derivatives of interpolation functions w.r.t natural coordinate ksi
     jj: Matrix,     // (space_ndim, space_ndim) Jacobian matrix
     jj_inv: Matrix, // (space_ndim, space_ndim) Inverse Jacobian matrix
 }
@@ -138,10 +252,10 @@ impl Shape {
     /// # Input
     ///
     /// * `space_ndim` -- the space dimension (1, 2, or 3)
-    /// * `shape_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space
+    /// * `geom_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space
     /// * `npoint` -- the number of points defining the shape
-    pub fn new(space_ndim: usize, shape_ndim: usize, npoint: usize) -> Result<Self, StrError> {
-        match (shape_ndim, npoint) {
+    pub fn new(space_ndim: usize, geom_ndim: usize, npoint: usize) -> Result<Self, StrError> {
+        match (geom_ndim, npoint) {
             (1, 2) => return Err("Lin2 is not available yet"),
             (1, 3) => return Err("Lin3 is not available yet"),
             (1, 4) => return Err("Lin4 is not available yet"),
@@ -154,7 +268,7 @@ impl Shape {
                 return Ok(Shape {
                     space_ndim,
                     kind: ShapeKind::Qua4,
-                    shape_ndim: Qua4::NDIM,
+                    geom_ndim: Qua4::NDIM,
                     npoint: Qua4::NPOINT,
                     nedge: Qua4::NEDGE,
                     nface: Qua4::NFACE,
@@ -175,7 +289,7 @@ impl Shape {
                 return Ok(Shape {
                     space_ndim,
                     kind: ShapeKind::Qua8,
-                    shape_ndim: Qua8::NDIM,
+                    geom_ndim: Qua8::NDIM,
                     npoint: Qua8::NPOINT,
                     nedge: Qua8::NEDGE,
                     nface: Qua8::NFACE,
@@ -202,7 +316,7 @@ impl Shape {
                 return Ok(Shape {
                     space_ndim,
                     kind: ShapeKind::Hex8,
-                    shape_ndim: Hex8::NDIM,
+                    geom_ndim: Hex8::NDIM,
                     npoint: Hex8::NPOINT,
                     nedge: Hex8::NEDGE,
                     nface: Hex8::NFACE,
@@ -223,7 +337,7 @@ impl Shape {
                 return Ok(Shape {
                     space_ndim,
                     kind: ShapeKind::Hex20,
-                    shape_ndim: Hex20::NDIM,
+                    geom_ndim: Hex20::NDIM,
                     npoint: Hex20::NPOINT,
                     nedge: Hex20::NEDGE,
                     nface: Hex20::NFACE,
@@ -240,7 +354,7 @@ impl Shape {
                     jj_inv: Matrix::new(space_ndim, space_ndim),
                 });
             }
-            _ => return Err("(space_ndim, shape_ndim, npoint) combination is invalid"),
+            _ => return Err("(space_ndim, geom_ndim, npoint) combination is invalid"),
         };
     }
 
@@ -338,8 +452,8 @@ impl Shape {
 
     /// Returns the number of dimensions of the shape (not space)
     #[inline]
-    pub fn get_shape_ndim(&self) -> usize {
-        self.shape_ndim
+    pub fn get_geom_ndim(&self) -> usize {
+        self.geom_ndim
     }
 
     /// Returns the number of points
@@ -496,7 +610,7 @@ mod tests {
 
     // Computes Sᵐ(ξ) with variable ξ
     fn sm(v: f64, args: &mut Arguments) -> f64 {
-        for i in 0..args.shape.get_shape_ndim() {
+        for i in 0..args.shape.get_geom_ndim() {
             args.ksi[i] = args.at_ksi[i];
         }
         args.ksi[args.i] = v;
@@ -509,7 +623,7 @@ mod tests {
         let ndim_npoint = gen_ndim_npoint();
         for (ndim, npoint) in ndim_npoint {
             let mut shape = Shape::new(ndim, ndim, npoint)?;
-            assert_eq!(shape.get_shape_ndim(), ndim);
+            assert_eq!(shape.get_geom_ndim(), ndim);
             assert_eq!(shape.get_npoint(), npoint);
             let mut ksi = Vector::new(ndim);
             for m in 0..npoint {
@@ -562,7 +676,7 @@ mod tests {
         let ndim_npoint = gen_ndim_npoint();
         for (ndim, npoint) in ndim_npoint {
             let mut shape = Shape::new(ndim, ndim, npoint)?;
-            let ndim = shape.get_shape_ndim();
+            let ndim = shape.get_geom_ndim();
             let npoint = shape.get_npoint();
             let mut ksi = Vector::new(ndim);
             // create matrix of coordinates with shifted nat-coords: edges = [0, 2]
