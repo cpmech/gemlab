@@ -303,32 +303,53 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 ///
 /// This case (e.g., a cube in the 1D space) is not allowed.
 pub struct Shape {
-    // geometry kind and space ndim
-    pub kind: GeoKind,     // geometry kind
-    pub space_ndim: usize, // space ndim (not shape ndim)
+    /// Geometry kind
+    pub kind: GeoKind,
 
-    // constants (from each specific shape)
-    pub geo_ndim: usize,    // geometry ndim (not space ndim)
-    pub npoint: usize,      // number of points
-    pub nedge: usize,       // number of edges
-    pub nface: usize,       // number of faces
-    pub edge_npoint: usize, // edge's number of points
-    pub face_npoint: usize, // face's number of points
-    pub face_nedge: usize,  // face's number of edges
+    /// Space ndim (not shape ndim)
+    pub space_ndim: usize,
 
-    // functions (from each specific shape)
-    pub fn_interp: FnInterp, // function to calculate interpolation functions
-    pub fn_deriv: FnDeriv,   // function to calculate local derivatives of interpolation functions
+    /// Geometric shape ndim (not space ndim)
+    pub geo_ndim: usize,
 
-    // input data
-    // ok_xx: bool,    // User has provided X matrix
-    pub xx_tra: Matrix, // (space_ndim, npoint) transposed coordinates matrix (real space)
+    /// Number of points
+    pub npoint: usize,
 
-    // sandbox (temporary) variables
-    pub nn: Vector,     // (npoint) interpolation functions @ reference coordinate ksi
-    pub ll: Matrix,     // (npoint, geo_ndim) derivatives of interpolation functions w.r.t reference coordinate ksi
-    pub jj: Matrix,     // (space_ndim, geo_ndim) Jacobian matrix
-    pub jj_inv: Matrix, // (space_ndim, space_ndim) Inverse Jacobian matrix (only if geo_ndim == space_ndim)
+    /// Number of edges
+    pub nedge: usize,
+
+    /// Number of faces
+    pub nface: usize,
+
+    /// Edge's number of points
+    pub edge_npoint: usize,
+
+    /// Face's number of points
+    pub face_npoint: usize,
+
+    /// Face's number of edges
+    pub face_nedge: usize,
+
+    /// Function to calculate interpolation functions
+    pub fn_interp: FnInterp,
+
+    /// Function to calculate local derivatives (w.r.t. ksi) of interpolation functions
+    pub fn_deriv: FnDeriv,
+
+    /// Array N: (npoint) interpolation functions at reference coordinate ksi
+    pub interp: Vector,
+
+    /// Matrix L: (npoint,geo_ndim) derivatives of interpolation functions w.r.t reference coordinate ksi
+    pub deriv: Matrix,
+
+    /// Matrix J: (space_ndim,geo_ndim) Jacobian matrix
+    pub jacobian: Matrix,
+
+    /// Matrix inv(J): (space_ndim,space_ndim) Inverse Jacobian matrix (only if geo_ndim == space_ndim)
+    pub inv_jacobian: Matrix,
+
+    /// Matrix X: (space_ndim,npoint) transposed coordinates matrix (real space)
+    coords_transp: Matrix,
 }
 
 impl Shape {
@@ -339,17 +360,21 @@ impl Shape {
     /// * `space_ndim` -- the space dimension (1, 2, or 3)
     /// * `geo_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space
     /// * `npoint` -- the number of points defining the shape
+    ///
+    /// # Note
+    ///
+    /// Some methods require that the coordinates matrix be set first.
+    /// This can be accomplished by calling the `set_coords` method.
     pub fn new(space_ndim: usize, geo_ndim: usize, npoint: usize) -> Result<Self, StrError> {
-        let ok_xx = false;
-        let xx_tra = Matrix::new(space_ndim, npoint);
-        let nn = Vector::new(npoint);
-        let ll = Matrix::new(npoint, geo_ndim);
-        let jj = Matrix::new(space_ndim, geo_ndim);
-        let jj_inv = if geo_ndim == space_ndim {
+        let interp = Vector::new(npoint);
+        let deriv = Matrix::new(npoint, geo_ndim);
+        let jacobian = Matrix::new(space_ndim, geo_ndim);
+        let inv_jacobian = if geo_ndim == space_ndim {
             Matrix::new(space_ndim, space_ndim)
         } else {
             Matrix::new(0, 0)
         };
+        let coords_transp = Matrix::new(space_ndim, npoint);
         match (geo_ndim, npoint) {
             (1, 2) => Err("Lin2 is not available yet"),
             (1, 3) => Err("Lin3 is not available yet"),
@@ -371,11 +396,11 @@ impl Shape {
                 face_nedge: Qua4::FACE_NEDGE,
                 fn_interp: Qua4::calc_interp,
                 fn_deriv: Qua4::calc_deriv,
-                xx_tra,
-                nn,
-                ll,
-                jj,
-                jj_inv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                coords_transp,
             }),
             (2, 8) => Ok(Shape {
                 kind: GeoKind::Qua8,
@@ -389,11 +414,11 @@ impl Shape {
                 face_nedge: Qua8::FACE_NEDGE,
                 fn_interp: Qua8::calc_interp,
                 fn_deriv: Qua8::calc_deriv,
-                xx_tra,
-                nn,
-                ll,
-                jj,
-                jj_inv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                coords_transp,
             }),
             (2, 9) => Err("Qua9 is not available yet"),
             (2, 12) => Err("Qua12 is not available yet"),
@@ -413,11 +438,11 @@ impl Shape {
                 face_nedge: Hex8::FACE_NEDGE,
                 fn_interp: Hex8::calc_interp,
                 fn_deriv: Hex8::calc_deriv,
-                xx_tra,
-                nn,
-                ll,
-                jj,
-                jj_inv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                coords_transp,
             }),
             (3, 20) => Ok(Shape {
                 kind: GeoKind::Hex20,
@@ -431,34 +456,45 @@ impl Shape {
                 face_nedge: Hex20::FACE_NEDGE,
                 fn_interp: Hex20::calc_interp,
                 fn_deriv: Hex20::calc_deriv,
-                xx_tra,
-                nn,
-                ll,
-                jj,
-                jj_inv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                coords_transp,
             }),
             _ => Err("(space_ndim, geo_ndim, npoint) combination is invalid"),
         }
     }
 
-    // Sets the coordinates matrix
-    //
-    // # Input
-    //
-    // * `xx` -- (npoint, space_ndim) matrix of coordinates
-    // pub fn set_coords_matrix(&mut self, xx: &Matrix) -> Result<(), StrError> {
-    //     let (nrow, ncol) = xx.dims();
-    //     if nrow != self.npoint || ncol != self.space_ndim {
-    //         return Err("matrix of coordinates has invalid dimensions");
-    //     }
-    //     for i in 0..self.npoint {
-    //         for j in 0..self.space_ndim {
-    //             self.xx_tra[j][i] = xx[i][j];
-    //         }
-    //     }
-    //     self.ok_xx = true;
-    //     Ok(())
-    // }
+    /// Sets a component of the coordinates matrix
+    ///
+    /// ```text
+    ///     ┌               ┐
+    ///     | x⁰₀  x⁰₁  x⁰₂ |
+    ///     | x¹₀  x¹₁  x¹₂ |
+    /// X = | x²₀  x²₁  x²₂ |
+    ///     |      ...      |
+    ///     | xᴹ₀  xᴹ₁  xᴹ₂ |
+    ///     └               ┘_(npoint,space_ndim)
+    /// ```
+    ///
+    /// where `M = npoint - 1`
+    ///
+    /// # Input
+    ///
+    /// * `m` -- point index in form 0 to npoint-1
+    /// * `i` -- dimension index from 0 to space_ndim-1
+    /// * `value` -- the X(m,i) component
+    pub fn set_point_coord(&mut self, m: usize, i: usize, value: f64) -> Result<(), StrError> {
+        if m >= self.npoint {
+            return Err("index of point is invalid");
+        }
+        if i >= self.space_ndim {
+            return Err("index of space dimension is invalid");
+        }
+        self.coords_transp[i][m] = value;
+        Ok(())
+    }
 
     /// Calculates the real coordinates x from reference coordinates ξ
     ///
@@ -481,8 +517,8 @@ impl Shape {
     /// You must set the coordinates matrix first, otherwise the computations
     /// will generate wrong results.
     pub fn calc_coords(&mut self, x: &mut Vector, ksi: &Vector) -> Result<(), StrError> {
-        (self.fn_interp)(&mut self.nn, ksi);
-        mat_vec_mul(x, 1.0, &self.xx_tra, &self.nn)
+        (self.fn_interp)(&mut self.interp, ksi);
+        mat_vec_mul(x, 1.0, &self.coords_transp, &self.interp)
     }
 
     /// Calculates the Jacobian of the mapping from general to reference space
@@ -498,21 +534,21 @@ impl Shape {
     /// Thus
     ///
     /// ```text
-    /// jj := J = Xᵀ · L
+    /// jacobian := J = Xᵀ · L
     ///
     /// or (line in multi-dimensions, geom_ndim < space_ndim)
     ///
-    /// jj := Jline = Xᵀ · L
+    /// jacobian := Jline = Xᵀ · L
     ///
     /// or (3D surface, geo_ndim = 2 and space_ndim = 3)
     ///
-    /// jj := Jsurf = Xᵀ · L
+    /// jacobian := Jsurf = Xᵀ · L
     /// ```
     ///
     /// If `geo_ndim = space_ndim`, we also compute the inverse Jacobian
     ///
     /// ```text
-    /// jj_inv := J⁻¹
+    /// inv_jacobian := J⁻¹
     /// ```
     ///
     /// # Input
@@ -526,72 +562,24 @@ impl Shape {
     ///
     /// # Updated variables
     ///
-    /// * `jj` -- Jacobian matrix (space_ndim,geo_ndim)
-    /// * `jj_inv` -- If `geo_ndim = space_ndim`: inverse Jacobian matrix (space_ndim,space_ndim)
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `inv_jacobian` -- If `geo_ndim = space_ndim`: inverse Jacobian matrix (space_ndim,space_ndim)
     ///
     /// # Warning
     ///
     /// You must set the coordinates matrix first, otherwise the computations
     /// will generate wrong results.
     pub fn calc_jacobian(&mut self, ksi: &Vector) -> Result<f64, StrError> {
-        (self.fn_deriv)(&mut self.ll, ksi);
-        mat_mat_mul(&mut self.jj, 1.0, &self.xx_tra, &self.ll)?;
+        (self.fn_deriv)(&mut self.deriv, ksi);
+        mat_mat_mul(&mut self.jacobian, 1.0, &self.coords_transp, &self.deriv)?;
         if self.geo_ndim == self.space_ndim {
-            inverse(&mut self.jj_inv, &self.jj)
+            inverse(&mut self.inv_jacobian, &self.jacobian)
         } else {
             Ok(0.0)
         }
     }
 
     // --- getters ------------------------------------------------------------------------------
-
-    /// Returns the number of dimensions of space (not shape)
-    #[inline]
-    pub fn get_space_ndim(&self) -> usize {
-        self.space_ndim
-    }
-
-    /// Returns the number of dimensions of the shape (not space)
-    #[inline]
-    pub fn get_geo_ndim(&self) -> usize {
-        self.geo_ndim
-    }
-
-    /// Returns the number of points
-    #[inline]
-    pub fn get_npoint(&self) -> usize {
-        self.npoint
-    }
-
-    /// Returns the number of edges
-    #[inline]
-    pub fn get_nedge(&self) -> usize {
-        self.nedge
-    }
-
-    /// Returns the number of faces
-    #[inline]
-    pub fn get_nface(&self) -> usize {
-        self.nface
-    }
-
-    /// Returns the number of points on edge
-    #[inline]
-    pub fn get_edge_npoint(&self) -> usize {
-        self.edge_npoint
-    }
-
-    /// Returns the number of points on face
-    #[inline]
-    pub fn get_face_npoint(&self) -> usize {
-        self.face_npoint
-    }
-
-    /// Returns the number of edges on face (not the cell's edges)
-    #[inline]
-    pub fn get_face_nedge(&self) -> usize {
-        self.face_nedge
-    }
 
     /// Returns the local id of point on edge
     ///
@@ -642,10 +630,10 @@ impl Shape {
         }
     }
 
-    /// Returns reference coordinates @ point m
+    /// Returns the reference coordinates at point m
     ///
     /// ```text
-    /// coord = ξᵐ = vector{r, s, t} @ point m
+    /// ξᵐ := ξ at point m
     /// ```
     pub fn get_ksi(&self, ksi: &mut Vector, m: usize) {
         match self.kind {
@@ -670,23 +658,6 @@ impl Shape {
             _ => panic!("ShapeKind is not available yet"),
         }
     }
-
-    // --- private ------------------------------------------------------------------------------
-
-    ///
-    ///
-    ///
-    ///
-    ///
-    fn calc_ss(&mut self) {}
-
-    /// ```text
-    /// →       dSᵐ(ξ)
-    /// gᵐ(ξ) = ——————
-    ///            →
-    ///           dξ
-    /// ```
-    fn calc_g(&mut self) {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -711,12 +682,12 @@ mod tests {
 
     // Computes Sᵐ(ξ) with variable ξ
     fn sm(v: f64, args: &mut Arguments) -> f64 {
-        for i in 0..args.shape.get_geo_ndim() {
+        for i in 0..args.shape.geo_ndim {
             args.ksi[i] = args.at_ksi[i];
         }
         args.ksi[args.i] = v;
-        (args.shape.fn_interp)(&mut args.shape.nn, &args.ksi);
-        args.shape.nn[args.m]
+        (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
+        args.shape.interp[args.m]
     }
 
     #[test]
@@ -724,14 +695,14 @@ mod tests {
         let ndim_npoint = gen_ndim_npoint();
         for (ndim, npoint) in ndim_npoint {
             let mut shape = Shape::new(ndim, ndim, npoint)?;
-            assert_eq!(shape.get_geo_ndim(), ndim);
-            assert_eq!(shape.get_npoint(), npoint);
+            assert_eq!(shape.geo_ndim, ndim);
+            assert_eq!(shape.npoint, npoint);
             let mut ksi = Vector::new(ndim);
             for m in 0..npoint {
                 shape.get_ksi(&mut ksi, m);
-                (shape.fn_interp)(&mut shape.nn, &ksi);
+                (shape.fn_interp)(&mut shape.interp, &ksi);
                 for n in 0..npoint {
-                    let smn = shape.nn[n];
+                    let smn = shape.interp[n];
                     if m == n {
                         assert_approx_eq!(smn, 1.0, 1e-15);
                     } else {
@@ -759,13 +730,13 @@ mod tests {
                 m: 0,
                 i: 0,
             };
-            (shape.fn_deriv)(&mut shape.ll, &args.at_ksi);
+            (shape.fn_deriv)(&mut shape.deriv, &args.at_ksi);
             for m in 0..npoint {
                 args.m = m;
                 for i in 0..ndim {
                     args.i = i;
-                    // gᵐᵢ := dSᵐ/dξᵢ
-                    assert_deriv_approx_eq!(shape.ll[m][i], args.at_ksi[i], sm, args, 1e-12);
+                    // Lᵐᵢ := dNᵐ/dξᵢ
+                    assert_deriv_approx_eq!(shape.deriv[m][i], args.at_ksi[i], sm, args, 1e-12);
                 }
             }
         }
@@ -777,18 +748,15 @@ mod tests {
         let ndim_npoint = gen_ndim_npoint();
         for (ndim, npoint) in ndim_npoint {
             let mut shape = Shape::new(ndim, ndim, npoint)?;
-            let ndim = shape.get_geo_ndim();
-            let npoint = shape.get_npoint();
             let mut ksi = Vector::new(ndim);
-            // create matrix of coordinates with shifted nat-coords: edges = [0, 2]
-            let mut xx = Matrix::new(npoint, ndim);
+            // set matrix of coordinates with shifted nat-coords: edges = [0, 2]
             for m in 0..npoint {
                 shape.get_ksi(&mut ksi, m);
                 for i in 0..ndim {
-                    xx[m][i] = 1.0 + ksi[i];
+                    shape.set_point_coord(m, i, 1.0 + ksi[i])?;
                 }
             }
-            // set @ksi such that x[i] = 1.25
+            // set at_ksi such that x[i] = 1.25
             let mut at_ksi = Vector::new(ndim);
             for i in 0..ndim {
                 at_ksi[i] = 0.25;

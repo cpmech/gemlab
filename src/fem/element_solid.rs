@@ -15,11 +15,10 @@ impl ElementSolid {
         // shape
         let cell = &mesh.cells[cell_id];
         let space_ndim = mesh.space_ndim;
-        let shape_ndim = cell.shape_ndim;
+        let geo_ndim = cell.geo_ndim;
         let npoint = cell.points.len();
-        let mut shape = Shape::new(space_ndim, shape_ndim, npoint)?;
-        let xx = mesh.get_cell_coords_matrix(cell_id);
-        shape.set_coords_matrix(&xx)?;
+        let mut shape = Shape::new(space_ndim, geo_ndim, npoint)?;
+        mesh.extract_coords(&mut shape, cell_id)?;
         // element
         Ok(ElementSolid {
             shape,
@@ -30,12 +29,12 @@ impl ElementSolid {
 
 impl Element for ElementSolid {
     fn assign_dofs(&self, dofs: &mut SystemDofs) {
-        let dof_per_point = if self.shape.get_space_ndim() == 2 {
+        let dof_per_point = if self.shape.space_ndim == 2 {
             vec![Dof::Ux, Dof::Uy]
         } else {
             vec![Dof::Ux, Dof::Uy, Dof::Uz]
         };
-        let npoint = self.shape.get_npoint();
+        let npoint = self.shape.npoint;
         for m in 0..npoint {
             for dof in &dof_per_point {
                 dofs.update(self.point_ids[m], *dof);
@@ -51,11 +50,11 @@ impl Element for ElementSolid {
         Ok(())
     }
 
-    fn add_ke_to_kk(&self, kk: &mut SparseTriplet) -> Result<(), StrError> {
+    fn add_ke_to_kk(&self, _: &mut SparseTriplet) -> Result<(), StrError> {
         Ok(())
     }
 
-    fn add_fe_to_ff(&self, ff: &mut Vector) -> Result<(), StrError> {
+    fn add_fe_to_ff(&self, _: &mut Vector) -> Result<(), StrError> {
         Ok(())
     }
 }

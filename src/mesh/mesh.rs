@@ -3,7 +3,7 @@ use super::At;
 use crate::shapes::Shape;
 use crate::util::GridSearch;
 use crate::StrError;
-use russell_lab::{sort2, sort3, Matrix};
+use russell_lab::{sort2, sort3};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
@@ -68,7 +68,7 @@ pub struct Cell {
     /// For example, a 1D line in the 2D or 3D space or a 2D triangle in the 3D space.
     ///
     /// **raw data**
-    pub shape_ndim: usize,
+    pub geo_ndim: usize,
 
     /// List of points defining this cell; in the right order (unsorted)
     ///
@@ -220,7 +220,7 @@ impl Mesh {
         let zero_cell = Cell {
             id: 0,
             attribute_id: 0,
-            shape_ndim: 0,
+            geo_ndim: 0,
             points: Vec::new(),
         };
         Ok(Mesh {
@@ -388,16 +388,15 @@ impl Mesh {
         Vec::new()
     }
 
-    pub fn get_cell_coords_matrix(&self, cell_id: usize) -> Matrix {
+    pub fn extract_coords(&self, shape: &mut Shape, cell_id: usize) -> Result<(), StrError> {
         let npoint = self.cells[cell_id].points.len();
-        let mut xx = Matrix::new(self.space_ndim, npoint);
         for m in 0..npoint {
             let point_id = self.cells[cell_id].points[m];
             for i in 0..self.space_ndim {
-                xx[m][i] = self.points[point_id].coords[i];
+                shape.set_point_coord(m, i, self.points[point_id].coords[i])?;
             }
         }
-        xx
+        Ok(())
     }
 
     // ======================================================================================================
@@ -529,26 +528,24 @@ impl Mesh {
         // loop over 2D cells
         for cell in &self.cells {
             // check ndim
-            let shape_ndim = cell.shape_ndim;
-            if shape_ndim != 2 {
+            let geo_ndim = cell.geo_ndim;
+            if geo_ndim != 2 {
                 continue; // e.g., 1D line in 2D space
             }
 
             // shape
             let npoint = cell.points.len();
-            let shape_key = (shape_ndim, npoint);
+            let shape_key = (geo_ndim, npoint);
             if !all_shapes.contains_key(&shape_key) {
-                all_shapes.insert(shape_key, Shape::new(space_ndim, shape_ndim, npoint)?);
+                all_shapes.insert(shape_key, Shape::new(space_ndim, geo_ndim, npoint)?);
             }
             let shape = all_shapes.get(&shape_key).unwrap();
 
             // edges (new derived data)
-            let nedge = shape.get_nedge();
-            let edge_npoint = shape.get_edge_npoint();
-            for e in 0..nedge {
+            for e in 0..shape.nedge {
                 // collect edge point ids
-                let mut edge_points = vec![0; edge_npoint];
-                for i in 0..edge_npoint {
+                let mut edge_points = vec![0; shape.edge_npoint];
+                for i in 0..shape.edge_npoint {
                     let local_point_id = shape.get_edge_point_id(e, i);
                     edge_points[i] = cell.points[local_point_id];
                 }
@@ -600,26 +597,24 @@ impl Mesh {
         // loop over 3D cells
         for cell in &self.cells {
             // check ndim
-            let shape_ndim = cell.shape_ndim;
-            if shape_ndim != 3 {
+            let geo_ndim = cell.geo_ndim;
+            if geo_ndim != 3 {
                 continue; // e.g., 1D line in 3D space or 2D quad in 3D space
             }
 
             // shape
             let npoint = cell.points.len();
-            let shape_key = (shape_ndim, npoint);
+            let shape_key = (geo_ndim, npoint);
             if !all_shapes.contains_key(&shape_key) {
-                all_shapes.insert(shape_key, Shape::new(space_ndim, shape_ndim, npoint)?);
+                all_shapes.insert(shape_key, Shape::new(space_ndim, geo_ndim, npoint)?);
             }
             let shape = all_shapes.get(&shape_key).unwrap();
 
             // faces (new derived data)
-            let nface = shape.get_nface();
-            let face_npoint = shape.get_face_npoint();
-            for f in 0..nface {
+            for f in 0..shape.nface {
                 // collect face point ids
-                let mut face_points = vec![0; face_npoint];
-                for i in 0..face_npoint {
+                let mut face_points = vec![0; shape.face_npoint];
+                for i in 0..shape.face_npoint {
                     let local_point_id = shape.get_face_point_id(f, i);
                     face_points[i] = cell.points[local_point_id];
                 }
@@ -673,12 +668,12 @@ impl Mesh {
             let face_shape = all_shapes.get(&face_shape_key).unwrap();
 
             // boundary edges
-            let face_nedge = face_shape.get_nedge();
-            let face_edge_npoint = face_shape.get_edge_npoint();
-            for e in 0..face_nedge {
+            // let face_nedge = face_shape.get_nedge();
+            // let face_edge_npoint = face_shape.get_edge_npoint();
+            for e in 0..face_shape.nedge {
                 // collect edge point ids
-                let mut edge_points = vec![0; face_edge_npoint];
-                for i in 0..face_edge_npoint {
+                let mut edge_points = vec![0; face_shape.edge_npoint];
+                for i in 0..face_shape.edge_npoint {
                     let local_point_id = face_shape.get_edge_point_id(e, i);
                     edge_points[i] = face.points[local_point_id];
                 }
@@ -780,7 +775,7 @@ impl fmt::Display for Mesh {
             write!(
                 f,
                 "i:{} a:{} n:{} p:{:?}\n",
-                cell.id, cell.attribute_id, cell.shape_ndim, cell.points,
+                cell.id, cell.attribute_id, cell.geo_ndim, cell.points,
             )
             .unwrap();
         }
