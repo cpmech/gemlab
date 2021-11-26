@@ -306,10 +306,10 @@ pub struct Shape {
     /// Geometry kind
     pub kind: GeoKind,
 
-    /// Space ndim (not shape ndim)
+    /// Space ndim
     pub space_ndim: usize,
 
-    /// Geometric shape ndim (not space ndim)
+    /// Geometry ndim
     pub geo_ndim: usize,
 
     /// Number of points
@@ -483,16 +483,16 @@ impl Shape {
     /// # Input
     ///
     /// * `m` -- point index in form 0 to npoint-1
-    /// * `i` -- dimension index from 0 to space_ndim-1
-    /// * `value` -- the X(m,i) component
-    pub fn set_point_coord(&mut self, m: usize, i: usize, value: f64) -> Result<(), StrError> {
+    /// * `j` -- dimension index from 0 to space_ndim-1
+    /// * `value` -- the X(m,j) component
+    pub fn set_point_coord(&mut self, m: usize, j: usize, value: f64) -> Result<(), StrError> {
         if m >= self.npoint {
             return Err("index of point is invalid");
         }
-        if i >= self.space_ndim {
+        if j >= self.space_ndim {
             return Err("index of space dimension is invalid");
         }
-        self.coords_transp[i][m] = value;
+        self.coords_transp[j][m] = value;
         Ok(())
     }
 
@@ -632,10 +632,10 @@ impl Shape {
 
     /// Returns the reference coordinates at point m
     ///
-    /// ```text
-    /// ξᵐ := ξ at point m
-    /// ```
-    pub fn get_ksi(&self, ksi: &mut Vector, m: usize) {
+    /// # Output
+    ///
+    /// * `ksi` -- (geo_ndim) reference coordinates `ξᵐ` at point m
+    pub fn get_reference_coords(&self, ksi: &mut Vector, m: usize) {
         match self.kind {
             GeoKind::Qua4 => {
                 ksi[0] = Qua4::POINT_REFERENCE_COORDS[m][0];
@@ -667,46 +667,79 @@ mod tests {
     use super::*;
     use russell_chk::*;
 
-    fn gen_ndim_npoint() -> Vec<(usize, usize)> {
+    // Generates pairs (geom_ndim,npoint) to allocate test shapes
+    fn gen_geo_ndim_npoint() -> Vec<(usize, usize)> {
         vec![(2, 4), (2, 8), (3, 8), (3, 20)]
     }
 
-    // Holds arguments for numerical differentiation
-    struct Arguments {
+    // Generates matrix of coordinates with shifted ref-coords such that edges = [0, 2]
+    fn gen_coords(shape: &mut Shape) {
+        assert_eq!(shape.geo_ndim, shape.space_ndim);
+        let mut ksi = Vector::new(shape.geo_ndim);
+        for m in 0..shape.npoint {
+            shape.get_reference_coords(&mut ksi, m);
+            for j in 0..shape.geo_ndim {
+                shape.set_point_coord(m, j, 1.0 + ksi[j]).unwrap();
+            }
+        }
+    }
+
+    // Holds arguments for numerical differentiation of N w.r.t ξ => L (deriv) matrix
+    struct ArgsInterp {
         shape: Shape,   // shape
         at_ksi: Vector, // at nat coord value
         ksi: Vector,    // temporary nat coord
-        m: usize,       // point index
-        i: usize,       // dimension index
+        m: usize,       // point index from 0 to npoint
+        j: usize,       // dimension index from 0 to geom_ndim
     }
 
-    // Computes Sᵐ(ξ) with variable ξ
-    fn sm(v: f64, args: &mut Arguments) -> f64 {
-        for i in 0..args.shape.geo_ndim {
-            args.ksi[i] = args.at_ksi[i];
+    // Holds arguments for numerical differentiation of x w.r.t ξ => Jacobian
+    struct ArgsCoords {
+        shape: Shape,   // shape
+        at_ksi: Vector, // at nat coord value
+        ksi: Vector,    // temporary nat coord
+        x: Vector,      // (space_ndim) coordinates at ξ
+        i: usize,       // dimension index from 0 to space_ndim
+        j: usize,       // dimension index from 0 to geo_ndim
+    }
+
+    // Computes Nᵐ(ξ) with variable v := ξⱼ
+    fn calc_interp_m(v: f64, args: &mut ArgsInterp) -> f64 {
+        for j in 0..args.shape.geo_ndim {
+            args.ksi[j] = args.at_ksi[j];
         }
-        args.ksi[args.i] = v;
+        args.ksi[args.j] = v;
         (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
         args.shape.interp[args.m]
     }
 
+    // Computes xᵢ(ξ) with variable v := ξⱼ
+    fn calc_coord_i(v: f64, args: &mut ArgsCoords) -> f64 {
+        for j in 0..args.shape.geo_ndim {
+            args.ksi[j] = args.at_ksi[j];
+        }
+        args.ksi[args.j] = v;
+        args.shape.calc_coords(&mut args.x, &args.ksi).unwrap();
+        args.x[args.i]
+    }
+
     #[test]
     fn fn_interp_works() -> Result<(), StrError> {
-        let ndim_npoint = gen_ndim_npoint();
-        for (ndim, npoint) in ndim_npoint {
-            let mut shape = Shape::new(ndim, ndim, npoint)?;
-            assert_eq!(shape.geo_ndim, ndim);
+        for (geo_ndim, npoint) in gen_geo_ndim_npoint() {
+            let space_ndim = geo_ndim;
+            let mut shape = Shape::new(space_ndim, geo_ndim, npoint)?;
+            assert_eq!(shape.geo_ndim, geo_ndim);
             assert_eq!(shape.npoint, npoint);
-            let mut ksi = Vector::new(ndim);
+            let mut ksi = Vector::new(geo_ndim);
             for m in 0..npoint {
-                shape.get_ksi(&mut ksi, m);
+                shape.get_reference_coords(&mut ksi, m);
                 (shape.fn_interp)(&mut shape.interp, &ksi);
                 for n in 0..npoint {
-                    let smn = shape.interp[n];
+                    let interp_mn = shape.interp[n];
                     if m == n {
-                        assert_approx_eq!(smn, 1.0, 1e-15);
+                        assert_approx_eq!(interp_mn, 1.0, 1e-15);
                     } else {
-                        assert_approx_eq!(smn, 0.0, 1e-15);
+                        assert_approx_eq!(interp_mn, 0.0, 1e-15);
                     }
                 }
             }
@@ -716,27 +749,27 @@ mod tests {
 
     #[test]
     fn fn_deriv_works() -> Result<(), StrError> {
-        let ndim_npoint = gen_ndim_npoint();
-        for (ndim, npoint) in ndim_npoint {
-            let mut shape = Shape::new(ndim, ndim, npoint)?;
-            let mut at_ksi = Vector::new(ndim);
-            for i in 0..ndim {
-                at_ksi[i] = 0.25;
+        for (geo_ndim, npoint) in gen_geo_ndim_npoint() {
+            let space_ndim = geo_ndim;
+            let mut shape = Shape::new(space_ndim, geo_ndim, npoint)?;
+            let mut at_ksi = Vector::new(geo_ndim);
+            for j in 0..geo_ndim {
+                at_ksi[j] = 0.25;
             }
-            let args = &mut Arguments {
-                shape: Shape::new(ndim, ndim, npoint)?,
+            let args = &mut ArgsInterp {
+                shape: Shape::new(space_ndim, geo_ndim, npoint)?,
                 at_ksi,
-                ksi: Vector::new(ndim),
+                ksi: Vector::new(geo_ndim),
                 m: 0,
-                i: 0,
+                j: 0,
             };
             (shape.fn_deriv)(&mut shape.deriv, &args.at_ksi);
             for m in 0..npoint {
                 args.m = m;
-                for i in 0..ndim {
-                    args.i = i;
-                    // Lᵐᵢ := dNᵐ/dξᵢ
-                    assert_deriv_approx_eq!(shape.deriv[m][i], args.at_ksi[i], sm, args, 1e-12);
+                for j in 0..geo_ndim {
+                    args.j = j;
+                    // Lᵐⱼ := dNᵐ/dξⱼ
+                    assert_deriv_approx_eq!(shape.deriv[m][j], args.at_ksi[j], calc_interp_m, args, 1e-12);
                 }
             }
         }
@@ -745,28 +778,54 @@ mod tests {
 
     #[test]
     fn calc_coords_works() -> Result<(), StrError> {
-        let ndim_npoint = gen_ndim_npoint();
-        for (ndim, npoint) in ndim_npoint {
-            let mut shape = Shape::new(ndim, ndim, npoint)?;
-            let mut ksi = Vector::new(ndim);
-            // set matrix of coordinates with shifted nat-coords: edges = [0, 2]
-            for m in 0..npoint {
-                shape.get_ksi(&mut ksi, m);
-                for i in 0..ndim {
-                    shape.set_point_coord(m, i, 1.0 + ksi[i])?;
-                }
-            }
+        for (geo_ndim, npoint) in gen_geo_ndim_npoint() {
+            let space_ndim = geo_ndim;
+            let mut shape = Shape::new(space_ndim, geo_ndim, npoint)?;
+            gen_coords(&mut shape);
             // set at_ksi such that x[i] = 1.25
-            let mut at_ksi = Vector::new(ndim);
-            for i in 0..ndim {
+            let mut at_ksi = Vector::new(geo_ndim);
+            for i in 0..geo_ndim {
                 at_ksi[i] = 0.25;
             }
             // calculate coords
-            let mut x = Vector::new(ndim);
+            let mut x = Vector::new(space_ndim);
             shape.calc_coords(&mut x, &at_ksi)?;
             // check
-            let x_correct = vec![1.25; ndim];
+            let x_correct = vec![1.25; space_ndim];
             assert_vec_approx_eq!(x.as_data(), x_correct, 1e-15);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn calc_jacobian_works() -> Result<(), StrError> {
+        for (geo_ndim, npoint) in gen_geo_ndim_npoint() {
+            let space_ndim = geo_ndim;
+            let mut shape = Shape::new(space_ndim, geo_ndim, npoint)?;
+            gen_coords(&mut shape);
+            let mut at_ksi = Vector::new(geo_ndim);
+            for i in 0..geo_ndim {
+                at_ksi[i] = 0.25;
+            }
+            let args = &mut ArgsCoords {
+                shape: Shape::new(space_ndim, geo_ndim, npoint)?,
+                at_ksi,
+                ksi: Vector::new(geo_ndim),
+                x: Vector::new(space_ndim),
+                i: 0,
+                j: 0,
+            };
+            gen_coords(&mut args.shape);
+            shape.calc_jacobian(&args.at_ksi)?;
+            println!("{}", shape.jacobian);
+            for i in 0..space_ndim {
+                args.i = i;
+                for j in 0..geo_ndim {
+                    args.j = j;
+                    // Jᵢⱼ := dxᵢ/dξⱼ
+                    assert_deriv_approx_eq!(shape.jacobian[i][j], args.at_ksi[j], calc_coord_i, args, 1e-12);
+                }
+            }
         }
         Ok(())
     }

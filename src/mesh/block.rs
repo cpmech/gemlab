@@ -381,7 +381,7 @@ impl Block {
                     let mut points = vec![0; shape_out.npoint];
                     for m in 0..shape_out.npoint {
                         // transform reference coords: scale and translate
-                        shape_out.get_ksi(&mut ksi_aug, m);
+                        shape_out.get_reference_coords(&mut ksi_aug, m);
                         mat_vec_mul(&mut ksi, 1.0, &transform, &ksi_aug)?;
 
                         // maybe append point to mesh
