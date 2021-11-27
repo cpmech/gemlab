@@ -1,6 +1,6 @@
 use super::{Hex20, Hex8, Qua4, Qua8};
 use crate::StrError;
-use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, Vector};
+use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
 
 /// Defines the kind of shape
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -352,6 +352,12 @@ pub struct Shape {
     /// Matrix G: (npoint,space_ndim) Gradient of shape functions (only if geo_ndim == space_ndim)
     pub gradient: Matrix,
 
+    /// Minimum (space_ndim) coordinates from the X matrix
+    pub min_coords: Vec<f64>,
+
+    /// Maximum (space_ndim) coordinates from the X matrix
+    pub max_coords: Vec<f64>,
+
     /// Matrix X: (space_ndim,npoint) transposed coordinates matrix (real space)
     coords_transp: Matrix,
 }
@@ -378,6 +384,8 @@ impl Shape {
         } else {
             (Matrix::new(0, 0), Matrix::new(0, 0))
         };
+        let min_coords = vec![f64::MAX; space_ndim];
+        let max_coords = vec![f64::MIN; space_ndim];
         let coords_transp = Matrix::new(space_ndim, npoint);
         match (geo_ndim, npoint) {
             (1, 2) => Err("Lin2 is not available yet"),
@@ -405,6 +413,8 @@ impl Shape {
                 jacobian,
                 inv_jacobian,
                 gradient,
+                min_coords,
+                max_coords,
                 coords_transp,
             }),
             (2, 8) => Ok(Shape {
@@ -424,6 +434,8 @@ impl Shape {
                 jacobian,
                 inv_jacobian,
                 gradient,
+                min_coords,
+                max_coords,
                 coords_transp,
             }),
             (2, 9) => Err("Qua9 is not available yet"),
@@ -449,6 +461,8 @@ impl Shape {
                 jacobian,
                 inv_jacobian,
                 gradient,
+                min_coords,
+                max_coords,
                 coords_transp,
             }),
             (3, 20) => Ok(Shape {
@@ -468,6 +482,8 @@ impl Shape {
                 jacobian,
                 inv_jacobian,
                 gradient,
+                min_coords,
+                max_coords,
                 coords_transp,
             }),
             _ => Err("(space_ndim, geo_ndim, npoint) combination is invalid"),
@@ -501,6 +517,12 @@ impl Shape {
             return Err("index of space dimension is invalid");
         }
         self.coords_transp[j][m] = value;
+        if value < self.min_coords[j] {
+            self.min_coords[j] = value;
+        }
+        if value > self.max_coords[j] {
+            self.max_coords[j] = value;
+        }
         Ok(())
     }
 
@@ -585,6 +607,66 @@ impl Shape {
         } else {
             Ok(0.0)
         }
+    }
+
+    /// Approximates the reference coordinates from given real coordinates (inverse mapping)
+    ///
+    /// **Note:** This function works with `geo_ndim == space_ndim` only
+    ///
+    /// # Input
+    ///
+    /// * `x` -- real coordinates
+    /// * `nit_max` -- maximum number of iterations (e.g., 10)
+    /// * `tol` -- tolerance for the norm of the difference x - x(ξ) (e.g., 1e-8)
+    ///
+    /// # Output
+    ///
+    /// * `ksi` -- reference coordinates
+    /// * returns the number of iterations
+    ///
+    /// # Warning
+    ///
+    /// You must set the coordinates matrix first, otherwise the computations
+    /// will generate wrong results.
+    pub fn approximate_ksi(
+        &mut self,
+        ksi: &mut Vector,
+        x: &Vector,
+        nit_max: usize,
+        tol: f64,
+    ) -> Result<usize, StrError> {
+        if self.geo_ndim != self.space_ndim {
+            return Err("geo_ndim must equal space_ndim");
+        }
+        // use linear scale to guess ksi
+        for j in 0..self.geo_ndim {
+            // ksi[j] = 0.0; // trial at center
+            ksi[j] = 2.0 * (x[j] - self.min_coords[j]) / (self.max_coords[j] - self.min_coords[j]) - 1.0;
+            if ksi[j] < -1.0 {
+                ksi[j] = -1.0;
+            }
+            if ksi[j] > 1.0 {
+                ksi[j] = 1.0;
+            }
+        }
+        let mut residual = Vector::new(self.space_ndim);
+        let mut x_at_ksi = Vector::new(self.space_ndim);
+        let mut delta_ksi = Vector::new(self.geo_ndim);
+        for it in 0..nit_max {
+            self.calc_coords(&mut x_at_ksi, &ksi)?;
+            for i in 0..self.space_ndim {
+                residual[i] = x[i] - x_at_ksi[i];
+            }
+            if residual.norm(NormVec::Euc) <= tol {
+                return Ok(it);
+            }
+            self.calc_jacobian(ksi)?;
+            mat_vec_mul(&mut delta_ksi, 1.0, &self.inv_jacobian, &residual)?;
+            for j in 0..self.geo_ndim {
+                ksi[j] += delta_ksi[j];
+            }
+        }
+        Err("inverse mapping failed to converge")
     }
 
     /// Calculates the gradient of the interpolation functions
@@ -719,50 +801,53 @@ impl Shape {
 mod tests {
     use super::*;
     use russell_chk::*;
+    use russell_lab::copy_vector;
     use std::collections::HashMap;
 
     struct TestData {
         shapes: Vec<Shape>,
-        tolerances_fn_interp: HashMap<GeoKind, f64>,
-        tolerances_fn_deriv: HashMap<GeoKind, f64>,
-        tolerances_calc_coords: HashMap<GeoKind, f64>,
-        tolerances_calc_coords_high: HashMap<GeoKind, f64>, // high tol for center
-        tolerances_calc_jacobian: HashMap<GeoKind, f64>,
-        tolerances_calc_gradient: HashMap<GeoKind, f64>,
+        tols_fn_interp: HashMap<GeoKind, f64>,
+        tols_fn_deriv: HashMap<GeoKind, f64>,
+        tols_calc_coords: HashMap<GeoKind, f64>,
+        tols_calc_coords_high: HashMap<GeoKind, f64>, // high tol for center
+        tols_calc_jacobian: HashMap<GeoKind, f64>,
+        tols_approximate_ksi: HashMap<GeoKind, f64>,
+        tols_calc_gradient: HashMap<GeoKind, f64>,
+    }
+
+    // Generates (geo_ndim,npoint) pairs to allocate shapes
+    fn gen_geo_ndim_npoint() -> Vec<(usize, usize)> {
+        vec![(2, 4), (2, 8), (3, 8), (3, 20)]
     }
 
     // Generates test data
     fn gen_test_data() -> TestData {
         let mut data = TestData {
             shapes: Vec::new(),
-            tolerances_fn_interp: HashMap::new(),
-            tolerances_fn_deriv: HashMap::new(),
-            tolerances_calc_coords: HashMap::new(),
-            tolerances_calc_coords_high: HashMap::new(),
-            tolerances_calc_jacobian: HashMap::new(),
-            tolerances_calc_gradient: HashMap::new(),
+            tols_fn_interp: HashMap::new(),
+            tols_fn_deriv: HashMap::new(),
+            tols_calc_coords: HashMap::new(),
+            tols_calc_coords_high: HashMap::new(),
+            tols_calc_jacobian: HashMap::new(),
+            tols_approximate_ksi: HashMap::new(),
+            tols_calc_gradient: HashMap::new(),
         };
         let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
         for (geo_ndim, npoint) in pairs {
             let space_ndim = geo_ndim;
             data.shapes.push(Shape::new(space_ndim, geo_ndim, npoint).unwrap());
-            let shape = data.shapes.last().unwrap();
-            data.tolerances_fn_interp.insert(shape.kind, 1e-15);
-            data.tolerances_fn_deriv.insert(shape.kind, 1e-12);
-            data.tolerances_calc_coords.insert(shape.kind, 1e-15);
         }
-        data.tolerances_calc_coords_high.insert(GeoKind::Qua4, 0.15);
-        data.tolerances_calc_coords_high.insert(GeoKind::Qua8, 1e-14);
-        data.tolerances_calc_coords_high.insert(GeoKind::Hex8, 0.15);
-        data.tolerances_calc_coords_high.insert(GeoKind::Hex20, 1e-14);
-        data.tolerances_calc_jacobian.insert(GeoKind::Qua4, 1e-11);
-        data.tolerances_calc_jacobian.insert(GeoKind::Qua8, 1e-11);
-        data.tolerances_calc_jacobian.insert(GeoKind::Hex8, 1e-11);
-        data.tolerances_calc_jacobian.insert(GeoKind::Hex20, 1e-11);
-        data.tolerances_calc_gradient.insert(GeoKind::Qua4, 1e-12);
-        data.tolerances_calc_gradient.insert(GeoKind::Qua8, 1e-12);
-        data.tolerances_calc_gradient.insert(GeoKind::Hex8, 1e-12);
-        data.tolerances_calc_gradient.insert(GeoKind::Hex20, 1e-12);
+
+        data.tols_approximate_ksi.insert(GeoKind::Qua4, 1e-15);
+        data.tols_approximate_ksi.insert(GeoKind::Qua8, 1e-15);
+        data.tols_approximate_ksi.insert(GeoKind::Hex8, 1e-15);
+        data.tols_approximate_ksi.insert(GeoKind::Hex20, 1e-15);
+
+        data.tols_calc_gradient.insert(GeoKind::Qua4, 1e-12);
+        data.tols_calc_gradient.insert(GeoKind::Qua8, 1e-12);
+        data.tols_calc_gradient.insert(GeoKind::Hex8, 1e-12);
+        data.tols_calc_gradient.insert(GeoKind::Hex20, 1e-12);
+
         data
     }
 
@@ -862,25 +947,6 @@ mod tests {
         }
     }
 
-    // Holds arguments for numerical differentiation of N w.r.t ξ => L (deriv) matrix
-    struct ArgsInterpVarKsi {
-        shape: Shape,   // auxiliary (copy) shape
-        at_ksi: Vector, // at reference coord value
-        ksi: Vector,    // temporary reference coord
-        m: usize,       // point index from 0 to npoint
-        j: usize,       // dimension index from 0 to geom_ndim
-    }
-
-    // Holds arguments for numerical differentiation of x w.r.t ξ => Jacobian
-    struct ArgsCoordsVarKsi {
-        shape: Shape,   // auxiliary (copy) shape
-        at_ksi: Vector, // at reference coord value
-        ksi: Vector,    // temporary reference coord
-        x: Vector,      // (space_ndim) coordinates at ξ
-        i: usize,       // dimension index from 0 to space_ndim
-        j: usize,       // dimension index from 0 to geo_ndim
-    }
-
     // Holds arguments for numerical differentiation of N w.r.t x => G (gradient) matrix
     struct ArgsInterpVarX {
         shape: Shape, // auxiliary (copy) shape
@@ -891,26 +957,6 @@ mod tests {
         j: usize,     // dimension index from 0 to space_ndim
     }
 
-    // Computes Nᵐ(ξ) with variable v := ξⱼ
-    fn calc_interp_m_var_ksi(v: f64, args: &mut ArgsInterpVarKsi) -> f64 {
-        for j in 0..args.shape.geo_ndim {
-            args.ksi[j] = args.at_ksi[j];
-        }
-        args.ksi[args.j] = v;
-        (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
-        args.shape.interp[args.m]
-    }
-
-    // Computes xᵢ(ξ) with variable v := ξⱼ
-    fn calc_coord_i_var_ksi(v: f64, args: &mut ArgsCoordsVarKsi) -> f64 {
-        for j in 0..args.shape.geo_ndim {
-            args.ksi[j] = args.at_ksi[j];
-        }
-        args.ksi[args.j] = v;
-        args.shape.calc_coords(&mut args.x, &args.ksi).unwrap();
-        args.x[args.i]
-    }
-
     // Computes Nᵐ(ξ(x)) with variable v := xⱼ
     fn calc_interp_m_var_x(v: f64, args: &mut ArgsInterpVarX) -> f64 {
         for j in 0..args.shape.space_ndim {
@@ -918,26 +964,50 @@ mod tests {
         }
         args.x[args.j] = v;
         gen_ref_coords(&mut args.ksi, &args.x);
+        println!("\n\n{}\n=>\n{}", args.x, args.ksi);
+        args.shape.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-8).unwrap();
+        println!("{}\n=>\n{}", args.x, args.ksi);
         (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
         args.shape.interp[args.m]
     }
 
     #[test]
     fn fn_interp_works() -> Result<(), StrError> {
-        let mut data = gen_test_data();
-        for shape in &mut data.shapes {
-            let tol = *data.tolerances_fn_interp.get(&shape.kind).unwrap();
+        // define dims and number of points
+        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+
+        // define tolerances
+        let mut tols = HashMap::new();
+        tols.insert(GeoKind::Qua4, 1e-15);
+        tols.insert(GeoKind::Qua8, 1e-15);
+        tols.insert(GeoKind::Hex8, 1e-15);
+        tols.insert(GeoKind::Hex20, 1e-15);
+
+        // loop over shapes
+        for (geo_ndim, npoint) in pairs {
+            // allocate shape
+            let space_ndim = geo_ndim;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+
+            // set tolerance
+            let tol = *tols.get(&shape.kind).unwrap();
             println!("{:?}: tol={:e}", shape.kind, tol);
+
+            // loop over points of shape
             let mut ksi = Vector::new(shape.geo_ndim);
             for m in 0..shape.npoint {
+                // get ξᵐ corresponding to point m
                 shape.get_reference_coords(&mut ksi, m);
+
+                // compute interpolation function Nⁿ(ξᵐ)
                 (shape.fn_interp)(&mut shape.interp, &ksi);
+
+                // check: Nⁿ(ξᵐ) = 1 if m==n; 0 otherwise
                 for n in 0..shape.npoint {
-                    let interp_mn = shape.interp[n];
                     if m == n {
-                        assert_approx_eq!(interp_mn, 1.0, tol);
+                        assert_approx_eq!(shape.interp[n], 1.0, tol);
                     } else {
-                        assert_approx_eq!(interp_mn, 0.0, tol);
+                        assert_approx_eq!(shape.interp[n], 0.0, tol);
                     }
                 }
             }
@@ -945,30 +1015,70 @@ mod tests {
         Ok(())
     }
 
+    // Holds arguments for numerical differentiation of N w.r.t ξ => L (deriv) matrix
+    struct ArgsNumL {
+        shape: Shape,   // auxiliary (copy) shape
+        at_ksi: Vector, // at reference coord value
+        ksi: Vector,    // temporary reference coord
+        m: usize,       // point index from 0 to npoint
+        j: usize,       // dimension index from 0 to geom_ndim
+    }
+
+    // Computes Nᵐ(ξ) with variable v := ξⱼ
+    fn aux_deriv(v: f64, args: &mut ArgsNumL) -> f64 {
+        copy_vector(&mut args.ksi, &args.at_ksi).unwrap();
+        args.ksi[args.j] = v;
+        (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
+        args.shape.interp[args.m]
+    }
+
     #[test]
     fn fn_deriv_works() -> Result<(), StrError> {
-        let mut data = gen_test_data();
-        for shape in &mut data.shapes {
-            let tol = *data.tolerances_fn_deriv.get(&shape.kind).unwrap();
+        // define dims and number of points
+        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+
+        // define tolerances
+        let mut tols = HashMap::new();
+        tols.insert(GeoKind::Qua4, 1e-13);
+        tols.insert(GeoKind::Qua8, 1e-12);
+        tols.insert(GeoKind::Hex8, 1e-13);
+        tols.insert(GeoKind::Hex20, 1e-12);
+
+        // loop over shapes
+        for (geo_ndim, npoint) in pairs {
+            // allocate shape
+            let space_ndim = geo_ndim;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+
+            // set tolerance
+            let tol = *tols.get(&shape.kind).unwrap();
             println!("{:?}: tol={:e}", shape.kind, tol);
+
+            // set ξ within reference space
             let mut at_ksi = Vector::new(shape.geo_ndim);
             for j in 0..shape.geo_ndim {
                 at_ksi[j] = 0.25;
             }
-            let args = &mut ArgsInterpVarKsi {
+
+            // compute all derivatives of interpolation functions w.r.t ξ
+            (shape.fn_deriv)(&mut shape.deriv, &at_ksi);
+
+            // set arguments for numerical integration
+            let args = &mut ArgsNumL {
                 shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
                 at_ksi,
                 ksi: Vector::new(shape.geo_ndim),
                 m: 0,
                 j: 0,
             };
-            (shape.fn_deriv)(&mut shape.deriv, &args.at_ksi);
+
+            // check Lᵐ(ξ) = dNᵐ(ξ)/dξ
             for m in 0..shape.npoint {
                 args.m = m;
                 for j in 0..shape.geo_ndim {
                     args.j = j;
                     // Lᵐⱼ := dNᵐ/dξⱼ
-                    assert_deriv_approx_eq!(shape.deriv[m][j], args.at_ksi[j], calc_interp_m_var_ksi, args, tol);
+                    assert_deriv_approx_eq!(shape.deriv[m][j], args.at_ksi[j], aux_deriv, args, tol);
                 }
             }
         }
@@ -977,42 +1087,117 @@ mod tests {
 
     #[test]
     fn calc_coords_works() -> Result<(), StrError> {
-        let mut data = gen_test_data();
-        for shape in &mut data.shapes {
-            let tol = *data.tolerances_calc_coords.get(&shape.kind).unwrap();
-            let tol_high = *data.tolerances_calc_coords_high.get(&shape.kind).unwrap();
-            println!("{:?}: tol={:e}, tol_high={:e}", shape.kind, tol, tol_high);
+        // define dims and number of points
+        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+
+        // define tolerances
+        let mut tols = HashMap::new();
+        tols.insert(GeoKind::Qua4, 1e-15);
+        tols.insert(GeoKind::Qua8, 1e-15);
+        tols.insert(GeoKind::Hex8, 1e-15);
+        tols.insert(GeoKind::Hex20, 1e-15);
+
+        // define tolerances for point at the middle of the reference domain
+        let mut tols_mid = HashMap::new();
+        tols_mid.insert(GeoKind::Qua4, 0.14); // linear maps are inaccurate for the circle wedge
+        tols_mid.insert(GeoKind::Qua8, 1e-14);
+        tols_mid.insert(GeoKind::Hex8, 0.14); // bi-linear maps are inaccurate for the circle wedge
+        tols_mid.insert(GeoKind::Hex20, 1e-14);
+
+        // loop over shapes
+        for (geo_ndim, npoint) in pairs {
+            // allocate shape
+            let space_ndim = geo_ndim;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+
+            // set tolerance
+            let tol = *tols.get(&shape.kind).unwrap();
+            let tol_mid = *tols_mid.get(&shape.kind).unwrap();
+            println!("{:?}: tol={:e}, tol_mid={:e}", shape.kind, tol, tol_mid);
+
+            // set coordinates matrix
             set_coords_matrix(shape);
+
+            // loop over points of shape
             let mut ksi = Vector::new(shape.geo_ndim);
             let mut x = Vector::new(shape.space_ndim);
             let mut x_correct = Vector::new(shape.space_ndim);
             for m in 0..shape.npoint {
+                // get ξᵐ corresponding to point m
                 shape.get_reference_coords(&mut ksi, m);
+
+                // calculate xᵐ(ξᵐ) using the isoparametric formula
                 shape.calc_coords(&mut x, &ksi)?;
+
+                // compare xᵐ with generated coordinates
                 gen_coords(&mut x_correct, &ksi);
                 assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol);
             }
-            // for ksi=(0,0,0), use higher tolerance because the cylinder mapping is inaccurate
-            let ksi_0 = Vector::new(shape.geo_ndim);
-            shape.calc_coords(&mut x, &ksi_0)?;
-            gen_coords(&mut x_correct, &ksi_0);
-            assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_high);
+
+            // test again at middle of reference space with ξ := (0,0,0)
+            let ksi_mid = Vector::new(shape.geo_ndim);
+            shape.calc_coords(&mut x, &ksi_mid)?;
+            gen_coords(&mut x_correct, &ksi_mid);
+            assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_mid);
         }
         Ok(())
     }
 
+    // Holds arguments for numerical differentiation of x w.r.t ξ => Jacobian
+    struct ArgsNumJ {
+        shape: Shape,   // auxiliary (copy) shape
+        at_ksi: Vector, // at reference coord value
+        ksi: Vector,    // temporary reference coord
+        x: Vector,      // (space_ndim) coordinates at ξ
+        i: usize,       // dimension index from 0 to space_ndim
+        j: usize,       // dimension index from 0 to geo_ndim
+    }
+
+    // Computes xᵢ(ξ) with variable v := ξⱼ
+    fn aux_jacobian(v: f64, args: &mut ArgsNumJ) -> f64 {
+        copy_vector(&mut args.ksi, &args.at_ksi).unwrap();
+        args.ksi[args.j] = v;
+        args.shape.calc_coords(&mut args.x, &args.ksi).unwrap();
+        args.x[args.i]
+    }
+
     #[test]
     fn calc_jacobian_works() -> Result<(), StrError> {
-        let mut data = gen_test_data();
-        for shape in &mut data.shapes {
-            let tol = *data.tolerances_calc_jacobian.get(&shape.kind).unwrap();
+        // define dims and number of points
+        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+
+        // define tolerances
+        let mut tols = HashMap::new();
+        tols.insert(GeoKind::Qua4, 1e-11);
+        tols.insert(GeoKind::Qua8, 1e-11);
+        tols.insert(GeoKind::Hex8, 1e-11);
+        tols.insert(GeoKind::Hex20, 1e-11);
+
+        // loop over shapes
+        for (geo_ndim, npoint) in pairs {
+            // allocate shape
+            let space_ndim = geo_ndim;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+
+            // set tolerance
+            let tol = *tols.get(&shape.kind).unwrap();
             println!("{:?}: tol={:e}", shape.kind, tol);
-            set_coords_matrix(shape);
+
+            // set ξ within reference space
             let mut at_ksi = Vector::new(shape.geo_ndim);
-            for i in 0..shape.geo_ndim {
-                at_ksi[i] = 0.25;
+            for j in 0..shape.geo_ndim {
+                at_ksi[j] = 0.25;
             }
-            let args = &mut ArgsCoordsVarKsi {
+
+            // set coordinates matrix
+            set_coords_matrix(shape);
+
+            // compute Jacobian, its inverse, and determinant
+            let det_jac = shape.calc_jacobian(&at_ksi)?;
+            assert!(det_jac > 0.0);
+
+            // set arguments for numerical integration
+            let args = &mut ArgsNumJ {
                 shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
                 at_ksi,
                 ksi: Vector::new(shape.geo_ndim),
@@ -1021,14 +1206,14 @@ mod tests {
                 j: 0,
             };
             set_coords_matrix(&mut args.shape);
-            let det_jac = shape.calc_jacobian(&args.at_ksi)?;
-            assert!(det_jac > 0.0);
+
+            // check J(ξ) = dx(ξ)/dξ
             for i in 0..shape.space_ndim {
                 args.i = i;
                 for j in 0..shape.geo_ndim {
                     args.j = j;
                     // Jᵢⱼ := dxᵢ/dξⱼ
-                    assert_deriv_approx_eq!(shape.jacobian[i][j], args.at_ksi[j], calc_coord_i_var_ksi, args, tol);
+                    assert_deriv_approx_eq!(shape.jacobian[i][j], args.at_ksi[j], aux_jacobian, args, tol);
                 }
             }
         }
@@ -1036,15 +1221,42 @@ mod tests {
     }
 
     #[test]
+    fn approximate_ksi_works() -> Result<(), StrError> {
+        let mut data = gen_test_data();
+        let shape = &mut data.shapes[1];
+        // for shape in &mut data.shapes {
+        let tol = *data.tols_approximate_ksi.get(&shape.kind).unwrap();
+        println!("{:?}: tol={:e}", shape.kind, tol);
+        set_coords_matrix(shape);
+        let mut x = Vector::new(shape.space_ndim);
+        let mut ksi = Vector::new(shape.geo_ndim);
+        let mut ksi_correct = Vector::new(shape.geo_ndim);
+        for m in 0..shape.npoint {
+            shape.get_reference_coords(&mut ksi, m);
+            shape.calc_coords(&mut x, &ksi)?;
+            copy_vector(&mut ksi_correct, &ksi)?;
+            println!("x =\n{}", x);
+            let nit = shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
+            println!("nit = {}\nksi =\n{}", nit, ksi);
+            if shape.kind == GeoKind::Qua4 {
+                assert_eq!(nit, 1);
+            }
+            assert_vec_approx_eq!(ksi.as_data(), ksi_correct.as_data(), tol);
+        }
+        // }
+        Ok(())
+    }
+
+    #[test]
     fn fn_gradient_works() -> Result<(), StrError> {
         let mut data = gen_test_data();
         for shape in &mut data.shapes {
-            let tol = *data.tolerances_calc_gradient.get(&shape.kind).unwrap();
+            let tol = *data.tols_calc_gradient.get(&shape.kind).unwrap();
             println!("{:?}: tol={:e}", shape.kind, tol);
             set_coords_matrix(shape);
             let mut at_ksi = Vector::new(shape.geo_ndim);
             for j in 0..shape.geo_ndim {
-                at_ksi[j] = 0.25;
+                at_ksi[j] = 0.0;
             }
             let mut at_x = Vector::new(shape.space_ndim);
             gen_coords(&mut at_x, &at_ksi);
