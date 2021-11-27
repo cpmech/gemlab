@@ -1,5 +1,5 @@
 use super::{
-    Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet4, Tri10, Tri15, Tri3, Tri6,
+    Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet10, Tet4, Tri10, Tri15, Tri3, Tri6,
 };
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
@@ -705,7 +705,27 @@ impl Shape {
                 max_coords,
                 coords_transp,
             }),
-            (3, 10) => Err("Tet10 is not available yet"),
+            (3, 10) => Ok(Shape {
+                kind: GeoKind::Tet10,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Tet10::NEDGE,
+                nface: Tet10::NFACE,
+                edge_npoint: Tet10::EDGE_NPOINT,
+                face_npoint: Tet10::FACE_NPOINT,
+                face_nedge: Tet10::FACE_NEDGE,
+                fn_interp: Tet10::calc_interp,
+                fn_deriv: Tet10::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
             (3, 8) => Ok(Shape {
                 kind: GeoKind::Hex8,
                 space_ndim,
@@ -1084,9 +1104,9 @@ impl Shape {
             GeoKind::Qua16 => Qua16::EDGE_POINT_IDS[e][i],
             GeoKind::Qua17 => Qua17::EDGE_POINT_IDS[e][i],
             GeoKind::Tet4 => Tet4::EDGE_POINT_IDS[e][i],
+            GeoKind::Tet10 => Tet10::EDGE_POINT_IDS[e][i],
             GeoKind::Hex8 => Hex8::EDGE_POINT_IDS[e][i],
             GeoKind::Hex20 => Hex20::EDGE_POINT_IDS[e][i],
-            _ => panic!("ShapeKind is not available yet"),
         }
     }
 
@@ -1113,9 +1133,9 @@ impl Shape {
             GeoKind::Qua16 => 0,
             GeoKind::Qua17 => 0,
             GeoKind::Tet4 => Tet4::FACE_POINT_IDS[f][i],
+            GeoKind::Tet10 => Tet10::FACE_POINT_IDS[f][i],
             GeoKind::Hex8 => Hex8::FACE_POINT_IDS[f][i],
             GeoKind::Hex20 => Hex20::FACE_POINT_IDS[f][i],
-            _ => panic!("ShapeKind is not available yet"),
         }
     }
 
@@ -1143,9 +1163,9 @@ impl Shape {
             GeoKind::Qua16 => 0,
             GeoKind::Qua17 => 0,
             GeoKind::Tet4 => Tet4::FACE_EDGE_POINT_IDS[f][k][i],
+            GeoKind::Tet10 => Tet10::FACE_EDGE_POINT_IDS[f][k][i],
             GeoKind::Hex8 => Hex8::FACE_EDGE_POINT_IDS[f][k][i],
             GeoKind::Hex20 => Hex20::FACE_EDGE_POINT_IDS[f][k][i],
-            _ => panic!("ShapeKind is not available yet"),
         }
     }
 
@@ -1213,6 +1233,11 @@ impl Shape {
                 ksi[1] = Tet4::POINT_REFERENCE_COORDS[m][1];
                 ksi[2] = Tet4::POINT_REFERENCE_COORDS[m][2];
             }
+            GeoKind::Tet10 => {
+                ksi[0] = Tet10::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Tet10::POINT_REFERENCE_COORDS[m][1];
+                ksi[2] = Tet10::POINT_REFERENCE_COORDS[m][2];
+            }
             GeoKind::Hex8 => {
                 ksi[0] = Hex8::POINT_REFERENCE_COORDS[m][0];
                 ksi[1] = Hex8::POINT_REFERENCE_COORDS[m][1];
@@ -1223,7 +1248,6 @@ impl Shape {
                 ksi[1] = Hex20::POINT_REFERENCE_COORDS[m][1];
                 ksi[2] = Hex20::POINT_REFERENCE_COORDS[m][2];
             }
-            _ => panic!("ShapeKind is not available yet"),
         }
     }
 }
@@ -1341,6 +1365,7 @@ mod tests {
             (2, 16),
             (2, 17),
             (3, 4),
+            (3, 10),
             (3, 8),
             (3, 20),
         ];
@@ -1362,6 +1387,7 @@ mod tests {
         tols.insert(GeoKind::Qua16, 1e-15);
         tols.insert(GeoKind::Qua17, 1e-15);
         tols.insert(GeoKind::Tet4, 1e-15);
+        tols.insert(GeoKind::Tet10, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
 
@@ -1433,6 +1459,7 @@ mod tests {
             (2, 16),
             (2, 17),
             (3, 4),
+            (3, 10),
             (3, 8),
             (3, 20),
         ];
@@ -1455,6 +1482,7 @@ mod tests {
         tols.insert(GeoKind::Qua17, 1e-10);
         tols.insert(GeoKind::Hex8, 1e-13);
         tols.insert(GeoKind::Tet4, 1e-12);
+        tols.insert(GeoKind::Tet10, 1e-12);
         tols.insert(GeoKind::Hex20, 1e-12);
 
         // loop over shapes

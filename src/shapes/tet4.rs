@@ -5,7 +5,7 @@ use russell_lab::{Matrix, Vector};
 /// # Local IDs of points
 ///
 /// ```text
-///               t              r    s    t
+///               t               r    s    t
 ///               |         p:0 [0.0, 0.0, 0.0]
 ///               @ 3       p:1 [1.0, 0.0, 0.0]
 ///              /|`.       p:2 [0.0, 1.0, 0.0]
@@ -161,9 +161,7 @@ impl Tet4 {
     }
 
     /// Computes the derivatives of interpolation functions
-    pub fn calc_deriv(deriv: &mut Matrix, ksi: &Vector) {
-        let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
-
+    pub fn calc_deriv(deriv: &mut Matrix, _: &Vector) {
         deriv[0][0] = -1.0;
         deriv[1][0] = 1.0;
         deriv[2][0] = 0.0;
