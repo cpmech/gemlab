@@ -1,4 +1,4 @@
-use super::{Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tri3};
+use super::{Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tri10, Tri15, Tri3, Tri6};
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
 
@@ -493,9 +493,69 @@ impl Shape {
                 max_coords,
                 coords_transp,
             }),
-            (2, 6) => Err("Tri6 is not available yet"),
-            (2, 10) => Err("Tri10 is not available yet"),
-            (2, 15) => Err("Tri15 is not available yet"),
+            (2, 6) => Ok(Shape {
+                kind: GeoKind::Tri6,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Tri6::NEDGE,
+                nface: Tri6::NFACE,
+                edge_npoint: Tri6::EDGE_NPOINT,
+                face_npoint: Tri6::FACE_NPOINT,
+                face_nedge: Tri6::FACE_NEDGE,
+                fn_interp: Tri6::calc_interp,
+                fn_deriv: Tri6::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
+            (2, 10) => Ok(Shape {
+                kind: GeoKind::Tri10,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Tri10::NEDGE,
+                nface: Tri10::NFACE,
+                edge_npoint: Tri10::EDGE_NPOINT,
+                face_npoint: Tri10::FACE_NPOINT,
+                face_nedge: Tri10::FACE_NEDGE,
+                fn_interp: Tri10::calc_interp,
+                fn_deriv: Tri10::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
+            (2, 15) => Ok(Shape {
+                kind: GeoKind::Tri15,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Tri15::NEDGE,
+                nface: Tri15::NFACE,
+                edge_npoint: Tri15::EDGE_NPOINT,
+                face_npoint: Tri15::FACE_NPOINT,
+                face_nedge: Tri15::FACE_NEDGE,
+                fn_interp: Tri15::calc_interp,
+                fn_deriv: Tri15::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
             (2, 4) => Ok(Shape {
                 kind: GeoKind::Qua4,
                 space_ndim,
@@ -992,6 +1052,9 @@ impl Shape {
             GeoKind::Lin4 => 0,
             GeoKind::Lin5 => 0,
             GeoKind::Tri3 => Tri3::EDGE_POINT_IDS[e][i],
+            GeoKind::Tri6 => Tri6::EDGE_POINT_IDS[e][i],
+            GeoKind::Tri10 => Tri10::EDGE_POINT_IDS[e][i],
+            GeoKind::Tri15 => Tri15::EDGE_POINT_IDS[e][i],
             GeoKind::Qua4 => Qua4::EDGE_POINT_IDS[e][i],
             GeoKind::Qua8 => Qua8::EDGE_POINT_IDS[e][i],
             GeoKind::Qua9 => Qua9::EDGE_POINT_IDS[e][i],
@@ -1017,6 +1080,9 @@ impl Shape {
             GeoKind::Lin4 => 0,
             GeoKind::Lin5 => 0,
             GeoKind::Tri3 => 0,
+            GeoKind::Tri6 => 0,
+            GeoKind::Tri10 => 0,
+            GeoKind::Tri15 => 0,
             GeoKind::Qua4 => 0,
             GeoKind::Qua8 => 0,
             GeoKind::Qua9 => 0,
@@ -1043,6 +1109,9 @@ impl Shape {
             GeoKind::Lin4 => 0,
             GeoKind::Lin5 => 0,
             GeoKind::Tri3 => 0,
+            GeoKind::Tri6 => 0,
+            GeoKind::Tri10 => 0,
+            GeoKind::Tri15 => 0,
             GeoKind::Qua4 => 0,
             GeoKind::Qua8 => 0,
             GeoKind::Qua9 => 0,
@@ -1077,6 +1146,18 @@ impl Shape {
             GeoKind::Tri3 => {
                 ksi[0] = Tri3::POINT_REFERENCE_COORDS[m][0];
                 ksi[1] = Tri3::POINT_REFERENCE_COORDS[m][1];
+            }
+            GeoKind::Tri6 => {
+                ksi[0] = Tri6::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Tri6::POINT_REFERENCE_COORDS[m][1];
+            }
+            GeoKind::Tri10 => {
+                ksi[0] = Tri10::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Tri10::POINT_REFERENCE_COORDS[m][1];
+            }
+            GeoKind::Tri15 => {
+                ksi[0] = Tri15::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Tri15::POINT_REFERENCE_COORDS[m][1];
             }
             GeoKind::Qua4 => {
                 ksi[0] = Qua4::POINT_REFERENCE_COORDS[m][0];
@@ -1220,6 +1301,9 @@ mod tests {
             (1, 4),
             (1, 5),
             (2, 3),
+            (2, 6),
+            (2, 10),
+            (2, 15),
             (2, 4),
             (2, 8),
             (2, 9),
@@ -1237,6 +1321,9 @@ mod tests {
         tols.insert(GeoKind::Lin4, 1e-15);
         tols.insert(GeoKind::Lin5, 1e-15);
         tols.insert(GeoKind::Tri3, 1e-15);
+        tols.insert(GeoKind::Tri6, 1e-15);
+        tols.insert(GeoKind::Tri10, 1e-15);
+        tols.insert(GeoKind::Tri15, 1e-15);
         tols.insert(GeoKind::Qua4, 1e-15);
         tols.insert(GeoKind::Qua8, 1e-15);
         tols.insert(GeoKind::Qua9, 1e-15);
@@ -1304,6 +1391,9 @@ mod tests {
             (1, 4),
             (1, 5),
             (2, 3),
+            (2, 6),
+            (2, 10),
+            (2, 15),
             (2, 4),
             (2, 8),
             (2, 9),
@@ -1321,6 +1411,9 @@ mod tests {
         tols.insert(GeoKind::Lin4, 1e-10);
         tols.insert(GeoKind::Lin5, 1e-10);
         tols.insert(GeoKind::Tri3, 1e-12);
+        tols.insert(GeoKind::Tri6, 1e-12);
+        tols.insert(GeoKind::Tri10, 1e-10);
+        tols.insert(GeoKind::Tri15, 1e-9);
         tols.insert(GeoKind::Qua4, 1e-13);
         tols.insert(GeoKind::Qua8, 1e-12);
         tols.insert(GeoKind::Qua9, 1e-13);

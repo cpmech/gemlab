@@ -66,9 +66,7 @@ impl Tri3 {
     }
 
     /// Computes the derivatives of interpolation functions
-    pub fn calc_deriv(deriv: &mut Matrix, ksi: &Vector) {
-        let (r, s) = (ksi[0], ksi[1]);
-
+    pub fn calc_deriv(deriv: &mut Matrix, _: &Vector) {
         deriv[0][0] = -1.0;
         deriv[1][0] = 1.0;
         deriv[2][0] = 0.0;
