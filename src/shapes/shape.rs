@@ -1,4 +1,4 @@
-use super::{Hex20, Hex8, Qua4, Qua8};
+use super::{Hex20, Hex8, Qua17, Qua4, Qua8};
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
 
@@ -441,7 +441,27 @@ impl Shape {
             (2, 9) => Err("Qua9 is not available yet"),
             (2, 12) => Err("Qua12 is not available yet"),
             (2, 16) => Err("Qua16 is not available yet"),
-            (2, 17) => Err("Qua17 is not available yet"),
+            (2, 17) => Ok(Shape {
+                kind: GeoKind::Qua17,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Qua17::NEDGE,
+                nface: Qua17::NFACE,
+                edge_npoint: Qua17::EDGE_NPOINT,
+                face_npoint: Qua17::FACE_NPOINT,
+                face_nedge: Qua17::FACE_NEDGE,
+                fn_interp: Qua17::calc_interp,
+                fn_deriv: Qua17::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
             (3, 4) => Err("Tet4 is not available yet"),
             (3, 10) => Err("Tet10 is not available yet"),
             (3, 8) => Ok(Shape {
@@ -863,6 +883,10 @@ impl Shape {
                 ksi[0] = Qua8::POINT_REFERENCE_COORDS[m][0];
                 ksi[1] = Qua8::POINT_REFERENCE_COORDS[m][1];
             }
+            GeoKind::Qua17 => {
+                ksi[0] = Qua17::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Qua17::POINT_REFERENCE_COORDS[m][1];
+            }
             GeoKind::Hex8 => {
                 ksi[0] = Hex8::POINT_REFERENCE_COORDS[m][0];
                 ksi[1] = Hex8::POINT_REFERENCE_COORDS[m][1];
@@ -883,14 +907,15 @@ impl Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::PI;
     use russell_chk::*;
     use russell_lab::copy_vector;
     use std::collections::HashMap;
 
     const RMIN: f64 = 1.0;
     const RMAX: f64 = 10.0;
-    const AMIN: f64 = 30.0 * std::f64::consts::PI / 180.0;
-    const AMAX: f64 = 60.0 * std::f64::consts::PI / 180.0;
+    const AMIN: f64 = 30.0 * PI / 180.0;
+    const AMAX: f64 = 60.0 * PI / 180.0;
 
     // Generate coordinates
     //
@@ -974,12 +999,13 @@ mod tests {
     #[test]
     fn fn_interp_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+        let pairs = vec![(2, 4), (2, 8), (2, 17), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
         tols.insert(GeoKind::Qua4, 1e-15);
         tols.insert(GeoKind::Qua8, 1e-15);
+        tols.insert(GeoKind::Qua17, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
 
@@ -1035,12 +1061,13 @@ mod tests {
     #[test]
     fn fn_deriv_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+        let pairs = vec![(2, 4), (2, 8), (2, 17), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
         tols.insert(GeoKind::Qua4, 1e-13);
         tols.insert(GeoKind::Qua8, 1e-12);
+        tols.insert(GeoKind::Qua17, 1e-10);
         tols.insert(GeoKind::Hex8, 1e-13);
         tols.insert(GeoKind::Hex20, 1e-12);
 
@@ -1088,12 +1115,13 @@ mod tests {
     #[test]
     fn calc_coords_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+        let pairs = vec![(2, 4), (2, 8), (2, 17), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
         tols.insert(GeoKind::Qua4, 1e-15);
         tols.insert(GeoKind::Qua8, 1e-15);
+        tols.insert(GeoKind::Qua17, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
 
@@ -1101,6 +1129,7 @@ mod tests {
         let mut tols_mid = HashMap::new();
         tols_mid.insert(GeoKind::Qua4, 0.14); // linear maps are inaccurate for the circle wedge
         tols_mid.insert(GeoKind::Qua8, 1e-14);
+        tols_mid.insert(GeoKind::Qua17, 1e-14);
         tols_mid.insert(GeoKind::Hex8, 0.14); // bi-linear maps are inaccurate for the circle wedge
         tols_mid.insert(GeoKind::Hex20, 1e-14);
 
@@ -1164,12 +1193,13 @@ mod tests {
     #[test]
     fn calc_jacobian_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+        let pairs = vec![(2, 4), (2, 8), (2, 17), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
         tols.insert(GeoKind::Qua4, 1e-11);
         tols.insert(GeoKind::Qua8, 1e-11);
+        tols.insert(GeoKind::Qua17, 1e-10);
         tols.insert(GeoKind::Hex8, 1e-11);
         tols.insert(GeoKind::Hex20, 1e-11);
 
@@ -1223,17 +1253,30 @@ mod tests {
     #[test]
     fn calc_boundary_normal_works() -> Result<(), StrError> {
         // allocate surface shape
-        let mut surf = Shape::new(3, 2, 4)?;
-        assert_eq!(surf.kind, GeoKind::Qua4);
+        let mut surf = Shape::new(3, 2, 17)?;
 
         // set coordinates matrix
         set_coords_matrix(&mut surf);
-        println!("X =\n{}", surf.coords_transp);
 
-        let mut at_ksi = Vector::new(surf.geo_ndim);
-        let mut normal = Vector::new(surf.geo_ndim);
+        // compute boundary normal vector
+        let at_ksi = Vector::new(surf.geo_ndim);
+        let mut normal = Vector::new(surf.space_ndim);
         surf.calc_boundary_normal(&mut normal, &at_ksi)?;
 
+        // check magnitude of normal vector
+        let mag_normal = normal.norm(NormVec::Euc);
+        let area = PI * (RMAX * RMAX - RMIN * RMIN) / 12.0;
+        let ref_area = 4.0;
+        let area_ratio = area / ref_area;
+        println!("normal =\n{}", normal);
+        println!("mag_normal = {}", mag_normal);
+        println!("area_ratio = {}", area_ratio);
+        assert_approx_eq!(mag_normal, area_ratio, 1e-4);
+
+        // check direction of normal vector
+        let mut unit_normal = Vector::from(normal.as_data());
+        unit_normal.scale(1.0 / mag_normal);
+        assert_vec_approx_eq!(unit_normal.as_data(), &[0.0, 0.0, 1.0], 1e-15);
         Ok(())
     }
 
