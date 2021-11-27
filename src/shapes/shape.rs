@@ -506,8 +506,8 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `m` -- point index in form 0 to npoint-1
-    /// * `j` -- dimension index from 0 to space_ndim-1
+    /// * `m` -- point index in form 0 to npoint - 1
+    /// * `j` -- dimension index from 0 to space_ndim - 1
     /// * `value` -- the X(m,j) component
     pub fn set_point_coord(&mut self, m: usize, j: usize, value: f64) -> Result<(), StrError> {
         if m >= self.npoint {
@@ -542,11 +542,25 @@ impl Shape {
     /// x := Xᵀ ⋅ N
     /// ```
     ///
+    /// # Input
+    ///
+    /// * `ksi` -- ξ reference coordinate (geo_ndim)
+    ///
+    /// # Output
+    ///
+    /// * `x` -- real coordinate (space_ndim)
+    ///
     /// # Warning
     ///
     /// You must set the coordinates matrix first, otherwise the computations
     /// will generate wrong results.
     pub fn calc_coords(&mut self, x: &mut Vector, ksi: &Vector) -> Result<(), StrError> {
+        if x.dim() != self.space_ndim {
+            return Err("x.dim() must equal space_ndim");
+        }
+        if ksi.dim() != self.geo_ndim {
+            return Err("ksi.dim() must equal geo_ndim");
+        }
         (self.fn_interp)(&mut self.interp, ksi);
         mat_vec_mul(x, 1.0, &self.coords_transp, &self.interp)
     }
@@ -583,7 +597,7 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `ksi` -- ξ reference coordinate
+    /// * `ksi` -- ξ reference coordinate (geo_ndim)
     ///
     /// # Output
     ///
@@ -600,6 +614,9 @@ impl Shape {
     /// You must set the coordinates matrix first, otherwise the computations
     /// will generate wrong results.
     pub fn calc_jacobian(&mut self, ksi: &Vector) -> Result<f64, StrError> {
+        if ksi.dim() != self.geo_ndim {
+            return Err("ksi.dim() must equal geo_ndim");
+        }
         (self.fn_deriv)(&mut self.deriv, ksi);
         mat_mat_mul(&mut self.jacobian, 1.0, &self.coords_transp, &self.deriv)?;
         if self.geo_ndim == self.space_ndim {
@@ -609,19 +626,71 @@ impl Shape {
         }
     }
 
+    /// Computes the boundary normal vector
+    ///
+    /// **Note:** This function works with `geo_ndim < space_ndim` only. In particular:
+    ///
+    /// * `geo_ndim = 1` and `space_ndim = 2`: line in 2D, or
+    /// * `geo_ndim = 2` and `space_ndim = 3`: surface in 3D.
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- ξ reference coordinate at the boundary (geo_ndim)
+    ///
+    /// # Output
+    ///
+    /// * `normal` -- (space_ndim) the boundary normal vector; not necessarily unitary
+    ///
+    /// # Updated variables
+    ///
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    pub fn calc_boundary_normal(&mut self, normal: &mut Vector, ksi: &Vector) -> Result<(), StrError> {
+        // check
+        if self.geo_ndim == self.space_ndim {
+            return Err("geo_ndim must be smaller than space_ndim");
+        }
+        if normal.dim() != self.space_ndim {
+            return Err("normal.dim() must equal space_ndim");
+        }
+        if ksi.dim() != self.geo_ndim {
+            return Err("ksi.dim() must equal geo_ndim");
+        }
+
+        // compute Jacobian
+        (self.fn_deriv)(&mut self.deriv, ksi);
+        mat_mat_mul(&mut self.jacobian, 1.0, &self.coords_transp, &self.deriv)?;
+
+        // line in 2D
+        if self.geo_ndim == 1 && self.space_ndim == 2 {
+            normal[0] = -self.jacobian[1][0];
+            normal[1] = self.jacobian[0][0];
+            return Ok(());
+        }
+
+        // surface in 3D
+        if self.geo_ndim == 2 && self.space_ndim == 3 {
+            normal[0] = self.jacobian[1][0] * self.jacobian[2][1] - self.jacobian[2][0] * self.jacobian[1][1];
+            normal[1] = self.jacobian[2][0] * self.jacobian[0][1] - self.jacobian[0][0] * self.jacobian[2][1];
+            normal[2] = self.jacobian[0][0] * self.jacobian[1][1] - self.jacobian[1][0] * self.jacobian[0][1];
+            return Ok(());
+        }
+
+        Err("geo_ndim and space_ndim combination is invalid for boundary normal")
+    }
+
     /// Approximates the reference coordinates from given real coordinates (inverse mapping)
     ///
     /// **Note:** This function works with `geo_ndim == space_ndim` only
     ///
     /// # Input
     ///
-    /// * `x` -- real coordinates
+    /// * `x` -- real coordinates (space_ndim = geo_ndim)
     /// * `nit_max` -- maximum number of iterations (e.g., 10)
     /// * `tol` -- tolerance for the norm of the difference x - x(ξ) (e.g., 1e-8)
     ///
     /// # Output
     ///
-    /// * `ksi` -- reference coordinates
+    /// * `ksi` -- ξ reference coordinates (geo_ndim = space_ndim)
     /// * returns the number of iterations
     ///
     /// # Warning
@@ -635,9 +704,17 @@ impl Shape {
         nit_max: usize,
         tol: f64,
     ) -> Result<usize, StrError> {
+        // check
         if self.geo_ndim != self.space_ndim {
             return Err("geo_ndim must equal space_ndim");
         }
+        if x.dim() != self.space_ndim {
+            return Err("x.dim() must equal space_ndim");
+        }
+        if ksi.dim() != self.geo_ndim {
+            return Err("ksi.dim() must equal geo_ndim");
+        }
+
         // use linear scale to guess ksi
         for j in 0..self.geo_ndim {
             // ksi[j] = 0.0; // trial at center
@@ -649,6 +726,8 @@ impl Shape {
                 ksi[j] = 1.0;
             }
         }
+
+        // perform iterations
         let mut residual = Vector::new(self.space_ndim);
         let mut x_at_ksi = Vector::new(self.space_ndim);
         let mut delta_ksi = Vector::new(self.geo_ndim);
@@ -666,6 +745,7 @@ impl Shape {
                 ksi[j] += delta_ksi[j];
             }
         }
+
         Err("inverse mapping failed to converge")
     }
 
@@ -689,7 +769,7 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `ksi` -- ξ reference coordinate
+    /// * `ksi` -- ξ reference coordinate (geo_ndim = space_ndim)
     ///
     /// # Output
     ///
@@ -708,6 +788,9 @@ impl Shape {
     pub fn calc_gradient(&mut self, ksi: &Vector) -> Result<f64, StrError> {
         if self.geo_ndim != self.space_ndim {
             return Err("geo_ndim must equal space_ndim");
+        }
+        if ksi.dim() != self.geo_ndim {
+            return Err("ksi.dim() must equal geo_ndim");
         }
         let det_jac = self.calc_jacobian(ksi)?;
         mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian)?;
@@ -861,15 +944,28 @@ mod tests {
         }
     }
 
-    // Generates matrix of coordinates for geo_ndim = space_ndim
+    // Generates matrix of coordinates
     fn set_coords_matrix(shape: &mut Shape) {
-        assert_eq!(shape.geo_ndim, shape.space_ndim);
         let mut x = Vector::new(shape.space_ndim);
         let mut ksi = Vector::new(shape.geo_ndim);
+        let mut ksi_aux = Vector::new(shape.space_ndim);
         for m in 0..shape.npoint {
             shape.get_reference_coords(&mut ksi, m);
-            gen_coords(&mut x, &ksi);
-            for j in 0..shape.geo_ndim {
+            if shape.geo_ndim == shape.space_ndim {
+                gen_coords(&mut x, &ksi);
+            } else if shape.geo_ndim == 1 && shape.space_ndim == 2 {
+                ksi_aux[0] = ksi[0];
+                ksi_aux[1] = 1.0;
+                gen_coords(&mut x, &ksi_aux);
+            } else if shape.geo_ndim == 2 && shape.space_ndim == 3 {
+                ksi_aux[0] = ksi[0];
+                ksi_aux[1] = ksi[1];
+                ksi_aux[2] = 1.0;
+                gen_coords(&mut x, &ksi_aux);
+            } else {
+                panic!("(geo_ndim,space_ndim) pair is invalid");
+            }
+            for j in 0..shape.space_ndim {
                 shape.set_point_coord(m, j, x[j]).unwrap();
             }
         }
@@ -1121,6 +1217,23 @@ mod tests {
                 }
             }
         }
+        Ok(())
+    }
+
+    #[test]
+    fn calc_boundary_normal_works() -> Result<(), StrError> {
+        // allocate surface shape
+        let mut surf = Shape::new(3, 2, 4)?;
+        assert_eq!(surf.kind, GeoKind::Qua4);
+
+        // set coordinates matrix
+        set_coords_matrix(&mut surf);
+        println!("X =\n{}", surf.coords_transp);
+
+        let mut at_ksi = Vector::new(surf.geo_ndim);
+        let mut normal = Vector::new(surf.geo_ndim);
+        surf.calc_boundary_normal(&mut normal, &at_ksi)?;
+
         Ok(())
     }
 
