@@ -3,6 +3,7 @@ use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, Vector};
 
 /// Defines the kind of shape
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GeoKind {
     Lin2,
     Lin3,
@@ -348,6 +349,9 @@ pub struct Shape {
     /// Matrix inv(J): (space_ndim,space_ndim) Inverse Jacobian matrix (only if geo_ndim == space_ndim)
     pub inv_jacobian: Matrix,
 
+    /// Matrix G: (npoint,space_ndim) Gradient of shape functions (only if geo_ndim == space_ndim)
+    pub gradient: Matrix,
+
     /// Matrix X: (space_ndim,npoint) transposed coordinates matrix (real space)
     coords_transp: Matrix,
 }
@@ -369,10 +373,10 @@ impl Shape {
         let interp = Vector::new(npoint);
         let deriv = Matrix::new(npoint, geo_ndim);
         let jacobian = Matrix::new(space_ndim, geo_ndim);
-        let inv_jacobian = if geo_ndim == space_ndim {
-            Matrix::new(space_ndim, space_ndim)
+        let (inv_jacobian, gradient) = if geo_ndim == space_ndim {
+            (Matrix::new(space_ndim, space_ndim), Matrix::new(npoint, space_ndim))
         } else {
-            Matrix::new(0, 0)
+            (Matrix::new(0, 0), Matrix::new(0, 0))
         };
         let coords_transp = Matrix::new(space_ndim, npoint);
         match (geo_ndim, npoint) {
@@ -400,6 +404,7 @@ impl Shape {
                 deriv,
                 jacobian,
                 inv_jacobian,
+                gradient,
                 coords_transp,
             }),
             (2, 8) => Ok(Shape {
@@ -418,6 +423,7 @@ impl Shape {
                 deriv,
                 jacobian,
                 inv_jacobian,
+                gradient,
                 coords_transp,
             }),
             (2, 9) => Err("Qua9 is not available yet"),
@@ -442,6 +448,7 @@ impl Shape {
                 deriv,
                 jacobian,
                 inv_jacobian,
+                gradient,
                 coords_transp,
             }),
             (3, 20) => Ok(Shape {
@@ -460,6 +467,7 @@ impl Shape {
                 deriv,
                 jacobian,
                 inv_jacobian,
+                gradient,
                 coords_transp,
             }),
             _ => Err("(space_ndim, geo_ndim, npoint) combination is invalid"),
@@ -579,6 +587,51 @@ impl Shape {
         }
     }
 
+    /// Calculates the gradient of the interpolation functions
+    ///
+    /// **Note:** This function works with `geo_ndim == space_ndim` only
+    ///
+    /// ```text
+    ///             →
+    /// →       dNᵐ(ξ)
+    /// Gᵐ(ξ) = ——————
+    ///            →
+    ///           dx
+    /// ```
+    ///
+    /// which can be organized in an (npoint,space_ndim) matrix `G` as follows
+    ///
+    /// ```text
+    /// G = L · J⁻¹
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- ξ reference coordinate
+    ///
+    /// # Output
+    ///
+    /// Returns the determinant of the Jacobian.
+    ///
+    /// # Updated variables
+    ///
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
+    /// * `gradient` -- gradient matrix (npoint,space_ndim)
+    ///
+    /// # Warning
+    ///
+    /// You must set the coordinates matrix first, otherwise the computations
+    /// will generate wrong results.
+    pub fn calc_gradient(&mut self, ksi: &Vector) -> Result<f64, StrError> {
+        if self.geo_ndim != self.space_ndim {
+            return Err("geo_ndim must equal space_ndim");
+        }
+        let det_jac = self.calc_jacobian(ksi)?;
+        mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian)?;
+        Ok(det_jac)
+    }
+
     // --- getters ------------------------------------------------------------------------------
 
     /// Returns the local id of point on edge
@@ -666,45 +719,176 @@ impl Shape {
 mod tests {
     use super::*;
     use russell_chk::*;
+    use std::collections::HashMap;
 
-    // Generates pairs (geom_ndim,npoint) to allocate test shapes
-    fn gen_geo_ndim_npoint() -> Vec<(usize, usize)> {
-        vec![(2, 4), (2, 8), (3, 8), (3, 20)]
+    struct TestData {
+        shapes: Vec<Shape>,
+        tolerances_fn_interp: HashMap<GeoKind, f64>,
+        tolerances_fn_deriv: HashMap<GeoKind, f64>,
+        tolerances_calc_coords: HashMap<GeoKind, f64>,
+        tolerances_calc_coords_high: HashMap<GeoKind, f64>, // high tol for center
+        tolerances_calc_jacobian: HashMap<GeoKind, f64>,
+        tolerances_calc_gradient: HashMap<GeoKind, f64>,
     }
 
-    // Generates matrix of coordinates with shifted ref-coords such that edges = [0, 2]
-    fn gen_coords(shape: &mut Shape) {
+    // Generates test data
+    fn gen_test_data() -> TestData {
+        let mut data = TestData {
+            shapes: Vec::new(),
+            tolerances_fn_interp: HashMap::new(),
+            tolerances_fn_deriv: HashMap::new(),
+            tolerances_calc_coords: HashMap::new(),
+            tolerances_calc_coords_high: HashMap::new(),
+            tolerances_calc_jacobian: HashMap::new(),
+            tolerances_calc_gradient: HashMap::new(),
+        };
+        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+        for (geo_ndim, npoint) in pairs {
+            let space_ndim = geo_ndim;
+            data.shapes.push(Shape::new(space_ndim, geo_ndim, npoint).unwrap());
+            let shape = data.shapes.last().unwrap();
+            data.tolerances_fn_interp.insert(shape.kind, 1e-15);
+            data.tolerances_fn_deriv.insert(shape.kind, 1e-12);
+            data.tolerances_calc_coords.insert(shape.kind, 1e-15);
+        }
+        data.tolerances_calc_coords_high.insert(GeoKind::Qua4, 0.15);
+        data.tolerances_calc_coords_high.insert(GeoKind::Qua8, 1e-14);
+        data.tolerances_calc_coords_high.insert(GeoKind::Hex8, 0.15);
+        data.tolerances_calc_coords_high.insert(GeoKind::Hex20, 1e-14);
+        data.tolerances_calc_jacobian.insert(GeoKind::Qua4, 1e-11);
+        data.tolerances_calc_jacobian.insert(GeoKind::Qua8, 1e-11);
+        data.tolerances_calc_jacobian.insert(GeoKind::Hex8, 1e-11);
+        data.tolerances_calc_jacobian.insert(GeoKind::Hex20, 1e-11);
+        data
+    }
+
+    const RMIN: f64 = 1.0;
+    const RMAX: f64 = 10.0;
+    const AMIN: f64 = 30.0 * std::f64::consts::PI / 180.0;
+    const AMAX: f64 = 60.0 * std::f64::consts::PI / 180.0;
+
+    // Generate coordinates
+    //
+    //                         |            /
+    //                                     /
+    //                 ,,****#"|""#****,, /
+    //            ,***""'              `""**,             r
+    //         ,**#"           |        /??"#**,       ,~'
+    //       ,*#"                      /??????"#*,  ,~'
+    //     ,*#"         _,,**#"|"#**,,_?????????"#*,
+    //    ,#"         ,*#"'         `"#*,??????,~ "#,
+    //   ,#'        ,*"        |    /   "*,?,~'    `#,
+    //  ,#'        *"              / αmax "*        `#,
+    //  *'        *'           |  /    ,~' `*        `*
+    //  #         #              /  ,~'     #         #
+    // ,#        ,#            | ,~' αmin    #,        #,
+    // #         #             o - - - - - - #  - - -  # - - -
+    // `#        '#                    rmin #'   rmax #'
+    //  #         #,                       ,#         #
+    //  #,         #*                     *#         ,#
+    //  `#,         "#*                 *#"         ,#'
+    //   `#,          "#*,_         _,*#"          ,#'
+    //    `#*           `""#*******#""'           *#'
+    //     `#**                                 **#'
+    //       "#**                             **#"
+    //         `"#**,                     ,**#"'
+    //            `"##**,             ,**##"'
+    //                 ``""##*****##""''
+    //
+    // if 3D => cylindrical coordinates
+    //
+    // r(ξ₀,ξ₁,ξ₂) = rmin + (1+ξ₀) * Δr/2
+    // α(ξ₀,ξ₁,ξ₂) = αmin + (1+ξ₁) * Δα/2
+    // z(ξ₀,ξ₁,ξ₂) = ξ₂
+    //
+    // x₀ := r * cos(α)
+    // x₁ := r * sin(α)
+    // x₂ := z
+    fn gen_coords(x: &mut Vector, ksi: &Vector) {
+        assert_eq!(x.dim(), ksi.dim());
+        let r = RMIN + (1.0 + ksi[0]) * (RMAX - RMIN) / 2.0;
+        if x.dim() == 1 {
+            x[0] = r;
+            return;
+        }
+        let a = AMIN + (1.0 + ksi[1]) * (AMAX - AMIN) / 2.0;
+        x[0] = r * f64::cos(a);
+        x[1] = r * f64::sin(a);
+        if x.dim() == 3 {
+            x[2] = ksi[2];
+        }
+    }
+
+    // Generate reference coordinates
+    //
+    // if 3D => cylindrical coordinates
+    //
+    // ξ₀(r,α,z) = (2/Δr) * (r-rmin) - 1
+    // ξ₁(r,α,z) = (2/Δα) * (α-αmin) - 1
+    // ξ₂(r,α,z) = z
+    //
+    // r(x₀,x₁,x₂) = sqrt(x₀ x₀ + x₁ x₁)
+    // α(x₀,x₁,x₂) = atan(x₁ / x₀)
+    // z(x₀,x₁,x₂) = x₂
+    fn gen_ref_coords(ksi: &mut Vector, x: &Vector) {
+        assert_eq!(x.dim(), ksi.dim());
+        let r = f64::sqrt(x[0] * x[0] + x[1] * x[1]);
+        ksi[0] = (2.0 / (RMAX - RMIN)) * (r - RMIN) - 1.0;
+        if x.dim() == 1 {
+            return;
+        }
+        let a = f64::atan2(x[1], x[0]);
+        ksi[1] = (2.0 / (AMAX - AMIN)) * (a - AMIN) - 1.0;
+        if x.dim() == 3 {
+            ksi[2] = x[2];
+        }
+    }
+
+    // Generates matrix of coordinates for geo_ndim = space_ndim
+    fn set_coords_matrix(shape: &mut Shape) {
         assert_eq!(shape.geo_ndim, shape.space_ndim);
+        let mut x = Vector::new(shape.space_ndim);
         let mut ksi = Vector::new(shape.geo_ndim);
         for m in 0..shape.npoint {
             shape.get_reference_coords(&mut ksi, m);
+            gen_coords(&mut x, &ksi);
             for j in 0..shape.geo_ndim {
-                shape.set_point_coord(m, j, 1.0 + ksi[j]).unwrap();
+                shape.set_point_coord(m, j, x[j]).unwrap();
             }
         }
     }
 
     // Holds arguments for numerical differentiation of N w.r.t ξ => L (deriv) matrix
-    struct ArgsInterp {
-        shape: Shape,   // shape
-        at_ksi: Vector, // at nat coord value
-        ksi: Vector,    // temporary nat coord
+    struct ArgsInterpVarKsi {
+        shape: Shape,   // auxiliary (copy) shape
+        at_ksi: Vector, // at reference coord value
+        ksi: Vector,    // temporary reference coord
         m: usize,       // point index from 0 to npoint
         j: usize,       // dimension index from 0 to geom_ndim
     }
 
     // Holds arguments for numerical differentiation of x w.r.t ξ => Jacobian
-    struct ArgsCoords {
-        shape: Shape,   // shape
-        at_ksi: Vector, // at nat coord value
-        ksi: Vector,    // temporary nat coord
+    struct ArgsCoordsVarKsi {
+        shape: Shape,   // auxiliary (copy) shape
+        at_ksi: Vector, // at reference coord value
+        ksi: Vector,    // temporary reference coord
         x: Vector,      // (space_ndim) coordinates at ξ
         i: usize,       // dimension index from 0 to space_ndim
         j: usize,       // dimension index from 0 to geo_ndim
     }
 
+    // Holds arguments for numerical differentiation of N w.r.t x => G (gradient) matrix
+    struct ArgsInterpVarX {
+        shape: Shape, // auxiliary (copy) shape
+        at_x: Vector, // at x coord value
+        x: Vector,    // temporary x coord
+        ksi: Vector,  // temporary reference coord
+        m: usize,     // point index from 0 to npoint
+        j: usize,     // dimension index from 0 to space_ndim
+    }
+
     // Computes Nᵐ(ξ) with variable v := ξⱼ
-    fn calc_interp_m(v: f64, args: &mut ArgsInterp) -> f64 {
+    fn calc_interp_m_var_ksi(v: f64, args: &mut ArgsInterpVarKsi) -> f64 {
         for j in 0..args.shape.geo_ndim {
             args.ksi[j] = args.at_ksi[j];
         }
@@ -714,7 +898,7 @@ mod tests {
     }
 
     // Computes xᵢ(ξ) with variable v := ξⱼ
-    fn calc_coord_i(v: f64, args: &mut ArgsCoords) -> f64 {
+    fn calc_coord_i_var_ksi(v: f64, args: &mut ArgsCoordsVarKsi) -> f64 {
         for j in 0..args.shape.geo_ndim {
             args.ksi[j] = args.at_ksi[j];
         }
@@ -723,23 +907,33 @@ mod tests {
         args.x[args.i]
     }
 
+    // Computes Nᵐ(ξ(x)) with variable v := xⱼ
+    fn calc_interp_m_var_x(v: f64, args: &mut ArgsInterpVarX) -> f64 {
+        for j in 0..args.shape.space_ndim {
+            args.x[j] = args.at_x[j];
+        }
+        args.x[args.j] = v;
+        gen_ref_coords(&mut args.ksi, &args.x);
+        (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
+        args.shape.interp[args.m]
+    }
+
     #[test]
     fn fn_interp_works() -> Result<(), StrError> {
-        for (geo_ndim, npoint) in gen_geo_ndim_npoint() {
-            let space_ndim = geo_ndim;
-            let mut shape = Shape::new(space_ndim, geo_ndim, npoint)?;
-            assert_eq!(shape.geo_ndim, geo_ndim);
-            assert_eq!(shape.npoint, npoint);
-            let mut ksi = Vector::new(geo_ndim);
-            for m in 0..npoint {
+        let mut data = gen_test_data();
+        for shape in &mut data.shapes {
+            let tol = *data.tolerances_fn_interp.get(&shape.kind).unwrap();
+            println!("{:?}: tol={:e}", shape.kind, tol);
+            let mut ksi = Vector::new(shape.geo_ndim);
+            for m in 0..shape.npoint {
                 shape.get_reference_coords(&mut ksi, m);
                 (shape.fn_interp)(&mut shape.interp, &ksi);
-                for n in 0..npoint {
+                for n in 0..shape.npoint {
                     let interp_mn = shape.interp[n];
                     if m == n {
-                        assert_approx_eq!(interp_mn, 1.0, 1e-15);
+                        assert_approx_eq!(interp_mn, 1.0, tol);
                     } else {
-                        assert_approx_eq!(interp_mn, 0.0, 1e-15);
+                        assert_approx_eq!(interp_mn, 0.0, tol);
                     }
                 }
             }
@@ -749,27 +943,28 @@ mod tests {
 
     #[test]
     fn fn_deriv_works() -> Result<(), StrError> {
-        for (geo_ndim, npoint) in gen_geo_ndim_npoint() {
-            let space_ndim = geo_ndim;
-            let mut shape = Shape::new(space_ndim, geo_ndim, npoint)?;
-            let mut at_ksi = Vector::new(geo_ndim);
-            for j in 0..geo_ndim {
+        let mut data = gen_test_data();
+        for shape in &mut data.shapes {
+            let tol = *data.tolerances_fn_deriv.get(&shape.kind).unwrap();
+            println!("{:?}: tol={:e}", shape.kind, tol);
+            let mut at_ksi = Vector::new(shape.geo_ndim);
+            for j in 0..shape.geo_ndim {
                 at_ksi[j] = 0.25;
             }
-            let args = &mut ArgsInterp {
-                shape: Shape::new(space_ndim, geo_ndim, npoint)?,
+            let args = &mut ArgsInterpVarKsi {
+                shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
                 at_ksi,
-                ksi: Vector::new(geo_ndim),
+                ksi: Vector::new(shape.geo_ndim),
                 m: 0,
                 j: 0,
             };
             (shape.fn_deriv)(&mut shape.deriv, &args.at_ksi);
-            for m in 0..npoint {
+            for m in 0..shape.npoint {
                 args.m = m;
-                for j in 0..geo_ndim {
+                for j in 0..shape.geo_ndim {
                     args.j = j;
                     // Lᵐⱼ := dNᵐ/dξⱼ
-                    assert_deriv_approx_eq!(shape.deriv[m][j], args.at_ksi[j], calc_interp_m, args, 1e-12);
+                    assert_deriv_approx_eq!(shape.deriv[m][j], args.at_ksi[j], calc_interp_m_var_ksi, args, tol);
                 }
             }
         }
@@ -778,52 +973,57 @@ mod tests {
 
     #[test]
     fn calc_coords_works() -> Result<(), StrError> {
-        for (geo_ndim, npoint) in gen_geo_ndim_npoint() {
-            let space_ndim = geo_ndim;
-            let mut shape = Shape::new(space_ndim, geo_ndim, npoint)?;
-            gen_coords(&mut shape);
-            // set at_ksi such that x[i] = 1.25
-            let mut at_ksi = Vector::new(geo_ndim);
-            for i in 0..geo_ndim {
-                at_ksi[i] = 0.25;
+        let mut data = gen_test_data();
+        for shape in &mut data.shapes {
+            let tol = *data.tolerances_calc_coords.get(&shape.kind).unwrap();
+            let tol_high = *data.tolerances_calc_coords_high.get(&shape.kind).unwrap();
+            println!("{:?}: tol={:e}, tol_high={:e}", shape.kind, tol, tol_high);
+            set_coords_matrix(shape);
+            let mut ksi = Vector::new(shape.geo_ndim);
+            let mut x = Vector::new(shape.space_ndim);
+            let mut x_correct = Vector::new(shape.space_ndim);
+            for m in 0..shape.npoint {
+                shape.get_reference_coords(&mut ksi, m);
+                shape.calc_coords(&mut x, &ksi)?;
+                gen_coords(&mut x_correct, &ksi);
+                assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol);
             }
-            // calculate coords
-            let mut x = Vector::new(space_ndim);
-            shape.calc_coords(&mut x, &at_ksi)?;
-            // check
-            let x_correct = vec![1.25; space_ndim];
-            assert_vec_approx_eq!(x.as_data(), x_correct, 1e-15);
+            // for ksi=(0,0,0), use higher tolerance because the cylinder mapping is inaccurate
+            let ksi_0 = Vector::new(shape.geo_ndim);
+            shape.calc_coords(&mut x, &ksi_0)?;
+            gen_coords(&mut x_correct, &ksi_0);
+            assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_high);
         }
         Ok(())
     }
 
     #[test]
     fn calc_jacobian_works() -> Result<(), StrError> {
-        for (geo_ndim, npoint) in gen_geo_ndim_npoint() {
-            let space_ndim = geo_ndim;
-            let mut shape = Shape::new(space_ndim, geo_ndim, npoint)?;
-            gen_coords(&mut shape);
-            let mut at_ksi = Vector::new(geo_ndim);
-            for i in 0..geo_ndim {
+        let mut data = gen_test_data();
+        for shape in &mut data.shapes {
+            let tol = *data.tolerances_calc_jacobian.get(&shape.kind).unwrap();
+            println!("{:?}: tol={:e}", shape.kind, tol);
+            set_coords_matrix(shape);
+            let mut at_ksi = Vector::new(shape.geo_ndim);
+            for i in 0..shape.geo_ndim {
                 at_ksi[i] = 0.25;
             }
-            let args = &mut ArgsCoords {
-                shape: Shape::new(space_ndim, geo_ndim, npoint)?,
+            let args = &mut ArgsCoordsVarKsi {
+                shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
                 at_ksi,
-                ksi: Vector::new(geo_ndim),
-                x: Vector::new(space_ndim),
+                ksi: Vector::new(shape.geo_ndim),
+                x: Vector::new(shape.space_ndim),
                 i: 0,
                 j: 0,
             };
-            gen_coords(&mut args.shape);
+            set_coords_matrix(&mut args.shape);
             shape.calc_jacobian(&args.at_ksi)?;
-            println!("{}", shape.jacobian);
-            for i in 0..space_ndim {
+            for i in 0..shape.space_ndim {
                 args.i = i;
-                for j in 0..geo_ndim {
+                for j in 0..shape.geo_ndim {
                     args.j = j;
                     // Jᵢⱼ := dxᵢ/dξⱼ
-                    assert_deriv_approx_eq!(shape.jacobian[i][j], args.at_ksi[j], calc_coord_i, args, 1e-12);
+                    assert_deriv_approx_eq!(shape.jacobian[i][j], args.at_ksi[j], calc_coord_i_var_ksi, args, tol);
                 }
             }
         }
