@@ -886,7 +886,7 @@ impl Shape {
     ///
     /// * `x` -- real coordinates (space_ndim = geo_ndim)
     /// * `nit_max` -- maximum number of iterations (e.g., 10)
-    /// * `tol` -- tolerance for the norm of the difference x - x(ξ) (e.g., 1e-8)
+    /// * `tol` -- tolerance for the norm of the difference x - x(ξ) (e.g., 1e-14)
     ///
     /// # Output
     ///
@@ -915,15 +915,23 @@ impl Shape {
             return Err("ksi.dim() must equal geo_ndim");
         }
 
+        // reference domain limits
+        let min_ksi = if self.class == GeoClass::Tri || self.class == GeoClass::Tet {
+            0.0
+        } else {
+            -1.0
+        };
+        let max_ksi = 1.0;
+        let delta_ksi = max_ksi - min_ksi;
+
         // use linear scale to guess ksi
         for j in 0..self.geo_ndim {
-            // ksi[j] = 0.0; // trial at center
-            ksi[j] = 2.0 * (x[j] - self.min_coords[j]) / (self.max_coords[j] - self.min_coords[j]) - 1.0;
-            if ksi[j] < -1.0 {
-                ksi[j] = -1.0;
+            ksi[j] = (x[j] - self.min_coords[j]) / (self.max_coords[j] - self.min_coords[j]) * delta_ksi + min_ksi;
+            if ksi[j] < min_ksi {
+                ksi[j] = min_ksi;
             }
-            if ksi[j] > 1.0 {
-                ksi[j] = 1.0;
+            if ksi[j] > max_ksi {
+                ksi[j] = max_ksi;
             }
         }
 
@@ -1615,10 +1623,12 @@ mod tests {
     #[test]
     fn approximate_ksi_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+        let pairs = vec![(2, 3), (2, 6), (2, 4), (2, 8), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
+        tols.insert(GeoKind::Tri3, 1e-15);
+        tols.insert(GeoKind::Tri6, 1e-15);
         tols.insert(GeoKind::Qua4, 1e-15);
         tols.insert(GeoKind::Qua8, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
@@ -1653,17 +1663,22 @@ mod tests {
                 let nit = shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
 
                 // check (linear and bi-linear shapes converge with nit = 1)
-                if shape.kind == GeoKind::Qua4 || shape.kind == GeoKind::Hex8 {
+                if shape.kind == GeoKind::Tri3 || shape.kind == GeoKind::Qua4 || shape.kind == GeoKind::Hex8 {
                     assert_eq!(nit, 1);
                 }
                 assert_vec_approx_eq!(ksi.as_data(), ksi_correct.as_data(), tol);
             }
 
-            // test again at middle of reference space with ξ := (0,0,0)
-            let ksi_mid = Vector::new(shape.geo_ndim);
-            shape.calc_coords(&mut x, &ksi_mid)?;
+            // test again at within the reference domain
+            let mut ksi_in = Vector::new(shape.geo_ndim);
+            if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
+                ksi_in.fill(1.0 / 3.0);
+            } else {
+                ksi_in.fill(0.0);
+            }
+            shape.calc_coords(&mut x, &ksi_in)?;
             shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
-            assert_vec_approx_eq!(ksi.as_data(), ksi_mid.as_data(), tol);
+            assert_vec_approx_eq!(ksi.as_data(), ksi_in.as_data(), tol);
         }
         Ok(())
     }
