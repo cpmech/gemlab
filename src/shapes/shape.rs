@@ -1,4 +1,4 @@
-use super::{Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9};
+use super::{Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tri3};
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
 
@@ -472,7 +472,27 @@ impl Shape {
                 max_coords,
                 coords_transp,
             }),
-            (2, 3) => Err("Tri3 is not available yet"),
+            (2, 3) => Ok(Shape {
+                kind: GeoKind::Tri3,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Tri3::NEDGE,
+                nface: Tri3::NFACE,
+                edge_npoint: Tri3::EDGE_NPOINT,
+                face_npoint: Tri3::FACE_NPOINT,
+                face_nedge: Tri3::FACE_NEDGE,
+                fn_interp: Tri3::calc_interp,
+                fn_deriv: Tri3::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
             (2, 6) => Err("Tri6 is not available yet"),
             (2, 10) => Err("Tri10 is not available yet"),
             (2, 15) => Err("Tri15 is not available yet"),
@@ -971,6 +991,7 @@ impl Shape {
             GeoKind::Lin3 => 0,
             GeoKind::Lin4 => 0,
             GeoKind::Lin5 => 0,
+            GeoKind::Tri3 => Tri3::EDGE_POINT_IDS[e][i],
             GeoKind::Qua4 => Qua4::EDGE_POINT_IDS[e][i],
             GeoKind::Qua8 => Qua8::EDGE_POINT_IDS[e][i],
             GeoKind::Qua9 => Qua9::EDGE_POINT_IDS[e][i],
@@ -995,6 +1016,7 @@ impl Shape {
             GeoKind::Lin3 => 0,
             GeoKind::Lin4 => 0,
             GeoKind::Lin5 => 0,
+            GeoKind::Tri3 => 0,
             GeoKind::Qua4 => 0,
             GeoKind::Qua8 => 0,
             GeoKind::Qua9 => 0,
@@ -1020,6 +1042,7 @@ impl Shape {
             GeoKind::Lin3 => 0,
             GeoKind::Lin4 => 0,
             GeoKind::Lin5 => 0,
+            GeoKind::Tri3 => 0,
             GeoKind::Qua4 => 0,
             GeoKind::Qua8 => 0,
             GeoKind::Qua9 => 0,
@@ -1050,6 +1073,10 @@ impl Shape {
             }
             GeoKind::Lin5 => {
                 ksi[0] = Lin5::POINT_REFERENCE_COORDS[m][0];
+            }
+            GeoKind::Tri3 => {
+                ksi[0] = Tri3::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Tri3::POINT_REFERENCE_COORDS[m][1];
             }
             GeoKind::Qua4 => {
                 ksi[0] = Qua4::POINT_REFERENCE_COORDS[m][0];
@@ -1192,6 +1219,7 @@ mod tests {
             (1, 3),
             (1, 4),
             (1, 5),
+            (2, 3),
             (2, 4),
             (2, 8),
             (2, 9),
@@ -1208,6 +1236,7 @@ mod tests {
         tols.insert(GeoKind::Lin3, 1e-15);
         tols.insert(GeoKind::Lin4, 1e-15);
         tols.insert(GeoKind::Lin5, 1e-15);
+        tols.insert(GeoKind::Tri3, 1e-15);
         tols.insert(GeoKind::Qua4, 1e-15);
         tols.insert(GeoKind::Qua8, 1e-15);
         tols.insert(GeoKind::Qua9, 1e-15);
@@ -1274,6 +1303,7 @@ mod tests {
             (1, 3),
             (1, 4),
             (1, 5),
+            (2, 3),
             (2, 4),
             (2, 8),
             (2, 9),
@@ -1290,6 +1320,7 @@ mod tests {
         tols.insert(GeoKind::Lin3, 1e-13);
         tols.insert(GeoKind::Lin4, 1e-10);
         tols.insert(GeoKind::Lin5, 1e-10);
+        tols.insert(GeoKind::Tri3, 1e-12);
         tols.insert(GeoKind::Qua4, 1e-13);
         tols.insert(GeoKind::Qua8, 1e-12);
         tols.insert(GeoKind::Qua9, 1e-13);
