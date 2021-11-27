@@ -1,4 +1,4 @@
-use super::{Hex20, Hex8, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9};
+use super::{Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9};
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
 
@@ -388,10 +388,90 @@ impl Shape {
         let max_coords = vec![f64::MIN; space_ndim];
         let coords_transp = Matrix::new(space_ndim, npoint);
         match (geo_ndim, npoint) {
-            (1, 2) => Err("Lin2 is not available yet"),
-            (1, 3) => Err("Lin3 is not available yet"),
-            (1, 4) => Err("Lin4 is not available yet"),
-            (1, 5) => Err("Lin5 is not available yet"),
+            (1, 2) => Ok(Shape {
+                kind: GeoKind::Lin2,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Lin2::NEDGE,
+                nface: Lin2::NFACE,
+                edge_npoint: Lin2::EDGE_NPOINT,
+                face_npoint: Lin2::FACE_NPOINT,
+                face_nedge: Lin2::FACE_NEDGE,
+                fn_interp: Lin2::calc_interp,
+                fn_deriv: Lin2::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
+            (1, 3) => Ok(Shape {
+                kind: GeoKind::Lin3,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Lin3::NEDGE,
+                nface: Lin3::NFACE,
+                edge_npoint: Lin3::EDGE_NPOINT,
+                face_npoint: Lin3::FACE_NPOINT,
+                face_nedge: Lin3::FACE_NEDGE,
+                fn_interp: Lin3::calc_interp,
+                fn_deriv: Lin3::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
+            (1, 4) => Ok(Shape {
+                kind: GeoKind::Lin4,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Lin4::NEDGE,
+                nface: Lin4::NFACE,
+                edge_npoint: Lin4::EDGE_NPOINT,
+                face_npoint: Lin4::FACE_NPOINT,
+                face_nedge: Lin4::FACE_NEDGE,
+                fn_interp: Lin4::calc_interp,
+                fn_deriv: Lin4::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
+            (1, 5) => Ok(Shape {
+                kind: GeoKind::Lin5,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Lin5::NEDGE,
+                nface: Lin5::NFACE,
+                edge_npoint: Lin5::EDGE_NPOINT,
+                face_npoint: Lin5::FACE_NPOINT,
+                face_nedge: Lin5::FACE_NEDGE,
+                fn_interp: Lin5::calc_interp,
+                fn_deriv: Lin5::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
             (2, 3) => Err("Tri3 is not available yet"),
             (2, 6) => Err("Tri6 is not available yet"),
             (2, 10) => Err("Tri10 is not available yet"),
@@ -887,6 +967,10 @@ impl Shape {
     /// * `i` -- index of local point [0, edge_npoint-1]
     pub fn get_edge_point_id(&self, e: usize, i: usize) -> usize {
         match self.kind {
+            GeoKind::Lin2 => 0,
+            GeoKind::Lin3 => 0,
+            GeoKind::Lin4 => 0,
+            GeoKind::Lin5 => 0,
             GeoKind::Qua4 => Qua4::EDGE_POINT_IDS[e][i],
             GeoKind::Qua8 => Qua8::EDGE_POINT_IDS[e][i],
             GeoKind::Qua9 => Qua9::EDGE_POINT_IDS[e][i],
@@ -907,6 +991,10 @@ impl Shape {
     /// * `i` -- index of local point [0, face_npoint-1]
     pub fn get_face_point_id(&self, f: usize, i: usize) -> usize {
         match self.kind {
+            GeoKind::Lin2 => 0,
+            GeoKind::Lin3 => 0,
+            GeoKind::Lin4 => 0,
+            GeoKind::Lin5 => 0,
             GeoKind::Qua4 => 0,
             GeoKind::Qua8 => 0,
             GeoKind::Qua9 => 0,
@@ -928,6 +1016,10 @@ impl Shape {
     /// * `i` -- index of local point [0, edge_npoint-1]
     pub fn get_face_edge_point_id(&self, f: usize, k: usize, i: usize) -> usize {
         match self.kind {
+            GeoKind::Lin2 => 0,
+            GeoKind::Lin3 => 0,
+            GeoKind::Lin4 => 0,
+            GeoKind::Lin5 => 0,
             GeoKind::Qua4 => 0,
             GeoKind::Qua8 => 0,
             GeoKind::Qua9 => 0,
@@ -947,6 +1039,18 @@ impl Shape {
     /// * `ksi` -- (geo_ndim) reference coordinates `ξᵐ` at point m
     pub fn get_reference_coords(&self, ksi: &mut Vector, m: usize) {
         match self.kind {
+            GeoKind::Lin2 => {
+                ksi[0] = Lin2::POINT_REFERENCE_COORDS[m][0];
+            }
+            GeoKind::Lin3 => {
+                ksi[0] = Lin3::POINT_REFERENCE_COORDS[m][0];
+            }
+            GeoKind::Lin4 => {
+                ksi[0] = Lin4::POINT_REFERENCE_COORDS[m][0];
+            }
+            GeoKind::Lin5 => {
+                ksi[0] = Lin5::POINT_REFERENCE_COORDS[m][0];
+            }
             GeoKind::Qua4 => {
                 ksi[0] = Qua4::POINT_REFERENCE_COORDS[m][0];
                 ksi[1] = Qua4::POINT_REFERENCE_COORDS[m][1];
@@ -1083,10 +1187,27 @@ mod tests {
     #[test]
     fn fn_interp_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (2, 9), (2, 12), (2, 16), (2, 17), (3, 8), (3, 20)];
+        let pairs = vec![
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (1, 5),
+            (2, 4),
+            (2, 8),
+            (2, 9),
+            (2, 12),
+            (2, 16),
+            (2, 17),
+            (3, 8),
+            (3, 20),
+        ];
 
         // define tolerances
         let mut tols = HashMap::new();
+        tols.insert(GeoKind::Lin2, 1e-15);
+        tols.insert(GeoKind::Lin3, 1e-15);
+        tols.insert(GeoKind::Lin4, 1e-15);
+        tols.insert(GeoKind::Lin5, 1e-15);
         tols.insert(GeoKind::Qua4, 1e-15);
         tols.insert(GeoKind::Qua8, 1e-15);
         tols.insert(GeoKind::Qua9, 1e-15);
@@ -1148,10 +1269,27 @@ mod tests {
     #[test]
     fn fn_deriv_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (2, 9), (2, 12), (2, 16), (2, 17), (3, 8), (3, 20)];
+        let pairs = vec![
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (1, 5),
+            (2, 4),
+            (2, 8),
+            (2, 9),
+            (2, 12),
+            (2, 16),
+            (2, 17),
+            (3, 8),
+            (3, 20),
+        ];
 
         // define tolerances
         let mut tols = HashMap::new();
+        tols.insert(GeoKind::Lin2, 1e-13);
+        tols.insert(GeoKind::Lin3, 1e-13);
+        tols.insert(GeoKind::Lin4, 1e-10);
+        tols.insert(GeoKind::Lin5, 1e-10);
         tols.insert(GeoKind::Qua4, 1e-13);
         tols.insert(GeoKind::Qua8, 1e-12);
         tols.insert(GeoKind::Qua9, 1e-13);
