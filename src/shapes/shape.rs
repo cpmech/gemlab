@@ -838,11 +838,6 @@ mod tests {
             data.shapes.push(Shape::new(space_ndim, geo_ndim, npoint).unwrap());
         }
 
-        data.tols_approximate_ksi.insert(GeoKind::Qua4, 1e-15);
-        data.tols_approximate_ksi.insert(GeoKind::Qua8, 1e-15);
-        data.tols_approximate_ksi.insert(GeoKind::Hex8, 1e-15);
-        data.tols_approximate_ksi.insert(GeoKind::Hex20, 1e-15);
-
         data.tols_calc_gradient.insert(GeoKind::Qua4, 1e-12);
         data.tols_calc_gradient.insert(GeoKind::Qua8, 1e-12);
         data.tols_calc_gradient.insert(GeoKind::Hex8, 1e-12);
@@ -1183,14 +1178,14 @@ mod tests {
             let tol = *tols.get(&shape.kind).unwrap();
             println!("{:?}: tol={:e}", shape.kind, tol);
 
+            // set coordinates matrix
+            set_coords_matrix(shape);
+
             // set ξ within reference space
             let mut at_ksi = Vector::new(shape.geo_ndim);
             for j in 0..shape.geo_ndim {
                 at_ksi[j] = 0.25;
             }
-
-            // set coordinates matrix
-            set_coords_matrix(shape);
 
             // compute Jacobian, its inverse, and determinant
             let det_jac = shape.calc_jacobian(&at_ksi)?;
@@ -1222,28 +1217,57 @@ mod tests {
 
     #[test]
     fn approximate_ksi_works() -> Result<(), StrError> {
-        let mut data = gen_test_data();
-        let shape = &mut data.shapes[1];
-        // for shape in &mut data.shapes {
-        let tol = *data.tols_approximate_ksi.get(&shape.kind).unwrap();
-        println!("{:?}: tol={:e}", shape.kind, tol);
-        set_coords_matrix(shape);
-        let mut x = Vector::new(shape.space_ndim);
-        let mut ksi = Vector::new(shape.geo_ndim);
-        let mut ksi_correct = Vector::new(shape.geo_ndim);
-        for m in 0..shape.npoint {
-            shape.get_reference_coords(&mut ksi, m);
-            shape.calc_coords(&mut x, &ksi)?;
-            copy_vector(&mut ksi_correct, &ksi)?;
-            println!("x =\n{}", x);
-            let nit = shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
-            println!("nit = {}\nksi =\n{}", nit, ksi);
-            if shape.kind == GeoKind::Qua4 {
-                assert_eq!(nit, 1);
+        // define dims and number of points
+        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+
+        // define tolerances
+        let mut tols = HashMap::new();
+        tols.insert(GeoKind::Qua4, 1e-15);
+        tols.insert(GeoKind::Qua8, 1e-15);
+        tols.insert(GeoKind::Hex8, 1e-15);
+        tols.insert(GeoKind::Hex20, 1e-15);
+
+        // loop over shapes
+        for (geo_ndim, npoint) in pairs {
+            // allocate shape
+            let space_ndim = geo_ndim;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+
+            // set tolerance
+            let tol = *tols.get(&shape.kind).unwrap();
+            println!("{:?}: tol={:e}", shape.kind, tol);
+
+            // set coordinates matrix
+            set_coords_matrix(shape);
+
+            // loop over points of shape
+            let mut x = Vector::new(shape.space_ndim);
+            let mut ksi = Vector::new(shape.geo_ndim);
+            let mut ksi_correct = Vector::new(shape.geo_ndim);
+            for m in 0..shape.npoint {
+                // get ξᵐ corresponding to point m
+                shape.get_reference_coords(&mut ksi, m);
+                copy_vector(&mut ksi_correct, &ksi)?;
+
+                // calculate xᵐ(ξᵐ) using the isoparametric formula
+                shape.calc_coords(&mut x, &ksi)?;
+
+                // compute approximation of the inverse mapping ξᵐ(xᵐ)
+                let nit = shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
+
+                // check (linear and bi-linear shapes converge with nit = 1)
+                if shape.kind == GeoKind::Qua4 || shape.kind == GeoKind::Hex8 {
+                    assert_eq!(nit, 1);
+                }
+                assert_vec_approx_eq!(ksi.as_data(), ksi_correct.as_data(), tol);
             }
-            assert_vec_approx_eq!(ksi.as_data(), ksi_correct.as_data(), tol);
+
+            // test again at middle of reference space with ξ := (0,0,0)
+            let ksi_mid = Vector::new(shape.geo_ndim);
+            shape.calc_coords(&mut x, &ksi_mid)?;
+            let nit = shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
+            assert_vec_approx_eq!(ksi.as_data(), ksi_mid.as_data(), tol);
         }
-        // }
         Ok(())
     }
 
