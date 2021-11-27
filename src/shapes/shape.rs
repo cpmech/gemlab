@@ -759,6 +759,10 @@ mod tests {
         data.tolerances_calc_jacobian.insert(GeoKind::Qua8, 1e-11);
         data.tolerances_calc_jacobian.insert(GeoKind::Hex8, 1e-11);
         data.tolerances_calc_jacobian.insert(GeoKind::Hex20, 1e-11);
+        data.tolerances_calc_gradient.insert(GeoKind::Qua4, 1e-12);
+        data.tolerances_calc_gradient.insert(GeoKind::Qua8, 1e-12);
+        data.tolerances_calc_gradient.insert(GeoKind::Hex8, 1e-12);
+        data.tolerances_calc_gradient.insert(GeoKind::Hex20, 1e-12);
         data
     }
 
@@ -1017,13 +1021,50 @@ mod tests {
                 j: 0,
             };
             set_coords_matrix(&mut args.shape);
-            shape.calc_jacobian(&args.at_ksi)?;
+            let det_jac = shape.calc_jacobian(&args.at_ksi)?;
+            assert!(det_jac > 0.0);
             for i in 0..shape.space_ndim {
                 args.i = i;
                 for j in 0..shape.geo_ndim {
                     args.j = j;
                     // Jᵢⱼ := dxᵢ/dξⱼ
                     assert_deriv_approx_eq!(shape.jacobian[i][j], args.at_ksi[j], calc_coord_i_var_ksi, args, tol);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn fn_gradient_works() -> Result<(), StrError> {
+        let mut data = gen_test_data();
+        for shape in &mut data.shapes {
+            let tol = *data.tolerances_calc_gradient.get(&shape.kind).unwrap();
+            println!("{:?}: tol={:e}", shape.kind, tol);
+            set_coords_matrix(shape);
+            let mut at_ksi = Vector::new(shape.geo_ndim);
+            for j in 0..shape.geo_ndim {
+                at_ksi[j] = 0.25;
+            }
+            let mut at_x = Vector::new(shape.space_ndim);
+            gen_coords(&mut at_x, &at_ksi);
+            let args = &mut ArgsInterpVarX {
+                shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
+                at_x,
+                x: Vector::new(shape.space_ndim),
+                ksi: Vector::new(shape.geo_ndim),
+                m: 0,
+                j: 0,
+            };
+            set_coords_matrix(&mut args.shape);
+            let det_jac = shape.calc_gradient(&at_ksi)?;
+            assert!(det_jac > 0.0);
+            for m in 0..shape.npoint {
+                args.m = m;
+                for j in 0..shape.geo_ndim {
+                    args.j = j;
+                    // Gᵐⱼ := dNᵐ/dxⱼ
+                    assert_deriv_approx_eq!(shape.gradient[m][j], args.at_x[j], calc_interp_m_var_x, args, tol);
                 }
             }
         }
