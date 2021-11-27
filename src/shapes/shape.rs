@@ -804,48 +804,6 @@ mod tests {
     use russell_lab::copy_vector;
     use std::collections::HashMap;
 
-    struct TestData {
-        shapes: Vec<Shape>,
-        tols_fn_interp: HashMap<GeoKind, f64>,
-        tols_fn_deriv: HashMap<GeoKind, f64>,
-        tols_calc_coords: HashMap<GeoKind, f64>,
-        tols_calc_coords_high: HashMap<GeoKind, f64>, // high tol for center
-        tols_calc_jacobian: HashMap<GeoKind, f64>,
-        tols_approximate_ksi: HashMap<GeoKind, f64>,
-        tols_calc_gradient: HashMap<GeoKind, f64>,
-    }
-
-    // Generates (geo_ndim,npoint) pairs to allocate shapes
-    fn gen_geo_ndim_npoint() -> Vec<(usize, usize)> {
-        vec![(2, 4), (2, 8), (3, 8), (3, 20)]
-    }
-
-    // Generates test data
-    fn gen_test_data() -> TestData {
-        let mut data = TestData {
-            shapes: Vec::new(),
-            tols_fn_interp: HashMap::new(),
-            tols_fn_deriv: HashMap::new(),
-            tols_calc_coords: HashMap::new(),
-            tols_calc_coords_high: HashMap::new(),
-            tols_calc_jacobian: HashMap::new(),
-            tols_approximate_ksi: HashMap::new(),
-            tols_calc_gradient: HashMap::new(),
-        };
-        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
-        for (geo_ndim, npoint) in pairs {
-            let space_ndim = geo_ndim;
-            data.shapes.push(Shape::new(space_ndim, geo_ndim, npoint).unwrap());
-        }
-
-        data.tols_calc_gradient.insert(GeoKind::Qua4, 1e-12);
-        data.tols_calc_gradient.insert(GeoKind::Qua8, 1e-12);
-        data.tols_calc_gradient.insert(GeoKind::Hex8, 1e-12);
-        data.tols_calc_gradient.insert(GeoKind::Hex20, 1e-12);
-
-        data
-    }
-
     const RMIN: f64 = 1.0;
     const RMAX: f64 = 10.0;
     const AMIN: f64 = 30.0 * std::f64::consts::PI / 180.0;
@@ -903,31 +861,6 @@ mod tests {
         }
     }
 
-    // Generate reference coordinates
-    //
-    // if 3D => cylindrical coordinates
-    //
-    // ξ₀(r,α,z) = (2/Δr) * (r-rmin) - 1
-    // ξ₁(r,α,z) = (2/Δα) * (α-αmin) - 1
-    // ξ₂(r,α,z) = z
-    //
-    // r(x₀,x₁,x₂) = sqrt(x₀ x₀ + x₁ x₁)
-    // α(x₀,x₁,x₂) = atan(x₁ / x₀)
-    // z(x₀,x₁,x₂) = x₂
-    fn gen_ref_coords(ksi: &mut Vector, x: &Vector) {
-        assert_eq!(x.dim(), ksi.dim());
-        let r = f64::sqrt(x[0] * x[0] + x[1] * x[1]);
-        ksi[0] = (2.0 / (RMAX - RMIN)) * (r - RMIN) - 1.0;
-        if x.dim() == 1 {
-            return;
-        }
-        let a = f64::atan2(x[1], x[0]);
-        ksi[1] = (2.0 / (AMAX - AMIN)) * (a - AMIN) - 1.0;
-        if x.dim() == 3 {
-            ksi[2] = x[2];
-        }
-    }
-
     // Generates matrix of coordinates for geo_ndim = space_ndim
     fn set_coords_matrix(shape: &mut Shape) {
         assert_eq!(shape.geo_ndim, shape.space_ndim);
@@ -940,30 +873,6 @@ mod tests {
                 shape.set_point_coord(m, j, x[j]).unwrap();
             }
         }
-    }
-
-    // Holds arguments for numerical differentiation of N w.r.t x => G (gradient) matrix
-    struct ArgsInterpVarX {
-        shape: Shape, // auxiliary (copy) shape
-        at_x: Vector, // at x coord value
-        x: Vector,    // temporary x coord
-        ksi: Vector,  // temporary reference coord
-        m: usize,     // point index from 0 to npoint
-        j: usize,     // dimension index from 0 to space_ndim
-    }
-
-    // Computes Nᵐ(ξ(x)) with variable v := xⱼ
-    fn calc_interp_m_var_x(v: f64, args: &mut ArgsInterpVarX) -> f64 {
-        for j in 0..args.shape.space_ndim {
-            args.x[j] = args.at_x[j];
-        }
-        args.x[args.j] = v;
-        gen_ref_coords(&mut args.ksi, &args.x);
-        println!("\n\n{}\n=>\n{}", args.x, args.ksi);
-        args.shape.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-8).unwrap();
-        println!("{}\n=>\n{}", args.x, args.ksi);
-        (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
-        args.shape.interp[args.m]
     }
 
     #[test]
@@ -1265,26 +1174,72 @@ mod tests {
             // test again at middle of reference space with ξ := (0,0,0)
             let ksi_mid = Vector::new(shape.geo_ndim);
             shape.calc_coords(&mut x, &ksi_mid)?;
-            let nit = shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
+            shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
             assert_vec_approx_eq!(ksi.as_data(), ksi_mid.as_data(), tol);
         }
         Ok(())
     }
 
+    // Holds arguments for numerical differentiation of N w.r.t x => G (gradient) matrix
+    struct ArgsNumG {
+        shape: Shape, // auxiliary (copy) shape
+        at_x: Vector, // at x coord value
+        x: Vector,    // temporary x coord
+        ksi: Vector,  // temporary reference coord
+        m: usize,     // point index from 0 to npoint
+        j: usize,     // dimension index from 0 to space_ndim
+    }
+
+    // Computes Nᵐ(ξ(x)) with variable v := xⱼ
+    fn aux_grad(v: f64, args: &mut ArgsNumG) -> f64 {
+        copy_vector(&mut args.x, &args.at_x).unwrap();
+        args.x[args.j] = v;
+        args.shape.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-14).unwrap();
+        (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
+        args.shape.interp[args.m]
+    }
+
     #[test]
     fn fn_gradient_works() -> Result<(), StrError> {
-        let mut data = gen_test_data();
-        for shape in &mut data.shapes {
-            let tol = *data.tols_calc_gradient.get(&shape.kind).unwrap();
+        // define dims and number of points
+        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+
+        // define tolerances
+        let mut tols = HashMap::new();
+        tols.insert(GeoKind::Qua4, 1e-11);
+        tols.insert(GeoKind::Qua8, 1e-11);
+        tols.insert(GeoKind::Hex8, 1e-11);
+        tols.insert(GeoKind::Hex20, 1e-10);
+
+        // loop over shapes
+        for (geo_ndim, npoint) in pairs {
+            // allocate shape
+            let space_ndim = geo_ndim;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+
+            // set tolerance
+            let tol = *tols.get(&shape.kind).unwrap();
             println!("{:?}: tol={:e}", shape.kind, tol);
+
+            // set coordinates matrix
             set_coords_matrix(shape);
+
+            // set ξ at the middle of the reference domain
             let mut at_ksi = Vector::new(shape.geo_ndim);
             for j in 0..shape.geo_ndim {
                 at_ksi[j] = 0.0;
             }
+
+            // compute x corresponding to ξ using the isoparametric formula
             let mut at_x = Vector::new(shape.space_ndim);
-            gen_coords(&mut at_x, &at_ksi);
-            let args = &mut ArgsInterpVarX {
+            shape.calc_coords(&mut at_x, &at_ksi)?;
+
+            // compute gradient
+            let det_jac = shape.calc_gradient(&at_ksi)?;
+            assert!(det_jac > 0.0);
+
+            // set arguments for numerical integration
+            let args = &mut ArgsNumG {
                 shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
                 at_x,
                 x: Vector::new(shape.space_ndim),
@@ -1293,14 +1248,14 @@ mod tests {
                 j: 0,
             };
             set_coords_matrix(&mut args.shape);
-            let det_jac = shape.calc_gradient(&at_ksi)?;
-            assert!(det_jac > 0.0);
+
+            // check Gᵐ(ξ(x)) = dNᵐ(ξ(x))/dx
             for m in 0..shape.npoint {
                 args.m = m;
                 for j in 0..shape.geo_ndim {
                     args.j = j;
                     // Gᵐⱼ := dNᵐ/dxⱼ
-                    assert_deriv_approx_eq!(shape.gradient[m][j], args.at_x[j], calc_interp_m_var_x, args, tol);
+                    assert_deriv_approx_eq!(shape.gradient[m][j], args.at_x[j], aux_grad, args, tol);
                 }
             }
         }
