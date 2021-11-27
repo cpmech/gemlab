@@ -433,7 +433,7 @@ impl Shape {
     /// # Note
     ///
     /// Some methods require that the coordinates matrix be set first.
-    /// This can be accomplished by calling the `set_point_coord` method.
+    /// This can be accomplished by calling the `set_point` method.
     pub fn new(space_ndim: usize, geo_ndim: usize, npoint: usize) -> Result<Self, StrError> {
         // collect geometry data
         let (class, kind, nedge, nface, edge_npoint, face_npoint, face_nedge, fn_interp, fn_deriv): (
@@ -709,7 +709,7 @@ impl Shape {
     /// * `m` -- point index in form 0 to npoint - 1
     /// * `j` -- dimension index from 0 to space_ndim - 1
     /// * `value` -- the X(m,j) component
-    pub fn set_point_coord(&mut self, m: usize, j: usize, value: f64) -> Result<(), StrError> {
+    pub fn set_point(&mut self, m: usize, j: usize, value: f64) -> Result<(), StrError> {
         if m >= self.npoint {
             return Err("index of point is invalid");
         }
@@ -1259,7 +1259,7 @@ mod tests {
                 panic!("(geo_ndim,space_ndim) pair is invalid");
             }
             for j in 0..shape.space_ndim {
-                shape.set_point_coord(m, j, x[j]).unwrap();
+                shape.set_point(m, j, x[j]).unwrap();
             }
         }
     }

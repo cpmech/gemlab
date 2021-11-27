@@ -393,7 +393,7 @@ impl Mesh {
         for m in 0..npoint {
             let point_id = self.cells[cell_id].points[m];
             for i in 0..self.space_ndim {
-                shape.set_point_coord(m, i, self.points[point_id].coords[i])?;
+                shape.set_point(m, i, self.points[point_id].coords[i])?;
             }
         }
         Ok(())
