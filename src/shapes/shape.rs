@@ -93,7 +93,7 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 ///
 /// ```text
 ///             →
-/// →       dNᵐ(ξ)
+/// →  →    dNᵐ(ξ)
 /// Lᵐ(ξ) = ——————
 ///            →
 ///           dξ
