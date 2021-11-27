@@ -1,6 +1,6 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a quadrilateral with 8 points
+/// Defines a quadrilateral with 8 points (quadratic edges)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///

@@ -1,6 +1,6 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a hexahedron with 20 points
+/// Defines a hexahedron with 20 points (quadratic faces)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
