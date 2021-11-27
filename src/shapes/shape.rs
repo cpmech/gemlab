@@ -1,4 +1,4 @@
-use super::{Hex20, Hex8, Qua17, Qua4, Qua8};
+use super::{Hex20, Hex8, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9};
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
 
@@ -438,9 +438,69 @@ impl Shape {
                 max_coords,
                 coords_transp,
             }),
-            (2, 9) => Err("Qua9 is not available yet"),
-            (2, 12) => Err("Qua12 is not available yet"),
-            (2, 16) => Err("Qua16 is not available yet"),
+            (2, 9) => Ok(Shape {
+                kind: GeoKind::Qua9,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Qua9::NEDGE,
+                nface: Qua9::NFACE,
+                edge_npoint: Qua9::EDGE_NPOINT,
+                face_npoint: Qua9::FACE_NPOINT,
+                face_nedge: Qua9::FACE_NEDGE,
+                fn_interp: Qua9::calc_interp,
+                fn_deriv: Qua9::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
+            (2, 12) => Ok(Shape {
+                kind: GeoKind::Qua12,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Qua12::NEDGE,
+                nface: Qua12::NFACE,
+                edge_npoint: Qua12::EDGE_NPOINT,
+                face_npoint: Qua12::FACE_NPOINT,
+                face_nedge: Qua12::FACE_NEDGE,
+                fn_interp: Qua12::calc_interp,
+                fn_deriv: Qua12::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
+            (2, 16) => Ok(Shape {
+                kind: GeoKind::Qua16,
+                space_ndim,
+                geo_ndim,
+                npoint,
+                nedge: Qua16::NEDGE,
+                nface: Qua16::NFACE,
+                edge_npoint: Qua16::EDGE_NPOINT,
+                face_npoint: Qua16::FACE_NPOINT,
+                face_nedge: Qua16::FACE_NEDGE,
+                fn_interp: Qua16::calc_interp,
+                fn_deriv: Qua16::calc_deriv,
+                interp,
+                deriv,
+                jacobian,
+                inv_jacobian,
+                gradient,
+                min_coords,
+                max_coords,
+                coords_transp,
+            }),
             (2, 17) => Ok(Shape {
                 kind: GeoKind::Qua17,
                 space_ndim,
@@ -829,6 +889,10 @@ impl Shape {
         match self.kind {
             GeoKind::Qua4 => Qua4::EDGE_POINT_IDS[e][i],
             GeoKind::Qua8 => Qua8::EDGE_POINT_IDS[e][i],
+            GeoKind::Qua9 => Qua9::EDGE_POINT_IDS[e][i],
+            GeoKind::Qua12 => Qua12::EDGE_POINT_IDS[e][i],
+            GeoKind::Qua16 => Qua16::EDGE_POINT_IDS[e][i],
+            GeoKind::Qua17 => Qua17::EDGE_POINT_IDS[e][i],
             GeoKind::Hex8 => Hex8::EDGE_POINT_IDS[e][i],
             GeoKind::Hex20 => Hex20::EDGE_POINT_IDS[e][i],
             _ => panic!("ShapeKind is not available yet"),
@@ -845,6 +909,10 @@ impl Shape {
         match self.kind {
             GeoKind::Qua4 => 0,
             GeoKind::Qua8 => 0,
+            GeoKind::Qua9 => 0,
+            GeoKind::Qua12 => 0,
+            GeoKind::Qua16 => 0,
+            GeoKind::Qua17 => 0,
             GeoKind::Hex8 => Hex8::FACE_POINT_IDS[f][i],
             GeoKind::Hex20 => Hex20::FACE_POINT_IDS[f][i],
             _ => panic!("ShapeKind is not available yet"),
@@ -862,6 +930,10 @@ impl Shape {
         match self.kind {
             GeoKind::Qua4 => 0,
             GeoKind::Qua8 => 0,
+            GeoKind::Qua9 => 0,
+            GeoKind::Qua12 => 0,
+            GeoKind::Qua16 => 0,
+            GeoKind::Qua17 => 0,
             GeoKind::Hex8 => Hex8::FACE_EDGE_POINT_IDS[f][k][i],
             GeoKind::Hex20 => Hex20::FACE_EDGE_POINT_IDS[f][k][i],
             _ => panic!("ShapeKind is not available yet"),
@@ -882,6 +954,18 @@ impl Shape {
             GeoKind::Qua8 => {
                 ksi[0] = Qua8::POINT_REFERENCE_COORDS[m][0];
                 ksi[1] = Qua8::POINT_REFERENCE_COORDS[m][1];
+            }
+            GeoKind::Qua9 => {
+                ksi[0] = Qua9::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Qua9::POINT_REFERENCE_COORDS[m][1];
+            }
+            GeoKind::Qua12 => {
+                ksi[0] = Qua12::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Qua12::POINT_REFERENCE_COORDS[m][1];
+            }
+            GeoKind::Qua16 => {
+                ksi[0] = Qua16::POINT_REFERENCE_COORDS[m][0];
+                ksi[1] = Qua16::POINT_REFERENCE_COORDS[m][1];
             }
             GeoKind::Qua17 => {
                 ksi[0] = Qua17::POINT_REFERENCE_COORDS[m][0];
@@ -999,12 +1083,15 @@ mod tests {
     #[test]
     fn fn_interp_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (2, 17), (3, 8), (3, 20)];
+        let pairs = vec![(2, 4), (2, 8), (2, 9), (2, 12), (2, 16), (2, 17), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
         tols.insert(GeoKind::Qua4, 1e-15);
         tols.insert(GeoKind::Qua8, 1e-15);
+        tols.insert(GeoKind::Qua9, 1e-15);
+        tols.insert(GeoKind::Qua12, 1e-15);
+        tols.insert(GeoKind::Qua16, 1e-15);
         tols.insert(GeoKind::Qua17, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
@@ -1061,12 +1148,15 @@ mod tests {
     #[test]
     fn fn_deriv_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (2, 17), (3, 8), (3, 20)];
+        let pairs = vec![(2, 4), (2, 8), (2, 9), (2, 12), (2, 16), (2, 17), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
         tols.insert(GeoKind::Qua4, 1e-13);
         tols.insert(GeoKind::Qua8, 1e-12);
+        tols.insert(GeoKind::Qua9, 1e-13);
+        tols.insert(GeoKind::Qua12, 1e-10);
+        tols.insert(GeoKind::Qua16, 1e-10);
         tols.insert(GeoKind::Qua17, 1e-10);
         tols.insert(GeoKind::Hex8, 1e-13);
         tols.insert(GeoKind::Hex20, 1e-12);

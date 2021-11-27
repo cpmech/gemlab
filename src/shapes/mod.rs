@@ -36,13 +36,19 @@
 
 mod hex20;
 mod hex8;
+mod qua12;
+mod qua16;
 mod qua17;
 mod qua4;
 mod qua8;
+mod qua9;
 mod shape;
 pub use crate::shapes::hex20::*;
 pub use crate::shapes::hex8::*;
+pub use crate::shapes::qua12::*;
+pub use crate::shapes::qua16::*;
 pub use crate::shapes::qua17::*;
 pub use crate::shapes::qua4::*;
 pub use crate::shapes::qua8::*;
+pub use crate::shapes::qua9::*;
 pub use crate::shapes::shape::*;
