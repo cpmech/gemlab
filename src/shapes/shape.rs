@@ -4,26 +4,80 @@ use super::{
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
 
-/// Defines the kind of shape
+/// Defines the class of geometric shape
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum GeoClass {
+    /// Lines (segments) class
+    Lin,
+
+    /// Triangles class
+    Tri,
+
+    /// Quadrilaterals class
+    Qua,
+
+    /// Tetrahedra class
+    Tet,
+
+    /// Hexahedra class
+    Hex,
+}
+
+/// Defines the kind of geometric shape
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GeoKind {
+    /// Line (segment) with 2 points (linear functions)
     Lin2,
+
+    /// Line (segment) with 3 points (quadratic functions)
     Lin3,
+
+    /// Line (segment) with 4 points (cubic functions)
     Lin4,
+
+    /// Line (segment) with 5 points (quartic functions)
     Lin5,
+
+    /// Triangle with 3 points (linear edges)
     Tri3,
+
+    /// Triangle with 6 points (quadratic edges)
     Tri6,
+
+    /// Triangle with 10 points (cubic edges; interior points)
     Tri10,
+
+    /// Triangle with 15 points (quartic edges; interior points)
     Tri15,
+
+    /// Quadrilateral with 4 points (linear edges)
     Qua4,
+
+    /// Quadrilateral with 8 points (quadratic edges)
     Qua8,
+
+    /// Quadrilateral with 9 points (quadratic edges; interior point)
     Qua9,
+
+    /// Quadrilateral with 12 points (cubic edges)
     Qua12,
+
+    /// Quadrilateral with 16 points (cubic edges; interior points)
     Qua16,
+
+    /// Quadrilateral with 17 points (quartic edges; interior point)
     Qua17,
+
+    /// Tetrahedron with 4 points (linear faces)
     Tet4,
+
+    /// Tetrahedron with 10 points (quadratic faces)
     Tet10,
+
+    /// Hexahedron with 8 points (bilinear faces)
     Hex8,
+
+    /// Hexahedron with 20 points (quadratic faces)
     Hex20,
 }
 
@@ -306,6 +360,9 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 ///
 /// This case (e.g., a cube in the 1D space) is not allowed.
 pub struct Shape {
+    /// Geometry class
+    pub class: GeoClass,
+
     /// Geometry kind
     pub kind: GeoKind,
 
@@ -391,6 +448,7 @@ impl Shape {
         let coords_transp = Matrix::new(space_ndim, npoint);
         match (geo_ndim, npoint) {
             (1, 2) => Ok(Shape {
+                class: GeoClass::Lin,
                 kind: GeoKind::Lin2,
                 space_ndim,
                 geo_ndim,
@@ -412,6 +470,7 @@ impl Shape {
                 coords_transp,
             }),
             (1, 3) => Ok(Shape {
+                class: GeoClass::Lin,
                 kind: GeoKind::Lin3,
                 space_ndim,
                 geo_ndim,
@@ -433,6 +492,7 @@ impl Shape {
                 coords_transp,
             }),
             (1, 4) => Ok(Shape {
+                class: GeoClass::Lin,
                 kind: GeoKind::Lin4,
                 space_ndim,
                 geo_ndim,
@@ -454,6 +514,7 @@ impl Shape {
                 coords_transp,
             }),
             (1, 5) => Ok(Shape {
+                class: GeoClass::Lin,
                 kind: GeoKind::Lin5,
                 space_ndim,
                 geo_ndim,
@@ -475,6 +536,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 3) => Ok(Shape {
+                class: GeoClass::Tri,
                 kind: GeoKind::Tri3,
                 space_ndim,
                 geo_ndim,
@@ -496,6 +558,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 6) => Ok(Shape {
+                class: GeoClass::Tri,
                 kind: GeoKind::Tri6,
                 space_ndim,
                 geo_ndim,
@@ -517,6 +580,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 10) => Ok(Shape {
+                class: GeoClass::Tri,
                 kind: GeoKind::Tri10,
                 space_ndim,
                 geo_ndim,
@@ -538,6 +602,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 15) => Ok(Shape {
+                class: GeoClass::Tri,
                 kind: GeoKind::Tri15,
                 space_ndim,
                 geo_ndim,
@@ -559,6 +624,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 4) => Ok(Shape {
+                class: GeoClass::Qua,
                 kind: GeoKind::Qua4,
                 space_ndim,
                 geo_ndim,
@@ -580,6 +646,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 8) => Ok(Shape {
+                class: GeoClass::Qua,
                 kind: GeoKind::Qua8,
                 space_ndim,
                 geo_ndim,
@@ -601,6 +668,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 9) => Ok(Shape {
+                class: GeoClass::Qua,
                 kind: GeoKind::Qua9,
                 space_ndim,
                 geo_ndim,
@@ -622,6 +690,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 12) => Ok(Shape {
+                class: GeoClass::Qua,
                 kind: GeoKind::Qua12,
                 space_ndim,
                 geo_ndim,
@@ -643,6 +712,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 16) => Ok(Shape {
+                class: GeoClass::Qua,
                 kind: GeoKind::Qua16,
                 space_ndim,
                 geo_ndim,
@@ -664,6 +734,7 @@ impl Shape {
                 coords_transp,
             }),
             (2, 17) => Ok(Shape {
+                class: GeoClass::Qua,
                 kind: GeoKind::Qua17,
                 space_ndim,
                 geo_ndim,
@@ -685,6 +756,7 @@ impl Shape {
                 coords_transp,
             }),
             (3, 4) => Ok(Shape {
+                class: GeoClass::Tet,
                 kind: GeoKind::Tet4,
                 space_ndim,
                 geo_ndim,
@@ -706,6 +778,7 @@ impl Shape {
                 coords_transp,
             }),
             (3, 10) => Ok(Shape {
+                class: GeoClass::Tet,
                 kind: GeoKind::Tet10,
                 space_ndim,
                 geo_ndim,
@@ -727,6 +800,7 @@ impl Shape {
                 coords_transp,
             }),
             (3, 8) => Ok(Shape {
+                class: GeoClass::Hex,
                 kind: GeoKind::Hex8,
                 space_ndim,
                 geo_ndim,
@@ -748,6 +822,7 @@ impl Shape {
                 coords_transp,
             }),
             (3, 20) => Ok(Shape {
+                class: GeoClass::Hex,
                 kind: GeoKind::Hex20,
                 space_ndim,
                 geo_ndim,
