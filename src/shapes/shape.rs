@@ -1,6 +1,4 @@
-use super::{
-    Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet10, Tet4, Tri10, Tri15, Tri3, Tri6,
-};
+use super::*;
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
 
@@ -81,11 +79,14 @@ pub enum GeoKind {
     Hex20,
 }
 
-// alias for interpolation functions
-type FnInterp = fn(&mut Vector, &Vector);
+// Defines an alias for interpolation functions
+pub type FnInterp = fn(&mut Vector, &Vector);
 
-// alias for derivative of interpolation functions
-type FnDeriv = fn(&mut Matrix, &Vector);
+// Defines an alias for derivative of interpolation functions
+pub type FnDeriv = fn(&mut Matrix, &Vector);
+
+// Defines an alias for integration points data
+pub type IpData = &'static [[f64; 4]];
 
 /// Implements an isoparametric geometric shape for numerical integration and more
 ///
@@ -359,6 +360,10 @@ type FnDeriv = fn(&mut Matrix, &Vector);
 /// ## Third case: geo_ndim > space_ndim
 ///
 /// This case (e.g., a cube in the 1D space) is not allowed.
+///
+/// # Note
+///
+/// All public members are **readonly** and should not be modified externally.
 pub struct Shape {
     /// Geometry class
     pub class: GeoClass,
@@ -411,14 +416,20 @@ pub struct Shape {
     /// Matrix G: (npoint,space_ndim) Gradient of shape functions (only if geo_ndim == space_ndim)
     pub gradient: Matrix,
 
+    /// Matrix Xᵀ: (space_ndim,npoint) transposed coordinates matrix (real space)
+    pub coords_transp: Matrix,
+
     /// Minimum (space_ndim) coordinates from the X matrix
     pub min_coords: Vec<f64>,
 
     /// Maximum (space_ndim) coordinates from the X matrix
     pub max_coords: Vec<f64>,
 
-    /// Matrix X: (space_ndim,npoint) transposed coordinates matrix (real space)
-    coords_transp: Matrix,
+    /// Number of integration points
+    pub nip: usize,
+
+    /// Integration points and weights
+    pub ip_data: IpData,
 }
 
 impl Shape {
@@ -436,7 +447,7 @@ impl Shape {
     /// This can be accomplished by calling the `set_point` method.
     pub fn new(space_ndim: usize, geo_ndim: usize, npoint: usize) -> Result<Self, StrError> {
         // collect geometry data
-        let (class, kind, nedge, nface, edge_npoint, face_npoint, face_nedge, fn_interp, fn_deriv): (
+        let (class, kind, nedge, nface, edge_npoint, face_npoint, face_nedge, fn_interp, fn_deriv, nip, ip_data): (
             GeoClass,
             GeoKind,
             usize,
@@ -446,6 +457,8 @@ impl Shape {
             usize,
             FnInterp,
             FnDeriv,
+            usize,
+            IpData,
         ) = match (geo_ndim, npoint) {
             // Lin
             (1, 2) => (
@@ -458,6 +471,8 @@ impl Shape {
                 Lin2::FACE_NEDGE,
                 Lin2::calc_interp,
                 Lin2::calc_deriv,
+                2,
+                &IP_LIN_LEGENDRE_2,
             ),
             (1, 3) => (
                 GeoClass::Lin,
@@ -469,6 +484,8 @@ impl Shape {
                 Lin3::FACE_NEDGE,
                 Lin3::calc_interp,
                 Lin3::calc_deriv,
+                3,
+                &IP_LIN_LEGENDRE_3,
             ),
             (1, 4) => (
                 GeoClass::Lin,
@@ -480,6 +497,8 @@ impl Shape {
                 Lin4::FACE_NEDGE,
                 Lin4::calc_interp,
                 Lin4::calc_deriv,
+                4,
+                &IP_LIN_LEGENDRE_4,
             ),
             (1, 5) => (
                 GeoClass::Lin,
@@ -491,6 +510,8 @@ impl Shape {
                 Lin5::FACE_NEDGE,
                 Lin5::calc_interp,
                 Lin5::calc_deriv,
+                5,
+                &IP_LIN_LEGENDRE_5,
             ),
 
             // Tri
@@ -504,6 +525,8 @@ impl Shape {
                 Tri3::FACE_NEDGE,
                 Tri3::calc_interp,
                 Tri3::calc_deriv,
+                1,
+                &IP_TRI_INTERNAL_1,
             ),
             (2, 6) => (
                 GeoClass::Tri,
@@ -515,6 +538,8 @@ impl Shape {
                 Tri6::FACE_NEDGE,
                 Tri6::calc_interp,
                 Tri6::calc_deriv,
+                3,
+                &IP_TRI_INTERNAL_3,
             ),
             (2, 10) => (
                 GeoClass::Tri,
@@ -526,6 +551,8 @@ impl Shape {
                 Tri10::FACE_NEDGE,
                 Tri10::calc_interp,
                 Tri10::calc_deriv,
+                12,
+                &IP_TRI_INTERNAL_12,
             ),
             (2, 15) => (
                 GeoClass::Tri,
@@ -537,6 +564,8 @@ impl Shape {
                 Tri15::FACE_NEDGE,
                 Tri15::calc_interp,
                 Tri15::calc_deriv,
+                12,
+                &IP_TRI_INTERNAL_12,
             ),
 
             // Qua
@@ -550,6 +579,8 @@ impl Shape {
                 Qua4::FACE_NEDGE,
                 Qua4::calc_interp,
                 Qua4::calc_deriv,
+                4,
+                &IP_QUA_LEGENDRE_4,
             ),
             (2, 8) => (
                 GeoClass::Qua,
@@ -561,6 +592,8 @@ impl Shape {
                 Qua8::FACE_NEDGE,
                 Qua8::calc_interp,
                 Qua8::calc_deriv,
+                9,
+                &IP_QUA_LEGENDRE_9,
             ),
             (2, 9) => (
                 GeoClass::Qua,
@@ -572,6 +605,8 @@ impl Shape {
                 Qua9::FACE_NEDGE,
                 Qua9::calc_interp,
                 Qua9::calc_deriv,
+                9,
+                &IP_QUA_LEGENDRE_9,
             ),
             (2, 12) => (
                 GeoClass::Qua,
@@ -583,6 +618,8 @@ impl Shape {
                 Qua12::FACE_NEDGE,
                 Qua12::calc_interp,
                 Qua12::calc_deriv,
+                9,
+                &IP_QUA_LEGENDRE_9,
             ),
             (2, 16) => (
                 GeoClass::Qua,
@@ -594,6 +631,8 @@ impl Shape {
                 Qua16::FACE_NEDGE,
                 Qua16::calc_interp,
                 Qua16::calc_deriv,
+                16,
+                &IP_QUA_LEGENDRE_16,
             ),
             (2, 17) => (
                 GeoClass::Qua,
@@ -605,6 +644,8 @@ impl Shape {
                 Qua17::FACE_NEDGE,
                 Qua17::calc_interp,
                 Qua17::calc_deriv,
+                16,
+                &IP_QUA_LEGENDRE_16,
             ),
 
             // Tet
@@ -618,6 +659,8 @@ impl Shape {
                 Tet4::FACE_NEDGE,
                 Tet4::calc_interp,
                 Tet4::calc_deriv,
+                1,
+                &IP_TET_INTERNAL_1,
             ),
             (3, 10) => (
                 GeoClass::Tet,
@@ -629,6 +672,8 @@ impl Shape {
                 Tet10::FACE_NEDGE,
                 Tet10::calc_interp,
                 Tet10::calc_deriv,
+                4,
+                &IP_TET_INTERNAL_4,
             ),
 
             // Hex
@@ -642,6 +687,8 @@ impl Shape {
                 Hex8::FACE_NEDGE,
                 Hex8::calc_interp,
                 Hex8::calc_deriv,
+                8,
+                &IP_HEX_LEGENDRE_8,
             ),
             (3, 20) => (
                 GeoClass::Hex,
@@ -653,6 +700,8 @@ impl Shape {
                 Hex20::FACE_NEDGE,
                 Hex20::calc_interp,
                 Hex20::calc_deriv,
+                27,
+                &IP_HEX_LEGENDRE_27,
             ),
             _ => return Err("(geo_ndim,npoint) combination is invalid"),
         };
@@ -684,9 +733,11 @@ impl Shape {
             } else {
                 Matrix::new(0, 0)
             },
+            coords_transp: Matrix::new(space_ndim, npoint),
             min_coords: vec![f64::MAX; space_ndim],
             max_coords: vec![f64::MIN; space_ndim],
-            coords_transp: Matrix::new(space_ndim, npoint),
+            nip,
+            ip_data,
         })
     }
 

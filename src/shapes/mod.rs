@@ -36,6 +36,8 @@
 
 mod hex20;
 mod hex8;
+mod integration;
+mod integration_points;
 mod lin2;
 mod lin3;
 mod lin4;
@@ -55,6 +57,8 @@ mod tri3;
 mod tri6;
 pub use crate::shapes::hex20::*;
 pub use crate::shapes::hex8::*;
+pub use crate::shapes::integration::*;
+pub use crate::shapes::integration_points::*;
 pub use crate::shapes::lin2::*;
 pub use crate::shapes::lin3::*;
 pub use crate::shapes::lin4::*;
