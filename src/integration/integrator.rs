@@ -1,7 +1,6 @@
 use super::*;
 use crate::shapes::{GeoClass, GeoKind, Shape};
 use crate::StrError;
-use russell_lab::Vector;
 
 /// Defines options to select integration points
 #[derive(Eq, PartialEq)]
@@ -24,6 +23,9 @@ pub struct Integrator {
     pub points: IpData,
     // pub int_points: Vec<Vector>,
 }
+
+/// Defines scalar function (index,ksi)
+pub type FnScalar = fn(usize, &[f64]) -> f64;
 
 impl Integrator {
     /// Creates new Integrator
@@ -235,11 +237,16 @@ impl Integrator {
         Ok(())
     }
 
-    pub fn case_a(&self, shape: &mut Shape) -> Result<(), StrError> {
-        let res = 0.0;
-        for point in self.points {
-            shape.calc_jacobian(point)?;
-            println!("{:?}", point);
+    pub fn case_a(&self, a: &mut [f64], shape: &mut Shape, s: FnScalar) -> Result<(), StrError> {
+        a.fill(0.0);
+        for (index, iota) in self.points.iter().enumerate() {
+            let ksi = &iota[0..shape.geo_ndim];
+            let weight = iota[3];
+            shape.calc_interp(ksi);
+            let det_jac = shape.calc_jacobian(ksi)?;
+            for m in 0..shape.npoint {
+                a[m] += shape.interp[m] * s(index, ksi) * det_jac * weight;
+            }
         }
         Ok(())
     }
@@ -250,6 +257,8 @@ impl Integrator {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const NOISE: f64 = 1234.56;
 
     #[test]
     fn new_works() -> Result<(), StrError> {
@@ -272,7 +281,10 @@ mod tests {
         shape.set_point(3, 1, 1.0)?;
 
         let integ = Integrator::new(shape.kind);
-        assert_eq!(integ.nip, 4);
+        let mut a = vec![NOISE; shape.npoint];
+        integ.case_a(&mut a, &mut shape, |_, _| 0.0)?;
+        println!("a = {:?}", a);
+
         Ok(())
     }
 }
