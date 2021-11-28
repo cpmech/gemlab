@@ -80,10 +80,10 @@ pub enum GeoKind {
 }
 
 /// Defines an alias for interpolation functions
-pub type FnInterp = fn(&mut Vector, &[f64]);
+type FnInterp = fn(&mut Vector, &[f64]);
 
 /// Defines an alias for derivative of interpolation functions
-pub type FnDeriv = fn(&mut Matrix, &[f64]);
+type FnDeriv = fn(&mut Matrix, &[f64]);
 
 /// Implements an isoparametric geometric shape for numerical integration and more
 ///
@@ -272,10 +272,10 @@ pub struct Shape {
     pub face_nedge: usize,
 
     /// Function to calculate interpolation functions
-    pub fn_interp: FnInterp,
+    fn_interp: FnInterp,
 
     /// Function to calculate local derivatives (w.r.t. ksi) of interpolation functions
-    pub fn_deriv: FnDeriv,
+    fn_deriv: FnDeriv,
 
     /// Array N: (npoint) interpolation functions at reference coordinate ksi
     pub interp: Vector,
@@ -571,6 +571,52 @@ impl Shape {
         })
     }
 
+    /// Calculates the interpolation functions
+    ///
+    /// Computes Nᵐ from:
+    ///
+    /// ```text
+    /// → →         →  →
+    /// u(ξ) = Σ Nᵐ(ξ) uᵐ
+    ///        m         
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- ξ reference coordinate (geo_ndim)
+    ///
+    /// # Updated variables
+    ///
+    /// * `interp` -- interpolation functions (npoint)
+    #[inline]
+    pub fn calc_interp(&mut self, ksi: &[f64]) {
+        (self.fn_interp)(&mut self.interp, ksi);
+    }
+
+    /// Calculates the derivatives of interpolation functions w.r.t reference coordinate
+    ///
+    /// Computes Lᵐ from:
+    ///
+    /// ```text
+    ///             →
+    /// →  →    dNᵐ(ξ)
+    /// Lᵐ(ξ) = ——————
+    ///            →
+    ///           dξ
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- ξ reference coordinate (geo_ndim)
+    ///
+    /// # Updated variables
+    ///
+    /// * `deriv` -- interpolation functions (npoint)
+    #[inline]
+    pub fn calc_deriv(&mut self, ksi: &[f64]) {
+        (self.fn_deriv)(&mut self.deriv, ksi);
+    }
+
     /// Sets a component of the coordinates matrix
     ///
     /// ```text
@@ -642,7 +688,7 @@ impl Shape {
         if ksi.len() != self.geo_ndim {
             return Err("ksi.len() must equal geo_ndim");
         }
-        (self.fn_interp)(&mut self.interp, ksi);
+        self.calc_interp(ksi);
         mat_vec_mul(x, 1.0, &self.coords_transp, &self.interp)
     }
 
@@ -698,7 +744,7 @@ impl Shape {
         if ksi.len() != self.geo_ndim {
             return Err("ksi.len() must equal geo_ndim");
         }
-        (self.fn_deriv)(&mut self.deriv, ksi);
+        self.calc_deriv(ksi);
         mat_mat_mul(&mut self.jacobian, 1.0, &self.coords_transp, &self.deriv)?;
         if self.geo_ndim == self.space_ndim {
             inverse(&mut self.inv_jacobian, &self.jacobian)
@@ -738,7 +784,7 @@ impl Shape {
         }
 
         // compute Jacobian
-        (self.fn_deriv)(&mut self.deriv, ksi);
+        self.calc_deriv(ksi);
         mat_mat_mul(&mut self.jacobian, 1.0, &self.coords_transp, &self.deriv)?;
 
         // line in 2D
@@ -1114,7 +1160,7 @@ mod tests {
     }
 
     #[test]
-    fn fn_interp_works() -> Result<(), StrError> {
+    fn calc_interp_works() -> Result<(), StrError> {
         // define dims and number of points
         let pairs = vec![
             (1, 2),
@@ -1174,7 +1220,7 @@ mod tests {
                 let ksi = shape.get_reference_coords(m);
 
                 // compute interpolation function Nⁿ(ξᵐ)
-                (shape.fn_interp)(&mut shape.interp, &ksi);
+                shape.calc_interp(ksi);
 
                 // check: Nⁿ(ξᵐ) = 1 if m==n; 0 otherwise
                 for n in 0..shape.npoint {
@@ -1202,12 +1248,12 @@ mod tests {
     fn aux_deriv(v: f64, args: &mut ArgsNumL) -> f64 {
         args.ksi.copy_from_slice(&args.at_ksi);
         args.ksi[args.j] = v;
-        (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
+        args.shape.calc_interp(&args.ksi);
         args.shape.interp[args.m]
     }
 
     #[test]
-    fn fn_deriv_works() -> Result<(), StrError> {
+    fn calc_deriv_works() -> Result<(), StrError> {
         // define dims and number of points
         let pairs = vec![
             (1, 2),
@@ -1265,7 +1311,7 @@ mod tests {
             let at_ksi = vec![0.25; shape.geo_ndim];
 
             // compute all derivatives of interpolation functions w.r.t ξ
-            (shape.fn_deriv)(&mut shape.deriv, &at_ksi);
+            shape.calc_deriv(&at_ksi);
 
             // set arguments for numerical integration
             let args = &mut ArgsNumL {
@@ -1606,7 +1652,7 @@ mod tests {
         copy_vector(&mut args.x, &args.at_x).unwrap();
         args.x[args.j] = v;
         args.shape.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-14).unwrap();
-        (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
+        args.shape.calc_interp(&args.ksi);
         args.shape.interp[args.m]
     }
 
