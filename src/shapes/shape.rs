@@ -1209,50 +1209,42 @@ mod tests {
     const AMIN: f64 = 30.0 * PI / 180.0;
     const AMAX: f64 = 60.0 * PI / 180.0;
 
-    // Generate coordinates
-    //
-    // The shape is the wedge highlighted with "?" in the figure below.
-    // If class == Tri, the shape is half of the highlighted wedge.
-    // If geo_ndim == 1, the edge of the highlighted area is selected.
-    // In 3D, an extrusion is applied along the out-of-plane direction.
-    //
-    //                         |            /
-    //                                     /
-    //                 ,,****#"|""#****,, /
-    //            ,***""'              `""**,             r
-    //         ,**#"           |        /??"#**,       ,~'
-    //       ,*#"                      /??????"#*,  ,~'
-    //     ,*#"         _,,**#"|"#**,,_?????????"#*,
-    //    ,#"         ,*#"'         `"#*,??????,~ "#,
-    //   ,#'        ,*"        |    /   "*,?,~'    `#,
-    //  ,#'        *"              / αmax "*        `#,
-    //  *'        *'           |  /    ,~' `*        `*
-    //  #         #              /  ,~'     #         #
-    // ,#        ,#            | ,~' αmin    #,        #,
-    // #         #             o - - - - - - #  - - -  # - - -
-    // `#        '#                    rmin #'   rmax #'
-    //  #         #,                       ,#         #
-    //  #,         #*                     *#         ,#
-    //  `#,         "#*                 *#"         ,#'
-    //   `#,          "#*,_         _,*#"          ,#'
-    //    `#*           `""#*******#""'           *#'
-    //     `#**                                 **#'
-    //       "#**                             **#"
-    //         `"#**,                     ,**#"'
-    //            `"##**,             ,**##"'
-    //                 ``""##*****##""''
-    //
-    // Intermediary mapping:
-    //
-    // r(ξ₀,ξ₁,ξ₂) = rmin + (ξ₀ - ξ₀min) * Δr / Δξ₀
-    // α(ξ₀,ξ₁,ξ₂) = αmin + (ξ₁ - ξ₁min) * Δα / Δξ₁
-    // z(ξ₀,ξ₁,ξ₂) = ξ₂
-    //
-    // Cylindrical coordinates:
-    //
-    // x₀ := r * cos(α)
-    // x₁ := r * sin(α)
-    // x₂ := z
+    /// Generate coordinates
+    ///
+    /// The shape is the wedge highlighted with "?" in the figure below.
+    /// If class == Tri, the shape is half of the highlighted wedge.
+    /// If geo_ndim == 1, the edge of the highlighted area is selected.
+    /// In 3D, an extrusion is applied along the out-of-plane direction.
+    ///
+    /// ```text
+    ///                         |            /
+    ///                         |           / αmax
+    ///                 __---=*****=---__  /
+    ///             _.*'        |        `*._
+    ///          _.*            |        /???*._          ,
+    ///        .*               |       /???????*.     ,-'
+    ///      .*           __-=*****=-__/??????????*.,-' αmin
+    ///     *          _-*      |      *-????????,-'*
+    ///    *         .*         |    /    *.??,-'    *
+    ///   *         *           |   /      ,*'        *
+    ///  *         *            |  /    ,-'  *         *
+    /// *         *             | /  ,-'      *         *
+    /// #         #             |/.-'         #         #
+    /// # ------- # ----------- o ----------- # ------- # --> r
+    ///                                     rmin       rmax
+    /// ```
+    ///
+    /// Intermediary mapping:
+    ///
+    /// r(ξ₀,ξ₁,ξ₂) = rmin + (ξ₀ - ξ₀min) * Δr / Δξ₀
+    /// α(ξ₀,ξ₁,ξ₂) = αmin + (ξ₁ - ξ₁min) * Δα / Δξ₁
+    /// z(ξ₀,ξ₁,ξ₂) = ξ₂
+    ///
+    /// Cylindrical coordinates:
+    ///
+    /// x₀ := r * cos(α)
+    /// x₁ := r * sin(α)
+    /// x₂ := z
     fn gen_coords(x: &mut Vector, ksi: &Vector, class: GeoClass) {
         assert_eq!(x.dim(), ksi.dim());
         let (min_ksi, _, del_ksi) = ref_domain_limits(class);
