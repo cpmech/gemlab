@@ -102,14 +102,13 @@ pub type IpData = &'static [[f64; 4]];
 ///
 /// We also consider the following counting variables:
 ///
+/// * `nip` -- number of integration points
 /// * `npoint` -- number of points
 /// * `nedge` -- number of edges
 /// * `nface` -- number of faces
 /// * `edge_npoint` -- edge's number of points
 /// * `face_npoint` -- face's number of points
 /// * `face_nedge` -- face's number of edges
-///
-/// # Formulae
 ///
 /// The isoparametric formulation establishes that
 ///
@@ -132,7 +131,7 @@ pub type IpData = &'static [[f64; 4]];
 ///
 /// where `N` is an (npoint) array formed with all `Nm`.
 ///
-/// ## First case: geo_ndim = space_ndim
+/// # General case (geo_ndim == space_ndim)
 ///
 /// If `geo_ndim == space_ndim`, we define the Jacobian tensor as
 ///
@@ -194,39 +193,7 @@ pub type IpData = &'static [[f64; 4]];
 ///
 /// where G is an (npoint,space_ndim) matrix.
 ///
-/// We can then perform integrations in the reference space as follows:
-///
-/// ```text
-///       ⌠   →       ⌠   → →            →
-/// res = │ f(x) dΩ = │ f(x(ξ)) ⋅ det(J)(ξ) dΩ
-///       ⌡           ⌡
-///       Ω           Ωref
-/// ```
-///
-/// which is replaced by numerical integration according to:
-///
-/// ```text
-///       nip-1  →             →
-/// res ≈  Σ   f(ιp)) ⋅ det(J)(ιp) ⋅ wp
-///       p=0
-/// ```
-///
-/// where `nip` is the number of integration points, `ιp := ξp` is the reference
-/// coordinate of the integration point, and `wp` is the weight attached to the
-/// p-th integration point.
-///
-/// ## Second case: geo_ndim < space_ndim
-///
-/// This case corresponds to a line or surface in a multi-dimensional space.
-/// For instance, a line in 2D or 3D or a triangle in 3D.
-///
-/// If `geo_ndim < space_ndim`, we must consider some particular cases. For now, the only
-/// cases we can handle are:
-///
-/// * `geo_ndim = 1` and `space_ndim = 2 or 3` -- Line in multi-dimensions (boundary or not)
-/// * `geo_ndim = 2` and `space_ndim = 3` -- 3D surface (boundary only)
-///
-/// ### Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+/// # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
 ///
 /// In this case, the Jacobian equals the (space_ndim,1) base vector `g1` aligned
 /// with the line element, i.e.,
@@ -238,50 +205,7 @@ pub type IpData = &'static [[f64; 4]];
 ///                    dξ
 /// ```
 ///
-/// We further consider a parametric coordinate `ell` which varies from 0 to `ell_max`
-/// (the length of the line) according to
-///
-/// ```text
-///                  ell_max
-/// ell(ξ) = (1 + ξ) ———————
-///                     2
-///
-///          2 · ell
-/// ξ(ell) = ——————— - 1
-///          ell_max
-/// ```
-///
-/// ```text
-/// 0 ≤ ell ≤ ell_max
-///
-/// -1 ≤ ξ ≤ +1
-/// ```
-///
-/// Then, we replace the line integrals over the real space with line integrals over
-/// the mapped space as follows:
-///
-/// ```text
-///       ⌠               ⌠
-/// res = │ f(ell) dell = │ f(ξ(ell)) ⋅ ||Jline||(ξ) dξ
-///       ⌡               ⌡
-///       Ω               Ωref
-/// ```
-///
-/// where `||Jline||` is the Euclidean norm of `Jline`.
-///
-/// The above integral is replaced by numerical integration according to:
-///
-/// ```text
-///       nip-1      →               →
-/// res ≈  Σ   f(ell(ιp)) ⋅ ||Jline||(ιp) ⋅ wp
-///       p=0
-/// ```
-///
-/// where `nip` is the number of integration points, `ιp := ξp` is the reference coordinate
-/// of the integration point, and `wp` is the weight attached to the p-th integration point.
-/// Furthermore, we can use the definition of `ell` to compute `ell(ξ:=ιp)`.
-///
-/// **Boundary line in 2D (geo_ndim = 1 and space_ndim = 2)**
+/// # Boundary line in 2D (geo_ndim == 1 and space_ndim == 2)
 ///
 /// If the line defines a boundary in 2D, we compute a normal vector by means of
 ///
@@ -290,28 +214,7 @@ pub type IpData = &'static [[f64; 4]];
 /// n = e3 × g1
 /// ```
 ///
-/// Then, we can compute the following boundary integral
-///
-/// ```text
-///       ⌠             →        ⌠           →    →
-/// res = │ q(ell) unit_n dell = │ q(ell) ⋅ (e3 × g1) dξ
-///       ⌡                      ⌡
-///       Γ                      Γref
-/// ```
-///
-/// where `unit_n` is the unit normal vector.
-///
-/// The above integral is replaced by numerical integration according to:
-///
-/// ```text
-///       nip-1      →       →  →     →  →
-/// res ≈  Σ   q(ell(ιp)) ⋅ (e3(ιp) × g1(ιp)) ⋅ wp
-///       p=0
-/// ```
-///
-/// where we can use the definition of `ell` to compute `ell(ξ:=ιp)`.
-///
-/// ### 3D surface (boundary only) (geo_ndim = 2 and space_ndim = 3)
+/// # Boundary surface (geo_ndim == 2 and space_ndim == 3)
 ///
 /// In this case, we use the normal vector to the surface to replace the surface
 /// integrations in the real space with integrations over the mapped space.
@@ -337,29 +240,6 @@ pub type IpData = &'static [[f64; 4]];
 /// ```text
 /// Jsurf = Xᵀ · L
 /// ```
-///
-/// We can then perform integrations in the reference space as follows:
-///
-/// ```text
-///       ⌠   →       →      ⌠   → →      →    →
-/// res = │ f(x) unit_n dA = │ f(x(ξ)) ⋅ (g1 × g2) dξ1 dξ2
-///       ⌡                  ⌡
-///       Γ                  Γref
-/// ```
-///
-/// where `unit_n` is the unit normal vector.
-///
-/// The above integral is replaced by numerical integration according to:
-///
-/// ```text
-///       nip-1   →      →   →    →   →
-/// res ≈  Σ   f(ιp)) ⋅ (g1(ιp) × g2(ιp)) ⋅ wp
-///       p=0
-/// ```
-///
-/// ## Third case: geo_ndim > space_ndim
-///
-/// This case (e.g., a cube in the 1D space) is not allowed.
 ///
 /// # Note
 ///

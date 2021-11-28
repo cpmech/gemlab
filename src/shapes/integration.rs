@@ -124,7 +124,7 @@ impl Shape {
         Ok(())
     }
 
-    /// Performs the integration of a function over the Shape domain
+    /// Performs the integration of a function over the Shape's domain
     ///
     /// # General case (geo_ndim == space_ndim)
     ///
@@ -142,7 +142,12 @@ impl Shape {
     /// res ≈  Σ   f(ιp)) ⋅ det(J)(ιp) ⋅ wp
     ///       p=0
     /// ```
-    /// # Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+    ///
+    /// where `nip` is the number of integration points, `ιp := ξp` is the reference
+    /// coordinate of the integration point, and `wp` is the weight attached to the
+    /// p-th integration point.
+    ///
+    /// # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
     ///
     /// ```text
     ///       ⌠               ⌠
@@ -160,13 +165,32 @@ impl Shape {
     /// res ≈  Σ   f(ell(ιp)) ⋅ ||Jline||(ιp) ⋅ wp
     ///       p=0
     /// ```
+    ///
+    /// Here, we considered a parametric coordinate `ell` which varies
+    /// from 0 to `ell_max` (the length of the line) according to
+    ///
+    /// ```text
+    ///                  ell_max
+    /// ell(ξ) = (1 + ξ) ———————
+    ///                     2
+    ///
+    ///          2 · ell
+    /// ξ(ell) = ——————— - 1
+    ///          ell_max
+    /// ```
+    ///
+    /// ```text
+    /// 0 ≤ ell ≤ ell_max
+    ///
+    /// -1 ≤ ξ ≤ +1
+    /// ```
     pub fn integ(&mut self) -> Result<f64, StrError> {
         Ok(0.0)
     }
 
-    /// Performs the integration of a function over the boundary of the Shape
+    /// Performs the integration of a function over the Shape's boundary
     ///
-    /// # Boundary line in 2D (geo_ndim = 1 and space_ndim = 2)
+    /// # Boundary line in 2D (geo_ndim == 1 and space_ndim == 2)
     ///
     /// ```text
     ///       ⌠             →        ⌠           →    →
@@ -185,7 +209,26 @@ impl Shape {
     ///       p=0
     /// ```
     ///
-    /// # 3D surface (geo_ndim = 2 and space_ndim = 3)
+    /// Here, we considered a parametric coordinate `ell` which varies
+    /// from 0 to `ell_max` (the length of the line) according to
+    ///
+    /// ```text
+    ///                  ell_max
+    /// ell(ξ) = (1 + ξ) ———————
+    ///                     2
+    ///
+    ///          2 · ell
+    /// ξ(ell) = ——————— - 1
+    ///          ell_max
+    /// ```
+    ///
+    /// ```text
+    /// 0 ≤ ell ≤ ell_max
+    ///
+    /// -1 ≤ ξ ≤ +1
+    /// ```
+    ///
+    /// # 3D surface (geo_ndim == 2 and space_ndim == 3)
     ///
     /// We can then perform integrations in the reference space as follows:
     ///
