@@ -1211,27 +1211,26 @@ mod tests {
 
     /// Generate coordinates
     ///
-    /// The shape is the wedge highlighted with "?" in the figure below.
+    /// He shape is the area indicated with "?" or the edge with "%".
     /// If class == Tri, the shape is half of the highlighted wedge.
-    /// If geo_ndim == 1, the edge of the highlighted area is selected.
     /// In 3D, an extrusion is applied along the out-of-plane direction.
     ///
     /// ```text
-    ///                         |            /
-    ///                         |           / αmax
-    ///                 __---=*****=---__  /
-    ///             _.*'        |        `*._
-    ///          _.*            |        /???*._          ,
-    ///        .*               |       /???????*.     ,-'
-    ///      .*           __-=*****=-__/??????????*.,-' αmin
-    ///     *          _-*      |      *-????????,-'*
-    ///    *         .*         |    /    *.??,-'    *
-    ///   *         *           |   /      ,*'        *
-    ///  *         *            |  /    ,-'  *         *
-    /// *         *             | /  ,-'      *         *
-    /// #         #             |/.-'         #         #
-    /// # ------- # ----------- o ----------- # ------- # --> r
-    ///                                     rmin       rmax
+    ///   |            /
+    ///   |           / αmax
+    ///   ***=---__  /
+    ///   |         % _
+    ///   |        % ? *._          ,
+    ///   |       % ????? *.     ,-'
+    ///   ***=-_ % ???????? *.,-' αmin
+    ///   |     % - ?????? ,-'*
+    ///   |    /    *.? ,-'    *
+    ///   |   /      ,*'        *
+    ///   |  /    ,-'  *         *
+    ///   | /  ,-'      *         *
+    ///   |/.-'         #         #
+    ///   o ----------- # ------- # --> r
+    ///               rmin       rmax
     /// ```
     ///
     /// Intermediary mapping:
@@ -1667,6 +1666,22 @@ mod tests {
 
     #[test]
     fn calc_boundary_normal_edge_works() -> Result<(), StrError> {
+        //  The edge is indicated by "%" in the figure below
+        // |           / αmax
+        // ***=---__  /
+        // |        `%._
+        // |        %   *._          ,
+        // |       %       *.     ,-'
+        // ***=-_ %          *.,-' αmin
+        // |     % -        ,-'*
+        // |    /    *.  ,-'    *
+        // |   /      ,*'        *
+        // |  /    ,-'  *         *
+        // | /  ,-'      *         *
+        // |/.-'         #         #
+        // o ----------- # ------- # --> r
+        //             rmin       rmax
+
         // allocate boundary edge
         let mut edge = Shape::new(2, 1, 5)?;
 
