@@ -1674,6 +1674,36 @@ mod tests {
     }
 
     #[test]
+    fn calc_boundary_normal_edge_works() -> Result<(), StrError> {
+        // allocate boundary edge
+        let mut edge = Shape::new(2, 1, 5)?;
+
+        // set coordinates matrix
+        set_coords_matrix(&mut edge);
+
+        // compute boundary normal vector
+        let at_ksi = Vector::new(edge.geo_ndim);
+        let mut normal = Vector::new(edge.space_ndim);
+        edge.calc_boundary_normal(&mut normal, &at_ksi)?;
+
+        // check magnitude of normal vector
+        let mag_normal = normal.norm(NormVec::Euc);
+        let length = RMAX - RMIN;
+        let ref_length = 2.0;
+        let length_ratio = length / ref_length;
+        println!("normal =\n{}", normal);
+        println!("mag_normal = {}", mag_normal);
+        println!("length_ratio = {}", length_ratio);
+        assert_approx_eq!(mag_normal, length_ratio, 1e-15);
+
+        // check direction of normal vector
+        let mut unit_normal = Vector::from(normal.as_data());
+        unit_normal.scale(1.0 / mag_normal);
+        assert_vec_approx_eq!(unit_normal.as_data(), &[-f64::sin(AMAX), f64::cos(AMAX)], 1e-15);
+        Ok(())
+    }
+
+    #[test]
     fn approximate_ksi_works() -> Result<(), StrError> {
         // define dims and number of points
         let pairs = vec![(2, 3), (2, 6), (2, 4), (2, 8), (3, 4), (3, 10), (3, 8), (3, 20)];
