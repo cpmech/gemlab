@@ -381,7 +381,7 @@ impl Block {
                     let mut points = vec![0; shape_out.npoint];
                     for m in 0..shape_out.npoint {
                         // transform reference coords: scale and translate
-                        shape_out.get_reference_coords(&mut ksi_aug, m);
+                        // shape_out.get_reference_coords(&mut ksi_aug, m); // TODO
                         mat_vec_mul(&mut ksi, 1.0, &transform, &ksi_aug)?;
 
                         // maybe append point to mesh
@@ -389,7 +389,7 @@ impl Block {
                         points[m] = index;
 
                         // mark boundary point
-                        if self.is_boundary_point(&ksi) {
+                        if self.is_boundary_point(ksi.as_data()) {
                             mesh.boundary_points.insert(index);
                         }
                     }
@@ -464,7 +464,7 @@ impl Block {
         self.grid_ksi.insert(index, ksi)?;
 
         // compute real coords
-        self.shape.calc_coords(x, ksi_vec)?;
+        // self.shape.calc_coords(x, ksi_vec)?; // TODO
         // self.shape.calc_ss_vec(ksi_vec);
         // self.shape.mul_interp_by_matrix(x, &self.coords)?;
 
@@ -656,7 +656,7 @@ impl Block {
     }
 
     /// Returns whether or not a point is on boundary given its reference coordinates
-    fn is_boundary_point(&self, ksi: &Vector) -> bool {
+    fn is_boundary_point(&self, ksi: &[f64]) -> bool {
         for i in 0..self.space_ndim {
             if f64::abs(ksi[i] - Block::NAT_MIN) <= Block::NAT_TOLERANCE {
                 return true;

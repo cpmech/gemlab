@@ -63,7 +63,7 @@ impl Tri10 {
     ];
 
     /// Computes the interpolation functions
-    pub fn calc_interp(interp: &mut Vector, ksi: &Vector) {
+    pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
         let z = 1.0 - r - s;
@@ -84,7 +84,7 @@ impl Tri10 {
     }
 
     /// Computes the derivatives of interpolation functions
-    pub fn calc_deriv(deriv: &mut Matrix, ksi: &Vector) {
+    pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
         let z = 1.0 - r - s;

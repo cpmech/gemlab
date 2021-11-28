@@ -80,13 +80,10 @@ pub enum GeoKind {
 }
 
 // Defines an alias for interpolation functions
-pub type FnInterp = fn(&mut Vector, &Vector);
+pub type FnInterp = fn(&mut Vector, &[f64]);
 
 // Defines an alias for derivative of interpolation functions
-pub type FnDeriv = fn(&mut Matrix, &Vector);
-
-// Defines an alias for integration points data
-pub type IpData = &'static [[f64; 4]];
+pub type FnDeriv = fn(&mut Matrix, &[f64]);
 
 /// Implements an isoparametric geometric shape for numerical integration and more
 ///
@@ -638,12 +635,12 @@ impl Shape {
     ///
     /// You must set the coordinates matrix first, otherwise the computations
     /// will generate wrong results.
-    pub fn calc_coords(&mut self, x: &mut Vector, ksi: &Vector) -> Result<(), StrError> {
+    pub fn calc_coords(&mut self, x: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
         if x.dim() != self.space_ndim {
             return Err("x.dim() must equal space_ndim");
         }
-        if ksi.dim() != self.geo_ndim {
-            return Err("ksi.dim() must equal geo_ndim");
+        if ksi.len() != self.geo_ndim {
+            return Err("ksi.len() must equal geo_ndim");
         }
         (self.fn_interp)(&mut self.interp, ksi);
         mat_vec_mul(x, 1.0, &self.coords_transp, &self.interp)
@@ -697,9 +694,9 @@ impl Shape {
     ///
     /// You must set the coordinates matrix first, otherwise the computations
     /// will generate wrong results.
-    pub fn calc_jacobian(&mut self, ksi: &Vector) -> Result<f64, StrError> {
-        if ksi.dim() != self.geo_ndim {
-            return Err("ksi.dim() must equal geo_ndim");
+    pub fn calc_jacobian(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
+        if ksi.len() != self.geo_ndim {
+            return Err("ksi.len() must equal geo_ndim");
         }
         (self.fn_deriv)(&mut self.deriv, ksi);
         mat_mat_mul(&mut self.jacobian, 1.0, &self.coords_transp, &self.deriv)?;
@@ -728,7 +725,7 @@ impl Shape {
     /// # Updated variables
     ///
     /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
-    pub fn calc_boundary_normal(&mut self, normal: &mut Vector, ksi: &Vector) -> Result<(), StrError> {
+    pub fn calc_boundary_normal(&mut self, normal: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
         // check
         if self.geo_ndim == self.space_ndim {
             return Err("geo_ndim must be smaller than space_ndim");
@@ -736,8 +733,8 @@ impl Shape {
         if normal.dim() != self.space_ndim {
             return Err("normal.dim() must equal space_ndim");
         }
-        if ksi.dim() != self.geo_ndim {
-            return Err("ksi.dim() must equal geo_ndim");
+        if ksi.len() != self.geo_ndim {
+            return Err("ksi.len() must equal geo_ndim");
         }
 
         // compute Jacobian
@@ -785,7 +782,7 @@ impl Shape {
     /// will generate wrong results.
     pub fn approximate_ksi(
         &mut self,
-        ksi: &mut Vector,
+        ksi: &mut [f64],
         x: &Vector,
         nit_max: usize,
         tol: f64,
@@ -797,8 +794,8 @@ impl Shape {
         if x.dim() != self.space_ndim {
             return Err("x.dim() must equal space_ndim");
         }
-        if ksi.dim() != self.geo_ndim {
-            return Err("ksi.dim() must equal geo_ndim");
+        if ksi.len() != self.geo_ndim {
+            return Err("ksi.len() must equal geo_ndim");
         }
 
         // use linear scale to guess ksi
@@ -871,12 +868,12 @@ impl Shape {
     ///
     /// You must set the coordinates matrix first, otherwise the computations
     /// will generate wrong results.
-    pub fn calc_gradient(&mut self, ksi: &Vector) -> Result<f64, StrError> {
+    pub fn calc_gradient(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
         if self.geo_ndim != self.space_ndim {
             return Err("geo_ndim must equal space_ndim");
         }
-        if ksi.dim() != self.geo_ndim {
-            return Err("ksi.dim() must equal geo_ndim");
+        if ksi.len() != self.geo_ndim {
+            return Err("ksi.len() must equal geo_ndim");
         }
         let det_jac = self.calc_jacobian(ksi)?;
         mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian)?;
@@ -978,80 +975,26 @@ impl Shape {
     /// # Output
     ///
     /// * `ksi` -- (geo_ndim) reference coordinates `ξᵐ` at point m
-    pub fn get_reference_coords(&self, ksi: &mut Vector, m: usize) {
+    pub fn get_reference_coords(&self, m: usize) -> &'static [f64] {
         match self.kind {
-            GeoKind::Lin2 => {
-                ksi[0] = Lin2::POINT_REFERENCE_COORDS[m][0];
-            }
-            GeoKind::Lin3 => {
-                ksi[0] = Lin3::POINT_REFERENCE_COORDS[m][0];
-            }
-            GeoKind::Lin4 => {
-                ksi[0] = Lin4::POINT_REFERENCE_COORDS[m][0];
-            }
-            GeoKind::Lin5 => {
-                ksi[0] = Lin5::POINT_REFERENCE_COORDS[m][0];
-            }
-            GeoKind::Tri3 => {
-                ksi[0] = Tri3::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Tri3::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Tri6 => {
-                ksi[0] = Tri6::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Tri6::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Tri10 => {
-                ksi[0] = Tri10::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Tri10::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Tri15 => {
-                ksi[0] = Tri15::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Tri15::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Qua4 => {
-                ksi[0] = Qua4::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Qua4::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Qua8 => {
-                ksi[0] = Qua8::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Qua8::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Qua9 => {
-                ksi[0] = Qua9::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Qua9::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Qua12 => {
-                ksi[0] = Qua12::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Qua12::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Qua16 => {
-                ksi[0] = Qua16::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Qua16::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Qua17 => {
-                ksi[0] = Qua17::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Qua17::POINT_REFERENCE_COORDS[m][1];
-            }
-            GeoKind::Tet4 => {
-                ksi[0] = Tet4::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Tet4::POINT_REFERENCE_COORDS[m][1];
-                ksi[2] = Tet4::POINT_REFERENCE_COORDS[m][2];
-            }
-            GeoKind::Tet10 => {
-                ksi[0] = Tet10::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Tet10::POINT_REFERENCE_COORDS[m][1];
-                ksi[2] = Tet10::POINT_REFERENCE_COORDS[m][2];
-            }
-            GeoKind::Hex8 => {
-                ksi[0] = Hex8::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Hex8::POINT_REFERENCE_COORDS[m][1];
-                ksi[2] = Hex8::POINT_REFERENCE_COORDS[m][2];
-            }
-            GeoKind::Hex20 => {
-                ksi[0] = Hex20::POINT_REFERENCE_COORDS[m][0];
-                ksi[1] = Hex20::POINT_REFERENCE_COORDS[m][1];
-                ksi[2] = Hex20::POINT_REFERENCE_COORDS[m][2];
-            }
+            GeoKind::Lin2 => &Lin2::POINT_REFERENCE_COORDS[m],
+            GeoKind::Lin3 => &Lin3::POINT_REFERENCE_COORDS[m],
+            GeoKind::Lin4 => &Lin4::POINT_REFERENCE_COORDS[m],
+            GeoKind::Lin5 => &Lin5::POINT_REFERENCE_COORDS[m],
+            GeoKind::Tri3 => &Tri3::POINT_REFERENCE_COORDS[m],
+            GeoKind::Tri6 => &Tri6::POINT_REFERENCE_COORDS[m],
+            GeoKind::Tri10 => &Tri10::POINT_REFERENCE_COORDS[m],
+            GeoKind::Tri15 => &Tri15::POINT_REFERENCE_COORDS[m],
+            GeoKind::Qua4 => &Qua4::POINT_REFERENCE_COORDS[m],
+            GeoKind::Qua8 => &Qua8::POINT_REFERENCE_COORDS[m],
+            GeoKind::Qua9 => &Qua9::POINT_REFERENCE_COORDS[m],
+            GeoKind::Qua12 => &Qua12::POINT_REFERENCE_COORDS[m],
+            GeoKind::Qua16 => &Qua16::POINT_REFERENCE_COORDS[m],
+            GeoKind::Qua17 => &Qua17::POINT_REFERENCE_COORDS[m],
+            GeoKind::Tet4 => &Tet4::POINT_REFERENCE_COORDS[m],
+            GeoKind::Tet10 => &Tet10::POINT_REFERENCE_COORDS[m],
+            GeoKind::Hex8 => &Hex8::POINT_REFERENCE_COORDS[m],
+            GeoKind::Hex20 => &Hex20::POINT_REFERENCE_COORDS[m],
         }
     }
 }
@@ -1128,8 +1071,8 @@ mod tests {
     /// x₀ := r * cos(α)
     /// x₁ := r * sin(α)
     /// x₂ := z
-    fn gen_coords(x: &mut Vector, ksi: &Vector, class: GeoClass) {
-        assert_eq!(x.dim(), ksi.dim());
+    fn gen_coords(x: &mut Vector, ksi: &[f64], class: GeoClass) {
+        assert_eq!(x.dim(), ksi.len());
         let (min_ksi, _, del_ksi) = ref_domain_limits(class);
         let r = RMIN + (ksi[0] - min_ksi) * (RMAX - RMIN) / del_ksi;
         if x.dim() == 1 {
@@ -1147,12 +1090,11 @@ mod tests {
     // Generates matrix of coordinates
     fn set_coords_matrix(shape: &mut Shape) {
         let mut x = Vector::new(shape.space_ndim);
-        let mut ksi = Vector::new(shape.geo_ndim);
-        let mut ksi_aux = Vector::new(shape.space_ndim);
+        let mut ksi_aux = vec![0.0; shape.space_ndim];
         for m in 0..shape.npoint {
-            shape.get_reference_coords(&mut ksi, m);
+            let ksi = shape.get_reference_coords(m);
             if shape.geo_ndim == shape.space_ndim {
-                gen_coords(&mut x, &ksi, shape.class);
+                gen_coords(&mut x, ksi, shape.class);
             } else if shape.geo_ndim == 1 && shape.space_ndim == 2 {
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = 1.0;
@@ -1227,10 +1169,9 @@ mod tests {
             println!("{:?}: tol={:e}", shape.kind, tol);
 
             // loop over points of shape
-            let mut ksi = Vector::new(shape.geo_ndim);
             for m in 0..shape.npoint {
                 // get ξᵐ corresponding to point m
-                shape.get_reference_coords(&mut ksi, m);
+                let ksi = shape.get_reference_coords(m);
 
                 // compute interpolation function Nⁿ(ξᵐ)
                 (shape.fn_interp)(&mut shape.interp, &ksi);
@@ -1250,16 +1191,16 @@ mod tests {
 
     // Holds arguments for numerical differentiation of N w.r.t ξ => L (deriv) matrix
     struct ArgsNumL {
-        shape: Shape,   // auxiliary (copy) shape
-        at_ksi: Vector, // at reference coord value
-        ksi: Vector,    // temporary reference coord
-        m: usize,       // point index from 0 to npoint
-        j: usize,       // dimension index from 0 to geom_ndim
+        shape: Shape,     // auxiliary (copy) shape
+        at_ksi: Vec<f64>, // at reference coord value
+        ksi: Vec<f64>,    // temporary reference coord
+        m: usize,         // point index from 0 to npoint
+        j: usize,         // dimension index from 0 to geom_ndim
     }
 
     // Computes Nᵐ(ξ) with variable v := ξⱼ
     fn aux_deriv(v: f64, args: &mut ArgsNumL) -> f64 {
-        copy_vector(&mut args.ksi, &args.at_ksi).unwrap();
+        args.ksi.copy_from_slice(&args.at_ksi);
         args.ksi[args.j] = v;
         (args.shape.fn_interp)(&mut args.shape.interp, &args.ksi);
         args.shape.interp[args.m]
@@ -1321,10 +1262,7 @@ mod tests {
             println!("{:?}: tol={:e}", shape.kind, tol);
 
             // set ξ within reference space
-            let mut at_ksi = Vector::new(shape.geo_ndim);
-            for j in 0..shape.geo_ndim {
-                at_ksi[j] = 0.25;
-            }
+            let at_ksi = vec![0.25; shape.geo_ndim];
 
             // compute all derivatives of interpolation functions w.r.t ξ
             (shape.fn_deriv)(&mut shape.deriv, &at_ksi);
@@ -1333,7 +1271,7 @@ mod tests {
             let args = &mut ArgsNumL {
                 shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
                 at_ksi,
-                ksi: Vector::new(shape.geo_ndim),
+                ksi: vec![0.0; shape.geo_ndim],
                 m: 0,
                 j: 0,
             };
@@ -1411,28 +1349,26 @@ mod tests {
             set_coords_matrix(shape);
 
             // loop over points of shape
-            let mut ksi = Vector::new(shape.geo_ndim);
             let mut x = Vector::new(shape.space_ndim);
             let mut x_correct = Vector::new(shape.space_ndim);
             for m in 0..shape.npoint {
                 // get ξᵐ corresponding to point m
-                shape.get_reference_coords(&mut ksi, m);
+                let ksi = shape.get_reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
-                shape.calc_coords(&mut x, &ksi)?;
+                shape.calc_coords(&mut x, ksi)?;
 
                 // compare xᵐ with generated coordinates
-                gen_coords(&mut x_correct, &ksi, shape.class);
+                gen_coords(&mut x_correct, ksi, shape.class);
                 assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol);
             }
 
             // test again inside the reference domain
-            let mut ksi_in = Vector::new(shape.geo_ndim);
-            if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
-                ksi_in.fill(1.0 / 3.0);
+            let ksi_in = if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
+                vec![1.0 / 3.0; shape.geo_ndim]
             } else {
-                ksi_in.fill(0.0);
-            }
+                vec![0.0; shape.geo_ndim]
+            };
             shape.calc_coords(&mut x, &ksi_in)?;
             gen_coords(&mut x_correct, &ksi_in, shape.class);
             assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_in);
@@ -1442,17 +1378,17 @@ mod tests {
 
     // Holds arguments for numerical differentiation of x w.r.t ξ => Jacobian
     struct ArgsNumJ {
-        shape: Shape,   // auxiliary (copy) shape
-        at_ksi: Vector, // at reference coord value
-        ksi: Vector,    // temporary reference coord
-        x: Vector,      // (space_ndim) coordinates at ξ
-        i: usize,       // dimension index from 0 to space_ndim
-        j: usize,       // dimension index from 0 to geo_ndim
+        shape: Shape,     // auxiliary (copy) shape
+        at_ksi: Vec<f64>, // at reference coord value
+        ksi: Vec<f64>,    // temporary reference coord
+        x: Vector,        // (space_ndim) coordinates at ξ
+        i: usize,         // dimension index from 0 to space_ndim
+        j: usize,         // dimension index from 0 to geo_ndim
     }
 
     // Computes xᵢ(ξ) with variable v := ξⱼ
     fn aux_jacobian(v: f64, args: &mut ArgsNumJ) -> f64 {
-        copy_vector(&mut args.ksi, &args.at_ksi).unwrap();
+        args.ksi.copy_from_slice(&args.at_ksi);
         args.ksi[args.j] = v;
         args.shape.calc_coords(&mut args.x, &args.ksi).unwrap();
         args.x[args.i]
@@ -1487,10 +1423,7 @@ mod tests {
             set_coords_matrix(shape);
 
             // set ξ within reference space
-            let mut at_ksi = Vector::new(shape.geo_ndim);
-            for j in 0..shape.geo_ndim {
-                at_ksi[j] = 0.25;
-            }
+            let at_ksi = vec![0.25; shape.geo_ndim];
 
             // compute Jacobian, its inverse, and determinant
             let det_jac = shape.calc_jacobian(&at_ksi)?;
@@ -1500,7 +1433,7 @@ mod tests {
             let args = &mut ArgsNumJ {
                 shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
                 at_ksi,
-                ksi: Vector::new(shape.geo_ndim),
+                ksi: vec![0.0; shape.geo_ndim],
                 x: Vector::new(shape.space_ndim),
                 i: 0,
                 j: 0,
@@ -1529,7 +1462,7 @@ mod tests {
         set_coords_matrix(&mut surf);
 
         // compute boundary normal vector
-        let at_ksi = Vector::new(surf.geo_ndim);
+        let at_ksi = vec![0.0; surf.geo_ndim];
         let mut normal = Vector::new(surf.space_ndim);
         surf.calc_boundary_normal(&mut normal, &at_ksi)?;
 
@@ -1575,7 +1508,7 @@ mod tests {
         set_coords_matrix(&mut edge);
 
         // compute boundary normal vector
-        let at_ksi = Vector::new(edge.geo_ndim);
+        let at_ksi = vec![0.0; edge.geo_ndim];
         let mut normal = Vector::new(edge.space_ndim);
         edge.calc_boundary_normal(&mut normal, &at_ksi)?;
 
@@ -1627,15 +1560,13 @@ mod tests {
 
             // loop over points of shape
             let mut x = Vector::new(shape.space_ndim);
-            let mut ksi = Vector::new(shape.geo_ndim);
-            let mut ksi_correct = Vector::new(shape.geo_ndim);
+            let mut ksi = vec![0.0; shape.geo_ndim];
             for m in 0..shape.npoint {
                 // get ξᵐ corresponding to point m
-                shape.get_reference_coords(&mut ksi, m);
-                copy_vector(&mut ksi_correct, &ksi)?;
+                let ksi_ref = shape.get_reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
-                shape.calc_coords(&mut x, &ksi)?;
+                shape.calc_coords(&mut x, ksi_ref)?;
 
                 // compute approximation of the inverse mapping ξᵐ(xᵐ)
                 let nit = shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
@@ -1644,31 +1575,30 @@ mod tests {
                 if shape.kind == GeoKind::Tri3 || shape.kind == GeoKind::Qua4 || shape.kind == GeoKind::Hex8 {
                     assert_eq!(nit, 1);
                 }
-                assert_vec_approx_eq!(ksi.as_data(), ksi_correct.as_data(), tol);
+                assert_vec_approx_eq!(ksi, ksi_ref, tol);
             }
 
             // test again inside the reference domain
-            let mut ksi_in = Vector::new(shape.geo_ndim);
-            if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
-                ksi_in.fill(1.0 / 3.0);
+            let ksi_in = if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
+                vec![1.0 / 3.0; shape.geo_ndim]
             } else {
-                ksi_in.fill(0.0);
-            }
+                vec![0.0; shape.geo_ndim]
+            };
             shape.calc_coords(&mut x, &ksi_in)?;
             shape.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
-            assert_vec_approx_eq!(ksi.as_data(), ksi_in.as_data(), tol);
+            assert_vec_approx_eq!(ksi, ksi_in, tol);
         }
         Ok(())
     }
 
     // Holds arguments for numerical differentiation of N w.r.t x => G (gradient) matrix
     struct ArgsNumG {
-        shape: Shape, // auxiliary (copy) shape
-        at_x: Vector, // at x coord value
-        x: Vector,    // temporary x coord
-        ksi: Vector,  // temporary reference coord
-        m: usize,     // point index from 0 to npoint
-        j: usize,     // dimension index from 0 to space_ndim
+        shape: Shape,  // auxiliary (copy) shape
+        at_x: Vector,  // at x coord value
+        x: Vector,     // temporary x coord
+        ksi: Vec<f64>, // temporary reference coord
+        m: usize,      // point index from 0 to npoint
+        j: usize,      // dimension index from 0 to space_ndim
     }
 
     // Computes Nᵐ(ξ(x)) with variable v := xⱼ
@@ -1708,10 +1638,7 @@ mod tests {
             set_coords_matrix(shape);
 
             // set ξ at the middle of the reference domain
-            let mut at_ksi = Vector::new(shape.geo_ndim);
-            for j in 0..shape.geo_ndim {
-                at_ksi[j] = 0.0;
-            }
+            let at_ksi = vec![0.0; shape.geo_ndim];
 
             // compute x corresponding to ξ using the isoparametric formula
             let mut at_x = Vector::new(shape.space_ndim);
@@ -1726,7 +1653,7 @@ mod tests {
                 shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
                 at_x,
                 x: Vector::new(shape.space_ndim),
-                ksi: Vector::new(shape.geo_ndim),
+                ksi: vec![0.0; shape.geo_ndim],
                 m: 0,
                 j: 0,
             };

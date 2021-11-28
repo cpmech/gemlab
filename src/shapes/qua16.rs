@@ -75,7 +75,7 @@ impl Qua16 {
     ];
 
     /// Computes the interpolation functions
-    pub fn calc_interp(interp: &mut Vector, ksi: &Vector) {
+    pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
         // interp fn of Lin4 along r
@@ -109,7 +109,7 @@ impl Qua16 {
     }
 
     /// Computes the derivatives of interpolation functions
-    pub fn calc_deriv(deriv: &mut Matrix, ksi: &Vector) {
+    pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
         // interp fn of Lin4 along r

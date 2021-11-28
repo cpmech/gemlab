@@ -238,7 +238,7 @@ impl Integrator {
     pub fn case_a(&self, shape: &mut Shape) -> Result<(), StrError> {
         let res = 0.0;
         for point in self.points {
-            // shape.calc_jacobian(point)?;
+            shape.calc_jacobian(point)?;
             println!("{:?}", point);
         }
         Ok(())

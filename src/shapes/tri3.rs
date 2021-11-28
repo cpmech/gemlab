@@ -57,7 +57,7 @@ impl Tri3 {
     ];
 
     /// Computes the interpolation functions
-    pub fn calc_interp(interp: &mut Vector, ksi: &Vector) {
+    pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
         interp[0] = 1.0 - r - s;
@@ -66,7 +66,7 @@ impl Tri3 {
     }
 
     /// Computes the derivatives of interpolation functions
-    pub fn calc_deriv(deriv: &mut Matrix, _: &Vector) {
+    pub fn calc_deriv(deriv: &mut Matrix, _: &[f64]) {
         deriv[0][0] = -1.0;
         deriv[1][0] = 1.0;
         deriv[2][0] = 0.0;

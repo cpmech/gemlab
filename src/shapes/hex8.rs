@@ -125,7 +125,7 @@ impl Hex8 {
     ];
 
     /// Computes the interpolation functions
-    pub fn calc_interp(interp: &mut Vector, ksi: &Vector) {
+    pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
         interp[0] = (1.0 - r - s + r * s - t + s * t + r * t - r * s * t) / 8.0;
@@ -139,7 +139,7 @@ impl Hex8 {
     }
 
     /// Computes the derivatives of interpolation functions
-    pub fn calc_deriv(deriv: &mut Matrix, ksi: &Vector) {
+    pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
         deriv[0][0] = (-1.0 + s + t - s * t) / 8.0;

@@ -157,7 +157,7 @@ impl Tet10 {
     ];
 
     /// Computes the interpolation functions
-    pub fn calc_interp(interp: &mut Vector, ksi: &Vector) {
+    pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
         let u = 1.0 - r - s - t;
@@ -175,7 +175,7 @@ impl Tet10 {
     }
 
     /// Computes the derivatives of interpolation functions
-    pub fn calc_deriv(deriv: &mut Matrix, ksi: &Vector) {
+    pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
         deriv[0][0] = 4.0 * (r + s + t) - 3.0;

@@ -61,7 +61,7 @@ impl Qua8 {
     ];
 
     /// Computes the interpolation functions
-    pub fn calc_interp(interp: &mut Vector, ksi: &Vector) {
+    pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
         interp[0] = (1.0 - r) * (1.0 - s) * (-r - s - 1.0) / 4.0;
@@ -75,7 +75,7 @@ impl Qua8 {
     }
 
     /// Computes the derivatives of interpolation functions
-    pub fn calc_deriv(deriv: &mut Matrix, ksi: &Vector) {
+    pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
         deriv[0][0] = -(1.0 - s) * (-r - r - s) / 4.0;

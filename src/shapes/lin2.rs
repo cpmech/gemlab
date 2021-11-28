@@ -29,7 +29,7 @@ impl Lin2 {
     ];
 
     /// Computes the interpolation functions
-    pub fn calc_interp(interp: &mut Vector, ksi: &Vector) {
+    pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let r = ksi[0];
 
         interp[0] = 0.5 * (1.0 - r);
@@ -37,7 +37,7 @@ impl Lin2 {
     }
 
     /// Computes the derivatives of interpolation functions
-    pub fn calc_deriv(deriv: &mut Matrix, _: &Vector) {
+    pub fn calc_deriv(deriv: &mut Matrix, _: &[f64]) {
         deriv[0][0] = -0.5;
         deriv[1][0] = 0.5;
     }
