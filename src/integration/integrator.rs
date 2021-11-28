@@ -1,6 +1,7 @@
 use super::*;
 use crate::shapes::{GeoClass, GeoKind, Shape};
 use crate::StrError;
+use russell_lab::Vector;
 
 /// Defines options to select integration points
 #[derive(Eq, PartialEq)]
@@ -24,8 +25,11 @@ pub struct Integrator {
     // pub int_points: Vec<Vector>,
 }
 
-/// Defines scalar function (index,ksi)
-pub type FnScalar = fn(usize, &[f64]) -> f64;
+/// Defines scalar function (the argument is index of the integration point)
+pub type FnScalar = fn(usize) -> f64;
+
+/// Defines vector function (the second argument is index of the integration point)
+pub type FnVector = fn(&mut Vector, usize);
 
 impl Integrator {
     /// Creates new Integrator
@@ -245,7 +249,33 @@ impl Integrator {
             shape.calc_interp(ksi);
             let det_jac = shape.calc_jacobian(ksi)?;
             for m in 0..shape.npoint {
-                a[m] += shape.interp[m] * s(index, ksi) * det_jac * weight;
+                a[m] += shape.interp[m] * s(index) * det_jac * weight;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn case_b(&self, b: &mut Vec<Vector>, shape: &mut Shape, v: FnVector) -> Result<(), StrError> {
+        if b.len() != shape.npoint {
+            return Err("b.len() must equal npoint");
+        }
+        for m in 0..shape.npoint {
+            if b[m].dim() != shape.space_ndim {
+                return Err("b[m].dim() must equal space_ndim");
+            }
+            b[m].fill(0.0);
+        }
+        let mut res = Vector::new(shape.space_ndim);
+        for (index, iota) in self.points.iter().enumerate() {
+            let ksi = &iota[0..shape.geo_ndim];
+            let weight = iota[3];
+            shape.calc_interp(ksi);
+            let det_jac = shape.calc_jacobian(ksi)?;
+            for m in 0..shape.npoint {
+                v(&mut res, index);
+                for i in 0..b[m].dim() {
+                    b[m][i] += shape.interp[m] * res[i] * det_jac * weight;
+                }
             }
         }
         Ok(())
@@ -258,6 +288,7 @@ impl Integrator {
 mod tests {
     use super::*;
 
+    // to test if variables are cleared before summation
     const NOISE: f64 = 1234.56;
 
     #[test]
@@ -280,9 +311,16 @@ mod tests {
         shape.set_point(3, 0, 0.0)?;
         shape.set_point(3, 1, 1.0)?;
 
-        let integ = Integrator::new(shape.kind);
+        let mut integ = Integrator::new(shape.kind);
+
+        println!("{:?}", integ.points.len());
+
+        integ.select_int_points(shape.class, 1, OptionIntPoint::Edge)?;
+
+        println!("{:?}", integ.points.len());
+
         let mut a = vec![NOISE; shape.npoint];
-        integ.case_a(&mut a, &mut shape, |_, _| 0.0)?;
+        integ.case_a(&mut a, &mut shape, |_| 0.0)?;
         println!("a = {:?}", a);
 
         Ok(())
