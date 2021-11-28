@@ -1577,14 +1577,16 @@ mod tests {
     #[test]
     fn calc_jacobian_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (2, 17), (3, 8), (3, 20)];
+        let pairs = vec![(2, 6), (2, 4), (2, 8), (2, 17), (3, 4), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
+        tols.insert(GeoKind::Tri6, 1e-11);
         tols.insert(GeoKind::Qua4, 1e-11);
         tols.insert(GeoKind::Qua8, 1e-11);
         tols.insert(GeoKind::Qua17, 1e-10);
         tols.insert(GeoKind::Hex8, 1e-11);
+        tols.insert(GeoKind::Tet4, 1e-12);
         tols.insert(GeoKind::Hex20, 1e-11);
 
         // loop over shapes
@@ -1797,12 +1799,14 @@ mod tests {
     #[test]
     fn fn_gradient_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (3, 8), (3, 20)];
+        let pairs = vec![(2, 6), (2, 4), (2, 8), (3, 10), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
+        tols.insert(GeoKind::Tri6, 1e-9);
         tols.insert(GeoKind::Qua4, 1e-11);
         tols.insert(GeoKind::Qua8, 1e-11);
+        tols.insert(GeoKind::Tet10, 1e-9);
         tols.insert(GeoKind::Hex8, 1e-11);
         tols.insert(GeoKind::Hex20, 1e-10);
 
