@@ -1619,7 +1619,7 @@ mod tests {
         let mut tols = HashMap::new();
         tols.insert(GeoKind::Tri6, 1e-9);
         tols.insert(GeoKind::Qua4, 1e-11);
-        tols.insert(GeoKind::Qua8, 1e-11);
+        tols.insert(GeoKind::Qua8, 1e-10);
         tols.insert(GeoKind::Tet10, 1e-9);
         tols.insert(GeoKind::Hex8, 1e-11);
         tols.insert(GeoKind::Hex20, 1e-10);
@@ -1637,8 +1637,8 @@ mod tests {
             // set coordinates matrix
             set_coords_matrix(shape);
 
-            // set ξ at the middle of the reference domain
-            let at_ksi = vec![0.0; shape.geo_ndim];
+            // set ξ within reference space
+            let at_ksi = vec![0.25; shape.geo_ndim];
 
             // compute x corresponding to ξ using the isoparametric formula
             let mut at_x = Vector::new(shape.space_ndim);
