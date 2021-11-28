@@ -1170,7 +1170,19 @@ impl Shape {
     }
 }
 
-/// Returns the (min,max,delta) limits in reference domain
+/// Returns the (min,max,delta) limits on the reference domain
+///
+/// # Tri and Tet
+///
+/// * `ξ_min` = 0.0
+/// * `ξ_max` = 1.0
+/// * `Δξ` = 1.0
+///
+/// # Lin, Qua, Hex
+///
+/// * `ξ_min` = -1.0
+/// * `ξ_max` = +1.0
+/// * `Δξ` = 2.0
 #[inline]
 pub fn ref_domain_limits(class: GeoClass) -> (f64, f64, f64) {
     if class == GeoClass::Tri || class == GeoClass::Tet {
