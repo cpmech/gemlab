@@ -915,18 +915,10 @@ impl Shape {
             return Err("ksi.dim() must equal geo_ndim");
         }
 
-        // reference domain limits
-        let min_ksi = if self.class == GeoClass::Tri || self.class == GeoClass::Tet {
-            0.0
-        } else {
-            -1.0
-        };
-        let max_ksi = 1.0;
-        let delta_ksi = max_ksi - min_ksi;
-
         // use linear scale to guess ksi
+        let (min_ksi, max_ksi, del_ksi) = ref_domain_limits(self.class);
         for j in 0..self.geo_ndim {
-            ksi[j] = (x[j] - self.min_coords[j]) / (self.max_coords[j] - self.min_coords[j]) * delta_ksi + min_ksi;
+            ksi[j] = (x[j] - self.min_coords[j]) / (self.max_coords[j] - self.min_coords[j]) * del_ksi + min_ksi;
             if ksi[j] < min_ksi {
                 ksi[j] = min_ksi;
             }
@@ -1178,6 +1170,16 @@ impl Shape {
     }
 }
 
+/// Returns the (min,max,delta) limits in reference domain
+#[inline]
+pub fn ref_domain_limits(class: GeoClass) -> (f64, f64, f64) {
+    if class == GeoClass::Tri || class == GeoClass::Tet {
+        (0.0, 1.0, 1.0)
+    } else {
+        (-1.0, 1.0, 2.0)
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -1194,6 +1196,11 @@ mod tests {
     const AMAX: f64 = 60.0 * PI / 180.0;
 
     // Generate coordinates
+    //
+    // The shape is the wedge highlighted with "?" in the figure below.
+    // If class == Tri, the shape is half of the highlighted wedge.
+    // If geo_ndim == 1, the edge of the highlighted area is selected.
+    // In 3D, an extrusion is applied along the out-of-plane direction.
     //
     //                         |            /
     //                                     /
@@ -1221,23 +1228,26 @@ mod tests {
     //            `"##**,             ,**##"'
     //                 ``""##*****##""''
     //
-    // if 3D => cylindrical coordinates
+    // Intermediary mapping:
     //
-    // r(ξ₀,ξ₁,ξ₂) = rmin + (1+ξ₀) * Δr/2
-    // α(ξ₀,ξ₁,ξ₂) = αmin + (1+ξ₁) * Δα/2
+    // r(ξ₀,ξ₁,ξ₂) = rmin + (ξ₀ - ξ₀min) * Δr / Δξ₀
+    // α(ξ₀,ξ₁,ξ₂) = αmin + (ξ₁ - ξ₁min) * Δα / Δξ₁
     // z(ξ₀,ξ₁,ξ₂) = ξ₂
+    //
+    // Cylindrical coordinates:
     //
     // x₀ := r * cos(α)
     // x₁ := r * sin(α)
     // x₂ := z
-    fn gen_coords(x: &mut Vector, ksi: &Vector) {
+    fn gen_coords(x: &mut Vector, ksi: &Vector, class: GeoClass) {
         assert_eq!(x.dim(), ksi.dim());
-        let r = RMIN + (1.0 + ksi[0]) * (RMAX - RMIN) / 2.0;
+        let (min_ksi, _, del_ksi) = ref_domain_limits(class);
+        let r = RMIN + (ksi[0] - min_ksi) * (RMAX - RMIN) / del_ksi;
         if x.dim() == 1 {
             x[0] = r;
             return;
         }
-        let a = AMIN + (1.0 + ksi[1]) * (AMAX - AMIN) / 2.0;
+        let a = AMIN + (ksi[1] - min_ksi) * (AMAX - AMIN) / del_ksi;
         x[0] = r * f64::cos(a);
         x[1] = r * f64::sin(a);
         if x.dim() == 3 {
@@ -1253,16 +1263,16 @@ mod tests {
         for m in 0..shape.npoint {
             shape.get_reference_coords(&mut ksi, m);
             if shape.geo_ndim == shape.space_ndim {
-                gen_coords(&mut x, &ksi);
+                gen_coords(&mut x, &ksi, shape.class);
             } else if shape.geo_ndim == 1 && shape.space_ndim == 2 {
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = 1.0;
-                gen_coords(&mut x, &ksi_aux);
+                gen_coords(&mut x, &ksi_aux, shape.class);
             } else if shape.geo_ndim == 2 && shape.space_ndim == 3 {
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = ksi[1];
                 ksi_aux[2] = 1.0;
-                gen_coords(&mut x, &ksi_aux);
+                gen_coords(&mut x, &ksi_aux, shape.class);
             } else {
                 panic!("(geo_ndim,space_ndim) pair is invalid");
             }
@@ -1455,23 +1465,47 @@ mod tests {
     #[test]
     fn calc_coords_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 4), (2, 8), (2, 17), (3, 8), (3, 20)];
+        let pairs = vec![
+            (2, 3),
+            (2, 6),
+            (2, 10),
+            (2, 15),
+            (2, 4),
+            (2, 8),
+            (2, 17),
+            (3, 4),
+            (3, 10),
+            (3, 8),
+            (3, 20),
+        ];
 
         // define tolerances
         let mut tols = HashMap::new();
         tols.insert(GeoKind::Qua4, 1e-15);
+        tols.insert(GeoKind::Tri3, 1e-15);
+        tols.insert(GeoKind::Tri6, 1e-15);
+        tols.insert(GeoKind::Tri10, 1e-14);
+        tols.insert(GeoKind::Tri15, 1e-15);
         tols.insert(GeoKind::Qua8, 1e-15);
         tols.insert(GeoKind::Qua17, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
+        tols.insert(GeoKind::Tet4, 1e-15);
+        tols.insert(GeoKind::Tet10, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
 
-        // define tolerances for point at the middle of the reference domain
-        let mut tols_mid = HashMap::new();
-        tols_mid.insert(GeoKind::Qua4, 0.14); // linear maps are inaccurate for the circle wedge
-        tols_mid.insert(GeoKind::Qua8, 1e-14);
-        tols_mid.insert(GeoKind::Qua17, 1e-14);
-        tols_mid.insert(GeoKind::Hex8, 0.14); // bi-linear maps are inaccurate for the circle wedge
-        tols_mid.insert(GeoKind::Hex20, 1e-14);
+        // define tolerances for point in the reference domain
+        let mut tols_in = HashMap::new();
+        tols_in.insert(GeoKind::Tri3, 0.45); // linear maps are inaccurate for the circular wedge
+        tols_in.insert(GeoKind::Tri6, 0.02); // << quadratic mapping is inaccurate as well
+        tols_in.insert(GeoKind::Tri10, 1e-14);
+        tols_in.insert(GeoKind::Tri15, 1e-4); // << this triangle is inaccurate as well here
+        tols_in.insert(GeoKind::Qua4, 0.14); // linear maps are inaccurate for the circular wedge
+        tols_in.insert(GeoKind::Qua8, 1e-14);
+        tols_in.insert(GeoKind::Qua17, 1e-14);
+        tols_in.insert(GeoKind::Tet4, 0.45); // linear tetrahedron is also inaccurate here
+        tols_in.insert(GeoKind::Tet10, 0.02); // quadratic tetrahedron is also inaccurate here
+        tols_in.insert(GeoKind::Hex8, 0.14); // bi-linear maps are inaccurate for the circular wedge
+        tols_in.insert(GeoKind::Hex20, 1e-14);
 
         // loop over shapes
         for (geo_ndim, npoint) in pairs {
@@ -1481,8 +1515,8 @@ mod tests {
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            let tol_mid = *tols_mid.get(&shape.kind).unwrap();
-            println!("{:?}: tol={:e}, tol_mid={:e}", shape.kind, tol, tol_mid);
+            let tol_in = *tols_in.get(&shape.kind).unwrap();
+            println!("{:?}: tol={:e}, tol_in={:e}", shape.kind, tol, tol_in);
 
             // set coordinates matrix
             set_coords_matrix(shape);
@@ -1499,15 +1533,20 @@ mod tests {
                 shape.calc_coords(&mut x, &ksi)?;
 
                 // compare xᵐ with generated coordinates
-                gen_coords(&mut x_correct, &ksi);
+                gen_coords(&mut x_correct, &ksi, shape.class);
                 assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol);
             }
 
-            // test again at middle of reference space with ξ := (0,0,0)
-            let ksi_mid = Vector::new(shape.geo_ndim);
-            shape.calc_coords(&mut x, &ksi_mid)?;
-            gen_coords(&mut x_correct, &ksi_mid);
-            assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_mid);
+            // test again inside the reference domain
+            let mut ksi_in = Vector::new(shape.geo_ndim);
+            if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
+                ksi_in.fill(1.0 / 3.0);
+            } else {
+                ksi_in.fill(0.0);
+            }
+            shape.calc_coords(&mut x, &ksi_in)?;
+            gen_coords(&mut x_correct, &ksi_in, shape.class);
+            assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_in);
         }
         Ok(())
     }
@@ -1623,14 +1662,16 @@ mod tests {
     #[test]
     fn approximate_ksi_works() -> Result<(), StrError> {
         // define dims and number of points
-        let pairs = vec![(2, 3), (2, 6), (2, 4), (2, 8), (3, 8), (3, 20)];
+        let pairs = vec![(2, 3), (2, 6), (2, 4), (2, 8), (3, 4), (3, 10), (3, 8), (3, 20)];
 
         // define tolerances
         let mut tols = HashMap::new();
-        tols.insert(GeoKind::Tri3, 1e-15);
+        tols.insert(GeoKind::Tri3, 1e-14);
         tols.insert(GeoKind::Tri6, 1e-15);
         tols.insert(GeoKind::Qua4, 1e-15);
         tols.insert(GeoKind::Qua8, 1e-15);
+        tols.insert(GeoKind::Tet4, 1e-15);
+        tols.insert(GeoKind::Tet10, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
 
@@ -1669,7 +1710,7 @@ mod tests {
                 assert_vec_approx_eq!(ksi.as_data(), ksi_correct.as_data(), tol);
             }
 
-            // test again at within the reference domain
+            // test again inside the reference domain
             let mut ksi_in = Vector::new(shape.geo_ndim);
             if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
                 ksi_in.fill(1.0 / 3.0);
