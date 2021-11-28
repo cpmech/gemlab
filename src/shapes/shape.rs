@@ -880,7 +880,9 @@ impl Shape {
 
     /// Approximates the reference coordinates from given real coordinates (inverse mapping)
     ///
-    /// **Note:** This function works with `geo_ndim == space_ndim` only
+    /// **Note:** This function works with `geo_ndim == space_ndim` only.
+    ///
+    /// We use Newton iterations with the inverse of the Jacobian to compute ξ(x).
     ///
     /// # Input
     ///
