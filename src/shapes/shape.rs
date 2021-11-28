@@ -79,10 +79,10 @@ pub enum GeoKind {
     Hex20,
 }
 
-// Defines an alias for interpolation functions
+/// Defines an alias for interpolation functions
 pub type FnInterp = fn(&mut Vector, &[f64]);
 
-// Defines an alias for derivative of interpolation functions
+/// Defines an alias for derivative of interpolation functions
 pub type FnDeriv = fn(&mut Matrix, &[f64]);
 
 /// Implements an isoparametric geometric shape for numerical integration and more
