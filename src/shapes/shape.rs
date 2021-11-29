@@ -688,7 +688,9 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `ksi` -- ξ reference coordinate (geo_ndim)
+    /// * `ksi` -- ξ reference coordinate. The length of ξ must be equal to geo_ndim at least,
+    ///            while lengths greater than geo_ndim are allowed (and ignored). In this way,
+    ///            we can pass a slice with integration point data such as `[f64; 4]`.
     ///
     /// # Output
     ///
@@ -702,8 +704,8 @@ impl Shape {
         if x.dim() != self.space_ndim {
             return Err("x.dim() must equal space_ndim");
         }
-        if ksi.len() != self.geo_ndim {
-            return Err("ksi.len() must equal geo_ndim");
+        if ksi.len() < self.geo_ndim {
+            return Err("ksi.len() must equal geo_ndim at least");
         }
         self.calc_interp(ksi);
         mat_vec_mul(x, 1.0, &self.coords_transp, &self.interp)
@@ -741,7 +743,9 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `ksi` -- ξ reference coordinate (geo_ndim)
+    /// * `ksi` -- ξ reference coordinate. The length of ξ must be equal to geo_ndim at least,
+    ///            while lengths greater than geo_ndim are allowed (and ignored). In this way,
+    ///            we can pass a slice with integration point data such as `[f64; 4]`.
     ///
     /// # Output
     ///
@@ -759,8 +763,8 @@ impl Shape {
     /// You must set the coordinates matrix first, otherwise the computations
     /// will generate wrong results.
     pub fn calc_jacobian(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
-        if ksi.len() != self.geo_ndim {
-            return Err("ksi.len() must equal geo_ndim");
+        if ksi.len() < self.geo_ndim {
+            return Err("ksi.len() must equal geo_ndim at least");
         }
         self.calc_deriv(ksi);
         mat_mat_mul(&mut self.jacobian, 1.0, &self.coords_transp, &self.deriv)?;
@@ -845,7 +849,9 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `ksi` -- ξ reference coordinate at the boundary (geo_ndim)
+    /// * `ksi` -- ξ reference coordinate. The length of ξ must be equal to geo_ndim at least,
+    ///            while lengths greater than geo_ndim are allowed (and ignored). In this way,
+    ///            we can pass a slice with integration point data such as `[f64; 4]`.
     ///
     /// # Output
     ///
@@ -862,8 +868,8 @@ impl Shape {
         if normal.dim() != self.space_ndim {
             return Err("normal.dim() must equal space_ndim");
         }
-        if ksi.len() != self.geo_ndim {
-            return Err("ksi.len() must equal geo_ndim");
+        if ksi.len() < self.geo_ndim {
+            return Err("ksi.len() must equal geo_ndim at least");
         }
 
         // compute Jacobian
@@ -981,7 +987,9 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `ksi` -- ξ reference coordinate (geo_ndim = space_ndim)
+    /// * `ksi` -- ξ reference coordinate. The length of ξ must be equal to geo_ndim at least,
+    ///            while lengths greater than geo_ndim are allowed (and ignored). In this way,
+    ///            we can pass a slice with integration point data such as `[f64; 4]`.
     ///
     /// # Output
     ///
@@ -1001,8 +1009,8 @@ impl Shape {
         if self.geo_ndim != self.space_ndim {
             return Err("geo_ndim must equal space_ndim");
         }
-        if ksi.len() != self.geo_ndim {
-            return Err("ksi.len() must equal geo_ndim");
+        if ksi.len() < self.geo_ndim {
+            return Err("ksi.len() must equal geo_ndim at least");
         }
         let det_jac = self.calc_jacobian(ksi)?;
         mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian)?;
