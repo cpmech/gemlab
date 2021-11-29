@@ -404,28 +404,44 @@ impl Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::SQRT_3;
+    use russell_chk::assert_vec_approx_eq;
 
     // to test if variables are cleared before summation
     const NOISE: f64 = 1234.56;
 
+    fn gen_eq_triangle() -> (Shape, f64) {
+        // equilateral triangle with sides equal to l
+        //       /\
+        //      /  \
+        //   l /    \ l
+        //    /      \
+        //   /________\
+        //        l
+        let l = 5.0;
+        let h = l * SQRT_3 / 2.0;
+        let area = l * h / 2.0;
+        let mut shape = Shape::new(2, 2, 3).unwrap();
+        let (xmin, ymin) = (3.0, 4.0);
+        shape.set_point(0, 0, xmin).unwrap();
+        shape.set_point(0, 1, ymin).unwrap();
+        shape.set_point(1, 0, xmin + l).unwrap();
+        shape.set_point(1, 1, ymin).unwrap();
+        shape.set_point(2, 0, xmin + l / 2.0).unwrap();
+        shape.set_point(2, 1, ymin + h).unwrap();
+        (shape, area)
+    }
+
     #[test]
     fn integ_case_a_works() -> Result<(), StrError> {
-        let mut shape = Shape::new(2, 2, 4)?;
-        shape.set_point(0, 0, 0.0)?;
-        shape.set_point(0, 1, 0.0)?;
-        shape.set_point(1, 0, 1.0)?;
-        shape.set_point(1, 1, 0.0)?;
-        shape.set_point(2, 0, 1.0)?;
-        shape.set_point(2, 1, 1.0)?;
-        shape.set_point(3, 0, 0.0)?;
-        shape.set_point(3, 1, 1.0)?;
-
+        let (mut shape, area) = gen_eq_triangle();
         let mut a = vec![NOISE; shape.npoint];
-
-        shape.integ_case_a(&mut a, |_| 0.0)?;
-
+        let fn_s = |_| 3.0;
+        shape.integ_case_a(&mut a, fn_s)?;
         println!("a = {:?}", a);
-
+        let cf = fn_s(0) * area / 3.0;
+        let a_correct = &[cf, cf, cf];
+        assert_vec_approx_eq!(a, a_correct, 1e-14);
         Ok(())
     }
 }
