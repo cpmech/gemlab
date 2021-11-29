@@ -438,7 +438,6 @@ mod tests {
         let mut a = vec![NOISE; shape.npoint];
         let fn_s = |_| 3.0;
         shape.integ_case_a(&mut a, fn_s)?;
-        println!("a = {:?}", a);
         let cf = fn_s(0) * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a, a_correct, 1e-14);
