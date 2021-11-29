@@ -316,18 +316,18 @@ impl Shape {
     /// Case-D, tensor dot gradient:
     ///
     /// ```text
-    /// →    ⌠ → →    →  → →   →
+    /// →    ⌠   →    →  → →   →
     /// dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
-    ///      ⌡
+    ///      ⌡ ▔
     ///      Ω
     /// ```
     ///
     /// The numerical integration is:
     ///
     /// ```text
-    /// →   nip-1 → →     →  →       →
+    /// →   nip-1   →     →  →       →
     /// dᵐ ≈  Σ   σ(ιp) · Gᵐ(ιp) |J|(ιp) wp
-    ///      p=0
+    ///      p=0  ▔
     /// ```
     ///
     /// # Input
