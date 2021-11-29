@@ -434,11 +434,22 @@ mod tests {
 
     #[test]
     fn integ_case_a_works() -> Result<(), StrError> {
+        // with a constant source term:
+        //
+        // s(x) = cₛ
+        //
+        // we get:
+        //           ┌   ┐
+        //      cₛ A │ 1 │
+        // Fₛ = ———— │ 1 │
+        //        3  │ 1 │
+        //           └   ┘
         let (mut shape, area) = gen_eq_triangle();
         let mut a = vec![NOISE; shape.npoint];
-        let fn_s = |_| 3.0;
+        const CS: f64 = 3.0;
+        let fn_s = |_| CS;
         shape.integ_case_a(&mut a, fn_s)?;
-        let cf = fn_s(0) * area / 3.0;
+        let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a, a_correct, 1e-14);
         Ok(())
