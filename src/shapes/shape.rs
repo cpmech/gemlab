@@ -109,6 +109,14 @@ pub type IpData = &'static [[f64; 4]];
 /// * `face_npoint` -- face's number of points
 /// * `face_nedge` -- face's number of edges
 ///
+/// When performing numerical integrations, we use the following notation:
+/// |J| is the determinant of the Jacobian, ||J|| is the norm of the Jacobian vector
+/// for line in multi-dimensions, `nip` is the number of integration points,
+/// `ιp := ξp` is the reference coordinate of the integration point,
+/// and `wp` is the weight of the p-th integration point.
+///
+/// # Isoparametric formulation
+///
 /// The isoparametric formulation establishes that
 ///
 /// ```text
@@ -194,50 +202,33 @@ pub type IpData = &'static [[f64; 4]];
 ///
 /// # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
 ///
-/// In this case, the Jacobian equals the (space_ndim,1) base vector `g1` aligned
-/// with the line element, i.e.,
+/// In this case, the Jacobian equals the (space_ndim,1) base vector `g1` tangent
+/// to the line element, i.e.,
 ///
 /// ```text
-///                     →
-/// →          →       dx
-/// Jline(ξ) = g1(ξ) = —— = Xᵀ · L
-///                    dξ
+///                          →
+/// →    →     →            dx
+/// J := Jline(ξ) = g₁(ξ) = —— = Xᵀ · L
+///                         dξ
 /// ```
 ///
-/// # Boundary line in 2D (geo_ndim == 1 and space_ndim == 2)
-///
-/// If the line defines a boundary in 2D, we compute a normal vector by means of
+/// We also consider a parametric coordinate `ℓ` which varies
+/// from 0 to `ℓ_max` (the length of the line) according to
 ///
 /// ```text
-/// →   →    →
-/// n = e3 × g1
+///                ℓ_max
+/// ℓ(ξ) = (1 + ξ) —————
+///                  2
+///
+///        2 · ℓ
+/// ξ(ℓ) = ————— - 1
+///        ℓ_max
 /// ```
 ///
-/// # Boundary surface (geo_ndim == 2 and space_ndim == 3)
-///
-/// In this case, we use the normal vector to the surface to replace the surface
-/// integrations in the real space with integrations over the mapped space.
-/// Instead of using the Jacobian, we use the normal vector.
-///
-/// Considering convective coordinates (ξ1,ξ2) on the surface, we compute the
-/// following base vectors
-///
 /// ```text
-///          →
-/// →  →    dx
-/// g1(ξ) = ——— = first_column(Jsurf)
-///         dξ1
+/// 0 ≤ ℓ ≤ ℓ_max
 ///
-///          →
-/// →  →    dx
-/// g2(ξ) = ——— = second_column(Jsurf)
-///         dξ1
-/// ```
-///
-/// where we defined
-///
-/// ```text
-/// Jsurf = Xᵀ · L
+/// -1 ≤ ξ ≤ +1
 /// ```
 ///
 /// # Note
@@ -785,6 +776,64 @@ impl Shape {
     ///
     /// * `geo_ndim = 1` and `space_ndim = 2` -- line in 2D, or
     /// * `geo_ndim = 2` and `space_ndim = 3` -- surface in 3D.
+    ///
+    /// # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
+    ///
+    /// Base vector tangent with the line:
+    ///
+    /// ```text
+    ///          →
+    ///         dx
+    /// g₁(ξ) = —— = Xᵀ · L = first_column(J)
+    ///         dξ
+    /// ```
+    ///
+    /// Normal vector:
+    ///
+    /// ```text
+    /// →   →    →
+    /// n = e₃ × g₁
+    ///
+    ///   →       →
+    /// ||n|| = ||g₁||
+    /// ```
+    ///
+    /// Thus
+    ///
+    /// ```text
+    ///        →           →
+    /// dℓ = ||g₁|| dξ = ||n|| dξ
+    /// ```
+    ///
+    /// # Boundary surface (geo_ndim == 2 and space_ndim == 3)
+    ///
+    /// Base vectors tangent to the surface:
+    ///
+    /// ```text
+    ///          →
+    /// →  →    dx
+    /// g₁(ξ) = ——— = first_column(J)
+    ///         dξ₁
+    ///
+    ///          →
+    /// →  →    dx
+    /// g₂(ξ) = ——— = second_column(J)
+    ///         dξ₂
+    /// ```
+    ///
+    /// Normal vector:
+    ///
+    /// ```text
+    /// →   →    →
+    /// n = g₁ × g₂
+    /// ```
+    ///
+    /// Thus
+    ///
+    /// ```text
+    ///         →
+    /// dA := ||n|| dξ₁ dξ₂
+    /// ```
     ///
     /// # Input
     ///

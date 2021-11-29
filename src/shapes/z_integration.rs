@@ -135,6 +135,51 @@ impl Shape {
         Ok(())
     }
 
+    /// Performs the Case-A integration
+    ///
+    /// # General case (geo_ndim == space_ndim)
+    ///
+    /// Case-A, interpolation functions times scalar field:
+    ///
+    /// ```text
+    ///      ⌠    → →     →
+    /// aᵐ = │ Nᵐ(x(ξ)) s(x) dΩ
+    ///      ⌡
+    ///      Ω
+    /// ```
+    ///
+    /// which is replaced by numerical integration according to:
+    ///
+    /// ```text
+    ///     nip-1    →     →        →
+    /// aᵐ ≈  Σ   Nᵐ(ιp) s(ιp)) |J|(ιp) wp
+    ///      p=0
+    /// ```
+    ///
+    /// # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
+    ///
+    /// ```text
+    ///      ⌠
+    /// aᵐ = │ Nᵐ(ℓ(ξ)) s(ℓ) dℓ
+    ///      ⌡
+    ///      Ω
+    /// ```
+    ///
+    /// which is replaced by numerical integration according to:
+    ///
+    /// ```text
+    ///     nip-1    →     →          →
+    /// aᵐ ≈  Σ   Nᵐ(ιp) s(ιp)) ||J||(ιp) wp
+    ///      p=0
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `fn_s` -- s(x(ξ)) function, however written as the function of the index of the integration point.
+    ///
+    /// # Output
+    ///
+    /// * `a` -- aᵐ values from the integration (npoint)
     pub fn integ_case_a(&mut self, a: &mut [f64], fn_s: FnScalar) -> Result<(), StrError> {
         // clear results
         a.fill(0.0);
