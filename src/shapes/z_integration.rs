@@ -2,12 +2,16 @@ use super::*;
 use crate::shapes::{GeoClass, Shape};
 use crate::StrError;
 use russell_lab::Vector;
+use russell_tensor::Tensor2;
 
 /// Defines scalar function (the argument is index of the integration point)
 pub type FnScalar = fn(usize) -> f64;
 
 /// Defines vector function (the second argument is index of the integration point)
 pub type FnVector = fn(&mut Vector, usize);
+
+/// Defines tensor function (the second argument is index of the integration point)
+pub type FnTensor = fn(&mut Tensor2, usize);
 
 impl Shape {
     /// Selects integrations points and weights
@@ -183,12 +187,96 @@ impl Shape {
             // loop over points and perform summation
             for m in 0..self.npoint {
                 fn_v(&mut v, index);
-                for i in 0..b[m].dim() {
+                for i in 0..self.space_ndim {
                     b[m][i] += self.interp[m] * v[i] * det_jac * weight;
                 }
             }
         }
         Ok(())
+    }
+
+    pub fn integ_case_c(&mut self, c: &mut [f64], fn_w: FnVector) -> Result<(), StrError> {
+        // clear results
+        c.fill(0.0);
+
+        // auxiliary vector holding the output of fn_w
+        let mut w = Vector::new(self.space_ndim);
+
+        // loop over integration points
+        for index in 0..self.ip_data.len() {
+            // ksi coordinates and weight
+            let iota = &self.ip_data[index][0..self.geo_ndim];
+            let weight = self.ip_data[index][3];
+
+            // calculate Jacobian and Gradient
+            let det_jac = self.calc_gradient(iota)?;
+
+            // loop over points and perform summation
+            for m in 0..self.npoint {
+                fn_w(&mut w, index);
+                let w_dot_grad = self.vec_dot_grad(m, &w);
+                c[m] += w_dot_grad * det_jac * weight;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn integ_case_d(&mut self, d: &mut Vec<Vector>, fn_sig: FnTensor) -> Result<(), StrError> {
+        // check
+        if d.len() != self.npoint {
+            return Err("b.len() must equal npoint");
+        }
+
+        // check dims and clear results
+        for m in 0..self.npoint {
+            if d[m].dim() != self.space_ndim {
+                return Err("d[m].dim() must equal space_ndim");
+            }
+            d[m].fill(0.0);
+        }
+
+        // auxiliary tensor holding the output of fn_sig
+        let mut sig = Tensor2::new(true);
+
+        // auxiliary vector equal to σ · G
+        let mut sig_dot_grad = vec![0.0; self.space_ndim];
+
+        // loop over integration points
+        for index in 0..self.ip_data.len() {
+            // ksi coordinates and weight
+            let iota = &self.ip_data[index][0..self.geo_ndim];
+            let weight = self.ip_data[index][3];
+
+            // calculate Jacobian and Gradient
+            let det_jac = self.calc_gradient(iota)?;
+
+            // loop over points and perform summation
+            for m in 0..self.npoint {
+                fn_sig(&mut sig, index);
+                self.tensor_dot_grad(&mut sig_dot_grad, m, &sig);
+                for i in 0..self.space_ndim {
+                    d[m][i] += sig_dot_grad[i] * det_jac * weight;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn vec_dot_grad(&self, m: usize, w: &Vector) -> f64 {
+        let mut res = 0.0;
+        for i in 0..self.space_ndim {
+            res += w[i] * self.gradient[m][i];
+        }
+        res
+    }
+
+    fn tensor_dot_grad(&self, res: &mut [f64], m: usize, sig: &Tensor2) {
+        for i in 0..self.space_ndim {
+            res[i] = 0.0;
+            for j in 0..self.space_ndim {
+                res[i] += sig.get(i, j) * self.gradient[m][j];
+            }
+        }
     }
 }
 
