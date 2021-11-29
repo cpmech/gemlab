@@ -137,8 +137,6 @@ impl Shape {
 
     /// Performs the Case-A integration
     ///
-    /// # General case (geo_ndim == space_ndim)
-    ///
     /// Case-A, interpolation functions times scalar field:
     ///
     /// ```text
@@ -148,15 +146,7 @@ impl Shape {
     ///      Ω
     /// ```
     ///
-    /// which is replaced by numerical integration according to:
-    ///
-    /// ```text
-    ///     nip-1    →     →        →
-    /// aᵐ ≈  Σ   Nᵐ(ιp) s(ιp)) |J|(ιp) wp
-    ///      p=0
-    /// ```
-    ///
-    /// # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
+    /// or, for lines in multi-dimensions,
     ///
     /// ```text
     ///      ⌠
@@ -165,21 +155,22 @@ impl Shape {
     ///      Ω
     /// ```
     ///
-    /// which is replaced by numerical integration according to:
+    /// The numerical integration is:
     ///
     /// ```text
-    ///     nip-1    →     →          →
-    /// aᵐ ≈  Σ   Nᵐ(ιp) s(ιp)) ||J||(ιp) wp
+    ///     nip-1    →     →       →
+    /// aᵐ ≈  Σ   Nᵐ(ιp) s(ιp) |J|(ιp) wp
     ///      p=0
     /// ```
     ///
     /// # Input
     ///
-    /// * `fn_s` -- s(x(ξ)) function, however written as the function of the index of the integration point.
+    /// * `fn_s` -- s(x(ξ)) or s(ℓ) scalar function, however written as the
+    ///             function of the index of the integration point.
     ///
     /// # Output
     ///
-    /// * `a` -- aᵐ values from the integration (npoint)
+    /// * `a` -- (npoint) aᵐ scalars; result from the integration
     pub fn integ_case_a(&mut self, a: &mut [f64], fn_s: FnScalar) -> Result<(), StrError> {
         // clear results
         a.fill(0.0);
@@ -202,6 +193,33 @@ impl Shape {
         Ok(())
     }
 
+    /// Performs the Case-B integration
+    ///
+    /// Case-B, interpolation functions times vector field:
+    ///
+    /// ```text
+    /// →    ⌠    → →   → →
+    /// bᵐ = │ Nᵐ(x(ξ)) v(x) dΩ
+    ///      ⌡
+    ///      Ω
+    /// ```
+    ///
+    /// The numerical integration is:
+    ///
+    /// ```text
+    /// →   nip-1    →   → →       →
+    /// bᵐ ≈  Σ   Nᵐ(ιp) v(ιp) |J|(ιp) wp
+    ///      p=0
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `fn_v` -- v(x(ξ)) vector function, however written as the
+    ///             function of the index of the integration point.
+    ///
+    /// # Output
+    ///
+    /// * `b` -- (npoint) bᵐ vectors; result from the integration
     pub fn integ_case_b(&mut self, b: &mut Vec<Vector>, fn_v: FnVector) -> Result<(), StrError> {
         // check
         if b.len() != self.npoint {
@@ -240,6 +258,33 @@ impl Shape {
         Ok(())
     }
 
+    /// Performs the Case-C integration
+    ///
+    /// Case-C, vector dot gradient:
+    ///
+    /// ```text
+    ///      ⌠ → →    →  → →
+    /// cᵐ = │ w(x) · Gᵐ(x(ξ)) dΩ
+    ///      ⌡
+    ///      Ω
+    /// ```
+    ///
+    /// The numerical integration is:
+    ///
+    /// ```text
+    ///     nip-1 → →     →  →       →
+    /// cᵐ ≈  Σ   w(ιp) · Gᵐ(ιp) |J|(ιp) wp
+    ///      p=0
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `fn_w` -- w(x(ξ)) vector function, however written as the
+    ///             function of the index of the integration point.
+    ///
+    /// # Output
+    ///
+    /// * `c` -- (npoint) cᵐ scalars; result from the integration
     pub fn integ_case_c(&mut self, c: &mut [f64], fn_w: FnVector) -> Result<(), StrError> {
         // clear results
         c.fill(0.0);
@@ -266,6 +311,33 @@ impl Shape {
         Ok(())
     }
 
+    /// Performs the Case-D integration
+    ///
+    /// Case-D, tensor dot gradient:
+    ///
+    /// ```text
+    /// →    ⌠ → →    →  → →   →
+    /// dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
+    ///      ⌡
+    ///      Ω
+    /// ```
+    ///
+    /// The numerical integration is:
+    ///
+    /// ```text
+    /// →   nip-1 → →     →  →       →
+    /// dᵐ ≈  Σ   σ(ιp) · Gᵐ(ιp) |J|(ιp) wp
+    ///      p=0
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `fn_sig` -- sig(x(ξ)) tensor function, however written as the
+    ///               function of the index of the integration point.
+    ///
+    /// # Output
+    ///
+    /// * `d` -- (npoint) dᵐ vectors; result from the integration
     pub fn integ_case_d(&mut self, d: &mut Vec<Vector>, fn_sig: FnTensor) -> Result<(), StrError> {
         // check
         if d.len() != self.npoint {
@@ -307,6 +379,7 @@ impl Shape {
         Ok(())
     }
 
+    /// Computes vector dot the gradient at point m
     fn vec_dot_grad(&self, m: usize, w: &Vector) -> f64 {
         let mut res = 0.0;
         for i in 0..self.space_ndim {
@@ -315,6 +388,7 @@ impl Shape {
         res
     }
 
+    /// Computes tensor dot the gradient at point m
     fn tensor_dot_grad(&self, res: &mut [f64], m: usize, sig: &Tensor2) {
         for i in 0..self.space_ndim {
             res[i] = 0.0;
