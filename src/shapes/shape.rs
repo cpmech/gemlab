@@ -745,8 +745,9 @@ impl Shape {
     ///
     /// # Output
     ///
-    /// If `geo_ndim = space_ndim`, returns the determinant of the Jacobian.
-    /// Otherwise, returns zero.
+    /// * If `geo_ndim = space_ndim`, returns the determinant of the Jacobian
+    /// * If `geo_ndim = 1` and `space_ndim > 1`, returns the norm of the Jacobian vector
+    /// * Otherwise, returns zero
     ///
     /// # Updated variables
     ///
@@ -766,6 +767,13 @@ impl Shape {
         if self.geo_ndim == self.space_ndim {
             inverse(&mut self.inv_jacobian, &self.jacobian)
         } else {
+            if self.geo_ndim == 1 {
+                let mut norm_jac = 0.0;
+                for i in 0..self.space_ndim {
+                    norm_jac += self.jacobian[i][0] * self.jacobian[i][0];
+                }
+                return Ok(f64::sqrt(norm_jac));
+            }
             Ok(0.0)
         }
     }
