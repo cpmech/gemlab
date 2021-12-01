@@ -4,15 +4,6 @@ use crate::StrError;
 use russell_lab::Vector;
 use russell_tensor::Tensor2;
 
-/// Defines scalar function (the argument is index of the integration point)
-pub type FnScalar = fn(usize) -> f64;
-
-/// Defines vector function (the second argument is index of the integration point)
-pub type FnVector = fn(&mut Vector, usize);
-
-/// Defines tensor function (the second argument is index of the integration point)
-pub type FnTensor = fn(&mut Tensor2, usize);
-
 impl Shape {
     /// Selects integrations points and weights
     ///
@@ -165,20 +156,23 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `fn_s` -- s(x(ξ)) or s(ℓ) scalar function, however written as the
-    ///             function of the index of the integration point.
+    /// * `fn_s(index: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function, however written as
+    ///                                  a function of the index of the integration point.
     ///
     /// # Output
     ///
     /// * `a` -- (npoint) aᵐ scalars; result from the integration
-    pub fn integ_case_a(&mut self, a: &mut [f64], fn_s: FnScalar) -> Result<(), StrError> {
+    pub fn integ_case_a<F>(&mut self, a: &mut [f64], fn_s: F) -> Result<(), StrError>
+    where
+        F: Fn(usize) -> f64,
+    {
         // clear results
         a.fill(0.0);
 
         // loop over integration points
         for index in 0..self.ip_data.len() {
             // ksi coordinates and weight
-            let iota = &self.ip_data[index][0..self.geo_ndim];
+            let iota = &self.ip_data[index];
             let weight = self.ip_data[index][3];
 
             // calculate interpolation functions and Jacobian
@@ -214,13 +208,16 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `fn_v` -- v(x(ξ)) vector function, however written as the
-    ///             function of the index of the integration point.
+    /// * `fn_v(v: &mut Vector, index: usize)` -- v(x(ξ)) vector function, however written as
+    ///                                           a function of the index of the integration point.
     ///
     /// # Output
     ///
     /// * `b` -- (npoint) bᵐ vectors; result from the integration
-    pub fn integ_case_b(&mut self, b: &mut Vec<Vector>, fn_v: FnVector) -> Result<(), StrError> {
+    pub fn integ_case_b<F>(&mut self, b: &mut Vec<Vector>, fn_v: F) -> Result<(), StrError>
+    where
+        F: Fn(&mut Vector, usize),
+    {
         // check
         if b.len() != self.npoint {
             return Err("b.len() must equal npoint");
@@ -240,7 +237,7 @@ impl Shape {
         // loop over integration points
         for index in 0..self.ip_data.len() {
             // ksi coordinates and weight
-            let iota = &self.ip_data[index][0..self.geo_ndim];
+            let iota = &self.ip_data[index];
             let weight = self.ip_data[index][3];
 
             // calculate interpolation functions and Jacobian
@@ -279,13 +276,16 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `fn_w` -- w(x(ξ)) vector function, however written as the
-    ///             function of the index of the integration point.
+    /// * `fn_w(w: &mut Vector, index: usize)` -- w(x(ξ)) vector function, however written as
+    ///                                           a function of the index of the integration point.
     ///
     /// # Output
     ///
     /// * `c` -- (npoint) cᵐ scalars; result from the integration
-    pub fn integ_case_c(&mut self, c: &mut [f64], fn_w: FnVector) -> Result<(), StrError> {
+    pub fn integ_case_c<F>(&mut self, c: &mut [f64], fn_w: F) -> Result<(), StrError>
+    where
+        F: Fn(&mut Vector, usize),
+    {
         // clear results
         c.fill(0.0);
 
@@ -295,7 +295,7 @@ impl Shape {
         // loop over integration points
         for index in 0..self.ip_data.len() {
             // ksi coordinates and weight
-            let iota = &self.ip_data[index][0..self.geo_ndim];
+            let iota = &self.ip_data[index];
             let weight = self.ip_data[index][3];
 
             // calculate Jacobian and Gradient
@@ -332,13 +332,16 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `fn_sig` -- sig(x(ξ)) tensor function, however written as the
-    ///               function of the index of the integration point.
+    /// * `fn_sig(sig: &mut Tensor2, index: usize)` -- σ(x(ξ)) tensor function, however written as
+    ///                                                a function of the index of the integration point.
     ///
     /// # Output
     ///
     /// * `d` -- (npoint) dᵐ vectors; result from the integration
-    pub fn integ_case_d(&mut self, d: &mut Vec<Vector>, fn_sig: FnTensor) -> Result<(), StrError> {
+    pub fn integ_case_d<F>(&mut self, d: &mut Vec<Vector>, fn_sig: F) -> Result<(), StrError>
+    where
+        F: Fn(&mut Tensor2, usize),
+    {
         // check
         if d.len() != self.npoint {
             return Err("b.len() must equal npoint");
@@ -361,7 +364,7 @@ impl Shape {
         // loop over integration points
         for index in 0..self.ip_data.len() {
             // ksi coordinates and weight
-            let iota = &self.ip_data[index][0..self.geo_ndim];
+            let iota = &self.ip_data[index];
             let weight = self.ip_data[index][3];
 
             // calculate Jacobian and Gradient
@@ -410,14 +413,14 @@ mod tests {
     // to test if variables are cleared before summation
     const NOISE: f64 = 1234.56;
 
-    fn gen_eq_triangle() -> (Shape, f64) {
-        // equilateral triangle with sides equal to l
-        //       /\
-        //      /  \
-        //   l /    \ l
-        //    /      \
-        //   /________\
-        //        l
+    // equilateral triangle with sides equal to l
+    //       /\
+    //      /  \
+    //   l /    \ l
+    //    /      \
+    //   /________\
+    //        l
+    fn gen_tri3() -> (Shape, f64) {
         let l = 5.0;
         let h = l * SQRT_3 / 2.0;
         let area = l * h / 2.0;
@@ -432,9 +435,19 @@ mod tests {
         (shape, area)
     }
 
+    // line segment from xa to xb (geo_ndim == space_ndim)
+    fn gen_lin2() -> (Shape, f64) {
+        let mut shape = Shape::new(1, 1, 2).unwrap();
+        let (xa, xb) = (3.0, 9.0);
+        let length = xb - xa;
+        shape.set_point(0, 0, xa).unwrap();
+        shape.set_point(1, 0, xb).unwrap();
+        (shape, length)
+    }
+
     #[test]
     fn integ_case_a_works() -> Result<(), StrError> {
-        // with a constant source term:
+        // tri3 with a constant source term:
         //
         // s(x) = cₛ
         //
@@ -444,14 +457,35 @@ mod tests {
         // Fₛ = ———— │ 1 │
         //        3  │ 1 │
         //           └   ┘
-        let (mut shape, area) = gen_eq_triangle();
-        let mut a = vec![NOISE; shape.npoint];
+        let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let fn_s = |_| CS;
-        shape.integ_case_a(&mut a, fn_s)?;
+        let mut a = vec![NOISE; tri3.npoint];
+        tri3.integ_case_a(&mut a, fn_s)?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a, a_correct, 1e-14);
+
+        // lin2 with linear source term:
+        //
+        // s(x) = x
+        //
+        //        ┌           ┐
+        //      l │ 2 xa + xb │
+        // Fₛ = — │           │
+        //      6 │ xa + 2 xb │
+        //        └           ┘
+        let (mut lin2, length) = gen_lin2();
+        let mut x = Vector::new(lin2.space_ndim);
+        let mut x_at_ip = vec![0.0; lin2.ip_data.len()];
+        for index in 0..lin2.ip_data.len() {
+            lin2.calc_coords(&mut x, &lin2.ip_data[index])?;
+            x_at_ip[index] = x[0];
+        }
+        println!("x_at_ip = {:?}", x_at_ip);
+        let fn_s = |index: usize| x_at_ip[index];
+        let mut a = vec![NOISE; lin2.npoint];
+        lin2.integ_case_a(&mut a, fn_s)?;
         Ok(())
     }
 }
