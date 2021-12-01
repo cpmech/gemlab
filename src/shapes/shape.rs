@@ -289,6 +289,9 @@ pub struct Shape {
     /// Matrix Xᵀ: (space_ndim,npoint) transposed coordinates matrix (real space)
     pub coords_transp: Matrix,
 
+    /// Tells if at least the last entry of the coordinates matrix has been input
+    ok_last_coord: bool,
+
     /// Minimum (space_ndim) coordinates from the X matrix
     pub min_coords: Vec<f64>,
 
@@ -582,6 +585,7 @@ impl Shape {
                 Matrix::new(0, 0)
             },
             coords_transp: Matrix::new(space_ndim, npoint),
+            ok_last_coord: false,
             min_coords: vec![f64::MAX; space_ndim],
             max_coords: vec![f64::MIN; space_ndim],
             ip_data,
@@ -667,6 +671,9 @@ impl Shape {
         if value > self.max_coords[j] {
             self.max_coords[j] = value;
         }
+        if m == self.npoint - 1 && j == self.space_ndim - 1 {
+            self.ok_last_coord = true;
+        }
         Ok(())
     }
 
@@ -698,14 +705,17 @@ impl Shape {
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first, otherwise the computations
-    /// will generate wrong results.
+    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// otherwise the computations will generate wrong results.
     pub fn calc_coords(&mut self, x: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
         if x.dim() != self.space_ndim {
             return Err("x.dim() must equal space_ndim");
         }
         if ksi.len() < self.geo_ndim {
             return Err("ksi.len() must equal geo_ndim at least");
+        }
+        if !self.ok_last_coord {
+            return Err("the last point coordinate has not been input yet");
         }
         self.calc_interp(ksi);
         mat_vec_mul(x, 1.0, &self.coords_transp, &self.interp)
@@ -760,11 +770,14 @@ impl Shape {
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first, otherwise the computations
-    /// will generate wrong results.
+    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// otherwise the computations will generate wrong results.
     pub fn calc_jacobian(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
         if ksi.len() < self.geo_ndim {
             return Err("ksi.len() must equal geo_ndim at least");
+        }
+        if !self.ok_last_coord {
+            return Err("the last point coordinate has not been input yet");
         }
         self.calc_deriv(ksi);
         mat_mat_mul(&mut self.jacobian, 1.0, &self.coords_transp, &self.deriv)?;
@@ -860,6 +873,11 @@ impl Shape {
     /// # Updated variables
     ///
     /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    ///
+    /// # Warning
+    ///
+    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// otherwise the computations will generate wrong results.
     pub fn calc_boundary_normal(&mut self, normal: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
         // check
         if self.geo_ndim == self.space_ndim {
@@ -870,6 +888,9 @@ impl Shape {
         }
         if ksi.len() < self.geo_ndim {
             return Err("ksi.len() must equal geo_ndim at least");
+        }
+        if !self.ok_last_coord {
+            return Err("the last point coordinate has not been input yet");
         }
 
         // compute Jacobian
@@ -913,8 +934,8 @@ impl Shape {
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first, otherwise the computations
-    /// will generate wrong results.
+    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// otherwise the computations will generate wrong results.
     pub fn approximate_ksi(
         &mut self,
         ksi: &mut [f64],
@@ -931,6 +952,9 @@ impl Shape {
         }
         if ksi.len() != self.geo_ndim {
             return Err("ksi.len() must equal geo_ndim");
+        }
+        if !self.ok_last_coord {
+            return Err("the last point coordinate has not been input yet");
         }
 
         // use linear scale to guess ksi
@@ -1003,8 +1027,8 @@ impl Shape {
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first, otherwise the computations
-    /// will generate wrong results.
+    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// otherwise the computations will generate wrong results.
     pub fn calc_gradient(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
         if self.geo_ndim != self.space_ndim {
             return Err("geo_ndim must equal space_ndim");
@@ -1012,9 +1036,45 @@ impl Shape {
         if ksi.len() < self.geo_ndim {
             return Err("ksi.len() must equal geo_ndim at least");
         }
+        if !self.ok_last_coord {
+            return Err("the last point coordinate has not been input yet");
+        }
         let det_jac = self.calc_jacobian(ksi)?;
         mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian)?;
         Ok(det_jac)
+    }
+
+    /// Calculates the real coordinates of all integration points
+    ///
+    /// We use the `calc_coords` method to apply the isoparametric formula
+    /// to all p-th integration points `ιᵖ`. For example,
+    ///
+    /// ```text
+    /// → →          → →   →
+    /// x(ιᵖ) = Σ Nᵐ(ξ=ιᵖ) xᵐ
+    ///         m         
+    /// ```
+    ///
+    /// # Output
+    ///
+    /// Returns an array with `nip` (number of integration point) vectors, where
+    /// each vector has a dimension equal to `space_ndim`.
+    ///
+    /// # Warning
+    ///
+    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// otherwise the computations will generate wrong results.
+    pub fn calc_int_points_coords(&mut self) -> Result<Vec<Vector>, StrError> {
+        if !self.ok_last_coord {
+            return Err("the last point coordinate has not been input yet");
+        }
+        let mut all_coords = Vec::new();
+        for iota in self.ip_data {
+            let mut x = Vector::new(self.space_ndim);
+            self.calc_coords(&mut x, iota).unwrap();
+            all_coords.push(x);
+        }
+        Ok(all_coords)
     }
 
     // --- getters ------------------------------------------------------------------------------
@@ -1163,7 +1223,7 @@ pub fn ref_domain_limits(class: GeoClass) -> (f64, f64, f64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::PI;
+    use crate::util::{PI, SQRT_3};
     use russell_chk::*;
     use russell_lab::copy_vector;
     use std::collections::HashMap;
@@ -1806,6 +1866,25 @@ mod tests {
                 }
             }
         }
+        Ok(())
+    }
+
+    #[test]
+    fn calc_int_points_coords() -> Result<(), StrError> {
+        let mut shape = Shape::new(1, 1, 2)?;
+        let (xa, xb) = (2.0, 5.0);
+        shape.set_point(0, 0, xa)?;
+        shape.set_point(1, 0, xb)?;
+        let int_points = shape.calc_int_points_coords()?;
+        assert_eq!(int_points.len(), 2);
+        let ksi_a = -1.0 / SQRT_3;
+        let ksi_b = 1.0 / SQRT_3;
+        let x_ksi_a = xa + (ksi_a + 1.0) * (xb - xa) / 2.0;
+        let x_ksi_b = xa + (ksi_b + 1.0) * (xb - xa) / 2.0;
+        assert_eq!(int_points[0].dim(), 1);
+        assert_eq!(int_points[1].dim(), 1);
+        assert_approx_eq!(int_points[0][0], x_ksi_a, 1e-15);
+        assert_approx_eq!(int_points[1][0], x_ksi_b, 1e-15);
         Ok(())
     }
 }
