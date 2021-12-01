@@ -154,19 +154,36 @@ impl Shape {
     ///      p=0
     /// ```
     ///
+    /// # Output
+    ///
+    /// ```text
+    ///     ┌     ┐
+    ///     |  a⁰ |
+    ///     |  a¹ |
+    /// a = |  a² |
+    ///     | ··· |
+    ///     |  aᵐ |
+    ///     └     ┘
+    /// ```
+    ///
+    /// * `a` -- A vector containing all `aᵐ` values, one after another, and
+    ///          sequentially placed as shown above. `m` is the index of the point.
+    ///          The length of `a` must be equal to `npoint`.
+    ///
     /// # Input
     ///
     /// * `fn_s(index: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function, however written as
     ///                                  a function of the index of the integration point.
-    ///
-    /// # Output
-    ///
-    /// * `a` -- (npoint) aᵐ scalars; result from the integration
-    pub fn integ_case_a<F>(&mut self, a: &mut [f64], fn_s: F) -> Result<(), StrError>
+    pub fn integ_case_a<F>(&mut self, a: &mut Vector, fn_s: F) -> Result<(), StrError>
     where
         F: Fn(usize) -> f64,
     {
-        // clear results
+        // check
+        if a.dim() != self.npoint {
+            return Err("the length of vector 'a' must be equal to npoint");
+        }
+
+        // clear output vector
         a.fill(0.0);
 
         // loop over integration points
@@ -206,33 +223,44 @@ impl Shape {
     ///      p=0
     /// ```
     ///
-    /// # Input
-    ///
-    /// * `fn_v(v: &mut Vector, index: usize)` -- v(x(ξ)) vector function, however written as
-    ///                                           a function of the index of the integration point.
-    ///
     /// # Output
     ///
-    /// * `b` -- (npoint) bᵐ vectors; result from the integration
-    pub fn integ_case_b<F>(&mut self, b: &mut Vec<Vector>, fn_v: F) -> Result<(), StrError>
+    /// ```text
+    ///     ┌     ┐
+    ///     | b⁰₀ |
+    ///     | b⁰₁ |
+    ///     | b¹₀ |
+    /// b = | b¹₁ |
+    ///     | b²₀ |
+    ///     | b²₁ |
+    ///     | ··· |
+    ///     | bᵐᵢ |
+    ///     └     ┘
+    /// ```
+    ///
+    /// * `b` -- A vector containing all `bᵐᵢ` values, one after another, and sequentially placed
+    ///          as shown above (in 2D). `m` is the index of the point and `i` corresponds to `space_ndim`.
+    ///          The length of `b` must equal to `npoint * space_ndim`.
+    ///
+    /// # Input
+    ///
+    /// * `fn_v(v: &mut Vector, index: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`, however written as
+    ///                                           a function of the index of the integration point.
+    /// * `aux_v` -- is an auxiliary vector with size equal to `space_ndim`.
+    pub fn integ_case_b<F>(&mut self, b: &mut Vector, fn_v: F, aux_v: &mut Vector) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
         // check
-        if b.len() != self.npoint {
-            return Err("b.len() must equal npoint");
+        if b.dim() != self.npoint * self.space_ndim {
+            return Err("the length of vector 'b' must be equal to npoint * space_ndim");
+        }
+        if aux_v.dim() != self.space_ndim {
+            return Err("the length of vector 'aux_v' must be equal to space_ndim");
         }
 
-        // check dims and clear results
-        for m in 0..self.npoint {
-            if b[m].dim() != self.space_ndim {
-                return Err("b[m].dim() must equal space_ndim");
-            }
-            b[m].fill(0.0);
-        }
-
-        // auxiliary vector holding the output of fn_v
-        let mut v = Vector::new(self.space_ndim);
+        // clear output vector
+        b.fill(0.0);
 
         // loop over integration points
         for index in 0..self.ip_data.len() {
@@ -246,9 +274,10 @@ impl Shape {
 
             // loop over points and perform summation
             for m in 0..self.npoint {
-                fn_v(&mut v, index);
+                fn_v(aux_v, index);
                 for i in 0..self.space_ndim {
-                    b[m][i] += self.interp[m] * v[i] * det_jac * weight;
+                    let ii = i + m * self.space_ndim;
+                    b[ii] += self.interp[m] * aux_v[i] * det_jac * weight;
                 }
             }
         }
@@ -459,11 +488,11 @@ mod tests {
         let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let fn_s = |_| CS;
-        let mut a = vec![NOISE; tri3.npoint];
+        let mut a = Vector::filled(tri3.npoint, NOISE);
         tri3.integ_case_a(&mut a, fn_s)?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
-        assert_vec_approx_eq!(a, a_correct, 1e-14);
+        assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
 
         // lin2 with linear source term:
         //
@@ -477,11 +506,41 @@ mod tests {
         let (mut lin2, xa, xb) = gen_lin2();
         let all_int_points = lin2.calc_int_points_coords()?;
         let fn_s = |index: usize| all_int_points[index][0];
-        let mut a = vec![NOISE; lin2.npoint];
+        let mut a = Vector::new(lin2.npoint);
         lin2.integ_case_a(&mut a, fn_s)?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
-        assert_vec_approx_eq!(a, a_correct, 1e-15);
+        assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
+        Ok(())
+    }
+
+    #[test]
+    fn integ_case_b_works() -> Result<(), StrError> {
+        // This test is similar to the case_a with tri3, however using a vector
+        // So, each component of `b` equals `Fₛ`
+        let (mut tri3, area) = gen_tri3();
+        const CS: f64 = 3.0;
+        let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
+        let mut b = Vector::filled(tri3.npoint * tri3.space_ndim, NOISE);
+        let mut aux_v = Vector::new(tri3.space_ndim);
+        tri3.integ_case_b(&mut b, fn_v, &mut aux_v)?;
+        let cf = CS * area / 3.0;
+        let b_correct = &[cf, cf, cf, cf, cf, cf];
+        assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
+
+        // Likewise, this test is similar to case_a with lin2, however using a vector
+        // with a single component. So, each component of `b` equals `Fₛ`
+        let (mut lin2, xa, xb) = gen_lin2();
+        let all_int_points = lin2.calc_int_points_coords()?;
+        let fn_v = |v: &mut Vector, index: usize| {
+            v.fill(all_int_points[index][0]);
+        };
+        let mut b = Vector::filled(lin2.npoint * lin2.space_ndim, NOISE);
+        let mut aux_v = Vector::new(lin2.space_ndim);
+        lin2.integ_case_b(&mut b, fn_v, &mut aux_v)?;
+        let cf = (xb - xa) / 6.0;
+        let b_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
+        assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
         Ok(())
     }
 }
