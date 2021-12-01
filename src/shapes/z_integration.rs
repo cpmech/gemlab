@@ -150,7 +150,7 @@ impl Shape {
     ///
     /// ```text
     ///     nip-1    →     →       →
-    /// aᵐ ≈  Σ   Nᵐ(ιp) s(ιp) |J|(ιp) wp
+    /// aᵐ ≈  Σ   Nᵐ(ιᵖ) s(ιᵖ) |J|(ιᵖ) wᵖ
     ///      p=0
     /// ```
     ///
@@ -202,7 +202,7 @@ impl Shape {
     ///
     /// ```text
     /// →   nip-1    →   → →       →
-    /// bᵐ ≈  Σ   Nᵐ(ιp) v(ιp) |J|(ιp) wp
+    /// bᵐ ≈  Σ   Nᵐ(ιᵖ) v(ιᵖ) |J|(ιᵖ) wᵖ
     ///      p=0
     /// ```
     ///
@@ -270,7 +270,7 @@ impl Shape {
     ///
     /// ```text
     ///     nip-1 → →     →  →       →
-    /// cᵐ ≈  Σ   w(ιp) · Gᵐ(ιp) |J|(ιp) wp
+    /// cᵐ ≈  Σ   w(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
     ///      p=0
     /// ```
     ///
@@ -326,7 +326,7 @@ impl Shape {
     ///
     /// ```text
     /// →   nip-1   →     →  →       →
-    /// dᵐ ≈  Σ   σ(ιp) · Gᵐ(ιp) |J|(ιp) wp
+    /// dᵐ ≈  Σ   σ(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
     ///      p=0  ▔
     /// ```
     ///
@@ -436,13 +436,12 @@ mod tests {
     }
 
     // line segment from xa to xb (geo_ndim == space_ndim)
-    fn gen_lin2() -> (Shape, f64) {
+    fn gen_lin2() -> (Shape, f64, f64) {
         let mut shape = Shape::new(1, 1, 2).unwrap();
         let (xa, xb) = (3.0, 9.0);
-        let length = xb - xa;
         shape.set_point(0, 0, xa).unwrap();
         shape.set_point(1, 0, xb).unwrap();
-        (shape, length)
+        (shape, xa, xb)
     }
 
     #[test]
@@ -475,17 +474,14 @@ mod tests {
         // Fₛ = — │           │
         //      6 │ xa + 2 xb │
         //        └           ┘
-        let (mut lin2, length) = gen_lin2();
-        let mut x = Vector::new(lin2.space_ndim);
-        let mut x_at_ip = vec![0.0; lin2.ip_data.len()];
-        for index in 0..lin2.ip_data.len() {
-            lin2.calc_coords(&mut x, &lin2.ip_data[index])?;
-            x_at_ip[index] = x[0];
-        }
-        println!("x_at_ip = {:?}", x_at_ip);
-        let fn_s = |index: usize| x_at_ip[index];
+        let (mut lin2, xa, xb) = gen_lin2();
+        let all_int_points = lin2.calc_int_points_coords()?;
+        let fn_s = |index: usize| all_int_points[index][0];
         let mut a = vec![NOISE; lin2.npoint];
         lin2.integ_case_a(&mut a, fn_s)?;
+        let cf = (xb - xa) / 6.0;
+        let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
+        assert_vec_approx_eq!(a, a_correct, 1e-15);
         Ok(())
     }
 }
