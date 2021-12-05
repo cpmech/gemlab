@@ -486,6 +486,7 @@ mod tests {
     use super::*;
     use crate::util::SQRT_3;
     use russell_chk::assert_vec_approx_eq;
+    use russell_lab::Matrix;
 
     // to test if variables are cleared before summation
     const NOISE: f64 = 1234.56;
@@ -589,6 +590,78 @@ mod tests {
         let cf = (xb - xa) / 6.0;
         let b_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
+        Ok(())
+    }
+
+    struct AnalyticalTri3 {
+        x: [f64; 3],
+        y: [f64; 3],
+        b: [f64; 3],
+        c: [f64; 3],
+    }
+
+    fn analytical_tri3(area: f64, tri3: &mut Shape) -> AnalyticalTri3 {
+        let (x0, y0) = (tri3.coords_transp[0][0], tri3.coords_transp[1][0]);
+        let (x1, y1) = (tri3.coords_transp[0][1], tri3.coords_transp[1][1]);
+        let (x2, y2) = (tri3.coords_transp[0][2], tri3.coords_transp[1][2]);
+        let (b0, b1, b2) = (y1 - y2, y2 - y0, y0 - y1);
+        let (c0, c1, c2) = (x2 - x1, x0 - x2, x1 - x0);
+        let (f0, f1, f2) = (x1 * y2 - x2 * y1, x2 * y0 - x0 * y2, x0 * y1 - x1 * y0);
+        let aa = (f0 + f1 + f2) / 2.0;
+        assert_eq!(area, aa);
+        let gg = Matrix::from(&[
+            [b0 / (2.0 * aa), c0 / (2.0 * aa)],
+            [b1 / (2.0 * aa), c1 / (2.0 * aa)],
+            [b2 / (2.0 * aa), c2 / (2.0 * aa)],
+        ]);
+        tri3.calc_gradient(&tri3.ip_data[0]).unwrap();
+        assert_eq!(tri3.gradient.as_data(), gg.as_data());
+        AnalyticalTri3 {
+            x: [x0, x1, x2],
+            y: [y0, y1, y2],
+            b: [b0, b1, b2],
+            c: [c0, c1, c2],
+        }
+    }
+
+    #[test]
+    fn integ_case_c_works() -> Result<(), StrError> {
+        // shape and analytical gradient
+        let (mut tri3, area) = gen_tri3();
+        let ana = analytical_tri3(area, &mut tri3);
+
+        // constant vector function: w(x) = {w0, w1}
+        const W0: f64 = 2.0;
+        const W1: f64 = 3.0;
+        let fn_w = |w: &mut Vector, _: usize| {
+            w[0] = W0;
+            w[1] = W1;
+        };
+        let c_correct = &[
+            (W0 * ana.b[0] + W1 * ana.c[0]) / 2.0,
+            (W0 * ana.b[1] + W1 * ana.c[1]) / 2.0,
+            (W0 * ana.b[2] + W1 * ana.c[2]) / 2.0,
+        ];
+        let mut c = Vector::filled(tri3.npoint, NOISE);
+        let mut aux_w = Vector::new(tri3.space_ndim);
+        tri3.integ_case_c(&mut c, fn_w, &mut aux_w)?;
+        assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
+
+        // bilinear vector function: w(x) = {x, y}
+        let all_int_points = tri3.calc_int_points_coords()?;
+        let fn_w = |w: &mut Vector, index: usize| {
+            w[0] = all_int_points[index][0];
+            w[1] = all_int_points[index][1];
+        };
+        let c_correct = &[
+            (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[0] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[0] / 6.0,
+            (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[1] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[1] / 6.0,
+            (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[2] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[2] / 6.0,
+        ];
+        let mut c = Vector::filled(tri3.npoint, NOISE);
+        let mut aux_w = Vector::new(tri3.space_ndim);
+        tri3.integ_case_c(&mut c, fn_w, &mut aux_w)?;
+        assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
 }
