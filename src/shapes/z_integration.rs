@@ -630,7 +630,9 @@ mod tests {
         let (mut tri3, area) = gen_tri3();
         let ana = analytical_tri3(area, &mut tri3);
 
-        // constant vector function: w(x) = {w0, w1}
+        // constant vector function: w(x) = {w₀, w₁}
+        // solution:
+        //    cᵐ = ½ (w₀ bₘ + w₁ cₘ)
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
         let fn_w = |w: &mut Vector, _: usize| {
@@ -648,6 +650,8 @@ mod tests {
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
 
         // bilinear vector function: w(x) = {x, y}
+        // solution:
+        //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
         let all_int_points = tri3.calc_int_points_coords()?;
         let fn_w = |w: &mut Vector, index: usize| {
             w[0] = all_int_points[index][0];
