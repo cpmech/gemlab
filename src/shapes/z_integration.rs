@@ -149,9 +149,9 @@ impl Shape {
     /// The numerical integration is:
     ///
     /// ```text
-    ///     nip-1    →     →       →
-    /// aᵐ ≈  Σ   Nᵐ(ιᵖ) s(ιᵖ) |J|(ιᵖ) wᵖ
-    ///      p=0
+    ///      nip-1     →     →       →
+    /// aᵐ ≈   Σ    Nᵐ(ιᵖ) s(ιᵖ) |J|(ιᵖ) wᵖ
+    ///       p=0
     /// ```
     ///
     /// # Output
@@ -218,9 +218,9 @@ impl Shape {
     /// The numerical integration is:
     ///
     /// ```text
-    /// →   nip-1    →   → →       →
-    /// bᵐ ≈  Σ   Nᵐ(ιᵖ) v(ιᵖ) |J|(ιᵖ) wᵖ
-    ///      p=0
+    /// →    nip-1     →   → →       →
+    /// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) |J|(ιᵖ) wᵖ
+    ///       p=0
     /// ```
     ///
     /// # Output
@@ -234,13 +234,16 @@ impl Shape {
     ///     | b²₀ |
     ///     | b²₁ |
     ///     | ··· |
-    ///     | bᵐᵢ |
-    ///     └     ┘
+    ///     | bᵐᵢ |  ⟸  ii := i + m * space_ndim
+    ///     └     ┘       
+    ///
+    /// m = ii ÷ space_ndim
+    /// i = ii % space_ndim
     /// ```
     ///
     /// * `b` -- A vector containing all `bᵐᵢ` values, one after another, and sequentially placed
     ///          as shown above (in 2D). `m` is the index of the point and `i` corresponds to `space_ndim`.
-    ///          The length of `b` must equal to `npoint * space_ndim`.
+    ///          The length of `b` must be equal to `npoint * space_ndim`.
     ///
     /// # Input
     ///
@@ -298,28 +301,46 @@ impl Shape {
     /// The numerical integration is:
     ///
     /// ```text
-    ///     nip-1 → →     →  →       →
-    /// cᵐ ≈  Σ   w(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
-    ///      p=0
+    ///      nip-1  → →     →  →       →
+    /// cᵐ ≈   Σ    w(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
+    ///       p=0
     /// ```
-    ///
-    /// # Input
-    ///
-    /// * `fn_w(w: &mut Vector, index: usize)` -- w(x(ξ)) vector function, however written as
-    ///                                           a function of the index of the integration point.
     ///
     /// # Output
     ///
-    /// * `c` -- (npoint) cᵐ scalars; result from the integration
-    pub fn integ_case_c<F>(&mut self, c: &mut [f64], fn_w: F) -> Result<(), StrError>
+    /// ```text
+    ///     ┌     ┐
+    ///     |  c⁰ |
+    ///     |  c¹ |
+    /// c = |  c² |
+    ///     | ··· |
+    ///     |  cᵐ |
+    ///     └     ┘
+    /// ```
+    ///
+    /// * `c` -- A vector containing all `cᵐ` values, one after another, and
+    ///          sequentially placed as shown above. `m` is the index of the point.
+    ///          The length of `c` must be be equal to `npoint`.
+    ///
+    /// # Input
+    ///
+    /// * `fn_w(w: &mut Vector, index: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`, however written as
+    ///                                           a function of the index of the integration point.
+    /// * `aux_w` -- is an auxiliary vector with size equal to `space_ndim`.
+    pub fn integ_case_c<F>(&mut self, c: &mut Vector, fn_w: F, aux_w: &mut Vector) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
-        // clear results
-        c.fill(0.0);
+        // check
+        if c.dim() != self.npoint {
+            return Err("the length of vector 'c' must be equal to npoint");
+        }
+        if aux_w.dim() != self.space_ndim {
+            return Err("the length of vector 'aux_w' must be equal to space_ndim");
+        }
 
-        // auxiliary vector holding the output of fn_w
-        let mut w = Vector::new(self.space_ndim);
+        // clear output vector
+        c.fill(0.0);
 
         // loop over integration points
         for index in 0..self.ip_data.len() {
@@ -332,8 +353,8 @@ impl Shape {
 
             // loop over points and perform summation
             for m in 0..self.npoint {
-                fn_w(&mut w, index);
-                let w_dot_grad = self.vec_dot_grad(m, &w);
+                fn_w(aux_w, index);
+                let w_dot_grad = self.vec_dot_grad(m, aux_w);
                 c[m] += w_dot_grad * det_jac * weight;
             }
         }
@@ -354,41 +375,66 @@ impl Shape {
     /// The numerical integration is:
     ///
     /// ```text
-    /// →   nip-1   →     →  →       →
-    /// dᵐ ≈  Σ   σ(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
-    ///      p=0  ▔
+    /// →    nip-1    →     →  →       →
+    /// dᵐ ≈   Σ    σ(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
+    ///       p=0   ▔
     /// ```
+    ///
+    /// # Output
+    ///
+    /// ```text
+    ///     ┌     ┐
+    ///     | d⁰₀ |
+    ///     | d⁰₁ |
+    ///     | d¹₀ |
+    /// d = | d¹₁ |
+    ///     | d²₀ |
+    ///     | d²₁ |
+    ///     | ··· |
+    ///     | dᵐᵢ |  ⟸  ii := i + m * space_ndim
+    ///     └     ┘
+    ///
+    /// m = ii ÷ space_ndim
+    /// i = ii % space_ndim
+    /// ```
+    ///
+    /// * `d` -- A vector containing all `dᵐᵢ` values, one after another, and sequentially placed
+    ///          as shown above (in 2D). `m` is the index of the point and `i` corresponds to `space_ndim`.
+    ///          The length of `d` must be equal to `npoint * space_ndim`.
     ///
     /// # Input
     ///
     /// * `fn_sig(sig: &mut Tensor2, index: usize)` -- σ(x(ξ)) tensor function, however written as
     ///                                                a function of the index of the integration point.
+    /// * `aux_sig` -- is an auxiliary Tensor2.
+    /// * `aux_vec` -- is an auxiliary Vector with size equal to `space_ndim`.
     ///
-    /// # Output
-    ///
-    /// * `d` -- (npoint) dᵐ vectors; result from the integration
-    pub fn integ_case_d<F>(&mut self, d: &mut Vec<Vector>, fn_sig: F) -> Result<(), StrError>
+    pub fn integ_case_d<F>(
+        &mut self,
+        d: &mut Vector,
+        fn_sig: F,
+        aux_sig: &mut Tensor2,
+        aux_vec: &mut Vector,
+    ) -> Result<(), StrError>
     where
         F: Fn(&mut Tensor2, usize),
     {
         // check
-        if d.len() != self.npoint {
-            return Err("b.len() must equal npoint");
+        if self.space_ndim == 1 {
+            return Err("space_ndim must be 2 or 3");
+        }
+        if d.dim() != self.npoint * self.space_ndim {
+            return Err("the length of vector 'd' must be equal to npoint * space_ndim");
+        }
+        if aux_sig.vec.dim() != 2 * self.space_ndim {
+            return Err("'aux_sig' must be symmetric in 2D (vec.dim = 4) or 3D (vec.dim = 6)");
+        }
+        if aux_vec.dim() != self.space_ndim {
+            return Err("the length of vector 'aux_vec' must be equal to space_ndim");
         }
 
-        // check dims and clear results
-        for m in 0..self.npoint {
-            if d[m].dim() != self.space_ndim {
-                return Err("d[m].dim() must equal space_ndim");
-            }
-            d[m].fill(0.0);
-        }
-
-        // auxiliary tensor holding the output of fn_sig
-        let mut sig = Tensor2::new(true);
-
-        // auxiliary vector equal to σ · G
-        let mut sig_dot_grad = vec![0.0; self.space_ndim];
+        // clear output vector
+        d.fill(0.0);
 
         // loop over integration points
         for index in 0..self.ip_data.len() {
@@ -401,10 +447,12 @@ impl Shape {
 
             // loop over points and perform summation
             for m in 0..self.npoint {
-                fn_sig(&mut sig, index);
-                self.tensor_dot_grad(&mut sig_dot_grad, m, &sig);
+                fn_sig(aux_sig, index);
+                // aux_vec := σ · G
+                self.tensor_dot_grad(aux_vec, m, &aux_sig);
                 for i in 0..self.space_ndim {
-                    d[m][i] += sig_dot_grad[i] * det_jac * weight;
+                    let ii = i + m * self.space_ndim;
+                    d[ii] += aux_vec[i] * det_jac * weight;
                 }
             }
         }
@@ -421,7 +469,7 @@ impl Shape {
     }
 
     /// Computes tensor dot the gradient at point m
-    fn tensor_dot_grad(&self, res: &mut [f64], m: usize, sig: &Tensor2) {
+    fn tensor_dot_grad(&self, res: &mut Vector, m: usize, sig: &Tensor2) {
         for i in 0..self.space_ndim {
             res[i] = 0.0;
             for j in 0..self.space_ndim {
