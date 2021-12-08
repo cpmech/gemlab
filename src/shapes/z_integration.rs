@@ -668,4 +668,40 @@ mod tests {
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
+
+    #[test]
+    fn integ_case_d_works() -> Result<(), StrError> {
+        // shape and analytical gradient
+        let (mut tri3, area) = gen_tri3();
+        let ana = analytical_tri3(area, &mut tri3);
+
+        // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
+        // solution:
+        //    dᵐ₀ = ½ (σ₀₀ bₘ + σ₀₁ cₘ)
+        //    dᵐ₁ = ½ (σ₁₀ bₘ + σ₁₁ cₘ)
+        const S00: f64 = 2.0;
+        const S11: f64 = 3.0;
+        const S22: f64 = 4.0;
+        const S01: f64 = 5.0;
+        let fn_sig = |sig: &mut Tensor2, _: usize| {
+            sig.sym_set(0, 0, S00);
+            sig.sym_set(1, 1, S11);
+            sig.sym_set(2, 2, S22);
+            sig.sym_set(0, 1, S01);
+        };
+        let d_correct = &[
+            (S00 * ana.b[0] + S01 * ana.c[0]) / 2.0,
+            (S01 * ana.b[0] + S11 * ana.c[0]) / 2.0,
+            (S00 * ana.b[1] + S01 * ana.c[1]) / 2.0,
+            (S01 * ana.b[1] + S11 * ana.c[1]) / 2.0,
+            (S00 * ana.b[2] + S01 * ana.c[2]) / 2.0,
+            (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
+        ];
+        let mut d = Vector::filled(tri3.npoint * tri3.space_ndim, NOISE);
+        let mut aux_sig = Tensor2::new(true, true);
+        let mut aux_vec = Vector::new(tri3.space_ndim);
+        tri3.integ_case_d(&mut d, fn_sig, &mut aux_sig, &mut aux_vec)?;
+        assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
+        Ok(())
+    }
 }
