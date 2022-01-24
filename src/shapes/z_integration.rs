@@ -459,6 +459,21 @@ impl Shape {
         Ok(())
     }
 
+    /// Computes the Nᵐ s Nⁿ integral
+    ///
+    /// ```text
+    /// →    ⌠   →    →  → →   →
+    /// dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
+    ///      ⌡ ▔
+    ///      Ω
+    /// ```
+    pub fn integ_mat_nsn() {}
+    pub fn integ_mat_gvn() {}
+    pub fn integ_mat_gtg() {}
+    pub fn integ_mat_ntn() {}
+    pub fn integ_mat_nvg() {}
+    pub fn integ_mat_gdg() {}
+
     /// Computes vector dot the gradient at point m
     fn vec_dot_grad(&self, m: usize, w: &Vector) -> f64 {
         let mut res = 0.0;
