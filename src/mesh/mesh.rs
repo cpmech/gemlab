@@ -13,8 +13,11 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 
-/// Aliases usize as the index (==id) of Point and Cell
-pub type Index = usize;
+/// Aliases usize as Point ID
+pub type PointId = usize;
+
+/// Aliases usize as Cell ID
+pub type CellId = usize;
 
 /// Aliases (usize,usize) as the key of Edge
 pub type EdgeKey = (usize, usize);
@@ -31,7 +34,7 @@ pub struct Point {
     /// Identification number which equals the index of the point in the mesh
     ///
     /// **raw data**
-    pub id: Index,
+    pub id: PointId,
 
     /// Point coordinates (2D or 3D)
     ///
@@ -55,7 +58,7 @@ pub struct Cell {
     /// Identification number which equals the index of the cell in the mesh
     ///
     /// **raw data**
-    pub id: Index,
+    pub id: CellId,
 
     /// Attribute identification number
     ///
@@ -73,19 +76,19 @@ pub struct Cell {
     /// List of points defining this cell; in the right order (unsorted)
     ///
     /// **raw data**
-    pub points: Vec<Index>,
+    pub points: Vec<PointId>,
 }
 
 /// Holds edge data (derived data structure)
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
     /// List of points defining this edge; in the right order (unsorted)
-    pub points: Vec<Index>,
+    pub points: Vec<PointId>,
 
     /// Set of 2D cells sharing this edge (to find the boundary)
     ///
     /// **2D mesh only**
-    pub shared_by_2d_cells: HashSet<Index>,
+    pub shared_by_2d_cells: HashSet<CellId>,
 
     /// Set of boundary faces sharing this edge
     pub shared_by_boundary_faces: HashSet<FaceKey>,
@@ -95,10 +98,10 @@ pub struct Edge {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Face {
     /// List of points defining this face; in the right order (unsorted)
-    pub points: Vec<Index>,
+    pub points: Vec<PointId>,
 
     /// Set of cells sharing this face
-    pub shared_by_cells: HashSet<Index>,
+    pub shared_by_cells: HashSet<CellId>,
 }
 
 /// Holds mesh data
@@ -127,7 +130,7 @@ pub struct Mesh {
     /// Note: a boundary point belongs to a boundary edge or a boundary face
     ///
     /// (derived property)
-    pub boundary_points: HashSet<Index>,
+    pub boundary_points: HashSet<PointId>,
 
     /// Set of edges on the boundaries
     ///
@@ -148,7 +151,7 @@ pub struct Mesh {
     /// Collects all boundary point groups
     ///
     /// (derived property)
-    pub groups_boundary_points: HashMap<Group, HashSet<Index>>,
+    pub groups_boundary_points: HashMap<Group, HashSet<PointId>>,
 
     /// Collects all boundary edge groups
     ///
@@ -370,7 +373,7 @@ impl Mesh {
         Ok(self)
     }
 
-    pub fn get_boundary_point_ids_sorted(&self, group: &str) -> Vec<Index> {
+    pub fn get_boundary_point_ids_sorted(&self, group: &str) -> Vec<PointId> {
         if let Some(points) = self.groups_boundary_points.get(group) {
             let mut ids: Vec<_> = points.iter().map(|id| *id).collect();
             ids.sort();
@@ -404,12 +407,12 @@ impl Mesh {
     // ======================================================================================================
 
     /// Finds points in the mesh
-    fn find_points(&mut self, at: &At) -> Result<HashSet<Index>, StrError> {
+    fn find_points(&mut self, at: &At) -> Result<HashSet<PointId>, StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
 
-        let mut points: HashSet<Index> = HashSet::new();
+        let mut points: HashSet<PointId> = HashSet::new();
         match at {
             At::X(x) => {
                 if self.space_ndim == 2 {

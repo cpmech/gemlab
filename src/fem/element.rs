@@ -1,4 +1,4 @@
-use super::{ElementSolid, SystemDofs};
+use super::{ElementSolid, EquationNumbers};
 use crate::mesh::Mesh;
 use crate::StrError;
 use russell_lab::Vector;
@@ -20,7 +20,7 @@ pub enum ElementKind {
 }
 
 pub trait Element {
-    fn assign_dofs(&self, dofs: &mut SystemDofs);
+    fn activate_equation_numbers(&self, equation_numbers: &mut EquationNumbers);
 
     fn get_nnz(&self) -> usize;
 

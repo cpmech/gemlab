@@ -1,13 +1,17 @@
-use super::{Dof, Element, SystemDofs};
+use super::Element;
+use crate::fem::{DOF_UX, DOF_UY, DOF_UZ};
 use crate::mesh::Mesh;
 use crate::shapes::Shape;
 use crate::StrError;
 use russell_lab::Vector;
 use russell_sparse::SparseTriplet;
 
+#[allow(dead_code)]
+
 pub struct ElementSolid {
     shape: Shape,
     point_ids: Vec<usize>,
+    dof_indices: Vec<usize>,
 }
 
 impl ElementSolid {
@@ -23,21 +27,20 @@ impl ElementSolid {
         Ok(ElementSolid {
             shape,
             point_ids: cell.points.clone(),
+            dof_indices: if space_ndim == 2 {
+                vec![DOF_UX, DOF_UY]
+            } else {
+                vec![DOF_UX, DOF_UY, DOF_UZ]
+            },
         })
     }
 }
 
 impl Element for ElementSolid {
-    fn assign_dofs(&self, dofs: &mut SystemDofs) {
-        let dof_per_point = if self.shape.space_ndim == 2 {
-            vec![Dof::Ux, Dof::Uy]
-        } else {
-            vec![Dof::Ux, Dof::Uy, Dof::Uz]
-        };
-        let npoint = self.shape.npoint;
-        for m in 0..npoint {
-            for dof in &dof_per_point {
-                dofs.update(self.point_ids[m], *dof);
+    fn activate_equation_numbers(&self, equation_numbers: &mut super::EquationNumbers) {
+        for point_id in &self.point_ids {
+            for dof_index in &self.dof_indices {
+                equation_numbers.activate_equation(*point_id, *dof_index);
             }
         }
     }

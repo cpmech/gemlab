@@ -1,4 +1,4 @@
-use super::{new_element, Attribute, Bc, Dof, EdgeBc, Element, FnTimeSpace, PointBc, SystemDofs};
+use super::{new_element, Attribute, Bc, DofIndex, EdgeBc, Element, EquationNumbers, FnTimeSpace, PointBc};
 use crate::mesh::Mesh;
 use crate::StrError;
 use russell_lab::Vector;
@@ -12,48 +12,48 @@ pub struct Simulation {
     edge_bcs: Vec<EdgeBc>,
     attributes: HashMap<usize, Attribute>,
     elements: Vec<Box<dyn Element>>,
-    system_dofs: SystemDofs,
-    system_kk: SparseTriplet,
+    equation_numbers: EquationNumbers,
     system_uu: Vector,
     system_ff: Vector,
 }
 
 impl Simulation {
     pub fn new(mesh: Mesh) -> Result<Self, StrError> {
+        let npoint = mesh.points.len();
         Ok(Simulation {
             mesh,
             point_bcs: Vec::new(),
             edge_bcs: Vec::new(),
             attributes: HashMap::new(),
             elements: Vec::new(),
-            system_dofs: SystemDofs::new(),
-            system_kk: SparseTriplet::new(0, 0, 0, Symmetry::No)?,
+            equation_numbers: EquationNumbers::new(npoint),
+            // system_kk: SparseTriplet::new(0, 0, 0, Symmetry::No)?,
             system_uu: Vector::new(0),
             system_ff: Vector::new(0),
         })
     }
 
-    pub fn add_point_bc(&mut self, group: &str, bc: Bc, dof: Dof, f: FnTimeSpace) -> &mut Self {
+    pub fn add_point_bc(&mut self, group: &str, condition: Bc, dof_index: DofIndex, f: FnTimeSpace) -> &mut Self {
         let ids = self.mesh.get_boundary_point_ids_sorted(group);
-        for id in ids {
+        for point_id in ids {
             self.point_bcs.push(PointBc {
-                bc,
-                dof,
+                point_id,
+                dof_index,
+                condition,
                 f,
-                point_id: id,
             });
         }
         self
     }
 
-    pub fn add_edge_bc(&mut self, group: &str, bc: Bc, dof: Dof, f: FnTimeSpace) -> &mut Self {
+    pub fn add_edge_bc(&mut self, group: &str, condition: Bc, dof_index: DofIndex, f: FnTimeSpace) -> &mut Self {
         let keys = self.mesh.get_boundary_edge_keys_sorted(group);
-        for key in keys {
+        for edge_key in keys {
             self.edge_bcs.push(EdgeBc {
-                bc,
-                dof,
+                edge_key,
+                dof_index,
+                condition,
                 f,
-                edge_key: key,
             });
         }
         self
@@ -74,7 +74,7 @@ impl Simulation {
                         continue;
                     }
                     let element = new_element(attribute.kind, &self.mesh, cell.id)?;
-                    element.assign_dofs(&mut self.system_dofs);
+                    element.activate_equation_numbers(&mut self.equation_numbers);
                     nnz += element.get_nnz();
                     self.elements.push(element);
                 }
@@ -83,9 +83,10 @@ impl Simulation {
         }
 
         // allocate system vector and matrix
-        let nequation = self.system_dofs.get_number_of_equations();
-        self.system_ff = Vector::new(nequation);
-        self.system_kk = SparseTriplet::new(nequation, nequation, nnz, Symmetry::No)?;
+        // let nequation = self.system_dofs.get_number_of_equations();
+        let neq = self.equation_numbers.get_number_of_equations();
+        self.system_ff = Vector::new(neq);
+        // self.system_kk = SparseTriplet::new(neq, neq, nnz, Symmetry::No)?;
         Ok(())
     }
 
@@ -99,7 +100,7 @@ impl Simulation {
 
         // add element Ke matrix to global K matrix (must be serial)
         for element in &self.elements {
-            element.add_ke_to_kk(&mut self.system_kk)?;
+            // element.add_ke_to_kk(&mut self.system_kk)?;
         }
 
         // add element Fe vector to global F vector (must be serial)
@@ -113,13 +114,13 @@ impl Simulation {
                 Some(e) => e,
                 None => return Err("cannot find boundary edge"),
             };
-            match item.bc {
+            match item.condition {
                 Bc::Essential => {
                     for point_id in &edge.points {
                         let x = &self.mesh.points[*point_id].coords;
                         let val = (item.f)(time, x);
-                        let eq = self.system_dofs.get_equation(*point_id, item.dof)?;
-                        self.system_kk.put(eq, eq, 1.0);
+                        let eq = self.equation_numbers.get_equation_number(*point_id, item.dof_index)?;
+                        // self.system_kk.put(eq, eq, 1.0);
                         self.system_uu[eq] = val;
                         self.system_ff[eq] = val;
                     }
@@ -134,10 +135,12 @@ impl Simulation {
         for item in &self.point_bcs {
             let x = &self.mesh.points[item.point_id].coords;
             let val = (item.f)(time, x);
-            let eq = self.system_dofs.get_equation(item.point_id, item.dof)?;
-            match item.bc {
+            let eq = self
+                .equation_numbers
+                .get_equation_number(item.point_id, item.dof_index)?;
+            match item.condition {
                 Bc::Essential => {
-                    self.system_kk.put(eq, eq, 1.0);
+                    // self.system_kk.put(eq, eq, 1.0);
                     self.system_uu[eq] = val;
                     self.system_ff[eq] = val;
                 }
@@ -150,7 +153,7 @@ impl Simulation {
         // solve system
         let config = ConfigSolver::new();
         let mut solver = Solver::new(config)?;
-        solver.initialize(&self.system_kk)?;
+        // solver.initialize(&self.system_kk)?;
         solver.factorize()?;
         solver.solve(&mut self.system_uu, &self.system_ff)?;
 
@@ -161,7 +164,7 @@ impl Simulation {
 impl fmt::Display for Simulation {
     /// Prints the simulation data (may be large)
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "system_dofs:\n{}", self.system_dofs).unwrap();
+        write!(f, "equation numbers:\n{}", self.equation_numbers).unwrap();
         Ok(())
     }
 }
@@ -171,7 +174,7 @@ impl fmt::Display for Simulation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fem::ElementKind;
+    use crate::fem::{ElementKind, DOF_UX, DOF_UY};
     use crate::mesh::At;
 
     #[test]
@@ -210,11 +213,11 @@ mod tests {
         let mut sim = Simulation::new(mesh)?;
 
         // add boundary conditions
-        sim.add_point_bc("origin", Bc::Essential, Dof::Ux, |_, _| 0.0)
-            .add_point_bc("origin", Bc::Essential, Dof::Uy, |_, _| 0.0)
-            .add_edge_bc("left", Bc::Essential, Dof::Ux, |_, _| 0.0)
-            .add_edge_bc("right", Bc::Essential, Dof::Ux, |_, _| 0.0)
-            .add_edge_bc("bottom", Bc::Essential, Dof::Uy, |_, _| 0.0);
+        sim.add_point_bc("origin", Bc::Essential, DOF_UX, |_, _| 0.0)
+            .add_point_bc("origin", Bc::Essential, DOF_UY, |_, _| 0.0)
+            .add_edge_bc("left", Bc::Essential, DOF_UX, |_, _| 0.0)
+            .add_edge_bc("right", Bc::Essential, DOF_UX, |_, _| 0.0)
+            .add_edge_bc("bottom", Bc::Essential, DOF_UY, |_, _| 0.0);
 
         // define attributes
         let mut att0 = Attribute::new(ElementKind::Solid);
@@ -229,7 +232,7 @@ mod tests {
         sim.initialize()?;
 
         // run simulation
-        sim.run()?;
+        // sim.run()?;
 
         println!("{}", sim);
 
