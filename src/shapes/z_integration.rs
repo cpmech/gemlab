@@ -1,8 +1,9 @@
 use super::*;
 use crate::shapes::{GeoClass, Shape};
+use crate::util::SQRT_2;
 use crate::StrError;
-use russell_lab::Vector;
-use russell_tensor::Tensor2;
+use russell_lab::{Matrix, Vector};
+use russell_tensor::{Tensor2, Tensor4};
 
 impl Shape {
     /// Selects integrations points and weights
@@ -196,9 +197,12 @@ impl Shape {
             self.calc_interp(iota);
             let det_jac = self.calc_jacobian(iota)?;
 
+            // calculate s
+            let s = fn_s(index);
+
             // loop over points and perform summation
             for m in 0..self.npoint {
-                a[m] += self.interp[m] * fn_s(index) * det_jac * weight;
+                a[m] += self.interp[m] * s * det_jac * weight;
             }
         }
         Ok(())
@@ -237,7 +241,7 @@ impl Shape {
     ///     | bᵐᵢ |  ⟸  ii := i + m * space_ndim
     ///     └     ┘       
     ///
-    /// m = ii ÷ space_ndim
+    /// m = ii / space_ndim
     /// i = ii % space_ndim
     /// ```
     ///
@@ -275,9 +279,11 @@ impl Shape {
             self.calc_interp(iota);
             let det_jac = self.calc_jacobian(iota)?;
 
+            // calculate v
+            fn_v(aux_v, index);
+
             // loop over points and perform summation
             for m in 0..self.npoint {
-                fn_v(aux_v, index);
                 for i in 0..self.space_ndim {
                     let ii = i + m * self.space_ndim;
                     b[ii] += self.interp[m] * aux_v[i] * det_jac * weight;
@@ -351,9 +357,11 @@ impl Shape {
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(iota)?;
 
+            // calculate w
+            fn_w(aux_w, index);
+
             // loop over points and perform summation
             for m in 0..self.npoint {
-                fn_w(aux_w, index);
                 let w_dot_grad = self.vec_dot_grad(m, aux_w);
                 c[m] += w_dot_grad * det_jac * weight;
             }
@@ -394,7 +402,7 @@ impl Shape {
     ///     | dᵐᵢ |  ⟸  ii := i + m * space_ndim
     ///     └     ┘
     ///
-    /// m = ii ÷ space_ndim
+    /// m = ii / space_ndim
     /// i = ii % space_ndim
     /// ```
     ///
@@ -408,7 +416,6 @@ impl Shape {
     ///                                                a function of the index of the integration point.
     /// * `aux_sig` -- is an auxiliary Tensor2.
     /// * `aux_vec` -- is an auxiliary Vector with size equal to `space_ndim`.
-    ///
     pub fn integ_case_d<F>(
         &mut self,
         d: &mut Vector,
@@ -427,7 +434,7 @@ impl Shape {
             return Err("the length of vector 'd' must be equal to npoint * space_ndim");
         }
         if aux_sig.vec.dim() != 2 * self.space_ndim {
-            return Err("'aux_sig' must be symmetric in 2D (vec.dim = 4) or 3D (vec.dim = 6)");
+            return Err("'aux_sig' must be symmetric with dim equal to 4 in 2D or 6 in 3D");
         }
         if aux_vec.dim() != self.space_ndim {
             return Err("the length of vector 'aux_vec' must be equal to space_ndim");
@@ -445,9 +452,11 @@ impl Shape {
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(iota)?;
 
+            // calculate σ
+            fn_sig(aux_sig, index);
+
             // loop over points and perform summation
             for m in 0..self.npoint {
-                fn_sig(aux_sig, index);
                 // aux_vec := σ · G
                 self.tensor_dot_grad(aux_vec, m, &aux_sig);
                 for i in 0..self.space_ndim {
@@ -472,7 +481,101 @@ impl Shape {
     pub fn integ_mat_gtg() {}
     pub fn integ_mat_ntn() {}
     pub fn integ_mat_nvg() {}
-    pub fn integ_mat_gdg() {}
+
+    /// Computes the Gᵐₖ Dᵢₖⱼₗ Gⁿₗ integral (stiffness)
+    ///
+    /// Stiffness tensors:
+    ///
+    /// ```text
+    ///       ⌠               →    →
+    /// Kᵐⁿ = │ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
+    /// ▔     ⌡
+    ///       Ωₑ
+    /// ```
+    ///
+    /// The numerical integration is:
+    ///
+    /// ```text
+    ///         nip-1     →         →       →       →
+    /// Kᵐⁿᵢⱼ ≈   Σ   Gᵐₖ(ιᵖ) Dᵢₖⱼₗ(ιᵖ) Gⁿₗ(ιᵖ) |J|(ιᵖ) wᵖ
+    ///          p=0
+    /// ```
+    ///
+    /// # Output
+    ///
+    /// ```text
+    ///     ┌                                               ┐
+    ///     | K⁰⁰₀₀ K⁰⁰₀₁ K⁰¹₀₀ K⁰¹₀₁ K⁰²₀₀ K⁰²₀₁ ··· K⁰ⁿ₀ⱼ |
+    ///     | K⁰⁰₁₀ K⁰⁰₁₁ K⁰¹₁₀ K⁰¹₁₁ K⁰²₁₀ K⁰²₁₁ ··· K⁰ⁿ₁ⱼ |
+    ///     | K¹⁰₀₀ K¹⁰₀₁ K¹¹₀₀ K¹¹₀₁ K¹²₀₀ K¹²₀₁ ··· K¹ⁿ₀ⱼ |
+    /// K = | K¹⁰₁₀ K¹⁰₁₁ K¹¹₁₀ K¹¹₁₁ K¹²₁₀ K¹²₁₁ ··· K¹ⁿ₁ⱼ |
+    ///     | K²⁰₀₀ K²⁰₀₁ K²¹₀₀ K²¹₀₁ K²²₀₀ K²²₀₁ ··· K²ⁿ₀ⱼ |
+    ///     | K²⁰₁₀ K²⁰₁₁ K²¹₁₀ K²¹₁₁ K²²₁₀ K²²₁₁ ··· K²ⁿ₁ⱼ |
+    ///     |  ···   ···   ···   ···   ···   ···  ···  ···  |
+    ///     | Kᵐ⁰ᵢ₀ Kᵐ⁰ᵢ₁ Kᵐ¹ᵢ₀ Kᵐ¹ᵢ₁ Kᵐ²ᵢ₀ Kᵐ²ᵢ₁ ··· Kᵐⁿᵢⱼ |  ⟸  ii := i + m * space_ndim
+    ///     └                                               ┘
+    ///                                                 ⇑
+    ///                                                 jj := j + n * space_ndim
+    ///
+    /// m = ii / space_ndim    n = jj / space_ndim
+    /// i = ii % space_ndim    j = jj % space_ndim
+    /// ```
+    ///
+    /// * `kk` -- A matrix containing all `Kᵐⁿᵢⱼ` values, one after another, and sequentially placed
+    ///           as shown above (in 2D). `m` and `n` are the indices of the point and `i` and `j`
+    ///           correspond to `space_ndim`. The dimension of `K` must be equal to
+    ///           (`npoint * space_ndim`, `npoint * space_ndim`).
+    ///
+    /// # Input
+    ///
+    /// * `fn_dd(dd: &mut Tensor4, index: usize)` -- D(x(ξ)) constitutive modulus function, given as
+    ///                                              a function of the index of the integration point.
+    /// * `aux_dd` -- is an auxiliary Tensor4 (minor-symmetric in 2D or 3D with 4 or 6 components, respectively).
+    /// * `thickness` -- thickness of the 2D domain (e.g., for plane-stress problems).
+    pub fn integ_mat_gdg<F>(
+        &mut self,
+        kk: &mut Matrix,
+        fn_dd: F,
+        aux_dd: &mut Tensor4,
+        thickness: f64,
+    ) -> Result<(), StrError>
+    where
+        F: Fn(&mut Tensor4, usize),
+    {
+        // check
+        let (nrow_kk, ncol_kk) = kk.dims();
+        let (nrow_dd, ncol_dd) = aux_dd.mat.dims();
+        if self.space_ndim == 1 {
+            return Err("space_ndim must be 2 or 3");
+        }
+        if nrow_kk != ncol_kk || nrow_kk != self.npoint * self.space_ndim {
+            return Err("'K' matrix must be square with dim equal to npoint * space_ndim");
+        }
+        if nrow_dd != ncol_dd || nrow_dd != 2 * self.space_ndim {
+            return Err("'D' tensor must be symmetric with dim equal to 4 in 2D or 6 in 3D");
+        }
+
+        // clear output matrix
+        kk.fill(0.0);
+
+        // loop over integration points
+        for index in 0..self.ip_data.len() {
+            // ksi coordinates and weight
+            let iota = &self.ip_data[index];
+            let weight = self.ip_data[index][3];
+
+            // calculate Jacobian and Gradient
+            let det_jac = self.calc_gradient(iota)?;
+
+            // calculate constitutive modulus
+            fn_dd(aux_dd, index);
+
+            // add contribution to K matrix
+            let c = det_jac * weight * thickness;
+            self.stiffness_contribution(kk, c, aux_dd);
+        }
+        Ok(())
+    }
 
     /// Computes vector dot the gradient at point m
     fn vec_dot_grad(&self, m: usize, w: &Vector) -> f64 {
@@ -489,6 +592,38 @@ impl Shape {
             res[i] = 0.0;
             for j in 0..self.space_ndim {
                 res[i] += sig.get(i, j) * self.gradient[m][j];
+            }
+        }
+    }
+
+    /// Computes the contribution to the stiffness matrix
+    #[rustfmt::skip]
+    fn stiffness_contribution(&self, kk: &mut Matrix, c: f64, dd: &Tensor4) {
+        let s = SQRT_2;
+        let g = &self.gradient;
+        let d = &dd.mat;
+        if self.space_ndim == 3 {
+            for m in 0..self.npoint {
+                for n in 0..self.npoint {
+                    kk[0+m*3][0+n*3] += c * (g[m][2]*g[n][2]*d[5][5] + g[m][2]*g[n][1]*d[5][3] + s*g[m][2]*g[n][0]*d[5][0] + g[m][1]*g[n][2]*d[3][5] + g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][2]*d[0][5] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
+                    kk[0+m*3][1+n*3] += c * (g[m][2]*g[n][2]*d[5][4] + g[m][2]*g[n][0]*d[5][3] + s*g[m][2]*g[n][1]*d[5][1] + g[m][1]*g[n][2]*d[3][4] + g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][2]*d[0][4] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
+                    kk[0+m*3][2+n*3] += c * (g[m][2]*g[n][0]*d[5][5] + g[m][2]*g[n][1]*d[5][4] + s*g[m][2]*g[n][2]*d[5][2] + g[m][1]*g[n][0]*d[3][5] + g[m][1]*g[n][1]*d[3][4] + s*g[m][1]*g[n][2]*d[3][2] + s*g[m][0]*g[n][0]*d[0][5] + s*g[m][0]*g[n][1]*d[0][4] + 2.0*g[m][0]*g[n][2]*d[0][2]) / 2.0;
+                    kk[1+m*3][0+n*3] += c * (g[m][2]*g[n][2]*d[4][5] + g[m][2]*g[n][1]*d[4][3] + s*g[m][2]*g[n][0]*d[4][0] + g[m][0]*g[n][2]*d[3][5] + g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][2]*d[1][5] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0;
+                    kk[1+m*3][1+n*3] += c * (g[m][2]*g[n][2]*d[4][4] + g[m][2]*g[n][0]*d[4][3] + s*g[m][2]*g[n][1]*d[4][1] + g[m][0]*g[n][2]*d[3][4] + g[m][0]*g[n][0]*d[3][3] + s*g[m][0]*g[n][1]*d[3][1] + s*g[m][1]*g[n][2]*d[1][4] + s*g[m][1]*g[n][0]*d[1][3] + 2.0*g[m][1]*g[n][1]*d[1][1]) / 2.0;
+                    kk[1+m*3][2+n*3] += c * (g[m][2]*g[n][0]*d[4][5] + g[m][2]*g[n][1]*d[4][4] + s*g[m][2]*g[n][2]*d[4][2] + g[m][0]*g[n][0]*d[3][5] + g[m][0]*g[n][1]*d[3][4] + s*g[m][0]*g[n][2]*d[3][2] + s*g[m][1]*g[n][0]*d[1][5] + s*g[m][1]*g[n][1]*d[1][4] + 2.0*g[m][1]*g[n][2]*d[1][2]) / 2.0;
+                    kk[2+m*3][0+n*3] += c * (g[m][0]*g[n][2]*d[5][5] + g[m][0]*g[n][1]*d[5][3] + s*g[m][0]*g[n][0]*d[5][0] + g[m][1]*g[n][2]*d[4][5] + g[m][1]*g[n][1]*d[4][3] + s*g[m][1]*g[n][0]*d[4][0] + s*g[m][2]*g[n][2]*d[2][5] + s*g[m][2]*g[n][1]*d[2][3] + 2.0*g[m][2]*g[n][0]*d[2][0]) / 2.0;
+                    kk[2+m*3][1+n*3] += c * (g[m][0]*g[n][2]*d[5][4] + g[m][0]*g[n][0]*d[5][3] + s*g[m][0]*g[n][1]*d[5][1] + g[m][1]*g[n][2]*d[4][4] + g[m][1]*g[n][0]*d[4][3] + s*g[m][1]*g[n][1]*d[4][1] + s*g[m][2]*g[n][2]*d[2][4] + s*g[m][2]*g[n][0]*d[2][3] + 2.0*g[m][2]*g[n][1]*d[2][1]) / 2.0;
+                    kk[2+m*3][2+n*3] += c * (g[m][0]*g[n][0]*d[5][5] + g[m][0]*g[n][1]*d[5][4] + s*g[m][0]*g[n][2]*d[5][2] + g[m][1]*g[n][0]*d[4][5] + g[m][1]*g[n][1]*d[4][4] + s*g[m][1]*g[n][2]*d[4][2] + s*g[m][2]*g[n][0]*d[2][5] + s*g[m][2]*g[n][1]*d[2][4] + 2.0*g[m][2]*g[n][2]*d[2][2]) / 2.0;
+                }
+            }
+        } else {
+            for m in 0..self.npoint {
+                for n in 0..self.npoint {
+                    kk[0+m*2][0+n*2] += c * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
+                    kk[0+m*2][1+n*2] += c * (g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
+                    kk[1+m*2][0+n*2] += c * (g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0;
+                    kk[1+m*2][1+n*2] += c * (g[m][0]*g[n][0]*d[3][3] + s*g[m][0]*g[n][1]*d[3][1] + s*g[m][1]*g[n][0]*d[1][3] + 2.0*g[m][1]*g[n][1]*d[1][1]) / 2.0;
+                }
             }
         }
     }
