@@ -1,10 +1,10 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a quadrilateral with 16 points (cubic edges; interior points)
+/// Defines a quadrilateral with 16 nodes (cubic edges; interior nodes)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 ///  3      10       6        2
@@ -39,15 +39,15 @@ pub struct Qua16 {}
 
 impl Qua16 {
     pub const NDIM: usize = 2;
-    pub const NPOINT: usize = 16;
+    pub const NNODE: usize = 16;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 4;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 4;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Qua16::EDGE_NPOINT]; Qua16::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Qua16::EDGE_NNODE]; Qua16::NEDGE] = [
         [0, 1, 4,  8],
         [1, 2, 5,  9],
         [2, 3, 6, 10],
@@ -55,7 +55,7 @@ impl Qua16 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Qua16::NDIM]; Qua16::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua16::NDIM]; Qua16::NNODE] = [
         [-1.0       , -1.0       ],
         [ 1.0       , -1.0       ],
         [ 1.0       ,  1.0       ],

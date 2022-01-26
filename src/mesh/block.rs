@@ -378,8 +378,8 @@ impl Block {
                     let cell_id = mesh.cells.len();
 
                     // for each point
-                    let mut points = vec![0; shape_out.npoint];
-                    for m in 0..shape_out.npoint {
+                    let mut points = vec![0; shape_out.nnode];
+                    for m in 0..shape_out.nnode {
                         // transform reference coords: scale and translate
                         // shape_out.get_reference_coords(&mut ksi_aug, m); // TODO
                         mat_vec_mul(&mut ksi, 1.0, &transform, &ksi_aug)?;
@@ -513,8 +513,8 @@ impl Block {
         for e in 0..shape_out.nedge {
             // check if at least two points of edge are on the boundary
             let mut npoint_on_boundary = 0;
-            for i in 0..shape_out.edge_npoint {
-                let local_point_id = shape_out.get_edge_point_id(e, i);
+            for i in 0..shape_out.edge_nnode {
+                let local_point_id = shape_out.get_edge_node_id(e, i);
                 let point_id = point_ids[local_point_id];
                 if mesh.boundary_points.contains(&point_id) {
                     npoint_on_boundary += 1;
@@ -530,9 +530,9 @@ impl Block {
             }
 
             // collect point ids
-            let mut points = vec![0; shape_out.edge_npoint];
-            for i in 0..shape_out.edge_npoint {
-                let local_point_id = self.shape.get_edge_point_id(e, i);
+            let mut points = vec![0; shape_out.edge_nnode];
+            for i in 0..shape_out.edge_nnode {
+                let local_point_id = self.shape.get_edge_node_id(e, i);
                 points[i] = point_ids[local_point_id];
             }
 
@@ -599,8 +599,8 @@ impl Block {
             // check if at least three edges of face are on the boundary
             let mut nedge_on_boundary = 0;
             for k in 0..shape_out.face_nedge {
-                let local_point_id_0 = shape_out.get_face_edge_point_id(f, k, 0);
-                let local_point_id_1 = shape_out.get_face_edge_point_id(f, k, 1);
+                let local_point_id_0 = shape_out.get_face_edge_node_id(f, k, 0);
+                let local_point_id_1 = shape_out.get_face_edge_node_id(f, k, 1);
                 let point_id_0 = point_ids[local_point_id_0];
                 let point_id_1 = point_ids[local_point_id_1];
                 let mut edge_key = (point_id_0, point_id_1);
@@ -619,9 +619,9 @@ impl Block {
             }
 
             // collect point ids
-            let mut points = vec![0; shape_out.face_npoint];
-            for i in 0..shape_out.face_npoint {
-                let local_point_id = self.shape.get_face_point_id(f, i);
+            let mut points = vec![0; shape_out.face_nnode];
+            for i in 0..shape_out.face_nnode {
+                let local_point_id = self.shape.get_face_node_id(f, i);
                 points[i] = point_ids[local_point_id];
             }
 
@@ -722,7 +722,7 @@ mod tests {
         assert_eq!(b2d.face_groups.len(), 0);
         assert_eq!(b2d.ndiv, &[2, 2]);
         assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(b2d.shape.npoint, 8);
+        assert_eq!(b2d.shape.nnode, 8);
 
         let b3d = Block::new(3)?;
         assert_eq!(b3d.attribute_id, 1);
@@ -763,7 +763,7 @@ mod tests {
         assert_eq!(b3d.face_groups, &[0, 0, 0, 0, 0, 0]);
         assert_eq!(b3d.ndiv, &[2, 2, 2]);
         assert_eq!(format!("{:?}", b3d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(b3d.shape.npoint, 20);
+        assert_eq!(b3d.shape.nnode, 20);
         Ok(())
     }
 

@@ -1,10 +1,10 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a quadrilateral with 8 points (quadratic edges)
+/// Defines a quadrilateral with 8 nodes (quadratic edges)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 /// 3-----6-----2
@@ -33,15 +33,15 @@ pub struct Qua8 {}
 
 impl Qua8 {
     pub const NDIM: usize = 2;
-    pub const NPOINT: usize = 8;
+    pub const NNODE: usize = 8;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 3;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 3;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Qua8::EDGE_NPOINT]; Qua8::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Qua8::EDGE_NNODE]; Qua8::NEDGE] = [
         [0, 1, 4],
         [1, 2, 5],
         [2, 3, 6],
@@ -49,7 +49,7 @@ impl Qua8 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Qua8::NDIM]; Qua8::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua8::NDIM]; Qua8::NNODE] = [
         [-1.0, -1.0],
         [ 1.0, -1.0],
         [ 1.0,  1.0],

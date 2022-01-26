@@ -1,10 +1,10 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a hexahedron with 20 points (quadratic faces)
+/// Defines a hexahedron with 20 nodes (quadratic faces)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 ///            4_______15_______7            r     s     t             r     s     t
@@ -47,8 +47,8 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of faces
 ///
-/// Note: the order of points is such that the right-hand rule generates outward normals.
-/// Also, the order of face points corresponds to Qua8 points.
+/// Note: the order of nodes is such that the right-hand rule generates outward normals.
+/// Also, the order of face nodes corresponds to Qua8 nodes.
 ///
 /// ```text
 ///           4-------15-------7
@@ -70,15 +70,15 @@ pub struct Hex20 {}
 
 impl Hex20 {
     pub const NDIM: usize = 3;
-    pub const NPOINT: usize = 20;
+    pub const NNODE: usize = 20;
     pub const NEDGE: usize = 12;
     pub const NFACE: usize = 6;
-    pub const EDGE_NPOINT: usize = 3;
-    pub const FACE_NPOINT: usize = 8;
+    pub const EDGE_NNODE: usize = 3;
+    pub const FACE_NNODE: usize = 8;
     pub const FACE_NEDGE: usize = 4;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Hex20::EDGE_NPOINT]; Hex20::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Hex20::EDGE_NNODE]; Hex20::NEDGE] = [
         [0, 1,  8],
         [1, 2,  9],
         [2, 3, 10],
@@ -94,7 +94,7 @@ impl Hex20 {
     ];
 
     #[rustfmt::skip]
-    pub const FACE_POINT_IDS: [[usize; Hex20::FACE_NPOINT]; Hex20::NFACE] = [
+    pub const FACE_NODE_IDS: [[usize; Hex20::FACE_NNODE]; Hex20::NFACE] = [
         [0, 4, 7, 3, 16, 15, 19, 11],
         [1, 2, 6, 5,  9, 18, 13, 17],
         [0, 1, 5, 4,  8, 17, 12, 16],
@@ -104,7 +104,7 @@ impl Hex20 {
     ];
 
     #[rustfmt::skip]
-    pub const FACE_EDGE_POINT_IDS: [[[usize; Hex20::EDGE_NPOINT]; Hex20::FACE_NEDGE]; Hex20::NFACE] = [
+    pub const FACE_EDGE_NODE_IDS: [[[usize; Hex20::EDGE_NNODE]; Hex20::FACE_NEDGE]; Hex20::NFACE] = [
         [[0, 4, 16], [4, 7, 15], [7, 3, 19], [3, 0, 11]],
         [[1, 2,  9], [2, 6, 18], [6, 5, 13], [5, 1, 17]],
         [[0, 1,  8], [1, 5, 17], [5, 4, 12], [4, 0, 16]],
@@ -114,7 +114,7 @@ impl Hex20 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Hex20::NDIM]; Hex20::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Hex20::NDIM]; Hex20::NNODE] = [
         [-1.0, -1.0, -1.0],
         [ 1.0, -1.0, -1.0],
         [ 1.0,  1.0, -1.0],

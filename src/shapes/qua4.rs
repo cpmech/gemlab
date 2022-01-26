@@ -1,10 +1,10 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a quadrilateral with 4 points (linear edges)
+/// Defines a quadrilateral with 4 nodes (linear edges)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 /// 3-----------2
@@ -33,15 +33,15 @@ pub struct Qua4 {}
 
 impl Qua4 {
     pub const NDIM: usize = 2;
-    pub const NPOINT: usize = 4;
+    pub const NNODE: usize = 4;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 2;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 2;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Qua4::EDGE_NPOINT]; Qua4::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Qua4::EDGE_NNODE]; Qua4::NEDGE] = [
         [0, 1],
         [1, 2],
         [2, 3],
@@ -49,7 +49,7 @@ impl Qua4 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Qua4::NDIM]; Qua4::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua4::NDIM]; Qua4::NNODE] = [
         [-1.0, -1.0],
         [ 1.0, -1.0],
         [ 1.0,  1.0],

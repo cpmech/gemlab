@@ -24,58 +24,58 @@ pub enum GeoClass {
 /// Defines the kind of geometric shape
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GeoKind {
-    /// Line (segment) with 2 points (linear functions)
+    /// Line (segment) with 2 nodes (linear functions)
     Lin2,
 
-    /// Line (segment) with 3 points (quadratic functions)
+    /// Line (segment) with 3 nodes (quadratic functions)
     Lin3,
 
-    /// Line (segment) with 4 points (cubic functions)
+    /// Line (segment) with 4 nodes (cubic functions)
     Lin4,
 
-    /// Line (segment) with 5 points (quartic functions)
+    /// Line (segment) with 5 nodes (quartic functions)
     Lin5,
 
-    /// Triangle with 3 points (linear edges)
+    /// Triangle with 3 nodes (linear edges)
     Tri3,
 
-    /// Triangle with 6 points (quadratic edges)
+    /// Triangle with 6 nodes (quadratic edges)
     Tri6,
 
-    /// Triangle with 10 points (cubic edges; interior points)
+    /// Triangle with 10 nodes (cubic edges; interior node)
     Tri10,
 
-    /// Triangle with 15 points (quartic edges; interior points)
+    /// Triangle with 15 nodes (quartic edges; interior nodes)
     Tri15,
 
-    /// Quadrilateral with 4 points (linear edges)
+    /// Quadrilateral with 4 nodes (linear edges)
     Qua4,
 
-    /// Quadrilateral with 8 points (quadratic edges)
+    /// Quadrilateral with 8 nodes (quadratic edges)
     Qua8,
 
-    /// Quadrilateral with 9 points (quadratic edges; interior point)
+    /// Quadrilateral with 9 nodes (quadratic edges; interior node)
     Qua9,
 
-    /// Quadrilateral with 12 points (cubic edges)
+    /// Quadrilateral with 12 nodes (cubic edges)
     Qua12,
 
-    /// Quadrilateral with 16 points (cubic edges; interior points)
+    /// Quadrilateral with 16 nodes (cubic edges; interior nodes)
     Qua16,
 
-    /// Quadrilateral with 17 points (quartic edges; interior point)
+    /// Quadrilateral with 17 nodes (quartic edges; interior node)
     Qua17,
 
-    /// Tetrahedron with 4 points (linear faces)
+    /// Tetrahedron with 4 nodes (linear faces)
     Tet4,
 
-    /// Tetrahedron with 10 points (quadratic faces)
+    /// Tetrahedron with 10 nodes (quadratic faces)
     Tet10,
 
-    /// Hexahedron with 8 points (bilinear faces)
+    /// Hexahedron with 8 nodes (bilinear faces)
     Hex8,
 
-    /// Hexahedron with 20 points (quadratic faces)
+    /// Hexahedron with 20 nodes (quadratic faces)
     Hex20,
 }
 
@@ -102,11 +102,11 @@ pub type IpData = &'static [[f64; 4]];
 ///
 /// We also consider the following counting variables:
 ///
-/// * `npoint` -- number of points
+/// * `nnode` -- number of points that define the shape (number of nodes)
 /// * `nedge` -- number of edges
 /// * `nface` -- number of faces
-/// * `edge_npoint` -- edge's number of points
-/// * `face_npoint` -- face's number of points
+/// * `edge_nnode` -- number of points that define the edge (number of nodes)
+/// * `face_nnode` -- number of points that define the face (number of nodes)
 /// * `face_nedge` -- face's number of edges
 ///
 /// When performing numerical integrations, we use the following notation:
@@ -126,17 +126,17 @@ pub type IpData = &'static [[f64; 4]];
 /// ```
 ///
 /// where `x` is the (space_ndim) vector of real coordinates, `ξ` is the (geo_ndim)
-/// vector of reference coordinates, `Nm` are the (npoint) interpolation functions,
-/// and `xm` are the (npoint) coordinates of each m-point of the geometric shape.
+/// vector of reference coordinates, `Nm` are the (nnode) interpolation functions,
+/// and `xm` are the (nnode) coordinates of each m-node of the geometric shape.
 ///
-/// Given an (npoint,space_ndim) matrix of coordinates X, we can calculate the
+/// Given an (nnode,space_ndim) matrix of coordinates X, we can calculate the
 /// (space_ndim) vector of coordinates x by means of
 ///
 /// ```text
 /// x = Xᵀ ⋅ N
 /// ```
 ///
-/// where `N` is an (npoint) array formed with all `Nm`.
+/// where `N` is an (nnode) array formed with all `Nm`.
 ///
 /// # General case (geo_ndim == space_ndim)
 ///
@@ -162,7 +162,7 @@ pub type IpData = &'static [[f64; 4]];
 ///
 /// are the derivatives of each interpolation function `Nm` with respect to the
 /// reference coordinate. `Lm` are (geo_ndim) vectors and can be organized in
-/// an (npoint,geo_ndim) matrix `L` of "local" derivatives.
+/// an (nnode,geo_ndim) matrix `L` of "local" derivatives.
 ///
 /// We can write the Jacobian in matrix notation as follows
 ///
@@ -170,7 +170,7 @@ pub type IpData = &'static [[f64; 4]];
 /// J = Xᵀ · L
 /// ```
 ///
-/// where X is the (npoint,space_ndim) matrix of coordinates and L is the (npoint,geo_ndim) matrix.
+/// where X is the (nnode,space_ndim) matrix of coordinates and L is the (nnode,geo_ndim) matrix.
 ///
 /// We define the gradient of interpolation functions (i.e., derivatives of interpolation
 /// functions w.r.t real coordinates) by means of
@@ -183,7 +183,7 @@ pub type IpData = &'static [[f64; 4]];
 ///           dx
 /// ```
 ///
-/// which can be organized in an (npoint,space_ndim) matrix `G`.
+/// which can be organized in an (nnode,space_ndim) matrix `G`.
 ///
 /// The inverse Jacobian allows us to determine the gradient vectors G as follows
 ///
@@ -198,7 +198,7 @@ pub type IpData = &'static [[f64; 4]];
 /// G = L · J⁻¹
 /// ```
 ///
-/// where G is an (npoint,space_ndim) matrix.
+/// where G is an (nnode,space_ndim) matrix.
 ///
 /// # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
 ///
@@ -247,8 +247,8 @@ pub struct Shape {
     /// Geometry ndim
     pub geo_ndim: usize,
 
-    /// Number of points
-    pub npoint: usize,
+    /// Number of points that define the shape (shape's number of nodes)
+    pub nnode: usize,
 
     /// Number of edges
     pub nedge: usize,
@@ -256,11 +256,11 @@ pub struct Shape {
     /// Number of faces
     pub nface: usize,
 
-    /// Edge's number of points
-    pub edge_npoint: usize,
+    /// Number of points that define the edge (edge's number of nodes)
+    pub edge_nnode: usize,
 
-    /// Face's number of points
-    pub face_npoint: usize,
+    /// Number of points that define the face (face's number of nodes)
+    pub face_nnode: usize,
 
     /// Face's number of edges
     pub face_nedge: usize,
@@ -271,10 +271,10 @@ pub struct Shape {
     /// Function to calculate local derivatives (w.r.t. ksi) of interpolation functions
     fn_deriv: FnDeriv,
 
-    /// Array N: (npoint) interpolation functions at reference coordinate ksi
+    /// Array N: (nnode) interpolation functions at reference coordinate ksi
     pub interp: Vector,
 
-    /// Matrix L: (npoint,geo_ndim) derivatives of interpolation functions w.r.t reference coordinate ksi
+    /// Matrix L: (nnode,geo_ndim) derivatives of interpolation functions w.r.t reference coordinate ksi
     pub deriv: Matrix,
 
     /// Matrix J: (space_ndim,geo_ndim) Jacobian matrix
@@ -283,10 +283,10 @@ pub struct Shape {
     /// Matrix inv(J): (space_ndim,space_ndim) Inverse Jacobian matrix (only if geo_ndim == space_ndim)
     pub inv_jacobian: Matrix,
 
-    /// Matrix G: (npoint,space_ndim) Gradient of shape functions (only if geo_ndim == space_ndim)
+    /// Matrix G: (nnode,space_ndim) Gradient of shape functions (only if geo_ndim == space_ndim)
     pub gradient: Matrix,
 
-    /// Matrix Xᵀ: (space_ndim,npoint) transposed coordinates matrix (real space)
+    /// Matrix Xᵀ: (space_ndim,nnode) transposed coordinates matrix (real space)
     pub coords_transp: Matrix,
 
     /// Tells if at least the last entry of the coordinates matrix has been input
@@ -309,15 +309,15 @@ impl Shape {
     ///
     /// * `space_ndim` -- the space dimension (1, 2, or 3)
     /// * `geo_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space
-    /// * `npoint` -- the number of points defining the shape
+    /// * `nnode` -- the number of points defining the shape (number of nodes)
     ///
     /// # Note
     ///
     /// Some methods require that the coordinates matrix be set first.
-    /// This can be accomplished by calling the `set_point` method.
-    pub fn new(space_ndim: usize, geo_ndim: usize, npoint: usize) -> Result<Self, StrError> {
+    /// This can be accomplished by calling the `set_node` method.
+    pub fn new(space_ndim: usize, geo_ndim: usize, nnode: usize) -> Result<Self, StrError> {
         // collect geometry data
-        let (class, kind, nedge, nface, edge_npoint, face_npoint, face_nedge, fn_interp, fn_deriv, ip_data): (
+        let (class, kind, nedge, nface, edge_nnode, face_nnode, face_nedge, fn_interp, fn_deriv, ip_data): (
             GeoClass,
             GeoKind,
             usize,
@@ -328,15 +328,15 @@ impl Shape {
             FnInterp,
             FnDeriv,
             IpData,
-        ) = match (geo_ndim, npoint) {
+        ) = match (geo_ndim, nnode) {
             // Lin
             (1, 2) => (
                 GeoClass::Lin,
                 GeoKind::Lin2,
                 Lin2::NEDGE,
                 Lin2::NFACE,
-                Lin2::EDGE_NPOINT,
-                Lin2::FACE_NPOINT,
+                Lin2::EDGE_NNODE,
+                Lin2::FACE_NNODE,
                 Lin2::FACE_NEDGE,
                 Lin2::calc_interp,
                 Lin2::calc_deriv,
@@ -347,8 +347,8 @@ impl Shape {
                 GeoKind::Lin3,
                 Lin3::NEDGE,
                 Lin3::NFACE,
-                Lin3::EDGE_NPOINT,
-                Lin3::FACE_NPOINT,
+                Lin3::EDGE_NNODE,
+                Lin3::FACE_NNODE,
                 Lin3::FACE_NEDGE,
                 Lin3::calc_interp,
                 Lin3::calc_deriv,
@@ -359,8 +359,8 @@ impl Shape {
                 GeoKind::Lin4,
                 Lin4::NEDGE,
                 Lin4::NFACE,
-                Lin4::EDGE_NPOINT,
-                Lin4::FACE_NPOINT,
+                Lin4::EDGE_NNODE,
+                Lin4::FACE_NNODE,
                 Lin4::FACE_NEDGE,
                 Lin4::calc_interp,
                 Lin4::calc_deriv,
@@ -371,8 +371,8 @@ impl Shape {
                 GeoKind::Lin5,
                 Lin5::NEDGE,
                 Lin5::NFACE,
-                Lin5::EDGE_NPOINT,
-                Lin5::FACE_NPOINT,
+                Lin5::EDGE_NNODE,
+                Lin5::FACE_NNODE,
                 Lin5::FACE_NEDGE,
                 Lin5::calc_interp,
                 Lin5::calc_deriv,
@@ -385,8 +385,8 @@ impl Shape {
                 GeoKind::Tri3,
                 Tri3::NEDGE,
                 Tri3::NFACE,
-                Tri3::EDGE_NPOINT,
-                Tri3::FACE_NPOINT,
+                Tri3::EDGE_NNODE,
+                Tri3::FACE_NNODE,
                 Tri3::FACE_NEDGE,
                 Tri3::calc_interp,
                 Tri3::calc_deriv,
@@ -397,8 +397,8 @@ impl Shape {
                 GeoKind::Tri6,
                 Tri6::NEDGE,
                 Tri6::NFACE,
-                Tri6::EDGE_NPOINT,
-                Tri6::FACE_NPOINT,
+                Tri6::EDGE_NNODE,
+                Tri6::FACE_NNODE,
                 Tri6::FACE_NEDGE,
                 Tri6::calc_interp,
                 Tri6::calc_deriv,
@@ -409,8 +409,8 @@ impl Shape {
                 GeoKind::Tri10,
                 Tri10::NEDGE,
                 Tri10::NFACE,
-                Tri10::EDGE_NPOINT,
-                Tri10::FACE_NPOINT,
+                Tri10::EDGE_NNODE,
+                Tri10::FACE_NNODE,
                 Tri10::FACE_NEDGE,
                 Tri10::calc_interp,
                 Tri10::calc_deriv,
@@ -421,8 +421,8 @@ impl Shape {
                 GeoKind::Tri15,
                 Tri15::NEDGE,
                 Tri15::NFACE,
-                Tri15::EDGE_NPOINT,
-                Tri15::FACE_NPOINT,
+                Tri15::EDGE_NNODE,
+                Tri15::FACE_NNODE,
                 Tri15::FACE_NEDGE,
                 Tri15::calc_interp,
                 Tri15::calc_deriv,
@@ -435,8 +435,8 @@ impl Shape {
                 GeoKind::Qua4,
                 Qua4::NEDGE,
                 Qua4::NFACE,
-                Qua4::EDGE_NPOINT,
-                Qua4::FACE_NPOINT,
+                Qua4::EDGE_NNODE,
+                Qua4::FACE_NNODE,
                 Qua4::FACE_NEDGE,
                 Qua4::calc_interp,
                 Qua4::calc_deriv,
@@ -447,8 +447,8 @@ impl Shape {
                 GeoKind::Qua8,
                 Qua8::NEDGE,
                 Qua8::NFACE,
-                Qua8::EDGE_NPOINT,
-                Qua8::FACE_NPOINT,
+                Qua8::EDGE_NNODE,
+                Qua8::FACE_NNODE,
                 Qua8::FACE_NEDGE,
                 Qua8::calc_interp,
                 Qua8::calc_deriv,
@@ -459,8 +459,8 @@ impl Shape {
                 GeoKind::Qua9,
                 Qua9::NEDGE,
                 Qua9::NFACE,
-                Qua9::EDGE_NPOINT,
-                Qua9::FACE_NPOINT,
+                Qua9::EDGE_NNODE,
+                Qua9::FACE_NNODE,
                 Qua9::FACE_NEDGE,
                 Qua9::calc_interp,
                 Qua9::calc_deriv,
@@ -471,8 +471,8 @@ impl Shape {
                 GeoKind::Qua12,
                 Qua12::NEDGE,
                 Qua12::NFACE,
-                Qua12::EDGE_NPOINT,
-                Qua12::FACE_NPOINT,
+                Qua12::EDGE_NNODE,
+                Qua12::FACE_NNODE,
                 Qua12::FACE_NEDGE,
                 Qua12::calc_interp,
                 Qua12::calc_deriv,
@@ -483,8 +483,8 @@ impl Shape {
                 GeoKind::Qua16,
                 Qua16::NEDGE,
                 Qua16::NFACE,
-                Qua16::EDGE_NPOINT,
-                Qua16::FACE_NPOINT,
+                Qua16::EDGE_NNODE,
+                Qua16::FACE_NNODE,
                 Qua16::FACE_NEDGE,
                 Qua16::calc_interp,
                 Qua16::calc_deriv,
@@ -495,8 +495,8 @@ impl Shape {
                 GeoKind::Qua17,
                 Qua17::NEDGE,
                 Qua17::NFACE,
-                Qua17::EDGE_NPOINT,
-                Qua17::FACE_NPOINT,
+                Qua17::EDGE_NNODE,
+                Qua17::FACE_NNODE,
                 Qua17::FACE_NEDGE,
                 Qua17::calc_interp,
                 Qua17::calc_deriv,
@@ -509,8 +509,8 @@ impl Shape {
                 GeoKind::Tet4,
                 Tet4::NEDGE,
                 Tet4::NFACE,
-                Tet4::EDGE_NPOINT,
-                Tet4::FACE_NPOINT,
+                Tet4::EDGE_NNODE,
+                Tet4::FACE_NNODE,
                 Tet4::FACE_NEDGE,
                 Tet4::calc_interp,
                 Tet4::calc_deriv,
@@ -521,8 +521,8 @@ impl Shape {
                 GeoKind::Tet10,
                 Tet10::NEDGE,
                 Tet10::NFACE,
-                Tet10::EDGE_NPOINT,
-                Tet10::FACE_NPOINT,
+                Tet10::EDGE_NNODE,
+                Tet10::FACE_NNODE,
                 Tet10::FACE_NEDGE,
                 Tet10::calc_interp,
                 Tet10::calc_deriv,
@@ -535,8 +535,8 @@ impl Shape {
                 GeoKind::Hex8,
                 Hex8::NEDGE,
                 Hex8::NFACE,
-                Hex8::EDGE_NPOINT,
-                Hex8::FACE_NPOINT,
+                Hex8::EDGE_NNODE,
+                Hex8::FACE_NNODE,
                 Hex8::FACE_NEDGE,
                 Hex8::calc_interp,
                 Hex8::calc_deriv,
@@ -547,14 +547,14 @@ impl Shape {
                 GeoKind::Hex20,
                 Hex20::NEDGE,
                 Hex20::NFACE,
-                Hex20::EDGE_NPOINT,
-                Hex20::FACE_NPOINT,
+                Hex20::EDGE_NNODE,
+                Hex20::FACE_NNODE,
                 Hex20::FACE_NEDGE,
                 Hex20::calc_interp,
                 Hex20::calc_deriv,
                 &IP_HEX_LEGENDRE_27,
             ),
-            _ => return Err("(geo_ndim,npoint) combination is invalid"),
+            _ => return Err("(geo_ndim,nnode) combination is invalid"),
         };
 
         // return new Shape
@@ -563,16 +563,16 @@ impl Shape {
             kind,
             space_ndim,
             geo_ndim,
-            npoint,
+            nnode,
             nedge,
             nface,
-            edge_npoint,
-            face_npoint,
+            edge_nnode,
+            face_nnode,
             face_nedge,
             fn_interp,
             fn_deriv,
-            interp: Vector::new(npoint),
-            deriv: Matrix::new(npoint, geo_ndim),
+            interp: Vector::new(nnode),
+            deriv: Matrix::new(nnode, geo_ndim),
             jacobian: Matrix::new(space_ndim, geo_ndim),
             inv_jacobian: if geo_ndim == space_ndim {
                 Matrix::new(space_ndim, space_ndim)
@@ -580,11 +580,11 @@ impl Shape {
                 Matrix::new(0, 0)
             },
             gradient: if geo_ndim == space_ndim {
-                Matrix::new(npoint, space_ndim)
+                Matrix::new(nnode, space_ndim)
             } else {
                 Matrix::new(0, 0)
             },
-            coords_transp: Matrix::new(space_ndim, npoint),
+            coords_transp: Matrix::new(space_ndim, nnode),
             ok_last_coord: false,
             min_coords: vec![f64::MAX; space_ndim],
             max_coords: vec![f64::MIN; space_ndim],
@@ -608,7 +608,7 @@ impl Shape {
     ///
     /// # Updated variables
     ///
-    /// * `interp` -- interpolation functions (npoint)
+    /// * `interp` -- interpolation functions (nnode)
     #[inline]
     pub fn calc_interp(&mut self, ksi: &[f64]) {
         (self.fn_interp)(&mut self.interp, ksi);
@@ -632,7 +632,7 @@ impl Shape {
     ///
     /// # Updated variables
     ///
-    /// * `deriv` -- interpolation functions (npoint)
+    /// * `deriv` -- interpolation functions (nnode)
     #[inline]
     pub fn calc_deriv(&mut self, ksi: &[f64]) {
         (self.fn_deriv)(&mut self.deriv, ksi);
@@ -647,19 +647,19 @@ impl Shape {
     /// X = | x²₀  x²₁  x²₂ |
     ///     |      ...      |
     ///     | xᴹ₀  xᴹ₁  xᴹ₂ |
-    ///     └               ┘_(npoint,space_ndim)
+    ///     └               ┘_(nnode,space_ndim)
     /// ```
     ///
-    /// where `M = npoint - 1`
+    /// where `M = nnode - 1`
     ///
     /// # Input
     ///
-    /// * `m` -- point index in form 0 to npoint - 1
+    /// * `m` -- node index from 0 to nnode - 1
     /// * `j` -- dimension index from 0 to space_ndim - 1
     /// * `value` -- the X(m,j) component
-    pub fn set_point(&mut self, m: usize, j: usize, value: f64) -> Result<(), StrError> {
-        if m >= self.npoint {
-            return Err("index of point is invalid");
+    pub fn set_node(&mut self, m: usize, j: usize, value: f64) -> Result<(), StrError> {
+        if m >= self.nnode {
+            return Err("index of node is invalid");
         }
         if j >= self.space_ndim {
             return Err("index of space dimension is invalid");
@@ -671,7 +671,7 @@ impl Shape {
         if value > self.max_coords[j] {
             self.max_coords[j] = value;
         }
-        if m == self.npoint - 1 && j == self.space_ndim - 1 {
+        if m == self.nnode - 1 && j == self.space_ndim - 1 {
             self.ok_last_coord = true;
         }
         Ok(())
@@ -705,7 +705,7 @@ impl Shape {
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// You must set the coordinates matrix first (via the `set_node` method),
     /// otherwise the computations will generate wrong results.
     pub fn calc_coords(&mut self, x: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
         if x.dim() != self.space_ndim {
@@ -715,7 +715,7 @@ impl Shape {
             return Err("ksi.len() must equal geo_ndim at least");
         }
         if !self.ok_last_coord {
-            return Err("the last point coordinate has not been input yet");
+            return Err("the last node coordinate has not been input yet");
         }
         self.calc_interp(ksi);
         mat_vec_mul(x, 1.0, &self.coords_transp, &self.interp)
@@ -770,14 +770,14 @@ impl Shape {
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// You must set the coordinates matrix first (via the `set_node` method),
     /// otherwise the computations will generate wrong results.
     pub fn calc_jacobian(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
         if ksi.len() < self.geo_ndim {
             return Err("ksi.len() must equal geo_ndim at least");
         }
         if !self.ok_last_coord {
-            return Err("the last point coordinate has not been input yet");
+            return Err("the last node coordinate has not been input yet");
         }
         self.calc_deriv(ksi);
         mat_mat_mul(&mut self.jacobian, 1.0, &self.coords_transp, &self.deriv)?;
@@ -876,7 +876,7 @@ impl Shape {
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// You must set the coordinates matrix first (via the `set_node` method),
     /// otherwise the computations will generate wrong results.
     pub fn calc_boundary_normal(&mut self, normal: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
         // check
@@ -890,7 +890,7 @@ impl Shape {
             return Err("ksi.len() must equal geo_ndim at least");
         }
         if !self.ok_last_coord {
-            return Err("the last point coordinate has not been input yet");
+            return Err("the last node coordinate has not been input yet");
         }
 
         // compute Jacobian
@@ -934,7 +934,7 @@ impl Shape {
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// You must set the coordinates matrix first (via the `set_node` method),
     /// otherwise the computations will generate wrong results.
     pub fn approximate_ksi(
         &mut self,
@@ -954,7 +954,7 @@ impl Shape {
             return Err("ksi.len() must equal geo_ndim");
         }
         if !self.ok_last_coord {
-            return Err("the last point coordinate has not been input yet");
+            return Err("the last node coordinate has not been input yet");
         }
 
         // use linear scale to guess ksi
@@ -1003,7 +1003,7 @@ impl Shape {
     ///           dx
     /// ```
     ///
-    /// which can be organized in an (npoint,space_ndim) matrix `G` as follows
+    /// which can be organized in an (nnode,space_ndim) matrix `G` as follows
     ///
     /// ```text
     /// G = L · J⁻¹
@@ -1023,11 +1023,11 @@ impl Shape {
     ///
     /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
     /// * `inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
-    /// * `gradient` -- gradient matrix (npoint,space_ndim)
+    /// * `gradient` -- gradient matrix (nnode,space_ndim)
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// You must set the coordinates matrix first (via the `set_node` method),
     /// otherwise the computations will generate wrong results.
     pub fn calc_gradient(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
         if self.geo_ndim != self.space_ndim {
@@ -1037,7 +1037,7 @@ impl Shape {
             return Err("ksi.len() must equal geo_ndim at least");
         }
         if !self.ok_last_coord {
-            return Err("the last point coordinate has not been input yet");
+            return Err("the last node coordinate has not been input yet");
         }
         let det_jac = self.calc_jacobian(ksi)?;
         mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian)?;
@@ -1062,11 +1062,11 @@ impl Shape {
     ///
     /// # Warning
     ///
-    /// You must set the coordinates matrix first (via the `set_point` method),
+    /// You must set the coordinates matrix first (via the `set_node` method),
     /// otherwise the computations will generate wrong results.
     pub fn calc_int_points_coords(&mut self) -> Result<Vec<Vector>, StrError> {
         if !self.ok_last_coord {
-            return Err("the last point coordinate has not been input yet");
+            return Err("the last node coordinate has not been input yet");
         }
         let mut all_coords = Vec::new();
         for iota in self.ip_data {
@@ -1079,42 +1079,42 @@ impl Shape {
 
     // --- getters ------------------------------------------------------------------------------
 
-    /// Returns the local id of point on edge
+    /// Returns the local id of node on edge
     ///
     /// # Input
     ///
     /// * `e` -- index of edge in [0, nedge-1]
-    /// * `i` -- index of local point [0, edge_npoint-1]
-    pub fn get_edge_point_id(&self, e: usize, i: usize) -> usize {
+    /// * `i` -- index of local node [0, edge_nnode-1]
+    pub fn get_edge_node_id(&self, e: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
             GeoKind::Lin3 => 0,
             GeoKind::Lin4 => 0,
             GeoKind::Lin5 => 0,
-            GeoKind::Tri3 => Tri3::EDGE_POINT_IDS[e][i],
-            GeoKind::Tri6 => Tri6::EDGE_POINT_IDS[e][i],
-            GeoKind::Tri10 => Tri10::EDGE_POINT_IDS[e][i],
-            GeoKind::Tri15 => Tri15::EDGE_POINT_IDS[e][i],
-            GeoKind::Qua4 => Qua4::EDGE_POINT_IDS[e][i],
-            GeoKind::Qua8 => Qua8::EDGE_POINT_IDS[e][i],
-            GeoKind::Qua9 => Qua9::EDGE_POINT_IDS[e][i],
-            GeoKind::Qua12 => Qua12::EDGE_POINT_IDS[e][i],
-            GeoKind::Qua16 => Qua16::EDGE_POINT_IDS[e][i],
-            GeoKind::Qua17 => Qua17::EDGE_POINT_IDS[e][i],
-            GeoKind::Tet4 => Tet4::EDGE_POINT_IDS[e][i],
-            GeoKind::Tet10 => Tet10::EDGE_POINT_IDS[e][i],
-            GeoKind::Hex8 => Hex8::EDGE_POINT_IDS[e][i],
-            GeoKind::Hex20 => Hex20::EDGE_POINT_IDS[e][i],
+            GeoKind::Tri3 => Tri3::EDGE_NODE_IDS[e][i],
+            GeoKind::Tri6 => Tri6::EDGE_NODE_IDS[e][i],
+            GeoKind::Tri10 => Tri10::EDGE_NODE_IDS[e][i],
+            GeoKind::Tri15 => Tri15::EDGE_NODE_IDS[e][i],
+            GeoKind::Qua4 => Qua4::EDGE_NODE_IDS[e][i],
+            GeoKind::Qua8 => Qua8::EDGE_NODE_IDS[e][i],
+            GeoKind::Qua9 => Qua9::EDGE_NODE_IDS[e][i],
+            GeoKind::Qua12 => Qua12::EDGE_NODE_IDS[e][i],
+            GeoKind::Qua16 => Qua16::EDGE_NODE_IDS[e][i],
+            GeoKind::Qua17 => Qua17::EDGE_NODE_IDS[e][i],
+            GeoKind::Tet4 => Tet4::EDGE_NODE_IDS[e][i],
+            GeoKind::Tet10 => Tet10::EDGE_NODE_IDS[e][i],
+            GeoKind::Hex8 => Hex8::EDGE_NODE_IDS[e][i],
+            GeoKind::Hex20 => Hex20::EDGE_NODE_IDS[e][i],
         }
     }
 
-    /// Returns the local id of point on face
+    /// Returns the local id of node on face
     ///
     /// # Input
     ///
     /// * `f` -- index of face in [0, nface-1]
-    /// * `i` -- index of local point [0, face_npoint-1]
-    pub fn get_face_point_id(&self, f: usize, i: usize) -> usize {
+    /// * `i` -- index of local node [0, face_nnode-1]
+    pub fn get_face_node_id(&self, f: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
             GeoKind::Lin3 => 0,
@@ -1130,21 +1130,21 @@ impl Shape {
             GeoKind::Qua12 => 0,
             GeoKind::Qua16 => 0,
             GeoKind::Qua17 => 0,
-            GeoKind::Tet4 => Tet4::FACE_POINT_IDS[f][i],
-            GeoKind::Tet10 => Tet10::FACE_POINT_IDS[f][i],
-            GeoKind::Hex8 => Hex8::FACE_POINT_IDS[f][i],
-            GeoKind::Hex20 => Hex20::FACE_POINT_IDS[f][i],
+            GeoKind::Tet4 => Tet4::FACE_NODE_IDS[f][i],
+            GeoKind::Tet10 => Tet10::FACE_NODE_IDS[f][i],
+            GeoKind::Hex8 => Hex8::FACE_NODE_IDS[f][i],
+            GeoKind::Hex20 => Hex20::FACE_NODE_IDS[f][i],
         }
     }
 
-    /// Returns the local point id on an edge on the face
+    /// Returns the local node id on an edge on the face
     ///
     /// # Input
     ///
     /// * `f` -- index of face in [0, nface-1]
     /// * `k` -- index of face's edge (not the index of cell's edge) in [0, face_nedge-1]
-    /// * `i` -- index of local point [0, edge_npoint-1]
-    pub fn get_face_edge_point_id(&self, f: usize, k: usize, i: usize) -> usize {
+    /// * `i` -- index of local node [0, edge_nnode-1]
+    pub fn get_face_edge_node_id(&self, f: usize, k: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
             GeoKind::Lin3 => 0,
@@ -1160,38 +1160,38 @@ impl Shape {
             GeoKind::Qua12 => 0,
             GeoKind::Qua16 => 0,
             GeoKind::Qua17 => 0,
-            GeoKind::Tet4 => Tet4::FACE_EDGE_POINT_IDS[f][k][i],
-            GeoKind::Tet10 => Tet10::FACE_EDGE_POINT_IDS[f][k][i],
-            GeoKind::Hex8 => Hex8::FACE_EDGE_POINT_IDS[f][k][i],
-            GeoKind::Hex20 => Hex20::FACE_EDGE_POINT_IDS[f][k][i],
+            GeoKind::Tet4 => Tet4::FACE_EDGE_NODE_IDS[f][k][i],
+            GeoKind::Tet10 => Tet10::FACE_EDGE_NODE_IDS[f][k][i],
+            GeoKind::Hex8 => Hex8::FACE_EDGE_NODE_IDS[f][k][i],
+            GeoKind::Hex20 => Hex20::FACE_EDGE_NODE_IDS[f][k][i],
         }
     }
 
-    /// Returns the reference coordinates at point m
+    /// Returns the reference coordinates at node m
     ///
     /// # Output
     ///
-    /// * `ksi` -- (geo_ndim) reference coordinates `ξᵐ` at point m
+    /// * `ksi` -- (geo_ndim) reference coordinates `ξᵐ` at node m
     pub fn get_reference_coords(&self, m: usize) -> &'static [f64] {
         match self.kind {
-            GeoKind::Lin2 => &Lin2::POINT_REFERENCE_COORDS[m],
-            GeoKind::Lin3 => &Lin3::POINT_REFERENCE_COORDS[m],
-            GeoKind::Lin4 => &Lin4::POINT_REFERENCE_COORDS[m],
-            GeoKind::Lin5 => &Lin5::POINT_REFERENCE_COORDS[m],
-            GeoKind::Tri3 => &Tri3::POINT_REFERENCE_COORDS[m],
-            GeoKind::Tri6 => &Tri6::POINT_REFERENCE_COORDS[m],
-            GeoKind::Tri10 => &Tri10::POINT_REFERENCE_COORDS[m],
-            GeoKind::Tri15 => &Tri15::POINT_REFERENCE_COORDS[m],
-            GeoKind::Qua4 => &Qua4::POINT_REFERENCE_COORDS[m],
-            GeoKind::Qua8 => &Qua8::POINT_REFERENCE_COORDS[m],
-            GeoKind::Qua9 => &Qua9::POINT_REFERENCE_COORDS[m],
-            GeoKind::Qua12 => &Qua12::POINT_REFERENCE_COORDS[m],
-            GeoKind::Qua16 => &Qua16::POINT_REFERENCE_COORDS[m],
-            GeoKind::Qua17 => &Qua17::POINT_REFERENCE_COORDS[m],
-            GeoKind::Tet4 => &Tet4::POINT_REFERENCE_COORDS[m],
-            GeoKind::Tet10 => &Tet10::POINT_REFERENCE_COORDS[m],
-            GeoKind::Hex8 => &Hex8::POINT_REFERENCE_COORDS[m],
-            GeoKind::Hex20 => &Hex20::POINT_REFERENCE_COORDS[m],
+            GeoKind::Lin2 => &Lin2::NODE_REFERENCE_COORDS[m],
+            GeoKind::Lin3 => &Lin3::NODE_REFERENCE_COORDS[m],
+            GeoKind::Lin4 => &Lin4::NODE_REFERENCE_COORDS[m],
+            GeoKind::Lin5 => &Lin5::NODE_REFERENCE_COORDS[m],
+            GeoKind::Tri3 => &Tri3::NODE_REFERENCE_COORDS[m],
+            GeoKind::Tri6 => &Tri6::NODE_REFERENCE_COORDS[m],
+            GeoKind::Tri10 => &Tri10::NODE_REFERENCE_COORDS[m],
+            GeoKind::Tri15 => &Tri15::NODE_REFERENCE_COORDS[m],
+            GeoKind::Qua4 => &Qua4::NODE_REFERENCE_COORDS[m],
+            GeoKind::Qua8 => &Qua8::NODE_REFERENCE_COORDS[m],
+            GeoKind::Qua9 => &Qua9::NODE_REFERENCE_COORDS[m],
+            GeoKind::Qua12 => &Qua12::NODE_REFERENCE_COORDS[m],
+            GeoKind::Qua16 => &Qua16::NODE_REFERENCE_COORDS[m],
+            GeoKind::Qua17 => &Qua17::NODE_REFERENCE_COORDS[m],
+            GeoKind::Tet4 => &Tet4::NODE_REFERENCE_COORDS[m],
+            GeoKind::Tet10 => &Tet10::NODE_REFERENCE_COORDS[m],
+            GeoKind::Hex8 => &Hex8::NODE_REFERENCE_COORDS[m],
+            GeoKind::Hex20 => &Hex20::NODE_REFERENCE_COORDS[m],
         }
     }
 }
@@ -1288,7 +1288,7 @@ mod tests {
     fn set_coords_matrix(shape: &mut Shape) {
         let mut x = Vector::new(shape.space_ndim);
         let mut ksi_aux = vec![0.0; shape.space_ndim];
-        for m in 0..shape.npoint {
+        for m in 0..shape.nnode {
             let ksi = shape.get_reference_coords(m);
             if shape.geo_ndim == shape.space_ndim {
                 gen_coords(&mut x, ksi, shape.class);
@@ -1305,14 +1305,14 @@ mod tests {
                 panic!("(geo_ndim,space_ndim) pair is invalid");
             }
             for j in 0..shape.space_ndim {
-                shape.set_point(m, j, x[j]).unwrap();
+                shape.set_node(m, j, x[j]).unwrap();
             }
         }
     }
 
     #[test]
     fn calc_interp_works() -> Result<(), StrError> {
-        // define dims and number of points
+        // define dims and number of nodes
         let pairs = vec![
             (1, 2),
             (1, 3),
@@ -1356,25 +1356,25 @@ mod tests {
         tols.insert(GeoKind::Hex20, 1e-15);
 
         // loop over shapes
-        for (geo_ndim, npoint) in pairs {
+        for (geo_ndim, nnode) in pairs {
             // allocate shape
             let space_ndim = geo_ndim;
-            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            println!("{:?}: tol={:e}", shape.kind, tol);
+            // println!("{:?}: tol={:e}", shape.kind, tol);
 
-            // loop over points of shape
-            for m in 0..shape.npoint {
-                // get ξᵐ corresponding to point m
+            // loop over nodes of shape
+            for m in 0..shape.nnode {
+                // get ξᵐ corresponding to node m
                 let ksi = shape.get_reference_coords(m);
 
                 // compute interpolation function Nⁿ(ξᵐ)
                 shape.calc_interp(ksi);
 
                 // check: Nⁿ(ξᵐ) = 1 if m==n; 0 otherwise
-                for n in 0..shape.npoint {
+                for n in 0..shape.nnode {
                     if m == n {
                         assert_approx_eq!(shape.interp[n], 1.0, tol);
                     } else {
@@ -1391,7 +1391,7 @@ mod tests {
         shape: Shape,     // auxiliary (copy) shape
         at_ksi: Vec<f64>, // at reference coord value
         ksi: Vec<f64>,    // temporary reference coord
-        m: usize,         // point index from 0 to npoint
+        m: usize,         // node index from 0 to nnode
         j: usize,         // dimension index from 0 to geom_ndim
     }
 
@@ -1405,7 +1405,7 @@ mod tests {
 
     #[test]
     fn calc_deriv_works() -> Result<(), StrError> {
-        // define dims and number of points
+        // define dims and number of nodes
         let pairs = vec![
             (1, 2),
             (1, 3),
@@ -1449,14 +1449,14 @@ mod tests {
         tols.insert(GeoKind::Hex20, 1e-12);
 
         // loop over shapes
-        for (geo_ndim, npoint) in pairs {
+        for (geo_ndim, nnode) in pairs {
             // allocate shape
             let space_ndim = geo_ndim;
-            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            println!("{:?}: tol={:e}", shape.kind, tol);
+            // println!("{:?}: tol={:e}", shape.kind, tol);
 
             // set ξ within reference space
             let at_ksi = vec![0.25; shape.geo_ndim];
@@ -1466,7 +1466,7 @@ mod tests {
 
             // set arguments for numerical integration
             let args = &mut ArgsNumL {
-                shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
+                shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?,
                 at_ksi,
                 ksi: vec![0.0; shape.geo_ndim],
                 m: 0,
@@ -1474,7 +1474,7 @@ mod tests {
             };
 
             // check Lᵐ(ξ) = dNᵐ(ξ)/dξ
-            for m in 0..shape.npoint {
+            for m in 0..shape.nnode {
                 args.m = m;
                 for j in 0..shape.geo_ndim {
                     args.j = j;
@@ -1488,7 +1488,7 @@ mod tests {
 
     #[test]
     fn calc_coords_works() -> Result<(), StrError> {
-        // define dims and number of points
+        // define dims and number of nodes
         let pairs = vec![
             (2, 3),
             (2, 6),
@@ -1517,7 +1517,7 @@ mod tests {
         tols.insert(GeoKind::Tet10, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
 
-        // define tolerances for point in the reference domain
+        // define tolerances for node in the reference domain
         let mut tols_in = HashMap::new();
         tols_in.insert(GeoKind::Tri3, 0.45); // linear maps are inaccurate for the circular wedge
         tols_in.insert(GeoKind::Tri6, 0.02); // << quadratic mapping is inaccurate as well
@@ -1532,24 +1532,24 @@ mod tests {
         tols_in.insert(GeoKind::Hex20, 1e-14);
 
         // loop over shapes
-        for (geo_ndim, npoint) in pairs {
+        for (geo_ndim, nnode) in pairs {
             // allocate shape
             let space_ndim = geo_ndim;
-            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
             let tol_in = *tols_in.get(&shape.kind).unwrap();
-            println!("{:?}: tol={:e}, tol_in={:e}", shape.kind, tol, tol_in);
+            // println!("{:?}: tol={:e}, tol_in={:e}", shape.kind, tol, tol_in);
 
             // set coordinates matrix
             set_coords_matrix(shape);
 
-            // loop over points of shape
+            // loop over nodes of shape
             let mut x = Vector::new(shape.space_ndim);
             let mut x_correct = Vector::new(shape.space_ndim);
-            for m in 0..shape.npoint {
-                // get ξᵐ corresponding to point m
+            for m in 0..shape.nnode {
+                // get ξᵐ corresponding to node m
                 let ksi = shape.get_reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
@@ -1593,7 +1593,7 @@ mod tests {
 
     #[test]
     fn calc_jacobian_works() -> Result<(), StrError> {
-        // define dims and number of points
+        // define dims and number of nodes
         let pairs = vec![(2, 6), (2, 4), (2, 8), (2, 17), (3, 4), (3, 8), (3, 20)];
 
         // define tolerances
@@ -1607,14 +1607,14 @@ mod tests {
         tols.insert(GeoKind::Hex20, 1e-11);
 
         // loop over shapes
-        for (geo_ndim, npoint) in pairs {
+        for (geo_ndim, nnode) in pairs {
             // allocate shape
             let space_ndim = geo_ndim;
-            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            println!("{:?}: tol={:e}", shape.kind, tol);
+            // println!("{:?}: tol={:e}", shape.kind, tol);
 
             // set coordinates matrix
             set_coords_matrix(shape);
@@ -1628,7 +1628,7 @@ mod tests {
 
             // set arguments for numerical integration
             let args = &mut ArgsNumJ {
-                shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
+                shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?,
                 at_ksi,
                 ksi: vec![0.0; shape.geo_ndim],
                 x: Vector::new(shape.space_ndim),
@@ -1668,9 +1668,9 @@ mod tests {
         let area = PI * (RMAX * RMAX - RMIN * RMIN) / 12.0;
         let ref_area = 4.0;
         let area_ratio = area / ref_area;
-        println!("normal =\n{}", normal);
-        println!("mag_normal = {}", mag_normal);
-        println!("area_ratio = {}", area_ratio);
+        // println!("normal =\n{}", normal);
+        // println!("mag_normal = {}", mag_normal);
+        // println!("area_ratio = {}", area_ratio);
         assert_approx_eq!(mag_normal, area_ratio, 1e-4);
 
         // check direction of normal vector
@@ -1714,9 +1714,9 @@ mod tests {
         let length = RMAX - RMIN;
         let ref_length = 2.0;
         let length_ratio = length / ref_length;
-        println!("normal =\n{}", normal);
-        println!("mag_normal = {}", mag_normal);
-        println!("length_ratio = {}", length_ratio);
+        // println!("normal =\n{}", normal);
+        // println!("mag_normal = {}", mag_normal);
+        // println!("length_ratio = {}", length_ratio);
         assert_approx_eq!(mag_normal, length_ratio, 1e-15);
 
         // check direction of normal vector
@@ -1728,7 +1728,7 @@ mod tests {
 
     #[test]
     fn approximate_ksi_works() -> Result<(), StrError> {
-        // define dims and number of points
+        // define dims and number of nodes
         let pairs = vec![(2, 3), (2, 6), (2, 4), (2, 8), (3, 4), (3, 10), (3, 8), (3, 20)];
 
         // define tolerances
@@ -1743,23 +1743,23 @@ mod tests {
         tols.insert(GeoKind::Hex20, 1e-15);
 
         // loop over shapes
-        for (geo_ndim, npoint) in pairs {
+        for (geo_ndim, nnode) in pairs {
             // allocate shape
             let space_ndim = geo_ndim;
-            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            println!("{:?}: tol={:e}", shape.kind, tol);
+            // println!("{:?}: tol={:e}", shape.kind, tol);
 
             // set coordinates matrix
             set_coords_matrix(shape);
 
-            // loop over points of shape
+            // loop over nodes of shape
             let mut x = Vector::new(shape.space_ndim);
             let mut ksi = vec![0.0; shape.geo_ndim];
-            for m in 0..shape.npoint {
-                // get ξᵐ corresponding to point m
+            for m in 0..shape.nnode {
+                // get ξᵐ corresponding to node m
                 let ksi_ref = shape.get_reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
@@ -1794,7 +1794,7 @@ mod tests {
         at_x: Vector,  // at x coord value
         x: Vector,     // temporary x coord
         ksi: Vec<f64>, // temporary reference coord
-        m: usize,      // point index from 0 to npoint
+        m: usize,      // node index from 0 to nnode
         j: usize,      // dimension index from 0 to space_ndim
     }
 
@@ -1809,7 +1809,7 @@ mod tests {
 
     #[test]
     fn fn_gradient_works() -> Result<(), StrError> {
-        // define dims and number of points
+        // define dims and number of nodes
         let pairs = vec![(2, 6), (2, 4), (2, 8), (3, 10), (3, 8), (3, 20)];
 
         // define tolerances
@@ -1822,14 +1822,14 @@ mod tests {
         tols.insert(GeoKind::Hex20, 1e-10);
 
         // loop over shapes
-        for (geo_ndim, npoint) in pairs {
+        for (geo_ndim, nnode) in pairs {
             // allocate shape
             let space_ndim = geo_ndim;
-            let shape = &mut Shape::new(space_ndim, geo_ndim, npoint)?;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            println!("{:?}: tol={:e}", shape.kind, tol);
+            // println!("{:?}: tol={:e}", shape.kind, tol);
 
             // set coordinates matrix
             set_coords_matrix(shape);
@@ -1847,7 +1847,7 @@ mod tests {
 
             // set arguments for numerical integration
             let args = &mut ArgsNumG {
-                shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.npoint)?,
+                shape: Shape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?,
                 at_x,
                 x: Vector::new(shape.space_ndim),
                 ksi: vec![0.0; shape.geo_ndim],
@@ -1857,7 +1857,7 @@ mod tests {
             set_coords_matrix(&mut args.shape);
 
             // check Gᵐ(ξ(x)) = dNᵐ(ξ(x))/dx
-            for m in 0..shape.npoint {
+            for m in 0..shape.nnode {
                 args.m = m;
                 for j in 0..shape.geo_ndim {
                     args.j = j;
@@ -1873,8 +1873,8 @@ mod tests {
     fn calc_int_points_coords() -> Result<(), StrError> {
         let mut shape = Shape::new(1, 1, 2)?;
         let (xa, xb) = (2.0, 5.0);
-        shape.set_point(0, 0, xa)?;
-        shape.set_point(1, 0, xb)?;
+        shape.set_node(0, 0, xa)?;
+        shape.set_node(1, 0, xb)?;
         let int_points = shape.calc_int_points_coords()?;
         assert_eq!(int_points.len(), 2);
         let ksi_a = -1.0 / SQRT_3;

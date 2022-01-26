@@ -1,8 +1,8 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a tetrahedron with 10 points (quadratic faces)
+/// Defines a tetrahedron with 10 nodes (quadratic faces)
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 ///               t               r    s    t
@@ -37,7 +37,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of edges
 ///
-/// The order of edge points corresponds to Lin2 points.
+/// The order of edge nodes corresponds to Lin2 nodes.
 ///
 /// ```text
 ///               t                    p0  p1 p2
@@ -72,8 +72,8 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of faces
 ///
-/// Note: the order of points is such that the right-hand rule generates outward normals.
-/// Also, the order of face points corresponds to Tri3 points.
+/// Note: the order of nodes is such that the right-hand rule generates outward normals.
+/// Also, the order of face nodes corresponds to Tri3 nodes.
 ///
 /// ```text
 ///               t           p0 p1 p2 p3 p4 p5
@@ -109,15 +109,15 @@ pub struct Tet10 {}
 
 impl Tet10 {
     pub const NDIM: usize = 3;
-    pub const NPOINT: usize = 10;
+    pub const NNODE: usize = 10;
     pub const NEDGE: usize = 6;
     pub const NFACE: usize = 4;
-    pub const EDGE_NPOINT: usize = 3;
-    pub const FACE_NPOINT: usize = 6;
+    pub const EDGE_NNODE: usize = 3;
+    pub const FACE_NNODE: usize = 6;
     pub const FACE_NEDGE: usize = 3;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Tet10::EDGE_NPOINT]; Tet10::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Tet10::EDGE_NNODE]; Tet10::NEDGE] = [
         [0, 1, 4],
         [1, 2, 5],
         [2, 0, 6],
@@ -127,7 +127,7 @@ impl Tet10 {
     ];
 
     #[rustfmt::skip]
-    pub const FACE_POINT_IDS: [[usize; Tet10::FACE_NPOINT]; Tet10::NFACE] = [
+    pub const FACE_NODE_IDS: [[usize; Tet10::FACE_NNODE]; Tet10::NFACE] = [
         [0, 3, 2, 7, 9, 6],
         [0, 1, 3, 4, 8, 7],
         [0, 2, 1, 6, 5, 4],
@@ -135,7 +135,7 @@ impl Tet10 {
     ];
 
     #[rustfmt::skip]
-    pub const FACE_EDGE_POINT_IDS: [[[usize; Tet10::EDGE_NPOINT]; Tet10::FACE_NEDGE]; Tet10::NFACE] = [
+    pub const FACE_EDGE_NODE_IDS: [[[usize; Tet10::EDGE_NNODE]; Tet10::FACE_NEDGE]; Tet10::NFACE] = [
         [[0, 3, 7], [3, 2, 9], [2, 0, 6]],
         [[0, 1, 4], [1, 3, 8], [3, 0, 7]],
         [[0, 2, 6], [2, 1, 5], [1, 0, 4]],
@@ -143,7 +143,7 @@ impl Tet10 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Tet10::NDIM]; Tet10::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tet10::NDIM]; Tet10::NNODE] = [
         [0.0, 0.0, 0.0], // 0
         [1.0, 0.0, 0.0], // 1
         [0.0, 1.0, 0.0], // 2

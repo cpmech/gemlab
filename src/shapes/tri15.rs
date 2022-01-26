@@ -1,8 +1,8 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a triangle with 15 points (quartic edges; interior points)
+/// Defines a triangle with 15 nodes (quartic edges; interior nodes)
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 ///  s
@@ -37,22 +37,22 @@ pub struct Tri15 {}
 
 impl Tri15 {
     pub const NDIM: usize = 2;
-    pub const NPOINT: usize = 15;
+    pub const NNODE: usize = 15;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 5;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 5;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Tri15::EDGE_NPOINT]; Tri15::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Tri15::EDGE_NNODE]; Tri15::NEDGE] = [
         [0, 1, 3,  6,  7],
         [1, 2, 4,  8,  9],
         [2, 0, 5, 10, 11],
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Tri15::NDIM]; Tri15::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri15::NDIM]; Tri15::NNODE] = [
         [0.0  , 0.0 ], //  0
         [1.0  , 0.0 ], //  1
         [0.0  , 1.0 ], //  2

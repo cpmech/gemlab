@@ -1,10 +1,10 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a quadrilateral with 9 points (quadratic edges; interior point)
+/// Defines a quadrilateral with 9 nodes (quadratic edges; interior node)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 /// 3-----6-----2
@@ -33,15 +33,15 @@ pub struct Qua9 {}
 
 impl Qua9 {
     pub const NDIM: usize = 2;
-    pub const NPOINT: usize = 9;
+    pub const NNODE: usize = 9;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 3;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 3;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Qua9::EDGE_NPOINT]; Qua9::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Qua9::EDGE_NNODE]; Qua9::NEDGE] = [
         [0, 1, 4],
         [1, 2, 5],
         [2, 3, 6],
@@ -49,7 +49,7 @@ impl Qua9 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Qua9::NDIM]; Qua9::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua9::NDIM]; Qua9::NNODE] = [
         [-1.0, -1.0],
         [ 1.0, -1.0],
         [ 1.0,  1.0],

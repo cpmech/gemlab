@@ -1,8 +1,8 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a triangle with 6 points (quadratic edges)
+/// Defines a triangle with 6 nodes (quadratic edges)
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 /// s
@@ -35,22 +35,22 @@ pub struct Tri6 {}
 
 impl Tri6 {
     pub const NDIM: usize = 2;
-    pub const NPOINT: usize = 6;
+    pub const NNODE: usize = 6;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 3;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 3;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Tri6::EDGE_NPOINT]; Tri6::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Tri6::EDGE_NNODE]; Tri6::NEDGE] = [
         [0, 1, 3],
         [1, 2, 4],
         [2, 0, 5],
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Tri6::NDIM]; Tri6::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri6::NDIM]; Tri6::NNODE] = [
         [0.0, 0.0],
         [1.0, 0.0],
         [0.0, 1.0],

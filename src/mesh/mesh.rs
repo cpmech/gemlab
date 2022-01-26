@@ -73,7 +73,7 @@ pub struct Cell {
     /// **raw data**
     pub geo_ndim: usize,
 
-    /// List of points defining this cell; in the right order (unsorted)
+    /// List of points defining this cell (nodes); in the right order (unsorted)
     ///
     /// **raw data**
     pub points: Vec<PointId>,
@@ -396,7 +396,7 @@ impl Mesh {
         for m in 0..npoint {
             let point_id = self.cells[cell_id].points[m];
             for i in 0..self.space_ndim {
-                shape.set_point(m, i, self.points[point_id].coords[i])?;
+                shape.set_node(m, i, self.points[point_id].coords[i])?;
             }
         }
         Ok(())
@@ -547,9 +547,9 @@ impl Mesh {
             // edges (new derived data)
             for e in 0..shape.nedge {
                 // collect edge point ids
-                let mut edge_points = vec![0; shape.edge_npoint];
-                for i in 0..shape.edge_npoint {
-                    let local_point_id = shape.get_edge_point_id(e, i);
+                let mut edge_points = vec![0; shape.edge_nnode];
+                for i in 0..shape.edge_nnode {
+                    let local_point_id = shape.get_edge_node_id(e, i);
                     edge_points[i] = cell.points[local_point_id];
                 }
 
@@ -616,9 +616,9 @@ impl Mesh {
             // faces (new derived data)
             for f in 0..shape.nface {
                 // collect face point ids
-                let mut face_points = vec![0; shape.face_npoint];
-                for i in 0..shape.face_npoint {
-                    let local_point_id = shape.get_face_point_id(f, i);
+                let mut face_points = vec![0; shape.face_nnode];
+                for i in 0..shape.face_nnode {
+                    let local_point_id = shape.get_face_node_id(f, i);
                     face_points[i] = cell.points[local_point_id];
                 }
 
@@ -675,9 +675,9 @@ impl Mesh {
             // let face_edge_npoint = face_shape.get_edge_npoint();
             for e in 0..face_shape.nedge {
                 // collect edge point ids
-                let mut edge_points = vec![0; face_shape.edge_npoint];
-                for i in 0..face_shape.edge_npoint {
-                    let local_point_id = face_shape.get_edge_point_id(e, i);
+                let mut edge_points = vec![0; face_shape.edge_nnode];
+                for i in 0..face_shape.edge_nnode {
+                    let local_point_id = face_shape.get_edge_node_id(e, i);
                     edge_points[i] = face.points[local_point_id];
                 }
 

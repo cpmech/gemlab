@@ -1,10 +1,10 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a quadrilateral with 12 points (cubic edges)
+/// Defines a quadrilateral with 12 nodes (cubic edges)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 ///  3      10       6        2
@@ -39,15 +39,15 @@ pub struct Qua12 {}
 
 impl Qua12 {
     pub const NDIM: usize = 2;
-    pub const NPOINT: usize = 12;
+    pub const NNODE: usize = 12;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 4;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 4;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Qua12::EDGE_NPOINT]; Qua12::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Qua12::EDGE_NNODE]; Qua12::NEDGE] = [
         [0, 1, 4,  8],
         [1, 2, 5,  9],
         [2, 3, 6, 10],
@@ -55,7 +55,7 @@ impl Qua12 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Qua12::NDIM]; Qua12::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua12::NDIM]; Qua12::NNODE] = [
         [-1.0       , -1.0       ],
         [ 1.0       , -1.0       ],
         [ 1.0       ,  1.0       ],

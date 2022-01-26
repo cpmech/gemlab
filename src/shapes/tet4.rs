@@ -1,8 +1,8 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a tetrahedron with 4 points (linear faces)
+/// Defines a tetrahedron with 4 nodes (linear faces)
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 ///               t               r    s    t
@@ -37,7 +37,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of edges
 ///
-/// The order of edge points corresponds to Lin2 points.
+/// The order of edge nodes corresponds to Lin2 nodes.
 ///
 /// ```text
 ///               t                    p0  p1
@@ -72,8 +72,8 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of faces
 ///
-/// Note: the order of points is such that the right-hand rule generates outward normals.
-/// Also, the order of face points corresponds to Tri3 points.
+/// Note: the order of nodes is such that the right-hand rule generates outward normals.
+/// Also, the order of face nodes corresponds to Tri3 nodes.
 ///
 /// ```text
 ///               t
@@ -109,15 +109,15 @@ pub struct Tet4 {}
 
 impl Tet4 {
     pub const NDIM: usize = 3;
-    pub const NPOINT: usize = 4;
+    pub const NNODE: usize = 4;
     pub const NEDGE: usize = 6;
     pub const NFACE: usize = 4;
-    pub const EDGE_NPOINT: usize = 2;
-    pub const FACE_NPOINT: usize = 3;
+    pub const EDGE_NNODE: usize = 2;
+    pub const FACE_NNODE: usize = 3;
     pub const FACE_NEDGE: usize = 3;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Tet4::EDGE_NPOINT]; Tet4::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Tet4::EDGE_NNODE]; Tet4::NEDGE] = [
         [0, 1],
         [1, 2],
         [2, 0],
@@ -127,7 +127,7 @@ impl Tet4 {
     ];
 
     #[rustfmt::skip]
-    pub const FACE_POINT_IDS: [[usize; Tet4::FACE_NPOINT]; Tet4::NFACE] = [
+    pub const FACE_NODE_IDS: [[usize; Tet4::FACE_NNODE]; Tet4::NFACE] = [
         [0, 3, 2],
         [0, 1, 3],
         [0, 2, 1],
@@ -135,7 +135,7 @@ impl Tet4 {
     ];
 
     #[rustfmt::skip]
-    pub const FACE_EDGE_POINT_IDS: [[[usize; Tet4::EDGE_NPOINT]; Tet4::FACE_NEDGE]; Tet4::NFACE] = [
+    pub const FACE_EDGE_NODE_IDS: [[[usize; Tet4::EDGE_NNODE]; Tet4::FACE_NEDGE]; Tet4::NFACE] = [
         [[0, 3], [3, 2], [2, 0]],
         [[0, 1], [1, 3], [3, 0]],
         [[0, 2], [2, 1], [1, 0]],
@@ -143,7 +143,7 @@ impl Tet4 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Tet4::NDIM]; Tet4::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tet4::NDIM]; Tet4::NNODE] = [
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
         [0.0, 1.0, 0.0],

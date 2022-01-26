@@ -168,8 +168,8 @@ impl Shape {
     /// ```
     ///
     /// * `a` -- A vector containing all `aᵐ` values, one after another, and
-    ///          sequentially placed as shown above. `m` is the index of the point.
-    ///          The length of `a` must be equal to `npoint`.
+    ///          sequentially placed as shown above. `m` is the index of the node.
+    ///          The length of `a` must be equal to `nnode`.
     ///
     /// # Input
     ///
@@ -180,8 +180,8 @@ impl Shape {
         F: Fn(usize) -> f64,
     {
         // check
-        if a.dim() != self.npoint {
-            return Err("the length of vector 'a' must be equal to npoint");
+        if a.dim() != self.nnode {
+            return Err("the length of vector 'a' must be equal to nnode");
         }
 
         // clear output vector
@@ -200,8 +200,8 @@ impl Shape {
             // calculate s
             let s = fn_s(index);
 
-            // loop over points and perform summation
-            for m in 0..self.npoint {
+            // loop over nodes and perform summation
+            for m in 0..self.nnode {
                 a[m] += self.interp[m] * s * det_jac * weight;
             }
         }
@@ -246,8 +246,8 @@ impl Shape {
     /// ```
     ///
     /// * `b` -- A vector containing all `bᵐᵢ` values, one after another, and sequentially placed
-    ///          as shown above (in 2D). `m` is the index of the point and `i` corresponds to `space_ndim`.
-    ///          The length of `b` must be equal to `npoint * space_ndim`.
+    ///          as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
+    ///          The length of `b` must be equal to `nnode * space_ndim`.
     ///
     /// # Input
     ///
@@ -259,8 +259,8 @@ impl Shape {
         F: Fn(&mut Vector, usize),
     {
         // check
-        if b.dim() != self.npoint * self.space_ndim {
-            return Err("the length of vector 'b' must be equal to npoint * space_ndim");
+        if b.dim() != self.nnode * self.space_ndim {
+            return Err("the length of vector 'b' must be equal to nnode * space_ndim");
         }
         if aux_v.dim() != self.space_ndim {
             return Err("the length of vector 'aux_v' must be equal to space_ndim");
@@ -282,8 +282,8 @@ impl Shape {
             // calculate v
             fn_v(aux_v, index);
 
-            // loop over points and perform summation
-            for m in 0..self.npoint {
+            // loop over nodes and perform summation
+            for m in 0..self.nnode {
                 for i in 0..self.space_ndim {
                     let ii = i + m * self.space_ndim;
                     b[ii] += self.interp[m] * aux_v[i] * det_jac * weight;
@@ -325,8 +325,8 @@ impl Shape {
     /// ```
     ///
     /// * `c` -- A vector containing all `cᵐ` values, one after another, and
-    ///          sequentially placed as shown above. `m` is the index of the point.
-    ///          The length of `c` must be be equal to `npoint`.
+    ///          sequentially placed as shown above. `m` is the index of the node.
+    ///          The length of `c` must be be equal to `nnode`.
     ///
     /// # Input
     ///
@@ -338,8 +338,8 @@ impl Shape {
         F: Fn(&mut Vector, usize),
     {
         // check
-        if c.dim() != self.npoint {
-            return Err("the length of vector 'c' must be equal to npoint");
+        if c.dim() != self.nnode {
+            return Err("the length of vector 'c' must be equal to nnode");
         }
         if aux_w.dim() != self.space_ndim {
             return Err("the length of vector 'aux_w' must be equal to space_ndim");
@@ -360,8 +360,8 @@ impl Shape {
             // calculate w
             fn_w(aux_w, index);
 
-            // loop over points and perform summation
-            for m in 0..self.npoint {
+            // loop over nodes and perform summation
+            for m in 0..self.nnode {
                 let w_dot_grad = self.vec_dot_grad(m, aux_w);
                 c[m] += w_dot_grad * det_jac * weight;
             }
@@ -407,8 +407,8 @@ impl Shape {
     /// ```
     ///
     /// * `d` -- A vector containing all `dᵐᵢ` values, one after another, and sequentially placed
-    ///          as shown above (in 2D). `m` is the index of the point and `i` corresponds to `space_ndim`.
-    ///          The length of `d` must be equal to `npoint * space_ndim`.
+    ///          as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
+    ///          The length of `d` must be equal to `nnode * space_ndim`.
     ///
     /// # Input
     ///
@@ -430,8 +430,8 @@ impl Shape {
         if self.space_ndim == 1 {
             return Err("space_ndim must be 2 or 3");
         }
-        if d.dim() != self.npoint * self.space_ndim {
-            return Err("the length of vector 'd' must be equal to npoint * space_ndim");
+        if d.dim() != self.nnode * self.space_ndim {
+            return Err("the length of vector 'd' must be equal to nnode * space_ndim");
         }
         if aux_sig.vec.dim() != 2 * self.space_ndim {
             return Err("'aux_sig' must be symmetric with dim equal to 4 in 2D or 6 in 3D");
@@ -455,8 +455,8 @@ impl Shape {
             // calculate σ
             fn_sig(aux_sig, index);
 
-            // loop over points and perform summation
-            for m in 0..self.npoint {
+            // loop over nodes and perform summation
+            for m in 0..self.nnode {
                 // aux_vec := σ · G
                 self.tensor_dot_grad(aux_vec, m, &aux_sig);
                 for i in 0..self.space_ndim {
@@ -522,9 +522,9 @@ impl Shape {
     /// ```
     ///
     /// * `kk` -- A matrix containing all `Kᵐⁿᵢⱼ` values, one after another, and sequentially placed
-    ///           as shown above (in 2D). `m` and `n` are the indices of the point and `i` and `j`
+    ///           as shown above (in 2D). `m` and `n` are the indices of the node and `i` and `j`
     ///           correspond to `space_ndim`. The dimension of `K` must be equal to
-    ///           (`npoint * space_ndim`, `npoint * space_ndim`).
+    ///           (`nnode * space_ndim`, `nnode * space_ndim`).
     ///
     /// # Input
     ///
@@ -548,8 +548,8 @@ impl Shape {
         if self.space_ndim == 1 {
             return Err("space_ndim must be 2 or 3");
         }
-        if nrow_kk != ncol_kk || nrow_kk != self.npoint * self.space_ndim {
-            return Err("'K' matrix must be square with dim equal to npoint * space_ndim");
+        if nrow_kk != ncol_kk || nrow_kk != self.nnode * self.space_ndim {
+            return Err("'K' matrix must be square with dim equal to nnode * space_ndim");
         }
         if nrow_dd != ncol_dd || nrow_dd != 2 * self.space_ndim {
             return Err("'D' tensor must be symmetric with dim equal to 4 in 2D or 6 in 3D");
@@ -577,7 +577,7 @@ impl Shape {
         Ok(())
     }
 
-    /// Computes vector dot the gradient at point m
+    /// Computes vector dot the gradient at node m
     fn vec_dot_grad(&self, m: usize, w: &Vector) -> f64 {
         let mut res = 0.0;
         for i in 0..self.space_ndim {
@@ -586,7 +586,7 @@ impl Shape {
         res
     }
 
-    /// Computes tensor dot the gradient at point m
+    /// Computes tensor dot the gradient at node m
     fn tensor_dot_grad(&self, res: &mut Vector, m: usize, sig: &Tensor2) {
         for i in 0..self.space_ndim {
             res[i] = 0.0;
@@ -603,8 +603,8 @@ impl Shape {
         let g = &self.gradient;
         let d = &dd.mat;
         if self.space_ndim == 3 {
-            for m in 0..self.npoint {
-                for n in 0..self.npoint {
+            for m in 0..self.nnode {
+                for n in 0..self.nnode {
                     kk[0+m*3][0+n*3] += c * (g[m][2]*g[n][2]*d[5][5] + g[m][2]*g[n][1]*d[5][3] + s*g[m][2]*g[n][0]*d[5][0] + g[m][1]*g[n][2]*d[3][5] + g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][2]*d[0][5] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
                     kk[0+m*3][1+n*3] += c * (g[m][2]*g[n][2]*d[5][4] + g[m][2]*g[n][0]*d[5][3] + s*g[m][2]*g[n][1]*d[5][1] + g[m][1]*g[n][2]*d[3][4] + g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][2]*d[0][4] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
                     kk[0+m*3][2+n*3] += c * (g[m][2]*g[n][0]*d[5][5] + g[m][2]*g[n][1]*d[5][4] + s*g[m][2]*g[n][2]*d[5][2] + g[m][1]*g[n][0]*d[3][5] + g[m][1]*g[n][1]*d[3][4] + s*g[m][1]*g[n][2]*d[3][2] + s*g[m][0]*g[n][0]*d[0][5] + s*g[m][0]*g[n][1]*d[0][4] + 2.0*g[m][0]*g[n][2]*d[0][2]) / 2.0;
@@ -617,8 +617,8 @@ impl Shape {
                 }
             }
         } else {
-            for m in 0..self.npoint {
-                for n in 0..self.npoint {
+            for m in 0..self.nnode {
+                for n in 0..self.nnode {
                     kk[0+m*2][0+n*2] += c * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
                     kk[0+m*2][1+n*2] += c * (g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
                     kk[1+m*2][0+n*2] += c * (g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0;
@@ -654,12 +654,12 @@ mod tests {
         let area = l * h / 2.0;
         let mut shape = Shape::new(2, 2, 3).unwrap();
         let (xmin, ymin) = (3.0, 4.0);
-        shape.set_point(0, 0, xmin).unwrap();
-        shape.set_point(0, 1, ymin).unwrap();
-        shape.set_point(1, 0, xmin + l).unwrap();
-        shape.set_point(1, 1, ymin).unwrap();
-        shape.set_point(2, 0, xmin + l / 2.0).unwrap();
-        shape.set_point(2, 1, ymin + h).unwrap();
+        shape.set_node(0, 0, xmin).unwrap();
+        shape.set_node(0, 1, ymin).unwrap();
+        shape.set_node(1, 0, xmin + l).unwrap();
+        shape.set_node(1, 1, ymin).unwrap();
+        shape.set_node(2, 0, xmin + l / 2.0).unwrap();
+        shape.set_node(2, 1, ymin + h).unwrap();
         (shape, area)
     }
 
@@ -667,8 +667,8 @@ mod tests {
     fn gen_lin2() -> (Shape, f64, f64) {
         let mut shape = Shape::new(1, 1, 2).unwrap();
         let (xa, xb) = (3.0, 9.0);
-        shape.set_point(0, 0, xa).unwrap();
-        shape.set_point(1, 0, xb).unwrap();
+        shape.set_node(0, 0, xa).unwrap();
+        shape.set_node(1, 0, xb).unwrap();
         (shape, xa, xb)
     }
 
@@ -687,7 +687,7 @@ mod tests {
         let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let fn_s = |_| CS;
-        let mut a = Vector::filled(tri3.npoint, NOISE);
+        let mut a = Vector::filled(tri3.nnode, NOISE);
         tri3.integ_case_a(&mut a, fn_s)?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
@@ -705,7 +705,7 @@ mod tests {
         let (mut lin2, xa, xb) = gen_lin2();
         let all_int_points = lin2.calc_int_points_coords()?;
         let fn_s = |index: usize| all_int_points[index][0];
-        let mut a = Vector::new(lin2.npoint);
+        let mut a = Vector::new(lin2.nnode);
         lin2.integ_case_a(&mut a, fn_s)?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
@@ -720,7 +720,7 @@ mod tests {
         let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
-        let mut b = Vector::filled(tri3.npoint * tri3.space_ndim, NOISE);
+        let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut aux_v = Vector::new(tri3.space_ndim);
         tri3.integ_case_b(&mut b, fn_v, &mut aux_v)?;
         let cf = CS * area / 3.0;
@@ -734,7 +734,7 @@ mod tests {
         let fn_v = |v: &mut Vector, index: usize| {
             v.fill(all_int_points[index][0]);
         };
-        let mut b = Vector::filled(lin2.npoint * lin2.space_ndim, NOISE);
+        let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
         let mut aux_v = Vector::new(lin2.space_ndim);
         lin2.integ_case_b(&mut b, fn_v, &mut aux_v)?;
         let cf = (xb - xa) / 6.0;
@@ -794,7 +794,7 @@ mod tests {
             (W0 * ana.b[1] + W1 * ana.c[1]) / 2.0,
             (W0 * ana.b[2] + W1 * ana.c[2]) / 2.0,
         ];
-        let mut c = Vector::filled(tri3.npoint, NOISE);
+        let mut c = Vector::filled(tri3.nnode, NOISE);
         let mut aux_w = Vector::new(tri3.space_ndim);
         tri3.integ_case_c(&mut c, fn_w, &mut aux_w)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
@@ -812,7 +812,7 @@ mod tests {
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[1] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[1] / 6.0,
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[2] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[2] / 6.0,
         ];
-        let mut c = Vector::filled(tri3.npoint, NOISE);
+        let mut c = Vector::filled(tri3.nnode, NOISE);
         let mut aux_w = Vector::new(tri3.space_ndim);
         tri3.integ_case_c(&mut c, fn_w, &mut aux_w)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
@@ -847,7 +847,7 @@ mod tests {
             (S00 * ana.b[2] + S01 * ana.c[2]) / 2.0,
             (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
         ];
-        let mut d = Vector::filled(tri3.npoint * tri3.space_ndim, NOISE);
+        let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut aux_sig = Tensor2::new(true, true);
         let mut aux_vec = Vector::new(tri3.space_ndim);
         tri3.integ_case_d(&mut d, fn_sig, &mut aux_sig, &mut aux_vec)?;

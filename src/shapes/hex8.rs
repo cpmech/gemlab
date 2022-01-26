@@ -1,10 +1,10 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a hexahedron with 8 points (bilinear faces)
+/// Defines a hexahedron with 8 nodes (bilinear faces)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0.
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 ///           4________________7
@@ -46,8 +46,8 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of faces
 ///
-/// Note: the order of points is such that the right-hand rule generates outward normals.
-/// Also, the order of face points corresponds to Qua4 points.
+/// Note: the order of nodes is such that the right-hand rule generates outward normals.
+/// Also, the order of face nodes corresponds to Qua4 nodes.
 ///
 /// ```text
 ///           4----------------7
@@ -69,15 +69,15 @@ pub struct Hex8 {}
 
 impl Hex8 {
     pub const NDIM: usize = 3;
-    pub const NPOINT: usize = 8;
+    pub const NNODE: usize = 8;
     pub const NEDGE: usize = 12;
     pub const NFACE: usize = 6;
-    pub const EDGE_NPOINT: usize = 2;
-    pub const FACE_NPOINT: usize = 4;
+    pub const EDGE_NNODE: usize = 2;
+    pub const FACE_NNODE: usize = 4;
     pub const FACE_NEDGE: usize = 4;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Hex8::EDGE_NPOINT]; Hex8::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Hex8::EDGE_NNODE]; Hex8::NEDGE] = [
         [0, 1],
         [1, 2],
         [2, 3],
@@ -93,7 +93,7 @@ impl Hex8 {
     ];
 
     #[rustfmt::skip]
-    pub const FACE_POINT_IDS: [[usize; Hex8::FACE_NPOINT]; Hex8::NFACE] = [
+    pub const FACE_NODE_IDS: [[usize; Hex8::FACE_NNODE]; Hex8::NFACE] = [
         [0, 4, 7, 3],
         [1, 2, 6, 5],
         [0, 1, 5, 4],
@@ -103,7 +103,7 @@ impl Hex8 {
     ];
 
     #[rustfmt::skip]
-    pub const FACE_EDGE_POINT_IDS: [[[usize; Hex8::EDGE_NPOINT]; Hex8::FACE_NEDGE]; Hex8::NFACE] = [
+    pub const FACE_EDGE_NODE_IDS: [[[usize; Hex8::EDGE_NNODE]; Hex8::FACE_NEDGE]; Hex8::NFACE] = [
         [[0, 4], [4, 7], [7, 3], [3, 0]],
         [[1, 2], [2, 6], [6, 5], [5, 1]],
         [[0, 1], [1, 5], [5, 4], [4, 0]],
@@ -113,7 +113,7 @@ impl Hex8 {
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Hex8::NDIM]; Hex8::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Hex8::NDIM]; Hex8::NNODE] = [
         [-1.0, -1.0, -1.0],
         [ 1.0, -1.0, -1.0],
         [ 1.0,  1.0, -1.0],

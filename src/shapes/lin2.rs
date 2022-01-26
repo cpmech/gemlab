@@ -1,10 +1,10 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a line (segment) with 2 points (linear functions)
+/// Defines a line (segment) with 2 nodes (linear functions)
 ///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 /// -1                    +1
@@ -15,15 +15,15 @@ pub struct Lin2 {}
 
 impl Lin2 {
     pub const NDIM: usize = 1;
-    pub const NPOINT: usize = 2;
+    pub const NNODE: usize = 2;
     pub const NEDGE: usize = 0;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 0;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 0;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Lin2::NDIM]; Lin2::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Lin2::NDIM]; Lin2::NNODE] = [
         [-1.0],
         [ 1.0],
     ];

@@ -1,8 +1,8 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a triangle with 3 points (linear edges)
+/// Defines a triangle with 3 nodes (linear edges)
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 /// s
@@ -35,22 +35,22 @@ pub struct Tri3 {}
 
 impl Tri3 {
     pub const NDIM: usize = 2;
-    pub const NPOINT: usize = 3;
+    pub const NNODE: usize = 3;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 2;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 2;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Tri3::EDGE_NPOINT]; Tri3::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Tri3::EDGE_NNODE]; Tri3::NEDGE] = [
         [0, 1],
         [1, 2],
         [2, 0],
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Tri3::NDIM]; Tri3::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri3::NDIM]; Tri3::NNODE] = [
         [0.0, 0.0],
         [1.0, 0.0],
         [0.0, 1.0],

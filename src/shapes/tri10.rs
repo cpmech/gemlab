@@ -1,8 +1,8 @@
 use russell_lab::{Matrix, Vector};
 
-/// Defines a triangle with 10 points (cubic edges; interior point)
+/// Defines a triangle with 10 nodes (cubic edges; interior node)
 ///
-/// # Local IDs of points
+/// # Local IDs of nodes
 ///
 /// ```text
 /// s
@@ -34,22 +34,22 @@ pub struct Tri10 {}
 
 impl Tri10 {
     pub const NDIM: usize = 2;
-    pub const NPOINT: usize = 10;
+    pub const NNODE: usize = 10;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
-    pub const EDGE_NPOINT: usize = 4;
-    pub const FACE_NPOINT: usize = 0;
+    pub const EDGE_NNODE: usize = 4;
+    pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const EDGE_POINT_IDS: [[usize; Tri10::EDGE_NPOINT]; Tri10::NEDGE] = [
+    pub const EDGE_NODE_IDS: [[usize; Tri10::EDGE_NNODE]; Tri10::NEDGE] = [
         [0, 1, 3, 6],
         [1, 2, 4, 7],
         [2, 0, 5, 8],
     ];
 
     #[rustfmt::skip]
-    pub const POINT_REFERENCE_COORDS: [[f64; Tri10::NDIM]; Tri10::NPOINT] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri10::NDIM]; Tri10::NNODE] = [
         [0.0       , 0.0      ], // 0
         [1.0       , 0.0      ], // 1
         [0.0       , 1.0      ], // 2
