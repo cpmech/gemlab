@@ -127,31 +127,31 @@ impl Shape {
         Ok(())
     }
 
-    /// Implements the shape(n)-scalar(s) integration case
+    /// Implements the shape(N)-scalar(S) integration case
     ///
     /// Interpolation functions times scalar field:
     ///
     /// ```text
     ///      ⌠    → →     →
-    /// aᵐ = │ Nᵐ(x(ξ)) s(x) dΩ
+    /// aᵐ = │ Nᵐ(x(ξ)) s(x) tₕ dΩ
     ///      ⌡
-    ///      Ω
+    ///      Ωₑ
     /// ```
     ///
-    /// or, for lines in multi-dimensions,
+    /// or, for lines in multi-dimensions:
     ///
     /// ```text
     ///      ⌠
-    /// aᵐ = │ Nᵐ(ℓ(ξ)) s(ℓ) dℓ
+    /// aᵐ = │ Nᵐ(ℓ(ξ)) s(ℓ) tₕ dℓ
     ///      ⌡
-    ///      Ω
+    ///      Γₑ
     /// ```
     ///
     /// The numerical integration is:
     ///
     /// ```text
-    ///      nip-1     →     →       →
-    /// aᵐ ≈   Σ    Nᵐ(ιᵖ) s(ιᵖ) |J|(ιᵖ) wᵖ
+    ///      nip-1     →     →          →
+    /// aᵐ ≈   Σ    Nᵐ(ιᵖ) s(ιᵖ) tₕ |J|(ιᵖ) wᵖ
     ///       p=0
     /// ```
     ///
@@ -175,7 +175,8 @@ impl Shape {
     ///
     /// * `fn_s(index: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function, however written as
     ///                                  a function of the index of the integration point.
-    pub fn integ_vec_ns<F>(&mut self, a: &mut Vector, fn_s: F) -> Result<(), StrError>
+    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    pub fn integ_vec_a_ns<F>(&mut self, a: &mut Vector, fn_s: F, th: f64) -> Result<(), StrError>
     where
         F: Fn(usize) -> f64,
     {
@@ -201,29 +202,30 @@ impl Shape {
             let s = fn_s(index);
 
             // loop over nodes and perform sum
+            let coef = th * det_jac * weight;
             for m in 0..self.nnode {
-                a[m] += self.interp[m] * s * det_jac * weight;
+                a[m] += self.interp[m] * s * coef;
             }
         }
         Ok(())
     }
 
-    /// Implements the shape(n)-vector(v) integration case
+    /// Implements the the shape(N)-vector(V) integration case
     ///
     /// Interpolation functions times vector field:
     ///
     /// ```text
     /// →    ⌠    → →   → →
-    /// bᵐ = │ Nᵐ(x(ξ)) v(x) dΩ
+    /// bᵐ = │ Nᵐ(x(ξ)) v(x) tₕ dΩ
     ///      ⌡
-    ///      Ω
+    ///      Ωₑ
     /// ```
     ///
     /// The numerical integration is:
     ///
     /// ```text
-    /// →    nip-1     →   → →       →
-    /// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) |J|(ιᵖ) wᵖ
+    /// →    nip-1     →   → →          →
+    /// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) tₕ |J|(ιᵖ) wᵖ
     ///       p=0
     /// ```
     ///
@@ -253,8 +255,9 @@ impl Shape {
     ///
     /// * `fn_v(v: &mut Vector, index: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
-    /// * `aux_v` -- is an auxiliary vector with size equal to `space_ndim`.
-    pub fn integ_vec_nv<F>(&mut self, b: &mut Vector, fn_v: F, aux_v: &mut Vector) -> Result<(), StrError>
+    /// * `v` -- is an auxiliary vector with size equal to `space_ndim`.
+    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    pub fn integ_vec_b_nv<F>(&mut self, b: &mut Vector, fn_v: F, v: &mut Vector, th: f64) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
@@ -262,7 +265,7 @@ impl Shape {
         if b.dim() != self.nnode * self.space_ndim {
             return Err("the length of vector 'b' must be equal to nnode * space_ndim");
         }
-        if aux_v.dim() != self.space_ndim {
+        if v.dim() != self.space_ndim {
             return Err("the length of vector 'aux_v' must be equal to space_ndim");
         }
 
@@ -280,35 +283,31 @@ impl Shape {
             let det_jac = self.calc_jacobian(iota)?;
 
             // calculate v
-            fn_v(aux_v, index);
+            fn_v(v, index);
 
-            // loop over nodes and perform sum
-            for m in 0..self.nnode {
-                for i in 0..self.space_ndim {
-                    let ii = i + m * self.space_ndim;
-                    b[ii] += self.interp[m] * aux_v[i] * det_jac * weight;
-                }
-            }
+            // add contribution to b vector
+            let coef = th * det_jac * weight;
+            self.add_to_vec_b(b, v, coef);
         }
         Ok(())
     }
 
-    /// Implements the vector(v)-gradient(g) integration case
+    /// Implements the vector(V)-gradient(G) integration case
     ///
     /// Vector dot gradient:
     ///
     /// ```text
     ///      ⌠ → →    →  → →
-    /// cᵐ = │ w(x) · Gᵐ(x(ξ)) dΩ
+    /// cᵐ = │ w(x) · Gᵐ(x(ξ)) tₕ dΩ
     ///      ⌡
-    ///      Ω
+    ///      Ωₑ
     /// ```
     ///
     /// The numerical integration is:
     ///
     /// ```text
-    ///      nip-1  → →     →  →       →
-    /// cᵐ ≈   Σ    w(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
+    ///      nip-1  → →     →  →          →
+    /// cᵐ ≈   Σ    w(ιᵖ) · Gᵐ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
     ///       p=0
     /// ```
     ///
@@ -332,8 +331,9 @@ impl Shape {
     ///
     /// * `fn_w(w: &mut Vector, index: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
-    /// * `aux_w` -- is an auxiliary vector with size equal to `space_ndim`.
-    pub fn integ_vec_vg<F>(&mut self, c: &mut Vector, fn_w: F, aux_w: &mut Vector) -> Result<(), StrError>
+    /// * `w` -- is an auxiliary vector with size equal to `space_ndim`.
+    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    pub fn integ_vec_c_vg<F>(&mut self, c: &mut Vector, fn_w: F, w: &mut Vector, th: f64) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
@@ -341,7 +341,7 @@ impl Shape {
         if c.dim() != self.nnode {
             return Err("the length of vector 'c' must be equal to nnode");
         }
-        if aux_w.dim() != self.space_ndim {
+        if w.dim() != self.space_ndim {
             return Err("the length of vector 'aux_w' must be equal to space_ndim");
         }
 
@@ -358,33 +358,31 @@ impl Shape {
             let det_jac = self.calc_gradient(iota)?;
 
             // calculate w
-            fn_w(aux_w, index);
+            fn_w(w, index);
 
-            // loop over nodes and perform sum
-            for m in 0..self.nnode {
-                let w_dot_grad = self.vec_dot_grad(m, aux_w);
-                c[m] += w_dot_grad * det_jac * weight;
-            }
+            // add contribution to c vector
+            let coef = th * det_jac * weight;
+            self.add_to_vec_c(c, w, coef);
         }
         Ok(())
     }
 
-    /// Implements the tensor(t)-gradient(g) integration case
+    /// Implements the tensor(T)-gradient(G) integration case
     ///
     /// Tensor dot gradient:
     ///
     /// ```text
-    /// →    ⌠   →    →  → →   →
-    /// dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
+    /// →    ⌠   →    →  → →
+    /// dᵐ = │ σ(x) · Gᵐ(x(ξ)) tₕ dΩ
     ///      ⌡ ▔
-    ///      Ω
+    ///      Ωₑ
     /// ```
     ///
     /// The numerical integration is:
     ///
     /// ```text
-    /// →    nip-1    →     →  →       →
-    /// dᵐ ≈   Σ    σ(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
+    /// →    nip-1    →     →  →          →
+    /// dᵐ ≈   Σ    σ(ιᵖ) · Gᵐ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
     ///       p=0   ▔
     /// ```
     ///
@@ -414,15 +412,13 @@ impl Shape {
     ///
     /// * `fn_sig(sig: &mut Tensor2, index: usize)` -- σ(x(ξ)) tensor function, however written as
     ///                                                a function of the index of the integration point.
-    /// * `aux_sig` -- is an auxiliary Tensor2.
-    /// * `aux_vec` -- is an auxiliary Vector with size equal to `space_ndim`.
-    pub fn integ_vec_tg<F>(
-        &mut self,
-        d: &mut Vector,
-        fn_sig: F,
-        aux_sig: &mut Tensor2,
-        aux_vec: &mut Vector,
-    ) -> Result<(), StrError>
+    /// * `sig` -- is an auxiliary Tensor2 with 4 components in 2D and 6 components in 3D.
+    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    ///
+    /// # Note
+    ///
+    /// This function is only available for space_ndim = 2D or 3D.
+    pub fn integ_vec_d_tg<F>(&mut self, d: &mut Vector, fn_sig: F, sig: &mut Tensor2, th: f64) -> Result<(), StrError>
     where
         F: Fn(&mut Tensor2, usize),
     {
@@ -433,11 +429,8 @@ impl Shape {
         if d.dim() != self.nnode * self.space_ndim {
             return Err("the length of vector 'd' must be equal to nnode * space_ndim");
         }
-        if aux_sig.vec.dim() != 2 * self.space_ndim {
+        if sig.vec.dim() != 2 * self.space_ndim {
             return Err("'aux_sig' must be symmetric with dim equal to 4 in 2D or 6 in 3D");
-        }
-        if aux_vec.dim() != self.space_ndim {
-            return Err("the length of vector 'aux_vec' must be equal to space_ndim");
         }
 
         // clear output vector
@@ -451,10 +444,15 @@ impl Shape {
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(iota)?;
+            let coef = th * det_jac * weight;
 
             // calculate σ
-            fn_sig(aux_sig, index);
+            fn_sig(sig, index);
 
+            // add contribution to d vector
+            self.add_to_vec_d(d, sig, coef);
+
+            /*
             // loop over nodes and perform sum
             for m in 0..self.nnode {
                 // aux_vec := σ · G
@@ -464,52 +462,53 @@ impl Shape {
                     d[ii] += aux_vec[i] * det_jac * weight;
                 }
             }
+            */
         }
         Ok(())
     }
 
-    /// Implements the shape(n)-scalar(s)-shape(n) integration case (e.g., diffusion matrix)
-    pub fn integ_mat_nsn(&self) -> Result<(), StrError> {
+    /// Implements the shape(N)-scalar(S)-shape(N) integration case (e.g., diffusion matrix)
+    pub fn integ_mat_1_nsn(&self) -> Result<(), StrError> {
         Ok(())
     }
 
-    /// Implements the gradient(g)-vector(v)-shape(n) integration case (e.g., compressibility matrix)
-    pub fn integ_mat_gvn(&self) -> Result<(), StrError> {
+    /// Implements the gradient(G)-vector(V)-shape(N) integration case (e.g., compressibility matrix)
+    pub fn integ_mat_2_gvn(&self) -> Result<(), StrError> {
         Ok(())
     }
 
-    /// Implements the gradient(g)-tensor(t)-gradient(g) integration case (e.g., conductivity matrix)
-    pub fn integ_mat_gtg(&self) -> Result<(), StrError> {
+    /// Implements the gradient(G)-tensor(T)-gradient(G) integration case (e.g., conductivity matrix)
+    pub fn integ_mat_3_gtg(&self) -> Result<(), StrError> {
         Ok(())
     }
 
-    /// Implements the shape(n)-scalar(s)-gradient(g) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_mix_nsg(&self, _: &mut Shape) -> Result<(), StrError> {
+    /// Implements the shape(N)-scalar(S)-gradient(G) integration case with different shapes (e.g., coupling matrix)
+    pub fn integ_mat_4_nsg(&self, _: &mut Shape) -> Result<(), StrError> {
         Ok(())
     }
 
-    /// Implements the gradient(n)-tensor(t)-shape(n) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_mix_gtn(&self, _: &mut Shape) -> Result<(), StrError> {
+    /// Implements the gradient(G)-tensor(T)-shape(N) integration case with different shapes (e.g., coupling matrix)
+    pub fn integ_mat_5_gtn(&self, _: &mut Shape) -> Result<(), StrError> {
         Ok(())
     }
 
-    /// Implements the shape(n)-vector(v)-shape(n) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_mix_nvn(&self, _: &mut Shape) -> Result<(), StrError> {
+    /// Implements the shape(N)-vector(V)-shape(N) integration case with different shapes (e.g., coupling matrix)
+    pub fn integ_mat_6_nvn(&self, _: &mut Shape) -> Result<(), StrError> {
         Ok(())
     }
 
-    /// Implements the gradient(g)-scalar(s)-shape(n) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_mix_gsn(&self, _: &mut Shape) -> Result<(), StrError> {
+    /// Implements the gradient(G)-scalar(S)-shape(N) integration case with different shapes (e.g., coupling matrix)
+    pub fn integ_mat_7_gsn(&self, _: &mut Shape) -> Result<(), StrError> {
         Ok(())
     }
 
-    /// Implements the shape(n)-tensor(t)-shape(n) integration case (e.g., mass matrix)
-    pub fn integ_mat_ntn(&self) -> Result<(), StrError> {
+    /// Implements the shape(N)-tensor(T)-shape(N) integration case (e.g., mass matrix)
+    pub fn integ_mat_8_ntn(&self) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the shape(n)-vector(v)-gradient(g) integration case (e.g., variable density matrix)
-    pub fn integ_mat_nvg(&self) -> Result<(), StrError> {
+    pub fn integ_mat_9_nvg(&self) -> Result<(), StrError> {
         Ok(())
     }
 
@@ -519,7 +518,7 @@ impl Shape {
     ///
     /// ```text
     ///       ⌠               →    →
-    /// Kᵐⁿ = │ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
+    /// Kᵐⁿ = │ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ tₕ dΩ
     /// ▔     ⌡
     ///       Ωₑ
     /// ```
@@ -527,8 +526,8 @@ impl Shape {
     /// The numerical integration is:
     ///
     /// ```text
-    ///         nip-1     →         →       →       →
-    /// Kᵐⁿᵢⱼ ≈   Σ   Gᵐₖ(ιᵖ) Dᵢₖⱼₗ(ιᵖ) Gⁿₗ(ιᵖ) |J|(ιᵖ) wᵖ
+    ///         nip-1     →         →       →          →
+    /// Kᵐⁿᵢⱼ ≈   Σ   Gᵐₖ(ιᵖ) Dᵢₖⱼₗ(ιᵖ) Gⁿₗ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
     ///          p=0
     /// ```
     ///
@@ -562,20 +561,18 @@ impl Shape {
     /// * `fn_dd(dd: &mut Tensor4, index: usize)` -- D(x(ξ)) constitutive modulus function, given as
     ///                                              a function of the index of the integration point.
     /// * `aux_dd` -- is an auxiliary Tensor4 (minor-symmetric in 2D or 3D with 4 or 6 components, respectively).
-    /// * `thickness` -- thickness of the 2D domain (e.g., for plane-stress problems).
-    pub fn integ_mat_gdg<F>(
-        &mut self,
-        kk: &mut Matrix,
-        fn_dd: F,
-        aux_dd: &mut Tensor4,
-        thickness: f64,
-    ) -> Result<(), StrError>
+    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    ///
+    /// # Note
+    ///
+    /// This function is only available for space_ndim = 2D or 3D.
+    pub fn integ_mat_10_gdg<F>(&mut self, kk: &mut Matrix, fn_dd: F, dd: &mut Tensor4, th: f64) -> Result<(), StrError>
     where
         F: Fn(&mut Tensor4, usize),
     {
         // check
         let (nrow_kk, ncol_kk) = kk.dims();
-        let (nrow_dd, ncol_dd) = aux_dd.mat.dims();
+        let (nrow_dd, ncol_dd) = dd.mat.dims();
         if self.space_ndim == 1 {
             return Err("space_ndim must be 2 or 3");
         }
@@ -597,43 +594,94 @@ impl Shape {
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(iota)?;
+            let coef = det_jac * weight * th;
 
             // calculate constitutive modulus
-            fn_dd(aux_dd, index);
+            fn_dd(dd, index);
 
             // add contribution to K matrix
-            let c = det_jac * weight * thickness;
-            self.stiffness_contribution(kk, c, aux_dd);
+            self.add_to_mat_kk(kk, dd, coef);
         }
         Ok(())
     }
 
-    /// Computes vector dot the gradient at node m
-    fn vec_dot_grad(&self, m: usize, w: &Vector) -> f64 {
-        let mut res = 0.0;
-        for i in 0..self.space_ndim {
-            res += w[i] * self.gradient[m][i];
-        }
-        res
-    }
-
-    /// Computes tensor dot the gradient at node m
-    fn tensor_dot_grad(&self, res: &mut Vector, m: usize, sig: &Tensor2) {
-        for i in 0..self.space_ndim {
-            res[i] = 0.0;
-            for j in 0..self.space_ndim {
-                res[i] += sig.get(i, j) * self.gradient[m][j];
+    /// Adds contribution to the b-vector in integ_vec_2_nv
+    #[inline]
+    fn add_to_vec_b(&self, b: &mut Vector, v: &Vector, coef: f64) {
+        if self.space_ndim == 1 {
+            for m in 0..self.nnode {
+                b[m] += coef * self.interp[m] * v[0];
+            }
+        } else if self.space_ndim == 2 {
+            for m in 0..self.nnode {
+                b[0 + m * 2] += coef * self.interp[m] * v[0];
+                b[1 + m * 2] += coef * self.interp[m] * v[1];
+            }
+        } else {
+            for m in 0..self.nnode {
+                b[0 + m * 3] += coef * self.interp[m] * v[0];
+                b[1 + m * 3] += coef * self.interp[m] * v[1];
+                b[2 + m * 3] += coef * self.interp[m] * v[2];
             }
         }
     }
 
-    /// Computes the contribution to the stiffness matrix
+    /// Adds contribution to the c-vector in integ_vec_3_vg
+    #[inline]
+    fn add_to_vec_c(&self, c: &mut Vector, w: &Vector, coef: f64) {
+        let g = &self.gradient;
+        if self.space_ndim == 1 {
+            for m in 0..self.nnode {
+                c[m] += coef * w[0] * g[m][0];
+            }
+        } else if self.space_ndim == 2 {
+            for m in 0..self.nnode {
+                c[m] += coef * (w[0] * g[m][0] + w[1] * g[m][1]);
+            }
+        } else {
+            for m in 0..self.nnode {
+                c[m] += coef * (w[0] * g[m][0] + w[1] * g[m][1] + w[2] * g[m][2]);
+            }
+        }
+    }
+
+    /// Adds contribution to the d-vector in integ_vec_4_tg
+    #[inline]
+    fn add_to_vec_d(&self, d: &mut Vector, sig: &Tensor2, coef: f64) {
+        let s = SQRT_2;
+        let g = &self.gradient;
+        let t = &sig.vec;
+        if self.space_ndim == 2 {
+            for m in 0..self.nnode {
+                d[0 + m * 2] += coef * (t[0] * g[m][0] + t[3] * g[m][1] / s);
+                d[1 + m * 2] += coef * (t[3] * g[m][0] / s + t[1] * g[m][1]);
+            }
+        } else {
+            for m in 0..self.nnode {
+                d[0 + m * 3] += coef * (t[0] * g[m][0] + t[3] * g[m][1] / s + t[5] * g[m][2] / s);
+                d[1 + m * 3] += coef * (t[3] * g[m][0] / s + t[1] * g[m][1] + t[4] * g[m][2] / s);
+                d[2 + m * 3] += coef * (t[5] * g[m][0] / s + t[4] * g[m][1] / s + t[2] * g[m][2]);
+            }
+        }
+    }
+
+    /// Adds contribution to the K-matrix in integ_mat_10_gdg
+    #[inline]
     #[rustfmt::skip]
-    fn stiffness_contribution(&self, kk: &mut Matrix, c: f64, dd: &Tensor4) {
+    fn add_to_mat_kk(&self, kk: &mut Matrix, dd: &Tensor4, c: f64) {
         let s = SQRT_2;
         let g = &self.gradient;
         let d = &dd.mat;
-        if self.space_ndim == 3 {
+        if self.space_ndim == 2 {
+            for m in 0..self.nnode {
+                for n in 0..self.nnode {
+                    kk[0+m*2][0+n*2] += c * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
+                    kk[0+m*2][1+n*2] += c * (g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
+                    kk[1+m*2][0+n*2] += c * (g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0;
+                    kk[1+m*2][1+n*2] += c * (g[m][0]*g[n][0]*d[3][3] + s*g[m][0]*g[n][1]*d[3][1] + s*g[m][1]*g[n][0]*d[1][3] + 2.0*g[m][1]*g[n][1]*d[1][1]) / 2.0;
+                }
+            }
+        } else {
             for m in 0..self.nnode {
                 for n in 0..self.nnode {
                     kk[0+m*3][0+n*3] += c * (g[m][2]*g[n][2]*d[5][5] + g[m][2]*g[n][1]*d[5][3] + s*g[m][2]*g[n][0]*d[5][0] + g[m][1]*g[n][2]*d[3][5] + g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][2]*d[0][5] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
@@ -645,15 +693,6 @@ impl Shape {
                     kk[2+m*3][0+n*3] += c * (g[m][0]*g[n][2]*d[5][5] + g[m][0]*g[n][1]*d[5][3] + s*g[m][0]*g[n][0]*d[5][0] + g[m][1]*g[n][2]*d[4][5] + g[m][1]*g[n][1]*d[4][3] + s*g[m][1]*g[n][0]*d[4][0] + s*g[m][2]*g[n][2]*d[2][5] + s*g[m][2]*g[n][1]*d[2][3] + 2.0*g[m][2]*g[n][0]*d[2][0]) / 2.0;
                     kk[2+m*3][1+n*3] += c * (g[m][0]*g[n][2]*d[5][4] + g[m][0]*g[n][0]*d[5][3] + s*g[m][0]*g[n][1]*d[5][1] + g[m][1]*g[n][2]*d[4][4] + g[m][1]*g[n][0]*d[4][3] + s*g[m][1]*g[n][1]*d[4][1] + s*g[m][2]*g[n][2]*d[2][4] + s*g[m][2]*g[n][0]*d[2][3] + 2.0*g[m][2]*g[n][1]*d[2][1]) / 2.0;
                     kk[2+m*3][2+n*3] += c * (g[m][0]*g[n][0]*d[5][5] + g[m][0]*g[n][1]*d[5][4] + s*g[m][0]*g[n][2]*d[5][2] + g[m][1]*g[n][0]*d[4][5] + g[m][1]*g[n][1]*d[4][4] + s*g[m][1]*g[n][2]*d[4][2] + s*g[m][2]*g[n][0]*d[2][5] + s*g[m][2]*g[n][1]*d[2][4] + 2.0*g[m][2]*g[n][2]*d[2][2]) / 2.0;
-                }
-            }
-        } else {
-            for m in 0..self.nnode {
-                for n in 0..self.nnode {
-                    kk[0+m*2][0+n*2] += c * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
-                    kk[0+m*2][1+n*2] += c * (g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
-                    kk[1+m*2][0+n*2] += c * (g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0;
-                    kk[1+m*2][1+n*2] += c * (g[m][0]*g[n][0]*d[3][3] + s*g[m][0]*g[n][1]*d[3][1] + s*g[m][1]*g[n][0]*d[1][3] + 2.0*g[m][1]*g[n][1]*d[1][1]) / 2.0;
                 }
             }
         }
@@ -704,7 +743,7 @@ mod tests {
     }
 
     #[test]
-    fn integ_case_a_works() -> Result<(), StrError> {
+    fn integ_vec_a_works() -> Result<(), StrError> {
         // tri3 with a constant source term:
         //
         // s(x) = cₛ
@@ -719,7 +758,7 @@ mod tests {
         const CS: f64 = 3.0;
         let fn_s = |_| CS;
         let mut a = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_ns(&mut a, fn_s)?;
+        tri3.integ_vec_a_ns(&mut a, fn_s, 1.0)?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
@@ -737,7 +776,7 @@ mod tests {
         let all_int_points = lin2.calc_int_points_coords()?;
         let fn_s = |index: usize| all_int_points[index][0];
         let mut a = Vector::new(lin2.nnode);
-        lin2.integ_vec_ns(&mut a, fn_s)?;
+        lin2.integ_vec_a_ns(&mut a, fn_s, 1.0)?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
@@ -745,15 +784,15 @@ mod tests {
     }
 
     #[test]
-    fn integ_case_b_works() -> Result<(), StrError> {
+    fn integ_vec_b_works() -> Result<(), StrError> {
         // This test is similar to the case_a with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        let mut aux_v = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_nv(&mut b, fn_v, &mut aux_v)?;
+        let mut v = Vector::new(tri3.space_ndim);
+        tri3.integ_vec_b_nv(&mut b, fn_v, &mut v, 1.0)?;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
@@ -766,8 +805,8 @@ mod tests {
             v.fill(all_int_points[index][0]);
         };
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
-        let mut aux_v = Vector::new(lin2.space_ndim);
-        lin2.integ_vec_nv(&mut b, fn_v, &mut aux_v)?;
+        let mut v = Vector::new(lin2.space_ndim);
+        lin2.integ_vec_b_nv(&mut b, fn_v, &mut v, 1.0)?;
         let cf = (xb - xa) / 6.0;
         let b_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
@@ -806,7 +845,7 @@ mod tests {
     }
 
     #[test]
-    fn integ_case_c_works() -> Result<(), StrError> {
+    fn integ_vec_c_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (mut tri3, area) = gen_tri3();
         let ana = analytical_tri3(area, &mut tri3);
@@ -826,8 +865,8 @@ mod tests {
             (W0 * ana.b[2] + W1 * ana.c[2]) / 2.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        let mut aux_w = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_vg(&mut c, fn_w, &mut aux_w)?;
+        let mut w = Vector::new(tri3.space_ndim);
+        tri3.integ_vec_c_vg(&mut c, fn_w, &mut w, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
 
         // bilinear vector function: w(x) = {x, y}
@@ -844,14 +883,14 @@ mod tests {
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[2] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[2] / 6.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        let mut aux_w = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_vg(&mut c, fn_w, &mut aux_w)?;
+        let mut w = Vector::new(tri3.space_ndim);
+        tri3.integ_vec_c_vg(&mut c, fn_w, &mut w, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
 
     #[test]
-    fn integ_case_d_works() -> Result<(), StrError> {
+    fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (mut tri3, area) = gen_tri3();
         let ana = analytical_tri3(area, &mut tri3);
@@ -879,9 +918,8 @@ mod tests {
             (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
         ];
         let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        let mut aux_sig = Tensor2::new(true, true);
-        let mut aux_vec = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_tg(&mut d, fn_sig, &mut aux_sig, &mut aux_vec)?;
+        let mut sig = Tensor2::new(true, true);
+        tri3.integ_vec_d_tg(&mut d, fn_sig, &mut sig, 1.0)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
