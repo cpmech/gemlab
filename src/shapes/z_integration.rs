@@ -444,25 +444,13 @@ impl Shape {
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(iota)?;
-            let coef = th * det_jac * weight;
 
             // calculate σ
             fn_sig(sig, index);
 
             // add contribution to d vector
+            let coef = th * det_jac * weight;
             self.add_to_vec_d(d, sig, coef);
-
-            /*
-            // loop over nodes and perform sum
-            for m in 0..self.nnode {
-                // aux_vec := σ · G
-                self.tensor_dot_grad(aux_vec, m, &aux_sig);
-                for i in 0..self.space_ndim {
-                    let ii = i + m * self.space_ndim;
-                    d[ii] += aux_vec[i] * det_jac * weight;
-                }
-            }
-            */
         }
         Ok(())
     }
@@ -594,12 +582,12 @@ impl Shape {
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(iota)?;
-            let coef = det_jac * weight * th;
 
             // calculate constitutive modulus
             fn_dd(dd, index);
 
             // add contribution to K matrix
+            let coef = det_jac * weight * th;
             self.add_to_mat_kk(kk, dd, coef);
         }
         Ok(())
