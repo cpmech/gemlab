@@ -730,6 +730,55 @@ mod tests {
         (shape, xa, xb)
     }
 
+    struct AnalyticalTri3 {
+        x: [f64; 3],  // node x-coordinates
+        y: [f64; 3],  // node y-coordinates
+        b: [f64; 3],  // b-coefficients
+        c: [f64; 3],  // c-coefficients
+        area: f64,    // area
+        bmat: Matrix, // B-matrix
+    }
+
+    impl AnalyticalTri3 {
+        pub fn new(tri3: &mut Shape) -> Self {
+            // coefficients
+            let (x0, y0) = (tri3.coords_transp[0][0], tri3.coords_transp[1][0]);
+            let (x1, y1) = (tri3.coords_transp[0][1], tri3.coords_transp[1][1]);
+            let (x2, y2) = (tri3.coords_transp[0][2], tri3.coords_transp[1][2]);
+            let (b0, b1, b2) = (y1 - y2, y2 - y0, y0 - y1);
+            let (c0, c1, c2) = (x2 - x1, x0 - x2, x1 - x0);
+            let (f0, f1, f2) = (x1 * y2 - x2 * y1, x2 * y0 - x0 * y2, x0 * y1 - x1 * y0);
+
+            // area
+            let area = (f0 + f1 + f2) / 2.0;
+
+            // check gradients
+            let gg = Matrix::from(&[
+                [b0 / (2.0 * area), c0 / (2.0 * area)],
+                [b1 / (2.0 * area), c1 / (2.0 * area)],
+                [b2 / (2.0 * area), c2 / (2.0 * area)],
+            ]);
+            tri3.calc_gradient(&tri3.ip_data[0]).unwrap();
+            assert_eq!(tri3.gradient.as_data(), gg.as_data());
+
+            // results
+            let s = SQRT_2;
+            AnalyticalTri3 {
+                x: [x0, x1, x2],
+                y: [y0, y1, y2],
+                b: [b0, b1, b2],
+                c: [c0, c1, c2],
+                area,
+                bmat: Matrix::from(&[
+                    [b0, 0.0, b1, 0.0, b2, 0.0],
+                    [0.0, c0, 0.0, c1, 0.0, c2],
+                    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [c0 / s, b0 / s, c1 / s, b1 / s, c2 / s, b2 / s],
+                ]),
+            }
+        }
+    }
+
     #[test]
     fn integ_vec_a_works() -> Result<(), StrError> {
         // tri3 with a constant source term:
@@ -801,42 +850,12 @@ mod tests {
         Ok(())
     }
 
-    struct AnalyticalTri3 {
-        x: [f64; 3],
-        y: [f64; 3],
-        b: [f64; 3],
-        c: [f64; 3],
-    }
-
-    fn analytical_tri3(area: f64, tri3: &mut Shape) -> AnalyticalTri3 {
-        let (x0, y0) = (tri3.coords_transp[0][0], tri3.coords_transp[1][0]);
-        let (x1, y1) = (tri3.coords_transp[0][1], tri3.coords_transp[1][1]);
-        let (x2, y2) = (tri3.coords_transp[0][2], tri3.coords_transp[1][2]);
-        let (b0, b1, b2) = (y1 - y2, y2 - y0, y0 - y1);
-        let (c0, c1, c2) = (x2 - x1, x0 - x2, x1 - x0);
-        let (f0, f1, f2) = (x1 * y2 - x2 * y1, x2 * y0 - x0 * y2, x0 * y1 - x1 * y0);
-        let aa = (f0 + f1 + f2) / 2.0;
-        assert_eq!(area, aa);
-        let gg = Matrix::from(&[
-            [b0 / (2.0 * aa), c0 / (2.0 * aa)],
-            [b1 / (2.0 * aa), c1 / (2.0 * aa)],
-            [b2 / (2.0 * aa), c2 / (2.0 * aa)],
-        ]);
-        tri3.calc_gradient(&tri3.ip_data[0]).unwrap();
-        assert_eq!(tri3.gradient.as_data(), gg.as_data());
-        AnalyticalTri3 {
-            x: [x0, x1, x2],
-            y: [y0, y1, y2],
-            b: [b0, b1, b2],
-            c: [c0, c1, c2],
-        }
-    }
-
     #[test]
     fn integ_vec_c_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (mut tri3, area) = gen_tri3();
-        let ana = analytical_tri3(area, &mut tri3);
+        let ana = AnalyticalTri3::new(&mut tri3);
+        assert_eq!(area, ana.area);
 
         // constant vector function: w(x) = {w₀, w₁}
         // solution:
@@ -881,7 +900,7 @@ mod tests {
     fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (mut tri3, area) = gen_tri3();
-        let ana = analytical_tri3(area, &mut tri3);
+        let ana = AnalyticalTri3::new(&mut tri3);
 
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
@@ -909,6 +928,15 @@ mod tests {
         let mut sig = Tensor2::new(true, true);
         tri3.integ_vec_d_tg(&mut d, fn_sig, &mut sig, 1.0)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
+        Ok(())
+    }
+
+    #[test]
+    fn integ_mat_10_gdg_works() -> Result<(), StrError> {
+        // shape and analytical gradient
+        let (mut tri3, area) = gen_tri3();
+        let ana = AnalyticalTri3::new(&mut tri3);
+
         Ok(())
     }
 }
