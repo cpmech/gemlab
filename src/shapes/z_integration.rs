@@ -127,9 +127,9 @@ impl Shape {
         Ok(())
     }
 
-    /// Performs the Case-A integration
+    /// Implements the shape(n)-scalar(s) integration case
     ///
-    /// Case-A, interpolation functions times scalar field:
+    /// Interpolation functions times scalar field:
     ///
     /// ```text
     ///      ⌠    → →     →
@@ -175,7 +175,7 @@ impl Shape {
     ///
     /// * `fn_s(index: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function, however written as
     ///                                  a function of the index of the integration point.
-    pub fn integ_case_a<F>(&mut self, a: &mut Vector, fn_s: F) -> Result<(), StrError>
+    pub fn integ_vec_ns<F>(&mut self, a: &mut Vector, fn_s: F) -> Result<(), StrError>
     where
         F: Fn(usize) -> f64,
     {
@@ -208,9 +208,9 @@ impl Shape {
         Ok(())
     }
 
-    /// Performs the Case-B integration
+    /// Implements the shape(n)-vector(v) integration case
     ///
-    /// Case-B, interpolation functions times vector field:
+    /// Interpolation functions times vector field:
     ///
     /// ```text
     /// →    ⌠    → →   → →
@@ -254,7 +254,7 @@ impl Shape {
     /// * `fn_v(v: &mut Vector, index: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
     /// * `aux_v` -- is an auxiliary vector with size equal to `space_ndim`.
-    pub fn integ_case_b<F>(&mut self, b: &mut Vector, fn_v: F, aux_v: &mut Vector) -> Result<(), StrError>
+    pub fn integ_vec_nv<F>(&mut self, b: &mut Vector, fn_v: F, aux_v: &mut Vector) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
@@ -293,9 +293,9 @@ impl Shape {
         Ok(())
     }
 
-    /// Performs the Case-C integration
+    /// Implements the vector(v)-gradient(g) integration case
     ///
-    /// Case-C, vector dot gradient:
+    /// Vector dot gradient:
     ///
     /// ```text
     ///      ⌠ → →    →  → →
@@ -333,7 +333,7 @@ impl Shape {
     /// * `fn_w(w: &mut Vector, index: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
     /// * `aux_w` -- is an auxiliary vector with size equal to `space_ndim`.
-    pub fn integ_case_c<F>(&mut self, c: &mut Vector, fn_w: F, aux_w: &mut Vector) -> Result<(), StrError>
+    pub fn integ_vec_vg<F>(&mut self, c: &mut Vector, fn_w: F, aux_w: &mut Vector) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
@@ -369,9 +369,9 @@ impl Shape {
         Ok(())
     }
 
-    /// Performs the Case-D integration
+    /// Implements the tensor(t)-gradient(g) integration case
     ///
-    /// Case-D, tensor dot gradient:
+    /// Tensor dot gradient:
     ///
     /// ```text
     /// →    ⌠   →    →  → →   →
@@ -416,7 +416,7 @@ impl Shape {
     ///                                                a function of the index of the integration point.
     /// * `aux_sig` -- is an auxiliary Tensor2.
     /// * `aux_vec` -- is an auxiliary Vector with size equal to `space_ndim`.
-    pub fn integ_case_d<F>(
+    pub fn integ_vec_tg<F>(
         &mut self,
         d: &mut Vector,
         fn_sig: F,
@@ -468,21 +468,52 @@ impl Shape {
         Ok(())
     }
 
-    /// Computes the Nᵐ s Nⁿ integral
-    ///
-    /// ```text
-    /// →    ⌠   →    →  → →   →
-    /// dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
-    ///      ⌡ ▔
-    ///      Ω
-    /// ```
-    pub fn integ_mat_nsn() {}
-    pub fn integ_mat_gvn() {}
-    pub fn integ_mat_gtg() {}
-    pub fn integ_mat_ntn() {}
-    pub fn integ_mat_nvg() {}
+    /// Implements the shape(n)-scalar(s)-shape(n) integration case (e.g., diffusion matrix)
+    pub fn integ_mat_nsn(&self) -> Result<(), StrError> {
+        Ok(())
+    }
 
-    /// Computes the Gᵐₖ Dᵢₖⱼₗ Gⁿₗ integral (stiffness)
+    /// Implements the gradient(g)-vector(v)-shape(n) integration case (e.g., compressibility matrix)
+    pub fn integ_mat_gvn(&self) -> Result<(), StrError> {
+        Ok(())
+    }
+
+    /// Implements the gradient(g)-tensor(t)-gradient(g) integration case (e.g., conductivity matrix)
+    pub fn integ_mat_gtg(&self) -> Result<(), StrError> {
+        Ok(())
+    }
+
+    /// Implements the shape(n)-scalar(s)-gradient(g) integration case with different shapes (e.g., coupling matrix)
+    pub fn integ_mat_mix_nsg(&self, _: &mut Shape) -> Result<(), StrError> {
+        Ok(())
+    }
+
+    /// Implements the gradient(n)-tensor(t)-shape(n) integration case with different shapes (e.g., coupling matrix)
+    pub fn integ_mat_mix_gtn(&self, _: &mut Shape) -> Result<(), StrError> {
+        Ok(())
+    }
+
+    /// Implements the shape(n)-vector(v)-shape(n) integration case with different shapes (e.g., coupling matrix)
+    pub fn integ_mat_mix_nvn(&self, _: &mut Shape) -> Result<(), StrError> {
+        Ok(())
+    }
+
+    /// Implements the gradient(g)-scalar(s)-shape(n) integration case with different shapes (e.g., coupling matrix)
+    pub fn integ_mat_mix_gsn(&self, _: &mut Shape) -> Result<(), StrError> {
+        Ok(())
+    }
+
+    /// Implements the shape(n)-tensor(t)-shape(n) integration case (e.g., mass matrix)
+    pub fn integ_mat_ntn(&self) -> Result<(), StrError> {
+        Ok(())
+    }
+
+    /// Implements the shape(n)-vector(v)-gradient(g) integration case (e.g., variable density matrix)
+    pub fn integ_mat_nvg(&self) -> Result<(), StrError> {
+        Ok(())
+    }
+
+    /// Implements the gradient(g)-4th-tensor(d)-gradient(g) integration case (e.g., stiffness matrix)
     ///
     /// Stiffness tensors:
     ///
@@ -688,7 +719,7 @@ mod tests {
         const CS: f64 = 3.0;
         let fn_s = |_| CS;
         let mut a = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_case_a(&mut a, fn_s)?;
+        tri3.integ_vec_ns(&mut a, fn_s)?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
@@ -706,7 +737,7 @@ mod tests {
         let all_int_points = lin2.calc_int_points_coords()?;
         let fn_s = |index: usize| all_int_points[index][0];
         let mut a = Vector::new(lin2.nnode);
-        lin2.integ_case_a(&mut a, fn_s)?;
+        lin2.integ_vec_ns(&mut a, fn_s)?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
@@ -722,7 +753,7 @@ mod tests {
         let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut aux_v = Vector::new(tri3.space_ndim);
-        tri3.integ_case_b(&mut b, fn_v, &mut aux_v)?;
+        tri3.integ_vec_nv(&mut b, fn_v, &mut aux_v)?;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
@@ -736,7 +767,7 @@ mod tests {
         };
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
         let mut aux_v = Vector::new(lin2.space_ndim);
-        lin2.integ_case_b(&mut b, fn_v, &mut aux_v)?;
+        lin2.integ_vec_nv(&mut b, fn_v, &mut aux_v)?;
         let cf = (xb - xa) / 6.0;
         let b_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
@@ -796,7 +827,7 @@ mod tests {
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
         let mut aux_w = Vector::new(tri3.space_ndim);
-        tri3.integ_case_c(&mut c, fn_w, &mut aux_w)?;
+        tri3.integ_vec_vg(&mut c, fn_w, &mut aux_w)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
 
         // bilinear vector function: w(x) = {x, y}
@@ -814,7 +845,7 @@ mod tests {
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
         let mut aux_w = Vector::new(tri3.space_ndim);
-        tri3.integ_case_c(&mut c, fn_w, &mut aux_w)?;
+        tri3.integ_vec_vg(&mut c, fn_w, &mut aux_w)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
@@ -850,7 +881,7 @@ mod tests {
         let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut aux_sig = Tensor2::new(true, true);
         let mut aux_vec = Vector::new(tri3.space_ndim);
-        tri3.integ_case_d(&mut d, fn_sig, &mut aux_sig, &mut aux_vec)?;
+        tri3.integ_vec_tg(&mut d, fn_sig, &mut aux_sig, &mut aux_vec)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
