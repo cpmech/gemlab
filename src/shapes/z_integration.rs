@@ -200,7 +200,7 @@ impl Shape {
             // calculate s
             let s = fn_s(index);
 
-            // loop over nodes and perform summation
+            // loop over nodes and perform sum
             for m in 0..self.nnode {
                 a[m] += self.interp[m] * s * det_jac * weight;
             }
@@ -282,7 +282,7 @@ impl Shape {
             // calculate v
             fn_v(aux_v, index);
 
-            // loop over nodes and perform summation
+            // loop over nodes and perform sum
             for m in 0..self.nnode {
                 for i in 0..self.space_ndim {
                     let ii = i + m * self.space_ndim;
@@ -360,7 +360,7 @@ impl Shape {
             // calculate w
             fn_w(aux_w, index);
 
-            // loop over nodes and perform summation
+            // loop over nodes and perform sum
             for m in 0..self.nnode {
                 let w_dot_grad = self.vec_dot_grad(m, aux_w);
                 c[m] += w_dot_grad * det_jac * weight;
@@ -455,7 +455,7 @@ impl Shape {
             // calculate σ
             fn_sig(aux_sig, index);
 
-            // loop over nodes and perform summation
+            // loop over nodes and perform sum
             for m in 0..self.nnode {
                 // aux_vec := σ · G
                 self.tensor_dot_grad(aux_vec, m, &aux_sig);
@@ -669,7 +669,7 @@ mod tests {
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
 
-    // to test if variables are cleared before summation
+    // to test if variables are cleared before sum
     const NOISE: f64 = 1234.56;
 
     // equilateral triangle with sides equal to l
