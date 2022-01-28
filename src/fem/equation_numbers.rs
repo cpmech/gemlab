@@ -1,6 +1,6 @@
 use crate::{mesh::PointId, StrError};
-use std::cmp;
-use std::fmt::{self, Write};
+use russell_lab::GenericMatrix;
+use std::fmt;
 
 /// Alias for DOF index
 pub type DofIndex = usize;
@@ -44,7 +44,7 @@ pub struct EquationNumbers {
     count: i32,
 
     /// Equation numbers matrix [point][dof]
-    numbers: Vec<Vec<i32>>,
+    numbers: GenericMatrix<i32>,
 }
 
 impl EquationNumbers {
@@ -52,7 +52,7 @@ impl EquationNumbers {
     pub fn new(npoint: usize) -> Self {
         EquationNumbers {
             count: 0,
-            numbers: vec![vec![-1; DOF_TOTAL]; npoint],
+            numbers: GenericMatrix::filled(npoint, DOF_TOTAL, -1),
         }
     }
 
@@ -84,46 +84,6 @@ impl EquationNumbers {
 impl fmt::Display for EquationNumbers {
     /// Generates a string representation of the EquationNumbers
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // handle empty matrix
-        if self.numbers.len() < 1 {
-            return Ok(());
-        }
-        let nrow = self.numbers.len();
-        let ncol = self.numbers[0].len();
-        // find largest width
-        let mut width = 0;
-        let mut buf = String::new();
-        for i in 0..nrow {
-            for j in 0..ncol {
-                let val = self.numbers[i][j];
-                match f.precision() {
-                    Some(v) => write!(&mut buf, "{:.1$}", val, v)?,
-                    None => write!(&mut buf, "{}", val)?,
-                }
-                width = cmp::max(buf.chars().count(), width);
-                buf.clear();
-            }
-        }
-        // draw matrix
-        width += 1;
-        write!(f, "┌{:1$}┐\n", " ", width * ncol + 1)?;
-        for i in 0..nrow {
-            if i > 0 {
-                write!(f, " │\n")?;
-            }
-            for j in 0..ncol {
-                if j == 0 {
-                    write!(f, "│")?;
-                }
-                let val = self.numbers[i][j];
-                match f.precision() {
-                    Some(v) => write!(f, "{:>1$.2$}", val, width, v)?,
-                    None => write!(f, "{:>1$}", val, width)?,
-                }
-            }
-        }
-        write!(f, " │\n")?;
-        write!(f, "└{:1$}┘", " ", width * ncol + 1)?;
-        Ok(())
+        write!(f, "{}", self.numbers)
     }
 }

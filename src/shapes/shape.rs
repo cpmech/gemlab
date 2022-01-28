@@ -1,6 +1,6 @@
 use super::*;
 use crate::StrError;
-use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, Matrix, NormVec, Vector};
+use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, vector_norm, Matrix, NormVec, Vector};
 
 /// Defines the class of geometric shape
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -978,7 +978,7 @@ impl Shape {
             for i in 0..self.space_ndim {
                 residual[i] = x[i] - x_at_ksi[i];
             }
-            if residual.norm(NormVec::Euc) <= tol {
+            if vector_norm(&residual, NormVec::Euc) <= tol {
                 return Ok(it);
             }
             self.calc_jacobian(ksi)?;
@@ -1222,10 +1222,11 @@ pub fn ref_domain_limits(class: GeoClass) -> (f64, f64, f64) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{ref_domain_limits, GeoClass, GeoKind, Shape};
     use crate::util::{PI, SQRT_3};
-    use russell_chk::*;
-    use russell_lab::copy_vector;
+    use crate::StrError;
+    use russell_chk::{assert_approx_eq, assert_deriv_approx_eq, assert_vec_approx_eq};
+    use russell_lab::{copy_vector, scale_vector, vector_norm, NormVec, Vector};
     use std::collections::HashMap;
 
     const RMIN: f64 = 1.0;
@@ -1664,7 +1665,7 @@ mod tests {
         surf.calc_boundary_normal(&mut normal, &at_ksi)?;
 
         // check magnitude of normal vector
-        let mag_normal = normal.norm(NormVec::Euc);
+        let mag_normal = vector_norm(&normal, NormVec::Euc);
         let area = PI * (RMAX * RMAX - RMIN * RMIN) / 12.0;
         let ref_area = 4.0;
         let area_ratio = area / ref_area;
@@ -1675,7 +1676,7 @@ mod tests {
 
         // check direction of normal vector
         let mut unit_normal = Vector::from(normal.as_data());
-        unit_normal.scale(1.0 / mag_normal);
+        scale_vector(&mut unit_normal, 1.0 / mag_normal);
         assert_vec_approx_eq!(unit_normal.as_data(), &[0.0, 0.0, 1.0], 1e-15);
         Ok(())
     }
@@ -1710,7 +1711,7 @@ mod tests {
         edge.calc_boundary_normal(&mut normal, &at_ksi)?;
 
         // check magnitude of normal vector
-        let mag_normal = normal.norm(NormVec::Euc);
+        let mag_normal = vector_norm(&normal, NormVec::Euc);
         let length = RMAX - RMIN;
         let ref_length = 2.0;
         let length_ratio = length / ref_length;
@@ -1721,7 +1722,7 @@ mod tests {
 
         // check direction of normal vector
         let mut unit_normal = Vector::from(normal.as_data());
-        unit_normal.scale(1.0 / mag_normal);
+        scale_vector(&mut unit_normal, 1.0 / mag_normal);
         assert_vec_approx_eq!(unit_normal.as_data(), &[-f64::sin(AMAX), f64::cos(AMAX)], 1e-15);
         Ok(())
     }
