@@ -255,9 +255,9 @@ impl Shape {
     ///
     /// * `fn_v(v: &mut Vector, index: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
-    /// * `v` -- is an auxiliary vector with size equal to `space_ndim`.
+    /// * `v_aux` -- is an auxiliary vector with size equal to `space_ndim`.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_b_nv<F>(&mut self, b: &mut Vector, fn_v: F, v: &mut Vector, th: f64) -> Result<(), StrError>
+    pub fn integ_vec_b_nv<F>(&mut self, b: &mut Vector, fn_v: F, v_aux: &mut Vector, th: f64) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
@@ -265,7 +265,7 @@ impl Shape {
         if b.dim() != self.nnode * self.space_ndim {
             return Err("the length of vector 'b' must be equal to nnode * space_ndim");
         }
-        if v.dim() != self.space_ndim {
+        if v_aux.dim() != self.space_ndim {
             return Err("the length of vector 'aux_v' must be equal to space_ndim");
         }
 
@@ -283,11 +283,11 @@ impl Shape {
             let det_jac = self.calc_jacobian(iota)?;
 
             // calculate v
-            fn_v(v, index);
+            fn_v(v_aux, index);
 
             // add contribution to b vector
             let coef = th * det_jac * weight;
-            self.add_to_vec_b(b, v, coef);
+            self.add_to_vec_b(b, v_aux, coef);
         }
         Ok(())
     }
@@ -331,9 +331,9 @@ impl Shape {
     ///
     /// * `fn_w(w: &mut Vector, index: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
-    /// * `w` -- is an auxiliary vector with size equal to `space_ndim`.
+    /// * `w_aux` -- is an auxiliary vector with size equal to `space_ndim`.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_c_vg<F>(&mut self, c: &mut Vector, fn_w: F, w: &mut Vector, th: f64) -> Result<(), StrError>
+    pub fn integ_vec_c_vg<F>(&mut self, c: &mut Vector, fn_w: F, w_aux: &mut Vector, th: f64) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
@@ -341,7 +341,7 @@ impl Shape {
         if c.dim() != self.nnode {
             return Err("the length of vector 'c' must be equal to nnode");
         }
-        if w.dim() != self.space_ndim {
+        if w_aux.dim() != self.space_ndim {
             return Err("the length of vector 'aux_w' must be equal to space_ndim");
         }
 
@@ -358,11 +358,11 @@ impl Shape {
             let det_jac = self.calc_gradient(iota)?;
 
             // calculate w
-            fn_w(w, index);
+            fn_w(w_aux, index);
 
             // add contribution to c vector
             let coef = th * det_jac * weight;
-            self.add_to_vec_c(c, w, coef);
+            self.add_to_vec_c(c, w_aux, coef);
         }
         Ok(())
     }
@@ -412,13 +412,19 @@ impl Shape {
     ///
     /// * `fn_sig(sig: &mut Tensor2, index: usize)` -- σ(x(ξ)) tensor function, however written as
     ///                                                a function of the index of the integration point.
-    /// * `sig` -- is an auxiliary Tensor2 with 4 components in 2D and 6 components in 3D.
+    /// * `sig_aux` -- is an auxiliary Tensor2 with 4 components in 2D and 6 components in 3D.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_vec_d_tg<F>(&mut self, d: &mut Vector, fn_sig: F, sig: &mut Tensor2, th: f64) -> Result<(), StrError>
+    pub fn integ_vec_d_tg<F>(
+        &mut self,
+        d: &mut Vector,
+        fn_sig: F,
+        sig_aux: &mut Tensor2,
+        th: f64,
+    ) -> Result<(), StrError>
     where
         F: Fn(&mut Tensor2, usize),
     {
@@ -429,7 +435,7 @@ impl Shape {
         if d.dim() != self.nnode * self.space_ndim {
             return Err("the length of vector 'd' must be equal to nnode * space_ndim");
         }
-        if sig.vec.dim() != 2 * self.space_ndim {
+        if sig_aux.vec.dim() != 2 * self.space_ndim {
             return Err("'aux_sig' must be symmetric with dim equal to 4 in 2D or 6 in 3D");
         }
 
@@ -446,11 +452,11 @@ impl Shape {
             let det_jac = self.calc_gradient(iota)?;
 
             // calculate σ
-            fn_sig(sig, index);
+            fn_sig(sig_aux, index);
 
             // add contribution to d vector
             let coef = th * det_jac * weight;
-            self.add_to_vec_d(d, sig, coef);
+            self.add_to_vec_d(d, sig_aux, coef);
         }
         Ok(())
     }
@@ -548,19 +554,25 @@ impl Shape {
     ///
     /// * `fn_dd(dd: &mut Tensor4, index: usize)` -- D(x(ξ)) constitutive modulus function, given as
     ///                                              a function of the index of the integration point.
-    /// * `aux_dd` -- is an auxiliary Tensor4 (minor-symmetric in 2D or 3D with 4 or 6 components, respectively).
+    /// * `dd_aux` -- is an auxiliary Tensor4 (minor-symmetric in 2D or 3D with 4 or 6 components, respectively).
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_mat_10_gdg<F>(&mut self, kk: &mut Matrix, fn_dd: F, dd: &mut Tensor4, th: f64) -> Result<(), StrError>
+    pub fn integ_mat_10_gdg<F>(
+        &mut self,
+        kk: &mut Matrix,
+        fn_dd: F,
+        dd_aux: &mut Tensor4,
+        th: f64,
+    ) -> Result<(), StrError>
     where
         F: Fn(&mut Tensor4, usize),
     {
         // check
         let (nrow_kk, ncol_kk) = kk.dims();
-        let (nrow_dd, ncol_dd) = dd.mat.dims();
+        let (nrow_dd, ncol_dd) = dd_aux.mat.dims();
         if self.space_ndim == 1 {
             return Err("space_ndim must be 2 or 3");
         }
@@ -584,11 +596,11 @@ impl Shape {
             let det_jac = self.calc_gradient(iota)?;
 
             // calculate constitutive modulus
-            fn_dd(dd, index);
+            fn_dd(dd_aux, index);
 
             // add contribution to K matrix
             let coef = det_jac * weight * th;
-            self.add_to_mat_kk(kk, dd, coef);
+            self.add_to_mat_kk(kk, dd_aux, coef);
         }
         Ok(())
     }
@@ -694,7 +706,8 @@ mod tests {
     use super::*;
     use crate::util::SQRT_3;
     use russell_chk::assert_vec_approx_eq;
-    use russell_lab::Matrix;
+    use russell_lab::{copy_matrix, mat_mat_mul, mat_t_mat_mul, Matrix};
+    use russell_tensor::LinElasticity;
 
     // to test if variables are cleared before sum
     const NOISE: f64 = 1234.56;
@@ -731,12 +744,11 @@ mod tests {
     }
 
     struct AnalyticalTri3 {
-        x: [f64; 3],  // node x-coordinates
-        y: [f64; 3],  // node y-coordinates
-        b: [f64; 3],  // b-coefficients
-        c: [f64; 3],  // c-coefficients
-        area: f64,    // area
-        bmat: Matrix, // B-matrix
+        x: [f64; 3], // node x-coordinates
+        y: [f64; 3], // node y-coordinates
+        b: [f64; 3], // b-coefficients
+        c: [f64; 3], // c-coefficients
+        area: f64,   // area
     }
 
     impl AnalyticalTri3 {
@@ -762,19 +774,12 @@ mod tests {
             assert_eq!(tri3.gradient.as_data(), gg.as_data());
 
             // results
-            let s = SQRT_2;
             AnalyticalTri3 {
                 x: [x0, x1, x2],
                 y: [y0, y1, y2],
                 b: [b0, b1, b2],
                 c: [c0, c1, c2],
                 area,
-                bmat: Matrix::from(&[
-                    [b0, 0.0, b1, 0.0, b2, 0.0],
-                    [0.0, c0, 0.0, c1, 0.0, c2],
-                    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                    [c0 / s, b0 / s, c1 / s, b1 / s, c2 / s, b2 / s],
-                ]),
             }
         }
     }
@@ -828,8 +833,8 @@ mod tests {
         const CS: f64 = 3.0;
         let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        let mut v = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_b_nv(&mut b, fn_v, &mut v, 1.0)?;
+        let mut v_aux = Vector::new(tri3.space_ndim);
+        tri3.integ_vec_b_nv(&mut b, fn_v, &mut v_aux, 1.0)?;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
@@ -842,8 +847,8 @@ mod tests {
             v.fill(all_int_points[index][0]);
         };
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
-        let mut v = Vector::new(lin2.space_ndim);
-        lin2.integ_vec_b_nv(&mut b, fn_v, &mut v, 1.0)?;
+        let mut v_aux = Vector::new(lin2.space_ndim);
+        lin2.integ_vec_b_nv(&mut b, fn_v, &mut v_aux, 1.0)?;
         let cf = (xb - xa) / 6.0;
         let b_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
@@ -872,8 +877,8 @@ mod tests {
             (W0 * ana.b[2] + W1 * ana.c[2]) / 2.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        let mut w = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_c_vg(&mut c, fn_w, &mut w, 1.0)?;
+        let mut w_aux = Vector::new(tri3.space_ndim);
+        tri3.integ_vec_c_vg(&mut c, fn_w, &mut w_aux, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
 
         // bilinear vector function: w(x) = {x, y}
@@ -890,8 +895,8 @@ mod tests {
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[2] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[2] / 6.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        let mut w = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_c_vg(&mut c, fn_w, &mut w, 1.0)?;
+        let mut w_aux = Vector::new(tri3.space_ndim);
+        tri3.integ_vec_c_vg(&mut c, fn_w, &mut w_aux, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
@@ -899,7 +904,7 @@ mod tests {
     #[test]
     fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
-        let (mut tri3, area) = gen_tri3();
+        let (mut tri3, _) = gen_tri3();
         let ana = AnalyticalTri3::new(&mut tri3);
 
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
@@ -925,18 +930,95 @@ mod tests {
             (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
         ];
         let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        let mut sig = Tensor2::new(true, true);
-        tri3.integ_vec_d_tg(&mut d, fn_sig, &mut sig, 1.0)?;
+        let mut sig_aux = Tensor2::new(true, true);
+        tri3.integ_vec_d_tg(&mut d, fn_sig, &mut sig_aux, 1.0)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
 
     #[test]
     fn integ_mat_10_gdg_works() -> Result<(), StrError> {
+        /* Element # 0 from example 1.6 from [@bhatti] page 32
+
+         Solid bracket with thickness = 0.25
+
+                     1     -10                connectivity:
+        y=2.0 (-100) o'-,__                    eid : vertices
+                     |     '-,__ 3   -10         0 :  0, 2, 3
+        y=1.5 - - -  |        ,'o-,__            1 :  3, 1, 0
+                     |  1   ,'  |    '-,__ 5     2 :  2, 4, 5
+                     |    ,'    |  3   ,-'o      3 :  5, 3, 2
+                     |  ,'  0   |   ,-'   |
+                     |,'        |,-'   2  |   constraints:
+        y=0.0 (-100) o----------o---------o    -100 : fixed on x and y
+                     0          2         4
+                    x=0.0     x=2.0     x=4.0
+
+        # References
+
+        [@bhatti] Bhatti, M.A. (2005) Fundamental Finite Element Analysis
+                  and Applications, Wiley, 700p.
+        */
+
         // shape and analytical gradient
-        let (mut tri3, area) = gen_tri3();
+        let mut tri3 = Shape::new(2, 2, 3).unwrap();
+        tri3.set_node(0, 0, 0.0).unwrap();
+        tri3.set_node(0, 1, 0.0).unwrap();
+        tri3.set_node(1, 0, 2.0).unwrap();
+        tri3.set_node(1, 1, 0.0).unwrap();
+        tri3.set_node(2, 0, 2.0).unwrap();
+        tri3.set_node(2, 1, 1.5).unwrap();
         let ana = AnalyticalTri3::new(&mut tri3);
 
+        // elasticity modulus and function
+        let ela = LinElasticity::new(10000.0, 0.2, false, true);
+        let dd_ela = ela.get_modulus();
+        let fn_dd = |dd: &mut Tensor4, _: usize| {
+            copy_matrix(&mut dd.mat, &dd_ela.mat).unwrap();
+        };
+
+        // constants
+        let th = 0.25; // thickness
+        let dim_dd = 2 * tri3.space_ndim;
+        let dim_kk = tri3.nnode * tri3.space_ndim;
+
+        // compute B-matrix (dim_dd,dim_kk)
+        let r = 2.0 * ana.area;
+        let s = r * SQRT_2;
+        #[rustfmt::skip]
+        let bb = Matrix::from(&[
+            [ana.b[0]/r,        0.0, ana.b[1]/r,        0.0, ana.b[2]/r,        0.0],
+            [       0.0, ana.c[0]/r,        0.0, ana.c[1]/r,        0.0, ana.c[2]/r],
+            [       0.0,        0.0,        0.0,        0.0,        0.0,        0.0],
+            [ana.c[0]/s, ana.b[0]/s, ana.c[1]/s, ana.b[1]/s, ana.c[2]/s, ana.b[2]/s],
+        ]);
+        assert_eq!(bb.dims(), (dim_dd, dim_kk));
+
+        // compute K = Bᵀ ⋅ D ⋅ B
+        let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
+        let mut kk_correct = Matrix::new(dim_kk, dim_kk);
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &bb, &dd_ela.mat)?;
+        mat_mat_mul(&mut kk_correct, th * ana.area, &bb_t_dd, &bb)?;
+
+        // perform integration
+        let mut kk = Matrix::new(dim_kk, dim_kk);
+        let mut dd_aux = Tensor4::new(true, true);
+        tri3.integ_mat_10_gdg(&mut kk, fn_dd, &mut dd_aux, th)?;
+
+        // results from Bhatti's book
+        #[rustfmt::skip]
+        let kk_bhatti = Matrix::from( &[
+            [  9.765625000000001e+02,  0.000000000000000e+00, -9.765625000000001e+02,  2.604166666666667e+02,  0.000000000000000e+00, -2.604166666666667e+02],
+            [  0.000000000000000e+00,  3.906250000000000e+02,  5.208333333333334e+02, -3.906250000000000e+02, -5.208333333333334e+02,  0.000000000000000e+00],
+            [ -9.765625000000001e+02,  5.208333333333334e+02,  1.671006944444445e+03, -7.812500000000000e+02, -6.944444444444445e+02,  2.604166666666667e+02],
+            [  2.604166666666667e+02, -3.906250000000000e+02, -7.812500000000000e+02,  2.126736111111111e+03,  5.208333333333334e+02, -1.736111111111111e+03],
+            [  0.000000000000000e+00, -5.208333333333334e+02, -6.944444444444445e+02,  5.208333333333334e+02,  6.944444444444445e+02,  0.000000000000000e+00],
+            [ -2.604166666666667e+02,  0.000000000000000e+00,  2.604166666666667e+02, -1.736111111111111e+03,  0.000000000000000e+00,  1.736111111111111e+03],
+        ]);
+
+        // check
+        assert_vec_approx_eq!(kk_correct.as_data(), kk_bhatti.as_data(), 1e-12);
+        assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
         Ok(())
     }
 }
