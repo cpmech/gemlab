@@ -1,39 +1,64 @@
-use super::{ElementSolid, EquationNumbers};
-use crate::mesh::Mesh;
+use super::EquationNumbers;
+use crate::mesh::{CellAttributeId, Mesh};
 use crate::StrError;
 use russell_lab::Vector;
 use russell_sparse::SparseTriplet;
+use std::collections::HashMap;
 
-#[derive(Clone, Copy, Debug)]
-pub enum ElementKind {
-    Diffusion,
-    Truss,
-    Beam,
-    Solid,
-    SeepageLiq,
-    SeepageLiqGas,
-    PorousLiq,
-    PorousLiqGas,
-    PorousLiqGasTemp,
-    PorousLiqVel,
-    PorousLiqGasVel,
-}
-
+/// Defines a trait for (finite) elements
 pub trait Element {
-    fn activate_equation_numbers(&self, equation_numbers: &mut EquationNumbers);
+    /// Activates an equation number, if not set yet
+    fn activate_equation_numbers(&self, equation_numbers: &mut EquationNumbers) -> usize;
 
-    fn get_nnz(&self) -> usize;
+    /// Computes the element RHS-vector
+    fn compute_local_rhs_vector(&mut self) -> Result<(), StrError>;
 
-    fn compute_ke(&mut self) -> Result<(), StrError>;
+    /// Computes the element K-matrix
+    fn compute_local_k_matrix(&mut self, first_iteration: bool) -> Result<(), StrError>;
 
-    fn add_ke_to_kk(&self, kk: &mut SparseTriplet) -> Result<(), StrError>;
+    /// Assembles local right-hand side (RHS) vector into global RHS-vector
+    fn assemble_rhs_vector(&self, rhs: &mut Vector) -> Result<(), StrError>;
 
-    fn add_fe_to_ff(&self, ff: &mut Vector) -> Result<(), StrError>;
+    /// Assembles the local K-matrix into the global K-matrix
+    fn assemble_k_matrix(&self, kk: &mut SparseTriplet) -> Result<(), StrError>;
 }
 
-pub fn new_element(kind: ElementKind, mesh: &Mesh, cell_id: usize) -> Result<Box<dyn Element>, StrError> {
-    match kind {
-        ElementKind::Solid => Ok(Box::new(ElementSolid::new(mesh, cell_id)?)),
-        _ => panic!("Element kind {:?} is not available yet", kind),
+/// Defines a trait for element groups
+pub trait ElementGroup {
+    /// Tells whether the element group is active or not
+    fn is_active(&self) -> bool;
+
+    /// Allocates a new element belonging to this group
+    fn allocate(&self, mesh: &Mesh, cell_id: usize) -> Result<Box<dyn Element>, StrError>;
+}
+
+/// Maps element attributes to parameters
+pub struct ElementAttributes {
+    attributes: HashMap<CellAttributeId, Box<dyn ElementGroup>>,
+}
+
+impl ElementAttributes {
+    /// Returns a new ElementAttributes instance
+    pub fn new() -> Self {
+        ElementAttributes {
+            attributes: HashMap::new(),
+        }
+    }
+
+    /// Sets a new element attribute
+    pub fn set(&mut self, attribute_id: CellAttributeId, attribute: Box<dyn ElementGroup>) -> Result<(), StrError> {
+        if self.attributes.contains_key(&attribute_id) {
+            return Err("attribute already set");
+        }
+        self.attributes.insert(attribute_id, attribute);
+        Ok(())
+    }
+
+    /// Returns an existent element attribute
+    pub fn get(&self, attribute_id: CellAttributeId) -> Result<&Box<dyn ElementGroup>, StrError> {
+        match self.attributes.get(&attribute_id) {
+            Some(attribute) => Ok(attribute),
+            None => Err("cannot find an element attribute"),
+        }
     }
 }

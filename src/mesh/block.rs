@@ -78,7 +78,7 @@ pub enum Constraint {
 ///               1
 ///  
 pub struct Block {
-    attribute_id: usize,      // attribute ID of all elements in this block
+    attribute_id: i32,        // attribute ID of all elements in this block
     space_ndim: usize,        // space dimension
     npoint: usize,            // number of points (8 or 20) (quadratic block internally)
     nedge: usize,             // number of edges (4 or 12)
@@ -159,7 +159,7 @@ impl Block {
     }
 
     /// Sets group
-    pub fn set_group(&mut self, group: usize) -> &mut Self {
+    pub fn set_group(&mut self, group: i32) -> &mut Self {
         self.attribute_id = group;
         self
     }

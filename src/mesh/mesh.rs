@@ -19,6 +19,9 @@ pub type PointId = usize;
 /// Aliases usize as Cell ID
 pub type CellId = usize;
 
+/// Aliases usize as Cell's attribute ID
+pub type CellAttributeId = usize;
+
 /// Aliases (usize,usize) as the key of Edge
 pub type EdgeKey = (usize, usize);
 
@@ -63,7 +66,7 @@ pub struct Cell {
     /// Attribute identification number
     ///
     /// **raw data**
-    pub attribute_id: usize,
+    pub attribute_id: CellAttributeId,
 
     /// Space dimension of this cell
     ///

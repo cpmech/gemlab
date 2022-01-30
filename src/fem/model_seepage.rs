@@ -1,0 +1,3 @@
+pub trait ModelSeepage {
+    // todo
+}
