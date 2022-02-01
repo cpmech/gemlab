@@ -88,6 +88,10 @@ impl DataForReadMesh {
             };
         }
 
+        if data.next() != None {
+            return Err("point data contains extra values");
+        }
+
         self.current_npoint += 1; // next point
 
         Ok(true) // returns true == parsed
@@ -136,6 +140,10 @@ impl DataForReadMesh {
                 }
                 None => return Err("cannot read cell point id"),
             }
+        }
+
+        if data.next() != None {
+            return Err("cell data contains extra values");
         }
 
         self.current_ncell += 1; // next cell
@@ -563,6 +571,32 @@ mod tests {
             )
             .err(),
             Some("not all cells have been found")
+        );
+
+        assert_eq!(
+            parse_mesh(
+                "2 4 1\n\
+                 0 1 0.0 0.0\n\
+                 1 1 1.0 0.0\n\
+                 2 1 1.0 1.0\n\
+                 3 1 0.0 1.0\n\
+                 0 1  2 4  0 1 2 3\n"
+            )
+            .err(),
+            Some("point data contains extra values")
+        );
+
+        assert_eq!(
+            parse_mesh(
+                "2 4 1\n\
+                 0 0.0 0.0\n\
+                 1 1.0 0.0\n\
+                 2 1.0 1.0\n\
+                 3 0.0 1.0\n\
+                 0 1  2 4  0 1 2 3 4\n"
+            )
+            .err(),
+            Some("cell data contains extra values")
         );
         Ok(())
     }
