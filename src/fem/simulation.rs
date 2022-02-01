@@ -28,9 +28,9 @@ impl Simulation {
         for cell in &mesh.cells {
             let attribute = attributes.get(cell.attribute_id)?;
             if attribute.is_active() {
-                // let element = new_element(attribute.kind, &mesh, cell.id)?;
-                // nnz_max += element.activate_equation_numbers(&mut equation_numbers);
-                // elements.push(element);
+                let element = attribute.allocate(&mesh, cell.id)?;
+                nnz_max += element.activate_equation_numbers(&mut equation_numbers);
+                elements.push(element);
             }
         }
 
@@ -135,7 +135,7 @@ impl fmt::Display for Simulation {
 mod tests {
     use super::*;
     use crate::fem::{
-        ElementAttributes, ElementSolidGroup, ModelSeepageStandard, ModelSolidLinearElastic, DOF_UX, DOF_UY,
+        ElementAttributes, ElementSolidConfig, ModelSeepageStandard, ModelSolidLinearElastic, DOF_UX, DOF_UY,
     };
     use crate::mesh::At;
 
@@ -186,11 +186,11 @@ mod tests {
         let model_3 = ModelSeepageStandard::new(1e-4, 1e-4, 1e-4);
 
         // define attributes
-        let att_1 = ElementSolidGroup::new(Box::new(model_1), 0.25);
-        let att_2 = ElementSolidGroup::new(Box::new(model_2), 0.25);
+        let config_1 = ElementSolidConfig::new(Box::new(model_1), 0.25);
+        let config_2 = ElementSolidConfig::new(Box::new(model_2), 0.25);
         let mut attributes = ElementAttributes::new();
-        attributes.set(1, Box::new(att_1))?;
-        attributes.set(2, Box::new(att_2))?;
+        attributes.set(1, Box::new(config_1))?;
+        attributes.set(2, Box::new(config_2))?;
 
         // let mut attributes = ElementAttributes::new();
         // attributes.set(-1)

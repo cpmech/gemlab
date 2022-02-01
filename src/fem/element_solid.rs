@@ -1,4 +1,4 @@
-use super::{Element, ElementGroup, ModelSolid, ModelSolidState};
+use super::{Element, ElementConfig, ModelSolid, ModelSolidState};
 use crate::fem::{DOF_UX, DOF_UY, DOF_UZ};
 use crate::mesh::Mesh;
 use crate::shapes::Shape;
@@ -8,7 +8,7 @@ use russell_sparse::SparseTriplet;
 use russell_tensor::{Tensor2, Tensor4};
 
 /// Implements the element for solid mechanics simulations
-pub struct ElementSolid {
+pub struct ElementSolid<'a> {
     /// Shape object to perform integrations
     shape: Shape,
 
@@ -31,33 +31,51 @@ pub struct ElementSolid {
     sig_aux: Tensor2,
 
     /// Material model
+    model: &'a Box<dyn ModelSolid>,
+
+    /// Thickness
+    thickness: f64,
+    // Stress-strain-ivs state
+    // state: Vec<ModelSolidState>,
+}
+
+/// Holds configuration data for a group of ElementSolid
+pub struct ElementSolidConfig {
+    /// Material model
     model: Box<dyn ModelSolid>,
 
     /// Thickness
     thickness: f64,
+    // Use default integration points
+    // int_points_default: bool,
+
+    // /// Number of integration points
+    // int_points_number: usize,
+
+    // /// Flag for "edge" integration points
+    // int_points_edge: bool,
 }
 
-/// Holds configuration data for a group of ElementSolid
-pub struct ElementSolidGroup {
-    model: Box<dyn ModelSolid>,
-    thickness: f64,
-}
-
-impl ElementSolidGroup {
+impl ElementSolidConfig {
     /// Returns a new ElementSolidGroup instance
     pub fn new(model: Box<dyn ModelSolid>, thickness: f64) -> Self {
-        ElementSolidGroup { model, thickness }
+        ElementSolidConfig { model, thickness }
     }
+
+    // Set integration points
+    // pub fn set_int_points(&mut self, nip: usize, edge: bool, ws: bool) {
+    // todo
+    // }
 }
 
-impl ElementGroup for ElementSolidGroup {
+impl ElementConfig for ElementSolidConfig {
     /// Tells whether the element group is active or not
     fn is_active(&self) -> bool {
         true
     }
 
     /// Allocates a new element belonging to this group
-    fn allocate(&self, mesh: &Mesh, cell_id: usize) -> Result<Box<dyn Element>, StrError> {
+    fn allocate(&self, mesh: &Mesh, cell_id: usize) -> Result<Box<dyn Element + '_>, StrError> {
         // geometry
         let cell = &mesh.cells[cell_id];
         let geo_ndim = cell.geo_ndim;
@@ -91,14 +109,15 @@ impl ElementGroup for ElementSolidGroup {
             kk: Matrix::new(neq, neq),
             dd_aux: Tensor4::new(true, two_dim),
             sig_aux: Tensor2::new(true, two_dim),
-            model: self.model,
+            model: &self.model,
             thickness: self.thickness,
+            // state:vec![State]
         };
         Ok(Box::new(element))
     }
 }
 
-impl Element for ElementSolid {
+impl Element for ElementSolid<'_> {
     fn activate_equation_numbers(&self, equation_numbers: &mut super::EquationNumbers) -> usize {
         for point_id in &self.point_ids {
             for dof_index in &self.dof_indices {
