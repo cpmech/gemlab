@@ -124,7 +124,7 @@ impl DataForReadMesh {
 
         match data.next() {
             Some(v) => mesh.cells[i].geo_ndim = v.parse().map_err(|_| "cannot parse cell geo_ndim")?,
-            None => return Err("cannot read cell ndim"),
+            None => return Err("cannot read cell geo_ndim"),
         };
 
         let cell_npoint: usize = match data.next() {
@@ -401,11 +401,11 @@ mod tests {
 
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 1 ")).err(),
-            Some("cannot read cell ndim")
+            Some("cannot read cell geo_ndim")
         );
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 1  wrong")).err(),
-            Some("cannot parse cell ndim")
+            Some("cannot parse cell geo_ndim")
         );
 
         assert_eq!(
