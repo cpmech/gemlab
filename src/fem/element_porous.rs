@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_mut, unused_variables)]
+
 use super::{Element, EquationNumbers};
 use crate::StrError;
 use russell_lab::Vector;

@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_mut, unused_variables)]
+
 use super::{Element, ElementConfig, ModelSolid, ModelSolidState};
 use crate::fem::{DOF_UX, DOF_UY, DOF_UZ};
 use crate::mesh::Mesh;

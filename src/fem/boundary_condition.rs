@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_mut, unused_variables)]
+
 use super::DofIndex;
 use crate::mesh::{EdgeKey, PointId};
 

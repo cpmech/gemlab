@@ -1,9 +1,10 @@
+#![allow(dead_code, unused_mut, unused_variables)]
+
 use super::{ModelSolid, ModelSolidState};
 use crate::StrError;
 use russell_lab::{add_vectors, copy_matrix, copy_vector, Vector};
 use russell_tensor::{t4_ddot_t2, LinElasticity, Tensor2, Tensor4};
 
-#[derive(Clone, Debug)]
 pub struct ModelSolidLinearElastic {
     two_dim: bool,
     lin_elasticity: LinElasticity,
