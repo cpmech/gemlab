@@ -289,6 +289,10 @@ impl Mesh {
         self.compute_limits()?;
         self.grid_boundary_points
             .initialize(&vec![10; self.space_ndim], &self.min, &self.max)?;
+        for point_id in &self.boundary_points {
+            self.grid_boundary_points
+                .insert(*point_id, &self.points[*point_id].coords)?;
+        }
         self.derived_props_computed = true;
         Ok(())
     }
@@ -557,11 +561,12 @@ impl Mesh {
         }
 
         // find boundary edges and set boundary points
-        for (key, edge) in &all_edges {
+        for (edge_key, edge) in &all_edges {
             if edge.shared_by_2d_cells.len() == 1 {
-                self.boundary_edges.insert(*key, edge.clone());
-                for id in &edge.points {
-                    self.boundary_points.insert(*id);
+                self.boundary_edges.insert(*edge_key, edge.clone());
+                for point_id in &edge.points {
+                    self.boundary_points.insert(*point_id);
+                    self.points[*point_id].shared_by_boundary_edges.insert(*edge_key);
                 }
             }
         }
@@ -635,8 +640,9 @@ impl Mesh {
             self.boundary_faces.insert(*face_key, face.clone());
 
             // set boundary points
-            for id in &face.points {
-                self.boundary_points.insert(*id);
+            for point_id in &face.points {
+                self.boundary_points.insert(*point_id);
+                self.points[*point_id].shared_by_boundary_faces.insert(*face_key);
             }
 
             // face shape
@@ -662,6 +668,11 @@ impl Mesh {
                 // define key (sorted ids)
                 let mut edge_key: EdgeKey = (edge_points[0], edge_points[1]);
                 sort2(&mut edge_key);
+
+                // set point information
+                for point_id in &edge_points {
+                    self.points[*point_id].shared_by_boundary_edges.insert(edge_key);
+                }
 
                 // existing edge
                 if self.boundary_edges.contains_key(&edge_key) {
@@ -891,12 +902,6 @@ mod tests {
         let right = mesh.find_boundary_edges(At::X(1.0))?;
         let top = mesh.find_boundary_edges(At::Y(1.0))?;
         let left = mesh.find_boundary_edges(At::X(0.0))?;
-
-        println!("origin = {:?}", origin);
-        println!("bottom = {:?}", bottom);
-        println!("right = {:?}", right);
-        println!("top = {:?}", top);
-        println!("left = {:?}", left);
 
         assert_eq!(origin, &[0]);
         assert_eq!(bottom, &[(0, 1)]);
