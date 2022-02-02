@@ -825,8 +825,8 @@ impl Mesh {
             shared_by_cells.sort();
             write!(
                 &mut buf,
-                "k:({},{},{}) p:{:?} c:{:?}\n",
-                key.0, key.1, key.2, face.points, shared_by_cells
+                "k:({},{},{},{}) p:{:?} c:{:?}\n",
+                key.0, key.1, key.2, key.3, face.points, shared_by_cells
             )
             .unwrap();
         }
@@ -1050,8 +1050,6 @@ mod tests {
         assert_eq!(mesh.min, &[0.0, 0.0, 0.0]);
         assert_eq!(mesh.max, &[1.0, 1.0, 2.0]);
 
-        println!("\n\n{:?}\n\n", mesh.boundary_edges.get(&(0, 1)));
-
         assert_eq!(
             format!("{}", mesh.grid_boundary_points),
             "0: [0]\n\
@@ -1075,11 +1073,6 @@ mod tests {
              ncontainer = 16\n"
         );
         assert_eq!(mesh.derived_props_computed, true);
-        println!("{}", mesh.string_points());
-        println!("{}", mesh.string_cells());
-        println!("{}", mesh.string_boundary_points());
-        println!("{}", mesh.string_boundary_edges());
-        println!("{}", mesh.string_boundary_faces());
         assert_eq!(
             format!("{}", mesh.string_points()),
             "i:0 x:[0.0, 0.0, 0.0] e:[(0, 1), (0, 3), (0, 4)] f:[(0, 1, 2, 3), (0, 1, 4, 5), (0, 3, 4, 7)]\n\
@@ -1126,6 +1119,19 @@ mod tests {
              k:(8,11) p:[8, 11] c:[] f:[(4, 7, 8, 11), (8, 9, 10, 11)]\n\
              k:(9,10) p:[10, 9] c:[] f:[(5, 6, 9, 10), (8, 9, 10, 11)]\n\
              k:(10,11) p:[11, 10] c:[] f:[(6, 7, 10, 11), (8, 9, 10, 11)]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_boundary_faces()),
+            "k:(0,1,2,3) p:[0, 3, 2, 1] c:[0]\n\
+             k:(0,1,4,5) p:[0, 1, 5, 4] c:[0]\n\
+             k:(0,3,4,7) p:[0, 4, 7, 3] c:[0]\n\
+             k:(1,2,5,6) p:[1, 2, 6, 5] c:[0]\n\
+             k:(2,3,6,7) p:[2, 3, 7, 6] c:[0]\n\
+             k:(4,5,8,9) p:[4, 5, 9, 8] c:[1]\n\
+             k:(4,7,8,11) p:[4, 8, 11, 7] c:[1]\n\
+             k:(5,6,9,10) p:[5, 6, 10, 9] c:[1]\n\
+             k:(6,7,10,11) p:[6, 7, 11, 10] c:[1]\n\
+             k:(8,9,10,11) p:[8, 9, 10, 11] c:[1]\n"
         );
         Ok(())
     }
