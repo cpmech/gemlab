@@ -1,9 +1,9 @@
-use super::{Cell, Edge, EdgeKey, Face, FaceKey, Mesh, Point};
+use super::{Cell, Mesh, Point};
 use crate::geometry::Circle;
 use crate::shapes::Shape;
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
-use russell_lab::{mat_vec_mul, sort2, sort4, Matrix, Vector};
+use russell_lab::{mat_vec_mul, Matrix, Vector};
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -84,9 +84,6 @@ pub struct Block {
     nedge: usize,             // number of edges (4 or 12)
     nface: usize,             // number of faces (4 or 6)
     coords: Matrix,           // coordinates of points (npoint, ndim)
-    point_groups: Vec<usize>, // point groups (npoint)
-    edge_groups: Vec<usize>,  // edge groups (nedge)
-    face_groups: Vec<usize>,  // face groups (nface)
     ndiv: Vec<usize>,         // number of divisions along each dim (ndim)
     delta_ksi: Vec<Vec<f64>>, // delta ksi along each dim (ndim, {ndiv[0],ndiv[1],ndiv[2]})
 
@@ -146,9 +143,6 @@ impl Block {
             nedge: shape.nedge,
             nface: shape.nface,
             coords: Matrix::new(npoint, space_ndim),
-            point_groups: vec![0; npoint],
-            edge_groups: vec![0; shape.nedge],
-            face_groups: vec![0; shape.nface],
             ndiv: vec![NDIV; space_ndim],
             delta_ksi: vec![vec![1.0; NDIV]; space_ndim],
             edge_constraints: vec![None; shape.nedge],
@@ -159,8 +153,8 @@ impl Block {
     }
 
     /// Sets group
-    pub fn set_group(&mut self, group: usize) -> &mut Self {
-        self.attribute_id = group;
+    pub fn set_attribute_id(&mut self, attribute_id: usize) -> &mut Self {
+        self.attribute_id = attribute_id;
         self
     }
 
@@ -219,39 +213,6 @@ impl Block {
                 self.coords[19][i] = (self.coords[3][i] + self.coords[7][i]) / 2.0;
             }
         }
-        self
-    }
-
-    /// Sets the group of a point
-    ///
-    /// # Input
-    ///
-    /// * `p` -- index of point in [0, npoint-1]
-    pub fn set_point_group(&mut self, p: usize, group: usize) -> &mut Self {
-        assert!(p < self.npoint);
-        self.point_groups[p] = group;
-        self
-    }
-
-    /// Sets the group of an edge
-    ///
-    /// # Input
-    ///
-    /// * `e` -- index of edge in [0, nedge-1]
-    pub fn set_edge_group(&mut self, e: usize, group: usize) -> &mut Self {
-        assert!(e < self.nedge);
-        self.edge_groups[e] = group;
-        self
-    }
-
-    /// Sets the group of a face
-    ///
-    /// # Input
-    ///
-    /// * `f` -- index of edge in [0, nface-1]
-    pub fn set_face_group(&mut self, f: usize, group: usize) -> &mut Self {
-        assert!(f < self.nface);
-        self.face_groups[f] = group;
         self
     }
 
@@ -320,7 +281,7 @@ impl Block {
             }
         }
 
-        // results
+        // resulting mesh
         let mut mesh = Mesh::new(space_ndim)?;
 
         // auxiliary variables
@@ -387,18 +348,7 @@ impl Block {
                         // maybe append point to mesh
                         let index = self.maybe_append_new_point(&mut mesh, &mut x, &ksi, cell_id)?;
                         points[m] = index;
-
-                        // mark boundary point
-                        if self.is_boundary_point(ksi.as_data()) {
-                            mesh.boundary_points.insert(index);
-                        }
                     }
-
-                    // new edge
-                    // let boundary_edges = self.maybe_append_new_edge(&mut mesh, &shape_out, &points, cell_id)?;
-
-                    // new face
-                    // let boundary_faces = self.maybe_append_new_face(&mut mesh, &shape_out, &points, cell_id)?;
 
                     // new cell
                     let cell = Cell {
@@ -406,8 +356,6 @@ impl Block {
                         attribute_id: self.attribute_id,
                         geo_ndim: shape_out.geo_ndim,
                         points,
-                        // boundary_edges,
-                        // boundary_faces,
                     };
                     mesh.cells.push(cell);
 
@@ -451,11 +399,10 @@ impl Block {
         ksi_vec: &Vector,
         cell_id: usize,
     ) -> Result<usize, StrError> {
-        // handle existent point
+        // skip if existent point
         let ndim = self.space_ndim;
         let ksi = &ksi_vec.as_data()[0..ndim];
         if let Some(index) = self.grid_ksi.find(ksi)? {
-            // mesh.points[index].shared_by_cells.insert(cell_id);
             return Ok(index);
         }
 
@@ -480,192 +427,6 @@ impl Block {
 
         // done
         Ok(index)
-    }
-
-    #[allow(dead_code)]
-
-    /// Appends new boundary edge, if not existent yet
-    ///
-    /// # Output
-    ///
-    /// * `mesh` -- updated mesh with new boundary edge
-    ///
-    /// # Input
-    ///
-    /// * `shape_out` -- shape object for the output cells
-    /// * `point_ids` -- (just added) cell point ids
-    /// * `cell_id` -- ID of the cell adding this point (to set shared-by information)
-    ///
-    /// # Returns
-    ///
-    /// Returns the keys of the new or existent edges on boundary.
-    fn maybe_append_new_edge(
-        &mut self,
-        mesh: &mut Mesh,
-        shape_out: &Shape,
-        point_ids: &Vec<usize>,
-        cell_id: usize,
-    ) -> Result<HashSet<EdgeKey>, StrError> {
-        // results
-        let mut boundary_edges: HashSet<EdgeKey> = HashSet::new();
-
-        // loop over each edge
-        for e in 0..shape_out.nedge {
-            // check if at least two points of edge are on the boundary
-            let mut npoint_on_boundary = 0;
-            for i in 0..shape_out.edge_nnode {
-                let local_point_id = shape_out.get_edge_node_id(e, i);
-                let point_id = point_ids[local_point_id];
-                if mesh.boundary_points.contains(&point_id) {
-                    npoint_on_boundary += 1;
-                }
-                if npoint_on_boundary == 2 {
-                    break; // 2 is enough
-                }
-            }
-
-            // skip if edge is not on boundary
-            if npoint_on_boundary < 2 {
-                continue;
-            }
-
-            // collect point ids
-            let mut points = vec![0; shape_out.edge_nnode];
-            for i in 0..shape_out.edge_nnode {
-                let local_point_id = self.shape.get_edge_node_id(e, i);
-                points[i] = point_ids[local_point_id];
-            }
-
-            // define key (sorted ids)
-            let mut edge_key: EdgeKey = (points[0], points[1]);
-            sort2(&mut edge_key);
-
-            // set boundary edges
-            boundary_edges.insert(edge_key);
-
-            // existing item
-            if mesh.boundary_edges.contains_key(&edge_key) {
-                let edge = mesh.boundary_edges.get_mut(&edge_key).unwrap();
-                edge.shared_by_2d_cells.insert(cell_id);
-
-            // new item
-            } else {
-                let mut shared_by_cells = HashSet::new();
-                shared_by_cells.insert(cell_id);
-                mesh.boundary_edges.insert(
-                    edge_key,
-                    Edge {
-                        points,
-                        shared_by_2d_cells: shared_by_cells,
-                        shared_by_boundary_faces: HashSet::new(),
-                    },
-                );
-            }
-        }
-
-        // done
-        Ok(boundary_edges)
-    }
-
-    #[allow(dead_code)]
-
-    /// Appends new boundary face, if not existent yet
-    ///
-    /// # Output
-    ///
-    /// * `mesh` -- updated mesh with new boundary face
-    ///
-    /// # Input
-    ///
-    /// * `shape_out` -- shape object for the output cells
-    /// * `point_ids` -- (just added) cell point ids
-    /// * `cell_id` -- ID of the cell adding this point (to set shared-by information)
-    ///
-    /// # Returns
-    ///
-    /// Returns the keys of the new or existent faces on boundary.
-    fn maybe_append_new_face(
-        &mut self,
-        mesh: &mut Mesh,
-        shape_out: &Shape,
-        point_ids: &Vec<usize>,
-        cell_id: usize,
-    ) -> Result<HashSet<FaceKey>, StrError> {
-        // results
-        let mut boundary_faces: HashSet<FaceKey> = HashSet::new();
-
-        // loop over each face
-        for f in 0..shape_out.nface {
-            // check if at least three edges of face are on the boundary
-            let mut nedge_on_boundary = 0;
-            for k in 0..shape_out.face_nedge {
-                let local_point_id_0 = shape_out.get_face_edge_node_id(f, k, 0);
-                let local_point_id_1 = shape_out.get_face_edge_node_id(f, k, 1);
-                let point_id_0 = point_ids[local_point_id_0];
-                let point_id_1 = point_ids[local_point_id_1];
-                let mut edge_key = (point_id_0, point_id_1);
-                sort2(&mut edge_key);
-                if mesh.boundary_edges.contains_key(&edge_key) {
-                    nedge_on_boundary += 1;
-                }
-                if nedge_on_boundary == 3 {
-                    break;
-                }
-            }
-
-            // skip if face is not on boundary
-            if nedge_on_boundary < 3 {
-                continue;
-            }
-
-            // collect point ids
-            let mut points = vec![0; shape_out.face_nnode];
-            for i in 0..shape_out.face_nnode {
-                let local_point_id = self.shape.get_face_node_id(f, i);
-                points[i] = point_ids[local_point_id];
-            }
-
-            // define key (sorted ids)
-            let mut face_key: FaceKey = (points[0], points[1], points[2], points[3]);
-            sort4(&mut face_key);
-
-            // set boundary faces
-            boundary_faces.insert(face_key);
-
-            // existing item
-            if mesh.boundary_faces.contains_key(&face_key) {
-                let face = mesh.boundary_faces.get_mut(&face_key).unwrap();
-                face.shared_by_cells.insert(cell_id);
-
-            // new item
-            } else {
-                let mut shared_by_cells = HashSet::new();
-                shared_by_cells.insert(cell_id);
-                mesh.boundary_faces.insert(
-                    face_key,
-                    Face {
-                        points,
-                        shared_by_cells,
-                    },
-                );
-            }
-        }
-
-        // done
-        Ok(boundary_faces)
-    }
-
-    /// Returns whether or not a point is on boundary given its reference coordinates
-    fn is_boundary_point(&self, ksi: &[f64]) -> bool {
-        for i in 0..self.space_ndim {
-            if f64::abs(ksi[i] - Block::NAT_MIN) <= Block::NAT_TOLERANCE {
-                return true;
-            }
-            if f64::abs(ksi[i] - Block::NAT_MAX) <= Block::NAT_TOLERANCE {
-                return true;
-            }
-        }
-        false
     }
 }
 
@@ -717,9 +478,6 @@ mod tests {
              │ 0 0 │\n\
              └     ┘"
         );
-        assert_eq!(b2d.point_groups, &[0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(b2d.edge_groups, &[0, 0, 0, 0]);
-        assert_eq!(b2d.face_groups.len(), 0);
         assert_eq!(b2d.ndiv, &[2, 2]);
         assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b2d.shape.nnode, 8);
@@ -755,12 +513,6 @@ mod tests {
              │ 0 0 0 │\n\
              └       ┘"
         );
-        assert_eq!(
-            b3d.point_groups,
-            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        );
-        assert_eq!(b3d.edge_groups, &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(b3d.face_groups, &[0, 0, 0, 0, 0, 0]);
         assert_eq!(b3d.ndiv, &[2, 2, 2]);
         assert_eq!(format!("{:?}", b3d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b3d.shape.nnode, 20);
@@ -770,7 +522,7 @@ mod tests {
     #[test]
     fn set_group_works() -> Result<(), StrError> {
         let mut block = Block::new(2)?;
-        block.set_group(2);
+        block.set_attribute_id(2);
         assert_eq!(block.attribute_id, 2);
         Ok(())
     }
@@ -836,30 +588,6 @@ mod tests {
              │ 0 2 1 │\n\
              └       ┘"
         );
-        Ok(())
-    }
-
-    #[test]
-    fn set_point_group_works() -> Result<(), StrError> {
-        let mut block = Block::new(2)?;
-        block.set_point_group(0, 111);
-        assert_eq!(block.point_groups, &[111, 0, 0, 0, 0, 0, 0, 0]);
-        Ok(())
-    }
-
-    #[test]
-    fn set_edge_group_works() -> Result<(), StrError> {
-        let mut block = Block::new(2)?;
-        block.set_edge_group(0, 111);
-        assert_eq!(block.edge_groups, &[111, 0, 0, 0]);
-        Ok(())
-    }
-
-    #[test]
-    fn set_face_group_works() -> Result<(), StrError> {
-        let mut block = Block::new(3)?;
-        block.set_face_group(0, 111);
-        assert_eq!(block.face_groups, &[111, 0, 0, 0, 0, 0]);
         Ok(())
     }
 
