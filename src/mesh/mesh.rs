@@ -167,12 +167,12 @@ pub struct Mesh {
 
 impl Mesh {
     /// Returns a new empty mesh
-    pub(super) fn new(ndim: usize) -> Result<Self, StrError> {
-        if ndim < 2 || ndim > 3 {
-            return Err("ndim must be 2 or 3");
+    pub(super) fn new(space_ndim: usize) -> Result<Self, StrError> {
+        if space_ndim < 2 || space_ndim > 3 {
+            return Err("space_ndim must be 2 or 3");
         }
         Ok(Mesh {
-            space_ndim: ndim,
+            space_ndim,
             points: Vec::new(),
             cells: Vec::new(),
             boundary_points: HashSet::new(),
@@ -180,15 +180,15 @@ impl Mesh {
             boundary_faces: HashMap::new(),
             min: Vec::new(),
             max: Vec::new(),
-            grid_boundary_points: GridSearch::new(ndim)?,
+            grid_boundary_points: GridSearch::new(space_ndim)?,
             derived_props_computed: false,
         })
     }
 
     /// Returns a new mesh with pre-allocated (empty) Point and Cell vectors
-    pub(super) fn new_sized(ndim: usize, npoint: usize, ncell: usize) -> Result<Self, StrError> {
-        if ndim < 2 || ndim > 3 {
-            return Err("ndim must be 2 or 3");
+    pub(super) fn new_sized(space_ndim: usize, npoint: usize, ncell: usize) -> Result<Self, StrError> {
+        if space_ndim < 2 || space_ndim > 3 {
+            return Err("space_ndim must be 2 or 3");
         }
         if npoint < 2 {
             return Err("npoint must be greater than or equal to 2");
@@ -198,7 +198,7 @@ impl Mesh {
         }
         let zero_point = Point {
             id: 0,
-            coords: vec![0.0; ndim],
+            coords: vec![0.0; space_ndim],
             shared_by_boundary_edges: HashSet::new(),
             shared_by_boundary_faces: HashSet::new(),
         };
@@ -209,7 +209,7 @@ impl Mesh {
             points: Vec::new(),
         };
         Ok(Mesh {
-            space_ndim: ndim,
+            space_ndim,
             points: vec![zero_point; npoint],
             cells: vec![zero_cell; ncell],
             boundary_points: HashSet::new(),
@@ -217,7 +217,7 @@ impl Mesh {
             boundary_faces: HashMap::new(),
             min: Vec::new(),
             max: Vec::new(),
-            grid_boundary_points: GridSearch::new(ndim)?,
+            grid_boundary_points: GridSearch::new(space_ndim)?,
             derived_props_computed: false,
         })
     }
@@ -825,13 +825,184 @@ mod tests {
     use super::*;
 
     #[test]
-    fn new_works() {
-        // todo
+    fn new_fails_on_wrong_input() {
+        assert_eq!(Mesh::new(1).err(), Some("space_ndim must be 2 or 3"));
+        assert_eq!(Mesh::new(4).err(), Some("space_ndim must be 2 or 3"));
     }
 
     #[test]
-    fn serialize_works() {
-        // todo
+    fn new_sized_fails_on_wrong_input() {
+        assert_eq!(Mesh::new_sized(1, 2, 1).err(), Some("space_ndim must be 2 or 3"));
+        assert_eq!(Mesh::new_sized(4, 2, 1).err(), Some("space_ndim must be 2 or 3"));
+        assert_eq!(
+            Mesh::new_sized(2, 1, 1).err(),
+            Some("npoint must be greater than or equal to 2")
+        );
+        assert_eq!(
+            Mesh::new_sized(2, 2, 0).err(),
+            Some("ncell must be greater than or equal to 1")
+        );
+    }
+
+    #[test]
+    fn new_works() -> Result<(), StrError> {
+        let mesh = Mesh::new(2)?;
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 0);
+        assert_eq!(mesh.cells.len(), 0);
+        assert_eq!(mesh.boundary_points.len(), 0);
+        assert_eq!(mesh.boundary_edges.len(), 0);
+        assert_eq!(mesh.boundary_faces.len(), 0);
+        assert_eq!(mesh.min.len(), 0);
+        assert_eq!(mesh.max.len(), 0);
+        assert_eq!(
+            format!("{}", mesh.grid_boundary_points),
+            "ids = []\n\
+             nitem = 0\n\
+             ncontainer = 0\n"
+        );
+        assert_eq!(mesh.derived_props_computed, false);
+        Ok(())
+    }
+
+    #[test]
+    fn new_sized_works() -> Result<(), StrError> {
+        let mesh = Mesh::new_sized(2, 3, 1)?;
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 3);
+        assert_eq!(mesh.cells.len(), 1);
+        assert_eq!(mesh.boundary_points.len(), 0);
+        assert_eq!(mesh.boundary_edges.len(), 0);
+        assert_eq!(mesh.boundary_faces.len(), 0);
+        assert_eq!(mesh.min.len(), 0);
+        assert_eq!(mesh.max.len(), 0);
+        assert_eq!(
+            format!("{}", mesh.grid_boundary_points),
+            "ids = []\n\
+             nitem = 0\n\
+             ncontainer = 0\n"
+        );
+        assert_eq!(mesh.derived_props_computed, false);
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_works() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mesh = Mesh::from_text(
+            r"# header
+            # ndim npoint ncell
+                 2      6     2
+            
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+            
+            # cells
+            # id att geo_ndim npoint point_ids...
+               0   1        2      4 0 1 2 3
+               1   0        2      4 1 4 5 2",
+        )?;
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 6);
+        assert_eq!(mesh.cells.len(), 2);
+        assert_eq!(mesh.boundary_points.len(), 6);
+        assert_eq!(mesh.boundary_edges.len(), 6);
+        assert_eq!(mesh.boundary_faces.len(), 0);
+        assert_eq!(mesh.min, &[0.0, 0.0]);
+        assert_eq!(mesh.max, &[2.0, 1.0]);
+        assert_eq!(
+            format!("{}", mesh.grid_boundary_points),
+            "0: [0]\n\
+             4: [1]\n\
+             5: [1]\n\
+             9: [4]\n\
+             90: [3]\n\
+             94: [2]\n\
+             95: [2]\n\
+             99: [5]\n\
+             ids = [0, 1, 2, 3, 4, 5]\n\
+             nitem = 6\n\
+             ncontainer = 8\n"
+        );
+        assert_eq!(mesh.derived_props_computed, true);
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_file_works() -> Result<(), StrError> {
+        //
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.points.len(), 12);
+        assert_eq!(mesh.cells.len(), 2);
+        assert_eq!(mesh.boundary_points.len(), 12);
+        assert_eq!(mesh.boundary_edges.len(), 20);
+        // assert_eq!(mesh.boundary_faces.len(), 10);
+        assert_eq!(mesh.min, &[0.0, 0.0, 0.0]);
+        assert_eq!(mesh.max, &[1.0, 1.0, 2.0]);
+        println!("{}", mesh.grid_boundary_points);
+        assert_eq!(
+            format!("{}", mesh.grid_boundary_points),
+            "0: [0]\n\
+             9: [1]\n\
+             90: [3]\n\
+             99: [2]\n\
+             400: [4]\n\
+             409: [5]\n\
+             490: [7]\n\
+             499: [6]\n\
+             500: [4]\n\
+             509: [5]\n\
+             590: [7]\n\
+             599: [6]\n\
+             900: [8]\n\
+             909: [9]\n\
+             990: [11]\n\
+             999: [10]\n\
+             ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
+             nitem = 12\n\
+             ncontainer = 16\n"
+        );
+        assert_eq!(mesh.derived_props_computed, true);
+        Ok(())
+    }
+
+    #[test]
+    fn serialize_works() -> Result<(), StrError> {
+        Ok(())
     }
 
     #[test]

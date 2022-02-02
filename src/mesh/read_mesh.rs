@@ -618,7 +618,7 @@ mod tests {
             5  2.0 1.0
             
             # cells
-            # id attribute ndim npoint point_ids...
+            # id attribute geo_ndim npoint point_ids...
             0 1  2 4  0 1 2 3
             1 0  2 4  1 4 5 2",
         )?;
@@ -676,7 +676,7 @@ mod tests {
             11  0.0 1.0 2.0
             
             # cells
-            # id attribute ndim npoint point_ids...
+            # id attribute geo_ndim npoint point_ids...
             0 1  3 8  0 1 2 3 4 5  6  7
             1 0  3 8  4 5 6 7 8 9 10 11",
         )?;
