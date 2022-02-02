@@ -430,7 +430,7 @@ mod tests {
     #[test]
     fn new_fails_on_wrong_input() {
         let b2d = Block::new(1);
-        assert_eq!(b2d.err(), Some("ndim must be 2 or 3"));
+        assert_eq!(b2d.err(), Some("space_ndim must be 2 or 3"));
     }
 
     #[test]
@@ -496,7 +496,7 @@ mod tests {
     }
 
     #[test]
-    fn set_group_works() -> Result<(), StrError> {
+    fn set_attribute_id_works() -> Result<(), StrError> {
         let mut block = Block::new(2)?;
         block.set_attribute_id(2);
         assert_eq!(block.attribute_id, 2);
