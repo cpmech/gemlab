@@ -3,7 +3,7 @@ use crate::geometry::Circle;
 use crate::shapes::Shape;
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
-use russell_lab::{mat_vec_mul, sort2, sort3, Matrix, Vector};
+use russell_lab::{mat_vec_mul, sort2, sort4, Matrix, Vector};
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -626,8 +626,8 @@ impl Block {
             }
 
             // define key (sorted ids)
-            let mut face_key: FaceKey = (points[0], points[1], points[2]);
-            sort3(&mut face_key);
+            let mut face_key: FaceKey = (points[0], points[1], points[2], points[3]);
+            sort4(&mut face_key);
 
             // set boundary faces
             boundary_faces.insert(face_key);

@@ -3,11 +3,11 @@ use super::At;
 use crate::shapes::Shape;
 use crate::util::GridSearch;
 use crate::StrError;
-use russell_lab::{sort2, sort3};
+use russell_lab::{sort2, sort4};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fmt;
+use std::fmt::{self, Write as FmtWrite};
 use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -23,10 +23,21 @@ pub type CellId = usize;
 pub type CellAttributeId = usize;
 
 /// Aliases (usize,usize) as the key of Edge
+///
+/// # Note
+///
+/// Since the local numbering scheme runs over "corners" first, we can compare
+/// edges using only two points; i.e., the middle points don't matter.
 pub type EdgeKey = (usize, usize);
 
-/// Aliases (usize,usize,usize) as the key of Face
-pub type FaceKey = (usize, usize, usize);
+/// Aliases (usize,usize,usize,usize) as the key of Face
+///
+/// # Note
+///
+/// If all faces have at most 3 points, the fourth entry in the key will be equal to the total number of points.
+/// In this way, we can compare 4-node (or more nodes) faces with each other, since that the local numbering
+/// scheme runs over the "corners" first; i.e., the middle points don't matter.
+pub type FaceKey = (usize, usize, usize, usize);
 
 /// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -606,8 +617,12 @@ impl Mesh {
                 }
 
                 // define key (sorted ids)
-                let mut face_key: FaceKey = (face_points[0], face_points[1], face_points[2]);
-                sort3(&mut face_key);
+                let mut face_key: FaceKey = if face_points.len() > 3 {
+                    (face_points[0], face_points[1], face_points[2], face_points[3])
+                } else {
+                    (face_points[0], face_points[1], face_points[2], self.points.len())
+                };
+                sort4(&mut face_key);
 
                 // existing face
                 if all_faces.contains_key(&face_key) {
@@ -629,9 +644,14 @@ impl Mesh {
             }
         }
 
+        // sort face keys just so the next loop is deterministic
+        let mut face_keys: Vec<_> = all_faces.keys().collect();
+        face_keys.sort();
+
         // find boundary faces and set boundary points and boundary edges
-        for (face_key, face) in &all_faces {
+        for face_key in face_keys {
             // skip interior faces
+            let face = all_faces.get(&face_key).unwrap();
             if face.shared_by_cells.len() != 1 {
                 continue;
             }
@@ -733,58 +753,51 @@ impl Mesh {
         let res = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
         Ok(res)
     }
-}
 
-impl fmt::Display for Mesh {
-    /// Prints mesh data (may be large)
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // summary
-        write!(f, "ndim = {}\n", self.space_ndim).unwrap();
-        write!(f, "npoint = {}\n", self.points.len()).unwrap();
-        write!(f, "ncell = {}\n", self.cells.len()).unwrap();
-        write!(f, "n_boundary_point = {}\n", self.boundary_points.len()).unwrap();
-        write!(f, "n_boundary_edge = {}\n", self.boundary_edges.len()).unwrap();
-        write!(f, "n_boundary_face = {}\n", self.boundary_faces.len()).unwrap();
-
-        // points: i=index, g=group, x=coordinates, e=shared_by_boundary_edges, f=shared_by_boundary_faces
-        write!(f, "\npoints\n").unwrap();
+    /// Returns a string with information about all points
+    pub(super) fn string_points(&self) -> String {
+        let mut buf = String::new();
         for point in &self.points {
             let mut shared_by_boundary_edges: Vec<_> = point.shared_by_boundary_edges.iter().collect();
             let mut shared_by_boundary_faces: Vec<_> = point.shared_by_boundary_faces.iter().collect();
             shared_by_boundary_edges.sort();
             shared_by_boundary_faces.sort();
             write!(
-                f,
+                &mut buf,
                 "i:{} x:{:?} e:{:?} f:{:?}\n",
                 point.id, point.coords, shared_by_boundary_edges, shared_by_boundary_faces,
             )
             .unwrap();
         }
+        buf
+    }
 
-        // cells: i=index, a=attribute_id, n=geo_ndim, p=points
-        write!(f, "\ncells\n").unwrap();
+    /// Returns a string with information about all cells
+    pub(super) fn string_cells(&self) -> String {
+        let mut buf = String::new();
         for cell in &self.cells {
             write!(
-                f,
-                "i:{} a:{} n:{} p:{:?}\n",
+                &mut buf,
+                "i:{} a:{} g:{} p:{:?}\n",
                 cell.id, cell.attribute_id, cell.geo_ndim, cell.points,
             )
             .unwrap();
         }
+        buf
+    }
 
-        // boundary points: i=index
-        write!(f, "\nboundary_points\n").unwrap();
+    /// Returns a string with information about all boundary points
+    pub(super) fn string_boundary_points(&self) -> String {
+        let mut buf = String::new();
         let mut point_indices: Vec<_> = self.boundary_points.iter().collect();
         point_indices.sort();
-        for index in point_indices {
-            write!(f, "{} ", index).unwrap();
-        }
-        if self.boundary_points.len() > 0 {
-            write!(f, "\n").unwrap();
-        }
+        write!(&mut buf, "{:?}\n", point_indices).unwrap();
+        buf
+    }
 
-        // boundary edges: k=key(point,point), p=point_ids c=shared_by_2d_cells f=shared_by_boundary_faces
-        write!(f, "\nboundary_edges\n").unwrap();
+    /// Returns a string with information about all boundary edges
+    pub(super) fn string_boundary_edges(&self) -> String {
+        let mut buf = String::new();
         let mut keys_and_edges: Vec<_> = self.boundary_edges.keys().zip(self.boundary_edges.values()).collect();
         keys_and_edges.sort_by(|left, right| left.0.cmp(&right.0));
         for (key, edge) in keys_and_edges {
@@ -793,27 +806,65 @@ impl fmt::Display for Mesh {
             shared_by_2d_cells.sort();
             shared_by_boundary_faces.sort();
             write!(
-                f,
+                &mut buf,
                 "k:({},{}) p:{:?} c:{:?} f:{:?}\n",
                 key.0, key.1, edge.points, shared_by_2d_cells, shared_by_boundary_faces,
             )
             .unwrap();
         }
+        buf
+    }
 
-        // boundary_faces: k=key(point,point,point), p=point_ids, c=shared_by_cells
-        write!(f, "\nboundary_faces\n").unwrap();
+    /// Returns a string with information about all boundary faces
+    pub(super) fn string_boundary_faces(&self) -> String {
+        let mut buf = String::new();
         let mut keys_and_faces: Vec<_> = self.boundary_faces.keys().zip(self.boundary_faces.values()).collect();
         keys_and_faces.sort_by(|left, right| left.0.cmp(&right.0));
         for (key, face) in keys_and_faces {
             let mut shared_by_cells: Vec<_> = face.shared_by_cells.iter().collect();
             shared_by_cells.sort();
             write!(
-                f,
+                &mut buf,
                 "k:({},{},{}) p:{:?} c:{:?}\n",
                 key.0, key.1, key.2, face.points, shared_by_cells
             )
             .unwrap();
         }
+        buf
+    }
+}
+
+impl fmt::Display for Mesh {
+    /// Prints mesh data (may be large)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "SUMMARY\n")?;
+        write!(f, "=======\n")?;
+        write!(f, "ndim = {}\n", self.space_ndim)?;
+        write!(f, "npoint = {}\n", self.points.len())?;
+        write!(f, "ncell = {}\n", self.cells.len())?;
+        write!(f, "n_boundary_point = {}\n", self.boundary_points.len())?;
+        write!(f, "n_boundary_edge = {}\n", self.boundary_edges.len())?;
+        write!(f, "n_boundary_face = {}\n", self.boundary_faces.len())?;
+
+        write!(f, "\nPOINTS\n")?;
+        write!(f, "======\n")?;
+        write!(f, "{}", self.string_points())?;
+
+        write!(f, "\nCELLS\n")?;
+        write!(f, "=====\n")?;
+        write!(f, "{}", self.string_cells())?;
+
+        write!(f, "\nBOUNDARY POINTS\n")?;
+        write!(f, "===============\n")?;
+        write!(f, "{}", self.string_boundary_points())?;
+
+        write!(f, "\nBOUNDARY EDGES\n")?;
+        write!(f, "==============\n")?;
+        write!(f, "{}", self.string_boundary_edges())?;
+
+        write!(f, "\nBOUNDARY FACES\n")?;
+        write!(f, "==============\n")?;
+        write!(f, "{}", self.string_boundary_faces())?;
         Ok(())
     }
 }
@@ -887,7 +938,7 @@ mod tests {
     }
 
     #[test]
-    fn from_text_and_display_work() -> Result<(), StrError> {
+    fn from_text_and_strings_work() -> Result<(), StrError> {
         //
         //  3--------2--------5
         //  |        |        |
@@ -938,39 +989,30 @@ mod tests {
         );
         assert_eq!(mesh.derived_props_computed, true);
         assert_eq!(
-            format!("{}", mesh),
-            "ndim = 2\n\
-             npoint = 6\n\
-             ncell = 2\n\
-             n_boundary_point = 6\n\
-             n_boundary_edge = 6\n\
-             n_boundary_face = 0\n\
-             \n\
-             points\n\
-             i:0 x:[0.0, 0.0] e:[(0, 1), (0, 3)] f:[]\n\
+            format!("{}", mesh.string_points()),
+            "i:0 x:[0.0, 0.0] e:[(0, 1), (0, 3)] f:[]\n\
              i:1 x:[1.0, 0.0] e:[(0, 1), (1, 4)] f:[]\n\
              i:2 x:[1.0, 1.0] e:[(2, 3), (2, 5)] f:[]\n\
              i:3 x:[0.0, 1.0] e:[(0, 3), (2, 3)] f:[]\n\
              i:4 x:[2.0, 0.0] e:[(1, 4), (4, 5)] f:[]\n\
-             i:5 x:[2.0, 1.0] e:[(2, 5), (4, 5)] f:[]\n\
-             \n\
-             cells\n\
-             i:0 a:1 n:2 p:[0, 1, 2, 3]\n\
-             i:1 a:0 n:2 p:[1, 4, 5, 2]\n\
-             \n\
-             boundary_points\n\
-             0 1 2 3 4 5 \n\
-             \n\
-             boundary_edges\n\
-             k:(0,1) p:[0, 1] c:[0] f:[]\n\
+             i:5 x:[2.0, 1.0] e:[(2, 5), (4, 5)] f:[]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_cells()),
+            "i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 g:2 p:[1, 4, 5, 2]\n"
+        );
+        assert_eq!(format!("{}", mesh.string_boundary_points()), "[0, 1, 2, 3, 4, 5]\n");
+        assert_eq!(
+            format!("{}", mesh.string_boundary_edges()),
+            "k:(0,1) p:[0, 1] c:[0] f:[]\n\
              k:(0,3) p:[3, 0] c:[0] f:[]\n\
              k:(1,4) p:[1, 4] c:[1] f:[]\n\
              k:(2,3) p:[2, 3] c:[0] f:[]\n\
              k:(2,5) p:[5, 2] c:[1] f:[]\n\
-             k:(4,5) p:[4, 5] c:[1] f:[]\n\
-             \n\
-             boundary_faces\n"
+             k:(4,5) p:[4, 5] c:[1] f:[]\n"
         );
+        assert_eq!(format!("{}", mesh.string_boundary_faces()), "");
         Ok(())
     }
 
@@ -1004,10 +1046,12 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         assert_eq!(mesh.boundary_points.len(), 12);
         assert_eq!(mesh.boundary_edges.len(), 20);
-        // assert_eq!(mesh.boundary_faces.len(), 10);
+        assert_eq!(mesh.boundary_faces.len(), 10);
         assert_eq!(mesh.min, &[0.0, 0.0, 0.0]);
         assert_eq!(mesh.max, &[1.0, 1.0, 2.0]);
-        println!("{}", mesh.grid_boundary_points);
+
+        println!("\n\n{:?}\n\n", mesh.boundary_edges.get(&(0, 1)));
+
         assert_eq!(
             format!("{}", mesh.grid_boundary_points),
             "0: [0]\n\
@@ -1031,6 +1075,58 @@ mod tests {
              ncontainer = 16\n"
         );
         assert_eq!(mesh.derived_props_computed, true);
+        println!("{}", mesh.string_points());
+        println!("{}", mesh.string_cells());
+        println!("{}", mesh.string_boundary_points());
+        println!("{}", mesh.string_boundary_edges());
+        println!("{}", mesh.string_boundary_faces());
+        assert_eq!(
+            format!("{}", mesh.string_points()),
+            "i:0 x:[0.0, 0.0, 0.0] e:[(0, 1), (0, 3), (0, 4)] f:[(0, 1, 2, 3), (0, 1, 4, 5), (0, 3, 4, 7)]\n\
+             i:1 x:[1.0, 0.0, 0.0] e:[(0, 1), (1, 2), (1, 5)] f:[(0, 1, 2, 3), (0, 1, 4, 5), (1, 2, 5, 6)]\n\
+             i:2 x:[1.0, 1.0, 0.0] e:[(1, 2), (2, 3), (2, 6)] f:[(0, 1, 2, 3), (1, 2, 5, 6), (2, 3, 6, 7)]\n\
+             i:3 x:[0.0, 1.0, 0.0] e:[(0, 3), (2, 3), (3, 7)] f:[(0, 1, 2, 3), (0, 3, 4, 7), (2, 3, 6, 7)]\n\
+             i:4 x:[0.0, 0.0, 1.0] e:[(0, 4), (4, 5), (4, 7), (4, 8)] f:[(0, 1, 4, 5), (0, 3, 4, 7), (4, 5, 8, 9), (4, 7, 8, 11)]\n\
+             i:5 x:[1.0, 0.0, 1.0] e:[(1, 5), (4, 5), (5, 6), (5, 9)] f:[(0, 1, 4, 5), (1, 2, 5, 6), (4, 5, 8, 9), (5, 6, 9, 10)]\n\
+             i:6 x:[1.0, 1.0, 1.0] e:[(2, 6), (5, 6), (6, 7), (6, 10)] f:[(1, 2, 5, 6), (2, 3, 6, 7), (5, 6, 9, 10), (6, 7, 10, 11)]\n\
+             i:7 x:[0.0, 1.0, 1.0] e:[(3, 7), (4, 7), (6, 7), (7, 11)] f:[(0, 3, 4, 7), (2, 3, 6, 7), (4, 7, 8, 11), (6, 7, 10, 11)]\n\
+             i:8 x:[0.0, 0.0, 2.0] e:[(4, 8), (8, 9), (8, 11)] f:[(4, 5, 8, 9), (4, 7, 8, 11), (8, 9, 10, 11)]\n\
+             i:9 x:[1.0, 0.0, 2.0] e:[(5, 9), (8, 9), (9, 10)] f:[(4, 5, 8, 9), (5, 6, 9, 10), (8, 9, 10, 11)]\n\
+             i:10 x:[1.0, 1.0, 2.0] e:[(6, 10), (9, 10), (10, 11)] f:[(5, 6, 9, 10), (6, 7, 10, 11), (8, 9, 10, 11)]\n\
+             i:11 x:[0.0, 1.0, 2.0] e:[(7, 11), (8, 11), (10, 11)] f:[(4, 7, 8, 11), (6, 7, 10, 11), (8, 9, 10, 11)]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_cells()),
+            "i:0 a:1 g:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
+             i:1 a:0 g:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_boundary_points()),
+            "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_boundary_edges()),
+            "k:(0,1) p:[1, 0] c:[] f:[(0, 1, 2, 3), (0, 1, 4, 5)]\n\
+             k:(0,3) p:[0, 3] c:[] f:[(0, 1, 2, 3), (0, 3, 4, 7)]\n\
+             k:(0,4) p:[4, 0] c:[] f:[(0, 1, 4, 5), (0, 3, 4, 7)]\n\
+             k:(1,2) p:[2, 1] c:[] f:[(0, 1, 2, 3), (1, 2, 5, 6)]\n\
+             k:(1,5) p:[1, 5] c:[] f:[(0, 1, 4, 5), (1, 2, 5, 6)]\n\
+             k:(2,3) p:[3, 2] c:[] f:[(0, 1, 2, 3), (2, 3, 6, 7)]\n\
+             k:(2,6) p:[2, 6] c:[] f:[(1, 2, 5, 6), (2, 3, 6, 7)]\n\
+             k:(3,7) p:[7, 3] c:[] f:[(0, 3, 4, 7), (2, 3, 6, 7)]\n\
+             k:(4,5) p:[5, 4] c:[] f:[(0, 1, 4, 5), (4, 5, 8, 9)]\n\
+             k:(4,7) p:[4, 7] c:[] f:[(0, 3, 4, 7), (4, 7, 8, 11)]\n\
+             k:(4,8) p:[8, 4] c:[] f:[(4, 5, 8, 9), (4, 7, 8, 11)]\n\
+             k:(5,6) p:[6, 5] c:[] f:[(1, 2, 5, 6), (5, 6, 9, 10)]\n\
+             k:(5,9) p:[5, 9] c:[] f:[(4, 5, 8, 9), (5, 6, 9, 10)]\n\
+             k:(6,7) p:[7, 6] c:[] f:[(2, 3, 6, 7), (6, 7, 10, 11)]\n\
+             k:(6,10) p:[6, 10] c:[] f:[(5, 6, 9, 10), (6, 7, 10, 11)]\n\
+             k:(7,11) p:[11, 7] c:[] f:[(4, 7, 8, 11), (6, 7, 10, 11)]\n\
+             k:(8,9) p:[9, 8] c:[] f:[(4, 5, 8, 9), (8, 9, 10, 11)]\n\
+             k:(8,11) p:[8, 11] c:[] f:[(4, 7, 8, 11), (8, 9, 10, 11)]\n\
+             k:(9,10) p:[10, 9] c:[] f:[(5, 6, 9, 10), (8, 9, 10, 11)]\n\
+             k:(10,11) p:[11, 10] c:[] f:[(6, 7, 10, 11), (8, 9, 10, 11)]\n"
+        );
         Ok(())
     }
 
