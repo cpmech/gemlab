@@ -761,7 +761,7 @@ impl fmt::Display for Mesh {
             .unwrap();
         }
 
-        // cells: i=index, a=attribute_id, p=points
+        // cells: i=index, a=attribute_id, n=geo_ndim, p=points
         write!(f, "\ncells\n").unwrap();
         for cell in &self.cells {
             write!(
@@ -887,7 +887,7 @@ mod tests {
     }
 
     #[test]
-    fn from_text_works() -> Result<(), StrError> {
+    fn from_text_and_display_work() -> Result<(), StrError> {
         //
         //  3--------2--------5
         //  |        |        |
@@ -937,11 +937,45 @@ mod tests {
              ncontainer = 8\n"
         );
         assert_eq!(mesh.derived_props_computed, true);
+        assert_eq!(
+            format!("{}", mesh),
+            "ndim = 2\n\
+             npoint = 6\n\
+             ncell = 2\n\
+             n_boundary_point = 6\n\
+             n_boundary_edge = 6\n\
+             n_boundary_face = 0\n\
+             \n\
+             points\n\
+             i:0 x:[0.0, 0.0] e:[(0, 1), (0, 3)] f:[]\n\
+             i:1 x:[1.0, 0.0] e:[(0, 1), (1, 4)] f:[]\n\
+             i:2 x:[1.0, 1.0] e:[(2, 3), (2, 5)] f:[]\n\
+             i:3 x:[0.0, 1.0] e:[(0, 3), (2, 3)] f:[]\n\
+             i:4 x:[2.0, 0.0] e:[(1, 4), (4, 5)] f:[]\n\
+             i:5 x:[2.0, 1.0] e:[(2, 5), (4, 5)] f:[]\n\
+             \n\
+             cells\n\
+             i:0 a:1 n:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 n:2 p:[1, 4, 5, 2]\n\
+             \n\
+             boundary_points\n\
+             0 1 2 3 4 5 \n\
+             \n\
+             boundary_edges\n\
+             k:(0,1) p:[0, 1] c:[0] f:[]\n\
+             k:(0,3) p:[3, 0] c:[0] f:[]\n\
+             k:(1,4) p:[1, 4] c:[1] f:[]\n\
+             k:(2,3) p:[2, 3] c:[0] f:[]\n\
+             k:(2,5) p:[5, 2] c:[1] f:[]\n\
+             k:(4,5) p:[4, 5] c:[1] f:[]\n\
+             \n\
+             boundary_faces\n"
+        );
         Ok(())
     }
 
     #[test]
-    fn from_text_file_works() -> Result<(), StrError> {
+    fn from_text_file_and_display_work() -> Result<(), StrError> {
         //
         //       8-------------11
         //      /.             /|
@@ -1018,35 +1052,6 @@ mod tests {
         ",
         )?;
         println!("{}", mesh);
-        assert_eq!(
-            format!("{}", mesh),
-            "ndim = 2\n\
-             npoint = 4\n\
-             ncell = 1\n\
-             n_boundary_point = 4\n\
-             n_boundary_edge = 4\n\
-             n_boundary_face = 0\n\
-             \n\
-             points\n\
-             i:0 x:[0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0] e:[] f:[]\n\
-             \n\
-             cells\n\
-             i:0 a:0 n:2 p:[0, 1, 2, 3]\n\
-             \n\
-             boundary_points\n\
-             0 1 2 3 \n\
-             \n\
-             boundary_edges\n\
-             k:(0,1) p:[0, 1] c:[0] f:[]\n\
-             k:(0,3) p:[3, 0] c:[0] f:[]\n\
-             k:(1,2) p:[1, 2] c:[0] f:[]\n\
-             k:(2,3) p:[2, 3] c:[0] f:[]\n\
-             \n\
-             boundary_faces\n"
-        );
         Ok(())
     }
 
