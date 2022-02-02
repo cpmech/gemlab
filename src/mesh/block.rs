@@ -1,19 +1,9 @@
-use super::{Cell, Mesh, Point};
-use crate::geometry::Circle;
+use super::{Cell, Constraint, Mesh, Point};
 use crate::shapes::Shape;
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use russell_lab::{mat_vec_mul, Matrix, Vector};
 use std::collections::HashSet;
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Constraint {
-    /// Arc
-    Arc(Circle),
-
-    /// Arc surface extruded along X
-    ArcX(Circle),
-}
 
 /// Defines a polygon on polyhedron that can be split into smaller shapes
 ///
@@ -434,22 +424,8 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
-    use super::{Block, Circle, Constraint, StrError};
-
-    #[test]
-    fn constraint_traits_work() {
-        let constraint = Constraint::Arc(Circle {
-            center: [2.0, 3.0],
-            radius: 1.0,
-            tolerance: 1e-2,
-        });
-        let clone = constraint.clone();
-        assert_eq!(constraint, clone);
-        assert_eq!(
-            format!("{:?}", constraint),
-            "Arc(Circle { center: [2.0, 3.0], radius: 1.0, tolerance: 0.01 })"
-        );
-    }
+    use super::{Block, StrError};
+    use crate::{geometry::Circle, mesh::Constraint};
 
     #[test]
     fn new_fails_on_wrong_input() {
