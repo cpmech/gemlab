@@ -1138,55 +1138,191 @@ mod tests {
 
     #[test]
     fn serialize_works() -> Result<(), StrError> {
-        Ok(())
-    }
-
-    #[test]
-    fn compute_derived_props_works() -> Result<(), StrError> {
-        let mesh = Mesh::from_text(
-            r"
-            2 4 1
-            0  0.0 0.0
-            1  1.0 0.0
-            2  1.0 1.0
-            3  0.0 1.0
-            0 0  2 4  0 1 2 3
-        ",
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let m1 = Mesh::from_text(
+            r"# header
+            # ndim npoint ncell
+                 2      6     2
+            
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+            
+            # cells
+            # id att geo_ndim npoint point_ids...
+               0   1        2      4 0 1 2 3
+               1   0        2      4 1 4 5 2",
         )?;
-        println!("{}", mesh);
+        m1.save("/tmp/gemlab/test.msh")?;
+        let m2 = Mesh::read("/tmp/gemlab/test.msh")?;
+        assert_eq!(
+            format!("{}", m2.grid_boundary_points),
+            "0: [0]\n\
+             4: [1]\n\
+             5: [1]\n\
+             9: [4]\n\
+             90: [3]\n\
+             94: [2]\n\
+             95: [2]\n\
+             99: [5]\n\
+             ids = [0, 1, 2, 3, 4, 5]\n\
+             nitem = 6\n\
+             ncontainer = 8\n"
+        );
+        assert_eq!(m2.derived_props_computed, true);
+        assert_eq!(
+            format!("{}", m2.string_points()),
+            "i:0 x:[0.0, 0.0] e:[(0, 1), (0, 3)] f:[]\n\
+             i:1 x:[1.0, 0.0] e:[(0, 1), (1, 4)] f:[]\n\
+             i:2 x:[1.0, 1.0] e:[(2, 3), (2, 5)] f:[]\n\
+             i:3 x:[0.0, 1.0] e:[(0, 3), (2, 3)] f:[]\n\
+             i:4 x:[2.0, 0.0] e:[(1, 4), (4, 5)] f:[]\n\
+             i:5 x:[2.0, 1.0] e:[(2, 5), (4, 5)] f:[]\n"
+        );
+        assert_eq!(
+            format!("{}", m2.string_cells()),
+            "i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 g:2 p:[1, 4, 5, 2]\n"
+        );
+        assert_eq!(format!("{}", m2.string_boundary_points()), "[0, 1, 2, 3, 4, 5]\n");
+        assert_eq!(
+            format!("{}", m2.string_boundary_edges()),
+            "k:(0,1) p:[0, 1] c:[0] f:[]\n\
+             k:(0,3) p:[3, 0] c:[0] f:[]\n\
+             k:(1,4) p:[1, 4] c:[1] f:[]\n\
+             k:(2,3) p:[2, 3] c:[0] f:[]\n\
+             k:(2,5) p:[5, 2] c:[1] f:[]\n\
+             k:(4,5) p:[4, 5] c:[1] f:[]\n"
+        );
+        assert_eq!(format!("{}", m2.string_boundary_faces()), "");
         Ok(())
     }
 
     #[test]
-    fn display_works() {
-        // todo
+    fn display_works() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mesh = Mesh::from_text(
+            r"# header
+            # ndim npoint ncell
+                 2      6     2
+            
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+            
+            # cells
+            # id att geo_ndim npoint point_ids...
+               0   1        2      4 0 1 2 3
+               1   0        2      4 1 4 5 2",
+        )?;
+        assert_eq!(
+            format!("{}", mesh),
+            "SUMMARY\n\
+             =======\n\
+             ndim = 2\n\
+             npoint = 6\n\
+             ncell = 2\n\
+             n_boundary_point = 6\n\
+             n_boundary_edge = 6\n\
+             n_boundary_face = 0\n\
+             \n\
+             POINTS\n\
+             ======\n\
+             i:0 x:[0.0, 0.0] e:[(0, 1), (0, 3)] f:[]\n\
+             i:1 x:[1.0, 0.0] e:[(0, 1), (1, 4)] f:[]\n\
+             i:2 x:[1.0, 1.0] e:[(2, 3), (2, 5)] f:[]\n\
+             i:3 x:[0.0, 1.0] e:[(0, 3), (2, 3)] f:[]\n\
+             i:4 x:[2.0, 0.0] e:[(1, 4), (4, 5)] f:[]\n\
+             i:5 x:[2.0, 1.0] e:[(2, 5), (4, 5)] f:[]\n\
+             \n\
+             CELLS\n\
+             =====\n\
+             i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 g:2 p:[1, 4, 5, 2]\n\
+             \n\
+             BOUNDARY POINTS\n\
+             ===============\n\
+             [0, 1, 2, 3, 4, 5]\n\
+             \n\
+             BOUNDARY EDGES\n\
+             ==============\n\
+             k:(0,1) p:[0, 1] c:[0] f:[]\n\
+             k:(0,3) p:[3, 0] c:[0] f:[]\n\
+             k:(1,4) p:[1, 4] c:[1] f:[]\n\
+             k:(2,3) p:[2, 3] c:[0] f:[]\n\
+             k:(2,5) p:[5, 2] c:[1] f:[]\n\
+             k:(4,5) p:[4, 5] c:[1] f:[]\n\
+             \n\
+             BOUNDARY FACES\n\
+             ==============\n"
+        );
+        Ok(())
     }
 
     #[test]
     fn find_points_and_edges_work() -> Result<(), StrError> {
-        let mut mesh = Mesh::from_text(
-            r"
-            2 4 1
-            0 0.0 0.0
-            1 1.0 0.0
-            2 1.0 1.0
-            3 0.0 1.0
-            0 1  2 4  0 1 2 3
-        ",
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mut m1 = Mesh::from_text(
+            r"# header
+            # ndim npoint ncell
+                 2      6     2
+            
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+            
+            # cells
+            # id att geo_ndim npoint point_ids...
+               0   1        2      4 0 1 2 3
+               1   0        2      4 1 4 5 2",
         )?;
 
-        let origin = mesh.find_boundary_points(At::XY(0.0, 0.0))?;
-        let bottom = mesh.find_boundary_edges(At::Y(0.0))?;
-        let right = mesh.find_boundary_edges(At::X(1.0))?;
-        let top = mesh.find_boundary_edges(At::Y(1.0))?;
-        let left = mesh.find_boundary_edges(At::X(0.0))?;
+        let origin = m1.find_boundary_points(At::XY(0.0, 0.0))?;
+        let top_right = m1.find_boundary_points(At::XY(2.0, 1.0))?;
+        let bottom = m1.find_boundary_edges(At::Y(0.0))?;
+        let right = m1.find_boundary_edges(At::X(2.0))?;
+        let top = m1.find_boundary_edges(At::Y(1.0))?;
+        let left = m1.find_boundary_edges(At::X(0.0))?;
 
         assert_eq!(origin, &[0]);
-        assert_eq!(bottom, &[(0, 1)]);
-        assert_eq!(right, &[(1, 2)]);
-        assert_eq!(top, &[(2, 3)]);
+        assert_eq!(top_right, &[5]);
+        assert_eq!(bottom, &[(0, 1), (1, 4)]);
+        assert_eq!(right, &[(4, 5)]);
+        assert_eq!(top, &[(2, 3), (2, 5)]);
         assert_eq!(left, &[(0, 3)]);
-
         Ok(())
     }
 }
