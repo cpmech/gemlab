@@ -1364,7 +1364,6 @@ mod tests {
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            // println!("{:?}: tol={:e}", shape.kind, tol);
 
             // loop over nodes of shape
             for m in 0..shape.nnode {
@@ -1457,7 +1456,6 @@ mod tests {
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            // println!("{:?}: tol={:e}", shape.kind, tol);
 
             // set ξ within reference space
             let at_ksi = vec![0.25; shape.geo_ndim];
@@ -1541,7 +1539,6 @@ mod tests {
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
             let tol_in = *tols_in.get(&shape.kind).unwrap();
-            // println!("{:?}: tol={:e}, tol_in={:e}", shape.kind, tol, tol_in);
 
             // set coordinates matrix
             set_coords_matrix(shape);
@@ -1615,7 +1612,6 @@ mod tests {
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            // println!("{:?}: tol={:e}", shape.kind, tol);
 
             // set coordinates matrix
             set_coords_matrix(shape);
@@ -1669,9 +1665,6 @@ mod tests {
         let area = PI * (RMAX * RMAX - RMIN * RMIN) / 12.0;
         let ref_area = 4.0;
         let area_ratio = area / ref_area;
-        // println!("normal =\n{}", normal);
-        // println!("mag_normal = {}", mag_normal);
-        // println!("area_ratio = {}", area_ratio);
         assert_approx_eq!(mag_normal, area_ratio, 1e-4);
 
         // check direction of normal vector
@@ -1715,9 +1708,6 @@ mod tests {
         let length = RMAX - RMIN;
         let ref_length = 2.0;
         let length_ratio = length / ref_length;
-        // println!("normal =\n{}", normal);
-        // println!("mag_normal = {}", mag_normal);
-        // println!("length_ratio = {}", length_ratio);
         assert_approx_eq!(mag_normal, length_ratio, 1e-15);
 
         // check direction of normal vector
@@ -1751,7 +1741,6 @@ mod tests {
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            // println!("{:?}: tol={:e}", shape.kind, tol);
 
             // set coordinates matrix
             set_coords_matrix(shape);
@@ -1830,7 +1819,6 @@ mod tests {
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
-            // println!("{:?}: tol={:e}", shape.kind, tol);
 
             // set coordinates matrix
             set_coords_matrix(shape);

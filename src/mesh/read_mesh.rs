@@ -454,7 +454,6 @@ mod tests {
     #[test]
     fn read_mesh_2d_works() -> Result<(), StrError> {
         let mesh = read_mesh("./data/meshes/ok1.msh")?;
-        println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
             "ndim = 2\n\
@@ -488,7 +487,6 @@ mod tests {
     #[test]
     fn read_mesh_3d_works() -> Result<(), StrError> {
         let mesh = read_mesh("./data/meshes/ok2.msh")?;
-        println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
             "ndim = 3\n\
@@ -622,7 +620,6 @@ mod tests {
             0 1  2 4  0 1 2 3
             1 0  2 4  1 4 5 2",
         )?;
-        println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
             "ndim = 2\n\
@@ -680,7 +677,6 @@ mod tests {
             0 1  3 8  0 1 2 3 4 5  6  7
             1 0  3 8  4 5 6 7 8 9 10 11",
         )?;
-        println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
             "ndim = 3\n\
