@@ -104,6 +104,28 @@ mod tests {
              │ 0 0 1 1 │\n\
              └         ┘"
         );
+        assert_eq!(
+            format!("{}", mesh_shapes.boundary_edges.get(&(0, 1)).unwrap().coords_transp),
+            "┌     ┐\n\
+             │ 0 1 │\n\
+             │ 0 0 │\n\
+             └     ┘"
+        );
+        assert_eq!(
+            format!("{}", mesh_shapes.boundary_edges.get(&(1, 4)).unwrap().coords_transp),
+            "┌     ┐\n\
+             │ 1 2 │\n\
+             │ 0 0 │\n\
+             └     ┘"
+        );
+        assert_eq!(
+            format!("{}", mesh_shapes.boundary_edges.get(&(2, 3)).unwrap().coords_transp),
+            "┌     ┐\n\
+             │ 1 0 │\n\
+             │ 1 1 │\n\
+             └     ┘"
+        );
+        assert_eq!(mesh_shapes.boundary_faces.len(), 0);
 
         Ok(())
     }
