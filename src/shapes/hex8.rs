@@ -61,12 +61,12 @@ use russell_lab::{Matrix, Vector};
 /// |   ,'      ,'4,'|   ,'
 /// | ,'        ~~~  | ,'
 /// 1----------------2'
+/// ```
 ///
 /// # Note about face nodes
 ///
 /// * The order of face nodes is such that the normals are outward
 /// * The order of face nodes corresponds to **Qua4** nodes
-/// ```
 pub struct Hex8 {}
 
 impl Hex8 {

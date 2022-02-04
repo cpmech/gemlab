@@ -28,12 +28,12 @@ use russell_lab::{Matrix, Vector};
 ///  |           |
 ///  +-----------+
 ///        0
+/// ```
 ///
 /// # Note about edges
 ///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to **Lin3** nodes
-/// ```
 pub struct Qua9 {}
 
 impl Qua9 {

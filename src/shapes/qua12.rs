@@ -34,12 +34,12 @@ use russell_lab::{Matrix, Vector};
 ///  |           |
 ///  +-----------+
 ///        0
+/// ```
 ///
 /// # Note about edges
 ///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to **Lin4** nodes
-/// ```
 pub struct Qua12 {}
 
 impl Qua12 {

@@ -62,12 +62,12 @@ use russell_lab::{Matrix, Vector};
 /// |   ,'      ,'4,'|   ,'
 /// | ,'        ~~~  | ,'
 /// 1-------9--------2'
+/// ```
 ///
 /// # Note about face nodes
 ///
 /// * The order of face nodes is such that the normals are outward
 /// * The order of face nodes corresponds to **Qua8** nodes
-/// ```
 pub struct Hex20 {}
 
 impl Hex20 {

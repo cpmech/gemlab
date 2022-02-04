@@ -101,12 +101,12 @@ use russell_lab::{Matrix, Vector};
 ///   1,'`
 ///  /
 /// r
+/// ```
 ///
 /// # Note about face nodes
 ///
 /// * The order of face nodes is such that the normals are outward
 /// * The order of face nodes corresponds to **Tri3** nodes
-/// ```
 pub struct Tet4 {}
 
 impl Tet4 {
