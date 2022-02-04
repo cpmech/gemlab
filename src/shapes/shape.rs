@@ -1236,7 +1236,7 @@ mod tests {
 
     /// Generate coordinates
     ///
-    /// He shape is the area indicated with "?" or the edge with "%".
+    /// The shape is the area indicated with "?" or the edge with "%".
     /// If class == Tri, the shape is half of the highlighted wedge.
     /// In 3D, an extrusion is applied along the out-of-plane direction.
     ///
@@ -1309,6 +1309,25 @@ mod tests {
                 shape.set_node(m, j, x[j]).unwrap();
             }
         }
+    }
+
+    // Sets the coordinates such that the shape is parallel to the x,y,z axes
+    // For triangles and tetrahedra, one edge/face will cut the axes equally
+    // * Qua and Hex will have real coordinates equal to the natural coordinates
+    // * Tri and Tet will be scaled based using the natural coordinates
+    // * All edges parallel to the x,y,z axes will have lengths equal to 2.0
+    fn set_coords_matrix_parallel(shape: &mut Shape) -> Result<(), StrError> {
+        let mut scale = 1.0;
+        if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
+            scale = 2.0;
+        }
+        for m in 0..shape.nnode {
+            let ksi = shape.get_reference_coords(m);
+            for j in 0..shape.geo_ndim {
+                shape.set_node(m, j, scale * ksi[j])?;
+            }
+        }
+        Ok(())
     }
 
     #[test]
@@ -1714,6 +1733,82 @@ mod tests {
         let mut unit_normal = Vector::from(normal.as_data());
         scale_vector(&mut unit_normal, 1.0 / mag_normal);
         assert_vec_approx_eq!(unit_normal.as_data(), &[-f64::sin(AMAX), f64::cos(AMAX)], 1e-15);
+        Ok(())
+    }
+
+    #[test]
+    fn normals_are_outward_2d() -> Result<(), StrError> {
+        // define dims and number of nodes
+        let pairs = vec![
+            (2, 3),
+            (2, 6),
+            (2, 10),
+            (2, 15),
+            (2, 4),
+            (2, 8),
+            (2, 9),
+            (2, 12),
+            (2, 16),
+            (2, 17),
+        ];
+
+        // solution
+        //
+        //   →     Δℓ_edge   Δℓ_edge
+        // ||n|| = ——————— = ———————
+        //         Δξ_lin       2
+        //                                                 →     2 √2
+        // For the diagonal of Tri: Δℓ_edge = 2 √2, thus ||n|| = ————— = √2
+        //                                                         2
+        let tri_correct = vec![
+            &[0.0, -1.0], // bottom
+            &[1.0, 1.0],  // diagonal
+            &[-1.0, 0.0], // left
+        ];
+        let qua_correct = vec![
+            &[0.0, -1.0], // bottom
+            &[1.0, 0.0],  // right
+            &[0.0, 1.0],  // top
+            &[-1.0, 0.0], // left
+        ];
+
+        // auxiliary
+        let mut normal = Vector::new(2);
+        let ksi = &[0.0, 0.0, 0.0];
+
+        // loop over shapes
+        for (geo_ndim, nnode) in pairs {
+            // allocate shape
+            let space_ndim = geo_ndim;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
+
+            // set coordinates matrix
+            set_coords_matrix_parallel(shape)?;
+
+            // loop over edges
+            for e in 0..shape.nedge {
+                let edge_nnode = shape.edge_nnode;
+                let edge_shape = &mut Shape::new(space_ndim, 1, shape.edge_nnode)?;
+
+                // set edge coordinates
+                for i in 0..edge_nnode {
+                    for j in 0..space_ndim {
+                        let m = shape.get_edge_node_id(e, i);
+                        edge_shape.set_node(i, j, shape.coords_transp[j][m])?;
+                    }
+                }
+
+                // calc normal vector
+                edge_shape.calc_boundary_normal(&mut normal, ksi)?;
+                if shape.class == GeoClass::Tri {
+                    // check triangle
+                    assert_vec_approx_eq!(normal.as_data(), tri_correct[e], 1e-15);
+                } else {
+                    // check quadrilateral
+                    assert_vec_approx_eq!(normal.as_data(), qua_correct[e], 1e-15);
+                }
+            }
+        }
         Ok(())
     }
 

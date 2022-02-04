@@ -25,14 +25,19 @@ use russell_lab::{Matrix, Vector};
 /// # Local IDs of edges
 ///
 /// ```text
-///  |\
-///  | \
-///  |  \ 1
-/// 2|   \
+///  |\            p0  p1 p2 p3  p4
+///  | \       e:0 [1, 0, 3,  7,  6]
+///  |  \ 1    e:1 [2, 1, 4,  9,  8]
+/// 2|   \     e:2 [0, 2, 5, 11, 10]
 ///  |    \
 ///  |_____\
 ///     0
 /// ```
+///
+/// # Note about edges
+///
+/// * The order of edge nodes is such that the normals are outward
+/// * The order of edge nodes corresponds to **Lin5** nodes
 pub struct Tri15 {}
 
 impl Tri15 {
@@ -46,9 +51,9 @@ impl Tri15 {
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri15::EDGE_NNODE]; Tri15::NEDGE] = [
-        [0, 1, 3,  6,  7],
-        [1, 2, 4,  8,  9],
-        [2, 0, 5, 10, 11],
+        [1, 0, 3,  7,  6],
+        [2, 1, 4,  9,  8],
+        [0, 2, 5, 11, 10],
     ];
 
     #[rustfmt::skip]
