@@ -864,7 +864,10 @@ impl fmt::Display for Mesh {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::mesh::{At, Mesh};
+    use crate::StrError;
+    use russell_chk::assert_approx_eq;
+    use russell_lab::{vector_norm, NormVec, Vector};
 
     #[test]
     fn new_fails_on_wrong_input() {
@@ -1135,6 +1138,36 @@ mod tests {
              k:(6,7,10,11) p:[6, 7, 11, 10] c:[1]\n\
              k:(8,9,10,11) p:[8, 9, 10, 11] c:[1]\n"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn normals_are_correct_2d() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mut mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        {
+            let edge_01 = mesh.boundary_edges.get_mut(&(0, 1)).unwrap();
+            let mut u = Vector::new(mesh.space_ndim);
+            edge_01.shape.calc_boundary_normal(&mut u, &[0.0, 0.0, 0.0])?;
+            let norm_u = vector_norm(&u, NormVec::Euc);
+            println!("{}", u);
+            println!("norm u = {}", norm_u);
+            // the norm of u should be equal to 0.5 = edge_length / 2.0
+            // where 2.0 corresponds to the edge_length in the reference system
+            assert_approx_eq!(norm_u, 0.5, 1e-15);
+        }
+        {
+            let edge_03 = mesh.boundary_edges.get_mut(&(0, 3)).unwrap();
+            let mut u = Vector::new(mesh.space_ndim);
+            edge_03.shape.calc_boundary_normal(&mut u, &[0.0, 0.0, 0.0])?;
+            println!("{}", u);
+        }
         Ok(())
     }
 
