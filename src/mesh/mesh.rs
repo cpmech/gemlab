@@ -86,10 +86,14 @@ pub struct Cell {
 
     /// List of points defining this cell (nodes); in the right order (unsorted)
     ///
+    /// Note: The list of nodes must follow a **counter-clockwise order**.
+    ///
     /// **raw data**
     pub points: Vec<PointId>,
 
     /// Shape object for numerical integration and other calculations
+    ///
+    /// (derived property)
     pub shape: Shape,
 }
 
@@ -495,6 +499,12 @@ impl Mesh {
                 }
             }
 
+            // check if the determinant of Jacobian is positive => counterclockwise nodes
+            let det_jac = cell.shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
+            if det_jac < 0.0 {
+                return Err("a cell has incorrect ordering of nodes");
+            }
+
             // set information about all edges
             for e in 0..cell.shape.nedge {
                 // define edge key (sorted point ids)
@@ -570,6 +580,12 @@ impl Mesh {
                 for j in 0..self.space_ndim {
                     cell.shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
                 }
+            }
+
+            // check if the determinant of Jacobian is positive => counterclockwise nodes
+            let det_jac = cell.shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
+            if det_jac < 0.0 {
+                return Err("a cell has incorrect ordering of nodes");
             }
 
             // set information about all faces
