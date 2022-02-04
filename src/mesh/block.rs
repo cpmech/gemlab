@@ -557,7 +557,7 @@ mod tests {
             format!("{}", mesh),
             "SUMMARY\n\
              =======\n\
-             ndim = 2\n\
+             space_ndim = 2\n\
              npoint = 9\n\
              ncell = 4\n\
              n_boundary_point = 8\n\
@@ -634,7 +634,7 @@ mod tests {
             format!("{}", mesh),
             "SUMMARY\n\
              =======\n\
-             ndim = 2\n\
+             space_ndim = 2\n\
              npoint = 21\n\
              ncell = 4\n\
              n_boundary_point = 16\n\
@@ -757,7 +757,7 @@ mod tests {
             format!("{}", mesh),
             "SUMMARY\n\
              =======\n\
-             ndim = 3\n\
+             space_ndim = 3\n\
              npoint = 27\n\
              ncell = 8\n\
              n_boundary_point = 26\n\
@@ -954,7 +954,7 @@ mod tests {
             format!("{}", mesh),
             "SUMMARY\n\
              =======\n\
-             ndim = 3\n\
+             space_ndim = 3\n\
              npoint = 81\n\
              ncell = 8\n\
              n_boundary_point = 74\n\
