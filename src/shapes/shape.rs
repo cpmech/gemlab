@@ -1426,22 +1426,27 @@ mod tests {
     fn calc_deriv_works() -> Result<(), StrError> {
         // define dims and number of nodes
         let pairs = vec![
+            // Lin
             (1, 2),
             (1, 3),
             (1, 4),
             (1, 5),
+            // Tri
             (2, 3),
             (2, 6),
             (2, 10),
             (2, 15),
+            // Qua
             (2, 4),
             (2, 8),
             (2, 9),
             (2, 12),
             (2, 16),
             (2, 17),
+            // Tet
             (3, 4),
             (3, 10),
+            // Hex
             (3, 8),
             (3, 20),
         ];
