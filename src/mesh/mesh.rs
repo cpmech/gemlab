@@ -894,6 +894,38 @@ mod tests {
     }
 
     #[test]
+    fn from_text_fails_on_wrong_jacobian_2d() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let res = Mesh::from_text(
+            r"# header
+            # space_ndim npoint ncell
+                       2      6     2
+            
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+            
+            # cells
+            # id att geo_ndim nnode  (wrong) point_ids...
+               0   1        2     4  0 3 2 1
+               1   0        2     4  1 2 5 4",
+        );
+        assert_eq!(res.err(), Some("a cell has incorrect ordering of nodes"));
+        Ok(())
+    }
+
+    #[test]
     fn from_text_and_strings_work() -> Result<(), StrError> {
         //
         //  3--------2--------5
@@ -969,6 +1001,20 @@ mod tests {
              k:(4,5) p:[4, 5] c:[1] f:[]\n"
         );
         assert_eq!(format!("{}", mesh.string_boundary_faces()), "");
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_file_fails_on_wrong_jacobian_3d() -> Result<(), StrError> {
+        let res = Mesh::from_text_file("./data/meshes/bad_wrong_jacobian.msh");
+        assert_eq!(res.err(), Some("a cell has incorrect ordering of nodes"));
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_file_fails_on_wrong_nodes_3d() -> Result<(), StrError> {
+        let res = Mesh::from_text_file("./data/meshes/bad_wrong_nodes.msh");
+        assert_eq!(res.err(), Some("cannot compute inverse due to zero determinant"));
         Ok(())
     }
 
