@@ -866,8 +866,8 @@ impl fmt::Display for Mesh {
 mod tests {
     use crate::mesh::{At, Mesh};
     use crate::StrError;
-    use russell_chk::assert_approx_eq;
-    use russell_lab::{vector_norm, NormVec, Vector};
+    use russell_chk::assert_vec_approx_eq;
+    use russell_lab::Vector;
 
     #[test]
     fn new_fails_on_wrong_input() {
@@ -996,12 +996,12 @@ mod tests {
         assert_eq!(format!("{}", mesh.string_boundary_points()), "[0, 1, 2, 3, 4, 5]\n");
         assert_eq!(
             format!("{}", mesh.string_boundary_edges()),
-            "k:(0,1) p:[0, 1] c:[0] f:[]\n\
-             k:(0,3) p:[3, 0] c:[0] f:[]\n\
-             k:(1,4) p:[1, 4] c:[1] f:[]\n\
-             k:(2,3) p:[2, 3] c:[0] f:[]\n\
-             k:(2,5) p:[5, 2] c:[1] f:[]\n\
-             k:(4,5) p:[4, 5] c:[1] f:[]\n"
+            "k:(0,1) p:[1, 0] c:[0] f:[]\n\
+             k:(0,3) p:[0, 3] c:[0] f:[]\n\
+             k:(1,4) p:[4, 1] c:[1] f:[]\n\
+             k:(2,3) p:[3, 2] c:[0] f:[]\n\
+             k:(2,5) p:[2, 5] c:[1] f:[]\n\
+             k:(4,5) p:[5, 4] c:[1] f:[]\n"
         );
         assert_eq!(format!("{}", mesh.string_boundary_faces()), "");
         Ok(())
@@ -1054,7 +1054,6 @@ mod tests {
         assert_eq!(mesh.boundary_faces.len(), 10);
         assert_eq!(mesh.min, &[0.0, 0.0, 0.0]);
         assert_eq!(mesh.max, &[1.0, 1.0, 2.0]);
-
         assert_eq!(
             format!("{}", mesh.grid_boundary_points),
             "0: [0]\n\
@@ -1104,26 +1103,26 @@ mod tests {
         );
         assert_eq!(
             format!("{}", mesh.string_boundary_edges()),
-            "k:(0,1) p:[1, 0] c:[] f:[(0, 1, 2, 3), (0, 1, 4, 5)]\n\
-             k:(0,3) p:[0, 3] c:[] f:[(0, 1, 2, 3), (0, 3, 4, 7)]\n\
-             k:(0,4) p:[4, 0] c:[] f:[(0, 1, 4, 5), (0, 3, 4, 7)]\n\
-             k:(1,2) p:[2, 1] c:[] f:[(0, 1, 2, 3), (1, 2, 5, 6)]\n\
-             k:(1,5) p:[1, 5] c:[] f:[(0, 1, 4, 5), (1, 2, 5, 6)]\n\
-             k:(2,3) p:[3, 2] c:[] f:[(0, 1, 2, 3), (2, 3, 6, 7)]\n\
-             k:(2,6) p:[2, 6] c:[] f:[(1, 2, 5, 6), (2, 3, 6, 7)]\n\
-             k:(3,7) p:[7, 3] c:[] f:[(0, 3, 4, 7), (2, 3, 6, 7)]\n\
-             k:(4,5) p:[5, 4] c:[] f:[(0, 1, 4, 5), (4, 5, 8, 9)]\n\
-             k:(4,7) p:[4, 7] c:[] f:[(0, 3, 4, 7), (4, 7, 8, 11)]\n\
-             k:(4,8) p:[8, 4] c:[] f:[(4, 5, 8, 9), (4, 7, 8, 11)]\n\
-             k:(5,6) p:[6, 5] c:[] f:[(1, 2, 5, 6), (5, 6, 9, 10)]\n\
-             k:(5,9) p:[5, 9] c:[] f:[(4, 5, 8, 9), (5, 6, 9, 10)]\n\
-             k:(6,7) p:[7, 6] c:[] f:[(2, 3, 6, 7), (6, 7, 10, 11)]\n\
-             k:(6,10) p:[6, 10] c:[] f:[(5, 6, 9, 10), (6, 7, 10, 11)]\n\
-             k:(7,11) p:[11, 7] c:[] f:[(4, 7, 8, 11), (6, 7, 10, 11)]\n\
-             k:(8,9) p:[9, 8] c:[] f:[(4, 5, 8, 9), (8, 9, 10, 11)]\n\
-             k:(8,11) p:[8, 11] c:[] f:[(4, 7, 8, 11), (8, 9, 10, 11)]\n\
-             k:(9,10) p:[10, 9] c:[] f:[(5, 6, 9, 10), (8, 9, 10, 11)]\n\
-             k:(10,11) p:[11, 10] c:[] f:[(6, 7, 10, 11), (8, 9, 10, 11)]\n"
+            "k:(0,1) p:[0, 1] c:[] f:[(0, 1, 2, 3), (0, 1, 4, 5)]\n\
+             k:(0,3) p:[3, 0] c:[] f:[(0, 1, 2, 3), (0, 3, 4, 7)]\n\
+             k:(0,4) p:[0, 4] c:[] f:[(0, 1, 4, 5), (0, 3, 4, 7)]\n\
+             k:(1,2) p:[1, 2] c:[] f:[(0, 1, 2, 3), (1, 2, 5, 6)]\n\
+             k:(1,5) p:[5, 1] c:[] f:[(0, 1, 4, 5), (1, 2, 5, 6)]\n\
+             k:(2,3) p:[2, 3] c:[] f:[(0, 1, 2, 3), (2, 3, 6, 7)]\n\
+             k:(2,6) p:[6, 2] c:[] f:[(1, 2, 5, 6), (2, 3, 6, 7)]\n\
+             k:(3,7) p:[3, 7] c:[] f:[(0, 3, 4, 7), (2, 3, 6, 7)]\n\
+             k:(4,5) p:[4, 5] c:[] f:[(0, 1, 4, 5), (4, 5, 8, 9)]\n\
+             k:(4,7) p:[7, 4] c:[] f:[(0, 3, 4, 7), (4, 7, 8, 11)]\n\
+             k:(4,8) p:[4, 8] c:[] f:[(4, 5, 8, 9), (4, 7, 8, 11)]\n\
+             k:(5,6) p:[5, 6] c:[] f:[(1, 2, 5, 6), (5, 6, 9, 10)]\n\
+             k:(5,9) p:[9, 5] c:[] f:[(4, 5, 8, 9), (5, 6, 9, 10)]\n\
+             k:(6,7) p:[6, 7] c:[] f:[(2, 3, 6, 7), (6, 7, 10, 11)]\n\
+             k:(6,10) p:[10, 6] c:[] f:[(5, 6, 9, 10), (6, 7, 10, 11)]\n\
+             k:(7,11) p:[7, 11] c:[] f:[(4, 7, 8, 11), (6, 7, 10, 11)]\n\
+             k:(8,9) p:[8, 9] c:[] f:[(4, 5, 8, 9), (8, 9, 10, 11)]\n\
+             k:(8,11) p:[11, 8] c:[] f:[(4, 7, 8, 11), (8, 9, 10, 11)]\n\
+             k:(9,10) p:[9, 10] c:[] f:[(5, 6, 9, 10), (8, 9, 10, 11)]\n\
+             k:(10,11) p:[10, 11] c:[] f:[(6, 7, 10, 11), (8, 9, 10, 11)]\n"
         );
         assert_eq!(
             format!("{}", mesh.string_boundary_faces()),
@@ -1151,22 +1150,32 @@ mod tests {
         //  0--------1--------4
         //
         let mut mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
-        {
-            let edge_01 = mesh.boundary_edges.get_mut(&(0, 1)).unwrap();
-            let mut u = Vector::new(mesh.space_ndim);
-            edge_01.shape.calc_boundary_normal(&mut u, &[0.0, 0.0, 0.0])?;
-            let norm_u = vector_norm(&u, NormVec::Euc);
-            println!("{}", u);
-            println!("norm u = {}", norm_u);
-            // the norm of u should be equal to 0.5 = edge_length / 2.0
-            // where 2.0 corresponds to the edge_length in the reference system
-            assert_approx_eq!(norm_u, 0.5, 1e-15);
-        }
-        {
-            let edge_03 = mesh.boundary_edges.get_mut(&(0, 3)).unwrap();
-            let mut u = Vector::new(mesh.space_ndim);
-            edge_03.shape.calc_boundary_normal(&mut u, &[0.0, 0.0, 0.0])?;
-            println!("{}", u);
+
+        // the norm of the normal vector should be equal to 0.5 = edge_length / 2.0
+        // where 2.0 corresponds to the edge_length in the reference system
+        let l = 0.5; // norm of normal vector
+
+        // edge keys and correct normal vectors (solutions)
+        let edge_keys_and_solutions = [
+            // bottom
+            (vec![(0, 1), (1, 4)], [0.0, -l]),
+            // right
+            (vec![(4, 5)], [l, 0.0]),
+            // top
+            (vec![(2, 3), (2, 5)], [0.0, l]),
+            // left
+            (vec![(0, 3)], [-l, 0.0]),
+        ];
+
+        // check if the normal vectors at boundary are outward
+        let mut normal = Vector::new(mesh.space_ndim);
+        let ksi = &[0.0, 0.0, 0.0];
+        for (edge_keys, solution) in &edge_keys_and_solutions {
+            for edge_key in edge_keys {
+                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
+                edge.shape.calc_boundary_normal(&mut normal, ksi)?;
+                assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
+            }
         }
         Ok(())
     }
@@ -1305,12 +1314,12 @@ mod tests {
              \n\
              BOUNDARY EDGES\n\
              ==============\n\
-             k:(0,1) p:[0, 1] c:[0] f:[]\n\
-             k:(0,3) p:[3, 0] c:[0] f:[]\n\
-             k:(1,4) p:[1, 4] c:[1] f:[]\n\
-             k:(2,3) p:[2, 3] c:[0] f:[]\n\
-             k:(2,5) p:[5, 2] c:[1] f:[]\n\
-             k:(4,5) p:[4, 5] c:[1] f:[]\n\
+             k:(0,1) p:[1, 0] c:[0] f:[]\n\
+             k:(0,3) p:[0, 3] c:[0] f:[]\n\
+             k:(1,4) p:[4, 1] c:[1] f:[]\n\
+             k:(2,3) p:[3, 2] c:[0] f:[]\n\
+             k:(2,5) p:[2, 5] c:[1] f:[]\n\
+             k:(4,5) p:[5, 4] c:[1] f:[]\n\
              \n\
              BOUNDARY FACES\n\
              ==============\n"

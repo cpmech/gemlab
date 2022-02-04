@@ -46,9 +46,6 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of faces
 ///
-/// Note: the order of face nodes is such that the right-hand rule generates outward normals.
-/// Also, the order of face nodes corresponds to Qua4 nodes.
-///
 /// ```text
 ///           4----------------7
 ///         ,'|              ,'|
@@ -64,6 +61,11 @@ use russell_lab::{Matrix, Vector};
 /// |   ,'      ,'4,'|   ,'
 /// | ,'        ~~~  | ,'
 /// 1----------------2'
+///
+/// # Note about face nodes
+///
+/// * The order of face nodes is such that the normals are outward
+/// * The order of face nodes corresponds to **Qua4** nodes
 /// ```
 pub struct Hex8 {}
 

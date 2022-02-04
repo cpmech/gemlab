@@ -72,9 +72,6 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of faces
 ///
-/// Note: the order of face nodes is such that the right-hand rule generates outward normals.
-/// Also, the order of face nodes corresponds to Tri3 nodes.
-///
 /// ```text
 ///               t           p0 p1 p2 p3 p4 p5
 ///               |       f:0 [0, 3, 2, 7, 9, 6]
@@ -104,6 +101,11 @@ use russell_lab::{Matrix, Vector};
 ///   1,'`
 ///  /
 /// r
+///
+/// # Note about face nodes
+///
+/// * The order of face nodes is such that the normals are outward
+/// * The order of face nodes corresponds to **Tri6** nodes
 /// ```
 pub struct Tet10 {}
 
