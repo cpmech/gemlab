@@ -1314,7 +1314,7 @@ mod tests {
     // Sets the coordinates such that the shape is parallel to the x,y,z axes
     // For triangles and tetrahedra, one edge/face will cut the axes equally
     // * Qua and Hex will have real coordinates equal to the natural coordinates
-    // * Tri and Tet will be scaled based using the natural coordinates
+    // * Tri and Tet will be scaled using the natural coordinates
     // * All edges parallel to the x,y,z axes will have lengths equal to 2.0
     fn set_coords_matrix_parallel(shape: &mut Shape) -> Result<(), StrError> {
         let mut scale = 1.0;
@@ -1745,10 +1745,12 @@ mod tests {
     fn normals_are_outward_2d() -> Result<(), StrError> {
         // define dims and number of nodes
         let pairs = vec![
+            // Tri
             (2, 3),
             (2, 6),
             (2, 10),
             (2, 15),
+            // Qua
             (2, 4),
             (2, 8),
             (2, 9),
@@ -1811,6 +1813,93 @@ mod tests {
                 } else {
                     // check quadrilateral
                     assert_vec_approx_eq!(normal.as_data(), qua_correct[e], 1e-15);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn normals_are_outward_3d() -> Result<(), StrError> {
+        // define dims and number of nodes
+        let pairs = vec![
+            // Tet
+            (3, 4),
+            (3, 10),
+            // Hex
+            (3, 8),
+            (3, 20),
+        ];
+
+        // solution
+        // Hex with sides equal to h=2:
+        //
+        //   →         ΔA_face       h²
+        // ||n|| = ——————————————— = —— = 1
+        //         Δξ₁_qua Δξ₂_qua    4
+        //
+        // Tet with sides equal to h=2:
+        //
+        //   Faces orthogonal to the x,y,z axes:
+        //
+        //      →     ΔA_face   h²/2
+        //    ||n|| = ——————— = ———— = 4
+        //             ΔA_tri    1/2
+        //
+        //   Face orthogonal to the the diagonal:
+        //
+        //      →     ΔA_face   √3 h²/2
+        //    ||n|| = ——————— = ——————— = 4 √3
+        //             ΔA_tri     1/2
+        let tet_correct = vec![
+            &[-4.0, 0.0, 0.0], // negative-x face
+            &[0.0, -4.0, 0.0], // negative-y face
+            &[0.0, 0.0, -4.0], // negative-z face
+            &[4.0, 4.0, 4.0],  // face orthogonal to the diagonal
+        ];
+        let hex_correct = vec![
+            &[-1.0, 0.0, 0.0], // behind
+            &[1.0, 0.0, 0.0],  // front
+            &[0.0, -1.0, 0.0], // left
+            &[0.0, 1.0, 0.0],  // right
+            &[0.0, 0.0, -1.0], // bottom
+            &[0.0, 0.0, 1.0],  // top
+        ];
+
+        // auxiliary
+        let mut normal = Vector::new(3);
+        let ksi = &[0.0, 0.0, 0.0];
+
+        // loop over shapes
+        for (geo_ndim, nnode) in pairs {
+            // allocate shape
+            let space_ndim = geo_ndim;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
+
+            // set coordinates matrix
+            set_coords_matrix_parallel(shape)?;
+
+            // loop over faces
+            for f in 0..shape.nface {
+                let face_nnode = shape.face_nnode;
+                let face_shape = &mut Shape::new(space_ndim, 2, shape.face_nnode)?;
+
+                // set face coordinates
+                for i in 0..face_nnode {
+                    for j in 0..space_ndim {
+                        let m = shape.get_face_node_id(f, i);
+                        face_shape.set_node(i, j, shape.coords_transp[j][m])?;
+                    }
+                }
+
+                // calc normal vector
+                face_shape.calc_boundary_normal(&mut normal, ksi)?;
+                if shape.class == GeoClass::Tet {
+                    // check tetrahedron
+                    assert_vec_approx_eq!(normal.as_data(), tet_correct[f], 1e-15);
+                } else {
+                    // check hexahedron
+                    assert_vec_approx_eq!(normal.as_data(), hex_correct[f], 1e-15);
                 }
             }
         }
