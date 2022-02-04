@@ -4,14 +4,14 @@ use crate::shapes::Shape;
 use crate::util::GridSearch;
 use crate::StrError;
 use russell_lab::{sort2, sort4};
-use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fmt::{self, Write as FmtWrite};
-use std::fs;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::Path;
+use std::fmt::{self, Write};
+// use std::fs;
+// use std::fs::File;
+// use std::io::Read;
+// use std::path::Path;
 
 /// Aliases usize as Point ID
 pub type PointId = usize;
@@ -40,7 +40,7 @@ pub type EdgeKey = (usize, usize);
 pub type FaceKey = (usize, usize, usize, usize);
 
 /// Holds point data
-#[derive(Clone, Debug, Deserialize, Serialize)]
+// #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Point {
     /// Identification number which equals the index of the point in the mesh
     ///
@@ -64,7 +64,7 @@ pub struct Point {
 }
 
 /// Holds cell (aka geometric shape, polygon, polyhedra) data
-#[derive(Clone, Debug, Deserialize, Serialize)]
+// #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Cell {
     /// Identification number which equals the index of the cell in the mesh
     ///
@@ -88,10 +88,13 @@ pub struct Cell {
     ///
     /// **raw data**
     pub points: Vec<PointId>,
+
+    /// Shape object for numerical integration and other calculations
+    pub shape: Shape,
 }
 
 /// Holds edge data (derived data structure)
-#[derive(Clone, Debug, Deserialize, Serialize)]
+// #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
     /// List of points defining this edge; in the right order (unsorted)
     pub points: Vec<PointId>,
@@ -103,20 +106,26 @@ pub struct Edge {
 
     /// Set of boundary faces sharing this edge
     pub shared_by_boundary_faces: HashSet<FaceKey>,
+
+    /// Shape object for numerical integration and other calculations
+    pub shape: Shape,
 }
 
 /// Holds face data (derived data structure)
-#[derive(Clone, Debug, Deserialize, Serialize)]
+// #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Face {
     /// List of points defining this face; in the right order (unsorted)
     pub points: Vec<PointId>,
 
     /// Set of cells sharing this face
     pub shared_by_cells: HashSet<CellId>,
+
+    /// Shape object for numerical integration and other calculations
+    pub shape: Shape,
 }
 
 /// Holds mesh data
-#[derive(Deserialize, Serialize)]
+// #[derive(Deserialize, Serialize)]
 pub struct Mesh {
     /// Space dimension of the mesh
     ///
@@ -196,44 +205,11 @@ impl Mesh {
         })
     }
 
-    /// Returns a new mesh with pre-allocated (empty) Point and Cell vectors
-    pub(super) fn new_sized(space_ndim: usize, npoint: usize, ncell: usize) -> Result<Self, StrError> {
-        if space_ndim < 2 || space_ndim > 3 {
-            return Err("space_ndim must be 2 or 3");
-        }
-        if npoint < 2 {
-            return Err("npoint must be greater than or equal to 2");
-        }
-        if ncell < 1 {
-            return Err("ncell must be greater than or equal to 1");
-        }
-        let zero_point = Point {
-            id: 0,
-            coords: vec![0.0; space_ndim],
-            shared_by_boundary_edges: HashSet::new(),
-            shared_by_boundary_faces: HashSet::new(),
-        };
-        let zero_cell = Cell {
-            id: 0,
-            attribute_id: 0,
-            geo_ndim: 0,
-            points: Vec::new(),
-        };
-        Ok(Mesh {
-            space_ndim,
-            points: vec![zero_point; npoint],
-            cells: vec![zero_cell; ncell],
-            boundary_points: HashSet::new(),
-            boundary_edges: HashMap::new(),
-            boundary_faces: HashMap::new(),
-            min: Vec::new(),
-            max: Vec::new(),
-            grid_boundary_points: GridSearch::new(space_ndim)?,
-            derived_props_computed: false,
-        })
-    }
-
     /// Parses raw mesh data from a text string and computes derived properties
+    ///
+    /// # Note
+    ///
+    /// This function calls `compute_derived_props` already.
     pub fn from_text(raw_mesh_data: &str) -> Result<Self, StrError> {
         let mut mesh = parse_mesh(raw_mesh_data)?;
         mesh.compute_derived_props()?;
@@ -241,6 +217,10 @@ impl Mesh {
     }
 
     /// Reads raw mesh data from text file and computes derived properties
+    ///
+    /// # Note
+    ///
+    /// This function calls `compute_derived_props` already.
     pub fn from_text_file<P>(full_path: &P) -> Result<Self, StrError>
     where
         P: AsRef<OsStr> + ?Sized,
@@ -250,6 +230,7 @@ impl Mesh {
         Ok(mesh)
     }
 
+    /*
     /// Reads a binary file containing the mesh and computed properties
     ///
     /// # Input
@@ -285,8 +266,13 @@ impl Mesh {
         file.write_all(&serialized).map_err(|_| "cannot write file")?;
         Ok(())
     }
+    */
 
     /// Computes derived properties such as boundaries and limits
+    ///
+    /// # Note
+    ///
+    /// This function is automatically called by `from_text` and `from_text_file`.
     pub fn compute_derived_props(&mut self) -> Result<(), StrError> {
         self.derived_props_computed = false;
         self.boundary_points.clear();
@@ -479,16 +465,6 @@ impl Mesh {
                     if self.boundary_edges.contains_key(&edge_key) {
                         // update set
                         edge_keys.insert(*edge_key);
-                        // // update groups map
-                        // if self.groups_boundary_edges.contains_key(group) {
-                        //     let keys = self.groups_boundary_edges.get_mut(group).unwrap();
-                        //     keys.insert(key.clone());
-                        // // new groups map
-                        // } else {
-                        //     let mut keys = HashSet::new();
-                        //     keys.insert(key.clone());
-                        //     self.groups_boundary_edges.insert(group.to_string(), keys);
-                        // }
                     }
                 }
             }
@@ -498,149 +474,127 @@ impl Mesh {
         Ok(keys)
     }
 
-    /// TODO
-    pub fn extract_coords(&self, shape: &mut Shape, cell_id: usize) -> Result<(), StrError> {
-        let npoint = self.cells[cell_id].points.len();
-        for m in 0..npoint {
-            let point_id = self.cells[cell_id].points[m];
-            for i in 0..self.space_ndim {
-                shape.set_node(m, i, self.points[point_id].coords[i])?;
-            }
-        }
-        Ok(())
-    }
-
-    // ======================================================================================================
-    // --- private ------------------------------------------------------------------------------------------
-    // ======================================================================================================
-
     /// Computes derived properties of 2D mesh
     fn compute_derived_props_2d(&mut self) -> Result<(), StrError> {
-        // auxiliary
-        let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new();
-        let mut all_edges: HashMap<EdgeKey, Edge> = HashMap::new();
-        let space_ndim = self.space_ndim;
+        // maps all edge keys to (cell_id, e) where e is the cell's local edge index
+        let mut all_edges: HashMap<EdgeKey, Vec<(CellId, usize)>> = HashMap::new();
 
-        // loop over 2D cells
-        for cell in &self.cells {
-            // check ndim
-            let geo_ndim = cell.geo_ndim;
-            if geo_ndim != 2 {
-                continue; // e.g., 1D line in 2D space
+        // loop over all cells
+        for cell in &mut self.cells {
+            // skip if cell is not 2D
+            // for example, skip 1D line in 2D space because it's not a boundary edge
+            if cell.geo_ndim != 2 {
+                continue;
             }
 
-            // shape
-            let npoint = cell.points.len();
-            let shape_key = (geo_ndim, npoint);
-            if !all_shapes.contains_key(&shape_key) {
-                all_shapes.insert(shape_key, Shape::new(space_ndim, geo_ndim, npoint)?);
-            }
-            let shape = all_shapes.get(&shape_key).unwrap();
-
-            // edges (new derived data)
-            for e in 0..shape.nedge {
-                // collect edge point ids
-                let mut edge_points = vec![0; shape.edge_nnode];
-                for i in 0..shape.edge_nnode {
-                    let local_point_id = shape.get_edge_node_id(e, i);
-                    edge_points[i] = cell.points[local_point_id];
+            // set the cell node coordinates in its shape object
+            let nnode = cell.points.len();
+            for m in 0..nnode {
+                for j in 0..self.space_ndim {
+                    cell.shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
                 }
+            }
 
-                // define key (sorted ids)
-                let mut edge_key: EdgeKey = (edge_points[0], edge_points[1]);
+            // set information about all edges
+            for e in 0..cell.shape.nedge {
+                // define edge key (sorted point ids)
+                let mut edge_key: EdgeKey = (
+                    cell.points[cell.shape.get_edge_node_id(e, 0)],
+                    cell.points[cell.shape.get_edge_node_id(e, 1)],
+                );
                 sort2(&mut edge_key);
 
-                // existing edge
-                if all_edges.contains_key(&edge_key) {
-                    let edge = all_edges.get_mut(&edge_key).unwrap();
-                    edge.shared_by_2d_cells.insert(cell.id);
-
-                // new edge
-                } else {
-                    let mut shared_by_2d_cells = HashSet::new();
-                    shared_by_2d_cells.insert(cell.id);
-                    all_edges.insert(
-                        edge_key,
-                        Edge {
-                            points: edge_points,
-                            shared_by_2d_cells,
-                            shared_by_boundary_faces: HashSet::new(),
-                        },
-                    );
-                }
+                // configure edge_key => (cell_id, e)
+                let edge_data = all_edges.entry(edge_key).or_insert(Vec::new());
+                edge_data.push((cell.id, e));
             }
         }
 
-        // find boundary edges and set boundary points
-        for (edge_key, edge) in &all_edges {
-            if edge.shared_by_2d_cells.len() == 1 {
-                self.boundary_edges.insert(*edge_key, edge.clone());
-                for point_id in &edge.points {
-                    self.boundary_points.insert(*point_id);
-                    self.points[*point_id].shared_by_boundary_edges.insert(*edge_key);
-                }
+        // loop over all edges
+        for (edge_key, edge_data) in &all_edges {
+            // skip inner edges
+            if edge_data.len() != 1 {
+                continue;
             }
+
+            // edge data
+            let (cell_id, e) = edge_data[0];
+            let cell = &self.cells[cell_id];
+            let edge_nnode = cell.shape.edge_nnode;
+            let mut edge_points: Vec<PointId> = vec![0; edge_nnode];
+            let mut edge_shape = Shape::new(self.space_ndim, 1, edge_nnode)?;
+
+            // loop over all edge nodes
+            for i in 0..edge_nnode {
+                // configure edge nodes and shape object
+                edge_points[i] = cell.points[cell.shape.get_edge_node_id(e, i)];
+                for j in 0..self.space_ndim {
+                    edge_shape.set_node(i, j, self.points[edge_points[i]].coords[j])?;
+                }
+
+                // set boundary points
+                self.points[edge_points[i]].shared_by_boundary_edges.insert(*edge_key);
+                self.boundary_points.insert(edge_points[i]);
+            }
+
+            // append new boundary edge
+            self.boundary_edges.insert(
+                *edge_key,
+                Edge {
+                    points: edge_points,
+                    shared_by_2d_cells: HashSet::from([cell_id]),
+                    shared_by_boundary_faces: HashSet::new(),
+                    shape: edge_shape,
+                },
+            );
         }
         Ok(())
     }
 
     /// Computes derived properties of 3D mesh
     fn compute_derived_props_3d(&mut self) -> Result<(), StrError> {
-        // auxiliary
-        let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new();
-        let mut all_faces: HashMap<FaceKey, Face> = HashMap::new();
-        let space_ndim = self.space_ndim;
+        // maps all face keys to (cell_id, f) where f is the cell's local face index
+        let mut all_faces: HashMap<FaceKey, Vec<(CellId, usize)>> = HashMap::new();
 
-        // loop over 3D cells
-        for cell in &self.cells {
-            // check ndim
-            let geo_ndim = cell.geo_ndim;
-            if geo_ndim != 3 {
-                continue; // e.g., 1D line in 3D space or 2D quad in 3D space
+        // loop over all cells
+        for cell in &mut self.cells {
+            // skip if cell is not 3D
+            // for example, skip 1D line in 3D or 2D quad in 3D because they don't have faces
+            if cell.geo_ndim != 3 {
+                continue;
             }
 
-            // shape
-            let npoint = cell.points.len();
-            let shape_key = (geo_ndim, npoint);
-            if !all_shapes.contains_key(&shape_key) {
-                all_shapes.insert(shape_key, Shape::new(space_ndim, geo_ndim, npoint)?);
-            }
-            let shape = all_shapes.get(&shape_key).unwrap();
-
-            // faces (new derived data)
-            for f in 0..shape.nface {
-                // collect face point ids
-                let mut face_points = vec![0; shape.face_nnode];
-                for i in 0..shape.face_nnode {
-                    let local_point_id = shape.get_face_node_id(f, i);
-                    face_points[i] = cell.points[local_point_id];
+            // set the cell node coordinates in its shape object
+            let nnode = cell.points.len();
+            for m in 0..nnode {
+                for j in 0..self.space_ndim {
+                    cell.shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
                 }
+            }
 
-                // define key (sorted ids)
-                let mut face_key: FaceKey = if face_points.len() > 3 {
-                    (face_points[0], face_points[1], face_points[2], face_points[3])
+            // set information about all faces
+            for f in 0..cell.shape.nface {
+                // define face key (sorted ids)
+                let mut face_key: FaceKey = if cell.shape.face_nnode > 3 {
+                    (
+                        cell.points[cell.shape.get_face_node_id(f, 0)],
+                        cell.points[cell.shape.get_face_node_id(f, 1)],
+                        cell.points[cell.shape.get_face_node_id(f, 2)],
+                        cell.points[cell.shape.get_face_node_id(f, 3)],
+                    )
                 } else {
-                    (face_points[0], face_points[1], face_points[2], self.points.len())
+                    (
+                        cell.points[cell.shape.get_face_node_id(f, 0)],
+                        cell.points[cell.shape.get_face_node_id(f, 1)],
+                        cell.points[cell.shape.get_face_node_id(f, 2)],
+                        self.points.len(),
+                    )
                 };
                 sort4(&mut face_key);
 
-                // existing face
-                if all_faces.contains_key(&face_key) {
-                    let face = all_faces.get_mut(&face_key).unwrap();
-                    face.shared_by_cells.insert(cell.id);
-
-                // new face
-                } else {
-                    let mut shared_by_cells = HashSet::new();
-                    shared_by_cells.insert(cell.id);
-                    all_faces.insert(
-                        face_key,
-                        Face {
-                            points: face_points,
-                            shared_by_cells,
-                        },
-                    );
-                }
+                // configure face_key => (cell_id, f)
+                let face_data = all_faces.entry(face_key).or_insert(Vec::new());
+                face_data.push((cell.id, f));
             }
         }
 
@@ -648,71 +602,90 @@ impl Mesh {
         let mut face_keys: Vec<_> = all_faces.keys().collect();
         face_keys.sort();
 
-        // find boundary faces and set boundary points and boundary edges
+        // loop over all faces
         for face_key in face_keys {
-            // skip interior faces
-            let face = all_faces.get(&face_key).unwrap();
-            if face.shared_by_cells.len() != 1 {
+            let face_data = all_faces.get(face_key).unwrap();
+            // skip inner faces
+            if face_data.len() != 1 {
                 continue;
             }
 
-            // set boundary face
-            self.boundary_faces.insert(*face_key, face.clone());
+            // face data
+            let (cell_id, f) = face_data[0];
+            let cell = &self.cells[cell_id];
+            let face_nnode = cell.shape.face_nnode;
+            let mut face_points: Vec<PointId> = vec![0; face_nnode];
+            let mut face_shape = Shape::new(self.space_ndim, 2, face_nnode)?;
 
-            // set boundary points
-            for point_id in &face.points {
-                self.boundary_points.insert(*point_id);
-                self.points[*point_id].shared_by_boundary_faces.insert(*face_key);
-            }
-
-            // face shape
-            let face_ndim = 2;
-            let face_npoint = face.points.len();
-            let face_shape_key = (face_ndim, face_npoint);
-            if !all_shapes.contains_key(&face_shape_key) {
-                all_shapes.insert(face_shape_key, Shape::new(space_ndim, face_ndim, face_npoint)?);
-            }
-            let face_shape = all_shapes.get(&face_shape_key).unwrap();
-
-            // boundary edges
-            // let face_nedge = face_shape.get_nedge();
-            // let face_edge_npoint = face_shape.get_edge_npoint();
-            for e in 0..face_shape.nedge {
-                // collect edge point ids
-                let mut edge_points = vec![0; face_shape.edge_nnode];
-                for i in 0..face_shape.edge_nnode {
-                    let local_point_id = face_shape.get_edge_node_id(e, i);
-                    edge_points[i] = face.points[local_point_id];
+            // loop over all face nodes
+            for i in 0..face_nnode {
+                // configure face nodes and shape object
+                face_points[i] = cell.points[cell.shape.get_face_node_id(f, i)];
+                for j in 0..self.space_ndim {
+                    face_shape.set_node(i, j, self.points[face_points[i]].coords[j])?;
                 }
 
-                // define key (sorted ids)
-                let mut edge_key: EdgeKey = (edge_points[0], edge_points[1]);
+                // set boundary points
+                self.points[face_points[i]].shared_by_boundary_faces.insert(*face_key);
+                self.boundary_points.insert(face_points[i]);
+            }
+
+            // loop over all face edges
+            for e in 0..face_shape.nedge {
+                // define edge key (sorted point ids)
+                let mut edge_key: EdgeKey = (
+                    face_points[face_shape.get_edge_node_id(e, 0)],
+                    face_points[face_shape.get_edge_node_id(e, 1)],
+                );
                 sort2(&mut edge_key);
 
-                // set point information
-                for point_id in &edge_points {
-                    self.points[*point_id].shared_by_boundary_edges.insert(edge_key);
-                }
+                // handle boundary edge
+                match self.boundary_edges.get_mut(&edge_key) {
+                    Some(edge) => {
+                        // set boundary edge information
+                        edge.shared_by_boundary_faces.insert(*face_key);
+                    }
+                    None => {
+                        // edge data
+                        let edge_nnode = face_shape.edge_nnode;
+                        let mut edge_points: Vec<PointId> = vec![0; edge_nnode];
+                        let mut edge_shape = Shape::new(self.space_ndim, 1, edge_nnode)?;
 
-                // existing edge
-                if self.boundary_edges.contains_key(&edge_key) {
-                    let edge = self.boundary_edges.get_mut(&edge_key).unwrap();
-                    edge.shared_by_boundary_faces.insert(*face_key);
+                        // loop over all edge nodes
+                        for i in 0..edge_nnode {
+                            // configure edge nodes and shape object
+                            edge_points[i] = face_points[face_shape.get_edge_node_id(e, i)];
+                            for j in 0..self.space_ndim {
+                                edge_shape.set_node(i, j, self.points[edge_points[i]].coords[j])?;
+                            }
 
-                // new edge
-                } else {
-                    let mut shared_by_boundary_faces = HashSet::new();
-                    shared_by_boundary_faces.insert(*face_key);
-                    self.boundary_edges.insert(
-                        edge_key,
-                        Edge {
-                            points: edge_points,
-                            shared_by_2d_cells: HashSet::new(),
-                            shared_by_boundary_faces,
-                        },
-                    );
+                            // set boundary points
+                            self.points[edge_points[i]].shared_by_boundary_edges.insert(edge_key);
+                        }
+
+                        // append new boundary edge
+                        self.boundary_edges.insert(
+                            edge_key,
+                            Edge {
+                                points: edge_points,
+                                shared_by_2d_cells: HashSet::new(),
+                                shared_by_boundary_faces: HashSet::from([*face_key]),
+                                shape: edge_shape,
+                            },
+                        );
+                    }
                 }
             }
+
+            // append new boundary face
+            self.boundary_faces.insert(
+                *face_key,
+                Face {
+                    points: face_points,
+                    shared_by_cells: HashSet::from([cell_id]),
+                    shape: face_shape,
+                },
+            );
         }
         Ok(())
     }
@@ -739,6 +712,7 @@ impl Mesh {
         Ok(())
     }
 
+    /*
     /// Encodes this mesh to a binary object
     fn encode(&self) -> Result<Vec<u8>, StrError> {
         let mut serialized = Vec::new();
@@ -753,6 +727,7 @@ impl Mesh {
         let res = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
         Ok(res)
     }
+    */
 
     /// Returns a string with information about all points
     pub(super) fn string_points(&self) -> String {
@@ -839,7 +814,7 @@ impl fmt::Display for Mesh {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "SUMMARY\n")?;
         write!(f, "=======\n")?;
-        write!(f, "ndim = {}\n", self.space_ndim)?;
+        write!(f, "space_ndim = {}\n", self.space_ndim)?;
         write!(f, "npoint = {}\n", self.points.len())?;
         write!(f, "ncell = {}\n", self.cells.len())?;
         write!(f, "n_boundary_point = {}\n", self.boundary_points.len())?;
@@ -882,46 +857,11 @@ mod tests {
     }
 
     #[test]
-    fn new_sized_fails_on_wrong_input() {
-        assert_eq!(Mesh::new_sized(1, 2, 1).err(), Some("space_ndim must be 2 or 3"));
-        assert_eq!(Mesh::new_sized(4, 2, 1).err(), Some("space_ndim must be 2 or 3"));
-        assert_eq!(
-            Mesh::new_sized(2, 1, 1).err(),
-            Some("npoint must be greater than or equal to 2")
-        );
-        assert_eq!(
-            Mesh::new_sized(2, 2, 0).err(),
-            Some("ncell must be greater than or equal to 1")
-        );
-    }
-
-    #[test]
     fn new_works() -> Result<(), StrError> {
         let mesh = Mesh::new(2)?;
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 0);
         assert_eq!(mesh.cells.len(), 0);
-        assert_eq!(mesh.boundary_points.len(), 0);
-        assert_eq!(mesh.boundary_edges.len(), 0);
-        assert_eq!(mesh.boundary_faces.len(), 0);
-        assert_eq!(mesh.min.len(), 0);
-        assert_eq!(mesh.max.len(), 0);
-        assert_eq!(
-            format!("{}", mesh.grid_boundary_points),
-            "ids = []\n\
-             nitem = 0\n\
-             ncontainer = 0\n"
-        );
-        assert_eq!(mesh.derived_props_computed, false);
-        Ok(())
-    }
-
-    #[test]
-    fn new_sized_works() -> Result<(), StrError> {
-        let mesh = Mesh::new_sized(2, 3, 1)?;
-        assert_eq!(mesh.space_ndim, 2);
-        assert_eq!(mesh.points.len(), 3);
-        assert_eq!(mesh.cells.len(), 1);
         assert_eq!(mesh.boundary_points.len(), 0);
         assert_eq!(mesh.boundary_edges.len(), 0);
         assert_eq!(mesh.boundary_faces.len(), 0);
@@ -948,8 +888,8 @@ mod tests {
         //
         let mesh = Mesh::from_text(
             r"# header
-            # ndim npoint ncell
-                 2      6     2
+            # space_ndim npoint ncell
+                       2      6     2
             
             # points
             # id   x   y
@@ -961,9 +901,9 @@ mod tests {
                5 2.0 1.0
             
             # cells
-            # id att geo_ndim npoint point_ids...
-               0   1        2      4 0 1 2 3
-               1   0        2      4 1 4 5 2",
+            # id att geo_ndim nnode  point_ids...
+               0   1        2     4  0 1 2 3
+               1   0        2     4  1 4 5 2",
         )?;
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 6);
@@ -1136,6 +1076,7 @@ mod tests {
         Ok(())
     }
 
+    /*
     #[test]
     fn serialize_works() -> Result<(), StrError> {
         //
@@ -1147,9 +1088,9 @@ mod tests {
         //
         let m1 = Mesh::from_text(
             r"# header
-            # ndim npoint ncell
-                 2      6     2
-            
+            # space_ndim npoint ncell
+                       2      6     2
+
             # points
             # id   x   y
                0 0.0 0.0
@@ -1158,11 +1099,11 @@ mod tests {
                3 0.0 1.0
                4 2.0 0.0
                5 2.0 1.0
-            
+
             # cells
-            # id att geo_ndim npoint point_ids...
-               0   1        2      4 0 1 2 3
-               1   0        2      4 1 4 5 2",
+            # id att geo_ndim nnode  point_ids...
+               0   1        2     4  0 1 2 3
+               1   0        2     4  1 4 5 2",
         )?;
         m1.save("/tmp/gemlab/test.msh")?;
         let m2 = Mesh::read("/tmp/gemlab/test.msh")?;
@@ -1208,6 +1149,7 @@ mod tests {
         assert_eq!(format!("{}", m2.string_boundary_faces()), "");
         Ok(())
     }
+    */
 
     #[test]
     fn display_works() -> Result<(), StrError> {
@@ -1220,8 +1162,8 @@ mod tests {
         //
         let mesh = Mesh::from_text(
             r"# header
-            # ndim npoint ncell
-                 2      6     2
+            # space_ndim npoint ncell
+                       2      6     2
             
             # points
             # id   x   y
@@ -1233,15 +1175,15 @@ mod tests {
                5 2.0 1.0
             
             # cells
-            # id att geo_ndim npoint point_ids...
-               0   1        2      4 0 1 2 3
-               1   0        2      4 1 4 5 2",
+            # id att geo_ndim nnode  point_ids...
+               0   1        2     4  0 1 2 3
+               1   0        2     4  1 4 5 2",
         )?;
         assert_eq!(
             format!("{}", mesh),
             "SUMMARY\n\
              =======\n\
-             ndim = 2\n\
+             space_ndim = 2\n\
              npoint = 6\n\
              ncell = 2\n\
              n_boundary_point = 6\n\
@@ -1292,8 +1234,8 @@ mod tests {
         //
         let mut m1 = Mesh::from_text(
             r"# header
-            # ndim npoint ncell
-                 2      6     2
+            # space_ndim npoint ncell
+                       2      6     2
             
             # points
             # id   x   y
@@ -1305,9 +1247,9 @@ mod tests {
                5 2.0 1.0
             
             # cells
-            # id att geo_ndim npoint point_ids...
-               0   1        2      4 0 1 2 3
-               1   0        2      4 1 4 5 2",
+            # id att geo_ndim nnode  point_ids...
+               0   1        2     4  0 1 2 3
+               1   0        2     4  1 4 5 2",
         )?;
 
         let origin = m1.find_boundary_points(At::XY(0.0, 0.0))?;

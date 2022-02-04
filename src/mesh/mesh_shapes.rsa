@@ -56,9 +56,9 @@ impl MeshShapes {
 
 #[cfg(test)]
 mod tests {
-    use crate::{mesh::Mesh, StrError};
-
     use super::MeshShapes;
+    use crate::{mesh::Mesh, StrError};
+    use russell_lab::Vector;
 
     #[test]
     fn from_text_and_strings_work() -> Result<(), StrError> {
@@ -88,8 +88,14 @@ mod tests {
                0   1        2      4 0 1 2 3
                1   0        2      4 1 4 5 2",
         )?;
+        println!("{}", mesh);
 
-        let mesh_shapes = MeshShapes::new(&mesh)?;
+        let mut mesh_shapes = MeshShapes::new(&mesh)?;
+        assert_eq!(mesh_shapes.boundary_faces.len(), 0);
+        let shape_edge_01 = mesh_shapes.boundary_edges.get_mut(&(0, 1)).unwrap();
+        let shape_edge_45 = mesh_shapes.boundary_edges.get_mut(&(4, 5)).unwrap();
+        // let shape_edge_23 = mesh_shapes.boundary_edges.get(&(2, 3)).unwrap();
+        // let shape_edge_03 = mesh_shapes.boundary_edges.get(&(0, 3)).unwrap();
         assert_eq!(
             format!("{}", mesh_shapes.cells[0].coords_transp),
             "┌         ┐\n\
@@ -105,27 +111,37 @@ mod tests {
              └         ┘"
         );
         assert_eq!(
-            format!("{}", mesh_shapes.boundary_edges.get(&(0, 1)).unwrap().coords_transp),
+            format!("{}", shape_edge_01.coords_transp),
             "┌     ┐\n\
              │ 0 1 │\n\
              │ 0 0 │\n\
              └     ┘"
         );
-        assert_eq!(
-            format!("{}", mesh_shapes.boundary_edges.get(&(1, 4)).unwrap().coords_transp),
-            "┌     ┐\n\
-             │ 1 2 │\n\
-             │ 0 0 │\n\
-             └     ┘"
-        );
-        assert_eq!(
-            format!("{}", mesh_shapes.boundary_edges.get(&(2, 3)).unwrap().coords_transp),
-            "┌     ┐\n\
-             │ 1 0 │\n\
-             │ 1 1 │\n\
-             └     ┘"
-        );
-        assert_eq!(mesh_shapes.boundary_faces.len(), 0);
+        // assert_eq!(
+        //     format!("{}", shape_edge_45.coords_transp),
+        //     "┌     ┐\n\
+        //      │ 2 2 │\n\
+        //      │ 0 1 │\n\
+        //      └     ┘"
+        // );
+        // assert_eq!(
+        //     format!("{}", shape_edge_23.coords_transp),
+        //     "┌     ┐\n\
+        //      │ 1 0 │\n\
+        //      │ 1 1 │\n\
+        //      └     ┘"
+        // );
+        // assert_eq!(
+        //     format!("{}", shape_edge_03.coords_transp),
+        //     "┌     ┐\n\
+        //      │ 0 0 │\n\
+        //      │ 1 0 │\n\
+        //      └     ┘"
+        // );
+        let mut normal_edge_01 = Vector::new(2);
+        let ksi = &[0.0];
+        shape_edge_01.calc_boundary_normal(&mut normal_edge_01, ksi)?;
+        println!("{}", normal_edge_01);
 
         Ok(())
     }

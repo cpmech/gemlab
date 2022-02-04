@@ -1,12 +1,14 @@
-use super::Mesh;
+use super::{Cell, Mesh, Point, PointId};
+use crate::shapes::Shape;
 use crate::StrError;
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 struct DataForReadMesh {
-    ndim: usize,
+    space_ndim: usize,
     npoint: usize,
     ncell: usize,
     current_npoint: usize,
@@ -16,7 +18,7 @@ struct DataForReadMesh {
 impl DataForReadMesh {
     fn new() -> Self {
         DataForReadMesh {
-            ndim: 0,
+            space_ndim: 0,
             npoint: 0,
             ncell: 0,
             current_npoint: 0,
@@ -32,19 +34,19 @@ impl DataForReadMesh {
 
         let mut data = maybe_data.split_whitespace();
 
-        self.ndim = data
+        self.space_ndim = data
             .next()
             .unwrap() // must panic because no error expected here
             .parse()
-            .map_err(|_| "cannot parse ndim")?;
+            .map_err(|_| "cannot parse space_ndim")?;
 
-        match data.next() {
-            Some(v) => self.npoint = v.parse().map_err(|_| "cannot parse npoint")?,
+        self.npoint = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse npoint")?,
             None => return Err("cannot read npoint"),
         };
 
-        match data.next() {
-            Some(v) => self.ncell = v.parse().map_err(|_| "cannot parse ncell")?,
+        self.ncell = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse ncell")?,
             None => return Err("cannot read ncell"),
         };
 
@@ -59,31 +61,31 @@ impl DataForReadMesh {
 
         let mut data = maybe_data.split_whitespace();
 
-        let i: usize = data
+        let id: usize = data
             .next()
             .unwrap() // must panic because no error expected here
             .parse()
             .map_err(|_| "cannot parse point id")?;
 
-        if i != self.current_npoint {
+        if id != self.current_npoint {
             return Err("the id and index of points must equal each other");
         }
 
-        mesh.points[i].id = i;
+        let mut coords = vec![0.0; self.space_ndim];
 
-        match data.next() {
-            Some(v) => mesh.points[i].coords[0] = v.parse().map_err(|_| "cannot parse point x coordinate")?,
+        coords[0] = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse point x coordinate")?,
             None => return Err("cannot read point x coordinate"),
         };
 
-        match data.next() {
-            Some(v) => mesh.points[i].coords[1] = v.parse().map_err(|_| "cannot parse point y coordinate")?,
+        coords[1] = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse point y coordinate")?,
             None => return Err("cannot read point y coordinate"),
         };
 
-        if self.ndim == 3 {
-            match data.next() {
-                Some(v) => mesh.points[i].coords[2] = v.parse().map_err(|_| "cannot parse point z coordinate")?,
+        if self.space_ndim == 3 {
+            coords[2] = match data.next() {
+                Some(v) => v.parse().map_err(|_| "cannot parse point z coordinate")?,
                 None => return Err("cannot read point z coordinate"),
             };
         }
@@ -91,6 +93,13 @@ impl DataForReadMesh {
         if data.next() != None {
             return Err("point data contains extra values");
         }
+
+        mesh.points.push(Point {
+            id,
+            coords,
+            shared_by_boundary_edges: HashSet::new(),
+            shared_by_boundary_faces: HashSet::new(),
+        });
 
         self.current_npoint += 1; // next point
 
@@ -105,38 +114,38 @@ impl DataForReadMesh {
 
         let mut data = maybe_data.split_whitespace();
 
-        let i: usize = data
+        let id: usize = data
             .next()
             .unwrap() // must panic because no error expected here
             .parse()
             .map_err(|_| "cannot parse cell id")?;
 
-        if i != self.current_ncell {
+        if id != self.current_ncell {
             return Err("the id and index of cells must equal each other");
         }
 
-        mesh.cells[i].id = i;
-
-        match data.next() {
-            Some(v) => mesh.cells[i].attribute_id = v.parse().map_err(|_| "cannot parse cell attribute id")?,
+        let attribute_id: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse cell attribute id")?,
             None => return Err("cannot read cell attribute id"),
         };
 
-        match data.next() {
-            Some(v) => mesh.cells[i].geo_ndim = v.parse().map_err(|_| "cannot parse cell geo_ndim")?,
+        let geo_ndim: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse cell geo_ndim")?,
             None => return Err("cannot read cell geo_ndim"),
         };
 
-        let cell_npoint: usize = match data.next() {
-            Some(v) => v.parse().map_err(|_| "cannot parse cell npoint")?,
-            None => return Err("cannot read cell npoint"),
+        let nnode: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse cell nnode")?,
+            None => return Err("cannot read cell nnode"),
         };
 
-        for _ in 0..cell_npoint {
+        let mut points: Vec<PointId> = vec![0; nnode];
+
+        for m in 0..nnode {
             match data.next() {
                 Some(v) => {
                     let point_id: usize = v.parse().map_err(|_| "cannot parse cell point id")?;
-                    mesh.cells[i].points.push(point_id);
+                    points[m] = point_id;
                 }
                 None => return Err("cannot read cell point id"),
             }
@@ -145,6 +154,14 @@ impl DataForReadMesh {
         if data.next() != None {
             return Err("cell data contains extra values");
         }
+
+        mesh.cells.push(Cell {
+            id,
+            attribute_id,
+            geo_ndim,
+            points,
+            shape: Shape::new(self.space_ndim, geo_ndim, nnode)?,
+        });
 
         self.current_ncell += 1; // next cell
 
@@ -179,7 +196,7 @@ where
     }
 
     // allocate mesh
-    let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
+    let mut mesh = Mesh::new(data.space_ndim)?;
 
     // read and parse points
     loop {
@@ -244,7 +261,7 @@ pub(super) fn parse_mesh(text: &str) -> Result<Mesh, StrError> {
     }
 
     // allocate mesh
-    let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
+    let mut mesh = Mesh::new(data.space_ndim)?;
 
     // read and parse points
     loop {
@@ -300,7 +317,7 @@ mod tests {
 
         assert_eq!(
             data.parse_sizes(&String::from(" wrong \n")).err(),
-            Some("cannot parse ndim")
+            Some("cannot parse space_ndim")
         );
 
         assert_eq!(
@@ -326,11 +343,12 @@ mod tests {
     #[test]
     fn parse_point_captures_errors() -> Result<(), StrError> {
         let mut data = DataForReadMesh::new();
-        data.ndim = 3;
+        data.space_ndim = 3;
         data.npoint = 2;
         data.ncell = 1;
 
-        let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
+        // let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
+        let mut mesh = Mesh::new(data.space_ndim)?;
 
         assert_eq!(
             data.parse_point(&mut mesh, &String::from(" wrong \n")).err(),
@@ -374,11 +392,12 @@ mod tests {
     #[test]
     fn parse_cell_captures_errors() -> Result<(), StrError> {
         let mut data = DataForReadMesh::new();
-        data.ndim = 3;
+        data.space_ndim = 3;
         data.npoint = 2;
         data.ncell = 1;
 
-        let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
+        // let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
+        let mut mesh = Mesh::new(data.space_ndim)?;
 
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" wrong \n")).err(),
@@ -410,11 +429,11 @@ mod tests {
 
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 1 2")).err(),
-            Some("cannot read cell npoint")
+            Some("cannot read cell nnode")
         );
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 1  2 wrong")).err(),
-            Some("cannot parse cell npoint")
+            Some("cannot parse cell nnode")
         );
 
         assert_eq!(
@@ -437,6 +456,14 @@ mod tests {
             Some("file is empty or header is missing")
         );
         assert_eq!(
+            read_mesh(&String::from("./data/meshes/bad_extra_cell_data.msh")).err(),
+            Some("cell data contains extra values")
+        );
+        assert_eq!(
+            read_mesh(&String::from("./data/meshes/bad_extra_point_data.msh")).err(),
+            Some("point data contains extra values")
+        );
+        assert_eq!(
             read_mesh(&String::from("./data/meshes/bad_missing_header.msh")).err(),
             Some("file is empty or header is missing")
         );
@@ -456,14 +483,17 @@ mod tests {
         let mesh = read_mesh("./data/meshes/ok1.msh")?;
         assert_eq!(
             format!("{}", mesh),
-            "ndim = 2\n\
+            "SUMMARY\n\
+             =======\n\
+             space_ndim = 2\n\
              npoint = 6\n\
              ncell = 2\n\
              n_boundary_point = 0\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
              \n\
-             points\n\
+             POINTS\n\
+             ======\n\
              i:0 x:[0.0, 0.0] e:[] f:[]\n\
              i:1 x:[1.0, 0.0] e:[] f:[]\n\
              i:2 x:[1.0, 1.0] e:[] f:[]\n\
@@ -471,15 +501,20 @@ mod tests {
              i:4 x:[2.0, 0.0] e:[] f:[]\n\
              i:5 x:[2.0, 1.0] e:[] f:[]\n\
              \n\
-             cells\n\
-             i:0 a:1 n:2 p:[0, 1, 2, 3]\n\
-             i:1 a:0 n:2 p:[1, 4, 5, 2]\n\
+             CELLS\n\
+             =====\n\
+             i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 g:2 p:[1, 4, 5, 2]\n\
              \n\
-             boundary_points\n\
+             BOUNDARY POINTS\n\
+             ===============\n\
+             []\n\
              \n\
-             boundary_edges\n\
+             BOUNDARY EDGES\n\
+             ==============\n\
              \n\
-             boundary_faces\n"
+             BOUNDARY FACES\n\
+             ==============\n"
         );
         Ok(())
     }
@@ -489,14 +524,17 @@ mod tests {
         let mesh = read_mesh("./data/meshes/ok2.msh")?;
         assert_eq!(
             format!("{}", mesh),
-            "ndim = 3\n\
+            "SUMMARY\n\
+             =======\n\
+             space_ndim = 3\n\
              npoint = 12\n\
              ncell = 2\n\
              n_boundary_point = 0\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
              \n\
-             points\n\
+             POINTS\n\
+             ======\n\
              i:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
              i:1 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
              i:2 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
@@ -510,15 +548,20 @@ mod tests {
              i:10 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
              i:11 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
              \n\
-             cells\n\
-             i:0 a:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
-             i:1 a:0 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
+             CELLS\n\
+             =====\n\
+             i:0 a:1 g:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
+             i:1 a:0 g:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
              \n\
-             boundary_points\n\
+             BOUNDARY POINTS\n\
+             ===============\n\
+             []\n\
              \n\
-             boundary_edges\n\
+             BOUNDARY EDGES\n\
+             ==============\n\
              \n\
-             boundary_faces\n"
+             BOUNDARY FACES\n\
+             ==============\n"
         );
         Ok(())
     }
@@ -528,7 +571,7 @@ mod tests {
         assert_eq!(
             parse_mesh(
                 "# header\n\
-                 # ndim npoint ncell\n"
+                 # space_ndim npoint ncell\n"
             )
             .err(),
             Some("text string is empty or header is missing")
@@ -537,12 +580,12 @@ mod tests {
         assert_eq!(
             parse_mesh(
                 "# header\n\
-                 # ndim npoint ncell\n\
-                 2 4 1\n\
+                 # space_ndim npoint ncell\n\
+                            2      4     1\n\
                  \n\
                  # points\n\
-                 # id x y\n\
-                 0 0.0 0.0\n"
+                 # id   x   y\n\
+                    0 0.0 0.0\n"
             )
             .err(),
             Some("not all points have been found")
@@ -551,21 +594,21 @@ mod tests {
         assert_eq!(
             parse_mesh(
                 "# header\n\
-                 # ndim npoint ncell\n\
-                 2 6 2\n\
+                 # space_ndim npoint ncell\n\
+                            2      6     2\n\
                  \n\
                  # points\n\
-                 # id x y\n\
-                 0  0.0 0.0\n\
-                 1  1.0 0.0\n\
-                 2  1.0 1.0\n\
-                 3  0.0 1.0\n\
-                 4  2.0 0.0\n\
-                 5  2.0 1.0\n\
+                 # id   x   y\n\
+                    0 0.0 0.0\n\
+                    1 1.0 0.0\n\
+                    2 1.0 1.0\n\
+                    3 0.0 1.0\n\
+                    4 2.0 0.0\n\
+                    5 2.0 1.0\n\
                  \n\
                  # cells\n\
-                 # idx attribute point_ids...\n\
-                 0 1  2 4  0 1 2 3\n"
+                 # id att geo_ndim nnode  point_ids...\n\
+                    0   1        2     4  0 1 2 3\n"
             )
             .err(),
             Some("not all cells have been found")
@@ -573,12 +616,18 @@ mod tests {
 
         assert_eq!(
             parse_mesh(
-                "2 4 1\n\
-                 0 1 0.0 0.0\n\
-                 1 1 1.0 0.0\n\
-                 2 1 1.0 1.0\n\
-                 3 1 0.0 1.0\n\
-                 0 1  2 4  0 1 2 3\n"
+                "# header\n\
+                 # space_ndim npoint ncell\n\
+                            2      4     1\n\
+                 # points\n\
+                 # id wrong   x   y\n\
+                    0     1 0.0 0.0\n\
+                    1     1 1.0 0.0\n\
+                    2     1 1.0 1.0\n\
+                    3     1 0.0 1.0\n\
+                 # cells\n\
+                 # id att geo_ndim nnode  point_ids...\n\
+                    0   1        2     4  0 1 2 3\n"
             )
             .err(),
             Some("point data contains extra values")
@@ -586,12 +635,18 @@ mod tests {
 
         assert_eq!(
             parse_mesh(
-                "2 4 1\n\
-                 0 0.0 0.0\n\
-                 1 1.0 0.0\n\
-                 2 1.0 1.0\n\
-                 3 0.0 1.0\n\
-                 0 1  2 4  0 1 2 3 4\n"
+                "# header\n\
+                 # space_ndim npoint ncell\n\
+                            2      4     1\n\
+                 # points\n\
+                 # id   x   y\n\
+                    0 0.0 0.0\n\
+                    1 1.0 0.0\n\
+                    2 1.0 1.0\n\
+                    3 0.0 1.0\n\
+                 # cells\n\
+                 # id att geo_ndim nnode  point_ids + wrong...\n\
+                    0   1        2     4  0 1 2 3       4\n"
             )
             .err(),
             Some("cell data contains extra values")
@@ -603,33 +658,36 @@ mod tests {
     fn parse_mesh_2d_works() -> Result<(), StrError> {
         let mesh = parse_mesh(
             r"# header
-            # ndim npoint ncell
-            2 6 2
+            # space_ndim npoint ncell
+                       2      6     2
             
             # points
-            # id x y
-            0  0.0 0.0
-            1  1.0 0.0
-            2  1.0 1.0
-            3  0.0 1.0
-            4  2.0 0.0
-            5  2.0 1.0
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
             
             # cells
-            # id attribute geo_ndim npoint point_ids...
-            0 1  2 4  0 1 2 3
-            1 0  2 4  1 4 5 2",
+            # id att geo_ndim nnode  point_ids...
+               0   1        2     4  0 1 2 3
+               1   0        2     4  1 4 5 2",
         )?;
         assert_eq!(
             format!("{}", mesh),
-            "ndim = 2\n\
+            "SUMMARY\n\
+             =======\n\
+             space_ndim = 2\n\
              npoint = 6\n\
              ncell = 2\n\
              n_boundary_point = 0\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
              \n\
-             points\n\
+             POINTS\n\
+             ======\n\
              i:0 x:[0.0, 0.0] e:[] f:[]\n\
              i:1 x:[1.0, 0.0] e:[] f:[]\n\
              i:2 x:[1.0, 1.0] e:[] f:[]\n\
@@ -637,15 +695,20 @@ mod tests {
              i:4 x:[2.0, 0.0] e:[] f:[]\n\
              i:5 x:[2.0, 1.0] e:[] f:[]\n\
              \n\
-             cells\n\
-             i:0 a:1 n:2 p:[0, 1, 2, 3]\n\
-             i:1 a:0 n:2 p:[1, 4, 5, 2]\n\
+             CELLS\n\
+             =====\n\
+             i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 g:2 p:[1, 4, 5, 2]\n\
              \n\
-             boundary_points\n\
+             BOUNDARY POINTS\n\
+             ===============\n\
+             []\n\
              \n\
-             boundary_edges\n\
+             BOUNDARY EDGES\n\
+             ==============\n\
              \n\
-             boundary_faces\n"
+             BOUNDARY FACES\n\
+             ==============\n"
         );
         Ok(())
     }
@@ -654,39 +717,42 @@ mod tests {
     fn parse_mesh_3d_works() -> Result<(), StrError> {
         let mesh = parse_mesh(
             r"# header
-            # ndim npoint ncell
-            3 12 2
+            # space_ndim npoint ncell
+                       3     12     2
             
             # points
-            # id x y z
-             0  0.0 0.0 0.0
-             1  1.0 0.0 0.0
-             2  1.0 1.0 0.0
-             3  0.0 1.0 0.0
-             4  0.0 0.0 1.0
-             5  1.0 0.0 1.0
-             6  1.0 1.0 1.0
-             7  0.0 1.0 1.0
-             8  0.0 0.0 2.0
-             9  1.0 0.0 2.0
-            10  1.0 1.0 2.0
-            11  0.0 1.0 2.0
+            # id    x   y   z
+               0  0.0 0.0 0.0
+               1  1.0 0.0 0.0
+               2  1.0 1.0 0.0
+               3  0.0 1.0 0.0
+               4  0.0 0.0 1.0
+               5  1.0 0.0 1.0
+               6  1.0 1.0 1.0
+               7  0.0 1.0 1.0
+               8  0.0 0.0 2.0
+               9  1.0 0.0 2.0
+              10  1.0 1.0 2.0
+              11  0.0 1.0 2.0
             
             # cells
-            # id attribute geo_ndim npoint point_ids...
-            0 1  3 8  0 1 2 3 4 5  6  7
-            1 0  3 8  4 5 6 7 8 9 10 11",
+            # id att geo_ndim nnode  point_ids...
+               0   1        3     8  0 1 2 3 4 5  6  7
+               1   0        3     8  4 5 6 7 8 9 10 11",
         )?;
         assert_eq!(
             format!("{}", mesh),
-            "ndim = 3\n\
+            "SUMMARY\n\
+             =======\n\
+             space_ndim = 3\n\
              npoint = 12\n\
              ncell = 2\n\
              n_boundary_point = 0\n\
              n_boundary_edge = 0\n\
              n_boundary_face = 0\n\
              \n\
-             points\n\
+             POINTS\n\
+             ======\n\
              i:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
              i:1 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
              i:2 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
@@ -700,15 +766,20 @@ mod tests {
              i:10 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
              i:11 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
              \n\
-             cells\n\
-             i:0 a:1 n:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
-             i:1 a:0 n:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
+             CELLS\n\
+             =====\n\
+             i:0 a:1 g:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
+             i:1 a:0 g:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
              \n\
-             boundary_points\n\
+             BOUNDARY POINTS\n\
+             ===============\n\
+             []\n\
              \n\
-             boundary_edges\n\
+             BOUNDARY EDGES\n\
+             ==============\n\
              \n\
-             boundary_faces\n"
+             BOUNDARY FACES\n\
+             ==============\n"
         );
         Ok(())
     }

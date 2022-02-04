@@ -14,8 +14,8 @@
 #  12-----11-------1------------2------------8
 #
 # header
-# ndim npoint ncell
-     3     13     5
+# space_ndim npoint ncell
+           3     13     5
 
 # points
 # id    x   y   z
@@ -36,9 +36,9 @@
   12  1.0 -1.0 0.0
 
 # cells
-# id att geo_ndim npoint  point_ids...
-   0   1        3      8  0 1 2 3 4 5 6 7
-   1   2        3      4  2 8 3 6
-   2   2        2      4  3 9 10 7
-   3   2        2      3  8 9 3
-   4   3        1      3  1 11 12
+# id att geo_ndim nnode  point_ids...
+   0   1        3     8  0 1 2 3 4 5 6 7
+   1   2        3     4  2 8 3 6
+   2   2        2     4  3 9 10 7
+   3   2        2     3  8 9 3
+   4   3        1     3  1 11 12

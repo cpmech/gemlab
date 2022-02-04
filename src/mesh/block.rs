@@ -373,6 +373,7 @@ impl Block {
                         attribute_id: self.attribute_id,
                         geo_ndim: shape_out.geo_ndim,
                         points,
+                        shape: Shape::new(space_ndim, space_ndim, output_npoint)?,
                     };
                     mesh.cells.push(cell);
 
