@@ -72,7 +72,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of faces
 ///
-/// Note: the order of nodes is such that the right-hand rule generates outward normals.
+/// Note: the order of face nodes is such that the right-hand rule generates outward normals.
 /// Also, the order of face nodes corresponds to Tri3 nodes.
 ///
 /// ```text
