@@ -1,3 +1,5 @@
+//! Implements shape objects for numerical integration and other calculations
+
 mod enums;
 mod hex20;
 mod hex8;

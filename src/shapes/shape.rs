@@ -8,7 +8,7 @@ type FnInterp = fn(&mut Vector, &[f64]);
 /// Defines an alias for derivative of interpolation functions
 type FnDeriv = fn(&mut Matrix, &[f64]);
 
-// Defines an alias for integration points data (coordinates and weights)
+/// Defines an alias for integration points data (coordinates and weights)
 pub type IpData = &'static [[f64; 4]];
 
 /// Implements an isoparametric geometric shape for numerical integration and more
