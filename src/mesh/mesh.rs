@@ -1139,25 +1139,7 @@ mod tests {
         //  |        |        |
         //  0--------1--------4
         //
-        let mesh = Mesh::from_text(
-            r"# header
-            # space_ndim npoint ncell
-                       2      6     2
-            
-            # points
-            # id   x   y
-               0 0.0 0.0
-               1 1.0 0.0
-               2 1.0 1.0
-               3 0.0 1.0
-               4 2.0 0.0
-               5 2.0 1.0
-            
-            # cells
-            # id att geo_ndim nnode  point_ids...
-               0   1        2     4  0 1 2 3
-               1   0        2     4  1 4 5 2",
-        )?;
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
         assert_eq!(
             format!("{}", mesh),
             "SUMMARY\n\
@@ -1213,7 +1195,7 @@ mod tests {
     }
 
     #[test]
-    fn find_boundary_points_work() -> Result<(), StrError> {
+    fn find_boundary_points_work_2d() -> Result<(), StrError> {
         //
         //  3--------2--------5
         //  |        |        |
@@ -1221,32 +1203,14 @@ mod tests {
         //  |        |        |
         //  0--------1--------4
         //
-        let mut m1 = Mesh::from_text(
-            r"# header
-            # space_ndim npoint ncell
-                       2      6     2
-            
-            # points
-            # id   x   y
-               0 0.0 0.0
-               1 1.0 0.0
-               2 1.0 1.0
-               3 0.0 1.0
-               4 2.0 0.0
-               5 2.0 1.0
-            
-            # cells
-            # id att geo_ndim nnode  point_ids...
-               0   1        2     4  0 1 2 3
-               1   0        2     4  1 4 5 2",
-        )?;
+        let mut mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
 
-        let origin = m1.find_boundary_points(At::XY(0.0, 0.0))?;
-        let top_right = m1.find_boundary_points(At::XY(2.0, 1.0))?;
-        let bottom = m1.find_boundary_edges(At::Y(0.0))?;
-        let right = m1.find_boundary_edges(At::X(2.0))?;
-        let top = m1.find_boundary_edges(At::Y(1.0))?;
-        let left = m1.find_boundary_edges(At::X(0.0))?;
+        let origin = mesh.find_boundary_points(At::XY(0.0, 0.0))?;
+        let top_right = mesh.find_boundary_points(At::XY(2.0, 1.0))?;
+        let bottom = mesh.find_boundary_edges(At::Y(0.0))?;
+        let right = mesh.find_boundary_edges(At::X(2.0))?;
+        let top = mesh.find_boundary_edges(At::Y(1.0))?;
+        let left = mesh.find_boundary_edges(At::X(0.0))?;
 
         assert_eq!(origin, &[0]);
         assert_eq!(top_right, &[5]);
