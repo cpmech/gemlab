@@ -892,6 +892,21 @@ mod tests {
     }
 
     #[test]
+    fn from_text_fails_on_invalid_data() -> Result<(), StrError> {
+        assert_eq!(
+            Mesh::from_text("").err(),
+            Some("text string is empty or header is missing")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_file_fails_on_invalid_data() -> Result<(), StrError> {
+        assert_eq!(Mesh::from_text_file("").err(), Some("cannot open file"));
+        Ok(())
+    }
+
+    #[test]
     fn from_text_fails_on_wrong_jacobian_2d() -> Result<(), StrError> {
         //
         //  3--------2--------5
@@ -1174,81 +1189,6 @@ mod tests {
         }
         Ok(())
     }
-
-    /*
-    #[test]
-    fn serialize_works() -> Result<(), StrError> {
-        //
-        //  3--------2--------5
-        //  |        |        |
-        //  |        |        |
-        //  |        |        |
-        //  0--------1--------4
-        //
-        let m1 = Mesh::from_text(
-            r"# header
-            # space_ndim npoint ncell
-                       2      6     2
-
-            # points
-            # id   x   y
-               0 0.0 0.0
-               1 1.0 0.0
-               2 1.0 1.0
-               3 0.0 1.0
-               4 2.0 0.0
-               5 2.0 1.0
-
-            # cells
-            # id att geo_ndim nnode  point_ids...
-               0   1        2     4  0 1 2 3
-               1   0        2     4  1 4 5 2",
-        )?;
-        m1.save("/tmp/gemlab/test.msh")?;
-        let m2 = Mesh::read("/tmp/gemlab/test.msh")?;
-        assert_eq!(
-            format!("{}", m2.grid_boundary_points),
-            "0: [0]\n\
-             4: [1]\n\
-             5: [1]\n\
-             9: [4]\n\
-             90: [3]\n\
-             94: [2]\n\
-             95: [2]\n\
-             99: [5]\n\
-             ids = [0, 1, 2, 3, 4, 5]\n\
-             nitem = 6\n\
-             ncontainer = 8\n"
-        );
-        assert_eq!(m2.derived_props_computed, true);
-        assert_eq!(
-            format!("{}", m2.string_points()),
-            "i:0 x:[0.0, 0.0] e:[(0, 1), (0, 3)] f:[]\n\
-             i:1 x:[1.0, 0.0] e:[(0, 1), (1, 4)] f:[]\n\
-             i:2 x:[1.0, 1.0] e:[(2, 3), (2, 5)] f:[]\n\
-             i:3 x:[0.0, 1.0] e:[(0, 3), (2, 3)] f:[]\n\
-             i:4 x:[2.0, 0.0] e:[(1, 4), (4, 5)] f:[]\n\
-             i:5 x:[2.0, 1.0] e:[(2, 5), (4, 5)] f:[]\n"
-        );
-        assert_eq!(
-            format!("{}", m2.string_cells()),
-            "i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
-             i:1 a:0 g:2 p:[1, 4, 5, 2]\n"
-        );
-        assert_eq!(format!("{}", m2.string_boundary_points()), "[0, 1, 2, 3, 4, 5]\n");
-        assert_eq!(
-            format!("{}", m2.string_boundary_edges()),
-            "k:(0,1) p:[0, 1] c:[0] f:[]\n\
-             k:(0,3) p:[3, 0] c:[0] f:[]\n\
-             k:(1,4) p:[1, 4] c:[1] f:[]\n\
-             k:(2,3) p:[2, 3] c:[0] f:[]\n\
-             k:(2,5) p:[5, 2] c:[1] f:[]\n\
-             k:(4,5) p:[4, 5] c:[1] f:[]\n"
-        );
-        assert_eq!(format!("{}", m2.string_boundary_faces()), "");
-        Ok(())
-    }
-    */
 
     #[test]
     fn display_works() -> Result<(), StrError> {
