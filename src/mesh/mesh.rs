@@ -1203,7 +1203,17 @@ mod tests {
     }
 
     #[test]
-    fn find_points_and_edges_work() -> Result<(), StrError> {
+    fn find_boundary_points_fail_on_wong_input() -> Result<(), StrError> {
+        let mut mesh = Mesh::new(2)?;
+        assert_eq!(
+            mesh.find_boundary_points(At::XY(0.0, 0.0)).err(),
+            Some("compute_derived_props must be called first")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn find_boundary_points_work() -> Result<(), StrError> {
         //
         //  3--------2--------5
         //  |        |        |
