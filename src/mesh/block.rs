@@ -455,6 +455,28 @@ mod tests {
     }
 
     #[test]
+    fn set_coords_fail_on_wrong_input() -> Result<(), StrError> {
+        let mut b2d = Block::new(2)?;
+        let wrong: [[f64; 1]; 1] = [[0.0]];
+        assert_eq!(
+            b2d.set_coords(&wrong).err(),
+            Some("number of columns must be equal to space_ndim")
+        );
+        let wrong: [[f64; 2]; 1] = [[0.0, 0.0]];
+        assert_eq!(
+            b2d.set_coords(&wrong).err(),
+            Some("in 2D, the number of rows must be either 4 or 8")
+        );
+        let mut b3d = Block::new(3)?;
+        let wrong: [[f64; 3]; 1] = [[0.0, 0.0, 0.0]];
+        assert_eq!(
+            b3d.set_coords(&wrong).err(),
+            Some("in 3D, the number of rows must be either 8 or 20")
+        );
+        Ok(())
+    }
+
+    #[test]
     fn set_coords_works() -> Result<(), StrError> {
         let mut b2d = Block::new(2)?;
         #[rustfmt::skip]
@@ -527,6 +549,15 @@ mod tests {
         });
         block.set_face_constraint(0, constraint);
         assert_eq!(block.face_constraints[0], Some(constraint));
+        Ok(())
+    }
+
+    #[test]
+    fn subdivide_fails_on_wrong_input() -> Result<(), StrError> {
+        let mut b2d = Block::new(2)?;
+        assert_eq!(b2d.subdivide(1).err(), Some("output_npoint is invalid"));
+        let mut b3d = Block::new(3)?;
+        assert_eq!(b3d.subdivide(1).err(), Some("output_npoint is invalid"));
         Ok(())
     }
 
