@@ -40,7 +40,6 @@ pub type EdgeKey = (usize, usize);
 pub type FaceKey = (usize, usize, usize, usize);
 
 /// Holds point data
-// #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Point {
     /// Identification number which equals the index of the point in the mesh
     ///
@@ -64,7 +63,6 @@ pub struct Point {
 }
 
 /// Holds cell (aka geometric shape, polygon, polyhedra) data
-// #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Cell {
     /// Identification number which equals the index of the cell in the mesh
     ///
@@ -98,7 +96,6 @@ pub struct Cell {
 }
 
 /// Holds edge data (derived data structure)
-// #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
     /// List of points defining this edge; in the right order (unsorted)
     pub points: Vec<PointId>,
@@ -116,7 +113,6 @@ pub struct Edge {
 }
 
 /// Holds face data (derived data structure)
-// #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Face {
     /// List of points defining this face; in the right order (unsorted)
     pub points: Vec<PointId>,
@@ -129,7 +125,6 @@ pub struct Face {
 }
 
 /// Holds mesh data
-// #[derive(Deserialize, Serialize)]
 pub struct Mesh {
     /// Space dimension of the mesh
     ///

@@ -1,19 +1,16 @@
 use crate::geometry::{point_circle_distance, point_cylinder_distance, point_line_distance, point_point_distance};
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// Holds the id and coordinates of an item
-#[derive(Deserialize, Serialize)]
 struct Item {
     id: usize,   // identification number
     x: Vec<f64>, // (ndim) coordinates
 }
 
 /// Holds items
-#[derive(Deserialize, Serialize)]
 struct Container {
     items: Vec<Item>,
 }
@@ -25,7 +22,6 @@ struct Container {
 /// * Durand, Farias, and Pedroso (2015) Computing intersections between
 ///   non-compatible curves and finite elements, Computational Mechanics;
 ///   DOI=10.1007/s00466-015-1181-y
-#[derive(Deserialize, Serialize)]
 pub struct GridSearch {
     // constants
     ndim: usize,      // space dimension
@@ -566,21 +562,6 @@ impl GridSearch {
         Ok(plot)
     }
 
-    /// Returns the serialized data
-    pub fn encode(&self) -> Result<Vec<u8>, StrError> {
-        let mut serialized = Vec::new();
-        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
-        self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
-        Ok(serialized)
-    }
-
-    /// Creates a new GridSearch from serialized data
-    pub fn decode(serialized: &Vec<u8>) -> Result<Self, StrError> {
-        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
-        let res = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
-        Ok(res)
-    }
-
     /// Calculates the container index where the point x should be located
     ///
     /// # Output
@@ -1041,75 +1022,6 @@ mod tests {
         assert_eq!(g2d.initialized, true);
         assert_approx_eq!(g3d.radius, f64::sqrt(3.0 * (1.0 / 3.0) * (1.0 / 3.0)), 1e-15);
         assert_approx_eq!(g3d.radius_tol, f64::sqrt(3.0 * 1e-4 * 1e-4), 1e-15);
-    }
-
-    #[test]
-    fn encode_decode_work() -> Result<(), StrError> {
-        let item = Item {
-            id: 123,
-            x: vec![1.0, 2.0],
-        };
-        let mut serialized = Vec::new();
-        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
-        item.serialize(&mut serializer).map_err(|_| "serialize failed")?;
-        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
-        let res: Item = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
-        assert_eq!(res.id, item.id);
-        assert_eq!(res.x, item.x);
-
-        let container = Container {
-            items: vec![Item {
-                id: 456,
-                x: vec![2.0, 3.0],
-            }],
-        };
-        let mut serialized = Vec::new();
-        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
-        container.serialize(&mut serializer).map_err(|_| "serialize failed")?;
-        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
-        let res: Container = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
-        assert_eq!(res.items.len(), 1);
-        assert_eq!(res.items[0].id, 456);
-        assert_eq!(res.items[0].x, &[2.0, 3.0]);
-
-        let original2d = get_test_grid_2d();
-        let data2d = original2d.encode()?;
-        let g2d = GridSearch::decode(&data2d)?;
-        assert_eq!(g2d.ndim, 2);
-        assert_eq!(g2d.ndiv, [5, 5]);
-        assert_eq!(g2d.min, [-0.2, -0.2]);
-        assert_eq!(g2d.max, [0.8, 1.8]);
-        assert_eq!(g2d.delta, [1.0, 2.0]);
-        assert_eq!(g2d.size, [0.2, 0.4]);
-        assert_eq!(g2d.cf, [1, 5, 25]);
-        assert_eq!(g2d.ratio, [0, 0]);
-        assert_eq!(g2d.tol, [1e-4, 1e-4]);
-        assert_eq!(g2d.halo.len(), 4);
-        assert_eq!(g2d.ncorner, 4);
-        assert_eq!(g2d.containers.len(), 0);
-        assert_eq!(g2d.initialized, true);
-        assert_approx_eq!(g2d.radius, f64::sqrt(0.1 * 0.1 + 0.2 * 0.2), 1e-15);
-        assert_approx_eq!(g2d.radius_tol, f64::sqrt(2.0 * 1e-4 * 1e-4), 1e-15);
-
-        let original3d = get_test_grid_3d();
-        let data3d = original3d.encode()?;
-        let g3d = GridSearch::decode(&data3d)?;
-        assert_eq!(g3d.ndim, 3);
-        assert_eq!(g3d.ndiv, [3, 3, 3]);
-        assert_eq!(g3d.min, [-1.0, -1.0, -1.0]);
-        assert_eq!(g3d.max, [1.0, 1.0, 1.0]);
-        assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
-        assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
-        assert_eq!(g3d.cf, [1, 3, 9]);
-        assert_eq!(g3d.ratio, [0, 0, 0]);
-        assert_eq!(g3d.tol, [1e-4, 1e-4, 1e-4]);
-        assert_eq!(g3d.halo.len(), 8);
-        assert_eq!(g3d.ncorner, 8);
-        assert_eq!(g3d.containers.len(), 0);
-        assert_eq!(g2d.initialized, true);
-        assert_approx_eq!(g3d.radius, f64::sqrt(3.0 * (1.0 / 3.0) * (1.0 / 3.0)), 1e-15);
-        assert_approx_eq!(g3d.radius_tol, f64::sqrt(3.0 * 1e-4 * 1e-4), 1e-15);
-        Ok(())
     }
 
     #[test]
