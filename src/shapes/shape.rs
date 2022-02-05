@@ -1298,6 +1298,130 @@ mod tests {
             shape.calc_coords(&mut x, &[0.0]).err(),
             Some("x.dim() must equal space_ndim")
         );
+
+        // calc_boundary_normal
+        let mut normal = Vector::new(1);
+        assert_eq!(
+            shape.calc_boundary_normal(&mut normal, &[0.0]).err(),
+            Some("geo_ndim must be smaller than space_ndim")
+        );
+        let mut shape = Shape::new(2, 1, 2)?;
+        assert_eq!(
+            shape.calc_boundary_normal(&mut normal, &[0.0]).err(),
+            Some("normal.dim() must equal space_ndim")
+        );
+        let mut normal = Vector::new(2);
+        assert_eq!(
+            shape.calc_boundary_normal(&mut normal, &[]).err(),
+            Some("ksi.len() must equal geo_ndim at least")
+        );
+        assert_eq!(
+            shape.calc_boundary_normal(&mut normal, &[0.0]).err(),
+            Some("the last node coordinate has not been input yet")
+        );
+
+        // approximate_ksi
+        let mut shape = Shape::new(2, 1, 2)?;
+        let mut ksi = vec![0.0; 1];
+        let x = Vector::new(2);
+        assert_eq!(
+            shape.approximate_ksi(&mut ksi, &x, 2, 1e-5).err(),
+            Some("geo_ndim must equal space_ndim")
+        );
+        let mut shape = Shape::new(1, 1, 2)?;
+        let x = Vector::new(2);
+        assert_eq!(
+            shape.approximate_ksi(&mut ksi, &x, 2, 1e-5).err(),
+            Some("x.dim() must equal space_ndim")
+        );
+        let x = Vector::new(1);
+        let mut ksi = vec![0.0; 0];
+        assert_eq!(
+            shape.approximate_ksi(&mut ksi, &x, 2, 1e-5).err(),
+            Some("ksi.len() must equal geo_ndim")
+        );
+        let mut ksi = vec![0.0; 1];
+        assert_eq!(
+            shape.approximate_ksi(&mut ksi, &x, 2, 1e-5).err(),
+            Some("the last node coordinate has not been input yet")
+        );
+
+        // calc_gradient
+        let mut shape = Shape::new(2, 1, 2)?;
+        assert_eq!(
+            shape.calc_gradient(&[0.0]).err(),
+            Some("geo_ndim must equal space_ndim")
+        );
+        let mut shape = Shape::new(1, 1, 2)?;
+        assert_eq!(
+            shape.calc_gradient(&[]).err(),
+            Some("ksi.len() must equal geo_ndim at least")
+        );
+        assert_eq!(
+            shape.calc_gradient(&[0.0]).err(),
+            Some("the last node coordinate has not been input yet")
+        );
+
+        // calc_int_points_coords
+        assert_eq!(
+            shape.calc_int_points_coords().err(),
+            Some("the last node coordinate has not been input yet")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn getters_work() -> Result<(), StrError> {
+        let pairs = vec![
+            // Lin
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (1, 5),
+            // Tri
+            (2, 3),
+            (2, 6),
+            (2, 10),
+            (2, 15),
+            // Qua
+            (2, 4),
+            (2, 8),
+            (2, 9),
+            (2, 12),
+            (2, 16),
+            (2, 17),
+            // Tet
+            (3, 4),
+            (3, 10),
+            // Hex
+            (3, 8),
+            (3, 20),
+        ];
+        for (geo_ndim, nnode) in pairs {
+            let space_ndim = geo_ndim;
+            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
+            match shape.class {
+                GeoClass::Lin => assert_eq!(shape.get_edge_node_id(0, 0), 0),
+                GeoClass::Tri => assert_eq!(shape.get_edge_node_id(0, 0), 1),
+                GeoClass::Qua => assert_eq!(shape.get_edge_node_id(0, 0), 1),
+                GeoClass::Tet => assert_eq!(shape.get_edge_node_id(0, 0), 0),
+                GeoClass::Hex => assert_eq!(shape.get_edge_node_id(0, 0), 0),
+            }
+            match shape.class {
+                GeoClass::Lin => assert_eq!(shape.get_face_node_id(0, 0), 0),
+                GeoClass::Tri => assert_eq!(shape.get_face_node_id(0, 0), 0),
+                GeoClass::Qua => assert_eq!(shape.get_face_node_id(0, 0), 0),
+                GeoClass::Tet => assert_eq!(shape.get_face_node_id(0, 0), 0),
+                GeoClass::Hex => assert_eq!(shape.get_face_node_id(0, 0), 0),
+            }
+            match shape.class {
+                GeoClass::Lin => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
+                GeoClass::Tri => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
+                GeoClass::Qua => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
+                GeoClass::Tet => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
+                GeoClass::Hex => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
+            }
+        }
         Ok(())
     }
 
@@ -1305,22 +1429,27 @@ mod tests {
     fn calc_interp_works() -> Result<(), StrError> {
         // define dims and number of nodes
         let pairs = vec![
+            // Lin
             (1, 2),
             (1, 3),
             (1, 4),
             (1, 5),
+            // Tri
             (2, 3),
             (2, 6),
             (2, 10),
             (2, 15),
+            // Qua
             (2, 4),
             (2, 8),
             (2, 9),
             (2, 12),
             (2, 16),
             (2, 17),
+            // Tet
             (3, 4),
             (3, 10),
+            // Hex
             (3, 8),
             (3, 20),
         ];
