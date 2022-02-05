@@ -1643,6 +1643,32 @@ mod tests {
     }
 
     #[test]
+    fn calc_jacobian_special_cases_work() -> Result<(), StrError> {
+        let mut shape = Shape::new(2, 1, 2)?;
+        let l = 3.5;
+        shape.set_node(0, 0, 0.0)?;
+        shape.set_node(0, 1, 0.0)?;
+        shape.set_node(1, 0, l)?;
+        shape.set_node(1, 1, 0.0)?;
+        let norm_jac_vec = shape.calc_jacobian(&[0.0])?;
+        assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
+
+        let mut shape = Shape::new(3, 2, 3)?;
+        shape.set_node(0, 0, 0.0)?;
+        shape.set_node(0, 1, 0.0)?;
+        shape.set_node(0, 2, 0.0)?;
+        shape.set_node(1, 0, 1.0)?;
+        shape.set_node(1, 1, 0.0)?;
+        shape.set_node(1, 2, 0.0)?;
+        shape.set_node(2, 0, 0.5)?;
+        shape.set_node(2, 1, 1.0)?;
+        shape.set_node(2, 2, 1.0)?;
+        let norm_jac_vec = shape.calc_jacobian(&[0.0, 0.0])?;
+        assert_eq!(norm_jac_vec, 0.0);
+        Ok(())
+    }
+
+    #[test]
     fn calc_boundary_normal_works() -> Result<(), StrError> {
         // allocate surface shape
         let mut surf = Shape::new(3, 2, 17)?;
