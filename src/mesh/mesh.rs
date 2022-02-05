@@ -1191,6 +1191,28 @@ mod tests {
             mesh.find_boundary_points(At::XY(0.0, 0.0)).err(),
             Some("compute_derived_props must be called first")
         );
+        let mut mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        assert_eq!(
+            mesh.find_boundary_points(At::Z(0.0)).err(),
+            Some("At::Z works in 3D only")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::YZ(0.0, 0.0)).err(),
+            Some("At::YZ works in 3D only")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::XZ(0.0, 0.0)).err(),
+            Some("At::XZ works in 3D only")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::XYZ(0.0, 0.0, 0.0)).err(),
+            Some("At::XYZ works in 3D only")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+                .err(),
+            Some("At::Cylinder works in 3D only")
+        );
         Ok(())
     }
 
