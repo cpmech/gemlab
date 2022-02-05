@@ -90,7 +90,7 @@ impl Block {
     const NAT_TOLERANCE: f64 = 1e-4; // tolerance to compare coordinates in the reference space
 
     // valid output npoint
-    const VALID_OUTPUT_NPOINT_2D: [usize; 5] = [4, 8, 9, 12, 16];
+    const VALID_OUTPUT_NPOINT_2D: [usize; 6] = [4, 8, 9, 12, 16, 17];
     const VALID_OUTPUT_NPOINT_3D: [usize; 2] = [8, 20];
 
     /// Creates a new Block with default options
@@ -256,7 +256,7 @@ impl Block {
     ///
     /// Valid output_npoint:
     ///
-    /// * 2D: [4, 8, 9, 12, 16]
+    /// * 2D: [4, 8, 9, 12, 16, 17]
     /// * 3D: [8, 20]
     pub fn subdivide(&mut self, output_npoint: usize) -> Result<Mesh, StrError> {
         // check
@@ -402,7 +402,8 @@ impl Block {
 #[cfg(test)]
 mod tests {
     use super::{Block, StrError};
-    use crate::{geometry::Circle, mesh::Constraint};
+    use crate::geometry::Circle;
+    use crate::mesh::Constraint;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
@@ -604,9 +605,9 @@ mod tests {
              ==============\n"
         );
 
-        // the norm of the normal vector should be equal to 0.5 = edge_length / 2.0
+        // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.0 / 2.0
         // where 2.0 corresponds to the edge_length in the reference system
-        let l = 0.5; // norm of normal vector
+        let l = 0.5; // magnitude of normal vector
 
         // edge keys and correct normal vectors (solutions)
         let edge_keys_and_solutions = vec![
@@ -626,6 +627,7 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
+                assert_eq!(edge.points.len(), 2);
                 edge.shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
             }
@@ -720,9 +722,9 @@ mod tests {
              ==============\n"
         );
 
-        // the norm of the normal vector should be equal to 0.5 = edge_length / 2.0
+        // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.0 / 2.0
         // where 2.0 corresponds to the edge_length in the reference system
-        let l = 0.5; // norm of normal vector
+        let l = 0.5; // magnitude of normal vector
 
         // edge keys and correct normal vectors (solutions)
         let edge_keys_and_solutions = [
@@ -742,8 +744,320 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
+                assert_eq!(edge.points.len(), 3);
                 edge.shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn subdivide_2d_qua9_works() -> Result<(), StrError> {
+        //
+        //  16------18------15------23------21
+        //   |               |               |
+        //   |               |               |
+        //  19      20      17      24      22
+        //   |               |               |
+        //   |               |               |
+        //   3-------6-------2------13------10
+        //   |               |               |
+        //   |               |               |
+        //   7       8       5      14      12
+        //   |               |               |
+        //   |               |               |
+        //   0-------4-------1------11-------9
+        //
+        let mut block = Block::new(2)?;
+        #[rustfmt::skip]
+        block.set_coords(&[
+            [0.0, 0.0],
+            [2.0, 0.0],
+            [2.0, 2.0],
+            [0.0, 2.0],
+        ])?;
+        let mut mesh = block.subdivide(9)?;
+        // check
+        assert_eq!(mesh.points.len(), 25);
+        assert_eq!(mesh.points[24].coords, &[1.5, 1.5]);
+        assert_eq!(mesh.cells[3].points, &[2, 10, 21, 15, 13, 22, 23, 17, 24]);
+
+        // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.0 / 2.0
+        // where 2.0 corresponds to the edge_length in the reference system
+        let l = 0.5; // magnitude of normal vector
+
+        // edge keys and correct normal vectors (solutions)
+        let edge_keys_and_solutions = [
+            // bottom
+            (vec![(0, 1), (1, 9)], [0.0, -l]),
+            // right
+            (vec![(9, 10), (10, 21)], [l, 0.0]),
+            // top
+            (vec![(15, 16), (15, 21)], [0.0, l]),
+            // left
+            (vec![(0, 3), (3, 16)], [-l, 0.0]),
+        ];
+
+        // check if the normal vectors at boundary are outward
+        let mut normal = Vector::new(mesh.space_ndim);
+        let ksi = &[0.0, 0.0, 0.0];
+        for (edge_keys, solution) in &edge_keys_and_solutions {
+            for edge_key in edge_keys {
+                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
+                assert_eq!(edge.points.len(), 3);
+                edge.shape.calc_boundary_normal(&mut normal, ksi)?;
+                assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn subdivide_2d_qua12_works() -> Result<(), StrError> {
+        //
+        //  21---26---23----20---32---30----28
+        //   |               |               |
+        //  24              25              31
+        //   |               |               |
+        //  27              22              29
+        //   |               |               |
+        //   3---10-----6----2---19---16----13
+        //   |               |               |
+        //   7               9              18
+        //   |               |               |
+        //  11               5              15
+        //   |               |               |
+        //   0----4-----8----1---14---17----12
+        //
+        let mut block = Block::new(2)?;
+        #[rustfmt::skip]
+        block.set_coords(&[
+            [0.0, 0.0],
+            [3.0, 0.0],
+            [3.0, 3.0],
+            [0.0, 3.0],
+        ])?;
+        let mut mesh = block.subdivide(12)?;
+
+        // check
+        assert_eq!(mesh.points.len(), 33);
+        assert_vec_approx_eq!(mesh.points[9].coords, &[1.5, 1.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[15].coords, &[3.0, 0.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[24].coords, &[0.0, 2.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[32].coords, &[2.0, 3.0], 1e-15);
+        assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        assert_eq!(mesh.cells[1].points, &[1, 12, 13, 2, 14, 15, 16, 9, 17, 18, 19, 5]);
+        assert_eq!(mesh.cells[2].points, &[3, 2, 20, 21, 10, 22, 23, 24, 6, 25, 26, 27]);
+        assert_eq!(mesh.cells[3].points, &[2, 13, 28, 20, 19, 29, 30, 25, 16, 31, 32, 22]);
+
+        // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.5 / 2.0
+        // where 2.0 corresponds to the edge_length in the reference system
+        let l = 0.75; // magnitude of normal vector
+
+        // edge keys and correct normal vectors (solutions)
+        let edge_keys_and_solutions = [
+            // bottom
+            (vec![(0, 1), (1, 12)], [0.0, -l]),
+            // right
+            (vec![(12, 13), (13, 28)], [l, 0.0]),
+            // top
+            (vec![(20, 21), (20, 28)], [0.0, l]),
+            // left
+            (vec![(0, 3), (3, 21)], [-l, 0.0]),
+        ];
+
+        // check if the normal vectors at boundary are outward
+        let mut normal = Vector::new(mesh.space_ndim);
+        let ksi = &[0.0, 0.0, 0.0];
+        for (edge_keys, solution) in &edge_keys_and_solutions {
+            for edge_key in edge_keys {
+                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
+                assert_eq!(edge.points.len(), 4);
+                edge.shape.calc_boundary_normal(&mut normal, ksi)?;
+                assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn subdivide_2d_qua16_works() -> Result<(), StrError> {
+        //
+        //  29---34----31---28---44---42----40
+        //   |               |               |
+        //  32   39    38   33   48   47    43
+        //   |               |               |
+        //  35   36    37   30   45   46    41
+        //   |               |               |
+        //   3---10-----6----2---23---20----17
+        //   |               |               |
+        //   7   15    14    9   27   26    22
+        //   |               |               |
+        //  11   12    13    5   24   25    19
+        //   |               |               |
+        //   0----4-----8----1---18---21----16
+        //
+        let mut block = Block::new(2)?;
+        #[rustfmt::skip]
+        block.set_coords(&[
+            [0.0, 0.0],
+            [3.0, 0.0],
+            [3.0, 3.0],
+            [0.0, 3.0],
+        ])?;
+        let mut mesh = block.subdivide(16)?;
+
+        // check
+        assert_eq!(mesh.points.len(), 49);
+        assert_vec_approx_eq!(mesh.points[4].coords, &[0.5, 0.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[8].coords, &[1.0, 0.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[10].coords, &[0.5, 1.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[13].coords, &[1.0, 0.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[17].coords, &[3.0, 1.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[24].coords, &[2.0, 0.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[26].coords, &[2.5, 1.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[37].coords, &[1.0, 2.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[40].coords, &[3.0, 3.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[48].coords, &[2.0, 2.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[43].coords, &[3.0, 2.5], 1e-15);
+        assert_eq!(
+            mesh.cells[0].points,
+            &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        );
+        assert_eq!(
+            mesh.cells[1].points,
+            &[1, 16, 17, 2, 18, 19, 20, 9, 21, 22, 23, 5, 24, 25, 26, 27]
+        );
+        assert_eq!(
+            mesh.cells[2].points,
+            &[3, 2, 28, 29, 10, 30, 31, 32, 6, 33, 34, 35, 36, 37, 38, 39]
+        );
+        assert_eq!(
+            mesh.cells[3].points,
+            &[2, 17, 40, 28, 23, 41, 42, 33, 20, 43, 44, 30, 45, 46, 47, 48]
+        );
+
+        // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.5 / 2.0
+        // where 2.0 corresponds to the edge_length in the reference system
+        let l = 0.75; // magnitude of normal vector
+
+        // edge keys and correct normal vectors (solutions)
+        let edge_keys_and_solutions = [
+            // bottom
+            (vec![(0, 1), (1, 16)], [0.0, -l]),
+            // right
+            (vec![(16, 17), (17, 40)], [l, 0.0]),
+            // top
+            (vec![(28, 29), (28, 40)], [0.0, l]),
+            // left
+            (vec![(0, 3), (3, 29)], [-l, 0.0]),
+        ];
+
+        // check if the normal vectors at boundary are outward
+        let mut normal = Vector::new(mesh.space_ndim);
+        let ksi = &[0.0, 0.0, 0.0];
+        for (edge_keys, solution) in &edge_keys_and_solutions {
+            for edge_key in edge_keys {
+                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
+                assert_eq!(edge.points.len(), 4);
+                edge.shape.calc_boundary_normal(&mut normal, ksi)?;
+                assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn subdivide_2d_qua17_works() -> Result<(), StrError> {
+        //
+        //  30---38---35---32---29---47---45---43---41
+        //   |                   |                   |
+        //  33                  37                  46
+        //   |                   |                   |
+        //  36        40        34        48        44
+        //   |                   |                   |
+        //  39                  31                  42
+        //   |                   |                   |
+        //   3---14---10----6----2---27---24---21---18
+        //   |                   |                   |
+        //   7                  13                  26
+        //   |                   |                   |
+        //  11        16         9        28        23
+        //   |                   |                   |
+        //  15                   5                  20
+        //   |                   |                   |
+        //   0----4----8---12----1---19---22---25---17
+        //
+        let mut block = Block::new(2)?;
+        #[rustfmt::skip]
+        block.set_coords(&[
+            [0.0, 0.0],
+            [4.0, 0.0],
+            [4.0, 4.0],
+            [0.0, 4.0],
+        ])?;
+        let mut mesh = block.subdivide(17)?;
+
+        // check
+        assert_eq!(mesh.points.len(), 49);
+        assert_vec_approx_eq!(mesh.points[4].coords, &[0.5, 0.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[5].coords, &[2.0, 0.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[6].coords, &[1.5, 2.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[11].coords, &[0.0, 1.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[12].coords, &[1.5, 0.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[16].coords, &[1.0, 1.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[19].coords, &[2.5, 0.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[23].coords, &[4.0, 1.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[27].coords, &[2.5, 2.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[28].coords, &[3.0, 1.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[32].coords, &[1.5, 4.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[40].coords, &[1.0, 3.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[41].coords, &[4.0, 4.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[46].coords, &[4.0, 3.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[48].coords, &[3.0, 3.0], 1e-15);
+        assert_eq!(
+            mesh.cells[0].points,
+            &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        );
+        assert_eq!(
+            mesh.cells[1].points,
+            &[1, 17, 18, 2, 19, 20, 21, 13, 22, 23, 24, 9, 25, 26, 27, 5, 28]
+        );
+        assert_eq!(
+            mesh.cells[2].points,
+            &[3, 2, 29, 30, 14, 31, 32, 33, 10, 34, 35, 36, 6, 37, 38, 39, 40]
+        );
+        assert_eq!(
+            mesh.cells[3].points,
+            &[2, 18, 41, 29, 27, 42, 43, 37, 24, 44, 45, 34, 21, 46, 47, 31, 48]
+        );
+
+        // the magnitude of the normal vector should be equal to edge_length / 2.0 = 2.0 / 2.0
+        // where 2.0 corresponds to the edge_length in the reference system
+        let l = 1.0; // magnitude of normal vector
+
+        // edge keys and correct normal vectors (solutions)
+        let edge_keys_and_solutions = [
+            // bottom
+            (vec![(0, 1), (1, 17)], [0.0, -l]),
+            // right
+            (vec![(17, 18), (18, 41)], [l, 0.0]),
+            // top
+            (vec![(29, 30), (29, 41)], [0.0, l]),
+            // left
+            (vec![(0, 3), (3, 30)], [-l, 0.0]),
+        ];
+
+        // check if the normal vectors at boundary are outward
+        let mut normal = Vector::new(mesh.space_ndim);
+        let ksi = &[0.0, 0.0, 0.0];
+        for (edge_keys, solution) in &edge_keys_and_solutions {
+            for edge_key in edge_keys {
+                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
+                assert_eq!(edge.points.len(), 5);
+                edge.shape.calc_boundary_normal(&mut normal, ksi)?;
+                assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
             }
         }
         Ok(())
