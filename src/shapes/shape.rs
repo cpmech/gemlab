@@ -1254,6 +1254,54 @@ mod tests {
     }
 
     #[test]
+    fn capture_some_wrong_input() -> Result<(), StrError> {
+        // new
+        assert_eq!(
+            Shape::new(1, 1, 1).err(),
+            Some("(geo_ndim,nnode) combination is invalid")
+        );
+
+        // set_node
+        let mut shape = Shape::new(1, 1, 2)?;
+        assert_eq!(shape.set_node(3, 0, 0.0).err(), Some("index of node is invalid"));
+        assert_eq!(
+            shape.set_node(0, 2, 0.0).err(),
+            Some("index of space dimension is invalid")
+        );
+
+        // calc_jacobian
+        assert_eq!(
+            shape.calc_jacobian(&[]).err(),
+            Some("ksi.len() must equal geo_ndim at least")
+        );
+        assert_eq!(
+            shape.calc_jacobian(&[0.0]).err(),
+            Some("the last node coordinate has not been input yet")
+        );
+
+        // calc_coords
+        let mut x = Vector::new(1);
+        assert_eq!(
+            shape.calc_coords(&mut x, &[0.0]).err(),
+            Some("the last node coordinate has not been input yet")
+        );
+        assert_eq!(
+            shape.calc_coords(&mut x, &[]).err(),
+            Some("ksi.len() must equal geo_ndim at least")
+        );
+
+        // calc_coords
+        shape.set_node(0, 0, 0.0)?;
+        shape.set_node(1, 0, 1.0)?;
+        let mut x = Vector::new(2);
+        assert_eq!(
+            shape.calc_coords(&mut x, &[0.0]).err(),
+            Some("x.dim() must equal space_ndim")
+        );
+        Ok(())
+    }
+
+    #[test]
     fn calc_interp_works() -> Result<(), StrError> {
         // define dims and number of nodes
         let pairs = vec![
