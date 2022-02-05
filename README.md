@@ -25,6 +25,12 @@ Add this to your Cargo.toml:
 gemlab = "0.2"
 ```
 
+## Todo
+
+- [ ] Implement `write_mesh` functions
+- [ ] Add tests to the z_integration file
+- [ ] Implement triangle and tetrahedron generators
+
 ## Examples
 
 TODO
