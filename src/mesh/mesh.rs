@@ -1173,10 +1173,14 @@ mod tests {
     }
 
     #[test]
-    fn find_boundary_points_fail_on_wong_input() -> Result<(), StrError> {
+    fn find_boundary_fails_on_wrong_input() -> Result<(), StrError> {
         let mut mesh = Mesh::new(2)?;
         assert_eq!(
             mesh.find_boundary_points(At::XY(0.0, 0.0)).err(),
+            Some("compute_derived_props must be called first")
+        );
+        assert_eq!(
+            mesh.find_boundary_edges(At::XY(0.0, 0.0)).err(),
             Some("compute_derived_props must be called first")
         );
         let mut mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
