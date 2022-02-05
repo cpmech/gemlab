@@ -1716,17 +1716,52 @@ mod tests {
     #[test]
     fn calc_jacobian_works() -> Result<(), StrError> {
         // define dims and number of nodes
-        let pairs = vec![(2, 6), (2, 4), (2, 8), (2, 17), (3, 4), (3, 8), (3, 20)];
+        let pairs = vec![
+            // Lin
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (1, 5),
+            // Tri
+            (2, 3),
+            (2, 6),
+            (2, 10),
+            (2, 15),
+            // Qua
+            (2, 4),
+            (2, 8),
+            (2, 9),
+            (2, 12),
+            (2, 16),
+            (2, 17),
+            // Tet
+            (3, 4),
+            (3, 10),
+            // Hex
+            (3, 8),
+            (3, 20),
+        ];
 
         // define tolerances
         let mut tols = HashMap::new();
+        tols.insert(GeoKind::Lin2, 1e-11);
+        tols.insert(GeoKind::Lin3, 1e-11);
+        tols.insert(GeoKind::Lin4, 1e-11);
+        tols.insert(GeoKind::Lin5, 1e-11);
+        tols.insert(GeoKind::Tri3, 1e-11);
         tols.insert(GeoKind::Tri6, 1e-11);
+        tols.insert(GeoKind::Tri10, 1e-11);
+        tols.insert(GeoKind::Tri15, 1e-10);
         tols.insert(GeoKind::Qua4, 1e-11);
         tols.insert(GeoKind::Qua8, 1e-11);
+        tols.insert(GeoKind::Qua9, 1e-11);
+        tols.insert(GeoKind::Qua12, 1e-10);
+        tols.insert(GeoKind::Qua16, 1e-10);
         tols.insert(GeoKind::Qua17, 1e-10);
         tols.insert(GeoKind::Hex8, 1e-11);
-        tols.insert(GeoKind::Tet4, 1e-12);
         tols.insert(GeoKind::Hex20, 1e-11);
+        tols.insert(GeoKind::Tet4, 1e-12);
+        tols.insert(GeoKind::Tet10, 1e-12);
 
         // loop over shapes
         for (geo_ndim, nnode) in pairs {
