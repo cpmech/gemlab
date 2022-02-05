@@ -424,14 +424,17 @@ impl Mesh {
 
         // loop over all cells
         for cell in &mut self.cells {
-            // skip if cell is not 2D
-            // for example, skip 1D line in 2D space because it's not a boundary edge
+            let nnode = cell.points.len();
+
+            // handle 1D shapes
             if cell.geo_ndim != 2 {
-                continue;
+                for m in 0..nnode {
+                    self.boundary_points.insert(cell.points[m]);
+                }
+                continue; // skip 1D line in 2D because it's not a boundary edge
             }
 
             // set the cell node coordinates in its shape object
-            let nnode = cell.points.len();
             for m in 0..nnode {
                 for j in 0..self.space_ndim {
                     cell.shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
@@ -507,14 +510,17 @@ impl Mesh {
 
         // loop over all cells
         for cell in &mut self.cells {
-            // skip if cell is not 3D
-            // for example, skip 1D line in 3D or 2D quad in 3D because they don't have faces
+            let nnode = cell.points.len();
+
+            // handle 1D and 2D shapes
             if cell.geo_ndim != 3 {
-                continue;
+                for m in 0..nnode {
+                    self.boundary_points.insert(cell.points[m]);
+                }
+                continue; // skip 1D line or 2D shape in 3D because they don't have faces
             }
 
             // set the cell node coordinates in its shape object
-            let nnode = cell.points.len();
             for m in 0..nnode {
                 for j in 0..self.space_ndim {
                     cell.shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
@@ -1329,7 +1335,6 @@ mod tests {
         //  0-------1--------2
         //
         let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes2.msh")?;
-        println!("{}", mesh);
         assert_eq!(
             format!("{}", mesh),
             "SUMMARY\n\
@@ -1337,7 +1342,7 @@ mod tests {
              space_ndim = 2\n\
              npoint = 5\n\
              ncell = 2\n\
-             n_boundary_point = 4\n\
+             n_boundary_point = 5\n\
              n_boundary_edge = 4\n\
              n_boundary_face = 0\n\
              \n\
@@ -1356,7 +1361,7 @@ mod tests {
              \n\
              BOUNDARY POINTS\n\
              ===============\n\
-             [1, 2, 3, 4]\n\
+             [0, 1, 2, 3, 4]\n\
              \n\
              BOUNDARY EDGES\n\
              ==============\n\
@@ -1392,7 +1397,7 @@ mod tests {
              space_ndim = 3\n\
              npoint = 13\n\
              ncell = 5\n\
-             n_boundary_point = 9\n\
+             n_boundary_point = 13\n\
              n_boundary_edge = 16\n\
              n_boundary_face = 10\n\
              \n\
@@ -1422,7 +1427,7 @@ mod tests {
              \n\
              BOUNDARY POINTS\n\
              ===============\n\
-             [0, 1, 2, 3, 4, 5, 6, 7, 8]\n\
+             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]\n\
              \n\
              BOUNDARY EDGES\n\
              ==============\n\
