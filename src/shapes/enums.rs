@@ -74,3 +74,25 @@ pub enum GeoKind {
     /// Hexahedron with 20 nodes (quadratic faces)
     Hex20,
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use crate::shapes::{GeoClass, GeoKind};
+    use std::collections::HashSet;
+
+    #[test]
+    fn derive_works() {
+        let class = GeoClass::Tri.clone();
+        let kind = GeoKind::Tri6.clone();
+        let classes = HashSet::from([GeoClass::Tri, GeoClass::Qua]);
+        let kinds = HashSet::from([GeoKind::Tri3, GeoKind::Qua4]);
+        assert_eq!(class, GeoClass::Tri);
+        assert_eq!(kind, GeoKind::Tri6);
+        assert_eq!(format!("{:?}", class), "Tri");
+        assert_eq!(format!("{:?}", kind), "Tri6");
+        assert_eq!(classes.contains(&GeoClass::Tri), true);
+        assert_eq!(kinds.contains(&GeoKind::Tri3), true);
+    }
+}
