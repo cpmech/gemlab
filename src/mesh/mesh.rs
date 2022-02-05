@@ -278,22 +278,22 @@ impl Mesh {
         match at {
             At::X(x) => {
                 if self.space_ndim == 2 {
-                    for id in self.grid_boundary_points.find_on_line(&[x, 0.0], &[x, 1.0]).unwrap() {
+                    for id in self.grid_boundary_points.find_on_line(&[x, 0.0], &[x, 1.0])? {
                         point_ids.insert(id);
                     }
                 } else {
-                    for id in self.grid_boundary_points.find_on_plane_yz(x).unwrap() {
+                    for id in self.grid_boundary_points.find_on_plane_yz(x)? {
                         point_ids.insert(id);
                     }
                 }
             }
             At::Y(y) => {
                 if self.space_ndim == 2 {
-                    for id in self.grid_boundary_points.find_on_line(&[0.0, y], &[1.0, y]).unwrap() {
+                    for id in self.grid_boundary_points.find_on_line(&[0.0, y], &[1.0, y])? {
                         point_ids.insert(id);
                     }
                 } else {
-                    for id in self.grid_boundary_points.find_on_plane_xz(y).unwrap() {
+                    for id in self.grid_boundary_points.find_on_plane_xz(y)? {
                         point_ids.insert(id);
                     }
                 }
@@ -302,22 +302,18 @@ impl Mesh {
                 if self.space_ndim == 2 {
                     return Err("At::Z works in 3D only");
                 } else {
-                    for id in self.grid_boundary_points.find_on_plane_xy(z).unwrap() {
+                    for id in self.grid_boundary_points.find_on_plane_xy(z)? {
                         point_ids.insert(id);
                     }
                 }
             }
             At::XY(x, y) => {
                 if self.space_ndim == 2 {
-                    if let Some(id) = self.grid_boundary_points.find(&[x, y]).unwrap() {
+                    if let Some(id) = self.grid_boundary_points.find(&[x, y])? {
                         point_ids.insert(id);
                     }
                 } else {
-                    for id in self
-                        .grid_boundary_points
-                        .find_on_line(&[x, y, 0.0], &[x, y, 1.0])
-                        .unwrap()
-                    {
+                    for id in self.grid_boundary_points.find_on_line(&[x, y, 0.0], &[x, y, 1.0])? {
                         point_ids.insert(id);
                     }
                 }
@@ -326,11 +322,7 @@ impl Mesh {
                 if self.space_ndim == 2 {
                     return Err("At::YZ works in 3D only");
                 } else {
-                    for id in self
-                        .grid_boundary_points
-                        .find_on_line(&[0.0, y, z], &[1.0, y, z])
-                        .unwrap()
-                    {
+                    for id in self.grid_boundary_points.find_on_line(&[0.0, y, z], &[1.0, y, z])? {
                         point_ids.insert(id);
                     }
                 }
@@ -339,11 +331,7 @@ impl Mesh {
                 if self.space_ndim == 2 {
                     return Err("At::XZ works in 3D only");
                 } else {
-                    for id in self
-                        .grid_boundary_points
-                        .find_on_line(&[x, 0.0, z], &[x, 1.0, z])
-                        .unwrap()
-                    {
+                    for id in self.grid_boundary_points.find_on_line(&[x, 0.0, z], &[x, 1.0, z])? {
                         point_ids.insert(id);
                     }
                 }
@@ -352,14 +340,14 @@ impl Mesh {
                 if self.space_ndim == 2 {
                     return Err("At::XYZ works in 3D only");
                 } else {
-                    if let Some(id) = self.grid_boundary_points.find(&[x, y, z]).unwrap() {
+                    if let Some(id) = self.grid_boundary_points.find(&[x, y, z])? {
                         point_ids.insert(id);
                     }
                 }
             }
             At::Circle(x, y, r) => {
                 if self.space_ndim == 2 {
-                    for id in self.grid_boundary_points.find_on_circle(&[x, y], r).unwrap() {
+                    for id in self.grid_boundary_points.find_on_circle(&[x, y], r)? {
                         point_ids.insert(id);
                     }
                 } else {
@@ -372,8 +360,7 @@ impl Mesh {
                 } else {
                     for id in self
                         .grid_boundary_points
-                        .find_on_cylinder(&[ax, ay, az], &[bx, by, bz], r)
-                        .unwrap()
+                        .find_on_cylinder(&[ax, ay, az], &[bx, by, bz], r)?
                     {
                         point_ids.insert(id);
                     }
@@ -800,6 +787,7 @@ impl fmt::Display for Mesh {
 #[cfg(test)]
 mod tests {
     use crate::mesh::{At, Mesh};
+    use crate::util::SQRT_2;
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
@@ -1213,33 +1201,102 @@ mod tests {
                 .err(),
             Some("At::Cylinder works in 3D only")
         );
+        let mut mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        assert_eq!(
+            mesh.find_boundary_points(At::Circle(0.0, 0.0, 0.0)).err(),
+            Some("At::Circle works in 2D only")
+        );
         Ok(())
     }
 
     #[test]
-    fn find_boundary_points_work_2d() -> Result<(), StrError> {
-        //
-        //  3--------2--------5
-        //  |        |        |
-        //  |        |        |
-        //  |        |        |
-        //  0--------1--------4
+    fn find_boundary_works_2d() -> Result<(), StrError> {
+        // `.       `.
+        //   3--------2--------5
+        //   | `.     | `.     |
+        //   |   `~.  |        |
+        //   |      `.|        |
+        //   0--------1--------4
         //
         let mut mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        assert_eq!(mesh.find_boundary_points(At::XY(0.0, 0.0))?, &[0]);
+        assert_eq!(mesh.find_boundary_points(At::XY(2.0, 1.0))?, &[5]);
+        assert_eq!(
+            mesh.find_boundary_points(At::XY(10.0, 0.0)).err(),
+            Some("point is outside the grid")
+        );
+        assert_eq!(mesh.find_boundary_edges(At::Y(0.0))?, &[(0, 1), (1, 4)]);
+        assert_eq!(mesh.find_boundary_edges(At::X(2.0))?, &[(4, 5)]);
+        assert_eq!(mesh.find_boundary_edges(At::Y(1.0))?, &[(2, 3), (2, 5)]);
+        assert_eq!(mesh.find_boundary_edges(At::X(0.0))?, &[(0, 3)]);
+        assert_eq!(mesh.find_boundary_edges(At::X(10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, 1.0))?, &[1, 3]);
+        assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, SQRT_2))?, &[2]);
+        assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, 10.0))?, &[]);
+        Ok(())
+    }
 
-        let origin = mesh.find_boundary_points(At::XY(0.0, 0.0))?;
-        let top_right = mesh.find_boundary_points(At::XY(2.0, 1.0))?;
-        let bottom = mesh.find_boundary_edges(At::Y(0.0))?;
-        let right = mesh.find_boundary_edges(At::X(2.0))?;
-        let top = mesh.find_boundary_edges(At::Y(1.0))?;
-        let left = mesh.find_boundary_edges(At::X(0.0))?;
-
-        assert_eq!(origin, &[0]);
-        assert_eq!(top_right, &[5]);
-        assert_eq!(bottom, &[(0, 1), (1, 4)]);
-        assert_eq!(right, &[(4, 5)]);
-        assert_eq!(top, &[(2, 3), (2, 5)]);
-        assert_eq!(left, &[(0, 3)]);
+    #[test]
+    fn find_boundary_works_3d() -> Result<(), StrError> {
+        //
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        //
+        let mut mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        assert_eq!(mesh.find_boundary_points(At::X(0.0))?, &[0, 3, 4, 7, 8, 11]);
+        assert_eq!(mesh.find_boundary_points(At::X(1.0))?, &[1, 2, 5, 6, 9, 10]);
+        assert_eq!(mesh.find_boundary_points(At::X(10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::Y(0.0))?, &[0, 1, 4, 5, 8, 9]);
+        assert_eq!(mesh.find_boundary_points(At::Y(1.0))?, &[2, 3, 6, 7, 10, 11]);
+        assert_eq!(mesh.find_boundary_points(At::Y(10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::Z(0.0))?, &[0, 1, 2, 3]);
+        assert_eq!(mesh.find_boundary_points(At::Z(1.0))?, &[4, 5, 6, 7]);
+        assert_eq!(mesh.find_boundary_points(At::Z(2.0))?, &[8, 9, 10, 11]);
+        assert_eq!(mesh.find_boundary_points(At::Z(10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::XY(0.0, 0.0))?, &[0, 4, 8]);
+        assert_eq!(mesh.find_boundary_points(At::XY(1.0, 1.0))?, &[2, 6, 10]);
+        assert_eq!(mesh.find_boundary_points(At::XY(10.0, 10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::YZ(0.0, 0.0))?, &[0, 1]);
+        assert_eq!(mesh.find_boundary_points(At::YZ(1.0, 1.0))?, &[6, 7]);
+        assert_eq!(mesh.find_boundary_points(At::XZ(0.0, 0.0))?, &[0, 3]);
+        assert_eq!(mesh.find_boundary_points(At::XZ(1.0, 0.0))?, &[1, 2]);
+        assert_eq!(mesh.find_boundary_points(At::XZ(1.0, 2.0))?, &[9, 10]);
+        assert_eq!(mesh.find_boundary_points(At::XYZ(0.0, 0.0, 0.0))?, &[0]);
+        assert_eq!(mesh.find_boundary_points(At::XYZ(1.0, 1.0, 2.0))?, &[10]);
+        assert_eq!(
+            mesh.find_boundary_points(At::XYZ(10.0, 0.0, 0.0)).err(),
+            Some("point is outside the grid")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
+            &[1, 3, 5, 7, 9, 11]
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?,
+            &[2, 6, 10]
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?,
+            &[]
+        );
         Ok(())
     }
 }
