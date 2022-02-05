@@ -4,14 +4,9 @@ use crate::shapes::Shape;
 use crate::util::GridSearch;
 use crate::StrError;
 use russell_lab::{sort2, sort4};
-// use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fmt::{self, Write};
-// use std::fs;
-// use std::fs::File;
-// use std::io::Read;
-// use std::path::Path;
 
 /// Aliases usize as Point ID
 pub type PointId = usize;
@@ -228,44 +223,6 @@ impl Mesh {
         mesh.compute_derived_props()?;
         Ok(mesh)
     }
-
-    /*
-    /// Reads a binary file containing the mesh and computed properties
-    ///
-    /// # Input
-    ///
-    /// * `full_path` -- may be a String, &str, or Path
-    pub fn read<P>(full_path: &P) -> Result<Self, StrError>
-    where
-        P: AsRef<OsStr> + ?Sized,
-    {
-        let path = Path::new(full_path).to_path_buf();
-        let mut file = File::open(&path).map_err(|_| "no file found")?;
-        let metadata = fs::metadata(&path).map_err(|_| "unable to read metadata")?;
-        let mut serialized = vec![0; metadata.len() as usize];
-        file.read(&mut serialized).expect("buffer overflow");
-        Mesh::decode(&serialized)
-    }
-
-    /// Writes a binary file with the mesh and computed properties
-    ///
-    /// # Input
-    ///
-    /// * `full_path` -- may be a String, &str, or Path
-    pub fn save<P>(&self, full_path: &P) -> Result<(), StrError>
-    where
-        P: AsRef<OsStr> + ?Sized,
-    {
-        let path = Path::new(full_path).to_path_buf();
-        if let Some(p) = path.parent() {
-            fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
-        }
-        let serialized = self.encode()?;
-        let mut file = File::create(&path).map_err(|_| "cannot create file")?;
-        file.write_all(&serialized).map_err(|_| "cannot write file")?;
-        Ok(())
-    }
-    */
 
     /// Computes derived properties such as boundaries and limits
     ///
@@ -722,23 +679,6 @@ impl Mesh {
         }
         Ok(())
     }
-
-    /*
-    /// Encodes this mesh to a binary object
-    fn encode(&self) -> Result<Vec<u8>, StrError> {
-        let mut serialized = Vec::new();
-        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
-        self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
-        Ok(serialized)
-    }
-
-    /// Decodes a binary object to Mesh
-    fn decode(serialized: &Vec<u8>) -> Result<Self, StrError> {
-        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
-        let res = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
-        Ok(res)
-    }
-    */
 
     /// Returns a string with information about all points
     pub(super) fn string_points(&self) -> String {
