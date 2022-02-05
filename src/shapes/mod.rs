@@ -1,3 +1,4 @@
+mod enums;
 mod hex20;
 mod hex8;
 mod lin2;
@@ -19,6 +20,7 @@ mod tri3;
 mod tri6;
 mod z_int_points;
 mod z_integration;
+pub use crate::shapes::enums::*;
 pub use crate::shapes::hex20::*;
 pub use crate::shapes::hex8::*;
 pub use crate::shapes::lin2::*;
