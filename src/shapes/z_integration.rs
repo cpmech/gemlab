@@ -1,5 +1,4 @@
 use super::*;
-use crate::shapes::{GeoClass, Shape};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
@@ -176,7 +175,7 @@ impl Shape {
     /// * `fn_s(index: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function, however written as
     ///                                  a function of the index of the integration point.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_a_ns<F>(&mut self, a: &mut Vector, fn_s: F, th: f64) -> Result<(), StrError>
+    pub fn integ_vec_a_ns<F>(&self, state: &mut ShapeState, a: &mut Vector, fn_s: F, th: f64) -> Result<(), StrError>
     where
         F: Fn(usize) -> f64,
     {
@@ -195,8 +194,8 @@ impl Shape {
             let weight = self.ip_data[index][3];
 
             // calculate interpolation functions and Jacobian
-            self.calc_interp(iota);
-            let det_jac = self.calc_jacobian(iota)?;
+            self.calc_interp(state, iota);
+            let det_jac = self.calc_jacobian(state, iota)?;
 
             // calculate s
             let s = fn_s(index);
@@ -204,7 +203,7 @@ impl Shape {
             // loop over nodes and perform sum
             let coef = th * det_jac * weight;
             for m in 0..self.nnode {
-                a[m] += self.interp[m] * s * coef;
+                a[m] += state.interp[m] * s * coef;
             }
         }
         Ok(())
@@ -257,7 +256,14 @@ impl Shape {
     ///                                           a function of the index of the integration point.
     /// * `v_aux` -- is an auxiliary vector with size equal to `space_ndim`.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_b_nv<F>(&mut self, b: &mut Vector, fn_v: F, v_aux: &mut Vector, th: f64) -> Result<(), StrError>
+    pub fn integ_vec_b_nv<F>(
+        &self,
+        state: &mut ShapeState,
+        b: &mut Vector,
+        fn_v: F,
+        v_aux: &mut Vector,
+        th: f64,
+    ) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
@@ -279,15 +285,15 @@ impl Shape {
             let weight = self.ip_data[index][3];
 
             // calculate interpolation functions and Jacobian
-            self.calc_interp(iota);
-            let det_jac = self.calc_jacobian(iota)?;
+            self.calc_interp(state, iota);
+            let det_jac = self.calc_jacobian(state, iota)?;
 
             // calculate v
             fn_v(v_aux, index);
 
             // add contribution to b vector
             let coef = th * det_jac * weight;
-            self.add_to_vec_b(b, v_aux, coef);
+            self.add_to_vec_b(state, b, v_aux, coef);
         }
         Ok(())
     }
@@ -333,7 +339,14 @@ impl Shape {
     ///                                           a function of the index of the integration point.
     /// * `w_aux` -- is an auxiliary vector with size equal to `space_ndim`.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_c_vg<F>(&mut self, c: &mut Vector, fn_w: F, w_aux: &mut Vector, th: f64) -> Result<(), StrError>
+    pub fn integ_vec_c_vg<F>(
+        &self,
+        state: &mut ShapeState,
+        c: &mut Vector,
+        fn_w: F,
+        w_aux: &mut Vector,
+        th: f64,
+    ) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize),
     {
@@ -355,14 +368,14 @@ impl Shape {
             let weight = self.ip_data[index][3];
 
             // calculate Jacobian and Gradient
-            let det_jac = self.calc_gradient(iota)?;
+            let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate w
             fn_w(w_aux, index);
 
             // add contribution to c vector
             let coef = th * det_jac * weight;
-            self.add_to_vec_c(c, w_aux, coef);
+            self.add_to_vec_c(state, c, w_aux, coef);
         }
         Ok(())
     }
@@ -419,7 +432,8 @@ impl Shape {
     ///
     /// This function is only available for space_ndim = 2D or 3D.
     pub fn integ_vec_d_tg<F>(
-        &mut self,
+        &self,
+        state: &mut ShapeState,
         d: &mut Vector,
         fn_sig: F,
         sig_aux: &mut Tensor2,
@@ -449,60 +463,60 @@ impl Shape {
             let weight = self.ip_data[index][3];
 
             // calculate Jacobian and Gradient
-            let det_jac = self.calc_gradient(iota)?;
+            let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate σ
             fn_sig(sig_aux, index);
 
             // add contribution to d vector
             let coef = th * det_jac * weight;
-            self.add_to_vec_d(d, sig_aux, coef);
+            self.add_to_vec_d(state, d, sig_aux, coef);
         }
         Ok(())
     }
 
     /// Implements the shape(N)-scalar(S)-shape(N) integration case (e.g., diffusion matrix)
-    pub fn integ_mat_1_nsn(&self) -> Result<(), StrError> {
+    pub fn integ_mat_1_nsn(&self, _: &mut ShapeState) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the gradient(G)-vector(V)-shape(N) integration case (e.g., compressibility matrix)
-    pub fn integ_mat_2_gvn(&self) -> Result<(), StrError> {
+    pub fn integ_mat_2_gvn(&self, _: &mut ShapeState) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the gradient(G)-tensor(T)-gradient(G) integration case (e.g., conductivity matrix)
-    pub fn integ_mat_3_gtg(&self) -> Result<(), StrError> {
+    pub fn integ_mat_3_gtg(&self, _: &mut ShapeState) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the shape(N)-scalar(S)-gradient(G) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_4_nsg(&self, _: &mut Shape) -> Result<(), StrError> {
+    pub fn integ_mat_4_nsg(&self, _: &mut ShapeState, _: &mut Shape) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the gradient(G)-tensor(T)-shape(N) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_5_gtn(&self, _: &mut Shape) -> Result<(), StrError> {
+    pub fn integ_mat_5_gtn(&self, _: &mut ShapeState, _: &mut Shape) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the shape(N)-vector(V)-shape(N) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_6_nvn(&self, _: &mut Shape) -> Result<(), StrError> {
+    pub fn integ_mat_6_nvn(&self, _: &mut ShapeState, _: &mut Shape) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the gradient(G)-scalar(S)-shape(N) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_7_gsn(&self, _: &mut Shape) -> Result<(), StrError> {
+    pub fn integ_mat_7_gsn(&self, _: &mut ShapeState, _: &mut Shape) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the shape(N)-tensor(T)-shape(N) integration case (e.g., mass matrix)
-    pub fn integ_mat_8_ntn(&self) -> Result<(), StrError> {
+    pub fn integ_mat_8_ntn(&self, _: &mut ShapeState) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the shape(n)-vector(v)-gradient(g) integration case (e.g., variable density matrix)
-    pub fn integ_mat_9_nvg(&self) -> Result<(), StrError> {
+    pub fn integ_mat_9_nvg(&self, _: &mut ShapeState) -> Result<(), StrError> {
         Ok(())
     }
 
@@ -561,7 +575,8 @@ impl Shape {
     ///
     /// This function is only available for space_ndim = 2D or 3D.
     pub fn integ_mat_10_gdg<F>(
-        &mut self,
+        &self,
+        state: &mut ShapeState,
         kk: &mut Matrix,
         fn_dd: F,
         dd_aux: &mut Tensor4,
@@ -593,43 +608,43 @@ impl Shape {
             let weight = self.ip_data[index][3];
 
             // calculate Jacobian and Gradient
-            let det_jac = self.calc_gradient(iota)?;
+            let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate constitutive modulus
             fn_dd(dd_aux, index);
 
             // add contribution to K matrix
             let coef = det_jac * weight * th;
-            self.add_to_mat_kk(kk, dd_aux, coef);
+            self.add_to_mat_kk(state, kk, dd_aux, coef);
         }
         Ok(())
     }
 
     /// Adds contribution to the b-vector in integ_vec_2_nv
     #[inline]
-    fn add_to_vec_b(&self, b: &mut Vector, v: &Vector, coef: f64) {
+    fn add_to_vec_b(&self, state: &mut ShapeState, b: &mut Vector, v: &Vector, coef: f64) {
         if self.space_ndim == 1 {
             for m in 0..self.nnode {
-                b[m] += coef * self.interp[m] * v[0];
+                b[m] += coef * state.interp[m] * v[0];
             }
         } else if self.space_ndim == 2 {
             for m in 0..self.nnode {
-                b[0 + m * 2] += coef * self.interp[m] * v[0];
-                b[1 + m * 2] += coef * self.interp[m] * v[1];
+                b[0 + m * 2] += coef * state.interp[m] * v[0];
+                b[1 + m * 2] += coef * state.interp[m] * v[1];
             }
         } else {
             for m in 0..self.nnode {
-                b[0 + m * 3] += coef * self.interp[m] * v[0];
-                b[1 + m * 3] += coef * self.interp[m] * v[1];
-                b[2 + m * 3] += coef * self.interp[m] * v[2];
+                b[0 + m * 3] += coef * state.interp[m] * v[0];
+                b[1 + m * 3] += coef * state.interp[m] * v[1];
+                b[2 + m * 3] += coef * state.interp[m] * v[2];
             }
         }
     }
 
     /// Adds contribution to the c-vector in integ_vec_3_vg
     #[inline]
-    fn add_to_vec_c(&self, c: &mut Vector, w: &Vector, coef: f64) {
-        let g = &self.gradient;
+    fn add_to_vec_c(&self, state: &mut ShapeState, c: &mut Vector, w: &Vector, coef: f64) {
+        let g = &state.gradient;
         if self.space_ndim == 1 {
             for m in 0..self.nnode {
                 c[m] += coef * w[0] * g[m][0];
@@ -647,9 +662,9 @@ impl Shape {
 
     /// Adds contribution to the d-vector in integ_vec_4_tg
     #[inline]
-    fn add_to_vec_d(&self, d: &mut Vector, sig: &Tensor2, coef: f64) {
+    fn add_to_vec_d(&self, state: &mut ShapeState, d: &mut Vector, sig: &Tensor2, coef: f64) {
         let s = SQRT_2;
-        let g = &self.gradient;
+        let g = &state.gradient;
         let t = &sig.vec;
         if self.space_ndim == 2 {
             for m in 0..self.nnode {
@@ -668,9 +683,9 @@ impl Shape {
     /// Adds contribution to the K-matrix in integ_mat_10_gdg
     #[inline]
     #[rustfmt::skip]
-    fn add_to_mat_kk(&self, kk: &mut Matrix, dd: &Tensor4, c: f64) {
+    fn add_to_mat_kk(&self, state: &mut ShapeState, kk: &mut Matrix, dd: &Tensor4, c: f64) {
         let s = SQRT_2;
-        let g = &self.gradient;
+        let g = &state.gradient;
         let d = &dd.mat;
         if self.space_ndim == 2 {
             for m in 0..self.nnode {
@@ -752,7 +767,7 @@ mod tests {
     }
 
     impl AnalyticalTri3 {
-        pub fn new(tri3: &mut Shape) -> Self {
+        pub fn new(tri3: &Shape) -> Self {
             // coefficients
             let (x0, y0) = (tri3.coords_transp[0][0], tri3.coords_transp[1][0]);
             let (x1, y1) = (tri3.coords_transp[0][1], tri3.coords_transp[1][1]);
@@ -770,8 +785,9 @@ mod tests {
                 [b1 / (2.0 * area), c1 / (2.0 * area)],
                 [b2 / (2.0 * area), c2 / (2.0 * area)],
             ]);
-            tri3.calc_gradient(&tri3.ip_data[0]).unwrap();
-            assert_eq!(tri3.gradient.as_data(), gg.as_data());
+            let mut state = tri3.alloc_state();
+            tri3.calc_gradient(&mut state, &tri3.ip_data[0]).unwrap();
+            assert_eq!(state.gradient.as_data(), gg.as_data());
 
             // results
             AnalyticalTri3 {
@@ -796,11 +812,12 @@ mod tests {
         // Fₛ = ———— │ 1 │
         //        3  │ 1 │
         //           └   ┘
-        let (mut tri3, area) = gen_tri3();
+        let (tri3, area) = gen_tri3();
+        let mut state = tri3.alloc_state();
         const CS: f64 = 3.0;
         let fn_s = |_| CS;
         let mut a = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_a_ns(&mut a, fn_s, 1.0)?;
+        tri3.integ_vec_a_ns(&mut state, &mut a, fn_s, 1.0)?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
@@ -814,11 +831,12 @@ mod tests {
         // Fₛ = — │           │
         //      6 │ xa + 2 xb │
         //        └           ┘
-        let (mut lin2, xa, xb) = gen_lin2();
-        let all_int_points = lin2.calc_int_points_coords()?;
+        let (lin2, xa, xb) = gen_lin2();
+        let mut state = lin2.alloc_state();
+        let all_int_points = lin2.calc_int_points_coords(&mut state)?;
         let fn_s = |index: usize| all_int_points[index][0];
         let mut a = Vector::new(lin2.nnode);
-        lin2.integ_vec_a_ns(&mut a, fn_s, 1.0)?;
+        lin2.integ_vec_a_ns(&mut state, &mut a, fn_s, 1.0)?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
@@ -829,26 +847,28 @@ mod tests {
     fn integ_vec_b_works() -> Result<(), StrError> {
         // This test is similar to the case_a with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
-        let (mut tri3, area) = gen_tri3();
+        let (tri3, area) = gen_tri3();
+        let mut state = tri3.alloc_state();
         const CS: f64 = 3.0;
         let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut v_aux = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_b_nv(&mut b, fn_v, &mut v_aux, 1.0)?;
+        tri3.integ_vec_b_nv(&mut state, &mut b, fn_v, &mut v_aux, 1.0)?;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
 
         // Likewise, this test is similar to case_a with lin2, however using a vector
         // with a single component. So, each component of `b` equals `Fₛ`
-        let (mut lin2, xa, xb) = gen_lin2();
-        let all_int_points = lin2.calc_int_points_coords()?;
+        let (lin2, xa, xb) = gen_lin2();
+        let mut state = lin2.alloc_state();
+        let all_int_points = lin2.calc_int_points_coords(&mut state)?;
         let fn_v = |v: &mut Vector, index: usize| {
             v.fill(all_int_points[index][0]);
         };
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
         let mut v_aux = Vector::new(lin2.space_ndim);
-        lin2.integ_vec_b_nv(&mut b, fn_v, &mut v_aux, 1.0)?;
+        lin2.integ_vec_b_nv(&mut state, &mut b, fn_v, &mut v_aux, 1.0)?;
         let cf = (xb - xa) / 6.0;
         let b_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
@@ -858,8 +878,9 @@ mod tests {
     #[test]
     fn integ_vec_c_works() -> Result<(), StrError> {
         // shape and analytical gradient
-        let (mut tri3, area) = gen_tri3();
-        let ana = AnalyticalTri3::new(&mut tri3);
+        let (tri3, area) = gen_tri3();
+        let mut state = tri3.alloc_state();
+        let ana = AnalyticalTri3::new(&tri3);
         assert_eq!(area, ana.area);
 
         // constant vector function: w(x) = {w₀, w₁}
@@ -878,13 +899,13 @@ mod tests {
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
         let mut w_aux = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_c_vg(&mut c, fn_w, &mut w_aux, 1.0)?;
+        tri3.integ_vec_c_vg(&mut state, &mut c, fn_w, &mut w_aux, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
 
         // bilinear vector function: w(x) = {x, y}
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
-        let all_int_points = tri3.calc_int_points_coords()?;
+        let all_int_points = tri3.calc_int_points_coords(&mut state)?;
         let fn_w = |w: &mut Vector, index: usize| {
             w[0] = all_int_points[index][0];
             w[1] = all_int_points[index][1];
@@ -896,7 +917,7 @@ mod tests {
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
         let mut w_aux = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_c_vg(&mut c, fn_w, &mut w_aux, 1.0)?;
+        tri3.integ_vec_c_vg(&mut state, &mut c, fn_w, &mut w_aux, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
@@ -904,8 +925,9 @@ mod tests {
     #[test]
     fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
-        let (mut tri3, _) = gen_tri3();
-        let ana = AnalyticalTri3::new(&mut tri3);
+        let (tri3, _) = gen_tri3();
+        let mut state = tri3.alloc_state();
+        let ana = AnalyticalTri3::new(&tri3);
 
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
@@ -931,7 +953,7 @@ mod tests {
         ];
         let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut sig_aux = Tensor2::new(true, true);
-        tri3.integ_vec_d_tg(&mut d, fn_sig, &mut sig_aux, 1.0)?;
+        tri3.integ_vec_d_tg(&mut state, &mut d, fn_sig, &mut sig_aux, 1.0)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
@@ -962,6 +984,7 @@ mod tests {
 
         // shape and analytical gradient
         let mut tri3 = Shape::new(2, 2, 3).unwrap();
+        let mut state = tri3.alloc_state();
         tri3.set_node(0, 0, 0.0).unwrap();
         tri3.set_node(0, 1, 0.0).unwrap();
         tri3.set_node(1, 0, 2.0).unwrap();
@@ -1003,7 +1026,7 @@ mod tests {
         // perform integration
         let mut kk = Matrix::new(dim_kk, dim_kk);
         let mut dd_aux = Tensor4::new(true, true);
-        tri3.integ_mat_10_gdg(&mut kk, fn_dd, &mut dd_aux, th)?;
+        tri3.integ_mat_10_gdg(&mut state, &mut kk, fn_dd, &mut dd_aux, th)?;
 
         // results from Bhatti's book
         #[rustfmt::skip]

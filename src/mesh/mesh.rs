@@ -442,7 +442,8 @@ impl Mesh {
             }
 
             // check if the determinant of Jacobian is positive => counterclockwise nodes
-            let det_jac = cell.shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
+            let mut state = cell.shape.alloc_state();
+            let det_jac = cell.shape.calc_jacobian(&mut state, &[0.0, 0.0, 0.0])?;
             if det_jac < 0.0 {
                 return Err("a cell has incorrect ordering of nodes");
             }
@@ -528,7 +529,8 @@ impl Mesh {
             }
 
             // check if the determinant of Jacobian is positive => counterclockwise nodes
-            let det_jac = cell.shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
+            let mut state = cell.shape.alloc_state();
+            let det_jac = cell.shape.calc_jacobian(&mut state, &[0.0, 0.0, 0.0])?;
             if det_jac < 0.0 {
                 return Err("a cell has incorrect ordering of nodes");
             }
@@ -1132,7 +1134,8 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                edge.shape.calc_boundary_normal(&mut normal, ksi)?;
+                let mut state = edge.shape.alloc_state();
+                edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
             }
         }
