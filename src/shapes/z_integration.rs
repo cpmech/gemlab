@@ -1,131 +1,10 @@
-use super::*;
+use super::{Shape, ShapeState};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::{Tensor2, Tensor4};
 
 impl Shape {
-    /// Selects integrations points and weights
-    ///
-    /// # Options
-    ///
-    /// ## nip for Lin class
-    ///
-    /// * `1` -- Legendre points
-    /// * `2` -- Legendre points
-    /// * `3` -- Legendre points
-    /// * `4` -- Legendre points
-    /// * `5` -- Legendre points
-    ///
-    /// ## nip for Tri class
-    ///
-    /// * `1` -- Internal points
-    /// * `3`:
-    ///     - `edge` -- Points on edge
-    ///     - otherwise, internal points
-    /// * `4` -- Internal points
-    /// * `12` -- Internal points
-    /// * `16` -- Internal points
-    ///
-    /// ## nip for Qua class
-    ///
-    /// * `1` -- Legendre points
-    /// * `4` -- Legendre points
-    /// * `5`:
-    ///     - `ws` -- Wilson's "Stable" version with w0=0.004 and wa=0.999 to mimic 4-point rule
-    ///     - otherwise, standard Wilson's formula
-    /// * `9` -- Legendre points
-    /// * `16` -- Legendre points
-    ///
-    /// ## nip for Tet class
-    ///
-    /// * `1` -- Internal points
-    /// * `4` -- Internal points
-    /// * `5` -- Internal points
-    /// * `6` -- Internal points
-    ///
-    /// ## nip for Hex class
-    ///
-    /// * `6` -- Iron's formula
-    /// * `8` -- Legendre points
-    /// * `9`:
-    ///     - `ws` -- Wilson's "Stable" version
-    ///     - otherwise, Wilson's standard formula
-    /// * `14` -- Iron's formula
-    /// * `27` -- Legendre points
-    pub fn select_int_points(&mut self, nip: usize, edge: bool, ws: bool) -> Result<(), StrError> {
-        match self.class {
-            // Lin
-            GeoClass::Lin => match nip {
-                1 => self.ip_data = &IP_LIN_LEGENDRE_1,
-                2 => self.ip_data = &IP_LIN_LEGENDRE_2,
-                3 => self.ip_data = &IP_LIN_LEGENDRE_3,
-                4 => self.ip_data = &IP_LIN_LEGENDRE_4,
-                5 => self.ip_data = &IP_LIN_LEGENDRE_5,
-                _ => return Err("number of integration points is not available for Lin class"),
-            },
-
-            // Tri
-            GeoClass::Tri => match nip {
-                1 => self.ip_data = &IP_TRI_INTERNAL_1,
-                3 => {
-                    if edge {
-                        self.ip_data = &IP_TRI_EDGE_3
-                    } else {
-                        self.ip_data = &IP_TRI_INTERNAL_3
-                    }
-                }
-                4 => self.ip_data = &IP_TRI_INTERNAL_4,
-                12 => self.ip_data = &IP_TRI_INTERNAL_12,
-                16 => self.ip_data = &IP_TRI_INTERNAL_16,
-                _ => return Err("number of integration points is not available for Tri class"),
-            },
-
-            // Qua
-            GeoClass::Qua => match nip {
-                1 => self.ip_data = &IP_QUA_LEGENDRE_1,
-                4 => self.ip_data = &IP_QUA_LEGENDRE_4,
-                5 => {
-                    if ws {
-                        self.ip_data = &IP_QUA_WILSON_STABLE_5
-                    } else {
-                        self.ip_data = &IP_QUA_WILSON_CORNER_5
-                    }
-                }
-                8 => self.ip_data = &IP_QUA_WILSON_8,
-                9 => self.ip_data = &IP_QUA_LEGENDRE_9,
-                16 => self.ip_data = &IP_QUA_LEGENDRE_16,
-                _ => return Err("number of integration points is not available for Qua class"),
-            },
-
-            // Tet
-            GeoClass::Tet => match nip {
-                1 => self.ip_data = &IP_TET_INTERNAL_1,
-                4 => self.ip_data = &IP_TET_INTERNAL_4,
-                5 => self.ip_data = &IP_TET_INTERNAL_5,
-                6 => self.ip_data = &IP_TET_INTERNAL_6,
-                _ => return Err("number of integration points is not available for Tet class"),
-            },
-
-            // Hex
-            GeoClass::Hex => match nip {
-                6 => self.ip_data = &IP_HEX_IRONS_6,
-                8 => self.ip_data = &IP_HEX_LEGENDRE_8,
-                9 => {
-                    if ws {
-                        self.ip_data = &IP_HEX_WILSON_STABLE_9
-                    } else {
-                        self.ip_data = &IP_HEX_WILSON_CORNER_9
-                    }
-                }
-                14 => self.ip_data = &IP_HEX_IRONS_14,
-                27 => self.ip_data = &IP_HEX_LEGENDRE_27,
-                _ => return Err("number of integration points is not available for Hex class"),
-            },
-        }
-        Ok(())
-    }
-
     /// Implements the shape(N)-scalar(S) integration case
     ///
     /// Interpolation functions times scalar field:
@@ -188,10 +67,10 @@ impl Shape {
         a.fill(0.0);
 
         // loop over integration points
-        for index in 0..self.ip_data.len() {
+        for index in 0..state.ip_data.len() {
             // ksi coordinates and weight
-            let iota = &self.ip_data[index];
-            let weight = self.ip_data[index][3];
+            let iota = &state.ip_data[index];
+            let weight = state.ip_data[index][3];
 
             // calculate interpolation functions and Jacobian
             self.calc_interp(state, iota);
@@ -279,10 +158,10 @@ impl Shape {
         b.fill(0.0);
 
         // loop over integration points
-        for index in 0..self.ip_data.len() {
+        for index in 0..state.ip_data.len() {
             // ksi coordinates and weight
-            let iota = &self.ip_data[index];
-            let weight = self.ip_data[index][3];
+            let iota = &state.ip_data[index];
+            let weight = state.ip_data[index][3];
 
             // calculate interpolation functions and Jacobian
             self.calc_interp(state, iota);
@@ -362,10 +241,10 @@ impl Shape {
         c.fill(0.0);
 
         // loop over integration points
-        for index in 0..self.ip_data.len() {
+        for index in 0..state.ip_data.len() {
             // ksi coordinates and weight
-            let iota = &self.ip_data[index];
-            let weight = self.ip_data[index][3];
+            let iota = &state.ip_data[index];
+            let weight = state.ip_data[index][3];
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(state, iota)?;
@@ -457,10 +336,10 @@ impl Shape {
         d.fill(0.0);
 
         // loop over integration points
-        for index in 0..self.ip_data.len() {
+        for index in 0..state.ip_data.len() {
             // ksi coordinates and weight
-            let iota = &self.ip_data[index];
-            let weight = self.ip_data[index][3];
+            let iota = &state.ip_data[index];
+            let weight = state.ip_data[index][3];
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(state, iota)?;
@@ -602,10 +481,10 @@ impl Shape {
         kk.fill(0.0);
 
         // loop over integration points
-        for index in 0..self.ip_data.len() {
+        for index in 0..state.ip_data.len() {
             // ksi coordinates and weight
-            let iota = &self.ip_data[index];
-            let weight = self.ip_data[index][3];
+            let iota = &state.ip_data[index];
+            let weight = state.ip_data[index][3];
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(state, iota)?;
@@ -785,8 +664,9 @@ mod tests {
                 [b1 / (2.0 * area), c1 / (2.0 * area)],
                 [b2 / (2.0 * area), c2 / (2.0 * area)],
             ]);
-            let mut state = tri3.alloc_state();
-            tri3.calc_gradient(&mut state, &tri3.ip_data[0]).unwrap();
+            let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode).unwrap();
+            let ksi = &state.ip_data[0];
+            tri3.calc_gradient(&mut state, ksi).unwrap();
             assert_eq!(state.gradient.as_data(), gg.as_data());
 
             // results
@@ -813,7 +693,7 @@ mod tests {
         //        3  │ 1 │
         //           └   ┘
         let (tri3, area) = gen_tri3();
-        let mut state = tri3.alloc_state();
+        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
         const CS: f64 = 3.0;
         let fn_s = |_| CS;
         let mut a = Vector::filled(tri3.nnode, NOISE);
@@ -832,7 +712,7 @@ mod tests {
         //      6 │ xa + 2 xb │
         //        └           ┘
         let (lin2, xa, xb) = gen_lin2();
-        let mut state = lin2.alloc_state();
+        let mut state = ShapeState::new(lin2.space_ndim, lin2.geo_ndim, lin2.nnode)?;
         let all_int_points = lin2.calc_int_points_coords(&mut state)?;
         let fn_s = |index: usize| all_int_points[index][0];
         let mut a = Vector::new(lin2.nnode);
@@ -848,7 +728,7 @@ mod tests {
         // This test is similar to the case_a with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let (tri3, area) = gen_tri3();
-        let mut state = tri3.alloc_state();
+        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
         const CS: f64 = 3.0;
         let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
@@ -861,7 +741,7 @@ mod tests {
         // Likewise, this test is similar to case_a with lin2, however using a vector
         // with a single component. So, each component of `b` equals `Fₛ`
         let (lin2, xa, xb) = gen_lin2();
-        let mut state = lin2.alloc_state();
+        let mut state = ShapeState::new(lin2.space_ndim, lin2.geo_ndim, lin2.nnode)?;
         let all_int_points = lin2.calc_int_points_coords(&mut state)?;
         let fn_v = |v: &mut Vector, index: usize| {
             v.fill(all_int_points[index][0]);
@@ -879,7 +759,7 @@ mod tests {
     fn integ_vec_c_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (tri3, area) = gen_tri3();
-        let mut state = tri3.alloc_state();
+        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
         let ana = AnalyticalTri3::new(&tri3);
         assert_eq!(area, ana.area);
 
@@ -926,7 +806,7 @@ mod tests {
     fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (tri3, _) = gen_tri3();
-        let mut state = tri3.alloc_state();
+        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
         let ana = AnalyticalTri3::new(&tri3);
 
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
@@ -984,7 +864,7 @@ mod tests {
 
         // shape and analytical gradient
         let mut tri3 = Shape::new(2, 2, 3).unwrap();
-        let mut state = tri3.alloc_state();
+        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
         tri3.set_node(0, 0, 0.0).unwrap();
         tri3.set_node(0, 1, 0.0).unwrap();
         tri3.set_node(1, 0, 2.0).unwrap();

@@ -104,7 +104,7 @@ impl Block {
         let geo_ndim = space_ndim;
         let nnode = if geo_ndim == 2 { 8 } else { 20 };
         let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-        let state = shape.alloc_state();
+        let state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
 
         // constants
         const NDIV: usize = 2;
@@ -406,6 +406,7 @@ mod tests {
     use super::{Block, StrError};
     use crate::geometry::Circle;
     use crate::mesh::Constraint;
+    use crate::shapes::ShapeState;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
@@ -660,7 +661,7 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = edge.shape.alloc_state();
+                let mut state = ShapeState::new(edge.shape.space_ndim, edge.shape.geo_ndim, edge.shape.nnode)?;
                 assert_eq!(edge.points.len(), 2);
                 edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
@@ -778,7 +779,7 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = edge.shape.alloc_state();
+                let mut state = ShapeState::new(edge.shape.space_ndim, edge.shape.geo_ndim, edge.shape.nnode)?;
                 assert_eq!(edge.points.len(), 3);
                 edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
@@ -840,7 +841,7 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = edge.shape.alloc_state();
+                let mut state = ShapeState::new(edge.shape.space_ndim, edge.shape.geo_ndim, edge.shape.nnode)?;
                 assert_eq!(edge.points.len(), 3);
                 edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
@@ -909,7 +910,7 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = edge.shape.alloc_state();
+                let mut state = ShapeState::new(edge.shape.space_ndim, edge.shape.geo_ndim, edge.shape.nnode)?;
                 assert_eq!(edge.points.len(), 4);
                 edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
@@ -997,7 +998,7 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = edge.shape.alloc_state();
+                let mut state = ShapeState::new(edge.shape.space_ndim, edge.shape.geo_ndim, edge.shape.nnode)?;
                 assert_eq!(edge.points.len(), 4);
                 edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
@@ -1093,7 +1094,7 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = edge.shape.alloc_state();
+                let mut state = ShapeState::new(edge.shape.space_ndim, edge.shape.geo_ndim, edge.shape.nnode)?;
                 assert_eq!(edge.points.len(), 5);
                 edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
