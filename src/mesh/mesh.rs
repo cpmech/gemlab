@@ -1261,7 +1261,7 @@ mod tests {
         assert_eq!(mesh.find_boundary_edges(At::X(10.0))?, &[]);
         assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, 1.0))?, &[1, 3]);
         assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, SQRT_2))?, &[2]);
-        assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, 10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, 10.0))?, &[] as &[usize]);
         Ok(())
     }
 
@@ -1292,17 +1292,17 @@ mod tests {
         let mut mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
         assert_eq!(mesh.find_boundary_points(At::X(0.0))?, &[0, 3, 4, 7, 8, 11]);
         assert_eq!(mesh.find_boundary_points(At::X(1.0))?, &[1, 2, 5, 6, 9, 10]);
-        assert_eq!(mesh.find_boundary_points(At::X(10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::X(10.0))?, &[] as &[usize]);
         assert_eq!(mesh.find_boundary_points(At::Y(0.0))?, &[0, 1, 4, 5, 8, 9]);
         assert_eq!(mesh.find_boundary_points(At::Y(1.0))?, &[2, 3, 6, 7, 10, 11]);
-        assert_eq!(mesh.find_boundary_points(At::Y(10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::Y(10.0))?, &[] as &[usize]);
         assert_eq!(mesh.find_boundary_points(At::Z(0.0))?, &[0, 1, 2, 3]);
         assert_eq!(mesh.find_boundary_points(At::Z(1.0))?, &[4, 5, 6, 7]);
         assert_eq!(mesh.find_boundary_points(At::Z(2.0))?, &[8, 9, 10, 11]);
-        assert_eq!(mesh.find_boundary_points(At::Z(10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::Z(10.0))?, &[] as &[usize]);
         assert_eq!(mesh.find_boundary_points(At::XY(0.0, 0.0))?, &[0, 4, 8]);
         assert_eq!(mesh.find_boundary_points(At::XY(1.0, 1.0))?, &[2, 6, 10]);
-        assert_eq!(mesh.find_boundary_points(At::XY(10.0, 10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::XY(10.0, 10.0))?, &[] as &[usize]);
         assert_eq!(mesh.find_boundary_points(At::YZ(0.0, 0.0))?, &[0, 1]);
         assert_eq!(mesh.find_boundary_points(At::YZ(1.0, 1.0))?, &[6, 7]);
         assert_eq!(mesh.find_boundary_points(At::XZ(0.0, 0.0))?, &[0, 3]);
@@ -1324,7 +1324,7 @@ mod tests {
         );
         assert_eq!(
             mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?,
-            &[]
+            &[] as &[usize]
         );
         Ok(())
     }
