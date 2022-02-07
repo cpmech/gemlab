@@ -1,16 +1,19 @@
 use crate::geometry::{point_circle_distance, point_cylinder_distance, point_line_distance, point_point_distance};
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// Holds the id and coordinates of an item
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Item {
     id: usize,   // identification number
     x: Vec<f64>, // (ndim) coordinates
 }
 
 /// Holds items
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Container {
     items: Vec<Item>,
 }
@@ -22,6 +25,7 @@ struct Container {
 /// * Durand, Farias, and Pedroso (2015) Computing intersections between
 ///   non-compatible curves and finite elements, Computational Mechanics;
 ///   DOI=10.1007/s00466-015-1181-y
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct GridSearch {
     // constants
     ndim: usize,      // space dimension
@@ -1617,6 +1621,48 @@ mod tests {
         let res = grid.plot();
         assert_eq!(res.err(), Some("initialize must be called first"));
 
+        Ok(())
+    }
+
+    #[test]
+    fn clone_and_serialize_work() -> Result<(), StrError> {
+        let mut grid = GridSearch::new(2)?;
+        grid.initialize(&[3, 3], &[0.0, 0.0], &[1.0, 1.0])?;
+        grid.insert(0, &[0.5, 0.5])?;
+        // clone
+        let mut cloned = grid.clone();
+        cloned.insert(1, &[0.8, 0.8])?;
+        assert_eq!(
+            format!("{}", grid),
+            "4: [0]\n\
+             ids = [0]\n\
+             nitem = 1\n\
+             ncontainer = 1\n"
+        );
+        assert_eq!(
+            format!("{}", cloned),
+            "4: [0]\n\
+             8: [1]\n\
+             ids = [0, 1]\n\
+             nitem = 2\n\
+             ncontainer = 2\n"
+        );
+        // serialize
+        let mut serialized = Vec::new();
+        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
+        grid.serialize(&mut serializer).map_err(|_| "grid serialize failed")?;
+        assert!(serialized.len() > 0);
+        // deserialize
+        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
+        let grid_read: GridSearch =
+            Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize grid data")?;
+        assert_eq!(
+            format!("{}", grid_read),
+            "4: [0]\n\
+             ids = [0]\n\
+             nitem = 1\n\
+             ncontainer = 1\n"
+        );
         Ok(())
     }
 }
