@@ -605,6 +605,8 @@ impl Shape {
         }
         if m == self.nnode - 1 && j == self.space_ndim - 1 {
             self.ok_last_coord = true;
+        } else {
+            self.ok_last_coord = false;
         }
         Ok(())
     }
@@ -1388,6 +1390,19 @@ mod tests {
             shape.calc_int_points_coords(&mut state).err(),
             Some("the last node coordinate has not been input yet")
         );
+        Ok(())
+    }
+
+    #[test]
+    fn set_node_resets_ok_last_coord() -> Result<(), StrError> {
+        let mut shape = Shape::new(1, 1, 2)?;
+        assert_eq!(shape.ok_last_coord, false);
+        shape.set_node(0, 0, 0.0)?;
+        assert_eq!(shape.ok_last_coord, false);
+        shape.set_node(1, 0, 0.0)?;
+        assert_eq!(shape.ok_last_coord, true);
+        shape.set_node(0, 0, 0.0)?; // must reset
+        assert_eq!(shape.ok_last_coord, false);
         Ok(())
     }
 
