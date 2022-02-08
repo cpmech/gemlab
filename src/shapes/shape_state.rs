@@ -217,11 +217,71 @@ mod tests {
 
     #[test]
     fn select_int_points_works() -> Result<(), StrError> {
+        // Lin
         let shape = Shape::new(1, 1, 2)?;
         let mut state = ShapeState::new(&shape);
-        assert_eq!(state.ip_data.len(), 2);
-        state.select_int_points(3, false, false)?;
+        for nip in 1..6 {
+            state.select_int_points(nip, false, false)?;
+            assert_eq!(state.ip_data.len(), nip);
+        }
+        assert_eq!(
+            state.select_int_points(100, false, false).err(),
+            Some("number of integration points is not available for Lin class")
+        );
+
+        // Tri
+        let shape = Shape::new(2, 2, 3)?;
+        let mut state = ShapeState::new(&shape);
+        for nip in [1, 3, 4, 12, 16] {
+            state.select_int_points(nip, false, false)?;
+            assert_eq!(state.ip_data.len(), nip);
+        }
+        state.select_int_points(3, true, false)?;
         assert_eq!(state.ip_data.len(), 3);
+        assert_eq!(
+            state.select_int_points(100, false, false).err(),
+            Some("number of integration points is not available for Tri class")
+        );
+
+        // Qua
+        let shape = Shape::new(2, 2, 4)?;
+        let mut state = ShapeState::new(&shape);
+        for nip in [1, 4, 5, 8, 9, 16] {
+            state.select_int_points(nip, false, false)?;
+            assert_eq!(state.ip_data.len(), nip);
+        }
+        state.select_int_points(5, false, true)?;
+        assert_eq!(state.ip_data.len(), 5);
+        assert_eq!(
+            state.select_int_points(100, false, false).err(),
+            Some("number of integration points is not available for Qua class")
+        );
+
+        // Tet
+        let shape = Shape::new(3, 3, 4)?;
+        let mut state = ShapeState::new(&shape);
+        for nip in [1, 4, 5, 6] {
+            state.select_int_points(nip, false, false)?;
+            assert_eq!(state.ip_data.len(), nip);
+        }
+        assert_eq!(
+            state.select_int_points(100, false, false).err(),
+            Some("number of integration points is not available for Tet class")
+        );
+
+        // Hex
+        let shape = Shape::new(3, 3, 8)?;
+        let mut state = ShapeState::new(&shape);
+        for nip in [6, 8, 9, 14, 27] {
+            state.select_int_points(nip, false, false)?;
+            assert_eq!(state.ip_data.len(), nip);
+        }
+        state.select_int_points(9, false, true)?;
+        assert_eq!(state.ip_data.len(), 9);
+        assert_eq!(
+            state.select_int_points(100, false, false).err(),
+            Some("number of integration points is not available for Hex class")
+        );
         Ok(())
     }
 }
