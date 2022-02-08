@@ -81,22 +81,27 @@ pub enum GeoKind {
 impl GeoKind {
     /// Holds all enum values
     pub const VALUES: [Self; 18] = [
+        // Lin
         Self::Lin2,
         Self::Lin3,
         Self::Lin4,
         Self::Lin5,
+        // Tri
         Self::Tri3,
         Self::Tri6,
         Self::Tri10,
         Self::Tri15,
+        // Qua
         Self::Qua4,
         Self::Qua8,
         Self::Qua9,
         Self::Qua12,
         Self::Qua16,
         Self::Qua17,
+        // Tet
         Self::Tet4,
         Self::Tet10,
+        // Hex
         Self::Hex8,
         Self::Hex20,
     ];
