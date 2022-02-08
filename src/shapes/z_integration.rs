@@ -135,16 +135,8 @@ impl Shape {
     /// * `state` -- mutable ShapeState
     /// * `fn_v(v: &mut Vector, index: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
-    /// * `v_aux` -- is an auxiliary vector with size equal to `space_ndim`.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_b_nv<F>(
-        &self,
-        b: &mut Vector,
-        state: &mut ShapeState,
-        fn_v: F,
-        v_aux: &mut Vector,
-        th: f64,
-    ) -> Result<(), StrError>
+    pub fn integ_vec_b_nv<F>(&self, b: &mut Vector, state: &mut ShapeState, fn_v: F, th: f64) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -152,9 +144,9 @@ impl Shape {
         if b.dim() != self.nnode * self.space_ndim {
             return Err("the length of vector 'b' must be equal to nnode * space_ndim");
         }
-        if v_aux.dim() != self.space_ndim {
-            return Err("the length of vector 'aux_v' must be equal to space_ndim");
-        }
+
+        // allocate auxiliary vector
+        let mut v = Vector::new(self.space_ndim);
 
         // clear output vector
         b.fill(0.0);
@@ -170,11 +162,11 @@ impl Shape {
             let det_jac = self.calc_jacobian(state, iota)?;
 
             // calculate v
-            fn_v(v_aux, index)?;
+            fn_v(&mut v, index)?;
 
             // add contribution to b vector
             let coef = th * det_jac * weight;
-            self.add_to_vec_b(state, b, v_aux, coef);
+            self.add_to_vec_b(state, b, &v, coef);
         }
         Ok(())
     }
@@ -219,16 +211,8 @@ impl Shape {
     /// * `state` -- mutable ShapeState
     /// * `fn_w(w: &mut Vector, index: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
-    /// * `w_aux` -- is an auxiliary vector with size equal to `space_ndim`.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_c_vg<F>(
-        &self,
-        c: &mut Vector,
-        state: &mut ShapeState,
-        fn_w: F,
-        w_aux: &mut Vector,
-        th: f64,
-    ) -> Result<(), StrError>
+    pub fn integ_vec_c_vg<F>(&self, c: &mut Vector, state: &mut ShapeState, fn_w: F, th: f64) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -236,9 +220,9 @@ impl Shape {
         if c.dim() != self.nnode {
             return Err("the length of vector 'c' must be equal to nnode");
         }
-        if w_aux.dim() != self.space_ndim {
-            return Err("the length of vector 'aux_w' must be equal to space_ndim");
-        }
+
+        // allocate auxiliary vector
+        let mut w = Vector::new(self.space_ndim);
 
         // clear output vector
         c.fill(0.0);
@@ -253,11 +237,11 @@ impl Shape {
             let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate w
-            fn_w(w_aux, index)?;
+            fn_w(&mut w, index)?;
 
             // add contribution to c vector
             let coef = th * det_jac * weight;
-            self.add_to_vec_c(state, c, w_aux, coef);
+            self.add_to_vec_c(state, c, &w, coef);
         }
         Ok(())
     }
@@ -307,21 +291,14 @@ impl Shape {
     ///
     /// * `state` -- mutable ShapeState
     /// * `fn_sig(sig: &mut Tensor2, index: usize)` -- σ(x(ξ)) tensor function, however written as
-    ///                                                a function of the index of the integration point.
-    /// * `sig_aux` -- is an auxiliary Tensor2 with 4 components in 2D and 6 components in 3D.
+    ///       a function of the index of the integration point.
+    ///       `sig` is symmetric with 4 or 6 components in 2D or 3D, respectively
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_vec_d_tg<F>(
-        &self,
-        d: &mut Vector,
-        state: &mut ShapeState,
-        fn_sig: F,
-        sig_aux: &mut Tensor2,
-        th: f64,
-    ) -> Result<(), StrError>
+    pub fn integ_vec_d_tg<F>(&self, d: &mut Vector, state: &mut ShapeState, fn_sig: F, th: f64) -> Result<(), StrError>
     where
         F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
     {
@@ -332,9 +309,9 @@ impl Shape {
         if d.dim() != self.nnode * self.space_ndim {
             return Err("the length of vector 'd' must be equal to nnode * space_ndim");
         }
-        if sig_aux.vec.dim() != 2 * self.space_ndim {
-            return Err("'aux_sig' must be symmetric with dim equal to 4 in 2D or 6 in 3D");
-        }
+
+        // allocate auxiliary tensor
+        let mut sig = Tensor2::new(true, self.space_ndim == 2);
 
         // clear output vector
         d.fill(0.0);
@@ -349,11 +326,11 @@ impl Shape {
             let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate σ
-            fn_sig(sig_aux, index)?;
+            fn_sig(&mut sig, index)?;
 
             // add contribution to d vector
             let coef = th * det_jac * weight;
-            self.add_to_vec_d(state, d, sig_aux, coef);
+            self.add_to_vec_d(state, d, &sig, coef);
         }
         Ok(())
     }
@@ -451,8 +428,8 @@ impl Shape {
     ///
     /// * `state` -- mutable ShapeState
     /// * `fn_dd(dd: &mut Tensor4, index: usize)` -- D(x(ξ)) constitutive modulus function, given as
-    ///                                              a function of the index of the integration point.
-    /// * `dd_aux` -- is an auxiliary Tensor4 (minor-symmetric in 2D or 3D with 4 or 6 components, respectively).
+    ///       a function of the index of the integration point.
+    ///       `dd` is minor-symmetric with (4x4) or (6x6) components in 2D or 3D, respectively.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     ///
     /// # Note
@@ -463,7 +440,6 @@ impl Shape {
         kk: &mut Matrix,
         state: &mut ShapeState,
         fn_dd: F,
-        dd_aux: &mut Tensor4,
         th: f64,
     ) -> Result<(), StrError>
     where
@@ -471,16 +447,15 @@ impl Shape {
     {
         // check
         let (nrow_kk, ncol_kk) = kk.dims();
-        let (nrow_dd, ncol_dd) = dd_aux.mat.dims();
         if self.space_ndim == 1 {
             return Err("space_ndim must be 2 or 3");
         }
         if nrow_kk != ncol_kk || nrow_kk != self.nnode * self.space_ndim {
             return Err("'K' matrix must be square with dim equal to nnode * space_ndim");
         }
-        if nrow_dd != ncol_dd || nrow_dd != 2 * self.space_ndim {
-            return Err("'D' tensor must be symmetric with dim equal to 4 in 2D or 6 in 3D");
-        }
+
+        // allocate auxiliary tensor
+        let mut dd = Tensor4::new(true, self.space_ndim == 2);
 
         // clear output matrix
         kk.fill(0.0);
@@ -495,11 +470,11 @@ impl Shape {
             let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate constitutive modulus
-            fn_dd(dd_aux, index)?;
+            fn_dd(&mut dd, index)?;
 
             // add contribution to K matrix
             let coef = det_jac * weight * th;
-            self.add_to_mat_kk(state, kk, dd_aux, coef);
+            self.add_to_mat_kk(state, kk, &dd, coef);
         }
         Ok(())
     }
@@ -740,8 +715,7 @@ mod tests {
             Ok(())
         };
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        let mut v_aux = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_b_nv(&mut b, &mut state, fn_v, &mut v_aux, 1.0)?;
+        tri3.integ_vec_b_nv(&mut b, &mut state, fn_v, 1.0)?;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
@@ -756,8 +730,7 @@ mod tests {
             Ok(())
         };
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
-        let mut v_aux = Vector::new(lin2.space_ndim);
-        lin2.integ_vec_b_nv(&mut b, &mut state, fn_v, &mut v_aux, 1.0)?;
+        lin2.integ_vec_b_nv(&mut b, &mut state, fn_v, 1.0)?;
         let cf = (xb - xa) / 6.0;
         let b_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
@@ -788,8 +761,7 @@ mod tests {
             (W0 * ana.b[2] + W1 * ana.c[2]) / 2.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        let mut w_aux = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_c_vg(&mut c, &mut state, fn_w, &mut w_aux, 1.0)?;
+        tri3.integ_vec_c_vg(&mut c, &mut state, fn_w, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
 
         // bilinear vector function: w(x) = {x, y}
@@ -807,8 +779,7 @@ mod tests {
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[2] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[2] / 6.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        let mut w_aux = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_c_vg(&mut c, &mut state, fn_w, &mut w_aux, 1.0)?;
+        tri3.integ_vec_c_vg(&mut c, &mut state, fn_w, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
@@ -848,8 +819,7 @@ mod tests {
 
         // test integration
         let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        let mut sig_aux = Tensor2::new(true, true);
-        tri3.integ_vec_d_tg(&mut d, &mut state, fn_sig, &mut sig_aux, 1.0)?;
+        tri3.integ_vec_d_tg(&mut d, &mut state, fn_sig, 1.0)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
@@ -922,8 +892,7 @@ mod tests {
 
         // perform integration
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        let mut dd_aux = Tensor4::new(true, true);
-        tri3.integ_mat_10_gdg(&mut kk, &mut state, fn_dd, &mut dd_aux, th)?;
+        tri3.integ_mat_10_gdg(&mut kk, &mut state, fn_dd, th)?;
 
         // results from Bhatti's book
         #[rustfmt::skip]
