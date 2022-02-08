@@ -1184,7 +1184,7 @@ mod tests {
 
         // set_node
         let mut shape = Shape::new(1, 1, 2)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
         assert_eq!(shape.set_node(3, 0, 0.0).err(), Some("index of node is invalid"));
         assert_eq!(
             shape.set_node(0, 2, 0.0).err(),
@@ -1228,7 +1228,7 @@ mod tests {
             Some("geo_ndim must be smaller than space_ndim")
         );
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
         assert_eq!(
             shape.calc_boundary_normal(&mut state, &mut normal, &[0.0]).err(),
             Some("normal.dim() must equal space_ndim")
@@ -1245,7 +1245,7 @@ mod tests {
 
         // approximate_ksi
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
         let mut ksi = vec![0.0; 1];
         let x = Vector::new(2);
         assert_eq!(
@@ -1253,7 +1253,7 @@ mod tests {
             Some("geo_ndim must equal space_ndim")
         );
         let shape = Shape::new(1, 1, 2)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
         let x = Vector::new(2);
         assert_eq!(
             shape.approximate_ksi(&mut state, &mut ksi, &x, 2, 1e-5).err(),
@@ -1273,13 +1273,13 @@ mod tests {
 
         // calc_gradient
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
         assert_eq!(
             shape.calc_gradient(&mut state, &[0.0]).err(),
             Some("geo_ndim must equal space_ndim")
         );
         let shape = Shape::new(1, 1, 2)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
         assert_eq!(
             shape.calc_gradient(&mut state, &[]).err(),
             Some("ksi.len() must equal geo_ndim at least")
@@ -1420,7 +1420,7 @@ mod tests {
             // allocate shape
             let space_ndim = geo_ndim;
             let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-            let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let mut state = ShapeState::new(&shape);
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
@@ -1519,7 +1519,7 @@ mod tests {
             // allocate shape
             let space_ndim = geo_ndim;
             let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-            let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let mut state = ShapeState::new(&shape);
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
@@ -1532,7 +1532,7 @@ mod tests {
 
             // set arguments for numerical integration
             let aux_shape = Shape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
-            let aux_state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let aux_state = ShapeState::new(&aux_shape);
             let args = &mut ArgsNumL {
                 shape: aux_shape,
                 state: aux_state,
@@ -1605,7 +1605,7 @@ mod tests {
             // allocate shape
             let space_ndim = geo_ndim;
             let mut shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-            let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let mut state = ShapeState::new(&shape);
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
@@ -1716,7 +1716,7 @@ mod tests {
             // allocate shape
             let space_ndim = geo_ndim;
             let mut shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-            let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let mut state = ShapeState::new(&shape);
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
@@ -1733,7 +1733,7 @@ mod tests {
 
             // set arguments for numerical integration
             let aux_shape = Shape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
-            let aux_state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let aux_state = ShapeState::new(&aux_shape);
             let args = &mut ArgsNumJ {
                 shape: aux_shape,
                 state: aux_state,
@@ -1761,7 +1761,7 @@ mod tests {
     #[test]
     fn calc_jacobian_special_cases_work() -> Result<(), StrError> {
         let mut shape = Shape::new(2, 1, 2)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
         let l = 3.5;
         shape.set_node(0, 0, 0.0)?;
         shape.set_node(0, 1, 0.0)?;
@@ -1771,7 +1771,7 @@ mod tests {
         assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
 
         let mut shape = Shape::new(3, 2, 3)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
         shape.set_node(0, 0, 0.0)?;
         shape.set_node(0, 1, 0.0)?;
         shape.set_node(0, 2, 0.0)?;
@@ -1790,7 +1790,7 @@ mod tests {
     fn calc_boundary_normal_works() -> Result<(), StrError> {
         // allocate surface shape
         let mut shape = Shape::new(3, 2, 17)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
 
         // set coordinates matrix
         set_coords_matrix(&mut shape);
@@ -1834,7 +1834,7 @@ mod tests {
 
         // allocate boundary edge
         let mut shape = Shape::new(2, 1, 5)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
 
         // set coordinates matrix
         set_coords_matrix(&mut shape);
@@ -1913,7 +1913,7 @@ mod tests {
             for e in 0..shape.nedge {
                 let edge_nnode = shape.edge_nnode;
                 let mut edge_shape = Shape::new(space_ndim, 1, shape.edge_nnode)?;
-                let mut edge_state = ShapeState::new(edge_shape.space_ndim, edge_shape.geo_ndim, edge_shape.nnode)?;
+                let mut edge_state = ShapeState::new(&edge_shape);
 
                 // set edge coordinates
                 for i in 0..edge_nnode {
@@ -2001,7 +2001,7 @@ mod tests {
             for f in 0..shape.nface {
                 let face_nnode = shape.face_nnode;
                 let mut face_shape = Shape::new(space_ndim, 2, shape.face_nnode)?;
-                let mut face_state = ShapeState::new(face_shape.space_ndim, face_shape.geo_ndim, face_shape.nnode)?;
+                let mut face_state = ShapeState::new(&face_shape);
 
                 // set face coordinates
                 for i in 0..face_nnode {
@@ -2046,7 +2046,7 @@ mod tests {
             // allocate shape
             let space_ndim = geo_ndim;
             let mut shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-            let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let mut state = ShapeState::new(&shape);
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
@@ -2128,7 +2128,7 @@ mod tests {
             // allocate shape
             let space_ndim = geo_ndim;
             let mut shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-            let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let mut state = ShapeState::new(&shape);
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
@@ -2149,7 +2149,7 @@ mod tests {
 
             // set arguments for numerical integration
             let aux_shape = Shape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
-            let aux_state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let aux_state = ShapeState::new(&shape);
             let args = &mut ArgsNumG {
                 shape: aux_shape,
                 state: aux_state,
@@ -2177,7 +2177,7 @@ mod tests {
     #[test]
     fn calc_int_points_coords() -> Result<(), StrError> {
         let mut shape = Shape::new(1, 1, 2)?;
-        let mut state = ShapeState::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = ShapeState::new(&shape);
         let (xa, xb) = (2.0, 5.0);
         shape.set_node(0, 0, xa)?;
         shape.set_node(1, 0, xb)?;

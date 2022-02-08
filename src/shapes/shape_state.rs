@@ -24,59 +24,56 @@ pub struct ShapeState {
 
     /// Integration points data (coordinates and weights)
     pub ip_data: IpData,
+
+    /// Store a copy of GeoClass to aid in setting integration points
+    class: GeoClass,
 }
 
 impl ShapeState {
     /// Allocates state variables
-    pub fn new(space_ndim: usize, geo_ndim: usize, nnode: usize) -> Result<Self, StrError> {
-        let ip_data: IpData = match (geo_ndim, nnode) {
+    pub fn new(shape: &Shape) -> Self {
+        let ip_data: IpData = match shape.kind {
             // Lin
-            (1, 2) => &IP_LIN_LEGENDRE_2,
-            (1, 3) => &IP_LIN_LEGENDRE_3,
-            (1, 4) => &IP_LIN_LEGENDRE_4,
-            (1, 5) => &IP_LIN_LEGENDRE_5,
-
+            GeoKind::Lin2 => &IP_LIN_LEGENDRE_2,
+            GeoKind::Lin3 => &IP_LIN_LEGENDRE_3,
+            GeoKind::Lin4 => &IP_LIN_LEGENDRE_4,
+            GeoKind::Lin5 => &IP_LIN_LEGENDRE_5,
             // Tri
-            (2, 3) => &IP_TRI_INTERNAL_1,
-            (2, 6) => &IP_TRI_INTERNAL_3,
-            (2, 10) => &IP_TRI_INTERNAL_12,
-            (2, 15) => &IP_TRI_INTERNAL_12,
-
+            GeoKind::Tri3 => &IP_TRI_INTERNAL_1,
+            GeoKind::Tri6 => &IP_TRI_INTERNAL_3,
+            GeoKind::Tri10 => &IP_TRI_INTERNAL_12,
+            GeoKind::Tri15 => &IP_TRI_INTERNAL_12,
             // Qua
-            (2, 4) => &IP_QUA_LEGENDRE_4,
-            (2, 8) => &IP_QUA_LEGENDRE_9,
-            (2, 9) => &IP_QUA_LEGENDRE_9,
-            (2, 12) => &IP_QUA_LEGENDRE_9,
-            (2, 16) => &IP_QUA_LEGENDRE_16,
-            (2, 17) => &IP_QUA_LEGENDRE_16,
-
+            GeoKind::Qua4 => &IP_QUA_LEGENDRE_4,
+            GeoKind::Qua8 => &IP_QUA_LEGENDRE_9,
+            GeoKind::Qua9 => &IP_QUA_LEGENDRE_9,
+            GeoKind::Qua12 => &IP_QUA_LEGENDRE_9,
+            GeoKind::Qua16 => &IP_QUA_LEGENDRE_16,
+            GeoKind::Qua17 => &IP_QUA_LEGENDRE_16,
             // Tet
-            (3, 4) => &IP_TET_INTERNAL_1,
-            (3, 10) => &IP_TET_INTERNAL_4,
-
+            GeoKind::Tet4 => &IP_TET_INTERNAL_1,
+            GeoKind::Tet10 => &IP_TET_INTERNAL_4,
             // Hex
-            (3, 8) => &IP_HEX_LEGENDRE_8,
-            (3, 20) => &IP_HEX_LEGENDRE_27,
-
-            // impossible
-            _ => return Err("(geo_ndim,nnode) combination is invalid"),
+            GeoKind::Hex8 => &IP_HEX_LEGENDRE_8,
+            GeoKind::Hex20 => &IP_HEX_LEGENDRE_27,
         };
-        Ok(ShapeState {
-            interp: Vector::new(nnode),
-            deriv: Matrix::new(nnode, geo_ndim),
-            jacobian: Matrix::new(space_ndim, geo_ndim),
-            inv_jacobian: if geo_ndim == space_ndim {
-                Matrix::new(space_ndim, space_ndim)
+        ShapeState {
+            interp: Vector::new(shape.nnode),
+            deriv: Matrix::new(shape.nnode, shape.geo_ndim),
+            jacobian: Matrix::new(shape.space_ndim, shape.geo_ndim),
+            inv_jacobian: if shape.geo_ndim == shape.space_ndim {
+                Matrix::new(shape.space_ndim, shape.space_ndim)
             } else {
                 Matrix::new(0, 0)
             },
-            gradient: if geo_ndim == space_ndim {
-                Matrix::new(nnode, space_ndim)
+            gradient: if shape.geo_ndim == shape.space_ndim {
+                Matrix::new(shape.nnode, shape.space_ndim)
             } else {
                 Matrix::new(0, 0)
             },
             ip_data,
-        })
+            class: shape.class,
+        }
     }
 
     /// Selects integrations points and weights
@@ -127,8 +124,8 @@ impl ShapeState {
     ///     - otherwise, Wilson's standard formula
     /// * `14` -- Iron's formula
     /// * `27` -- Legendre points
-    pub fn select_int_points(&mut self, class: GeoClass, nip: usize, edge: bool, ws: bool) -> Result<(), StrError> {
-        match class {
+    pub fn select_int_points(&mut self, nip: usize, edge: bool, ws: bool) -> Result<(), StrError> {
+        match self.class {
             // Lin
             GeoClass::Lin => match nip {
                 1 => self.ip_data = &IP_LIN_LEGENDRE_1,
@@ -138,7 +135,6 @@ impl ShapeState {
                 5 => self.ip_data = &IP_LIN_LEGENDRE_5,
                 _ => return Err("number of integration points is not available for Lin class"),
             },
-
             // Tri
             GeoClass::Tri => match nip {
                 1 => self.ip_data = &IP_TRI_INTERNAL_1,
@@ -154,7 +150,6 @@ impl ShapeState {
                 16 => self.ip_data = &IP_TRI_INTERNAL_16,
                 _ => return Err("number of integration points is not available for Tri class"),
             },
-
             // Qua
             GeoClass::Qua => match nip {
                 1 => self.ip_data = &IP_QUA_LEGENDRE_1,
@@ -171,7 +166,6 @@ impl ShapeState {
                 16 => self.ip_data = &IP_QUA_LEGENDRE_16,
                 _ => return Err("number of integration points is not available for Qua class"),
             },
-
             // Tet
             GeoClass::Tet => match nip {
                 1 => self.ip_data = &IP_TET_INTERNAL_1,
@@ -180,7 +174,6 @@ impl ShapeState {
                 6 => self.ip_data = &IP_TET_INTERNAL_6,
                 _ => return Err("number of integration points is not available for Tet class"),
             },
-
             // Hex
             GeoClass::Hex => match nip {
                 6 => self.ip_data = &IP_HEX_IRONS_6,
@@ -197,6 +190,38 @@ impl ShapeState {
                 _ => return Err("number of integration points is not available for Hex class"),
             },
         }
+        Ok(())
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use crate::shapes::{Shape, ShapeState};
+    use crate::StrError;
+
+    #[test]
+    fn new_works() -> Result<(), StrError> {
+        let (space_ndim, geo_ndim, nnode) = (1, 1, 2);
+        let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+        let state = ShapeState::new(&shape);
+        assert_eq!(state.interp.dim(), nnode);
+        assert_eq!(state.deriv.dims(), (nnode, space_ndim));
+        assert_eq!(state.jacobian.dims(), (space_ndim, geo_ndim));
+        assert_eq!(state.inv_jacobian.dims(), (space_ndim, space_ndim));
+        assert_eq!(state.gradient.dims(), (nnode, space_ndim));
+        assert_eq!(state.ip_data.len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn select_int_points_works() -> Result<(), StrError> {
+        let shape = Shape::new(1, 1, 2)?;
+        let mut state = ShapeState::new(&shape);
+        assert_eq!(state.ip_data.len(), 2);
+        state.select_int_points(3, false, false)?;
+        assert_eq!(state.ip_data.len(), 3);
         Ok(())
     }
 }

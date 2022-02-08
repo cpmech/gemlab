@@ -664,7 +664,7 @@ mod tests {
                 [b1 / (2.0 * area), c1 / (2.0 * area)],
                 [b2 / (2.0 * area), c2 / (2.0 * area)],
             ]);
-            let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode).unwrap();
+            let mut state = ShapeState::new(&tri3);
             let ksi = &state.ip_data[0];
             tri3.calc_gradient(&mut state, ksi).unwrap();
             assert_eq!(state.gradient.as_data(), gg.as_data());
@@ -693,7 +693,7 @@ mod tests {
         //        3  │ 1 │
         //           └   ┘
         let (tri3, area) = gen_tri3();
-        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
+        let mut state = ShapeState::new(&tri3);
         const CS: f64 = 3.0;
         let fn_s = |_| CS;
         let mut a = Vector::filled(tri3.nnode, NOISE);
@@ -712,7 +712,7 @@ mod tests {
         //      6 │ xa + 2 xb │
         //        └           ┘
         let (lin2, xa, xb) = gen_lin2();
-        let mut state = ShapeState::new(lin2.space_ndim, lin2.geo_ndim, lin2.nnode)?;
+        let mut state = ShapeState::new(&lin2);
         let all_int_points = lin2.calc_int_points_coords(&mut state)?;
         let fn_s = |index: usize| all_int_points[index][0];
         let mut a = Vector::new(lin2.nnode);
@@ -728,7 +728,7 @@ mod tests {
         // This test is similar to the case_a with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let (tri3, area) = gen_tri3();
-        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
+        let mut state = ShapeState::new(&tri3);
         const CS: f64 = 3.0;
         let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
@@ -741,7 +741,7 @@ mod tests {
         // Likewise, this test is similar to case_a with lin2, however using a vector
         // with a single component. So, each component of `b` equals `Fₛ`
         let (lin2, xa, xb) = gen_lin2();
-        let mut state = ShapeState::new(lin2.space_ndim, lin2.geo_ndim, lin2.nnode)?;
+        let mut state = ShapeState::new(&lin2);
         let all_int_points = lin2.calc_int_points_coords(&mut state)?;
         let fn_v = |v: &mut Vector, index: usize| {
             v.fill(all_int_points[index][0]);
@@ -759,7 +759,7 @@ mod tests {
     fn integ_vec_c_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (tri3, area) = gen_tri3();
-        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
+        let mut state = ShapeState::new(&tri3);
         let ana = AnalyticalTri3::new(&tri3);
         assert_eq!(area, ana.area);
 
@@ -806,7 +806,7 @@ mod tests {
     fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (tri3, _) = gen_tri3();
-        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
+        let mut state = ShapeState::new(&tri3);
         let ana = AnalyticalTri3::new(&tri3);
 
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
@@ -864,7 +864,7 @@ mod tests {
 
         // shape and analytical gradient
         let mut tri3 = Shape::new(2, 2, 3).unwrap();
-        let mut state = ShapeState::new(tri3.space_ndim, tri3.geo_ndim, tri3.nnode)?;
+        let mut state = ShapeState::new(&tri3);
         tri3.set_node(0, 0, 0.0).unwrap();
         tri3.set_node(0, 1, 0.0).unwrap();
         tri3.set_node(1, 0, 2.0).unwrap();
