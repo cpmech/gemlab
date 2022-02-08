@@ -243,7 +243,7 @@ impl Mesh {
         P: AsRef<OsStr> + ?Sized,
     {
         let path = Path::new(full_path).to_path_buf();
-        let mut file = File::open(&path).map_err(|_| "no file found")?;
+        let mut file = File::open(&path).map_err(|_| "file not found")?;
         let metadata = fs::metadata(&path).map_err(|_| "unable to read metadata")?;
         let mut bin = vec![0; metadata.len() as usize];
         file.read(&mut bin).expect("buffer overflow");
@@ -1584,6 +1584,18 @@ mod tests {
         let mesh_bin: Mesh = Deserialize::deserialize(&mut des).map_err(|_| "bin decode failed")?;
         assert_eq!(format!("{}", mesh_bin), before);
         assert_eq!(format!("{}", mesh_bin.grid_boundary_points), grid_before);
+        Ok(())
+    }
+
+    #[test]
+    fn read_write_capture_errors() -> Result<(), StrError> {
+        assert_eq!(Mesh::read("/tmp/not_found").err(), Some("file not found"));
+        assert_eq!(
+            Mesh::read("./data/meshes/ok_mixed_shapes2.msh").err(),
+            Some("deserialize failed")
+        );
+        let mesh = Mesh::new(2)?;
+        assert_eq!(mesh.write("/tmp/").err(), Some("cannot create file"));
         Ok(())
     }
 
