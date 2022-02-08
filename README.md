@@ -27,7 +27,7 @@ gemlab = "0.2"
 
 ## Todo
 
-- [ ] Implement `write_mesh` functions
+- [x] Implement read/write mesh functions
 - [ ] Add tests to the z_integration file
 - [ ] Implement triangle and tetrahedron generators
 
