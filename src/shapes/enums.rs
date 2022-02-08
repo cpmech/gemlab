@@ -78,6 +78,30 @@ pub enum GeoKind {
     Hex20 = 3_020,
 }
 
+impl GeoKind {
+    /// Holds all enum values
+    pub const VALUES: [Self; 18] = [
+        Self::Lin2,
+        Self::Lin3,
+        Self::Lin4,
+        Self::Lin5,
+        Self::Tri3,
+        Self::Tri6,
+        Self::Tri10,
+        Self::Tri15,
+        Self::Qua4,
+        Self::Qua8,
+        Self::Qua9,
+        Self::Qua12,
+        Self::Qua16,
+        Self::Qua17,
+        Self::Tet4,
+        Self::Tet10,
+        Self::Hex8,
+        Self::Hex20,
+    ];
+}
+
 pub(crate) fn i32_to_fn_interp(kind: i32) -> FnInterp {
     match kind {
         // Lin
@@ -140,6 +164,7 @@ pub(crate) fn i32_to_fn_deriv(kind: i32) -> FnDeriv {
 
 #[cfg(test)]
 mod tests {
+    use super::{i32_to_fn_deriv, i32_to_fn_interp};
     use crate::shapes::{GeoClass, GeoKind};
     use std::collections::HashSet;
 
@@ -158,7 +183,145 @@ mod tests {
     }
 
     #[test]
-    fn i32_to_fn_interp_works() {
-        // todo
+    fn data_is_consistent() {
+        for kind in GeoKind::VALUES {
+            match kind {
+                // Lin
+                GeoKind::Lin2 => {
+                    let k = kind as i32;
+                    let nnode = k - 1000;
+                    assert_eq!(nnode, 2);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Lin2);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Lin2);
+                }
+                GeoKind::Lin3 => {
+                    let k = kind as i32;
+                    let nnode = k - 1000;
+                    assert_eq!(nnode, 3);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Lin3);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Lin3);
+                }
+                GeoKind::Lin4 => {
+                    let k = kind as i32;
+                    let nnode = k - 1000;
+                    assert_eq!(nnode, 4);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Lin4);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Lin4);
+                }
+                GeoKind::Lin5 => {
+                    let k = kind as i32;
+                    let nnode = k - 1000;
+                    assert_eq!(nnode, 5);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Lin5);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Lin5);
+                }
+
+                // Tri
+                GeoKind::Tri3 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 3);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tri3);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tri3);
+                }
+                GeoKind::Tri6 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 6);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tri6);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tri6);
+                }
+                GeoKind::Tri10 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 10);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tri10);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tri10);
+                }
+                GeoKind::Tri15 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 15);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tri15);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tri15);
+                }
+
+                // Qua
+                GeoKind::Qua4 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 4);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua4);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua4);
+                }
+                GeoKind::Qua8 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 8);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua8);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua8);
+                }
+                GeoKind::Qua9 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 9);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua9);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua9);
+                }
+                GeoKind::Qua12 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 12);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua12);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua12);
+                }
+                GeoKind::Qua16 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 16);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua16);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua16);
+                }
+                GeoKind::Qua17 => {
+                    let k = kind as i32;
+                    let nnode = k - 2000;
+                    assert_eq!(nnode, 17);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua17);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua17);
+                }
+
+                // Tet
+                GeoKind::Tet4 => {
+                    let k = kind as i32;
+                    let nnode = k - 3000;
+                    assert_eq!(nnode, 4);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tet4);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tet4);
+                }
+                GeoKind::Tet10 => {
+                    let k = kind as i32;
+                    let nnode = k - 3000;
+                    assert_eq!(nnode, 10);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tet10);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tet10);
+                }
+
+                // Hex
+                GeoKind::Hex8 => {
+                    let k = kind as i32;
+                    let nnode = k - 3000;
+                    assert_eq!(nnode, 8);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Hex8);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Hex8);
+                }
+                GeoKind::Hex20 => {
+                    let k = kind as i32;
+                    let nnode = k - 3000;
+                    assert_eq!(nnode, 20);
+                    assert_eq!(i32_to_fn_interp(k).0, GeoKind::Hex20);
+                    assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Hex20);
+                }
+            }
+        }
     }
 }
