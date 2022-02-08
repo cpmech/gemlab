@@ -57,7 +57,7 @@ impl Shape {
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     pub fn integ_vec_a_ns<F>(&self, a: &mut Vector, state: &mut ShapeState, fn_s: F, th: f64) -> Result<(), StrError>
     where
-        F: Fn(usize) -> f64,
+        F: Fn(usize) -> Result<f64, StrError>,
     {
         // check
         if a.dim() != self.nnode {
@@ -78,7 +78,7 @@ impl Shape {
             let det_jac = self.calc_jacobian(state, iota)?;
 
             // calculate s
-            let s = fn_s(index);
+            let s = fn_s(index)?;
 
             // loop over nodes and perform sum
             let coef = th * det_jac * weight;
@@ -146,7 +146,7 @@ impl Shape {
         th: f64,
     ) -> Result<(), StrError>
     where
-        F: Fn(&mut Vector, usize),
+        F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
         // check
         if b.dim() != self.nnode * self.space_ndim {
@@ -170,7 +170,7 @@ impl Shape {
             let det_jac = self.calc_jacobian(state, iota)?;
 
             // calculate v
-            fn_v(v_aux, index);
+            fn_v(v_aux, index)?;
 
             // add contribution to b vector
             let coef = th * det_jac * weight;
@@ -230,7 +230,7 @@ impl Shape {
         th: f64,
     ) -> Result<(), StrError>
     where
-        F: Fn(&mut Vector, usize),
+        F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
         // check
         if c.dim() != self.nnode {
@@ -253,7 +253,7 @@ impl Shape {
             let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate w
-            fn_w(w_aux, index);
+            fn_w(w_aux, index)?;
 
             // add contribution to c vector
             let coef = th * det_jac * weight;
@@ -323,7 +323,7 @@ impl Shape {
         th: f64,
     ) -> Result<(), StrError>
     where
-        F: Fn(&mut Tensor2, usize),
+        F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
     {
         // check
         if self.space_ndim == 1 {
@@ -349,7 +349,7 @@ impl Shape {
             let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate σ
-            fn_sig(sig_aux, index);
+            fn_sig(sig_aux, index)?;
 
             // add contribution to d vector
             let coef = th * det_jac * weight;
@@ -467,7 +467,7 @@ impl Shape {
         th: f64,
     ) -> Result<(), StrError>
     where
-        F: Fn(&mut Tensor4, usize),
+        F: Fn(&mut Tensor4, usize) -> Result<(), StrError>,
     {
         // check
         let (nrow_kk, ncol_kk) = kk.dims();
@@ -495,7 +495,7 @@ impl Shape {
             let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate constitutive modulus
-            fn_dd(dd_aux, index);
+            fn_dd(dd_aux, index)?;
 
             // add contribution to K matrix
             let coef = det_jac * weight * th;
@@ -700,7 +700,7 @@ mod tests {
         let (tri3, area) = gen_tri3();
         let mut state = ShapeState::new(&tri3);
         const CS: f64 = 3.0;
-        let fn_s = |_| CS;
+        let fn_s = |_| Ok(CS);
         let mut a = Vector::filled(tri3.nnode, NOISE);
         tri3.integ_vec_a_ns(&mut a, &mut state, fn_s, 1.0)?;
         let cf = CS * area / 3.0;
@@ -719,7 +719,7 @@ mod tests {
         let (lin2, xa, xb) = gen_lin2();
         let mut state = ShapeState::new(&lin2);
         let all_int_points = lin2.calc_int_points_coords(&mut state)?;
-        let fn_s = |index: usize| all_int_points[index][0];
+        let fn_s = |index: usize| Ok(all_int_points[index][0]);
         let mut a = Vector::new(lin2.nnode);
         lin2.integ_vec_a_ns(&mut a, &mut state, fn_s, 1.0)?;
         let cf = (xb - xa) / 6.0;
@@ -735,7 +735,10 @@ mod tests {
         let (tri3, area) = gen_tri3();
         let mut state = ShapeState::new(&tri3);
         const CS: f64 = 3.0;
-        let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
+        let fn_v = |v: &mut Vector, _: usize| {
+            v.fill(CS);
+            Ok(())
+        };
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut v_aux = Vector::new(tri3.space_ndim);
         tri3.integ_vec_b_nv(&mut b, &mut state, fn_v, &mut v_aux, 1.0)?;
@@ -750,6 +753,7 @@ mod tests {
         let all_int_points = lin2.calc_int_points_coords(&mut state)?;
         let fn_v = |v: &mut Vector, index: usize| {
             v.fill(all_int_points[index][0]);
+            Ok(())
         };
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
         let mut v_aux = Vector::new(lin2.space_ndim);
@@ -776,6 +780,7 @@ mod tests {
         let fn_w = |w: &mut Vector, _: usize| {
             w[0] = W0;
             w[1] = W1;
+            Ok(())
         };
         let c_correct = &[
             (W0 * ana.b[0] + W1 * ana.c[0]) / 2.0,
@@ -794,6 +799,7 @@ mod tests {
         let fn_w = |w: &mut Vector, index: usize| {
             w[0] = all_int_points[index][0];
             w[1] = all_int_points[index][1];
+            Ok(())
         };
         let c_correct = &[
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[0] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[0] / 6.0,
@@ -827,6 +833,7 @@ mod tests {
             sig.sym_set(1, 1, S11);
             sig.sym_set(2, 2, S22);
             sig.sym_set(0, 1, S01);
+            Ok(())
         };
         let d_correct = &[
             (S00 * ana.b[0] + S01 * ana.c[0]) / 2.0,
@@ -883,6 +890,7 @@ mod tests {
         let dd_ela = ela.get_modulus();
         let fn_dd = |dd: &mut Tensor4, _: usize| {
             copy_matrix(&mut dd.mat, &dd_ela.mat).unwrap();
+            Ok(())
         };
 
         // constants
