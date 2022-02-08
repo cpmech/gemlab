@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-struct DataForReadMesh {
+struct DataForReadTextMesh {
     space_ndim: usize,
     npoint: usize,
     ncell: usize,
@@ -15,9 +15,9 @@ struct DataForReadMesh {
     current_ncell: usize,
 }
 
-impl DataForReadMesh {
+impl DataForReadTextMesh {
     fn new() -> Self {
-        DataForReadMesh {
+        DataForReadTextMesh {
             space_ndim: 0,
             npoint: 0,
             ncell: 0,
@@ -170,7 +170,7 @@ impl DataForReadMesh {
 }
 
 /// Reads raw mesh data from text file
-pub(super) fn read_mesh<P>(full_path: &P) -> Result<Mesh, StrError>
+pub(super) fn read_text_mesh<P>(full_path: &P) -> Result<Mesh, StrError>
 where
     P: AsRef<OsStr> + ?Sized,
 {
@@ -180,7 +180,7 @@ where
     let mut lines_iter = buffered.lines();
 
     // auxiliary data structure
-    let mut data = DataForReadMesh::new();
+    let mut data = DataForReadTextMesh::new();
 
     // read and parse sizes
     loop {
@@ -243,9 +243,9 @@ where
 }
 
 /// Parses raw mesh data from text string
-pub(super) fn parse_mesh(text: &str) -> Result<Mesh, StrError> {
+pub(super) fn parse_text_mesh(text: &str) -> Result<Mesh, StrError> {
     // auxiliary data structure
-    let mut data = DataForReadMesh::new();
+    let mut data = DataForReadTextMesh::new();
 
     // read and parse sizes
     let mut lines_iter = text.lines();
@@ -309,11 +309,11 @@ pub(super) fn parse_mesh(text: &str) -> Result<Mesh, StrError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_mesh, read_mesh, DataForReadMesh, Mesh, StrError};
+    use super::{parse_text_mesh, read_text_mesh, DataForReadTextMesh, Mesh, StrError};
 
     #[test]
     fn parse_sizes_captures_errors() -> Result<(), StrError> {
-        let mut data = DataForReadMesh::new();
+        let mut data = DataForReadTextMesh::new();
 
         assert_eq!(
             data.parse_sizes(&String::from(" wrong \n")).err(),
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn parse_point_captures_errors() -> Result<(), StrError> {
-        let mut data = DataForReadMesh::new();
+        let mut data = DataForReadTextMesh::new();
         data.space_ndim = 3;
         data.npoint = 2;
         data.ncell = 1;
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn parse_cell_captures_errors() -> Result<(), StrError> {
-        let mut data = DataForReadMesh::new();
+        let mut data = DataForReadTextMesh::new();
         data.space_ndim = 3;
         data.npoint = 2;
         data.ncell = 1;
@@ -449,38 +449,41 @@ mod tests {
     }
 
     #[test]
-    fn read_mesh_handle_wrong_files() -> Result<(), StrError> {
-        assert_eq!(read_mesh(&String::from("__wrong__")).err(), Some("cannot open file"));
+    fn read_text_mesh_handle_wrong_files() -> Result<(), StrError> {
         assert_eq!(
-            read_mesh(&String::from("./data/meshes/bad_empty.msh")).err(),
+            read_text_mesh(&String::from("__wrong__")).err(),
+            Some("cannot open file")
+        );
+        assert_eq!(
+            read_text_mesh(&String::from("./data/meshes/bad_empty.msh")).err(),
             Some("file is empty or header is missing")
         );
         assert_eq!(
-            read_mesh(&String::from("./data/meshes/bad_extra_cell_data.msh")).err(),
+            read_text_mesh(&String::from("./data/meshes/bad_extra_cell_data.msh")).err(),
             Some("cell data contains extra values")
         );
         assert_eq!(
-            read_mesh(&String::from("./data/meshes/bad_extra_point_data.msh")).err(),
+            read_text_mesh(&String::from("./data/meshes/bad_extra_point_data.msh")).err(),
             Some("point data contains extra values")
         );
         assert_eq!(
-            read_mesh(&String::from("./data/meshes/bad_missing_header.msh")).err(),
+            read_text_mesh(&String::from("./data/meshes/bad_missing_header.msh")).err(),
             Some("file is empty or header is missing")
         );
         assert_eq!(
-            read_mesh(&String::from("./data/meshes/bad_missing_points.msh")).err(),
+            read_text_mesh(&String::from("./data/meshes/bad_missing_points.msh")).err(),
             Some("not all points have been found")
         );
         assert_eq!(
-            read_mesh(&String::from("./data/meshes/bad_missing_cells.msh")).err(),
+            read_text_mesh(&String::from("./data/meshes/bad_missing_cells.msh")).err(),
             Some("not all cells have been found")
         );
         Ok(())
     }
 
     #[test]
-    fn read_mesh_2d_works() -> Result<(), StrError> {
-        let mesh = read_mesh("./data/meshes/ok1.msh")?;
+    fn read_text_mesh_2d_works() -> Result<(), StrError> {
+        let mesh = read_text_mesh("./data/meshes/ok1.msh")?;
         assert_eq!(
             format!("{}", mesh),
             "SUMMARY\n\
@@ -520,8 +523,8 @@ mod tests {
     }
 
     #[test]
-    fn read_mesh_3d_works() -> Result<(), StrError> {
-        let mesh = read_mesh("./data/meshes/ok2.msh")?;
+    fn read_text_mesh_3d_works() -> Result<(), StrError> {
+        let mesh = read_text_mesh("./data/meshes/ok2.msh")?;
         assert_eq!(
             format!("{}", mesh),
             "SUMMARY\n\
@@ -567,9 +570,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_mesh_handle_wrong_data() -> Result<(), StrError> {
+    fn parse_text_mesh_handle_wrong_data() -> Result<(), StrError> {
         assert_eq!(
-            parse_mesh(
+            parse_text_mesh(
                 "# header\n\
                  # space_ndim npoint ncell\n"
             )
@@ -578,7 +581,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse_mesh(
+            parse_text_mesh(
                 "# header\n\
                  # space_ndim npoint ncell\n\
                             2      4     1\n\
@@ -592,7 +595,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse_mesh(
+            parse_text_mesh(
                 "# header\n\
                  # space_ndim npoint ncell\n\
                             2      6     2\n\
@@ -615,7 +618,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse_mesh(
+            parse_text_mesh(
                 "# header\n\
                  # space_ndim npoint ncell\n\
                             2      4     1\n\
@@ -634,7 +637,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse_mesh(
+            parse_text_mesh(
                 "# header\n\
                  # space_ndim npoint ncell\n\
                             2      4     1\n\
@@ -656,7 +659,7 @@ mod tests {
 
     #[test]
     fn parse_mesh_2d_works() -> Result<(), StrError> {
-        let mesh = parse_mesh(
+        let mesh = parse_text_mesh(
             r"# header
             # space_ndim npoint ncell
                        2      6     2
@@ -714,8 +717,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_mesh_3d_works() -> Result<(), StrError> {
-        let mesh = parse_mesh(
+    fn parse_text_mesh_3d_works() -> Result<(), StrError> {
+        let mesh = parse_text_mesh(
             r"# header
             # space_ndim npoint ncell
                        3     12     2

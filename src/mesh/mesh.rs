@@ -1,4 +1,4 @@
-use super::read_mesh::{parse_mesh, read_mesh};
+use super::read_text_mesh::{parse_text_mesh, read_text_mesh};
 use super::At;
 use crate::shapes::{Shape, ShapeState};
 use crate::util::GridSearch;
@@ -214,7 +214,7 @@ impl Mesh {
     ///
     /// This function calls `compute_derived_props` already.
     pub fn from_text(raw_mesh_data: &str) -> Result<Self, StrError> {
-        let mut mesh = parse_mesh(raw_mesh_data)?;
+        let mut mesh = parse_text_mesh(raw_mesh_data)?;
         mesh.compute_derived_props()?;
         Ok(mesh)
     }
@@ -228,7 +228,7 @@ impl Mesh {
     where
         P: AsRef<OsStr> + ?Sized,
     {
-        let mut mesh = read_mesh(full_path)?;
+        let mut mesh = read_text_mesh(full_path)?;
         mesh.compute_derived_props()?;
         Ok(mesh)
     }
