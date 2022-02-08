@@ -7,7 +7,10 @@ use russell_lab::{sort2, sort4};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fmt::{self, Write};
+use std::fmt::{self, Write as FmtWrite};
+use std::fs::{self, File};
+use std::io::{Read, Write};
+use std::path::Path;
 
 /// Aliases usize as Point ID
 pub type PointId = usize;
@@ -228,6 +231,46 @@ impl Mesh {
         let mut mesh = read_mesh(full_path)?;
         mesh.compute_derived_props()?;
         Ok(mesh)
+    }
+
+    /// Reads a binary file containing the mesh data and computed properties
+    ///
+    /// # Input
+    ///
+    /// * `full_path` -- may be a String, &str, or Path
+    pub fn read<P>(full_path: &P) -> Result<Self, StrError>
+    where
+        P: AsRef<OsStr> + ?Sized,
+    {
+        let path = Path::new(full_path).to_path_buf();
+        let mut file = File::open(&path).map_err(|_| "no file found")?;
+        let metadata = fs::metadata(&path).map_err(|_| "unable to read metadata")?;
+        let mut bin = vec![0; metadata.len() as usize];
+        file.read(&mut bin).expect("buffer overflow");
+        let mut des = rmp_serde::Deserializer::new(&bin[..]);
+        let mesh: Mesh = Deserialize::deserialize(&mut des).map_err(|_| "deserialize failed")?;
+        Ok(mesh)
+    }
+
+    /// Writes a binary file with the mesh data and computed properties
+    ///
+    /// # Input
+    ///
+    /// * `full_path` -- may be a String, &str, or Path
+    pub fn write<P>(&self, full_path: &P) -> Result<(), StrError>
+    where
+        P: AsRef<OsStr> + ?Sized,
+    {
+        let path = Path::new(full_path).to_path_buf();
+        if let Some(p) = path.parent() {
+            fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
+        }
+        let mut bin = Vec::new();
+        let mut ser = rmp_serde::Serializer::new(&mut bin);
+        self.serialize(&mut ser).map_err(|_| "serialize failed")?;
+        let mut file = File::create(&path).map_err(|_| "cannot create file")?;
+        file.write_all(&bin).map_err(|_| "cannot write file")?;
+        Ok(())
     }
 
     /// Computes derived properties such as boundaries and limits
@@ -1541,6 +1584,40 @@ mod tests {
         let mesh_bin: Mesh = Deserialize::deserialize(&mut des).map_err(|_| "bin decode failed")?;
         assert_eq!(format!("{}", mesh_bin), before);
         assert_eq!(format!("{}", mesh_bin.grid_boundary_points), grid_before);
+        Ok(())
+    }
+
+    #[test]
+    fn read_write_work() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mesh = Mesh::from_text(
+            r"# header
+            # space_ndim npoint ncell
+                       2      6     2
+            
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+            
+            # cells
+            # id att geo_ndim nnode  point_ids...
+               0   1        2     4  0 1 2 3
+               1   0        2     4  1 4 5 2",
+        )?;
+        mesh.write("/tmp/gemlab/test.msh")?;
+        let mesh_read = Mesh::read("/tmp/gemlab/test.msh")?;
+        assert_eq!(format!("{}", mesh), format!("{}", mesh_read));
         Ok(())
     }
 }
