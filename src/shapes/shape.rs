@@ -2196,10 +2196,30 @@ mod tests {
 
     #[test]
     fn clone_and_serialize_work() -> Result<(), StrError> {
+        // original
         let mut shape = Shape::new(1, 1, 2)?;
         shape.set_node(0, 0, 1.0)?;
         shape.set_node(1, 0, 2.0)?;
         let before = format!("{:?}", shape);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌     ┐\n\
+             │ 1 2 │\n\
+             └     ┘"
+        );
+
+        // cloned
+        let mut cloned = shape.clone();
+        assert_eq!(format!("{:?}", cloned), before);
+        cloned.set_node(0, 0, 3.0)?;
+        cloned.set_node(1, 0, 4.0)?;
+        assert_eq!(
+            format!("{}", cloned.coords_transp),
+            "┌     ┐\n\
+             │ 3 4 │\n\
+             └     ┘"
+        );
+        assert_eq!(format!("{:?}", shape), before);
 
         // serialize to JSON
         let json = serde_json::to_string_pretty(&shape).map_err(|_| "json encode failed")?;
