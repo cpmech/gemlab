@@ -4,12 +4,6 @@ use crate::StrError;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::{Tensor2, Tensor4};
 
-/// Defines a trait to be used in the tensor(T)-gradient(G) integration case
-pub trait IntegTG {
-    /// Implements σ(x(ξ)) where x(ξ) can be found using the index of the integration point
-    fn calc_sig(&mut self, index_ip: usize) -> Result<&Tensor2, StrError>;
-}
-
 impl Shape {
     /// Implements the shape(N)-scalar(S) integration case
     ///
@@ -302,30 +296,30 @@ impl Shape {
     /// i = ii % space_ndim
     /// ```
     ///
-    /// # Output
-    ///
     /// * `d` -- A vector containing all `dᵐᵢ` values, one after another, and sequentially placed
     ///          as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
     ///          The length of `d` must be equal to `nnode * space_ndim`.
     ///
     /// # Input
     ///
-    /// * `state` -- the mutable ShapeState
-    /// * `element` -- an instance to run `calc_sig` σ(x(ξ))
-    /// * `thickness` -- `tₕ` the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    /// * `fn_sig(sig: &mut Tensor2, index: usize)` -- σ(x(ξ)) tensor function, however written as
+    ///                                                a function of the index of the integration point.
+    /// * `sig_aux` -- is an auxiliary Tensor2 with 4 components in 2D and 6 components in 3D.
+    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_vec_d_tg<T>(
+    pub fn integ_vec_d_tg<F>(
         &self,
-        d: &mut Vector,
         state: &mut ShapeState,
-        element: &mut T,
-        thickness: f64,
+        d: &mut Vector,
+        fn_sig: F,
+        sig_aux: &mut Tensor2,
+        th: f64,
     ) -> Result<(), StrError>
     where
-        T: IntegTG,
+        F: Fn(&mut Tensor2, usize),
     {
         // check
         if self.space_ndim == 1 {
@@ -333,6 +327,9 @@ impl Shape {
         }
         if d.dim() != self.nnode * self.space_ndim {
             return Err("the length of vector 'd' must be equal to nnode * space_ndim");
+        }
+        if sig_aux.vec.dim() != 2 * self.space_ndim {
+            return Err("'aux_sig' must be symmetric with dim equal to 4 in 2D or 6 in 3D");
         }
 
         // clear output vector
@@ -348,11 +345,11 @@ impl Shape {
             let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate σ
-            let sig = element.calc_sig(index)?;
+            fn_sig(sig_aux, index);
 
             // add contribution to d vector
-            let coef = thickness * det_jac * weight;
-            self.add_to_vec_d(state, d, sig, coef);
+            let coef = th * det_jac * weight;
+            self.add_to_vec_d(state, d, sig_aux, coef);
         }
         Ok(())
     }
@@ -820,6 +817,12 @@ mod tests {
         const S11: f64 = 3.0;
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
+        let fn_sig = |sig: &mut Tensor2, _: usize| {
+            sig.sym_set(0, 0, S00);
+            sig.sym_set(1, 1, S11);
+            sig.sym_set(2, 2, S22);
+            sig.sym_set(0, 1, S01);
+        };
         let d_correct = &[
             (S00 * ana.b[0] + S01 * ana.c[0]) / 2.0,
             (S01 * ana.b[0] + S11 * ana.c[0]) / 2.0,
@@ -828,28 +831,9 @@ mod tests {
             (S00 * ana.b[2] + S01 * ana.c[2]) / 2.0,
             (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
         ];
-
-        // fake element
-        struct Element {
-            sig: Tensor2,
-        }
-        impl IntegTG for Element {
-            fn calc_sig(&mut self, _: usize) -> Result<&Tensor2, StrError> {
-                self.sig.sym_set(0, 0, S00);
-                self.sig.sym_set(1, 1, S11);
-                self.sig.sym_set(2, 2, S22);
-                self.sig.sym_set(0, 1, S01);
-                Ok(&self.sig)
-            }
-        }
-        let mut element = Element {
-            sig: Tensor2::new(true, true),
-        };
-
-        // test integration
-        let neq = tri3.nnode * tri3.space_ndim;
-        let mut d = Vector::filled(neq, NOISE);
-        tri3.integ_vec_d_tg(&mut d, &mut state, &mut element, 1.0)?;
+        let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
+        let mut sig_aux = Tensor2::new(true, true);
+        tri3.integ_vec_d_tg(&mut state, &mut d, fn_sig, &mut sig_aux, 1.0)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
