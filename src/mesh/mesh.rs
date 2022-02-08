@@ -4,6 +4,7 @@ use crate::shapes::{Shape, ShapeState};
 use crate::util::GridSearch;
 use crate::StrError;
 use russell_lab::{sort2, sort4};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fmt::{self, Write};
@@ -35,6 +36,7 @@ pub type EdgeKey = (usize, usize);
 pub type FaceKey = (usize, usize, usize, usize);
 
 /// Holds point data
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Point {
     /// Identification number which equals the index of the point in the mesh
     ///
@@ -58,6 +60,7 @@ pub struct Point {
 }
 
 /// Holds cell (aka geometric shape, polygon, polyhedra) data
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Cell {
     /// Identification number which equals the index of the cell in the mesh
     ///
@@ -91,6 +94,7 @@ pub struct Cell {
 }
 
 /// Holds edge data (derived data structure)
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
     /// List of points defining this edge; in the right order (unsorted)
     pub points: Vec<PointId>,
@@ -108,6 +112,7 @@ pub struct Edge {
 }
 
 /// Holds face data (derived data structure)
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Face {
     /// List of points defining this face; in the right order (unsorted)
     pub points: Vec<PointId>,
@@ -120,6 +125,7 @@ pub struct Face {
 }
 
 /// Holds mesh data
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Mesh {
     /// Space dimension of the mesh
     ///
@@ -795,12 +801,13 @@ impl fmt::Display for Mesh {
 #[cfg(test)]
 mod tests {
     use super::Point;
-    use crate::mesh::{At, Mesh};
+    use crate::mesh::{At, Edge, Face, Mesh};
     use crate::shapes::ShapeState;
     use crate::util::SQRT_2;
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
+    use serde::{Deserialize, Serialize};
     use std::collections::HashSet;
 
     #[test]
@@ -1465,6 +1472,75 @@ mod tests {
              k:(3,6,8,13) p:[8, 3, 6] c:[1]\n\
              k:(4,5,6,7) p:[4, 5, 6, 7] c:[0]\n"
          );
+        Ok(())
+    }
+
+    #[test]
+    fn clone_and_serialize_work_2d() -> Result<(), StrError> {
+        // original
+        let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes2.msh")?;
+        assert!(format!("{:?}", mesh).len() > 0);
+        let before = format!("{}", mesh);
+        let grid_before = format!("{}", mesh.grid_boundary_points);
+
+        // ser/des point and edge
+        let point = &mesh.points[0];
+        let edge = mesh.boundary_edges.get(&(1, 2)).unwrap();
+        let point_json = serde_json::to_string(&point).map_err(|_| "json encode failed")?;
+        let edge_json = serde_json::to_string(&edge).map_err(|_| "json encode failed")?;
+        let point_after: Point = serde_json::from_str(&point_json).map_err(|_| "json decode failed")?;
+        let edge_after: Edge = serde_json::from_str(&edge_json).map_err(|_| "json decode failed")?;
+        assert_eq!(format!("{:?}", point_after), format!("{:?}", point));
+        assert_eq!(format!("{:?}", edge_after), format!("{:?}", edge));
+
+        // cloned
+        let cloned = mesh.clone();
+        assert_eq!(format!("{}", cloned), before);
+
+        // serialize to BIN
+        let mut bin = Vec::new();
+        let mut ser = rmp_serde::Serializer::new(&mut bin);
+        mesh.serialize(&mut ser).map_err(|_| "bin encode failed")?;
+        assert!(bin.len() > 0);
+
+        // deserialize from BIN
+        let mut des = rmp_serde::Deserializer::new(&bin[..]);
+        let mesh_bin: Mesh = Deserialize::deserialize(&mut des).map_err(|_| "bin decode failed")?;
+        assert_eq!(format!("{}", mesh_bin), before);
+        assert_eq!(format!("{}", mesh_bin.grid_boundary_points), grid_before);
+
+        Ok(())
+    }
+
+    #[test]
+    fn clone_and_serialize_work_3d() -> Result<(), StrError> {
+        // original
+        let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes.msh")?;
+        assert!(format!("{:?}", mesh).len() > 0);
+        let before = format!("{}", mesh);
+        let grid_before = format!("{}", mesh.grid_boundary_points);
+
+        // ser/des face
+        let face = mesh.boundary_faces.get(&(4, 5, 6, 7)).unwrap();
+        let face_json = serde_json::to_string(&face).map_err(|_| "json encode failed")?;
+        let face_after: Face = serde_json::from_str(&face_json).map_err(|_| "json decode failed")?;
+        assert_eq!(format!("{:?}", face_after), format!("{:?}", face));
+
+        // cloned
+        let cloned = mesh.clone();
+        assert_eq!(format!("{}", cloned), before);
+
+        // serialize to BIN
+        let mut bin = Vec::new();
+        let mut ser = rmp_serde::Serializer::new(&mut bin);
+        mesh.serialize(&mut ser).map_err(|_| "bin encode failed")?;
+        assert!(bin.len() > 0);
+
+        // deserialize from BIN
+        let mut des = rmp_serde::Deserializer::new(&bin[..]);
+        let mesh_bin: Mesh = Deserialize::deserialize(&mut des).map_err(|_| "bin decode failed")?;
+        assert_eq!(format!("{}", mesh_bin), before);
+        assert_eq!(format!("{}", mesh_bin.grid_boundary_points), grid_before);
         Ok(())
     }
 }
