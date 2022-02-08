@@ -828,13 +828,6 @@ mod tests {
         const S11: f64 = 3.0;
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
-        let fn_sig = |sig: &mut Tensor2, _: usize| {
-            sig.sym_set(0, 0, S00);
-            sig.sym_set(1, 1, S11);
-            sig.sym_set(2, 2, S22);
-            sig.sym_set(0, 1, S01);
-            Ok(())
-        };
         let d_correct = &[
             (S00 * ana.b[0] + S01 * ana.c[0]) / 2.0,
             (S01 * ana.b[0] + S11 * ana.c[0]) / 2.0,
@@ -843,6 +836,17 @@ mod tests {
             (S00 * ana.b[2] + S01 * ana.c[2]) / 2.0,
             (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
         ];
+
+        // fn_sig
+        let fn_sig = |sig: &mut Tensor2, _: usize| {
+            sig.sym_set(0, 0, S00);
+            sig.sym_set(1, 1, S11);
+            sig.sym_set(2, 2, S22);
+            sig.sym_set(0, 1, S01);
+            Ok(())
+        };
+
+        // test integration
         let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut sig_aux = Tensor2::new(true, true);
         tri3.integ_vec_d_tg(&mut d, &mut state, fn_sig, &mut sig_aux, 1.0)?;
