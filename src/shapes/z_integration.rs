@@ -51,10 +51,11 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `state` -- mutable ShapeState
     /// * `fn_s(index: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function, however written as
     ///                                  a function of the index of the integration point.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_a_ns<F>(&self, state: &mut ShapeState, a: &mut Vector, fn_s: F, th: f64) -> Result<(), StrError>
+    pub fn integ_vec_a_ns<F>(&self, a: &mut Vector, state: &mut ShapeState, fn_s: F, th: f64) -> Result<(), StrError>
     where
         F: Fn(usize) -> f64,
     {
@@ -131,14 +132,15 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `state` -- mutable ShapeState
     /// * `fn_v(v: &mut Vector, index: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
     /// * `v_aux` -- is an auxiliary vector with size equal to `space_ndim`.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     pub fn integ_vec_b_nv<F>(
         &self,
-        state: &mut ShapeState,
         b: &mut Vector,
+        state: &mut ShapeState,
         fn_v: F,
         v_aux: &mut Vector,
         th: f64,
@@ -214,14 +216,15 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `state` -- mutable ShapeState
     /// * `fn_w(w: &mut Vector, index: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`, however written as
     ///                                           a function of the index of the integration point.
     /// * `w_aux` -- is an auxiliary vector with size equal to `space_ndim`.
     /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     pub fn integ_vec_c_vg<F>(
         &self,
-        state: &mut ShapeState,
         c: &mut Vector,
+        state: &mut ShapeState,
         fn_w: F,
         w_aux: &mut Vector,
         th: f64,
@@ -302,6 +305,7 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `state` -- mutable ShapeState
     /// * `fn_sig(sig: &mut Tensor2, index: usize)` -- σ(x(ξ)) tensor function, however written as
     ///                                                a function of the index of the integration point.
     /// * `sig_aux` -- is an auxiliary Tensor2 with 4 components in 2D and 6 components in 3D.
@@ -312,8 +316,8 @@ impl Shape {
     /// This function is only available for space_ndim = 2D or 3D.
     pub fn integ_vec_d_tg<F>(
         &self,
-        state: &mut ShapeState,
         d: &mut Vector,
+        state: &mut ShapeState,
         fn_sig: F,
         sig_aux: &mut Tensor2,
         th: f64,
@@ -445,6 +449,7 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `state` -- mutable ShapeState
     /// * `fn_dd(dd: &mut Tensor4, index: usize)` -- D(x(ξ)) constitutive modulus function, given as
     ///                                              a function of the index of the integration point.
     /// * `dd_aux` -- is an auxiliary Tensor4 (minor-symmetric in 2D or 3D with 4 or 6 components, respectively).
@@ -455,8 +460,8 @@ impl Shape {
     /// This function is only available for space_ndim = 2D or 3D.
     pub fn integ_mat_10_gdg<F>(
         &self,
-        state: &mut ShapeState,
         kk: &mut Matrix,
+        state: &mut ShapeState,
         fn_dd: F,
         dd_aux: &mut Tensor4,
         th: f64,
@@ -697,7 +702,7 @@ mod tests {
         const CS: f64 = 3.0;
         let fn_s = |_| CS;
         let mut a = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_a_ns(&mut state, &mut a, fn_s, 1.0)?;
+        tri3.integ_vec_a_ns(&mut a, &mut state, fn_s, 1.0)?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
@@ -716,7 +721,7 @@ mod tests {
         let all_int_points = lin2.calc_int_points_coords(&mut state)?;
         let fn_s = |index: usize| all_int_points[index][0];
         let mut a = Vector::new(lin2.nnode);
-        lin2.integ_vec_a_ns(&mut state, &mut a, fn_s, 1.0)?;
+        lin2.integ_vec_a_ns(&mut a, &mut state, fn_s, 1.0)?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
@@ -733,7 +738,7 @@ mod tests {
         let fn_v = |v: &mut Vector, _: usize| v.fill(CS);
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut v_aux = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_b_nv(&mut state, &mut b, fn_v, &mut v_aux, 1.0)?;
+        tri3.integ_vec_b_nv(&mut b, &mut state, fn_v, &mut v_aux, 1.0)?;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
@@ -748,7 +753,7 @@ mod tests {
         };
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
         let mut v_aux = Vector::new(lin2.space_ndim);
-        lin2.integ_vec_b_nv(&mut state, &mut b, fn_v, &mut v_aux, 1.0)?;
+        lin2.integ_vec_b_nv(&mut b, &mut state, fn_v, &mut v_aux, 1.0)?;
         let cf = (xb - xa) / 6.0;
         let b_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
@@ -779,7 +784,7 @@ mod tests {
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
         let mut w_aux = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_c_vg(&mut state, &mut c, fn_w, &mut w_aux, 1.0)?;
+        tri3.integ_vec_c_vg(&mut c, &mut state, fn_w, &mut w_aux, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
 
         // bilinear vector function: w(x) = {x, y}
@@ -797,7 +802,7 @@ mod tests {
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
         let mut w_aux = Vector::new(tri3.space_ndim);
-        tri3.integ_vec_c_vg(&mut state, &mut c, fn_w, &mut w_aux, 1.0)?;
+        tri3.integ_vec_c_vg(&mut c, &mut state, fn_w, &mut w_aux, 1.0)?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
@@ -833,7 +838,7 @@ mod tests {
         ];
         let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
         let mut sig_aux = Tensor2::new(true, true);
-        tri3.integ_vec_d_tg(&mut state, &mut d, fn_sig, &mut sig_aux, 1.0)?;
+        tri3.integ_vec_d_tg(&mut d, &mut state, fn_sig, &mut sig_aux, 1.0)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
@@ -906,7 +911,7 @@ mod tests {
         // perform integration
         let mut kk = Matrix::new(dim_kk, dim_kk);
         let mut dd_aux = Tensor4::new(true, true);
-        tri3.integ_mat_10_gdg(&mut state, &mut kk, fn_dd, &mut dd_aux, th)?;
+        tri3.integ_mat_10_gdg(&mut kk, &mut state, fn_dd, &mut dd_aux, th)?;
 
         // results from Bhatti's book
         #[rustfmt::skip]
