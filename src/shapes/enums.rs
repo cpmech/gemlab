@@ -1,5 +1,8 @@
+use super::*;
+use serde::{Deserialize, Serialize};
+
 /// Defines the class of geometric shape
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub enum GeoClass {
     /// Lines (segments) class
     Lin,
@@ -18,61 +21,119 @@ pub enum GeoClass {
 }
 
 /// Defines the kind of geometric shape
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub enum GeoKind {
     /// Line (segment) with 2 nodes (linear functions)
-    Lin2,
+    Lin2 = 1_002,
 
     /// Line (segment) with 3 nodes (quadratic functions)
-    Lin3,
+    Lin3 = 1_003,
 
     /// Line (segment) with 4 nodes (cubic functions)
-    Lin4,
+    Lin4 = 1_004,
 
     /// Line (segment) with 5 nodes (quartic functions)
-    Lin5,
+    Lin5 = 1_005,
 
     /// Triangle with 3 nodes (linear edges)
-    Tri3,
+    Tri3 = 2_003,
 
     /// Triangle with 6 nodes (quadratic edges)
-    Tri6,
+    Tri6 = 2_006,
 
     /// Triangle with 10 nodes (cubic edges; interior node)
-    Tri10,
+    Tri10 = 2_010,
 
     /// Triangle with 15 nodes (quartic edges; interior nodes)
-    Tri15,
+    Tri15 = 2_015,
 
     /// Quadrilateral with 4 nodes (linear edges)
-    Qua4,
+    Qua4 = 2_004,
 
     /// Quadrilateral with 8 nodes (quadratic edges)
-    Qua8,
+    Qua8 = 2_008,
 
     /// Quadrilateral with 9 nodes (quadratic edges; interior node)
-    Qua9,
+    Qua9 = 2_009,
 
     /// Quadrilateral with 12 nodes (cubic edges)
-    Qua12,
+    Qua12 = 2_012,
 
     /// Quadrilateral with 16 nodes (cubic edges; interior nodes)
-    Qua16,
+    Qua16 = 2_016,
 
     /// Quadrilateral with 17 nodes (quartic edges; interior node)
-    Qua17,
+    Qua17 = 2_017,
 
     /// Tetrahedron with 4 nodes (linear faces)
-    Tet4,
+    Tet4 = 3_004,
 
     /// Tetrahedron with 10 nodes (quadratic faces)
-    Tet10,
+    Tet10 = 3_010,
 
     /// Hexahedron with 8 nodes (bilinear faces)
-    Hex8,
+    Hex8 = 3_008,
 
     /// Hexahedron with 20 nodes (quadratic faces)
-    Hex20,
+    Hex20 = 3_020,
+}
+
+pub(crate) fn i32_to_fn_interp(kind: i32) -> FnInterp {
+    match kind {
+        // Lin
+        1_002 => FnInterp(GeoKind::Lin2, Lin2::calc_interp),
+        1_003 => FnInterp(GeoKind::Lin3, Lin3::calc_interp),
+        1_004 => FnInterp(GeoKind::Lin4, Lin4::calc_interp),
+        1_005 => FnInterp(GeoKind::Lin5, Lin5::calc_interp),
+        // Tri
+        2_003 => FnInterp(GeoKind::Tri3, Tri3::calc_interp),
+        2_006 => FnInterp(GeoKind::Tri6, Tri6::calc_interp),
+        2_010 => FnInterp(GeoKind::Tri10, Tri10::calc_interp),
+        2_015 => FnInterp(GeoKind::Tri15, Tri15::calc_interp),
+        // Qua
+        2_004 => FnInterp(GeoKind::Qua4, Qua4::calc_interp),
+        2_008 => FnInterp(GeoKind::Qua8, Qua8::calc_interp),
+        2_009 => FnInterp(GeoKind::Qua9, Qua9::calc_interp),
+        2_012 => FnInterp(GeoKind::Qua12, Qua12::calc_interp),
+        2_016 => FnInterp(GeoKind::Qua16, Qua16::calc_interp),
+        2_017 => FnInterp(GeoKind::Qua17, Qua17::calc_interp),
+        // Tet
+        3_004 => FnInterp(GeoKind::Tet4, Tet4::calc_interp),
+        3_010 => FnInterp(GeoKind::Tet10, Tet10::calc_interp),
+        // Hex
+        3_008 => FnInterp(GeoKind::Hex8, Hex8::calc_interp),
+        3_020 => FnInterp(GeoKind::Hex20, Hex20::calc_interp),
+        _ => panic!("INTERNAL ERROR: cannot convert i32 to FnInterp"),
+    }
+}
+
+pub(crate) fn i32_to_fn_deriv(kind: i32) -> FnDeriv {
+    match kind {
+        // Lin
+        1_002 => FnDeriv(GeoKind::Lin2, Lin2::calc_deriv),
+        1_003 => FnDeriv(GeoKind::Lin3, Lin3::calc_deriv),
+        1_004 => FnDeriv(GeoKind::Lin4, Lin4::calc_deriv),
+        1_005 => FnDeriv(GeoKind::Lin5, Lin5::calc_deriv),
+        // Tri
+        2_003 => FnDeriv(GeoKind::Tri3, Tri3::calc_deriv),
+        2_006 => FnDeriv(GeoKind::Tri6, Tri6::calc_deriv),
+        2_010 => FnDeriv(GeoKind::Tri10, Tri10::calc_deriv),
+        2_015 => FnDeriv(GeoKind::Tri15, Tri15::calc_deriv),
+        // Qua
+        2_004 => FnDeriv(GeoKind::Qua4, Qua4::calc_deriv),
+        2_008 => FnDeriv(GeoKind::Qua8, Qua8::calc_deriv),
+        2_009 => FnDeriv(GeoKind::Qua9, Qua9::calc_deriv),
+        2_012 => FnDeriv(GeoKind::Qua12, Qua12::calc_deriv),
+        2_016 => FnDeriv(GeoKind::Qua16, Qua16::calc_deriv),
+        2_017 => FnDeriv(GeoKind::Qua17, Qua17::calc_deriv),
+        // Tet
+        3_004 => FnDeriv(GeoKind::Tet4, Tet4::calc_deriv),
+        3_010 => FnDeriv(GeoKind::Tet10, Tet10::calc_deriv),
+        // Hex
+        3_008 => FnDeriv(GeoKind::Hex8, Hex8::calc_deriv),
+        3_020 => FnDeriv(GeoKind::Hex20, Hex20::calc_deriv),
+        _ => panic!("INTERNAL ERROR: cannot convert i32 to FnDeriv"),
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,5 +155,10 @@ mod tests {
         assert_eq!(format!("{:?}", kind), "Tri6");
         assert_eq!(classes.contains(&GeoClass::Tri), true);
         assert_eq!(kinds.contains(&GeoKind::Tri3), true);
+    }
+
+    #[test]
+    fn i32_to_fn_interp_works() {
+        // todo
     }
 }

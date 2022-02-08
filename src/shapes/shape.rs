@@ -1,12 +1,7 @@
 use super::*;
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, vector_norm, Matrix, NormVec, Vector};
-
-/// Defines an alias for interpolation functions
-type FnInterp = fn(&mut Vector, &[f64]);
-
-/// Defines an alias for derivative of interpolation functions
-type FnDeriv = fn(&mut Matrix, &[f64]);
+use serde::{Deserialize, Serialize};
 
 /// Implements an isoparametric geometric shape for numerical integration and more
 ///
@@ -154,6 +149,7 @@ type FnDeriv = fn(&mut Matrix, &[f64]);
 /// # Note
 ///
 /// All public members are **readonly** and should not be modified externally.
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Shape {
     /// Geometry class
     pub class: GeoClass,
@@ -186,9 +182,17 @@ pub struct Shape {
     pub face_nedge: usize,
 
     /// Function to calculate interpolation functions
+    #[serde(
+        serialize_with = "shape_serialize_fn_interp",
+        deserialize_with = "shape_deserialize_fn_interp"
+    )]
     fn_interp: FnInterp,
 
     /// Function to calculate local derivatives (w.r.t. ksi) of interpolation functions
+    #[serde(
+        serialize_with = "shape_serialize_fn_deriv",
+        deserialize_with = "shape_deserialize_fn_deriv"
+    )]
     fn_deriv: FnDeriv,
 
     /// Matrix Xᵀ: (space_ndim,nnode) transposed coordinates matrix (real space)
@@ -219,7 +223,7 @@ impl Shape {
     /// This can be accomplished by calling the `set_node` method.
     pub fn new(space_ndim: usize, geo_ndim: usize, nnode: usize) -> Result<Self, StrError> {
         // collect geometry data
-        let (class, kind, nedge, nface, edge_nnode, face_nnode, face_nedge, fn_interp, fn_deriv): (
+        let (class, kind, nedge, nface, edge_nnode, face_nnode, face_nedge): (
             GeoClass,
             GeoKind,
             usize,
@@ -227,8 +231,6 @@ impl Shape {
             usize,
             usize,
             usize,
-            FnInterp,
-            FnDeriv,
         ) = match (geo_ndim, nnode) {
             // Lin
             (1, 2) => (
@@ -239,8 +241,6 @@ impl Shape {
                 Lin2::EDGE_NNODE,
                 Lin2::FACE_NNODE,
                 Lin2::FACE_NEDGE,
-                Lin2::calc_interp,
-                Lin2::calc_deriv,
             ),
             (1, 3) => (
                 GeoClass::Lin,
@@ -250,8 +250,6 @@ impl Shape {
                 Lin3::EDGE_NNODE,
                 Lin3::FACE_NNODE,
                 Lin3::FACE_NEDGE,
-                Lin3::calc_interp,
-                Lin3::calc_deriv,
             ),
             (1, 4) => (
                 GeoClass::Lin,
@@ -261,8 +259,6 @@ impl Shape {
                 Lin4::EDGE_NNODE,
                 Lin4::FACE_NNODE,
                 Lin4::FACE_NEDGE,
-                Lin4::calc_interp,
-                Lin4::calc_deriv,
             ),
             (1, 5) => (
                 GeoClass::Lin,
@@ -272,8 +268,6 @@ impl Shape {
                 Lin5::EDGE_NNODE,
                 Lin5::FACE_NNODE,
                 Lin5::FACE_NEDGE,
-                Lin5::calc_interp,
-                Lin5::calc_deriv,
             ),
 
             // Tri
@@ -285,8 +279,6 @@ impl Shape {
                 Tri3::EDGE_NNODE,
                 Tri3::FACE_NNODE,
                 Tri3::FACE_NEDGE,
-                Tri3::calc_interp,
-                Tri3::calc_deriv,
             ),
             (2, 6) => (
                 GeoClass::Tri,
@@ -296,8 +288,6 @@ impl Shape {
                 Tri6::EDGE_NNODE,
                 Tri6::FACE_NNODE,
                 Tri6::FACE_NEDGE,
-                Tri6::calc_interp,
-                Tri6::calc_deriv,
             ),
             (2, 10) => (
                 GeoClass::Tri,
@@ -307,8 +297,6 @@ impl Shape {
                 Tri10::EDGE_NNODE,
                 Tri10::FACE_NNODE,
                 Tri10::FACE_NEDGE,
-                Tri10::calc_interp,
-                Tri10::calc_deriv,
             ),
             (2, 15) => (
                 GeoClass::Tri,
@@ -318,8 +306,6 @@ impl Shape {
                 Tri15::EDGE_NNODE,
                 Tri15::FACE_NNODE,
                 Tri15::FACE_NEDGE,
-                Tri15::calc_interp,
-                Tri15::calc_deriv,
             ),
 
             // Qua
@@ -331,8 +317,6 @@ impl Shape {
                 Qua4::EDGE_NNODE,
                 Qua4::FACE_NNODE,
                 Qua4::FACE_NEDGE,
-                Qua4::calc_interp,
-                Qua4::calc_deriv,
             ),
             (2, 8) => (
                 GeoClass::Qua,
@@ -342,8 +326,6 @@ impl Shape {
                 Qua8::EDGE_NNODE,
                 Qua8::FACE_NNODE,
                 Qua8::FACE_NEDGE,
-                Qua8::calc_interp,
-                Qua8::calc_deriv,
             ),
             (2, 9) => (
                 GeoClass::Qua,
@@ -353,8 +335,6 @@ impl Shape {
                 Qua9::EDGE_NNODE,
                 Qua9::FACE_NNODE,
                 Qua9::FACE_NEDGE,
-                Qua9::calc_interp,
-                Qua9::calc_deriv,
             ),
             (2, 12) => (
                 GeoClass::Qua,
@@ -364,8 +344,6 @@ impl Shape {
                 Qua12::EDGE_NNODE,
                 Qua12::FACE_NNODE,
                 Qua12::FACE_NEDGE,
-                Qua12::calc_interp,
-                Qua12::calc_deriv,
             ),
             (2, 16) => (
                 GeoClass::Qua,
@@ -375,8 +353,6 @@ impl Shape {
                 Qua16::EDGE_NNODE,
                 Qua16::FACE_NNODE,
                 Qua16::FACE_NEDGE,
-                Qua16::calc_interp,
-                Qua16::calc_deriv,
             ),
             (2, 17) => (
                 GeoClass::Qua,
@@ -386,8 +362,6 @@ impl Shape {
                 Qua17::EDGE_NNODE,
                 Qua17::FACE_NNODE,
                 Qua17::FACE_NEDGE,
-                Qua17::calc_interp,
-                Qua17::calc_deriv,
             ),
 
             // Tet
@@ -399,8 +373,6 @@ impl Shape {
                 Tet4::EDGE_NNODE,
                 Tet4::FACE_NNODE,
                 Tet4::FACE_NEDGE,
-                Tet4::calc_interp,
-                Tet4::calc_deriv,
             ),
             (3, 10) => (
                 GeoClass::Tet,
@@ -410,8 +382,6 @@ impl Shape {
                 Tet10::EDGE_NNODE,
                 Tet10::FACE_NNODE,
                 Tet10::FACE_NEDGE,
-                Tet10::calc_interp,
-                Tet10::calc_deriv,
             ),
 
             // Hex
@@ -423,8 +393,6 @@ impl Shape {
                 Hex8::EDGE_NNODE,
                 Hex8::FACE_NNODE,
                 Hex8::FACE_NEDGE,
-                Hex8::calc_interp,
-                Hex8::calc_deriv,
             ),
             (3, 20) => (
                 GeoClass::Hex,
@@ -434,8 +402,6 @@ impl Shape {
                 Hex20::EDGE_NNODE,
                 Hex20::FACE_NNODE,
                 Hex20::FACE_NEDGE,
-                Hex20::calc_interp,
-                Hex20::calc_deriv,
             ),
             _ => return Err("(geo_ndim,nnode) combination is invalid"),
         };
@@ -452,8 +418,8 @@ impl Shape {
             edge_nnode,
             face_nnode,
             face_nedge,
-            fn_interp,
-            fn_deriv,
+            fn_interp: i32_to_fn_interp(kind as i32),
+            fn_deriv: i32_to_fn_deriv(kind as i32),
             coords_transp: Matrix::new(space_ndim, nnode),
             ok_last_coord: false,
             min_coords: vec![f64::MAX; space_ndim],
@@ -480,7 +446,7 @@ impl Shape {
     /// * `interp` -- interpolation functions (nnode)
     #[inline]
     pub fn calc_interp(&self, state: &mut ShapeState, ksi: &[f64]) {
-        (self.fn_interp)(&mut state.interp, ksi);
+        (self.fn_interp.1)(&mut state.interp, ksi);
     }
 
     /// Calculates the derivatives of interpolation functions w.r.t reference coordinate
@@ -504,7 +470,7 @@ impl Shape {
     /// * `deriv` -- interpolation functions (nnode)
     #[inline]
     pub fn calc_deriv(&self, state: &mut ShapeState, ksi: &[f64]) {
-        (self.fn_deriv)(&mut state.deriv, ksi);
+        (self.fn_deriv.1)(&mut state.deriv, ksi);
     }
 
     /// Sets a component of the coordinates matrix
@@ -1104,6 +1070,7 @@ mod tests {
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq, assert_vec_approx_eq};
     use russell_lab::{copy_vector, scale_vector, vector_norm, NormVec, Vector};
+    use serde::{Deserialize, Serialize};
     use std::collections::HashMap;
 
     const RMIN: f64 = 1.0;
@@ -2224,6 +2191,65 @@ mod tests {
         assert_eq!(int_points[1].dim(), 1);
         assert_approx_eq!(int_points[0][0], x_ksi_a, 1e-15);
         assert_approx_eq!(int_points[1][0], x_ksi_b, 1e-15);
+        Ok(())
+    }
+
+    #[test]
+    fn clone_and_serialize_work() -> Result<(), StrError> {
+        let mut shape = Shape::new(1, 1, 2)?;
+        shape.set_node(0, 0, 1.0)?;
+        shape.set_node(1, 0, 2.0)?;
+        let before = format!("{:?}", shape);
+
+        // serialize to JSON
+        let json = serde_json::to_string_pretty(&shape).map_err(|_| "json encode failed")?;
+        assert_eq!(
+            format!("{}", json),
+            "{\n\
+             \x20\x20\"class\": \"Lin\",\n\
+             \x20\x20\"kind\": \"Lin2\",\n\
+             \x20\x20\"space_ndim\": 1,\n\
+             \x20\x20\"geo_ndim\": 1,\n\
+             \x20\x20\"nnode\": 2,\n\
+             \x20\x20\"nedge\": 0,\n\
+             \x20\x20\"nface\": 0,\n\
+             \x20\x20\"edge_nnode\": 0,\n\
+             \x20\x20\"face_nnode\": 0,\n\
+             \x20\x20\"face_nedge\": 0,\n\
+             \x20\x20\"fn_interp\": 1002,\n\
+             \x20\x20\"fn_deriv\": 1002,\n\
+             \x20\x20\"coords_transp\": {\n\
+             \x20\x20\x20\x20\"nrow\": 1,\n\
+             \x20\x20\x20\x20\"ncol\": 2,\n\
+             \x20\x20\x20\x20\"data\": [\n\
+             \x20\x20\x20\x20\x20\x201.0,\n\
+             \x20\x20\x20\x20\x20\x202.0\n\
+             \x20\x20\x20\x20]\n\
+             \x20\x20},\n\
+             \x20\x20\"ok_last_coord\": true,\n\
+             \x20\x20\"min_coords\": [\n\
+             \x20\x20\x20\x201.0\n\
+             \x20\x20],\n\
+             \x20\x20\"max_coords\": [\n\
+             \x20\x20\x20\x202.0\n\
+             \x20\x20]\n\
+            }"
+        );
+
+        // deserialize from JSON
+        let shape_json: Shape = serde_json::from_str(&json).map_err(|_| "json decode failed")?;
+        assert_eq!(format!("{:?}", shape_json), before);
+
+        // serialize to BIN
+        let mut bin = Vec::new();
+        let mut ser = rmp_serde::Serializer::new(&mut bin);
+        shape.serialize(&mut ser).map_err(|_| "bin encode failed")?;
+        assert!(bin.len() > 0);
+
+        // deserialize from BIN
+        let mut des = rmp_serde::Deserializer::new(&bin[..]);
+        let shape_bin: Shape = Deserialize::deserialize(&mut des).map_err(|_| "bin decode failed")?;
+        assert_eq!(format!("{:?}", shape_bin), before);
         Ok(())
     }
 }
