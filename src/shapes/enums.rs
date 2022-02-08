@@ -188,6 +188,18 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "INTERNAL ERROR: cannot convert i32 to FnInterp")]
+    fn i32_to_fn_interp_panics_on_wrong_input() {
+        i32_to_fn_interp(-1);
+    }
+
+    #[test]
+    #[should_panic(expected = "INTERNAL ERROR: cannot convert i32 to FnDeriv")]
+    fn i32_to_fn_deriv_panics_on_wrong_input() {
+        i32_to_fn_deriv(-1);
+    }
+
+    #[test]
     fn data_is_consistent() {
         for kind in GeoKind::VALUES {
             match kind {
