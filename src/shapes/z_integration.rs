@@ -52,10 +52,16 @@ impl Shape {
     /// # Input
     ///
     /// * `state` -- mutable ShapeState
-    /// * `fn_s(index: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function, however written as
-    ///                                  a function of the index of the integration point.
-    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_a_ns<F>(&self, a: &mut Vector, state: &mut ShapeState, fn_s: F, th: f64) -> Result<(), StrError>
+    /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    /// * `fn_s(index_ip: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function,
+    ///   however written as a function of the index of the integration point.
+    pub fn integ_vec_a_ns<F>(
+        &self,
+        a: &mut Vector,
+        state: &mut ShapeState,
+        thickness: f64,
+        fn_s: F,
+    ) -> Result<(), StrError>
     where
         F: Fn(usize) -> Result<f64, StrError>,
     {
@@ -81,7 +87,7 @@ impl Shape {
             let s = fn_s(index)?;
 
             // loop over nodes and perform sum
-            let coef = th * det_jac * weight;
+            let coef = thickness * det_jac * weight;
             for m in 0..self.nnode {
                 a[m] += state.interp[m] * s * coef;
             }
@@ -133,10 +139,16 @@ impl Shape {
     /// # Input
     ///
     /// * `state` -- mutable ShapeState
-    /// * `fn_v(v: &mut Vector, index: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`, however written as
-    ///                                           a function of the index of the integration point.
-    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_b_nv<F>(&self, b: &mut Vector, state: &mut ShapeState, fn_v: F, th: f64) -> Result<(), StrError>
+    /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    /// * `fn_v(v: &mut Vector, index_ip: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`,
+    ///    however written as function of the index of the integration point.
+    pub fn integ_vec_b_nv<F>(
+        &self,
+        b: &mut Vector,
+        state: &mut ShapeState,
+        thickness: f64,
+        fn_v: F,
+    ) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -165,7 +177,7 @@ impl Shape {
             fn_v(&mut v, index)?;
 
             // add contribution to b vector
-            let coef = th * det_jac * weight;
+            let coef = thickness * det_jac * weight;
             self.add_to_vec_b(state, b, &v, coef);
         }
         Ok(())
@@ -209,10 +221,16 @@ impl Shape {
     /// # Input
     ///
     /// * `state` -- mutable ShapeState
-    /// * `fn_w(w: &mut Vector, index: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`, however written as
-    ///                                           a function of the index of the integration point.
-    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    pub fn integ_vec_c_vg<F>(&self, c: &mut Vector, state: &mut ShapeState, fn_w: F, th: f64) -> Result<(), StrError>
+    /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    /// * `fn_w(w: &mut Vector, index_ip: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`,
+    ///   however written as a function of the index of the integration point.
+    pub fn integ_vec_c_vg<F>(
+        &self,
+        c: &mut Vector,
+        state: &mut ShapeState,
+        thickness: f64,
+        fn_w: F,
+    ) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -240,7 +258,7 @@ impl Shape {
             fn_w(&mut w, index)?;
 
             // add contribution to c vector
-            let coef = th * det_jac * weight;
+            let coef = thickness * det_jac * weight;
             self.add_to_vec_c(state, c, &w, coef);
         }
         Ok(())
@@ -290,15 +308,21 @@ impl Shape {
     /// # Input
     ///
     /// * `state` -- mutable ShapeState
-    /// * `fn_sig(sig: &mut Tensor2, index: usize)` -- σ(x(ξ)) tensor function, however written as
-    ///       a function of the index of the integration point.
-    ///       `sig` is symmetric with 4 or 6 components in 2D or 3D, respectively
-    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    /// * `fn_sig(sig: &mut Tensor2, index_ip: usize)` -- σ(x(ξ)) tensor function,
+    ///   however written as a function of the index of the integration point.
+    ///   `sig` is symmetric with 4 or 6 components in 2D or 3D, respectively
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_vec_d_tg<F>(&self, d: &mut Vector, state: &mut ShapeState, fn_sig: F, th: f64) -> Result<(), StrError>
+    pub fn integ_vec_d_tg<F>(
+        &self,
+        d: &mut Vector,
+        state: &mut ShapeState,
+        thickness: f64,
+        fn_sig: F,
+    ) -> Result<(), StrError>
     where
         F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
     {
@@ -329,7 +353,7 @@ impl Shape {
             fn_sig(&mut sig, index)?;
 
             // add contribution to d vector
-            let coef = th * det_jac * weight;
+            let coef = thickness * det_jac * weight;
             self.add_to_vec_d(state, d, &sig, coef);
         }
         Ok(())
@@ -427,10 +451,10 @@ impl Shape {
     /// # Input
     ///
     /// * `state` -- mutable ShapeState
-    /// * `fn_dd(dd: &mut Tensor4, index: usize)` -- D(x(ξ)) constitutive modulus function, given as
-    ///       a function of the index of the integration point.
-    ///       `dd` is minor-symmetric with (4x4) or (6x6) components in 2D or 3D, respectively.
-    /// * `th` -- the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+    /// * `fn_dd(dd: &mut Tensor4, index_ip: usize)` -- D(x(ξ)) constitutive modulus function,
+    ///   however given as a function of the index of the integration point.
+    ///   `dd` is minor-symmetric with (4x4) or (6x6) components in 2D or 3D, respectively.
     ///
     /// # Note
     ///
@@ -439,8 +463,8 @@ impl Shape {
         &self,
         kk: &mut Matrix,
         state: &mut ShapeState,
+        thickness: f64,
         fn_dd: F,
-        th: f64,
     ) -> Result<(), StrError>
     where
         F: Fn(&mut Tensor4, usize) -> Result<(), StrError>,
@@ -473,7 +497,7 @@ impl Shape {
             fn_dd(&mut dd, index)?;
 
             // add contribution to K matrix
-            let coef = det_jac * weight * th;
+            let coef = det_jac * weight * thickness;
             self.add_to_mat_kk(state, kk, &dd, coef);
         }
         Ok(())
@@ -675,9 +699,8 @@ mod tests {
         let (tri3, area) = gen_tri3();
         let mut state = ShapeState::new(&tri3);
         const CS: f64 = 3.0;
-        let fn_s = |_| Ok(CS);
         let mut a = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_a_ns(&mut a, &mut state, fn_s, 1.0)?;
+        tri3.integ_vec_a_ns(&mut a, &mut state, 1.0, |_| Ok(CS))?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
@@ -694,9 +717,10 @@ mod tests {
         let (lin2, xa, xb) = gen_lin2();
         let mut state = ShapeState::new(&lin2);
         let all_int_points = lin2.calc_int_points_coords(&mut state)?;
-        let fn_s = |index: usize| Ok(all_int_points[index][0]);
         let mut a = Vector::new(lin2.nnode);
-        lin2.integ_vec_a_ns(&mut a, &mut state, fn_s, 1.0)?;
+        lin2.integ_vec_a_ns(&mut a, &mut state, 1.0, |index_ip: usize| {
+            Ok(all_int_points[index_ip][0])
+        })?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
@@ -710,12 +734,11 @@ mod tests {
         let (tri3, area) = gen_tri3();
         let mut state = ShapeState::new(&tri3);
         const CS: f64 = 3.0;
-        let fn_v = |v: &mut Vector, _: usize| {
+        let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
+        tri3.integ_vec_b_nv(&mut b, &mut state, 1.0, |v: &mut Vector, _: usize| {
             v.fill(CS);
             Ok(())
-        };
-        let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        tri3.integ_vec_b_nv(&mut b, &mut state, fn_v, 1.0)?;
+        })?;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
@@ -725,12 +748,11 @@ mod tests {
         let (lin2, xa, xb) = gen_lin2();
         let mut state = ShapeState::new(&lin2);
         let all_int_points = lin2.calc_int_points_coords(&mut state)?;
-        let fn_v = |v: &mut Vector, index: usize| {
+        let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
+        lin2.integ_vec_b_nv(&mut b, &mut state, 1.0, |v: &mut Vector, index: usize| {
             v.fill(all_int_points[index][0]);
             Ok(())
-        };
-        let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
-        lin2.integ_vec_b_nv(&mut b, &mut state, fn_v, 1.0)?;
+        })?;
         let cf = (xb - xa) / 6.0;
         let b_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
@@ -750,36 +772,34 @@ mod tests {
         //    cᵐ = ½ (w₀ bₘ + w₁ cₘ)
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
-        let fn_w = |w: &mut Vector, _: usize| {
-            w[0] = W0;
-            w[1] = W1;
-            Ok(())
-        };
         let c_correct = &[
             (W0 * ana.b[0] + W1 * ana.c[0]) / 2.0,
             (W0 * ana.b[1] + W1 * ana.c[1]) / 2.0,
             (W0 * ana.b[2] + W1 * ana.c[2]) / 2.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_c_vg(&mut c, &mut state, fn_w, 1.0)?;
+        tri3.integ_vec_c_vg(&mut c, &mut state, 1.0, |w: &mut Vector, _: usize| {
+            w[0] = W0;
+            w[1] = W1;
+            Ok(())
+        })?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
 
         // bilinear vector function: w(x) = {x, y}
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
         let all_int_points = tri3.calc_int_points_coords(&mut state)?;
-        let fn_w = |w: &mut Vector, index: usize| {
-            w[0] = all_int_points[index][0];
-            w[1] = all_int_points[index][1];
-            Ok(())
-        };
         let c_correct = &[
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[0] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[0] / 6.0,
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[1] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[1] / 6.0,
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[2] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[2] / 6.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_c_vg(&mut c, &mut state, fn_w, 1.0)?;
+        tri3.integ_vec_c_vg(&mut c, &mut state, 1.0, |w: &mut Vector, index: usize| {
+            w[0] = all_int_points[index][0];
+            w[1] = all_int_points[index][1];
+            Ok(())
+        })?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
@@ -808,18 +828,15 @@ mod tests {
             (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
         ];
 
-        // fn_sig
-        let fn_sig = |sig: &mut Tensor2, _: usize| {
+        // test integration
+        let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
+        tri3.integ_vec_d_tg(&mut d, &mut state, 1.0, |sig: &mut Tensor2, _: usize| {
             sig.sym_set(0, 0, S00);
             sig.sym_set(1, 1, S11);
             sig.sym_set(2, 2, S22);
             sig.sym_set(0, 1, S01);
             Ok(())
-        };
-
-        // test integration
-        let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        tri3.integ_vec_d_tg(&mut d, &mut state, fn_sig, 1.0)?;
+        })?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
@@ -862,13 +879,9 @@ mod tests {
         // elasticity modulus and function
         let ela = LinElasticity::new(10000.0, 0.2, false, true);
         let dd_ela = ela.get_modulus();
-        let fn_dd = |dd: &mut Tensor4, _: usize| {
-            copy_matrix(&mut dd.mat, &dd_ela.mat).unwrap();
-            Ok(())
-        };
 
         // constants
-        let th = 0.25; // thickness
+        let thickness = 0.25; // thickness
         let dim_dd = 2 * tri3.space_ndim;
         let dim_kk = tri3.nnode * tri3.space_ndim;
 
@@ -888,11 +901,14 @@ mod tests {
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk_correct = Matrix::new(dim_kk, dim_kk);
         mat_t_mat_mul(&mut bb_t_dd, 1.0, &bb, &dd_ela.mat)?;
-        mat_mat_mul(&mut kk_correct, th * ana.area, &bb_t_dd, &bb)?;
+        mat_mat_mul(&mut kk_correct, thickness * ana.area, &bb_t_dd, &bb)?;
 
         // perform integration
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        tri3.integ_mat_10_gdg(&mut kk, &mut state, fn_dd, th)?;
+        tri3.integ_mat_10_gdg(&mut kk, &mut state, thickness, |dd: &mut Tensor4, _: usize| {
+            copy_matrix(&mut dd.mat, &dd_ela.mat).unwrap();
+            Ok(())
+        })?;
 
         // results from Bhatti's book
         #[rustfmt::skip]
