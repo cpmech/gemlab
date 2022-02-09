@@ -813,8 +813,7 @@ mod tests {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    struct StressState2d {
+    pub struct StressState2d {
         pub sig: Tensor2,  // (effective) stress
         pub ivs: Vec<f64>, // internal values
         pub aux: Vec<f64>, // auxiliary
