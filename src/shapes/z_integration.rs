@@ -4,6 +4,18 @@ use crate::StrError;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::{Tensor2, Tensor4};
 
+/// Defines a trait for the callback in the tensor(T)-gradient(G) integration function
+pub trait IntegTG {
+    /// Implements the σ(x(ξ)) tensor function with x being identified by the index of the integration point
+    fn calc_sig(&self, sig: &mut Tensor2, index_ip: usize) -> Result<(), StrError>;
+}
+
+/// Defines a trait for the callback in the gradient(T)-4th-tensor(D)-gradient(G) integration function
+pub trait IntegGDG {
+    /// Implements the D(x(ξ)) tensor function where x being identified by the index of the integration point
+    fn calc_dd(&self, dd: &mut Tensor4, index_ip: usize) -> Result<(), StrError>;
+}
+
 impl Shape {
     /// Implements the shape(N)-scalar(S) integration case
     ///
@@ -309,22 +321,20 @@ impl Shape {
     ///
     /// * `state` -- mutable ShapeState
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    /// * `fn_sig(sig: &mut Tensor2, index_ip: usize)` -- σ(x(ξ)) tensor function,
-    ///   however written as a function of the index of the integration point.
-    ///   `sig` is symmetric with 4 or 6 components in 2D or 3D, respectively
+    /// * `element` -- an instance that implements the σ(x(ξ)) callback function
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_vec_d_tg<F>(
+    pub fn integ_vec_d_tg<T>(
         &self,
         d: &mut Vector,
         state: &mut ShapeState,
         thickness: f64,
-        fn_sig: F,
+        element: &T,
     ) -> Result<(), StrError>
     where
-        F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
+        T: IntegTG,
     {
         // check
         if self.space_ndim == 1 {
@@ -350,7 +360,7 @@ impl Shape {
             let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate σ
-            fn_sig(&mut sig, index)?;
+            element.calc_sig(&mut sig, index)?;
 
             // add contribution to d vector
             let coef = thickness * det_jac * weight;
@@ -404,7 +414,7 @@ impl Shape {
         Ok(())
     }
 
-    /// Implements the gradient(g)-4th-tensor(d)-gradient(g) integration case (e.g., stiffness matrix)
+    /// Implements the gradient(G)-4th-tensor(D)-gradient(G) integration case (e.g., stiffness matrix)
     ///
     /// Stiffness tensors:
     ///
@@ -452,22 +462,20 @@ impl Shape {
     ///
     /// * `state` -- mutable ShapeState
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    /// * `fn_dd(dd: &mut Tensor4, index_ip: usize)` -- D(x(ξ)) constitutive modulus function,
-    ///   however given as a function of the index of the integration point.
-    ///   `dd` is minor-symmetric with (4x4) or (6x6) components in 2D or 3D, respectively.
+    /// * `element` -- an instance that implements the D(x(ξ)) callback function
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_mat_10_gdg<F>(
+    pub fn integ_mat_10_gdg<T>(
         &self,
         kk: &mut Matrix,
         state: &mut ShapeState,
         thickness: f64,
-        fn_dd: F,
+        element: &T,
     ) -> Result<(), StrError>
     where
-        F: Fn(&mut Tensor4, usize) -> Result<(), StrError>,
+        T: IntegGDG,
     {
         // check
         let (nrow_kk, ncol_kk) = kk.dims();
@@ -494,7 +502,7 @@ impl Shape {
             let det_jac = self.calc_gradient(state, iota)?;
 
             // calculate constitutive modulus
-            fn_dd(&mut dd, index)?;
+            element.calc_dd(&mut dd, index)?;
 
             // add contribution to K matrix
             let coef = det_jac * weight * thickness;
@@ -604,8 +612,9 @@ mod tests {
     use super::*;
     use crate::util::SQRT_3;
     use russell_chk::assert_vec_approx_eq;
-    use russell_lab::{copy_matrix, mat_mat_mul, mat_t_mat_mul, Matrix};
+    use russell_lab::{copy_matrix, copy_vector, mat_mat_mul, mat_t_mat_mul, Matrix};
     use russell_tensor::LinElasticity;
+    use std::cell::RefCell;
 
     // to test if variables are cleared before sum
     const NOISE: f64 = 1234.56;
@@ -804,6 +813,71 @@ mod tests {
         Ok(())
     }
 
+    #[allow(dead_code)]
+    struct StressState2d {
+        pub sig: Tensor2,  // (effective) stress
+        pub ivs: Vec<f64>, // internal values
+        pub aux: Vec<f64>, // auxiliary
+    }
+
+    impl StressState2d {
+        pub fn new(nivs: usize, naux: usize) -> Self {
+            StressState2d {
+                sig: Tensor2::new(true, true),
+                ivs: vec![0.0; nivs],
+                aux: vec![0.0; naux],
+            }
+        }
+    }
+
+    struct LinElastModel2d {
+        lin_elast: LinElasticity,
+        n_times_called: usize, // for testing purposes
+    }
+
+    impl LinElastModel2d {
+        pub fn new(young: f64, poisson: f64, plane_stress: bool) -> Self {
+            LinElastModel2d {
+                lin_elast: LinElasticity::new(young, poisson, true, plane_stress),
+                n_times_called: 0,
+            }
+        }
+        pub fn consistent_modulus(&mut self, dd: &mut Tensor4, _state: &StressState2d) -> Result<(), StrError> {
+            let dd_ela = self.lin_elast.get_modulus();
+            self.n_times_called += 1;
+            copy_matrix(&mut dd.mat, &dd_ela.mat)
+        }
+    }
+
+    struct ElemElast2d {
+        state: StressState2d,
+        model: RefCell<LinElastModel2d>,
+        n_times_dd_computed: RefCell<usize>, // for testing purposes
+    }
+
+    impl ElemElast2d {
+        pub fn new(young: f64, poisson: f64, plane_stress: bool) -> Self {
+            ElemElast2d {
+                state: StressState2d::new(1, 1),
+                model: RefCell::new(LinElastModel2d::new(young, poisson, plane_stress)),
+                n_times_dd_computed: RefCell::new(0),
+            }
+        }
+    }
+
+    impl IntegTG for ElemElast2d {
+        fn calc_sig(&self, sig: &mut Tensor2, _index_ip: usize) -> Result<(), StrError> {
+            copy_vector(&mut sig.vec, &self.state.sig.vec)
+        }
+    }
+
+    impl IntegGDG for ElemElast2d {
+        fn calc_dd(&self, dd: &mut Tensor4, _index_ip: usize) -> Result<(), StrError> {
+            *self.n_times_dd_computed.borrow_mut() += 1;
+            self.model.borrow_mut().consistent_modulus(dd, &self.state)
+        }
+    }
+
     #[test]
     fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
@@ -828,15 +902,17 @@ mod tests {
             (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
         ];
 
+        // element instance with callback function calc_sig for integration
+        let mut element = ElemElast2d::new(10_000.0, 0.2, true);
+        element.state.sig.sym_set(0, 0, S00);
+        element.state.sig.sym_set(1, 1, S11);
+        element.state.sig.sym_set(2, 2, S22);
+        element.state.sig.sym_set(0, 1, S01);
+
         // test integration
-        let mut d = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        tri3.integ_vec_d_tg(&mut d, &mut state, 1.0, |sig: &mut Tensor2, _: usize| {
-            sig.sym_set(0, 0, S00);
-            sig.sym_set(1, 1, S11);
-            sig.sym_set(2, 2, S22);
-            sig.sym_set(0, 1, S01);
-            Ok(())
-        })?;
+        let dim_d = tri3.nnode * tri3.space_ndim;
+        let mut d = Vector::filled(dim_d, NOISE);
+        tri3.integ_vec_d_tg(&mut d, &mut state, 1.0, &element)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
@@ -876,16 +952,14 @@ mod tests {
         tri3.set_node(2, 1, 1.5).unwrap();
         let ana = AnalyticalTri3::new(&mut tri3);
 
-        // elasticity modulus and function
-        let ela = LinElasticity::new(10000.0, 0.2, false, true);
-        let dd_ela = ela.get_modulus();
-
         // constants
+        let young = 10_000.0;
+        let poisson = 0.2;
         let thickness = 0.25; // thickness
         let dim_dd = 2 * tri3.space_ndim;
         let dim_kk = tri3.nnode * tri3.space_ndim;
 
-        // compute B-matrix (dim_dd,dim_kk)
+        // solution: compute B-matrix (dim_dd,dim_kk)
         let r = 2.0 * ana.area;
         let s = r * SQRT_2;
         #[rustfmt::skip]
@@ -897,18 +971,20 @@ mod tests {
         ]);
         assert_eq!(bb.dims(), (dim_dd, dim_kk));
 
-        // compute K = Bᵀ ⋅ D ⋅ B
+        // solution: compute K = Bᵀ ⋅ D ⋅ B
+        let ela = LinElasticity::new(young, poisson, true, true);
+        let dd_ela = ela.get_modulus();
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk_correct = Matrix::new(dim_kk, dim_kk);
         mat_t_mat_mul(&mut bb_t_dd, 1.0, &bb, &dd_ela.mat)?;
         mat_mat_mul(&mut kk_correct, thickness * ana.area, &bb_t_dd, &bb)?;
 
+        // element instance with callback function calc_dd for integration
+        let element = ElemElast2d::new(young, poisson, true);
+
         // perform integration
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        tri3.integ_mat_10_gdg(&mut kk, &mut state, thickness, |dd: &mut Tensor4, _: usize| {
-            copy_matrix(&mut dd.mat, &dd_ela.mat).unwrap();
-            Ok(())
-        })?;
+        tri3.integ_mat_10_gdg(&mut kk, &mut state, thickness, &element)?;
 
         // results from Bhatti's book
         #[rustfmt::skip]
@@ -924,6 +1000,7 @@ mod tests {
         // check
         assert_vec_approx_eq!(kk_correct.as_data(), kk_bhatti.as_data(), 1e-12);
         assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
+        assert_eq!(*element.n_times_dd_computed.borrow(), state.ip_data.len());
         Ok(())
     }
 }
