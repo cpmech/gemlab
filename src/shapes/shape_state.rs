@@ -82,114 +82,97 @@ impl ShapeState {
     ///
     /// ## nip for Lin class
     ///
-    /// * `1` -- Legendre points
-    /// * `2` -- Legendre points
-    /// * `3` -- Legendre points
-    /// * `4` -- Legendre points
-    /// * `5` -- Legendre points
+    /// * `1` -- Conventional Legendre integration points and weights
+    /// * `2` -- Conventional Legendre integration points and weights
+    /// * `3` -- Conventional Legendre integration points and weights
+    /// * `4` -- Conventional Legendre integration points and weights
+    /// * `5` -- Conventional Legendre integration points and weights
     ///
     /// ## nip for Tri class
     ///
-    /// * `1` -- Internal points
-    /// * `3`:
-    ///     - `edge` -- Points on edge
-    ///     - otherwise, internal points
-    /// * `4` -- Internal points
-    /// * `12` -- Internal points
-    /// * `16` -- Internal points
+    /// * `1` -- Internal integration points and weights
+    /// * `3` -- Internal integration points and weights
+    /// * `1_003` -- Edge integration points and weights
+    /// * `4` -- Internal integration points and weights
+    /// * `12` -- Internal integration points and weights
+    /// * `16` -- Internal integration points and weights
     ///
     /// ## nip for Qua class
     ///
-    /// * `1` -- Legendre points
-    /// * `4` -- Legendre points
-    /// * `5`:
-    ///     - `ws` -- Wilson's "Stable" version with w0=0.004 and wa=0.999 to mimic 4-point rule
-    ///     - otherwise, standard Wilson's formula
-    /// * `9` -- Legendre points
-    /// * `16` -- Legendre points
+    /// * `1` -- Conventional Legendre integration points and weights
+    /// * `4` -- Conventional Legendre integration points and weights
+    /// * `5` -- Wilson's integration points and weights. "Corner" version
+    /// * `1_005` -- 5 points. Wilson's integration points and weights. "Stable" version version with w0=0.004 and wa=0.999 to mimic 4-point rule
+    /// * `8` -- Wilson's integration points and weights.
+    /// * `9` -- Conventional Legendre integration points and weights
+    /// * `16` -- Conventional Legendre integration points and weights
     ///
     /// ## nip for Tet class
     ///
-    /// * `1` -- Internal points
-    /// * `4` -- Internal points
-    /// * `5` -- Internal points
-    /// * `6` -- Internal points
+    /// * `1` -- Internal integration points and weights
+    /// * `4` -- Internal integration points and weights
+    /// * `5` -- Internal integration points and weights
+    /// * `6` -- Internal integration points and weights
     ///
     /// ## nip for Hex class
     ///
-    /// * `6` -- Iron's formula
-    /// * `8` -- Legendre points
-    /// * `9`:
-    ///     - `ws` -- Wilson's "Stable" version
-    ///     - otherwise, Wilson's standard formula
-    /// * `14` -- Iron's formula
-    /// * `27` -- Legendre points
-    pub fn select_int_points(&mut self, nip: usize, edge: bool, ws: bool) -> Result<(), StrError> {
-        match self.class {
+    /// * `6` -- Iron's integration points and weights
+    /// * `8` -- Conventional Legendre integration points and weights
+    /// * `9` -- Wilson's integration points and weights. "Corner" version
+    /// * `1_009` -- Wilson's integration points and weights. "Stable" version
+    /// * `14` -- Iron's integration points and weights
+    /// * `27` -- Conventional Legendre integration points and weights
+    pub fn select_int_points(&mut self, nip: usize) -> Result<(), StrError> {
+        self.ip_data = match self.class {
             // Lin
             GeoClass::Lin => match nip {
-                1 => self.ip_data = &IP_LIN_LEGENDRE_1,
-                2 => self.ip_data = &IP_LIN_LEGENDRE_2,
-                3 => self.ip_data = &IP_LIN_LEGENDRE_3,
-                4 => self.ip_data = &IP_LIN_LEGENDRE_4,
-                5 => self.ip_data = &IP_LIN_LEGENDRE_5,
+                1 => &IP_LIN_LEGENDRE_1,
+                2 => &IP_LIN_LEGENDRE_2,
+                3 => &IP_LIN_LEGENDRE_3,
+                4 => &IP_LIN_LEGENDRE_4,
+                5 => &IP_LIN_LEGENDRE_5,
                 _ => return Err("number of integration points is not available for Lin class"),
             },
             // Tri
             GeoClass::Tri => match nip {
-                1 => self.ip_data = &IP_TRI_INTERNAL_1,
-                3 => {
-                    if edge {
-                        self.ip_data = &IP_TRI_EDGE_3
-                    } else {
-                        self.ip_data = &IP_TRI_INTERNAL_3
-                    }
-                }
-                4 => self.ip_data = &IP_TRI_INTERNAL_4,
-                12 => self.ip_data = &IP_TRI_INTERNAL_12,
-                16 => self.ip_data = &IP_TRI_INTERNAL_16,
+                1 => &IP_TRI_INTERNAL_1,
+                3 => &IP_TRI_INTERNAL_3,
+                1_003 => &IP_TRI_EDGE_3,
+                4 => &IP_TRI_INTERNAL_4,
+                12 => &IP_TRI_INTERNAL_12,
+                16 => &IP_TRI_INTERNAL_16,
                 _ => return Err("number of integration points is not available for Tri class"),
             },
             // Qua
             GeoClass::Qua => match nip {
-                1 => self.ip_data = &IP_QUA_LEGENDRE_1,
-                4 => self.ip_data = &IP_QUA_LEGENDRE_4,
-                5 => {
-                    if ws {
-                        self.ip_data = &IP_QUA_WILSON_STABLE_5
-                    } else {
-                        self.ip_data = &IP_QUA_WILSON_CORNER_5
-                    }
-                }
-                8 => self.ip_data = &IP_QUA_WILSON_8,
-                9 => self.ip_data = &IP_QUA_LEGENDRE_9,
-                16 => self.ip_data = &IP_QUA_LEGENDRE_16,
+                1 => &IP_QUA_LEGENDRE_1,
+                4 => &IP_QUA_LEGENDRE_4,
+                5 => &IP_QUA_WILSON_CORNER_5,
+                1_005 => &IP_QUA_WILSON_STABLE_5,
+                8 => &IP_QUA_WILSON_8,
+                9 => &IP_QUA_LEGENDRE_9,
+                16 => &IP_QUA_LEGENDRE_16,
                 _ => return Err("number of integration points is not available for Qua class"),
             },
             // Tet
             GeoClass::Tet => match nip {
-                1 => self.ip_data = &IP_TET_INTERNAL_1,
-                4 => self.ip_data = &IP_TET_INTERNAL_4,
-                5 => self.ip_data = &IP_TET_INTERNAL_5,
-                6 => self.ip_data = &IP_TET_INTERNAL_6,
+                1 => &IP_TET_INTERNAL_1,
+                4 => &IP_TET_INTERNAL_4,
+                5 => &IP_TET_INTERNAL_5,
+                6 => &IP_TET_INTERNAL_6,
                 _ => return Err("number of integration points is not available for Tet class"),
             },
             // Hex
             GeoClass::Hex => match nip {
-                6 => self.ip_data = &IP_HEX_IRONS_6,
-                8 => self.ip_data = &IP_HEX_LEGENDRE_8,
-                9 => {
-                    if ws {
-                        self.ip_data = &IP_HEX_WILSON_STABLE_9
-                    } else {
-                        self.ip_data = &IP_HEX_WILSON_CORNER_9
-                    }
-                }
-                14 => self.ip_data = &IP_HEX_IRONS_14,
-                27 => self.ip_data = &IP_HEX_LEGENDRE_27,
+                6 => &IP_HEX_IRONS_6,
+                8 => &IP_HEX_LEGENDRE_8,
+                9 => &IP_HEX_WILSON_CORNER_9,
+                1_009 => &IP_HEX_WILSON_STABLE_9,
+                14 => &IP_HEX_IRONS_14,
+                27 => &IP_HEX_LEGENDRE_27,
                 _ => return Err("number of integration points is not available for Hex class"),
             },
-        }
+        };
         Ok(())
     }
 }
@@ -220,12 +203,12 @@ mod tests {
         // Lin
         let shape = Shape::new(1, 1, 2)?;
         let mut state = ShapeState::new(&shape);
-        for nip in 1..6 {
-            state.select_int_points(nip, false, false)?;
+        for nip in [1, 2, 3, 4, 5] {
+            state.select_int_points(nip)?;
             assert_eq!(state.ip_data.len(), nip);
         }
         assert_eq!(
-            state.select_int_points(100, false, false).err(),
+            state.select_int_points(100).err(),
             Some("number of integration points is not available for Lin class")
         );
 
@@ -233,13 +216,13 @@ mod tests {
         let shape = Shape::new(2, 2, 3)?;
         let mut state = ShapeState::new(&shape);
         for nip in [1, 3, 4, 12, 16] {
-            state.select_int_points(nip, false, false)?;
+            state.select_int_points(nip)?;
             assert_eq!(state.ip_data.len(), nip);
         }
-        state.select_int_points(3, true, false)?;
+        state.select_int_points(1_003)?;
         assert_eq!(state.ip_data.len(), 3);
         assert_eq!(
-            state.select_int_points(100, false, false).err(),
+            state.select_int_points(100).err(),
             Some("number of integration points is not available for Tri class")
         );
 
@@ -247,13 +230,13 @@ mod tests {
         let shape = Shape::new(2, 2, 4)?;
         let mut state = ShapeState::new(&shape);
         for nip in [1, 4, 5, 8, 9, 16] {
-            state.select_int_points(nip, false, false)?;
+            state.select_int_points(nip)?;
             assert_eq!(state.ip_data.len(), nip);
         }
-        state.select_int_points(5, false, true)?;
+        state.select_int_points(1_005)?;
         assert_eq!(state.ip_data.len(), 5);
         assert_eq!(
-            state.select_int_points(100, false, false).err(),
+            state.select_int_points(100).err(),
             Some("number of integration points is not available for Qua class")
         );
 
@@ -261,11 +244,11 @@ mod tests {
         let shape = Shape::new(3, 3, 4)?;
         let mut state = ShapeState::new(&shape);
         for nip in [1, 4, 5, 6] {
-            state.select_int_points(nip, false, false)?;
+            state.select_int_points(nip)?;
             assert_eq!(state.ip_data.len(), nip);
         }
         assert_eq!(
-            state.select_int_points(100, false, false).err(),
+            state.select_int_points(100).err(),
             Some("number of integration points is not available for Tet class")
         );
 
@@ -273,13 +256,13 @@ mod tests {
         let shape = Shape::new(3, 3, 8)?;
         let mut state = ShapeState::new(&shape);
         for nip in [6, 8, 9, 14, 27] {
-            state.select_int_points(nip, false, false)?;
+            state.select_int_points(nip)?;
             assert_eq!(state.ip_data.len(), nip);
         }
-        state.select_int_points(9, false, true)?;
+        state.select_int_points(1_009)?;
         assert_eq!(state.ip_data.len(), 9);
         assert_eq!(
-            state.select_int_points(100, false, false).err(),
+            state.select_int_points(100).err(),
             Some("number of integration points is not available for Hex class")
         );
         Ok(())
