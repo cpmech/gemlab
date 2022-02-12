@@ -23,10 +23,11 @@ use serde::{Deserialize, Serialize};
 /// * `edge_nnode` -- number of points that define the edge (number of nodes)
 /// * `face_nnode` -- number of points that define the face (number of nodes)
 /// * `face_nedge` -- face's number of edges
+/// * `n_integ_points` -- number of integration (Gauss) points
 ///
 /// When performing numerical integrations, we use the following notation:
 /// |J| is the determinant of the Jacobian, ||J|| is the norm of the Jacobian vector
-/// for line in multi-dimensions, `nip` is the number of integration points,
+/// for line in multi-dimensions, `n_integ_point` is the number of integration points,
 /// `ιp := ξp` is the reference coordinate of the integration point,
 /// and `wp` is the weight of the p-th integration point.
 ///
@@ -900,19 +901,19 @@ impl Shape {
     ///
     /// # Output
     ///
-    /// Returns an array with `nip` (number of integration point) vectors, where
+    /// Returns an array with `n_integ_point` (number of integration points) vectors, where
     /// each vector has a dimension equal to `space_ndim`.
     ///
     /// # Warning
     ///
     /// You must set the coordinates matrix first (via the `set_node` method),
     /// otherwise the computations will generate wrong results.
-    pub fn calc_int_points_coords(&self, state: &mut ShapeState) -> Result<Vec<Vector>, StrError> {
+    pub fn calc_integ_points_coords(&self, state: &mut ShapeState) -> Result<Vec<Vector>, StrError> {
         if !self.ok_last_coord {
             return Err("the last node coordinate has not been input yet");
         }
         let mut all_coords = Vec::new();
-        for iota in state.ip_data {
+        for iota in state.integ_point_constants {
             let mut x = Vector::new(self.space_ndim);
             self.calc_coords(state, &mut x, iota).unwrap();
             all_coords.push(x);
@@ -1291,7 +1292,7 @@ mod tests {
 
         // calc_int_points_coords
         assert_eq!(
-            shape.calc_int_points_coords(&mut state).err(),
+            shape.calc_integ_points_coords(&mut state).err(),
             Some("the last node coordinate has not been input yet")
         );
         Ok(())
@@ -2181,16 +2182,16 @@ mod tests {
         let (xa, xb) = (2.0, 5.0);
         shape.set_node(0, 0, xa)?;
         shape.set_node(1, 0, xb)?;
-        let int_points = shape.calc_int_points_coords(&mut state)?;
-        assert_eq!(int_points.len(), 2);
+        let integ_points = shape.calc_integ_points_coords(&mut state)?;
+        assert_eq!(integ_points.len(), 2);
         let ksi_a = -1.0 / SQRT_3;
         let ksi_b = 1.0 / SQRT_3;
         let x_ksi_a = xa + (ksi_a + 1.0) * (xb - xa) / 2.0;
         let x_ksi_b = xa + (ksi_b + 1.0) * (xb - xa) / 2.0;
-        assert_eq!(int_points[0].dim(), 1);
-        assert_eq!(int_points[1].dim(), 1);
-        assert_approx_eq!(int_points[0][0], x_ksi_a, 1e-15);
-        assert_approx_eq!(int_points[1][0], x_ksi_b, 1e-15);
+        assert_eq!(integ_points[0].dim(), 1);
+        assert_eq!(integ_points[1].dim(), 1);
+        assert_approx_eq!(integ_points[0][0], x_ksi_a, 1e-15);
+        assert_approx_eq!(integ_points[1][0], x_ksi_b, 1e-15);
         Ok(())
     }
 

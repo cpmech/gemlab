@@ -86,10 +86,10 @@ impl Shape {
         a.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.ip_data.len() {
+        for index in 0..state.integ_point_constants.len() {
             // ksi coordinates and weight
-            let iota = &state.ip_data[index];
-            let weight = state.ip_data[index][3];
+            let iota = &state.integ_point_constants[index];
+            let weight = state.integ_point_constants[index][3];
 
             // calculate interpolation functions and Jacobian
             self.calc_interp(state, iota);
@@ -176,10 +176,10 @@ impl Shape {
         b.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.ip_data.len() {
+        for index in 0..state.integ_point_constants.len() {
             // ksi coordinates and weight
-            let iota = &state.ip_data[index];
-            let weight = state.ip_data[index][3];
+            let iota = &state.integ_point_constants[index];
+            let weight = state.integ_point_constants[index][3];
 
             // calculate interpolation functions and Jacobian
             self.calc_interp(state, iota);
@@ -258,10 +258,10 @@ impl Shape {
         c.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.ip_data.len() {
+        for index in 0..state.integ_point_constants.len() {
             // ksi coordinates and weight
-            let iota = &state.ip_data[index];
-            let weight = state.ip_data[index][3];
+            let iota = &state.integ_point_constants[index];
+            let weight = state.integ_point_constants[index][3];
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(state, iota)?;
@@ -351,10 +351,10 @@ impl Shape {
         d.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.ip_data.len() {
+        for index in 0..state.integ_point_constants.len() {
             // ksi coordinates and weight
-            let iota = &state.ip_data[index];
-            let weight = state.ip_data[index][3];
+            let iota = &state.integ_point_constants[index];
+            let weight = state.integ_point_constants[index][3];
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(state, iota)?;
@@ -493,10 +493,10 @@ impl Shape {
         kk.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.ip_data.len() {
+        for index in 0..state.integ_point_constants.len() {
             // ksi coordinates and weight
-            let iota = &state.ip_data[index];
-            let weight = state.ip_data[index][3];
+            let iota = &state.integ_point_constants[index];
+            let weight = state.integ_point_constants[index][3];
 
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(state, iota)?;
@@ -678,7 +678,7 @@ mod tests {
                 [b2 / (2.0 * area), c2 / (2.0 * area)],
             ]);
             let mut state = ShapeState::new(&tri3);
-            let ksi = &state.ip_data[0];
+            let ksi = &state.integ_point_constants[0];
             tri3.calc_gradient(&mut state, ksi).unwrap();
             assert_eq!(state.gradient.as_data(), gg.as_data());
 
@@ -725,7 +725,7 @@ mod tests {
         //        └           ┘
         let (lin2, xa, xb) = gen_lin2();
         let mut state = ShapeState::new(&lin2);
-        let all_int_points = lin2.calc_int_points_coords(&mut state)?;
+        let all_int_points = lin2.calc_integ_points_coords(&mut state)?;
         let mut a = Vector::new(lin2.nnode);
         lin2.integ_vec_a_ns(&mut a, &mut state, 1.0, |index_ip: usize| {
             Ok(all_int_points[index_ip][0])
@@ -756,7 +756,7 @@ mod tests {
         // with a single component. So, each component of `b` equals `Fₛ`
         let (lin2, xa, xb) = gen_lin2();
         let mut state = ShapeState::new(&lin2);
-        let all_int_points = lin2.calc_int_points_coords(&mut state)?;
+        let all_int_points = lin2.calc_integ_points_coords(&mut state)?;
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
         lin2.integ_vec_b_nv(&mut b, &mut state, 1.0, |v: &mut Vector, index: usize| {
             v.fill(all_int_points[index][0]);
@@ -797,7 +797,7 @@ mod tests {
         // bilinear vector function: w(x) = {x, y}
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
-        let all_int_points = tri3.calc_int_points_coords(&mut state)?;
+        let all_int_points = tri3.calc_integ_points_coords(&mut state)?;
         let c_correct = &[
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[0] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[0] / 6.0,
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[1] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[1] / 6.0,
@@ -999,7 +999,7 @@ mod tests {
         // check
         assert_vec_approx_eq!(kk_correct.as_data(), kk_bhatti.as_data(), 1e-12);
         assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
-        assert_eq!(*element.n_times_dd_computed.borrow(), state.ip_data.len());
+        assert_eq!(*element.n_times_dd_computed.borrow(), state.integ_point_constants.len());
         Ok(())
     }
 }
