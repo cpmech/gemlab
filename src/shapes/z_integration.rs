@@ -725,10 +725,10 @@ mod tests {
         //        └           ┘
         let (lin2, xa, xb) = gen_lin2();
         let mut state = ShapeState::new(&lin2);
-        let all_int_points = lin2.calc_integ_points_coords(&mut state)?;
+        let all_integ_points = lin2.calc_integ_points_coords(&mut state)?;
         let mut a = Vector::new(lin2.nnode);
         lin2.integ_vec_a_ns(&mut a, &mut state, 1.0, |index_ip: usize| {
-            Ok(all_int_points[index_ip][0])
+            Ok(all_integ_points[index_ip][0])
         })?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
@@ -756,10 +756,10 @@ mod tests {
         // with a single component. So, each component of `b` equals `Fₛ`
         let (lin2, xa, xb) = gen_lin2();
         let mut state = ShapeState::new(&lin2);
-        let all_int_points = lin2.calc_integ_points_coords(&mut state)?;
+        let all_integ_points = lin2.calc_integ_points_coords(&mut state)?;
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
         lin2.integ_vec_b_nv(&mut b, &mut state, 1.0, |v: &mut Vector, index: usize| {
-            v.fill(all_int_points[index][0]);
+            v.fill(all_integ_points[index][0]);
             Ok(())
         })?;
         let cf = (xb - xa) / 6.0;
@@ -797,7 +797,7 @@ mod tests {
         // bilinear vector function: w(x) = {x, y}
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
-        let all_int_points = tri3.calc_integ_points_coords(&mut state)?;
+        let all_integ_points = tri3.calc_integ_points_coords(&mut state)?;
         let c_correct = &[
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[0] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[0] / 6.0,
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[1] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[1] / 6.0,
@@ -805,8 +805,8 @@ mod tests {
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
         tri3.integ_vec_c_vg(&mut c, &mut state, 1.0, |w: &mut Vector, index: usize| {
-            w[0] = all_int_points[index][0];
-            w[1] = all_int_points[index][1];
+            w[0] = all_integ_points[index][0];
+            w[1] = all_integ_points[index][1];
             Ok(())
         })?;
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);

@@ -122,7 +122,7 @@ impl ShapeState {
     /// * `1_009` -- Wilson's integration points and weights. "Stable" version
     /// * `14` -- Iron's integration points and weights
     /// * `27` -- Conventional Legendre integration points and weights
-    pub fn select_int_points(&mut self, n_integ_point: usize) -> Result<(), StrError> {
+    pub fn select_integ_points(&mut self, n_integ_point: usize) -> Result<(), StrError> {
         self.integ_point_constants = match self.class {
             // Lin
             GeoClass::Lin => match n_integ_point {
@@ -199,16 +199,16 @@ mod tests {
     }
 
     #[test]
-    fn select_int_points_works() -> Result<(), StrError> {
+    fn select_integ_points_works() -> Result<(), StrError> {
         // Lin
         let shape = Shape::new(1, 1, 2)?;
         let mut state = ShapeState::new(&shape);
         for n_integ_point in [1, 2, 3, 4, 5] {
-            state.select_int_points(n_integ_point)?;
+            state.select_integ_points(n_integ_point)?;
             assert_eq!(state.integ_point_constants.len(), n_integ_point);
         }
         assert_eq!(
-            state.select_int_points(100).err(),
+            state.select_integ_points(100).err(),
             Some("number of integration points is not available for Lin class")
         );
 
@@ -216,13 +216,13 @@ mod tests {
         let shape = Shape::new(2, 2, 3)?;
         let mut state = ShapeState::new(&shape);
         for n_integ_point in [1, 3, 4, 12, 16] {
-            state.select_int_points(n_integ_point)?;
+            state.select_integ_points(n_integ_point)?;
             assert_eq!(state.integ_point_constants.len(), n_integ_point);
         }
-        state.select_int_points(1_003)?;
+        state.select_integ_points(1_003)?;
         assert_eq!(state.integ_point_constants.len(), 3);
         assert_eq!(
-            state.select_int_points(100).err(),
+            state.select_integ_points(100).err(),
             Some("number of integration points is not available for Tri class")
         );
 
@@ -230,13 +230,13 @@ mod tests {
         let shape = Shape::new(2, 2, 4)?;
         let mut state = ShapeState::new(&shape);
         for n_integ_point in [1, 4, 5, 8, 9, 16] {
-            state.select_int_points(n_integ_point)?;
+            state.select_integ_points(n_integ_point)?;
             assert_eq!(state.integ_point_constants.len(), n_integ_point);
         }
-        state.select_int_points(1_005)?;
+        state.select_integ_points(1_005)?;
         assert_eq!(state.integ_point_constants.len(), 5);
         assert_eq!(
-            state.select_int_points(100).err(),
+            state.select_integ_points(100).err(),
             Some("number of integration points is not available for Qua class")
         );
 
@@ -244,11 +244,11 @@ mod tests {
         let shape = Shape::new(3, 3, 4)?;
         let mut state = ShapeState::new(&shape);
         for n_integ_point in [1, 4, 5, 6] {
-            state.select_int_points(n_integ_point)?;
+            state.select_integ_points(n_integ_point)?;
             assert_eq!(state.integ_point_constants.len(), n_integ_point);
         }
         assert_eq!(
-            state.select_int_points(100).err(),
+            state.select_integ_points(100).err(),
             Some("number of integration points is not available for Tet class")
         );
 
@@ -256,13 +256,13 @@ mod tests {
         let shape = Shape::new(3, 3, 8)?;
         let mut state = ShapeState::new(&shape);
         for n_integ_point in [6, 8, 9, 14, 27] {
-            state.select_int_points(n_integ_point)?;
+            state.select_integ_points(n_integ_point)?;
             assert_eq!(state.integ_point_constants.len(), n_integ_point);
         }
-        state.select_int_points(1_009)?;
+        state.select_integ_points(1_009)?;
         assert_eq!(state.integ_point_constants.len(), 9);
         assert_eq!(
-            state.select_int_points(100).err(),
+            state.select_integ_points(100).err(),
             Some("number of integration points is not available for Hex class")
         );
         Ok(())

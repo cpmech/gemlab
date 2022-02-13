@@ -1290,7 +1290,7 @@ mod tests {
             Some("the last node coordinate has not been input yet")
         );
 
-        // calc_int_points_coords
+        // calc_integ_points_coords
         assert_eq!(
             shape.calc_integ_points_coords(&mut state).err(),
             Some("the last node coordinate has not been input yet")
@@ -2176,7 +2176,7 @@ mod tests {
     }
 
     #[test]
-    fn calc_int_points_coords() -> Result<(), StrError> {
+    fn calc_integ_points_coords() -> Result<(), StrError> {
         let mut shape = Shape::new(1, 1, 2)?;
         let mut state = ShapeState::new(&shape);
         let (xa, xb) = (2.0, 5.0);
