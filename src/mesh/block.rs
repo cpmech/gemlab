@@ -1,5 +1,5 @@
 use super::{Cell, Constraint, Mesh, Point};
-use crate::shapes::{Shape, ShapeState};
+use crate::shapes::Shape;
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use russell_lab::Vector;
@@ -78,7 +78,6 @@ pub struct Block {
 
     // shape and interpolation functions
     shape: Shape,
-    state: ShapeState,
 
     // grid to search reference coordinates
     grid_ksi: GridSearch,
@@ -104,7 +103,6 @@ impl Block {
         let geo_ndim = space_ndim;
         let nnode = if geo_ndim == 2 { 8 } else { 20 };
         let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-        let state = ShapeState::new(&shape);
 
         // constants
         const NDIV: usize = 2;
@@ -130,7 +128,6 @@ impl Block {
             edge_constraints: vec![None; shape.nedge],
             face_constraints: vec![None; shape.nface],
             shape,
-            state,
             grid_ksi,
         })
     }
@@ -352,7 +349,7 @@ impl Block {
                                 self.grid_ksi.insert(point_id, &ksi)?;
 
                                 // compute real coordinates of point
-                                self.shape.calc_coords(&mut self.state, &mut x, &ksi)?;
+                                self.shape.calc_coords(&mut x, &ksi)?;
 
                                 // add new point to mesh
                                 let mut shared_by_cells = HashSet::new();
@@ -375,7 +372,6 @@ impl Block {
                         attribute_id: self.attribute_id,
                         geo_ndim: shape_out.geo_ndim,
                         points,
-                        shape: Shape::new(space_ndim, space_ndim, output_npoint)?,
                     };
                     mesh.cells.push(cell);
 
@@ -406,7 +402,7 @@ mod tests {
     use super::{Block, StrError};
     use crate::geometry::Circle;
     use crate::mesh::Constraint;
-    use crate::shapes::ShapeState;
+    use crate::shapes::Shape;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
@@ -661,9 +657,9 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = ShapeState::new(&edge.shape);
                 assert_eq!(edge.points.len(), 2);
-                edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
+                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
+                shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
             }
         }
@@ -779,9 +775,9 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = ShapeState::new(&edge.shape);
                 assert_eq!(edge.points.len(), 3);
-                edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
+                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
+                shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
             }
         }
@@ -841,9 +837,9 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = ShapeState::new(&edge.shape);
                 assert_eq!(edge.points.len(), 3);
-                edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
+                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
+                shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
             }
         }
@@ -910,9 +906,9 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = ShapeState::new(&edge.shape);
                 assert_eq!(edge.points.len(), 4);
-                edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
+                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
+                shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
             }
         }
@@ -998,9 +994,9 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = ShapeState::new(&edge.shape);
                 assert_eq!(edge.points.len(), 4);
-                edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
+                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
+                shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
             }
         }
@@ -1094,9 +1090,9 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = ShapeState::new(&edge.shape);
                 assert_eq!(edge.points.len(), 5);
-                edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
+                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
+                shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
             }
         }

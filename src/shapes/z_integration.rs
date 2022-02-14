@@ -1,4 +1,5 @@
-use super::{Shape, ShapeState};
+use super::z_integ_points::*;
+use super::{GeoClass, Shape};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
@@ -17,6 +18,106 @@ pub trait IntegGDG {
 }
 
 impl Shape {
+    /// Selects integrations points and weights
+    ///
+    /// # Options
+    ///
+    /// ## n_integ_point for Lin class
+    ///
+    /// * `1` -- Conventional Legendre integration points and weights
+    /// * `2` -- Conventional Legendre integration points and weights
+    /// * `3` -- Conventional Legendre integration points and weights
+    /// * `4` -- Conventional Legendre integration points and weights
+    /// * `5` -- Conventional Legendre integration points and weights
+    ///
+    /// ## n_integ_point for Tri class
+    ///
+    /// * `1` -- Internal integration points and weights
+    /// * `3` -- Internal integration points and weights
+    /// * `1_003` -- Edge integration points and weights
+    /// * `4` -- Internal integration points and weights
+    /// * `12` -- Internal integration points and weights
+    /// * `16` -- Internal integration points and weights
+    ///
+    /// ## n_integ_point for Qua class
+    ///
+    /// * `1` -- Conventional Legendre integration points and weights
+    /// * `4` -- Conventional Legendre integration points and weights
+    /// * `5` -- Wilson's integration points and weights. "Corner" version
+    /// * `1_005` -- 5 points. Wilson's integration points and weights. "Stable" version version with w0=0.004 and wa=0.999 to mimic 4-point rule
+    /// * `8` -- Wilson's integration points and weights.
+    /// * `9` -- Conventional Legendre integration points and weights
+    /// * `16` -- Conventional Legendre integration points and weights
+    ///
+    /// ## n_integ_point for Tet class
+    ///
+    /// * `1` -- Internal integration points and weights
+    /// * `4` -- Internal integration points and weights
+    /// * `5` -- Internal integration points and weights
+    /// * `6` -- Internal integration points and weights
+    ///
+    /// ## n_integ_point for Hex class
+    ///
+    /// * `6` -- Iron's integration points and weights
+    /// * `8` -- Conventional Legendre integration points and weights
+    /// * `9` -- Wilson's integration points and weights. "Corner" version
+    /// * `1_009` -- Wilson's integration points and weights. "Stable" version
+    /// * `14` -- Iron's integration points and weights
+    /// * `27` -- Conventional Legendre integration points and weights
+    pub fn select_integ_points(&mut self, n_integ_point: usize) -> Result<(), StrError> {
+        self.integ_points = match self.class {
+            // Lin
+            GeoClass::Lin => match n_integ_point {
+                1 => &IP_LIN_LEGENDRE_1,
+                2 => &IP_LIN_LEGENDRE_2,
+                3 => &IP_LIN_LEGENDRE_3,
+                4 => &IP_LIN_LEGENDRE_4,
+                5 => &IP_LIN_LEGENDRE_5,
+                _ => return Err("number of integration points is not available for Lin class"),
+            },
+            // Tri
+            GeoClass::Tri => match n_integ_point {
+                1 => &IP_TRI_INTERNAL_1,
+                3 => &IP_TRI_INTERNAL_3,
+                1_003 => &IP_TRI_EDGE_3,
+                4 => &IP_TRI_INTERNAL_4,
+                12 => &IP_TRI_INTERNAL_12,
+                16 => &IP_TRI_INTERNAL_16,
+                _ => return Err("number of integration points is not available for Tri class"),
+            },
+            // Qua
+            GeoClass::Qua => match n_integ_point {
+                1 => &IP_QUA_LEGENDRE_1,
+                4 => &IP_QUA_LEGENDRE_4,
+                5 => &IP_QUA_WILSON_CORNER_5,
+                1_005 => &IP_QUA_WILSON_STABLE_5,
+                8 => &IP_QUA_WILSON_8,
+                9 => &IP_QUA_LEGENDRE_9,
+                16 => &IP_QUA_LEGENDRE_16,
+                _ => return Err("number of integration points is not available for Qua class"),
+            },
+            // Tet
+            GeoClass::Tet => match n_integ_point {
+                1 => &IP_TET_INTERNAL_1,
+                4 => &IP_TET_INTERNAL_4,
+                5 => &IP_TET_INTERNAL_5,
+                6 => &IP_TET_INTERNAL_6,
+                _ => return Err("number of integration points is not available for Tet class"),
+            },
+            // Hex
+            GeoClass::Hex => match n_integ_point {
+                6 => &IP_HEX_IRONS_6,
+                8 => &IP_HEX_LEGENDRE_8,
+                9 => &IP_HEX_WILSON_CORNER_9,
+                1_009 => &IP_HEX_WILSON_STABLE_9,
+                14 => &IP_HEX_IRONS_14,
+                27 => &IP_HEX_LEGENDRE_27,
+                _ => return Err("number of integration points is not available for Hex class"),
+            },
+        };
+        Ok(())
+    }
+
     /// Implements the shape(N)-scalar(S) integration case
     ///
     /// Interpolation functions times scalar field:
@@ -63,17 +164,10 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `state` -- mutable ShapeState
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `fn_s(index_ip: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function,
     ///   however written as a function of the index of the integration point.
-    pub fn integ_vec_a_ns<F>(
-        &self,
-        a: &mut Vector,
-        state: &mut ShapeState,
-        thickness: f64,
-        fn_s: F,
-    ) -> Result<(), StrError>
+    pub fn integ_vec_a_ns<F>(&mut self, a: &mut Vector, thickness: f64, fn_s: F) -> Result<(), StrError>
     where
         F: Fn(usize) -> Result<f64, StrError>,
     {
@@ -86,14 +180,14 @@ impl Shape {
         a.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.integ_point_constants.len() {
+        for index in 0..self.integ_points.len() {
             // ksi coordinates and weight
-            let iota = &state.integ_point_constants[index];
-            let weight = state.integ_point_constants[index][3];
+            let iota = &self.integ_points[index];
+            let weight = self.integ_points[index][3];
 
             // calculate interpolation functions and Jacobian
-            self.calc_interp(state, iota);
-            let det_jac = self.calc_jacobian(state, iota)?;
+            self.calc_interp(iota);
+            let det_jac = self.calc_jacobian(iota)?;
 
             // calculate s
             let s = fn_s(index)?;
@@ -101,7 +195,7 @@ impl Shape {
             // loop over nodes and perform sum
             let coef = thickness * det_jac * weight;
             for m in 0..self.nnode {
-                a[m] += state.interp[m] * s * coef;
+                a[m] += self.temp_interp[m] * s * coef;
             }
         }
         Ok(())
@@ -150,17 +244,10 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `state` -- mutable ShapeState
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `fn_v(v: &mut Vector, index_ip: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`,
     ///    however written as function of the index of the integration point.
-    pub fn integ_vec_b_nv<F>(
-        &self,
-        b: &mut Vector,
-        state: &mut ShapeState,
-        thickness: f64,
-        fn_v: F,
-    ) -> Result<(), StrError>
+    pub fn integ_vec_b_nv<F>(&mut self, b: &mut Vector, thickness: f64, fn_v: F) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -176,21 +263,21 @@ impl Shape {
         b.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.integ_point_constants.len() {
+        for index in 0..self.integ_points.len() {
             // ksi coordinates and weight
-            let iota = &state.integ_point_constants[index];
-            let weight = state.integ_point_constants[index][3];
+            let iota = &self.integ_points[index];
+            let weight = self.integ_points[index][3];
 
             // calculate interpolation functions and Jacobian
-            self.calc_interp(state, iota);
-            let det_jac = self.calc_jacobian(state, iota)?;
+            self.calc_interp(iota);
+            let det_jac = self.calc_jacobian(iota)?;
 
             // calculate v
             fn_v(&mut v, index)?;
 
             // add contribution to b vector
             let coef = thickness * det_jac * weight;
-            self.add_to_vec_b(state, b, &v, coef);
+            self.add_to_vec_b(b, &v, coef);
         }
         Ok(())
     }
@@ -232,17 +319,10 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `state` -- mutable ShapeState
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `fn_w(w: &mut Vector, index_ip: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`,
     ///   however written as a function of the index of the integration point.
-    pub fn integ_vec_c_vg<F>(
-        &self,
-        c: &mut Vector,
-        state: &mut ShapeState,
-        thickness: f64,
-        fn_w: F,
-    ) -> Result<(), StrError>
+    pub fn integ_vec_c_vg<F>(&mut self, c: &mut Vector, thickness: f64, fn_w: F) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -258,20 +338,20 @@ impl Shape {
         c.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.integ_point_constants.len() {
+        for index in 0..self.integ_points.len() {
             // ksi coordinates and weight
-            let iota = &state.integ_point_constants[index];
-            let weight = state.integ_point_constants[index][3];
+            let iota = &self.integ_points[index];
+            let weight = self.integ_points[index][3];
 
             // calculate Jacobian and Gradient
-            let det_jac = self.calc_gradient(state, iota)?;
+            let det_jac = self.calc_gradient(iota)?;
 
             // calculate w
             fn_w(&mut w, index)?;
 
             // add contribution to c vector
             let coef = thickness * det_jac * weight;
-            self.add_to_vec_c(state, c, &w, coef);
+            self.add_to_vec_c(c, &w, coef);
         }
         Ok(())
     }
@@ -319,20 +399,13 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `state` -- mutable ShapeState
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `element` -- an instance that implements the σ(x(ξ)) callback function
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_vec_d_tg<T>(
-        &self,
-        d: &mut Vector,
-        state: &mut ShapeState,
-        thickness: f64,
-        element: &T,
-    ) -> Result<(), StrError>
+    pub fn integ_vec_d_tg<T>(&mut self, d: &mut Vector, thickness: f64, element: &T) -> Result<(), StrError>
     where
         T: IntegTG,
     {
@@ -351,66 +424,66 @@ impl Shape {
         d.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.integ_point_constants.len() {
+        for index in 0..self.integ_points.len() {
             // ksi coordinates and weight
-            let iota = &state.integ_point_constants[index];
-            let weight = state.integ_point_constants[index][3];
+            let iota = &self.integ_points[index];
+            let weight = self.integ_points[index][3];
 
             // calculate Jacobian and Gradient
-            let det_jac = self.calc_gradient(state, iota)?;
+            let det_jac = self.calc_gradient(iota)?;
 
             // calculate σ
             element.calc_sig(&mut sig, index)?;
 
             // add contribution to d vector
             let coef = thickness * det_jac * weight;
-            self.add_to_vec_d(state, d, &sig, coef);
+            self.add_to_vec_d(d, &sig, coef);
         }
         Ok(())
     }
 
     /// Implements the shape(N)-scalar(S)-shape(N) integration case (e.g., diffusion matrix)
-    pub fn integ_mat_1_nsn(&self, _: &mut ShapeState) -> Result<(), StrError> {
+    pub fn integ_mat_1_nsn(&self) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the gradient(G)-vector(V)-shape(N) integration case (e.g., compressibility matrix)
-    pub fn integ_mat_2_gvn(&self, _: &mut ShapeState) -> Result<(), StrError> {
+    pub fn integ_mat_2_gvn(&self) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the gradient(G)-tensor(T)-gradient(G) integration case (e.g., conductivity matrix)
-    pub fn integ_mat_3_gtg(&self, _: &mut ShapeState) -> Result<(), StrError> {
+    pub fn integ_mat_3_gtg(&self) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the shape(N)-scalar(S)-gradient(G) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_4_nsg(&self, _: &mut ShapeState, _: &mut Shape) -> Result<(), StrError> {
+    pub fn integ_mat_4_nsg(&self) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the gradient(G)-tensor(T)-shape(N) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_5_gtn(&self, _: &mut ShapeState, _: &mut Shape) -> Result<(), StrError> {
+    pub fn integ_mat_5_gtn(&self) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the shape(N)-vector(V)-shape(N) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_6_nvn(&self, _: &mut ShapeState, _: &mut Shape) -> Result<(), StrError> {
+    pub fn integ_mat_6_nvn(&self) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the gradient(G)-scalar(S)-shape(N) integration case with different shapes (e.g., coupling matrix)
-    pub fn integ_mat_7_gsn(&self, _: &mut ShapeState, _: &mut Shape) -> Result<(), StrError> {
+    pub fn integ_mat_7_gsn(&self) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the shape(N)-tensor(T)-shape(N) integration case (e.g., mass matrix)
-    pub fn integ_mat_8_ntn(&self, _: &mut ShapeState) -> Result<(), StrError> {
+    pub fn integ_mat_8_ntn(&self) -> Result<(), StrError> {
         Ok(())
     }
 
     /// Implements the shape(n)-vector(v)-gradient(g) integration case (e.g., variable density matrix)
-    pub fn integ_mat_9_nvg(&self, _: &mut ShapeState) -> Result<(), StrError> {
+    pub fn integ_mat_9_nvg(&self) -> Result<(), StrError> {
         Ok(())
     }
 
@@ -460,20 +533,13 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `state` -- mutable ShapeState
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `element` -- an instance that implements the D(x(ξ)) callback function
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_mat_10_gdg<T>(
-        &self,
-        kk: &mut Matrix,
-        state: &mut ShapeState,
-        thickness: f64,
-        element: &T,
-    ) -> Result<(), StrError>
+    pub fn integ_mat_10_gdg<T>(&mut self, kk: &mut Matrix, thickness: f64, element: &T) -> Result<(), StrError>
     where
         T: IntegGDG,
     {
@@ -493,49 +559,50 @@ impl Shape {
         kk.fill(0.0);
 
         // loop over integration points
-        for index in 0..state.integ_point_constants.len() {
+        for index in 0..self.integ_points.len() {
             // ksi coordinates and weight
-            let iota = &state.integ_point_constants[index];
-            let weight = state.integ_point_constants[index][3];
+            let iota = &self.integ_points[index];
+            let weight = self.integ_points[index][3];
 
             // calculate Jacobian and Gradient
-            let det_jac = self.calc_gradient(state, iota)?;
+            let det_jac = self.calc_gradient(iota)?;
 
             // calculate constitutive modulus
             element.calc_dd(&mut dd, index)?;
 
             // add contribution to K matrix
             let coef = det_jac * weight * thickness;
-            self.add_to_mat_kk(state, kk, &dd, coef);
+            self.add_to_mat_kk(kk, &dd, coef);
         }
         Ok(())
     }
 
     /// Adds contribution to the b-vector in integ_vec_2_nv
     #[inline]
-    fn add_to_vec_b(&self, state: &mut ShapeState, b: &mut Vector, v: &Vector, coef: f64) {
+    fn add_to_vec_b(&self, b: &mut Vector, v: &Vector, coef: f64) {
+        let nn = &self.temp_interp;
         if self.space_ndim == 1 {
             for m in 0..self.nnode {
-                b[m] += coef * state.interp[m] * v[0];
+                b[m] += coef * nn[m] * v[0];
             }
         } else if self.space_ndim == 2 {
             for m in 0..self.nnode {
-                b[0 + m * 2] += coef * state.interp[m] * v[0];
-                b[1 + m * 2] += coef * state.interp[m] * v[1];
+                b[0 + m * 2] += coef * nn[m] * v[0];
+                b[1 + m * 2] += coef * nn[m] * v[1];
             }
         } else {
             for m in 0..self.nnode {
-                b[0 + m * 3] += coef * state.interp[m] * v[0];
-                b[1 + m * 3] += coef * state.interp[m] * v[1];
-                b[2 + m * 3] += coef * state.interp[m] * v[2];
+                b[0 + m * 3] += coef * nn[m] * v[0];
+                b[1 + m * 3] += coef * nn[m] * v[1];
+                b[2 + m * 3] += coef * nn[m] * v[2];
             }
         }
     }
 
     /// Adds contribution to the c-vector in integ_vec_3_vg
     #[inline]
-    fn add_to_vec_c(&self, state: &mut ShapeState, c: &mut Vector, w: &Vector, coef: f64) {
-        let g = &state.gradient;
+    fn add_to_vec_c(&self, c: &mut Vector, w: &Vector, coef: f64) {
+        let g = &self.temp_gradient;
         if self.space_ndim == 1 {
             for m in 0..self.nnode {
                 c[m] += coef * w[0] * g[m][0];
@@ -553,9 +620,9 @@ impl Shape {
 
     /// Adds contribution to the d-vector in integ_vec_4_tg
     #[inline]
-    fn add_to_vec_d(&self, state: &mut ShapeState, d: &mut Vector, sig: &Tensor2, coef: f64) {
+    fn add_to_vec_d(&self, d: &mut Vector, sig: &Tensor2, coef: f64) {
         let s = SQRT_2;
-        let g = &state.gradient;
+        let g = &self.temp_gradient;
         let t = &sig.vec;
         if self.space_ndim == 2 {
             for m in 0..self.nnode {
@@ -574,9 +641,9 @@ impl Shape {
     /// Adds contribution to the K-matrix in integ_mat_10_gdg
     #[inline]
     #[rustfmt::skip]
-    fn add_to_mat_kk(&self, state: &mut ShapeState, kk: &mut Matrix, dd: &Tensor4, c: f64) {
+    fn add_to_mat_kk(&self,  kk: &mut Matrix, dd: &Tensor4, c: f64) {
         let s = SQRT_2;
-        let g = &state.gradient;
+        let g = &self.temp_gradient;
         let d = &dd.mat;
         if self.space_ndim == 2 {
             for m in 0..self.nnode {
@@ -659,7 +726,7 @@ mod tests {
     }
 
     impl AnalyticalTri3 {
-        pub fn new(tri3: &Shape) -> Self {
+        pub fn new(tri3: &mut Shape) -> Self {
             // coefficients
             let (x0, y0) = (tri3.coords_transp[0][0], tri3.coords_transp[1][0]);
             let (x1, y1) = (tri3.coords_transp[0][1], tri3.coords_transp[1][1]);
@@ -677,10 +744,9 @@ mod tests {
                 [b1 / (2.0 * area), c1 / (2.0 * area)],
                 [b2 / (2.0 * area), c2 / (2.0 * area)],
             ]);
-            let mut state = ShapeState::new(&tri3);
-            let ksi = &state.integ_point_constants[0];
-            tri3.calc_gradient(&mut state, ksi).unwrap();
-            assert_eq!(state.gradient.as_data(), gg.as_data());
+            let ksi = &tri3.integ_points[0];
+            tri3.calc_gradient(ksi).unwrap();
+            assert_eq!(tri3.temp_gradient.as_data(), gg.as_data());
 
             // results
             AnalyticalTri3 {
@@ -691,6 +757,71 @@ mod tests {
                 area,
             }
         }
+    }
+
+    #[test]
+    fn select_integ_points_works() -> Result<(), StrError> {
+        // Lin
+        let mut shape = Shape::new(1, 1, 2)?;
+        for n_integ_point in [1, 2, 3, 4, 5] {
+            shape.select_integ_points(n_integ_point)?;
+            assert_eq!(shape.integ_points.len(), n_integ_point);
+        }
+        assert_eq!(
+            shape.select_integ_points(100).err(),
+            Some("number of integration points is not available for Lin class")
+        );
+
+        // Tri
+        let mut shape = Shape::new(2, 2, 3)?;
+        for n_integ_point in [1, 3, 4, 12, 16] {
+            shape.select_integ_points(n_integ_point)?;
+            assert_eq!(shape.integ_points.len(), n_integ_point);
+        }
+        shape.select_integ_points(1_003)?;
+        assert_eq!(shape.integ_points.len(), 3);
+        assert_eq!(
+            shape.select_integ_points(100).err(),
+            Some("number of integration points is not available for Tri class")
+        );
+
+        // Qua
+        let mut shape = Shape::new(2, 2, 4)?;
+        for n_integ_point in [1, 4, 5, 8, 9, 16] {
+            shape.select_integ_points(n_integ_point)?;
+            assert_eq!(shape.integ_points.len(), n_integ_point);
+        }
+        shape.select_integ_points(1_005)?;
+        assert_eq!(shape.integ_points.len(), 5);
+        assert_eq!(
+            shape.select_integ_points(100).err(),
+            Some("number of integration points is not available for Qua class")
+        );
+
+        // Tet
+        let mut shape = Shape::new(3, 3, 4)?;
+        for n_integ_point in [1, 4, 5, 6] {
+            shape.select_integ_points(n_integ_point)?;
+            assert_eq!(shape.integ_points.len(), n_integ_point);
+        }
+        assert_eq!(
+            shape.select_integ_points(100).err(),
+            Some("number of integration points is not available for Tet class")
+        );
+
+        // Hex
+        let mut shape = Shape::new(3, 3, 8)?;
+        for n_integ_point in [6, 8, 9, 14, 27] {
+            shape.select_integ_points(n_integ_point)?;
+            assert_eq!(shape.integ_points.len(), n_integ_point);
+        }
+        shape.select_integ_points(1_009)?;
+        assert_eq!(shape.integ_points.len(), 9);
+        assert_eq!(
+            shape.select_integ_points(100).err(),
+            Some("number of integration points is not available for Hex class")
+        );
+        Ok(())
     }
 
     #[test]
@@ -705,11 +836,10 @@ mod tests {
         // Fₛ = ———— │ 1 │
         //        3  │ 1 │
         //           └   ┘
-        let (tri3, area) = gen_tri3();
-        let mut state = ShapeState::new(&tri3);
+        let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let mut a = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_a_ns(&mut a, &mut state, 1.0, |_| Ok(CS))?;
+        tri3.integ_vec_a_ns(&mut a, 1.0, |_| Ok(CS))?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
@@ -723,13 +853,10 @@ mod tests {
         // Fₛ = — │           │
         //      6 │ xa + 2 xb │
         //        └           ┘
-        let (lin2, xa, xb) = gen_lin2();
-        let mut state = ShapeState::new(&lin2);
-        let all_integ_points = lin2.calc_integ_points_coords(&mut state)?;
+        let (mut lin2, xa, xb) = gen_lin2();
+        let all_integ_points = lin2.calc_integ_points_coords()?;
         let mut a = Vector::new(lin2.nnode);
-        lin2.integ_vec_a_ns(&mut a, &mut state, 1.0, |index_ip: usize| {
-            Ok(all_integ_points[index_ip][0])
-        })?;
+        lin2.integ_vec_a_ns(&mut a, 1.0, |index_ip: usize| Ok(all_integ_points[index_ip][0]))?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
@@ -740,11 +867,10 @@ mod tests {
     fn integ_vec_b_works() -> Result<(), StrError> {
         // This test is similar to the case_a with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
-        let (tri3, area) = gen_tri3();
-        let mut state = ShapeState::new(&tri3);
+        let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        tri3.integ_vec_b_nv(&mut b, &mut state, 1.0, |v: &mut Vector, _: usize| {
+        tri3.integ_vec_b_nv(&mut b, 1.0, |v: &mut Vector, _: usize| {
             v.fill(CS);
             Ok(())
         })?;
@@ -754,11 +880,10 @@ mod tests {
 
         // Likewise, this test is similar to case_a with lin2, however using a vector
         // with a single component. So, each component of `b` equals `Fₛ`
-        let (lin2, xa, xb) = gen_lin2();
-        let mut state = ShapeState::new(&lin2);
-        let all_integ_points = lin2.calc_integ_points_coords(&mut state)?;
+        let (mut lin2, xa, xb) = gen_lin2();
+        let all_integ_points = lin2.calc_integ_points_coords()?;
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
-        lin2.integ_vec_b_nv(&mut b, &mut state, 1.0, |v: &mut Vector, index: usize| {
+        lin2.integ_vec_b_nv(&mut b, 1.0, |v: &mut Vector, index: usize| {
             v.fill(all_integ_points[index][0]);
             Ok(())
         })?;
@@ -771,9 +896,8 @@ mod tests {
     #[test]
     fn integ_vec_c_works() -> Result<(), StrError> {
         // shape and analytical gradient
-        let (tri3, area) = gen_tri3();
-        let mut state = ShapeState::new(&tri3);
-        let ana = AnalyticalTri3::new(&tri3);
+        let (mut tri3, area) = gen_tri3();
+        let ana = AnalyticalTri3::new(&mut tri3);
         assert_eq!(area, ana.area);
 
         // constant vector function: w(x) = {w₀, w₁}
@@ -787,7 +911,7 @@ mod tests {
             (W0 * ana.b[2] + W1 * ana.c[2]) / 2.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_c_vg(&mut c, &mut state, 1.0, |w: &mut Vector, _: usize| {
+        tri3.integ_vec_c_vg(&mut c, 1.0, |w: &mut Vector, _: usize| {
             w[0] = W0;
             w[1] = W1;
             Ok(())
@@ -797,14 +921,14 @@ mod tests {
         // bilinear vector function: w(x) = {x, y}
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
-        let all_integ_points = tri3.calc_integ_points_coords(&mut state)?;
+        let all_integ_points = tri3.calc_integ_points_coords()?;
         let c_correct = &[
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[0] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[0] / 6.0,
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[1] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[1] / 6.0,
             (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[2] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[2] / 6.0,
         ];
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_c_vg(&mut c, &mut state, 1.0, |w: &mut Vector, index: usize| {
+        tri3.integ_vec_c_vg(&mut c, 1.0, |w: &mut Vector, index: usize| {
             w[0] = all_integ_points[index][0];
             w[1] = all_integ_points[index][1];
             Ok(())
@@ -880,9 +1004,8 @@ mod tests {
     #[test]
     fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
-        let (tri3, _) = gen_tri3();
-        let mut state = ShapeState::new(&tri3);
-        let ana = AnalyticalTri3::new(&tri3);
+        let (mut tri3, _) = gen_tri3();
+        let ana = AnalyticalTri3::new(&mut tri3);
 
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
@@ -911,7 +1034,7 @@ mod tests {
         // test integration
         let dim_d = tri3.nnode * tri3.space_ndim;
         let mut d = Vector::filled(dim_d, NOISE);
-        tri3.integ_vec_d_tg(&mut d, &mut state, 1.0, &element)?;
+        tri3.integ_vec_d_tg(&mut d, 1.0, &element)?;
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())
     }
@@ -942,7 +1065,6 @@ mod tests {
 
         // shape and analytical gradient
         let mut tri3 = Shape::new(2, 2, 3).unwrap();
-        let mut state = ShapeState::new(&tri3);
         tri3.set_node(0, 0, 0.0).unwrap();
         tri3.set_node(0, 1, 0.0).unwrap();
         tri3.set_node(1, 0, 2.0).unwrap();
@@ -983,7 +1105,7 @@ mod tests {
 
         // perform integration
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        tri3.integ_mat_10_gdg(&mut kk, &mut state, thickness, &element)?;
+        tri3.integ_mat_10_gdg(&mut kk, thickness, &element)?;
 
         // results from Bhatti's book
         #[rustfmt::skip]
@@ -999,7 +1121,7 @@ mod tests {
         // check
         assert_vec_approx_eq!(kk_correct.as_data(), kk_bhatti.as_data(), 1e-12);
         assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
-        assert_eq!(*element.n_times_dd_computed.borrow(), state.integ_point_constants.len());
+        assert_eq!(*element.n_times_dd_computed.borrow(), tri3.integ_points.len());
         Ok(())
     }
 }

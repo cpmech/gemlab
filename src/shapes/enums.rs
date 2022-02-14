@@ -1,4 +1,5 @@
 use super::*;
+use crate::StrError;
 use serde::{Deserialize, Serialize};
 
 /// Defines the class of geometric shape
@@ -107,6 +108,41 @@ impl GeoKind {
     ];
 }
 
+/// Returns the GeoClass and GeoKind for given geo_ndim and nnode
+pub fn geo_class_and_kind(geo_ndim: usize, nnode: usize) -> Result<(GeoClass, GeoKind), StrError> {
+    match (geo_ndim, nnode) {
+        // Lin
+        (1, 2) => Ok((GeoClass::Lin, GeoKind::Lin2)),
+        (1, 3) => Ok((GeoClass::Lin, GeoKind::Lin3)),
+        (1, 4) => Ok((GeoClass::Lin, GeoKind::Lin4)),
+        (1, 5) => Ok((GeoClass::Lin, GeoKind::Lin5)),
+
+        // Tri
+        (2, 3) => Ok((GeoClass::Tri, GeoKind::Tri3)),
+        (2, 6) => Ok((GeoClass::Tri, GeoKind::Tri6)),
+        (2, 10) => Ok((GeoClass::Tri, GeoKind::Tri10)),
+        (2, 15) => Ok((GeoClass::Tri, GeoKind::Tri15)),
+
+        // Qua
+        (2, 4) => Ok((GeoClass::Qua, GeoKind::Qua4)),
+        (2, 8) => Ok((GeoClass::Qua, GeoKind::Qua8)),
+        (2, 9) => Ok((GeoClass::Qua, GeoKind::Qua9)),
+        (2, 12) => Ok((GeoClass::Qua, GeoKind::Qua12)),
+        (2, 16) => Ok((GeoClass::Qua, GeoKind::Qua16)),
+        (2, 17) => Ok((GeoClass::Qua, GeoKind::Qua17)),
+
+        // Tet
+        (3, 4) => Ok((GeoClass::Tet, GeoKind::Tet4)),
+        (3, 10) => Ok((GeoClass::Tet, GeoKind::Tet10)),
+
+        // Hex
+        (3, 8) => Ok((GeoClass::Hex, GeoKind::Hex8)),
+        (3, 20) => Ok((GeoClass::Hex, GeoKind::Hex20)),
+        _ => Err("(geo_ndim,nnode) combination is invalid"),
+    }
+}
+
+/// Converts i32 to FnInterp
 pub(crate) fn i32_to_fn_interp(kind: i32) -> FnInterp {
     match kind {
         // Lin
@@ -136,6 +172,7 @@ pub(crate) fn i32_to_fn_interp(kind: i32) -> FnInterp {
     }
 }
 
+/// Converts i32 to FnDeriv
 pub(crate) fn i32_to_fn_deriv(kind: i32) -> FnDeriv {
     match kind {
         // Lin
@@ -170,7 +207,10 @@ pub(crate) fn i32_to_fn_deriv(kind: i32) -> FnDeriv {
 #[cfg(test)]
 mod tests {
     use super::{i32_to_fn_deriv, i32_to_fn_interp};
-    use crate::shapes::{GeoClass, GeoKind};
+    use crate::{
+        shapes::{geo_class_and_kind, GeoClass, GeoKind},
+        StrError,
+    };
     use std::collections::HashSet;
 
     #[test]
@@ -200,7 +240,7 @@ mod tests {
     }
 
     #[test]
-    fn data_is_consistent() {
+    fn data_is_consistent() -> Result<(), StrError> {
         for kind in GeoKind::VALUES {
             match kind {
                 // Lin
@@ -210,6 +250,7 @@ mod tests {
                     assert_eq!(nnode, 2);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Lin2);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Lin2);
+                    assert_eq!(geo_class_and_kind(1, 2)?, (GeoClass::Lin, kind));
                 }
                 GeoKind::Lin3 => {
                     let k = kind as i32;
@@ -217,6 +258,7 @@ mod tests {
                     assert_eq!(nnode, 3);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Lin3);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Lin3);
+                    assert_eq!(geo_class_and_kind(1, 3)?, (GeoClass::Lin, kind));
                 }
                 GeoKind::Lin4 => {
                     let k = kind as i32;
@@ -224,6 +266,7 @@ mod tests {
                     assert_eq!(nnode, 4);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Lin4);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Lin4);
+                    assert_eq!(geo_class_and_kind(1, 4)?, (GeoClass::Lin, kind));
                 }
                 GeoKind::Lin5 => {
                     let k = kind as i32;
@@ -231,6 +274,7 @@ mod tests {
                     assert_eq!(nnode, 5);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Lin5);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Lin5);
+                    assert_eq!(geo_class_and_kind(1, 5)?, (GeoClass::Lin, kind));
                 }
 
                 // Tri
@@ -240,6 +284,7 @@ mod tests {
                     assert_eq!(nnode, 3);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tri3);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tri3);
+                    assert_eq!(geo_class_and_kind(2, 3)?, (GeoClass::Tri, kind));
                 }
                 GeoKind::Tri6 => {
                     let k = kind as i32;
@@ -247,6 +292,7 @@ mod tests {
                     assert_eq!(nnode, 6);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tri6);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tri6);
+                    assert_eq!(geo_class_and_kind(2, 6)?, (GeoClass::Tri, kind));
                 }
                 GeoKind::Tri10 => {
                     let k = kind as i32;
@@ -254,6 +300,7 @@ mod tests {
                     assert_eq!(nnode, 10);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tri10);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tri10);
+                    assert_eq!(geo_class_and_kind(2, 10)?, (GeoClass::Tri, kind));
                 }
                 GeoKind::Tri15 => {
                     let k = kind as i32;
@@ -261,6 +308,7 @@ mod tests {
                     assert_eq!(nnode, 15);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tri15);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tri15);
+                    assert_eq!(geo_class_and_kind(2, 15)?, (GeoClass::Tri, kind));
                 }
 
                 // Qua
@@ -270,6 +318,7 @@ mod tests {
                     assert_eq!(nnode, 4);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua4);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua4);
+                    assert_eq!(geo_class_and_kind(2, 4)?, (GeoClass::Qua, kind));
                 }
                 GeoKind::Qua8 => {
                     let k = kind as i32;
@@ -277,6 +326,7 @@ mod tests {
                     assert_eq!(nnode, 8);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua8);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua8);
+                    assert_eq!(geo_class_and_kind(2, 8)?, (GeoClass::Qua, kind));
                 }
                 GeoKind::Qua9 => {
                     let k = kind as i32;
@@ -284,6 +334,7 @@ mod tests {
                     assert_eq!(nnode, 9);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua9);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua9);
+                    assert_eq!(geo_class_and_kind(2, 9)?, (GeoClass::Qua, kind));
                 }
                 GeoKind::Qua12 => {
                     let k = kind as i32;
@@ -291,6 +342,7 @@ mod tests {
                     assert_eq!(nnode, 12);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua12);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua12);
+                    assert_eq!(geo_class_and_kind(2, 12)?, (GeoClass::Qua, kind));
                 }
                 GeoKind::Qua16 => {
                     let k = kind as i32;
@@ -298,6 +350,7 @@ mod tests {
                     assert_eq!(nnode, 16);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua16);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua16);
+                    assert_eq!(geo_class_and_kind(2, 16)?, (GeoClass::Qua, kind));
                 }
                 GeoKind::Qua17 => {
                     let k = kind as i32;
@@ -305,6 +358,7 @@ mod tests {
                     assert_eq!(nnode, 17);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Qua17);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Qua17);
+                    assert_eq!(geo_class_and_kind(2, 17)?, (GeoClass::Qua, kind));
                 }
 
                 // Tet
@@ -314,6 +368,7 @@ mod tests {
                     assert_eq!(nnode, 4);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tet4);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tet4);
+                    assert_eq!(geo_class_and_kind(3, 4)?, (GeoClass::Tet, kind));
                 }
                 GeoKind::Tet10 => {
                     let k = kind as i32;
@@ -321,6 +376,7 @@ mod tests {
                     assert_eq!(nnode, 10);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Tet10);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Tet10);
+                    assert_eq!(geo_class_and_kind(3, 10)?, (GeoClass::Tet, kind));
                 }
 
                 // Hex
@@ -330,6 +386,7 @@ mod tests {
                     assert_eq!(nnode, 8);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Hex8);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Hex8);
+                    assert_eq!(geo_class_and_kind(3, 8)?, (GeoClass::Hex, kind));
                 }
                 GeoKind::Hex20 => {
                     let k = kind as i32;
@@ -337,8 +394,10 @@ mod tests {
                     assert_eq!(nnode, 20);
                     assert_eq!(i32_to_fn_interp(k).0, GeoKind::Hex20);
                     assert_eq!(i32_to_fn_deriv(k).0, GeoKind::Hex20);
+                    assert_eq!(geo_class_and_kind(3, 20)?, (GeoClass::Hex, kind));
                 }
             }
         }
+        Ok(())
     }
 }

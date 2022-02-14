@@ -1,5 +1,4 @@
 use super::{Cell, Mesh, Point, PointId};
-use crate::shapes::Shape;
 use crate::StrError;
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -160,7 +159,6 @@ impl DataForReadTextMesh {
             attribute_id,
             geo_ndim,
             points,
-            shape: Shape::new(self.space_ndim, geo_ndim, nnode)?,
         });
 
         self.current_ncell += 1; // next cell

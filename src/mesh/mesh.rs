@@ -1,6 +1,6 @@
 use super::read_text_mesh::{parse_text_mesh, read_text_mesh};
 use super::At;
-use crate::shapes::{Shape, ShapeState};
+use crate::shapes::Shape;
 use crate::util::GridSearch;
 use crate::StrError;
 use russell_lab::{sort2, sort4};
@@ -477,8 +477,7 @@ impl Mesh {
             }
 
             // check if the determinant of Jacobian is positive => counterclockwise nodes
-            let mut state = ShapeState::new(&cell.shape);
-            let det_jac = cell.shape.calc_jacobian(&mut state, &[0.0, 0.0, 0.0])?;
+            let det_jac = cell.shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
             if det_jac < 0.0 {
                 return Err("a cell has incorrect ordering of nodes");
             }
@@ -564,8 +563,7 @@ impl Mesh {
             }
 
             // check if the determinant of Jacobian is positive => counterclockwise nodes
-            let mut state = ShapeState::new(&cell.shape);
-            let det_jac = cell.shape.calc_jacobian(&mut state, &[0.0, 0.0, 0.0])?;
+            let det_jac = cell.shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
             if det_jac < 0.0 {
                 return Err("a cell has incorrect ordering of nodes");
             }
@@ -831,7 +829,6 @@ impl fmt::Display for Mesh {
 mod tests {
     use super::Point;
     use crate::mesh::{At, Edge, Face, Mesh};
-    use crate::shapes::ShapeState;
     use crate::util::SQRT_2;
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -1171,8 +1168,7 @@ mod tests {
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
                 let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                let mut state = ShapeState::new(&edge.shape);
-                edge.shape.calc_boundary_normal(&mut state, &mut normal, ksi)?;
+                edge.shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
             }
         }
