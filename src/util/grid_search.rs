@@ -36,9 +36,6 @@ pub struct GridSearch {
     size: Vec<f64>,   // (ndim) side lengths of each container
     cf: Vec<usize>,   // (3) coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
 
-    // auxiliary variable
-    ratio: Vec<usize>, // (ndim) ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
-
     // square/cubic halo: bounding box corners around point, including the point
     tol: Vec<f64>,       // tolerances to compare coordinates and define the halo
     halo: Vec<Vec<f64>>, // (ncorner) 4 in 2D or 8 in 3D (each contains ndim coords)
@@ -79,7 +76,6 @@ impl GridSearch {
             delta: vec![0.0; ndim],
             size: vec![0.0; ndim],
             cf: vec![0; 3], // << must be 3
-            ratio: vec![0; ndim],
             tol: vec![0.0; ndim],
             halo: vec![vec![0.0; ndim]; ncorner],
             ncorner,
@@ -212,7 +208,7 @@ impl GridSearch {
     /// # Output
     ///
     /// * `id` -- if found, returns the identification number of the item
-    pub fn find(&mut self, x: &[f64]) -> Result<Option<usize>, StrError> {
+    pub fn find(&self, x: &[f64]) -> Result<Option<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -253,7 +249,7 @@ impl GridSearch {
     /// # Output
     ///
     /// Returns the ids of points.
-    pub fn find_on_line(&mut self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_line(&self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -296,7 +292,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 2D only.
-    pub fn find_on_circle(&mut self, center: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_circle(&self, center: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -340,7 +336,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_cylinder(&mut self, a: &[f64], b: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_cylinder(&self, a: &[f64], b: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -385,7 +381,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_plane_xy(&mut self, z: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_plane_xy(&self, z: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -424,7 +420,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_plane_yz(&mut self, x: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_plane_yz(&self, x: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -463,7 +459,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_plane_xz(&mut self, y: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_plane_xz(&self, y: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -572,18 +568,19 @@ impl GridSearch {
     ///
     /// * returns the index of the container or None if the point is out-of-range
     #[inline]
-    fn container_index(&mut self, x: &[f64]) -> Option<usize> {
+    fn container_index(&self, x: &[f64]) -> Option<usize> {
+        let mut ratio = vec![0; self.ndim]; // (ndim) ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
         let mut index = 0;
         for i in 0..self.ndim {
             if x[i] < self.min[i] || x[i] > self.max[i] {
                 return None;
             }
-            self.ratio[i] = ((x[i] - self.min[i]) / self.size[i]) as usize;
-            if self.ratio[i] == self.ndiv[i] {
+            ratio[i] = ((x[i] - self.min[i]) / self.size[i]) as usize;
+            if ratio[i] == self.ndiv[i] {
                 // the point is exactly on the max edge, thus select inner container
-                self.ratio[i] -= 1; // move to the inside
+                ratio[i] -= 1; // move to the inside
             }
-            index += self.ratio[i] * self.cf[i];
+            index += ratio[i] * self.cf[i];
         }
         Some(index)
     }
@@ -1001,7 +998,6 @@ mod tests {
         assert_eq!(g2d.delta, [1.0, 2.0]);
         assert_eq!(g2d.size, [0.2, 0.4]);
         assert_eq!(g2d.cf, [1, 5, 25]);
-        assert_eq!(g2d.ratio, [0, 0]);
         assert_eq!(g2d.tol, [1e-4, 1e-4]);
         assert_eq!(g2d.halo.len(), 4);
         assert_eq!(g2d.ncorner, 4);
@@ -1018,7 +1014,6 @@ mod tests {
         assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
         assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
         assert_eq!(g3d.cf, [1, 3, 9]);
-        assert_eq!(g3d.ratio, [0, 0, 0]);
         assert_eq!(g3d.tol, [1e-4, 1e-4, 1e-4]);
         assert_eq!(g3d.halo.len(), 8);
         assert_eq!(g3d.ncorner, 8);
@@ -1070,7 +1065,7 @@ mod tests {
 
     #[test]
     fn container_index_works() -> Result<(), StrError> {
-        let mut g2d = get_test_grid_2d();
+        let g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
             let index = g2d.container_index(data.x).unwrap();
             assert_eq!(index, data.container);
@@ -1078,7 +1073,7 @@ mod tests {
         let index = g2d.container_index(&[0.80001, 0.0]);
         assert_eq!(index, None); // outside
 
-        let mut g3d = get_test_grid_3d();
+        let g3d = get_test_grid_3d();
         for data in get_test_data_3d() {
             let index = g3d.container_index(data.x).unwrap();
             assert_eq!(index, data.container);
@@ -1247,7 +1242,7 @@ mod tests {
         let res = g2d.find(&[0.80001, 0.0]);
         assert_eq!(res, Err("point is outside the grid"));
 
-        let mut g3d = get_test_grid_3d();
+        let g3d = get_test_grid_3d();
         let res = g3d.find(&[0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
         let res = g3d.find(&[1.00001, 0.0, 0.0]);
@@ -1404,7 +1399,7 @@ mod tests {
         let res = g2d.find_on_circle(&[-0.2], 0.3);
         assert_eq!(res, Err("center.len() must equal ndim"));
 
-        let mut g3d = get_test_grid_3d();
+        let g3d = get_test_grid_3d();
         let res = g3d.find_on_circle(&[0.0, 0.0, 0.0], 1.0);
         assert_eq!(res, Err("this works in 2D only"));
     }
@@ -1446,7 +1441,7 @@ mod tests {
         let res = g3d.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0);
         assert_eq!(res, Err("b.len() must equal ndim"));
 
-        let mut g2d = get_test_grid_2d();
+        let g2d = get_test_grid_2d();
         let res = g2d.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0);
         assert_eq!(res, Err("this works in 3D only"));
     }
@@ -1490,7 +1485,7 @@ mod tests {
 
     #[test]
     fn find_on_plane_fails_on_wrong_input() {
-        let mut g2d = get_test_grid_2d();
+        let g2d = get_test_grid_2d();
         let mut g3d = get_test_grid_3d();
         g3d.initialized = false;
         let res = g3d.find_on_plane_xy(-1.0);

@@ -312,14 +312,7 @@ impl Mesh {
     /// # Note
     ///
     /// `compute_derived_props` must be called first, otherwise this function returns an error
-    ///
-    /// # Warning
-    ///
-    /// This function cannot be used concurrently.
-    pub fn find_boundary_points(&mut self, at: At) -> Result<Vec<PointId>, StrError> {
-        /*
-        NOTE: we use "&mut self" here because grid_boundary_points requires it
-        */
+    pub fn find_boundary_points(&self, at: At) -> Result<Vec<PointId>, StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
@@ -434,14 +427,7 @@ impl Mesh {
     /// # Note
     ///
     /// `compute_derived_props` must be called first, otherwise this function returns an error
-    ///
-    /// # Warning
-    ///
-    /// This function cannot be used concurrently.
-    pub fn find_boundary_edges(&mut self, at: At) -> Result<Vec<EdgeKey>, StrError> {
-        /*
-        NOTE: we use "&mut self" here because grid_boundary_points requires it
-        */
+    pub fn find_boundary_edges(&self, at: At) -> Result<Vec<EdgeKey>, StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
@@ -1249,7 +1235,7 @@ mod tests {
 
     #[test]
     fn find_boundary_fails_on_wrong_input() -> Result<(), StrError> {
-        let mut mesh = Mesh::new(2)?;
+        let mesh = Mesh::new(2)?;
         assert_eq!(
             mesh.find_boundary_points(At::XY(0.0, 0.0)).err(),
             Some("compute_derived_props must be called first")
@@ -1258,7 +1244,7 @@ mod tests {
             mesh.find_boundary_edges(At::XY(0.0, 0.0)).err(),
             Some("compute_derived_props must be called first")
         );
-        let mut mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
         assert_eq!(
             mesh.find_boundary_points(At::Z(0.0)).err(),
             Some("At::Z works in 3D only")
@@ -1280,7 +1266,7 @@ mod tests {
                 .err(),
             Some("At::Cylinder works in 3D only")
         );
-        let mut mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
         assert_eq!(
             mesh.find_boundary_points(At::Circle(0.0, 0.0, 0.0)).err(),
             Some("At::Circle works in 2D only")
@@ -1297,7 +1283,7 @@ mod tests {
         //   |      `.|        |
         //   0--------1--------4
         //
-        let mut mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
         assert_eq!(mesh.find_boundary_points(At::XY(0.0, 0.0))?, &[0]);
         assert_eq!(mesh.find_boundary_points(At::XY(2.0, 1.0))?, &[5]);
         assert_eq!(
@@ -1339,7 +1325,7 @@ mod tests {
         //  |/             |/
         //  1--------------2
         //
-        let mut mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
         assert_eq!(mesh.find_boundary_points(At::X(0.0))?, &[0, 3, 4, 7, 8, 11]);
         assert_eq!(mesh.find_boundary_points(At::X(1.0))?, &[1, 2, 5, 6, 9, 10]);
         assert_eq!(mesh.find_boundary_points(At::X(10.0))?, &[] as &[usize]);
