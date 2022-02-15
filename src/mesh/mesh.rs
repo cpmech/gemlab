@@ -146,7 +146,7 @@ pub struct Mesh {
 
     /// Set of edges on the boundaries
     ///
-    /// Note: In 2D, a boundary edge is such that it's shared by one 2D cell only (ignore 1D cells)
+    /// Note: In 2D, a boundary edge is such that it is shared by one 2D cell only (1D cells are ignored)
     ///
     /// Note: In 3D, a boundary edge belongs to a boundary face
     ///
@@ -155,7 +155,7 @@ pub struct Mesh {
 
     /// Set of faces on the boundaries
     ///
-    /// Note: A boundary face is such that it's shared by one 3D cell only
+    /// Note: A boundary face is such that it is shared by one 3D cell only
     ///
     /// (derived property)
     pub boundary_faces: HashMap<FaceKey, Face>,
@@ -506,7 +506,9 @@ impl Mesh {
     /// Computes derived properties of 2D mesh
     fn compute_derived_props_2d(&mut self) -> Result<(), StrError> {
         // maps all edge keys to (cell_id, e) where e is the cell's local edge index
-        let mut all_edges: HashMap<EdgeKey, Vec<(CellId, usize)>> = HashMap::new();
+        let mut all_edges: HashMap<EdgeKey, Vec<(CellId, usize)>> = HashMap::new(); // (edge_key) => [(cell_id,e)]
+
+        // maps all cell shapes to a Shape instance
         let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new(); // (geo_ndim,nnode) => Shape
 
         // loop over all cells
@@ -557,14 +559,14 @@ impl Mesh {
         }
 
         // loop over all edges
-        for (edge_key, edge_data) in &all_edges {
-            // skip inner edges
-            if edge_data.len() != 1 {
+        for (edge_key, cell_ids_and_es) in &all_edges {
+            // skip inner edges (those shared by multiple cells)
+            if cell_ids_and_es.len() != 1 {
                 continue;
             }
 
             // edge data
-            let (cell_id, e) = edge_data[0];
+            let (cell_id, e) = cell_ids_and_es[0];
             let cell = &self.cells[cell_id];
             let cell_shape = all_shapes.get(&(cell.geo_ndim, cell.points.len())).unwrap(); // must exist due to previous loop
             let edge_nnode = cell_shape.edge_nnode;
@@ -596,7 +598,9 @@ impl Mesh {
     /// Computes derived properties of 3D mesh
     fn compute_derived_props_3d(&mut self) -> Result<(), StrError> {
         // maps all face keys to (cell_id, f) where f is the cell's local face index
-        let mut all_faces: HashMap<FaceKey, Vec<(CellId, usize)>> = HashMap::new();
+        let mut all_faces: HashMap<FaceKey, Vec<(CellId, usize)>> = HashMap::new(); // (face_key) => [(cell_id,f)]
+
+        // maps all cell shapes to a Shape instance
         let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new(); // (geo_ndim,nnode) => Shape
 
         // loop over all cells
@@ -663,14 +667,14 @@ impl Mesh {
 
         // loop over all faces
         for face_key in face_keys {
-            let face_data = all_faces.get(face_key).unwrap();
-            // skip inner faces
-            if face_data.len() != 1 {
+            let cell_ids_and_fs = all_faces.get(face_key).unwrap();
+            // skip inner faces (those shared by multiple cells)
+            if cell_ids_and_fs.len() != 1 {
                 continue;
             }
 
             // face data
-            let (cell_id, f) = face_data[0];
+            let (cell_id, f) = cell_ids_and_fs[0];
             let cell = &self.cells[cell_id];
             let cell_shape = all_shapes.get(&(cell.geo_ndim, cell.points.len())).unwrap(); // must exist due to previous loop
             let face_nnode = cell_shape.face_nnode;
