@@ -1226,6 +1226,65 @@ mod tests {
     }
 
     #[test]
+    fn normals_are_correct_3d() -> Result<(), StrError> {
+        //
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+
+        // the norm of the normal vector should be equal to 0.25 = face_area / 4.0
+        // where 4.0 corresponds to the face_area in the reference system
+        let l = 0.25; // norm of normal vector
+
+        // face keys and correct normal vectors (solutions)
+        let face_keys_and_solutions = [
+            // behind
+            (vec![(0, 3, 4, 7), (4, 7, 8, 11)], [-l, 0.0, 0.0]),
+            // front
+            (vec![(1, 2, 5, 6), (5, 6, 9, 10)], [l, 0.0, 0.0]),
+            // left
+            (vec![(0, 1, 4, 5), (4, 5, 8, 9)], [0.0, -l, 0.0]),
+            // right
+            (vec![(2, 3, 6, 7), (6, 7, 10, 11)], [0.0, l, 0.0]),
+            // bottom
+            (vec![(0, 1, 2, 3)], [0.0, 0.0, -l]),
+            // top
+            (vec![(8, 9, 10, 11)], [0.0, 0.0, l]),
+        ];
+
+        // check if the normal vectors at boundary are outward
+        let mut normal = Vector::new(mesh.space_ndim);
+        let ksi = &[0.0, 0.0, 0.0];
+        for (face_keys, solution) in &face_keys_and_solutions {
+            for face_key in face_keys {
+                let mut face_shape = mesh.alloc_shape_boundary_face(face_key)?;
+                face_shape.calc_boundary_normal(&mut normal, ksi)?;
+                assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
     fn display_works() -> Result<(), StrError> {
         //
         //  3--------2--------5
