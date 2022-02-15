@@ -402,7 +402,6 @@ mod tests {
     use super::{Block, StrError};
     use crate::geometry::Circle;
     use crate::mesh::Constraint;
-    use crate::shapes::Shape;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
@@ -570,7 +569,7 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ])?;
-        let mut mesh = block.subdivide(4)?;
+        let mesh = block.subdivide(4)?;
         //
         //   7---------------6---------------8
         //   |               |               |
@@ -656,10 +655,9 @@ mod tests {
         let ksi = &[0.0, 0.0, 0.0];
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
-                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                assert_eq!(edge.points.len(), 2);
-                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
-                shape.calc_boundary_normal(&mut normal, ksi)?;
+                let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
+                assert_eq!(edge_shape.nnode, 2);
+                edge_shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
             }
         }
@@ -676,7 +674,7 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ])?;
-        let mut mesh = block.subdivide(8)?;
+        let mesh = block.subdivide(8)?;
         //
         //  14------16------13------20------18
         //   |               |               |
@@ -774,10 +772,9 @@ mod tests {
         let ksi = &[0.0, 0.0, 0.0];
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
-                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                assert_eq!(edge.points.len(), 3);
-                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
-                shape.calc_boundary_normal(&mut normal, ksi)?;
+                let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
+                assert_eq!(edge_shape.nnode, 3);
+                edge_shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
             }
         }
@@ -809,7 +806,8 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ])?;
-        let mut mesh = block.subdivide(9)?;
+        let mesh = block.subdivide(9)?;
+
         // check
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(mesh.points[24].coords, &[1.5, 1.5]);
@@ -836,10 +834,9 @@ mod tests {
         let ksi = &[0.0, 0.0, 0.0];
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
-                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                assert_eq!(edge.points.len(), 3);
-                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
-                shape.calc_boundary_normal(&mut normal, ksi)?;
+                let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
+                assert_eq!(edge_shape.nnode, 3);
+                edge_shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
             }
         }
@@ -871,7 +868,7 @@ mod tests {
             [3.0, 3.0],
             [0.0, 3.0],
         ])?;
-        let mut mesh = block.subdivide(12)?;
+        let mesh = block.subdivide(12)?;
 
         // check
         assert_eq!(mesh.points.len(), 33);
@@ -905,10 +902,9 @@ mod tests {
         let ksi = &[0.0, 0.0, 0.0];
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
-                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                assert_eq!(edge.points.len(), 4);
-                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
-                shape.calc_boundary_normal(&mut normal, ksi)?;
+                let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
+                assert_eq!(edge_shape.nnode, 4);
+                edge_shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
             }
         }
@@ -940,7 +936,7 @@ mod tests {
             [3.0, 3.0],
             [0.0, 3.0],
         ])?;
-        let mut mesh = block.subdivide(16)?;
+        let mesh = block.subdivide(16)?;
 
         // check
         assert_eq!(mesh.points.len(), 49);
@@ -993,10 +989,9 @@ mod tests {
         let ksi = &[0.0, 0.0, 0.0];
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
-                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                assert_eq!(edge.points.len(), 4);
-                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
-                shape.calc_boundary_normal(&mut normal, ksi)?;
+                let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
+                assert_eq!(edge_shape.nnode, 4);
+                edge_shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
             }
         }
@@ -1032,7 +1027,7 @@ mod tests {
             [4.0, 4.0],
             [0.0, 4.0],
         ])?;
-        let mut mesh = block.subdivide(17)?;
+        let mesh = block.subdivide(17)?;
 
         // check
         assert_eq!(mesh.points.len(), 49);
@@ -1089,10 +1084,9 @@ mod tests {
         let ksi = &[0.0, 0.0, 0.0];
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
-                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                assert_eq!(edge.points.len(), 5);
-                let mut shape = Shape::new(mesh.space_ndim, 1, edge.points.len())?;
-                shape.calc_boundary_normal(&mut normal, ksi)?;
+                let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
+                assert_eq!(edge_shape.nnode, 5);
+                edge_shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
             }
         }

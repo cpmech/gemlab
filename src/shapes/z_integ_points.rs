@@ -1,6 +1,3 @@
-use super::GeoKind;
-use serde::{de::Deserialize, de::Deserializer, Serializer};
-
 // This file defines several constants with integration points data.
 //
 // Each integration point (IP) is defined by 3 reference
@@ -11,30 +8,6 @@ use serde::{de::Deserialize, de::Deserializer, Serializer};
 // The data structure is a 2D array such that [[f64; 4]; NIP]
 // where NIP is the number of integration points in a particular set.
 // "4" corresponds to (r, s, t) and the weight (w).
-
-/// Holds (GeoKind,Constants) with integration points' constants (coordinates and weights)
-pub struct IntegPoints(pub GeoKind, pub &'static [[f64; 4]]);
-
-/// Implements the serialize method for IntegPoints
-///
-/// Only the GeoKind as i32 needs to be encoded
-pub(crate) fn shape_serialize_integ_points<S>(integ_points: &IntegPoints, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_i32(integ_points.0 as i32)
-}
-
-/// Implements the deserialize method for IntegPoints
-///
-/// Decodes the GeoKind as i32 and find the proper IntegPoints
-pub(crate) fn shape_deserialize_integ_points<'de, D>(deserializer: D) -> Result<IntegPoints, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let kind: i32 = Deserialize::deserialize(deserializer)?;
-    Ok(i32_to_fn_interp(kind))
-}
 
 // -----------------------------------------------------------------------
 // -- LIN ----------------------------------------------------------------

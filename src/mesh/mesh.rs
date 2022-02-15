@@ -89,11 +89,6 @@ pub struct Cell {
     ///
     /// **raw data**
     pub points: Vec<PointId>,
-
-    /// Shape object for numerical integration and other calculations
-    ///
-    /// (derived property)
-    pub shape: Shape,
 }
 
 /// Holds edge data (derived data structure)
@@ -109,9 +104,6 @@ pub struct Edge {
 
     /// Set of boundary faces sharing this edge
     pub shared_by_boundary_faces: HashSet<FaceKey>,
-
-    /// Shape object for numerical integration and other calculations
-    pub shape: Shape,
 }
 
 /// Holds face data (derived data structure)
@@ -122,9 +114,6 @@ pub struct Face {
 
     /// Set of cells sharing this face
     pub shared_by_cells: HashSet<CellId>,
-
-    /// Shape object for numerical integration and other calculations
-    pub shape: Shape,
 }
 
 /// Holds mesh data
@@ -299,6 +288,65 @@ impl Mesh {
         Ok(())
     }
 
+    /// Allocates a Shape instance for a given Cell and initializes the associated point coordinates
+    pub fn alloc_shape_cell(&self, cell_id: CellId) -> Result<Shape, StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+        if cell_id >= self.cells.len() {
+            return Err("cell_id is out-of-bounds");
+        }
+        let cell = &self.cells[cell_id];
+        let nnode = cell.points.len();
+        let mut shape = Shape::new(self.space_ndim, cell.geo_ndim, nnode)?;
+        for m in 0..nnode {
+            for j in 0..self.space_ndim {
+                shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
+            }
+        }
+        Ok(shape)
+    }
+
+    /// Allocates a Shape instance for a given boundary Edge and initializes the associated point coordinates
+    pub fn alloc_shape_boundary_edge(&self, edge_key: &EdgeKey) -> Result<Shape, StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+        match self.boundary_edges.get(edge_key) {
+            None => Err("edge_key is not present in the boundary_edges map"),
+            Some(edge) => {
+                let nnode = edge.points.len();
+                let mut shape = Shape::new(self.space_ndim, 1, nnode)?;
+                for m in 0..nnode {
+                    for j in 0..self.space_ndim {
+                        shape.set_node(m, j, self.points[edge.points[m]].coords[j])?;
+                    }
+                }
+                Ok(shape)
+            }
+        }
+    }
+
+    /// Allocates a Shape instance for a given boundary Face and initializes the associated point coordinates
+    pub fn alloc_shape_boundary_face(&self, face_key: &FaceKey) -> Result<Shape, StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+        match self.boundary_faces.get(face_key) {
+            None => Err("face_key is not present in the boundary_faces map"),
+            Some(face) => {
+                let nnode = face.points.len();
+                let mut shape = Shape::new(self.space_ndim, 2, nnode)?;
+                for m in 0..nnode {
+                    for j in 0..self.space_ndim {
+                        shape.set_node(m, j, self.points[face.points[m]].coords[j])?;
+                    }
+                }
+                Ok(shape)
+            }
+        }
+    }
+
     /// Finds boundary points in the mesh
     ///
     /// # Input
@@ -456,6 +504,7 @@ impl Mesh {
     fn compute_derived_props_2d(&mut self) -> Result<(), StrError> {
         // maps all edge keys to (cell_id, e) where e is the cell's local edge index
         let mut all_edges: HashMap<EdgeKey, Vec<(CellId, usize)>> = HashMap::new();
+        let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new(); // (geo_ndim,nnode) => Shape
 
         // loop over all cells
         for cell in &mut self.cells {
@@ -469,25 +518,31 @@ impl Mesh {
                 continue; // skip 1D line in 2D because it's not a boundary edge
             }
 
-            // set the cell node coordinates in its shape object
+            // get or allocate Shape
+            let cell_shape =
+                all_shapes
+                    .entry((cell.geo_ndim, nnode))
+                    .or_insert(Shape::new(self.space_ndim, cell.geo_ndim, nnode)?);
+
+            // set the cell node coordinates in the shape object
             for m in 0..nnode {
                 for j in 0..self.space_ndim {
-                    cell.shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
+                    cell_shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
                 }
             }
 
             // check if the determinant of Jacobian is positive => counterclockwise nodes
-            let det_jac = cell.shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
+            let det_jac = cell_shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
             if det_jac < 0.0 {
                 return Err("a cell has incorrect ordering of nodes");
             }
 
             // set information about all edges
-            for e in 0..cell.shape.nedge {
+            for e in 0..cell_shape.nedge {
                 // define edge key (sorted point ids)
                 let mut edge_key: EdgeKey = (
-                    cell.points[cell.shape.get_edge_node_id(e, 0)],
-                    cell.points[cell.shape.get_edge_node_id(e, 1)],
+                    cell.points[cell_shape.get_edge_node_id(e, 0)],
+                    cell.points[cell_shape.get_edge_node_id(e, 1)],
                 );
                 sort2(&mut edge_key);
 
@@ -507,17 +562,14 @@ impl Mesh {
             // edge data
             let (cell_id, e) = edge_data[0];
             let cell = &self.cells[cell_id];
-            let edge_nnode = cell.shape.edge_nnode;
+            let cell_shape = all_shapes.get(&(cell.geo_ndim, cell.points.len())).unwrap(); // must exist due to previous loop
+            let edge_nnode = cell_shape.edge_nnode;
             let mut edge_points: Vec<PointId> = vec![0; edge_nnode];
-            let mut edge_shape = Shape::new(self.space_ndim, 1, edge_nnode)?;
 
             // loop over all edge nodes
             for i in 0..edge_nnode {
-                // configure edge nodes and shape object
-                edge_points[i] = cell.points[cell.shape.get_edge_node_id(e, i)];
-                for j in 0..self.space_ndim {
-                    edge_shape.set_node(i, j, self.points[edge_points[i]].coords[j])?;
-                }
+                // configure edge nodes
+                edge_points[i] = cell.points[cell_shape.get_edge_node_id(e, i)];
 
                 // set boundary points
                 self.points[edge_points[i]].shared_by_boundary_edges.insert(*edge_key);
@@ -531,7 +583,6 @@ impl Mesh {
                     points: edge_points,
                     shared_by_2d_cells: HashSet::from([cell_id]),
                     shared_by_boundary_faces: HashSet::new(),
-                    shape: edge_shape,
                 },
             );
         }
@@ -542,6 +593,7 @@ impl Mesh {
     fn compute_derived_props_3d(&mut self) -> Result<(), StrError> {
         // maps all face keys to (cell_id, f) where f is the cell's local face index
         let mut all_faces: HashMap<FaceKey, Vec<(CellId, usize)>> = HashMap::new();
+        let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new(); // (geo_ndim,nnode) => Shape
 
         // loop over all cells
         for cell in &mut self.cells {
@@ -555,34 +607,40 @@ impl Mesh {
                 continue; // skip 1D line or 2D shape in 3D because they don't have faces
             }
 
-            // set the cell node coordinates in its shape object
+            // get or allocate Shape
+            let cell_shape =
+                all_shapes
+                    .entry((cell.geo_ndim, nnode))
+                    .or_insert(Shape::new(self.space_ndim, cell.geo_ndim, nnode)?);
+
+            // set the cell node coordinates in the shape object
             for m in 0..nnode {
                 for j in 0..self.space_ndim {
-                    cell.shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
+                    cell_shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
                 }
             }
 
             // check if the determinant of Jacobian is positive => counterclockwise nodes
-            let det_jac = cell.shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
+            let det_jac = cell_shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
             if det_jac < 0.0 {
                 return Err("a cell has incorrect ordering of nodes");
             }
 
             // set information about all faces
-            for f in 0..cell.shape.nface {
+            for f in 0..cell_shape.nface {
                 // define face key (sorted ids)
-                let mut face_key: FaceKey = if cell.shape.face_nnode > 3 {
+                let mut face_key: FaceKey = if cell_shape.face_nnode > 3 {
                     (
-                        cell.points[cell.shape.get_face_node_id(f, 0)],
-                        cell.points[cell.shape.get_face_node_id(f, 1)],
-                        cell.points[cell.shape.get_face_node_id(f, 2)],
-                        cell.points[cell.shape.get_face_node_id(f, 3)],
+                        cell.points[cell_shape.get_face_node_id(f, 0)],
+                        cell.points[cell_shape.get_face_node_id(f, 1)],
+                        cell.points[cell_shape.get_face_node_id(f, 2)],
+                        cell.points[cell_shape.get_face_node_id(f, 3)],
                     )
                 } else {
                     (
-                        cell.points[cell.shape.get_face_node_id(f, 0)],
-                        cell.points[cell.shape.get_face_node_id(f, 1)],
-                        cell.points[cell.shape.get_face_node_id(f, 2)],
+                        cell.points[cell_shape.get_face_node_id(f, 0)],
+                        cell.points[cell_shape.get_face_node_id(f, 1)],
+                        cell.points[cell_shape.get_face_node_id(f, 2)],
                         self.points.len(),
                     )
                 };
@@ -609,17 +667,15 @@ impl Mesh {
             // face data
             let (cell_id, f) = face_data[0];
             let cell = &self.cells[cell_id];
-            let face_nnode = cell.shape.face_nnode;
+            let cell_shape = all_shapes.get(&(cell.geo_ndim, cell.points.len())).unwrap(); // must exist due to previous loop
+            let face_nnode = cell_shape.face_nnode;
             let mut face_points: Vec<PointId> = vec![0; face_nnode];
-            let mut face_shape = Shape::new(self.space_ndim, 2, face_nnode)?;
+            let face_shape = Shape::new(self.space_ndim, 2, face_nnode)?;
 
             // loop over all face nodes
             for i in 0..face_nnode {
-                // configure face nodes and shape object
-                face_points[i] = cell.points[cell.shape.get_face_node_id(f, i)];
-                for j in 0..self.space_ndim {
-                    face_shape.set_node(i, j, self.points[face_points[i]].coords[j])?;
-                }
+                // configure face nodes
+                face_points[i] = cell.points[cell_shape.get_face_node_id(f, i)];
 
                 // set boundary points
                 self.points[face_points[i]].shared_by_boundary_faces.insert(*face_key);
@@ -645,15 +701,11 @@ impl Mesh {
                         // edge data
                         let edge_nnode = face_shape.edge_nnode;
                         let mut edge_points: Vec<PointId> = vec![0; edge_nnode];
-                        let mut edge_shape = Shape::new(self.space_ndim, 1, edge_nnode)?;
 
                         // loop over all edge nodes
                         for i in 0..edge_nnode {
-                            // configure edge nodes and shape object
+                            // configure edge nodes
                             edge_points[i] = face_points[face_shape.get_edge_node_id(e, i)];
-                            for j in 0..self.space_ndim {
-                                edge_shape.set_node(i, j, self.points[edge_points[i]].coords[j])?;
-                            }
 
                             // set boundary points
                             self.points[edge_points[i]].shared_by_boundary_edges.insert(edge_key);
@@ -666,7 +718,6 @@ impl Mesh {
                                 points: edge_points,
                                 shared_by_2d_cells: HashSet::new(),
                                 shared_by_boundary_faces: HashSet::from([*face_key]),
-                                shape: edge_shape,
                             },
                         );
                     }
@@ -679,7 +730,6 @@ impl Mesh {
                 Face {
                     points: face_points,
                     shared_by_cells: HashSet::from([cell_id]),
-                    shape: face_shape,
                 },
             );
         }
@@ -1144,7 +1194,7 @@ mod tests {
         //  |        |        |
         //  0--------1--------4
         //
-        let mut mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
 
         // the norm of the normal vector should be equal to 0.5 = edge_length / 2.0
         // where 2.0 corresponds to the edge_length in the reference system
@@ -1167,8 +1217,8 @@ mod tests {
         let ksi = &[0.0, 0.0, 0.0];
         for (edge_keys, solution) in &edge_keys_and_solutions {
             for edge_key in edge_keys {
-                let edge = mesh.boundary_edges.get_mut(edge_key).unwrap();
-                edge.shape.calc_boundary_normal(&mut normal, ksi)?;
+                let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
+                edge_shape.calc_boundary_normal(&mut normal, ksi)?;
                 assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
             }
         }

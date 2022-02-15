@@ -1,7 +1,15 @@
 use super::*;
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, vector_norm, Matrix, NormVec, Vector};
-use serde::{Deserialize, Serialize};
+
+/// Defines an alias for interpolation functions
+type FnInterp = fn(&mut Vector, &[f64]);
+
+/// Defines an alias for derivative of interpolation functions
+type FnDeriv = fn(&mut Matrix, &[f64]);
+
+/// Defines an alias for integration points' constants (coordinates and weights)
+pub type IntegPointConstants = &'static [[f64; 4]];
 
 /// Implements an isoparametric geometric shape for numerical integration and more
 ///
@@ -150,7 +158,6 @@ use serde::{Deserialize, Serialize};
 /// # Warning
 ///
 /// All public properties are **readonly** and should **not** be modified externally.
-#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Shape {
     /// Geometry class
     pub class: GeoClass,
@@ -183,17 +190,9 @@ pub struct Shape {
     pub face_nedge: usize,
 
     /// Function to calculate interpolation functions
-    #[serde(
-        serialize_with = "shape_serialize_fn_interp",
-        deserialize_with = "shape_deserialize_fn_interp"
-    )]
     fn_interp: FnInterp,
 
     /// Function to calculate local derivatives (w.r.t. ksi) of interpolation functions
-    #[serde(
-        serialize_with = "shape_serialize_fn_deriv",
-        deserialize_with = "shape_deserialize_fn_deriv"
-    )]
     fn_deriv: FnDeriv,
 
     /// Tells if at least the last entry of the coordinates matrix has been input
@@ -209,10 +208,6 @@ pub struct Shape {
     pub max_coords: Vec<f64>,
 
     /// Integration points (coordinates and weights)
-    #[serde(
-        serialize_with = "shape_serialize_integ_points",
-        deserialize_with = "shape_deserialize_integ_points"
-    )]
     pub integ_points: IntegPointConstants,
 
     /// Temporary Array N: (nnode) interpolation functions at reference coordinate ksi
