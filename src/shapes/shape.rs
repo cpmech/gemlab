@@ -240,11 +240,10 @@ impl Shape {
     /// Some methods require that the coordinates matrix be set first.
     /// This can be accomplished by calling the `set_node` method.
     pub fn new(space_ndim: usize, geo_ndim: usize, nnode: usize) -> Result<Self, StrError> {
-        // geo class and kind
-        let (class, kind) = geo_class_and_kind(geo_ndim, nnode)?;
-
         // collect geometry data
-        let (nedge, nface, edge_nnode, face_nnode, face_nedge, fn_interp, fn_deriv, integ_points): (
+        let (class, kind, nedge, nface, edge_nnode, face_nnode, face_nedge, fn_interp, fn_deriv, integ_points): (
+            GeoClass,
+            GeoKind,
             usize,
             usize,
             usize,
@@ -253,9 +252,11 @@ impl Shape {
             FnInterp,
             FnDeriv,
             IntegPointConstants,
-        ) = match kind {
+        ) = match (geo_ndim, nnode) {
             // Lin
-            GeoKind::Lin2 => (
+            (1, 2) => (
+                GeoClass::Lin,
+                GeoKind::Lin2,
                 Lin2::NEDGE,
                 Lin2::NFACE,
                 Lin2::EDGE_NNODE,
@@ -265,7 +266,9 @@ impl Shape {
                 Lin2::calc_deriv,
                 &IP_LIN_LEGENDRE_2,
             ),
-            GeoKind::Lin3 => (
+            (1, 3) => (
+                GeoClass::Lin,
+                GeoKind::Lin3,
                 Lin3::NEDGE,
                 Lin3::NFACE,
                 Lin3::EDGE_NNODE,
@@ -275,7 +278,9 @@ impl Shape {
                 Lin3::calc_deriv,
                 &IP_LIN_LEGENDRE_3,
             ),
-            GeoKind::Lin4 => (
+            (1, 4) => (
+                GeoClass::Lin,
+                GeoKind::Lin4,
                 Lin4::NEDGE,
                 Lin4::NFACE,
                 Lin4::EDGE_NNODE,
@@ -285,7 +290,9 @@ impl Shape {
                 Lin4::calc_deriv,
                 &IP_LIN_LEGENDRE_4,
             ),
-            GeoKind::Lin5 => (
+            (1, 5) => (
+                GeoClass::Lin,
+                GeoKind::Lin5,
                 Lin5::NEDGE,
                 Lin5::NFACE,
                 Lin5::EDGE_NNODE,
@@ -297,7 +304,9 @@ impl Shape {
             ),
 
             // Tri
-            GeoKind::Tri3 => (
+            (2, 3) => (
+                GeoClass::Tri,
+                GeoKind::Tri3,
                 Tri3::NEDGE,
                 Tri3::NFACE,
                 Tri3::EDGE_NNODE,
@@ -307,7 +316,9 @@ impl Shape {
                 Tri3::calc_deriv,
                 &IP_TRI_INTERNAL_1,
             ),
-            GeoKind::Tri6 => (
+            (2, 6) => (
+                GeoClass::Tri,
+                GeoKind::Tri6,
                 Tri6::NEDGE,
                 Tri6::NFACE,
                 Tri6::EDGE_NNODE,
@@ -317,7 +328,9 @@ impl Shape {
                 Tri6::calc_deriv,
                 &IP_TRI_INTERNAL_3,
             ),
-            GeoKind::Tri10 => (
+            (2, 10) => (
+                GeoClass::Tri,
+                GeoKind::Tri10,
                 Tri10::NEDGE,
                 Tri10::NFACE,
                 Tri10::EDGE_NNODE,
@@ -327,7 +340,9 @@ impl Shape {
                 Tri10::calc_deriv,
                 &IP_TRI_INTERNAL_12,
             ),
-            GeoKind::Tri15 => (
+            (2, 15) => (
+                GeoClass::Tri,
+                GeoKind::Tri15,
                 Tri15::NEDGE,
                 Tri15::NFACE,
                 Tri15::EDGE_NNODE,
@@ -339,7 +354,9 @@ impl Shape {
             ),
 
             // Qua
-            GeoKind::Qua4 => (
+            (2, 4) => (
+                GeoClass::Qua,
+                GeoKind::Qua4,
                 Qua4::NEDGE,
                 Qua4::NFACE,
                 Qua4::EDGE_NNODE,
@@ -349,7 +366,9 @@ impl Shape {
                 Qua4::calc_deriv,
                 &IP_QUA_LEGENDRE_4,
             ),
-            GeoKind::Qua8 => (
+            (2, 8) => (
+                GeoClass::Qua,
+                GeoKind::Qua8,
                 Qua8::NEDGE,
                 Qua8::NFACE,
                 Qua8::EDGE_NNODE,
@@ -359,7 +378,9 @@ impl Shape {
                 Qua8::calc_deriv,
                 &IP_QUA_LEGENDRE_9,
             ),
-            GeoKind::Qua9 => (
+            (2, 9) => (
+                GeoClass::Qua,
+                GeoKind::Qua9,
                 Qua9::NEDGE,
                 Qua9::NFACE,
                 Qua9::EDGE_NNODE,
@@ -369,7 +390,9 @@ impl Shape {
                 Qua9::calc_deriv,
                 &IP_QUA_LEGENDRE_9,
             ),
-            GeoKind::Qua12 => (
+            (2, 12) => (
+                GeoClass::Qua,
+                GeoKind::Qua12,
                 Qua12::NEDGE,
                 Qua12::NFACE,
                 Qua12::EDGE_NNODE,
@@ -379,7 +402,9 @@ impl Shape {
                 Qua12::calc_deriv,
                 &IP_QUA_LEGENDRE_9,
             ),
-            GeoKind::Qua16 => (
+            (2, 16) => (
+                GeoClass::Qua,
+                GeoKind::Qua16,
                 Qua16::NEDGE,
                 Qua16::NFACE,
                 Qua16::EDGE_NNODE,
@@ -389,7 +414,9 @@ impl Shape {
                 Qua16::calc_deriv,
                 &IP_QUA_LEGENDRE_16,
             ),
-            GeoKind::Qua17 => (
+            (2, 17) => (
+                GeoClass::Qua,
+                GeoKind::Qua17,
                 Qua17::NEDGE,
                 Qua17::NFACE,
                 Qua17::EDGE_NNODE,
@@ -401,7 +428,9 @@ impl Shape {
             ),
 
             // Tet
-            GeoKind::Tet4 => (
+            (3, 4) => (
+                GeoClass::Tet,
+                GeoKind::Tet4,
                 Tet4::NEDGE,
                 Tet4::NFACE,
                 Tet4::EDGE_NNODE,
@@ -411,7 +440,9 @@ impl Shape {
                 Tet4::calc_deriv,
                 &IP_TET_INTERNAL_1,
             ),
-            GeoKind::Tet10 => (
+            (3, 10) => (
+                GeoClass::Tet,
+                GeoKind::Tet10,
                 Tet10::NEDGE,
                 Tet10::NFACE,
                 Tet10::EDGE_NNODE,
@@ -423,7 +454,9 @@ impl Shape {
             ),
 
             // Hex
-            GeoKind::Hex8 => (
+            (3, 8) => (
+                GeoClass::Hex,
+                GeoKind::Hex8,
                 Hex8::NEDGE,
                 Hex8::NFACE,
                 Hex8::EDGE_NNODE,
@@ -433,7 +466,9 @@ impl Shape {
                 Hex8::calc_deriv,
                 &IP_HEX_LEGENDRE_8,
             ),
-            GeoKind::Hex20 => (
+            (3, 20) => (
+                GeoClass::Hex,
+                GeoKind::Hex20,
                 Hex20::NEDGE,
                 Hex20::NFACE,
                 Hex20::EDGE_NNODE,
@@ -443,6 +478,7 @@ impl Shape {
                 Hex20::calc_deriv,
                 &IP_HEX_LEGENDRE_27,
             ),
+            _ => return Err("(geo_ndim,nnode) combination is invalid"),
         };
 
         // return new Shape
