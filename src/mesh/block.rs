@@ -171,35 +171,35 @@ impl Block {
         // set corner nodes
         for m in 0..nrow {
             for j in 0..self.space_ndim {
-                self.shape.set_node(m, j, coords.at(m, j).into())?
+                self.shape.set_node(m, m, j, coords.at(m, j).into())?
             }
         }
 
         // generate mid nodes
         if self.space_ndim == 2 && nrow == 4 {
             for j in 0..self.space_ndim {
-                self.shape.set_node(4, j, (coords.at(0, j).into() + coords.at(1, j).into()) / 2.0)?;
-                self.shape.set_node(5, j, (coords.at(1, j).into() + coords.at(2, j).into()) / 2.0)?;
-                self.shape.set_node(6, j, (coords.at(2, j).into() + coords.at(3, j).into()) / 2.0)?;
-                self.shape.set_node(7, j, (coords.at(3, j).into() + coords.at(0, j).into()) / 2.0)?;
+                self.shape.set_node(4, 4, j, (coords.at(0, j).into() + coords.at(1, j).into()) / 2.0)?;
+                self.shape.set_node(5, 5, j, (coords.at(1, j).into() + coords.at(2, j).into()) / 2.0)?;
+                self.shape.set_node(6, 6, j, (coords.at(2, j).into() + coords.at(3, j).into()) / 2.0)?;
+                self.shape.set_node(7, 7, j, (coords.at(3, j).into() + coords.at(0, j).into()) / 2.0)?;
             }
         }
         if self.space_ndim == 3 && nrow == 8 {
             for j in 0..self.space_ndim {
-                self.shape.set_node( 8, j, (coords.at(0, j).into() + coords.at(1, j).into()) / 2.0)?;
-                self.shape.set_node( 9, j, (coords.at(1, j).into() + coords.at(2, j).into()) / 2.0)?;
-                self.shape.set_node(10, j, (coords.at(2, j).into() + coords.at(3, j).into()) / 2.0)?;
-                self.shape.set_node(11, j, (coords.at(3, j).into() + coords.at(0, j).into()) / 2.0)?;
+                self.shape.set_node( 8,  8, j, (coords.at(0, j).into() + coords.at(1, j).into()) / 2.0)?;
+                self.shape.set_node( 9,  9, j, (coords.at(1, j).into() + coords.at(2, j).into()) / 2.0)?;
+                self.shape.set_node(10, 10, j, (coords.at(2, j).into() + coords.at(3, j).into()) / 2.0)?;
+                self.shape.set_node(11, 11, j, (coords.at(3, j).into() + coords.at(0, j).into()) / 2.0)?;
 
-                self.shape.set_node(12, j, (coords.at(4, j).into() + coords.at(5, j).into()) / 2.0)?;
-                self.shape.set_node(13, j, (coords.at(5, j).into() + coords.at(6, j).into()) / 2.0)?;
-                self.shape.set_node(14, j, (coords.at(6, j).into() + coords.at(7, j).into()) / 2.0)?;
-                self.shape.set_node(15, j, (coords.at(7, j).into() + coords.at(4, j).into()) / 2.0)?;
+                self.shape.set_node(12, 12, j, (coords.at(4, j).into() + coords.at(5, j).into()) / 2.0)?;
+                self.shape.set_node(13, 13, j, (coords.at(5, j).into() + coords.at(6, j).into()) / 2.0)?;
+                self.shape.set_node(14, 14, j, (coords.at(6, j).into() + coords.at(7, j).into()) / 2.0)?;
+                self.shape.set_node(15, 15, j, (coords.at(7, j).into() + coords.at(4, j).into()) / 2.0)?;
 
-                self.shape.set_node(16, j, (coords.at(0, j).into() + coords.at(4, j).into()) / 2.0)?;
-                self.shape.set_node(17, j, (coords.at(1, j).into() + coords.at(5, j).into()) / 2.0)?;
-                self.shape.set_node(18, j, (coords.at(2, j).into() + coords.at(6, j).into()) / 2.0)?;
-                self.shape.set_node(19, j, (coords.at(3, j).into() + coords.at(7, j).into()) / 2.0)?;
+                self.shape.set_node(16, 16, j, (coords.at(0, j).into() + coords.at(4, j).into()) / 2.0)?;
+                self.shape.set_node(17, 17, j, (coords.at(1, j).into() + coords.at(5, j).into()) / 2.0)?;
+                self.shape.set_node(18, 18, j, (coords.at(2, j).into() + coords.at(6, j).into()) / 2.0)?;
+                self.shape.set_node(19, 19, j, (coords.at(3, j).into() + coords.at(7, j).into()) / 2.0)?;
             }
         }
         Ok(())
@@ -1538,6 +1538,32 @@ mod tests {
              k:(53,54,70,71) p:[54, 53, 70, 71, 57, 72, 73, 74] c:[6]\n\
              k:(53,64,70,77) p:[53, 64, 77, 70, 67, 78, 79, 72] c:[7]\n"
         );
+
+        // the norm of the normal vector should be equal to face_area / 4.0
+        // where 4.0 corresponds to the face_area in the reference system
+
+        // face keys and correct normal vectors (solutions)
+        let face_keys_and_solutions = [
+            (vec![(0, 1, 2, 3)], [0.0, 0.0, -1.0 / 4.0]),
+            (vec![(52, 53, 63, 64)], [0.0, 0.0, 1.0 / 4.0]),
+            (vec![(4, 7, 51, 54)], [-2.0 / 4.0, 0.0, 0.0]),
+            (vec![(34, 45, 70, 77)], [0.0, 2.0 / 4.0, 0.0]),
+        ];
+
+        // check point ids
+        let face_shape = mesh.alloc_shape_boundary_face(&(34, 45, 70, 77))?;
+        assert_eq!(face_shape.point_ids, &[45, 34, 70, 77, 49, 75, 79, 80]);
+
+        // check if the normal vectors at boundary are outward
+        let mut normal = Vector::new(mesh.space_ndim);
+        let ksi = &[0.0, 0.0, 0.0];
+        for (face_keys, solution) in &face_keys_and_solutions {
+            for face_key in face_keys {
+                let mut face_shape = mesh.alloc_shape_boundary_face(face_key)?;
+                face_shape.calc_boundary_normal(&mut normal, ksi)?;
+                assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
+            }
+        }
         Ok(())
     }
 }

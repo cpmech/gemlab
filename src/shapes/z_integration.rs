@@ -699,12 +699,12 @@ mod tests {
         let area = l * h / 2.0;
         let mut shape = Shape::new(2, 2, 3).unwrap();
         let (xmin, ymin) = (3.0, 4.0);
-        shape.set_node(0, 0, xmin).unwrap();
-        shape.set_node(0, 1, ymin).unwrap();
-        shape.set_node(1, 0, xmin + l).unwrap();
-        shape.set_node(1, 1, ymin).unwrap();
-        shape.set_node(2, 0, xmin + l / 2.0).unwrap();
-        shape.set_node(2, 1, ymin + h).unwrap();
+        shape.set_node(0, 0, 0, xmin).unwrap();
+        shape.set_node(0, 0, 1, ymin).unwrap();
+        shape.set_node(1, 1, 0, xmin + l).unwrap();
+        shape.set_node(1, 1, 1, ymin).unwrap();
+        shape.set_node(2, 2, 0, xmin + l / 2.0).unwrap();
+        shape.set_node(2, 2, 1, ymin + h).unwrap();
         (shape, area)
     }
 
@@ -712,8 +712,8 @@ mod tests {
     fn gen_lin2() -> (Shape, f64, f64) {
         let mut shape = Shape::new(1, 1, 2).unwrap();
         let (xa, xb) = (3.0, 9.0);
-        shape.set_node(0, 0, xa).unwrap();
-        shape.set_node(1, 0, xb).unwrap();
+        shape.set_node(0, 0, 0, xa).unwrap();
+        shape.set_node(1, 1, 0, xb).unwrap();
         (shape, xa, xb)
     }
 
@@ -1065,12 +1065,12 @@ mod tests {
 
         // shape and analytical gradient
         let mut tri3 = Shape::new(2, 2, 3).unwrap();
-        tri3.set_node(0, 0, 0.0).unwrap();
-        tri3.set_node(0, 1, 0.0).unwrap();
-        tri3.set_node(1, 0, 2.0).unwrap();
-        tri3.set_node(1, 1, 0.0).unwrap();
-        tri3.set_node(2, 0, 2.0).unwrap();
-        tri3.set_node(2, 1, 1.5).unwrap();
+        tri3.set_node(0, 0, 0, 0.0).unwrap();
+        tri3.set_node(0, 0, 1, 0.0).unwrap();
+        tri3.set_node(2, 1, 0, 2.0).unwrap();
+        tri3.set_node(2, 1, 1, 0.0).unwrap();
+        tri3.set_node(3, 2, 0, 2.0).unwrap();
+        tri3.set_node(3, 2, 1, 1.5).unwrap();
         let ana = AnalyticalTri3::new(&mut tri3);
 
         // constants

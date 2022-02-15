@@ -300,8 +300,9 @@ impl Mesh {
         let nnode = cell.points.len();
         let mut shape = Shape::new(self.space_ndim, cell.geo_ndim, nnode)?;
         for m in 0..nnode {
+            let point_id = cell.points[m];
             for j in 0..self.space_ndim {
-                shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
+                shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
             }
         }
         Ok(shape)
@@ -313,13 +314,14 @@ impl Mesh {
             return Err("compute_derived_props must be called first");
         }
         match self.boundary_edges.get(edge_key) {
-            None => Err("edge_key is not present in the boundary_edges map"),
+            None => Err("edge_key is invalid"),
             Some(edge) => {
                 let nnode = edge.points.len();
                 let mut shape = Shape::new(self.space_ndim, 1, nnode)?;
                 for m in 0..nnode {
+                    let point_id = edge.points[m];
                     for j in 0..self.space_ndim {
-                        shape.set_node(m, j, self.points[edge.points[m]].coords[j])?;
+                        shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
                     }
                 }
                 Ok(shape)
@@ -333,13 +335,14 @@ impl Mesh {
             return Err("compute_derived_props must be called first");
         }
         match self.boundary_faces.get(face_key) {
-            None => Err("face_key is not present in the boundary_faces map"),
+            None => Err("face_key is invalid"),
             Some(face) => {
                 let nnode = face.points.len();
                 let mut shape = Shape::new(self.space_ndim, 2, nnode)?;
                 for m in 0..nnode {
+                    let point_id = face.points[m];
                     for j in 0..self.space_ndim {
-                        shape.set_node(m, j, self.points[face.points[m]].coords[j])?;
+                        shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
                     }
                 }
                 Ok(shape)
@@ -526,8 +529,9 @@ impl Mesh {
 
             // set the cell node coordinates in the shape object
             for m in 0..nnode {
+                let point_id = cell.points[m];
                 for j in 0..self.space_ndim {
-                    cell_shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
+                    cell_shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
                 }
             }
 
@@ -615,8 +619,9 @@ impl Mesh {
 
             // set the cell node coordinates in the shape object
             for m in 0..nnode {
+                let point_id = cell.points[m];
                 for j in 0..self.space_ndim {
-                    cell_shape.set_node(m, j, self.points[cell.points[m]].coords[j])?;
+                    cell_shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
                 }
             }
 
@@ -879,6 +884,7 @@ impl fmt::Display for Mesh {
 mod tests {
     use super::Point;
     use crate::mesh::{At, Edge, Face, Mesh};
+    use crate::shapes::GeoKind;
     use crate::util::SQRT_2;
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -1181,6 +1187,181 @@ mod tests {
              k:(5,6,9,10) p:[5, 6, 10, 9] c:[1]\n\
              k:(6,7,10,11) p:[6, 7, 11, 10] c:[1]\n\
              k:(8,9,10,11) p:[8, 9, 10, 11] c:[1]\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn alloc_shape_fns_are_correct_2d() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        assert_eq!(mesh.alloc_shape_cell(2).err(), Some("cell_id is out-of-bounds"));
+        assert_eq!(
+            mesh.alloc_shape_boundary_edge(&(1, 0)).err(),
+            Some("edge_key is invalid")
+        );
+        assert_eq!(
+            mesh.alloc_shape_boundary_face(&(0, 1, 2, 3)).err(),
+            Some("face_key is invalid")
+        );
+
+        let shape = mesh.alloc_shape_cell(0)?;
+        assert_eq!(shape.kind, GeoKind::Qua4);
+        assert_eq!(shape.point_ids, &[0, 1, 2, 3]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌         ┐\n\
+             │ 0 1 1 0 │\n\
+             │ 0 0 1 1 │\n\
+             └         ┘"
+        );
+
+        let shape = mesh.alloc_shape_cell(1)?;
+        assert_eq!(shape.kind, GeoKind::Qua4);
+        assert_eq!(shape.point_ids, &[1, 4, 5, 2]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌         ┐\n\
+             │ 1 2 2 1 │\n\
+             │ 0 0 1 1 │\n\
+             └         ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_edge(&(0, 1))?;
+        assert_eq!(shape.kind, GeoKind::Lin2);
+        assert_eq!(shape.point_ids, &[1, 0]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌     ┐\n\
+             │ 1 0 │\n\
+             │ 0 0 │\n\
+             └     ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_edge(&(2, 5))?;
+        assert_eq!(shape.kind, GeoKind::Lin2);
+        assert_eq!(shape.point_ids, &[2, 5]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌     ┐\n\
+             │ 1 2 │\n\
+             │ 1 1 │\n\
+             └     ┘"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn alloc_shape_fns_are_correct_3d() -> Result<(), StrError> {
+        //
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        assert_eq!(mesh.alloc_shape_cell(2).err(), Some("cell_id is out-of-bounds"));
+        assert_eq!(
+            mesh.alloc_shape_boundary_edge(&(1, 0)).err(),
+            Some("edge_key is invalid")
+        );
+        assert_eq!(
+            mesh.alloc_shape_boundary_face(&(3, 2, 1, 0)).err(),
+            Some("face_key is invalid")
+        );
+
+        let shape = mesh.alloc_shape_cell(0)?;
+        assert_eq!(shape.kind, GeoKind::Hex8);
+        assert_eq!(shape.point_ids, &[0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌                 ┐\n\
+             │ 0 1 1 0 0 1 1 0 │\n\
+             │ 0 0 1 1 0 0 1 1 │\n\
+             │ 0 0 0 0 1 1 1 1 │\n\
+             └                 ┘"
+        );
+
+        let shape = mesh.alloc_shape_cell(1)?;
+        assert_eq!(shape.kind, GeoKind::Hex8);
+        assert_eq!(shape.point_ids, &[4, 5, 6, 7, 8, 9, 10, 11]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌                 ┐\n\
+             │ 0 1 1 0 0 1 1 0 │\n\
+             │ 0 0 1 1 0 0 1 1 │\n\
+             │ 1 1 1 1 2 2 2 2 │\n\
+             └                 ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_edge(&(0, 1))?;
+        assert_eq!(shape.kind, GeoKind::Lin2);
+        assert_eq!(shape.point_ids, &[0, 1]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌     ┐\n\
+             │ 0 1 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             └     ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_edge(&(8, 11))?;
+        assert_eq!(shape.kind, GeoKind::Lin2);
+        assert_eq!(shape.point_ids, &[11, 8]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌     ┐\n\
+             │ 0 0 │\n\
+             │ 1 0 │\n\
+             │ 2 2 │\n\
+             └     ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_face(&(0, 1, 2, 3))?;
+        assert_eq!(shape.kind, GeoKind::Qua4);
+        assert_eq!(shape.point_ids, &[0, 3, 2, 1]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌         ┐\n\
+             │ 0 0 1 1 │\n\
+             │ 0 1 1 0 │\n\
+             │ 0 0 0 0 │\n\
+             └         ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_face(&(8, 9, 10, 11))?;
+        assert_eq!(shape.kind, GeoKind::Qua4);
+        assert_eq!(shape.point_ids, &[8, 9, 10, 11]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌         ┐\n\
+             │ 0 1 1 0 │\n\
+             │ 0 0 1 1 │\n\
+             │ 2 2 2 2 │\n\
+             └         ┘"
         );
         Ok(())
     }

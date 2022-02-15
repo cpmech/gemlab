@@ -198,6 +198,9 @@ pub struct Shape {
     /// Tells if at least the last entry of the coordinates matrix has been input
     ok_last_coord: bool,
 
+    /// Global point ids corresponding to coords_transp (nnode)
+    pub point_ids: Vec<usize>,
+
     /// Matrix Xᵀ: (space_ndim,nnode) transposed coordinates matrix (real space)
     pub coords_transp: Matrix,
 
@@ -496,6 +499,7 @@ impl Shape {
             fn_interp,
             fn_deriv,
             ok_last_coord: false,
+            point_ids: vec![0; nnode],
             coords_transp: Matrix::new(space_ndim, nnode),
             min_coords: vec![f64::MAX; space_ndim],
             max_coords: vec![f64::MIN; space_ndim],
@@ -578,6 +582,7 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `point_id` -- the global point id that can be used for reference
     /// * `m` -- node index from 0 to nnode - 1
     /// * `j` -- dimension index from 0 to space_ndim - 1
     /// * `value` -- the X(m,j) component
@@ -585,13 +590,14 @@ impl Shape {
     /// # Updated variables
     ///
     /// * `coords_transp` -- Matrix Xᵀ: (space_ndim,nnode) transposed coordinates matrix (real space)
-    pub fn set_node(&mut self, m: usize, j: usize, value: f64) -> Result<(), StrError> {
+    pub fn set_node(&mut self, point_id: usize, m: usize, j: usize, value: f64) -> Result<(), StrError> {
         if m >= self.nnode {
             return Err("index of node is invalid");
         }
         if j >= self.space_ndim {
             return Err("index of space dimension is invalid");
         }
+        self.point_ids[m] = point_id;
         self.coords_transp[j][m] = value;
         if value < self.min_coords[j] {
             self.min_coords[j] = value;
@@ -1254,8 +1260,9 @@ mod tests {
             } else {
                 panic!("(geo_ndim,space_ndim) pair is invalid");
             }
+            let point_id = 100 + m;
             for j in 0..shape.space_ndim {
-                shape.set_node(m, j, x[j]).unwrap();
+                shape.set_node(point_id, m, j, x[j]).unwrap();
             }
         }
     }
@@ -1273,7 +1280,8 @@ mod tests {
         for m in 0..shape.nnode {
             let ksi = shape.get_reference_coords(m);
             for j in 0..shape.geo_ndim {
-                shape.set_node(m, j, scale * ksi[j])?;
+                let point_id = 100 + m;
+                shape.set_node(point_id, m, j, scale * ksi[j])?;
             }
         }
         Ok(())
@@ -1288,10 +1296,14 @@ mod tests {
         );
 
         // set_node
+        let point_id = 123;
         let mut shape = Shape::new(1, 1, 2)?;
-        assert_eq!(shape.set_node(3, 0, 0.0).err(), Some("index of node is invalid"));
         assert_eq!(
-            shape.set_node(0, 2, 0.0).err(),
+            shape.set_node(point_id, 3, 0, 0.0).err(),
+            Some("index of node is invalid")
+        );
+        assert_eq!(
+            shape.set_node(point_id, 0, 2, 0.0).err(),
             Some("index of space dimension is invalid")
         );
 
@@ -1317,8 +1329,8 @@ mod tests {
         );
 
         // calc_coords
-        shape.set_node(0, 0, 0.0)?;
-        shape.set_node(1, 0, 1.0)?;
+        shape.set_node(point_id, 0, 0, 0.0)?;
+        shape.set_node(point_id, 1, 0, 1.0)?;
         let mut x = Vector::new(2);
         assert_eq!(
             shape.calc_coords(&mut x, &[0.0]).err(),
@@ -1398,14 +1410,36 @@ mod tests {
 
     #[test]
     fn set_node_resets_ok_last_coord() -> Result<(), StrError> {
+        let point_id = 123;
         let mut shape = Shape::new(1, 1, 2)?;
         assert_eq!(shape.ok_last_coord, false);
-        shape.set_node(0, 0, 0.0)?;
+        shape.set_node(point_id, 0, 0, 0.0)?;
         assert_eq!(shape.ok_last_coord, false);
-        shape.set_node(1, 0, 0.0)?;
+        shape.set_node(point_id, 1, 0, 0.0)?;
         assert_eq!(shape.ok_last_coord, true);
-        shape.set_node(0, 0, 0.0)?; // must reset
+        shape.set_node(point_id, 0, 0, 0.0)?; // must reset
         assert_eq!(shape.ok_last_coord, false);
+        Ok(())
+    }
+
+    #[test]
+    fn set_node_works() -> Result<(), StrError> {
+        let mut shape = Shape::new(2, 2, 3)?;
+        shape.set_node(123, 0, 0, -1.23)?;
+        shape.set_node(123, 0, 1, 1.23)?;
+        shape.set_node(456, 1, 0, -4.56)?;
+        shape.set_node(456, 1, 1, 4.56)?;
+        shape.set_node(789, 2, 0, -7.89)?;
+        shape.set_node(789, 2, 1, 7.89)?;
+        assert_eq!(shape.point_ids, &[123, 456, 789]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌                   ┐\n\
+             │ -1.23 -4.56 -7.89 │\n\
+             │  1.23  4.56  7.89 │\n\
+             └                   ┘"
+        );
+        assert_eq!(shape.ok_last_coord, true);
         Ok(())
     }
 
@@ -1849,25 +1883,26 @@ mod tests {
 
     #[test]
     fn calc_jacobian_special_cases_work() -> Result<(), StrError> {
+        let point_id = 123;
         let mut shape = Shape::new(2, 1, 2)?;
         let l = 3.5;
-        shape.set_node(0, 0, 0.0)?;
-        shape.set_node(0, 1, 0.0)?;
-        shape.set_node(1, 0, l)?;
-        shape.set_node(1, 1, 0.0)?;
+        shape.set_node(point_id, 0, 0, 0.0)?;
+        shape.set_node(point_id, 0, 1, 0.0)?;
+        shape.set_node(point_id, 1, 0, l)?;
+        shape.set_node(point_id, 1, 1, 0.0)?;
         let norm_jac_vec = shape.calc_jacobian(&[0.0])?;
         assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
 
         let mut shape = Shape::new(3, 2, 3)?;
-        shape.set_node(0, 0, 0.0)?;
-        shape.set_node(0, 1, 0.0)?;
-        shape.set_node(0, 2, 0.0)?;
-        shape.set_node(1, 0, 1.0)?;
-        shape.set_node(1, 1, 0.0)?;
-        shape.set_node(1, 2, 0.0)?;
-        shape.set_node(2, 0, 0.5)?;
-        shape.set_node(2, 1, 1.0)?;
-        shape.set_node(2, 2, 1.0)?;
+        shape.set_node(point_id, 0, 0, 0.0)?;
+        shape.set_node(point_id, 0, 1, 0.0)?;
+        shape.set_node(point_id, 0, 2, 0.0)?;
+        shape.set_node(point_id, 1, 0, 1.0)?;
+        shape.set_node(point_id, 1, 1, 0.0)?;
+        shape.set_node(point_id, 1, 2, 0.0)?;
+        shape.set_node(point_id, 2, 0, 0.5)?;
+        shape.set_node(point_id, 2, 1, 1.0)?;
+        shape.set_node(point_id, 2, 2, 1.0)?;
         let norm_jac_vec = shape.calc_jacobian(&[0.0, 0.0])?;
         assert_eq!(norm_jac_vec, 0.0);
         Ok(())
@@ -2003,7 +2038,8 @@ mod tests {
                 for i in 0..edge_nnode {
                     for j in 0..space_ndim {
                         let m = shape.get_edge_node_id(e, i);
-                        edge_shape.set_node(i, j, shape.coords_transp[j][m])?;
+                        let point_id = 100 + m;
+                        edge_shape.set_node(point_id, i, j, shape.coords_transp[j][m])?;
                     }
                 }
 
@@ -2090,7 +2126,8 @@ mod tests {
                 for i in 0..face_nnode {
                     for j in 0..space_ndim {
                         let m = shape.get_face_node_id(f, i);
-                        face_shape.set_node(i, j, shape.coords_transp[j][m])?;
+                        let point_id = 100 + m;
+                        face_shape.set_node(point_id, i, j, shape.coords_transp[j][m])?;
                     }
                 }
 
@@ -2252,10 +2289,11 @@ mod tests {
 
     #[test]
     fn calc_integ_points_coords() -> Result<(), StrError> {
+        let point_id = 123;
         let mut shape = Shape::new(1, 1, 2)?;
         let (xa, xb) = (2.0, 5.0);
-        shape.set_node(0, 0, xa)?;
-        shape.set_node(1, 0, xb)?;
+        shape.set_node(point_id, 0, 0, xa)?;
+        shape.set_node(point_id, 1, 0, xb)?;
         let integ_points = shape.calc_integ_points_coords()?;
         assert_eq!(integ_points.len(), 2);
         let ksi_a = -1.0 / SQRT_3;
