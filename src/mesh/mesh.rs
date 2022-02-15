@@ -492,13 +492,59 @@ impl Mesh {
                 // check if two edge points pass through the geometric feature
                 if point_ids.contains(&edge_key.0) && point_ids.contains(&edge_key.1) {
                     if self.boundary_edges.contains_key(&edge_key) {
-                        // update set
                         edge_keys.insert(*edge_key);
                     }
                 }
             }
         }
         let mut keys: Vec<_> = edge_keys.into_iter().collect();
+        keys.sort();
+        Ok(keys)
+    }
+
+    /// Finds boundary faces in the mesh
+    ///
+    /// # Input
+    ///
+    /// * `at` -- the location constraint
+    ///
+    /// # Output
+    ///
+    /// * Returns a **sorted** list of face key ids (boundary faces only)
+    ///
+    /// # Note
+    ///
+    /// `compute_derived_props` must be called first, otherwise this function returns an error
+    pub fn find_boundary_faces(&self, at: At) -> Result<Vec<FaceKey>, StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+        let mut face_keys: HashSet<FaceKey> = HashSet::new();
+        // find all points near the geometric feature
+        let point_ids = &self.find_boundary_points(at)?;
+        for point_id in point_ids {
+            // loop over all boundary faces touching this point
+            let point = &self.points[*point_id];
+            for face_key in &point.shared_by_boundary_faces {
+                // check if the fourth point_id in the face_key is ok
+                let fourth_is_ok = if face_key.3 == self.points.len() {
+                    true
+                } else {
+                    point_ids.contains(&face_key.3)
+                };
+                // check if the face points pass through the geometric feature
+                if fourth_is_ok
+                    && point_ids.contains(&face_key.0)
+                    && point_ids.contains(&face_key.1)
+                    && point_ids.contains(&face_key.2)
+                {
+                    if self.boundary_faces.contains_key(&face_key) {
+                        face_keys.insert(*face_key);
+                    }
+                }
+            }
+        }
+        let mut keys: Vec<_> = face_keys.into_iter().collect();
         keys.sort();
         Ok(keys)
     }
@@ -1561,6 +1607,11 @@ mod tests {
             mesh.find_boundary_points(At::Circle(0.0, 0.0, 0.0)).err(),
             Some("At::Circle works in 2D only")
         );
+        let mesh = Mesh::new(3)?;
+        assert_eq!(
+            mesh.find_boundary_faces(At::Z(0.0)).err(),
+            Some("compute_derived_props must be called first")
+        );
         Ok(())
     }
 
@@ -1652,6 +1703,12 @@ mod tests {
             mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?,
             &[] as &[usize]
         );
+        assert_eq!(mesh.find_boundary_faces(At::X(0.0))?, &[(0, 3, 4, 7), (4, 7, 8, 11)]);
+        assert_eq!(mesh.find_boundary_faces(At::X(1.0))?, &[(1, 2, 5, 6), (5, 6, 9, 10)]);
+        assert_eq!(mesh.find_boundary_faces(At::Y(0.0))?, &[(0, 1, 4, 5), (4, 5, 8, 9)]);
+        assert_eq!(mesh.find_boundary_faces(At::Y(1.0))?, &[(2, 3, 6, 7), (6, 7, 10, 11)]);
+        assert_eq!(mesh.find_boundary_faces(At::Z(0.0))?, &[(0, 1, 2, 3)]);
+        assert_eq!(mesh.find_boundary_faces(At::Z(2.0))?, &[(8, 9, 10, 11)]);
         Ok(())
     }
 

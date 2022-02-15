@@ -401,7 +401,7 @@ impl Block {
 mod tests {
     use super::{Block, StrError};
     use crate::geometry::Circle;
-    use crate::mesh::Constraint;
+    use crate::mesh::{At, Constraint};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
@@ -1537,6 +1537,13 @@ mod tests {
              k:(52,53,63,64) p:[52, 63, 64, 53, 65, 66, 67, 56] c:[5]\n\
              k:(53,54,70,71) p:[54, 53, 70, 71, 57, 72, 73, 74] c:[6]\n\
              k:(53,64,70,77) p:[53, 64, 77, 70, 67, 78, 79, 72] c:[7]\n"
+        );
+
+        // check find_boundary_faces
+        assert_eq!(mesh.find_boundary_faces(At::Y(1.0))?, []);
+        assert_eq!(
+            mesh.find_boundary_faces(At::Y(2.0))?,
+            [(32, 33, 34, 35), (32, 34, 44, 45), (34, 35, 70, 71), (34, 45, 70, 77)]
         );
 
         // the norm of the normal vector should be equal to face_area / 4.0
