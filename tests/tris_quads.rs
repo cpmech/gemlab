@@ -1,4 +1,5 @@
-use gemlab::{mesh::Mesh, StrError};
+use gemlab::mesh::{At, Mesh};
+use gemlab::StrError;
 use russell_chk::assert_vec_approx_eq;
 use russell_lab::Vector;
 
@@ -69,6 +70,21 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
         }
     }
 
+    // find points
+    let points = mesh.find_boundary_points(At::X(0.0))?;
+    assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6]);
+    let points = mesh.find_boundary_points(At::X(1.0))?;
+    assert_eq!(points, &[7, 8, 9, 10, 11, 12]);
+
+    // find edges
+    let edges = mesh.find_boundary_edges(At::X(0.0))?;
+    assert_eq!(edges, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6)]);
+    let edges = mesh.find_boundary_edges(At::X(1.0))?;
+    assert_eq!(edges, &[(7, 8), (8, 9), (9, 10), (10, 11), (11, 12)]);
+
+    // find faces
+    let faces = mesh.find_boundary_faces(At::X(0.0))?;
+    assert_eq!(faces.len(), 0);
     Ok(())
 }
 
