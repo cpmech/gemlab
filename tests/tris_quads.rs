@@ -7,7 +7,6 @@ use russell_lab::Vector;
 fn column_distorted_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/column_distorted_tris_quads.msh")?;
-    println!("{}", mesh);
 
     // check sizes
     assert_eq!(mesh.points.len(), 13);
@@ -92,6 +91,37 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
 fn rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
-    println!("{}", mesh);
+
+    // the magnitude of the normal vector should be equal to edge_length / 2.0
+    // for both tris or quas where 2.0 corresponds to the edge_length in the reference system
+    // Note that the edge is mapped to [-1,+1] in both Lin or Qua
+
+    // edge keys and correct normal vectors (solutions)
+    let edge_keys_and_solutions = [
+        // left
+        (vec![(0, 3), (3, 7), (7, 10)], [-1.0 / 2.0, 0.0]),
+        // right
+        (vec![(2, 6), (6, 9), (9, 13)], [1.0 / 2.0, 0.0]),
+        // bottom
+        (vec![(0, 1), (1, 2)], [0.0, -2.0 / 2.0]),
+    ];
+
+    // check if the normal vectors at boundary are outward
+    let mut normal = Vector::new(mesh.space_ndim);
+    let ksi = &[0.0, 0.0, 0.0];
+    for (edge_keys, solution) in &edge_keys_and_solutions {
+        for edge_key in edge_keys {
+            let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
+            assert_eq!(edge_shape.nnode, 2);
+            edge_shape.calc_boundary_normal(&mut normal, ksi)?;
+            assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
+        }
+    }
+
+    // find edges
+    let edges = mesh.find_boundary_edges(At::X(0.0))?;
+    assert_eq!(edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
+    let edges = mesh.find_boundary_edges(At::X(4.0))?;
+    assert_eq!(edges, &[(2, 6), (6, 9), (9, 13)]);
     Ok(())
 }
