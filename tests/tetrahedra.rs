@@ -1,4 +1,5 @@
-use gemlab::{mesh::Mesh, StrError};
+use gemlab::mesh::{At, Mesh};
+use gemlab::StrError;
 use russell_chk::assert_vec_approx_eq;
 use russell_lab::Vector;
 
@@ -83,5 +84,31 @@ fn five_tets_within_cube() -> Result<(), StrError> {
             assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
         }
     }
+
+    // find points
+    let points = mesh.find_boundary_points(At::X(0.0))?;
+    assert_eq!(points, &[0, 3, 4, 7]);
+    let points = mesh.find_boundary_points(At::Y(2.0))?;
+    assert_eq!(points, &[2, 3, 6, 7]);
+
+    // find edges
+    let edges = mesh.find_boundary_edges(At::Z(0.0))?;
+    assert_eq!(edges, &[(0, 1), (0, 2), (0, 3), (1, 2), (2, 3)]);
+    let edges = mesh.find_boundary_edges(At::Y(2.0))?;
+    assert_eq!(edges, &[(2, 3), (2, 6), (2, 7), (3, 7), (6, 7)]);
+
+    // find faces
+    let faces = mesh.find_boundary_faces(At::X(0.0))?;
+    assert_eq!(faces, &[(0, 3, 7, npoint), (0, 4, 7, npoint)]);
+    let faces = mesh.find_boundary_faces(At::X(2.0))?;
+    assert_eq!(faces, &[(1, 2, 5, npoint), (2, 5, 6, npoint)]);
+    let faces = mesh.find_boundary_faces(At::Y(0.0))?;
+    assert_eq!(faces, &[(0, 1, 5, npoint), (0, 4, 5, npoint)]);
+    let faces = mesh.find_boundary_faces(At::Y(2.0))?;
+    assert_eq!(faces, &[(2, 3, 7, npoint), (2, 6, 7, npoint)]);
+    let faces = mesh.find_boundary_faces(At::Z(0.0))?;
+    assert_eq!(faces, &[(0, 1, 2, npoint), (0, 2, 3, npoint)]);
+    let faces = mesh.find_boundary_faces(At::Z(2.0))?;
+    assert_eq!(faces, &[(4, 5, 7, npoint), (5, 6, 7, npoint)]);
     Ok(())
 }
