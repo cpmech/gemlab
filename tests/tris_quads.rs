@@ -1,6 +1,8 @@
 use gemlab::mesh::{At, Mesh};
+use gemlab::shapes::Shape;
+use gemlab::util::SQRT_2;
 use gemlab::StrError;
-use russell_chk::assert_vec_approx_eq;
+use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 use russell_lab::Vector;
 
 #[test]
@@ -123,5 +125,36 @@ fn rectangle_tris_quads() -> Result<(), StrError> {
     assert_eq!(edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
     let edges = mesh.find_boundary_edges(At::X(4.0))?;
     assert_eq!(edges, &[(2, 6), (6, 9), (9, 13)]);
+
+    // edge (4,7)
+    let mut shape_edge_4_7 = Shape::new(2, 1, 2)?;
+    shape_edge_4_7.set_node(7, 0, 0, mesh.points[7].coords[0])?;
+    shape_edge_4_7.set_node(7, 0, 1, mesh.points[7].coords[1])?;
+    shape_edge_4_7.set_node(11, 1, 0, mesh.points[11].coords[0])?;
+    shape_edge_4_7.set_node(11, 1, 1, mesh.points[11].coords[1])?;
+    let length_edge_4_7 = SQRT_2;
+    let mut length_numerical = 0.0;
+    for index in 0..shape_edge_4_7.integ_points.len() {
+        let iota = &shape_edge_4_7.integ_points[index];
+        let weight = shape_edge_4_7.integ_points[index][3];
+        let det_jac = shape_edge_4_7.calc_jacobian(iota)?;
+        length_numerical += weight * det_jac;
+    }
+    assert_approx_eq!(length_edge_4_7, length_numerical, 1e-14);
+    let mut normal = Vector::new(2);
+    shape_edge_4_7.calc_boundary_normal(&mut normal, &[0.0, 0.0])?;
+    let l = length_edge_4_7 / 2.0;
+    assert_vec_approx_eq!(normal.as_data(), &[-l / SQRT_2, l / SQRT_2], 1e-14);
+
+    // cell 5
+    let mut shape_cell_5 = mesh.alloc_shape_cell(5)?;
+    let mut area_numerical = 0.0;
+    for index in 0..shape_cell_5.integ_points.len() {
+        let iota = &shape_cell_5.integ_points[index];
+        let weight = shape_cell_5.integ_points[index][3];
+        let det_jac = shape_cell_5.calc_jacobian(iota)?;
+        area_numerical += weight * det_jac;
+    }
+    assert_approx_eq!(area_numerical, length_edge_4_7 * length_edge_4_7, 1e-15);
     Ok(())
 }
