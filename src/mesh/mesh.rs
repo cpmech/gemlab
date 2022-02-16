@@ -160,15 +160,15 @@ pub struct Mesh {
     /// (derived property)
     pub boundary_faces: HashMap<FaceKey, Face>,
 
-    /// Min coordinates
+    /// Min coordinates (space_ndim)
     ///
     /// (derived property)
-    pub min: Vec<f64>,
+    pub min_coords: Vec<f64>,
 
-    /// Max coordinates
+    /// Max coordinates (space_ndim)
     ///
     /// (derived property)
-    pub max: Vec<f64>,
+    pub max_coords: Vec<f64>,
 
     /// Allows searching boundary points using their coordinates
     grid_boundary_points: GridSearch,
@@ -190,8 +190,8 @@ impl Mesh {
             boundary_points: HashSet::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
-            min: Vec::new(),
-            max: Vec::new(),
+            min_coords: vec![f64::MAX; space_ndim],
+            max_coords: vec![f64::MIN; space_ndim],
             grid_boundary_points: GridSearch::new(space_ndim)?,
             derived_props_computed: false,
         })
@@ -279,7 +279,7 @@ impl Mesh {
         }
         self.compute_limits()?;
         self.grid_boundary_points
-            .initialize(&vec![10; self.space_ndim], &self.min, &self.max)?;
+            .initialize(&vec![10; self.space_ndim], &self.min_coords, &self.max_coords)?;
         for point_id in &self.boundary_points {
             self.grid_boundary_points
                 .insert(*point_id, &self.points[*point_id].coords)?;
@@ -793,20 +793,18 @@ impl Mesh {
 
     /// Computes the range of coordinates
     fn compute_limits(&mut self) -> Result<(), StrError> {
-        self.min = vec![f64::MAX; self.space_ndim];
-        self.max = vec![f64::MIN; self.space_ndim];
         for point in &self.points {
             for i in 0..self.space_ndim {
-                if point.coords[i] < self.min[i] {
-                    self.min[i] = point.coords[i];
+                if point.coords[i] < self.min_coords[i] {
+                    self.min_coords[i] = point.coords[i];
                 }
-                if point.coords[i] > self.max[i] {
-                    self.max[i] = point.coords[i];
+                if point.coords[i] > self.max_coords[i] {
+                    self.max_coords[i] = point.coords[i];
                 }
             }
         }
         for i in 0..self.space_ndim {
-            if self.min[i] >= self.max[i] {
+            if self.min_coords[i] >= self.max_coords[i] {
                 return Err("mesh limits are invalid");
             }
         }
@@ -957,8 +955,8 @@ mod tests {
         assert_eq!(mesh.boundary_points.len(), 0);
         assert_eq!(mesh.boundary_edges.len(), 0);
         assert_eq!(mesh.boundary_faces.len(), 0);
-        assert_eq!(mesh.min.len(), 0);
-        assert_eq!(mesh.max.len(), 0);
+        assert_eq!(mesh.min_coords.len(), 0);
+        assert_eq!(mesh.max_coords.len(), 0);
         assert_eq!(
             format!("{}", mesh.grid_boundary_points),
             "ids = []\n\
@@ -1063,8 +1061,8 @@ mod tests {
         assert_eq!(mesh.boundary_points.len(), 6);
         assert_eq!(mesh.boundary_edges.len(), 6);
         assert_eq!(mesh.boundary_faces.len(), 0);
-        assert_eq!(mesh.min, &[0.0, 0.0]);
-        assert_eq!(mesh.max, &[2.0, 1.0]);
+        assert_eq!(mesh.min_coords, &[0.0, 0.0]);
+        assert_eq!(mesh.max_coords, &[2.0, 1.0]);
         assert_eq!(
             format!("{}", mesh.grid_boundary_points),
             "0: [0]\n\
@@ -1153,8 +1151,8 @@ mod tests {
         assert_eq!(mesh.boundary_points.len(), 12);
         assert_eq!(mesh.boundary_edges.len(), 20);
         assert_eq!(mesh.boundary_faces.len(), 10);
-        assert_eq!(mesh.min, &[0.0, 0.0, 0.0]);
-        assert_eq!(mesh.max, &[1.0, 1.0, 2.0]);
+        assert_eq!(mesh.min_coords, &[0.0, 0.0, 0.0]);
+        assert_eq!(mesh.max_coords, &[1.0, 1.0, 2.0]);
         assert_eq!(
             format!("{}", mesh.grid_boundary_points),
             "0: [0]\n\
