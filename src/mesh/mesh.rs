@@ -12,6 +12,19 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
 
+/// Number of divisions along the longest direction for GridSearch
+///
+/// ```text
+/// ndiv_other = min(ndiv_max, max(ndiv_min, (ll_other/ll_long) * ndiv_long))
+/// ```
+const GRID_SEARCH_NDIV_LONG: usize = 20;
+
+/// Minimum number of divisions for GridSearch
+const GRID_SEARCH_NDIV_MIN: usize = 2;
+
+/// Maximum number of divisions for GridSearch
+const GRID_SEARCH_NDIV_MAX: usize = 50;
+
 /// Aliases usize as Point ID
 pub type PointId = usize;
 
@@ -163,12 +176,17 @@ pub struct Mesh {
     /// Min coordinates (space_ndim)
     ///
     /// (derived property)
-    pub min_coords: Vec<f64>,
+    pub coords_min: Vec<f64>,
 
     /// Max coordinates (space_ndim)
     ///
     /// (derived property)
-    pub max_coords: Vec<f64>,
+    pub coords_max: Vec<f64>,
+
+    /// Difference max minus min coordinates (space_ndim), i.e., bounding box of Mesh
+    ///
+    /// (derived property)
+    pub coords_delta: Vec<f64>,
 
     /// Allows searching boundary points using their coordinates
     grid_boundary_points: GridSearch,
@@ -190,8 +208,9 @@ impl Mesh {
             boundary_points: HashSet::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
-            min_coords: vec![f64::MAX; space_ndim],
-            max_coords: vec![f64::MIN; space_ndim],
+            coords_min: Vec::new(),
+            coords_max: Vec::new(),
+            coords_delta: Vec::new(),
             grid_boundary_points: GridSearch::new(space_ndim)?,
             derived_props_computed: false,
         })
@@ -268,6 +287,7 @@ impl Mesh {
     ///
     /// This function is automatically called by `from_text` and `from_text_file`.
     pub fn compute_derived_props(&mut self) -> Result<(), StrError> {
+        // derived props
         self.derived_props_computed = false;
         self.boundary_points.clear();
         self.boundary_edges.clear();
@@ -277,13 +297,38 @@ impl Mesh {
         } else {
             self.compute_derived_props_3d()?;
         }
+
+        // limits
         self.compute_limits()?;
+
+        // compute number of divisions for GridSearch
+        let mut index_long = 0;
+        let mut delta_long = self.coords_delta[index_long];
+        for i in 1..self.space_ndim {
+            if self.coords_delta[i] > delta_long {
+                index_long = i;
+                delta_long = self.coords_delta[i];
+            }
+        }
+        let mut ndiv = vec![0; self.space_ndim];
+        for i in 0..self.space_ndim {
+            if i == index_long {
+                ndiv[i] = GRID_SEARCH_NDIV_LONG;
+            } else {
+                ndiv[i] = ((self.coords_delta[i] / delta_long) * (GRID_SEARCH_NDIV_LONG as f64)) as usize;
+            }
+            ndiv[i] = usize::min(GRID_SEARCH_NDIV_MAX, usize::max(GRID_SEARCH_NDIV_MIN, ndiv[i]));
+        }
+
+        // initialize GridSearch and add all boundary points to it
         self.grid_boundary_points
-            .initialize(&vec![10; self.space_ndim], &self.min_coords, &self.max_coords)?;
+            .initialize(&ndiv, &self.coords_min, &self.coords_max)?;
         for point_id in &self.boundary_points {
             self.grid_boundary_points
                 .insert(*point_id, &self.points[*point_id].coords)?;
         }
+
+        // done
         self.derived_props_computed = true;
         Ok(())
     }
@@ -793,20 +838,24 @@ impl Mesh {
 
     /// Computes the range of coordinates
     fn compute_limits(&mut self) -> Result<(), StrError> {
+        self.coords_min = vec![f64::MAX; self.space_ndim];
+        self.coords_max = vec![f64::MIN; self.space_ndim];
+        self.coords_delta = vec![0.0; self.space_ndim];
         for point in &self.points {
             for i in 0..self.space_ndim {
-                if point.coords[i] < self.min_coords[i] {
-                    self.min_coords[i] = point.coords[i];
+                if point.coords[i] < self.coords_min[i] {
+                    self.coords_min[i] = point.coords[i];
                 }
-                if point.coords[i] > self.max_coords[i] {
-                    self.max_coords[i] = point.coords[i];
+                if point.coords[i] > self.coords_max[i] {
+                    self.coords_max[i] = point.coords[i];
                 }
             }
         }
         for i in 0..self.space_ndim {
-            if self.min_coords[i] >= self.max_coords[i] {
+            if self.coords_min[i] >= self.coords_max[i] {
                 return Err("mesh limits are invalid");
             }
+            self.coords_delta[i] = self.coords_max[i] - self.coords_min[i];
         }
         Ok(())
     }
@@ -955,13 +1004,14 @@ mod tests {
         assert_eq!(mesh.boundary_points.len(), 0);
         assert_eq!(mesh.boundary_edges.len(), 0);
         assert_eq!(mesh.boundary_faces.len(), 0);
-        assert_eq!(mesh.min_coords.len(), 0);
-        assert_eq!(mesh.max_coords.len(), 0);
+        assert_eq!(mesh.coords_min.len(), 0);
+        assert_eq!(mesh.coords_max.len(), 0);
         assert_eq!(
             format!("{}", mesh.grid_boundary_points),
             "ids = []\n\
              nitem = 0\n\
-             ncontainer = 0\n"
+             ncontainer = 0\n\
+             ndiv = [0, 0]\n"
         );
         assert_eq!(mesh.derived_props_computed, false);
         Ok(())
@@ -1061,21 +1111,30 @@ mod tests {
         assert_eq!(mesh.boundary_points.len(), 6);
         assert_eq!(mesh.boundary_edges.len(), 6);
         assert_eq!(mesh.boundary_faces.len(), 0);
-        assert_eq!(mesh.min_coords, &[0.0, 0.0]);
-        assert_eq!(mesh.max_coords, &[2.0, 1.0]);
+        assert_eq!(mesh.coords_min, &[0.0, 0.0]);
+        assert_eq!(mesh.coords_max, &[2.0, 1.0]);
+
+        // DO NOT REMOVE THE CODE BELOW
+        // println!("{}", mesh.grid_boundary_points);
+        // let mut plot = mesh.grid_boundary_points.plot()?;
+        // plot.set_figure_size_points(1200.0, 600.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/from_text_and_strings_work.svg")?;
+
         assert_eq!(
             format!("{}", mesh.grid_boundary_points),
             "0: [0]\n\
-             4: [1]\n\
-             5: [1]\n\
-             9: [4]\n\
-             90: [3]\n\
-             94: [2]\n\
-             95: [2]\n\
-             99: [5]\n\
+             9: [1]\n\
+             10: [1]\n\
+             19: [4]\n\
+             180: [3]\n\
+             189: [2]\n\
+             190: [2]\n\
+             199: [5]\n\
              ids = [0, 1, 2, 3, 4, 5]\n\
              nitem = 6\n\
-             ncontainer = 8\n"
+             ncontainer = 8\n\
+             ndiv = [20, 10]\n"
         );
         assert_eq!(mesh.derived_props_computed, true);
         assert_eq!(
@@ -1151,29 +1210,38 @@ mod tests {
         assert_eq!(mesh.boundary_points.len(), 12);
         assert_eq!(mesh.boundary_edges.len(), 20);
         assert_eq!(mesh.boundary_faces.len(), 10);
-        assert_eq!(mesh.min_coords, &[0.0, 0.0, 0.0]);
-        assert_eq!(mesh.max_coords, &[1.0, 1.0, 2.0]);
+        assert_eq!(mesh.coords_min, &[0.0, 0.0, 0.0]);
+        assert_eq!(mesh.coords_max, &[1.0, 1.0, 2.0]);
+
+        // DO NOT REMOVE THE CODE BELOW
+        // println!("{}", mesh.grid_boundary_points);
+        // let mut plot = mesh.grid_boundary_points.plot()?;
+        // plot.set_figure_size_points(1200.0, 1200.0)
+        //     .set_equal_axes(true)
+        //     .save_and_show("/tmp/gemlab/from_text_file_and_display_work.svg")?;
+
         assert_eq!(
             format!("{}", mesh.grid_boundary_points),
             "0: [0]\n\
              9: [1]\n\
              90: [3]\n\
              99: [2]\n\
-             400: [4]\n\
-             409: [5]\n\
-             490: [7]\n\
-             499: [6]\n\
-             500: [4]\n\
-             509: [5]\n\
-             590: [7]\n\
-             599: [6]\n\
-             900: [8]\n\
-             909: [9]\n\
-             990: [11]\n\
-             999: [10]\n\
+             900: [4]\n\
+             909: [5]\n\
+             990: [7]\n\
+             999: [6]\n\
+             1000: [4]\n\
+             1009: [5]\n\
+             1090: [7]\n\
+             1099: [6]\n\
+             1900: [8]\n\
+             1909: [9]\n\
+             1990: [11]\n\
+             1999: [10]\n\
              ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
              nitem = 12\n\
-             ncontainer = 16\n"
+             ncontainer = 16\n\
+             ndiv = [10, 10, 20]\n"
         );
         assert_eq!(mesh.derived_props_computed, true);
         assert_eq!(
@@ -1235,6 +1303,72 @@ mod tests {
              k:(5,6,9,10) p:[5, 6, 10, 9] c:[1]\n\
              k:(6,7,10,11) p:[6, 7, 11, 10] c:[1]\n\
              k:(8,9,10,11) p:[8, 9, 10, 11] c:[1]\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn grid_search_initialization_works_2d() -> Result<(), StrError> {
+        //
+        // 3.1   6---------12
+        //       |    [6]   |       SOLID
+        // 3.0   5---------11       <-- layer separation
+        //       | [5]  ,-' |       POROUS
+        //       |   ,-'    |
+        // 2.5   4.-'       |
+        //       | '.   [4] |       L
+        //       | [3].     |       A
+        // 2.0   3.    '.   |       Y
+        //       | '--__ '. |       E
+        //       |      '--10  1.8  R
+        //       |          |       2
+        //       |   [2]    |
+        //       |          |
+        // 1.0   2----------9       <-- layer separation
+        //       |          |       L
+        //       |    [1]   |       A
+        // 0.5   1.__       |       Y
+        //       |   '--..  |       E
+        //       |  [0]   '-8  0.2  R
+        // 0.0   0----------7       1
+        //
+        //      0.0        1.0
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/column_distorted_tris_quads.msh")?;
+
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 13);
+        assert_eq!(mesh.cells.len(), 7);
+        assert_eq!(mesh.boundary_points.len(), 13);
+        assert_eq!(mesh.boundary_edges.len(), 13);
+        assert_eq!(mesh.boundary_faces.len(), 0);
+        assert_eq!(mesh.coords_min, &[0.0, 0.0]);
+        assert_eq!(mesh.coords_max, &[1.0, 3.1]);
+
+        // DO NOT REMOVE THE CODE BELOW
+        // println!("{}", mesh.grid_boundary_points);
+        // let mut plot = mesh.grid_boundary_points.plot()?;
+        // plot.set_figure_size_points(600.0, 1200.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/grid_search_initialization_works_2d.svg")?;
+
+        assert_eq!(
+            format!("{}", mesh.grid_boundary_points),
+            "0: [0]\n\
+             5: [7]\n\
+             11: [8]\n\
+             18: [1]\n\
+             36: [2]\n\
+             41: [9]\n\
+             71: [10]\n\
+             72: [3]\n\
+             96: [4]\n\
+             114: [5, 6]\n\
+             119: [11, 12]\n\
+             ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]\n\
+             nitem = 13\n\
+             ncontainer = 11\n\
+             ndiv = [6, 20]\n"
         );
         Ok(())
     }

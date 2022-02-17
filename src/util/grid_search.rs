@@ -761,6 +761,7 @@ impl fmt::Display for GridSearch {
         write!(f, "ids = {:?}\n", ids).unwrap();
         write!(f, "nitem = {}\n", unique_items.len()).unwrap();
         write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();
+        write!(f, "ndiv = {:?}\n", self.ndiv).unwrap();
         Ok(())
     }
 }
@@ -1030,7 +1031,8 @@ mod tests {
             format!("{}", g2d),
             "ids = []\n\
              nitem = 0\n\
-             ncontainer = 0\n"
+             ncontainer = 0\n\
+             ndiv = [5, 5]\n"
         );
 
         let g3d = get_test_grid_3d();
@@ -1038,7 +1040,8 @@ mod tests {
             format!("{}", g3d),
             "ids = []\n\
              nitem = 0\n\
-             ncontainer = 0\n"
+             ncontainer = 0\n\
+             ndiv = [3, 3, 3]\n"
         );
     }
 
@@ -1188,7 +1191,8 @@ mod tests {
              24: [400, 500]\n\
              ids = [100, 101, 102, 103, 200, 300, 400, 500, 600]\n\
              nitem = 9\n\
-             ncontainer = 17\n"
+             ncontainer = 17\n\
+             ndiv = [5, 5]\n"
         );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
@@ -1222,7 +1226,8 @@ mod tests {
              26: [300]\n\
              ids = [100, 101, 102, 103, 104, 105, 106, 200, 300, 400, 500]\n\
              nitem = 11\n\
-             ncontainer = 12\n"
+             ncontainer = 12\n\
+             ndiv = [3, 3, 3]\n"
         );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
@@ -1632,7 +1637,8 @@ mod tests {
             "4: [0]\n\
              ids = [0]\n\
              nitem = 1\n\
-             ncontainer = 1\n"
+             ncontainer = 1\n\
+             ndiv = [3, 3]\n"
         );
         assert_eq!(
             format!("{}", cloned),
@@ -1640,7 +1646,8 @@ mod tests {
              8: [1]\n\
              ids = [0, 1]\n\
              nitem = 2\n\
-             ncontainer = 2\n"
+             ncontainer = 2\n\
+             ndiv = [3, 3]\n"
         );
         // serialize
         let mut serialized = Vec::new();
@@ -1656,7 +1663,8 @@ mod tests {
             "4: [0]\n\
              ids = [0]\n\
              nitem = 1\n\
-             ncontainer = 1\n"
+             ncontainer = 1\n\
+             ndiv = [3, 3]\n"
         );
         Ok(())
     }
