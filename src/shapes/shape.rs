@@ -205,10 +205,10 @@ pub struct Shape {
     pub coords_transp: Matrix,
 
     /// Minimum (space_ndim) coordinates from the X matrix
-    pub min_coords: Vec<f64>,
+    pub coords_min: Vec<f64>,
 
     /// Maximum (space_ndim) coordinates from the X matrix
-    pub max_coords: Vec<f64>,
+    pub coords_max: Vec<f64>,
 
     /// Integration points (coordinates and weights)
     pub integ_points: IntegPointConstants,
@@ -501,8 +501,8 @@ impl Shape {
             ok_last_coord: false,
             point_ids: vec![0; nnode],
             coords_transp: Matrix::new(space_ndim, nnode),
-            min_coords: vec![f64::MAX; space_ndim],
-            max_coords: vec![f64::MIN; space_ndim],
+            coords_min: vec![f64::MAX; space_ndim],
+            coords_max: vec![f64::MIN; space_ndim],
             integ_points,
             temp_interp: Vector::new(nnode),
             temp_deriv: Matrix::new(nnode, geo_ndim),
@@ -599,11 +599,11 @@ impl Shape {
         }
         self.point_ids[m] = point_id;
         self.coords_transp[j][m] = value;
-        if value < self.min_coords[j] {
-            self.min_coords[j] = value;
+        if value < self.coords_min[j] {
+            self.coords_min[j] = value;
         }
-        if value > self.max_coords[j] {
-            self.max_coords[j] = value;
+        if value > self.coords_max[j] {
+            self.coords_max[j] = value;
         }
         if m == self.nnode - 1 && j == self.space_ndim - 1 {
             self.ok_last_coord = true;
@@ -910,7 +910,7 @@ impl Shape {
         // use linear scale to guess ksi
         let (min_ksi, max_ksi, del_ksi) = ref_domain_limits(self.class);
         for j in 0..self.geo_ndim {
-            ksi[j] = (x[j] - self.min_coords[j]) / (self.max_coords[j] - self.min_coords[j]) * del_ksi + min_ksi;
+            ksi[j] = (x[j] - self.coords_min[j]) / (self.coords_max[j] - self.coords_min[j]) * del_ksi + min_ksi;
             if ksi[j] < min_ksi {
                 ksi[j] = min_ksi;
             }
