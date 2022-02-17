@@ -13,17 +13,20 @@
 // -- LIN ----------------------------------------------------------------
 // -----------------------------------------------------------------------
 
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_LIN_LEGENDRE_1: [[f64; 4]; 1] = [
     [0.0, 0.0, 0.0, 2.0]
 ];
 
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_LIN_LEGENDRE_2: [[f64; 4]; 2] = [
     [-0.5773502691896257, 0.0, 0.0, 1.0],
     [ 0.5773502691896257, 0.0, 0.0, 1.0],
 ];
 
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_LIN_LEGENDRE_3: [[f64; 4]; 3] = [
     [-0.7745966692414834, 0.0, 0.0, 0.5555555555555556],
@@ -31,6 +34,7 @@ pub const IP_LIN_LEGENDRE_3: [[f64; 4]; 3] = [
     [ 0.7745966692414834, 0.0, 0.0, 0.5555555555555556],
 ];
 
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_LIN_LEGENDRE_4: [[f64; 4]; 4] = [
     [-0.8611363115940526, 0.0, 0.0, 0.3478548451374538],
@@ -39,6 +43,7 @@ pub const IP_LIN_LEGENDRE_4: [[f64; 4]; 4] = [
     [ 0.8611363115940526, 0.0, 0.0, 0.3478548451374538],
 ];
 
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_LIN_LEGENDRE_5: [[f64; 4]; 5] = [
     [-0.9061798459386640, 0.0, 0.0, 0.2369268850561891],
@@ -52,11 +57,13 @@ pub const IP_LIN_LEGENDRE_5: [[f64; 4]; 5] = [
 // -- TRI ----------------------------------------------------------------
 // -----------------------------------------------------------------------
 
+/// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TRI_INTERNAL_1: [[f64; 4]; 1] = [
     [1.0 / 3.0, 1.0 / 3.0, 0.0, 1.0 / 2.0],
 ];
 
+/// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
     [1.0 / 6.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
@@ -64,6 +71,7 @@ pub const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
     [1.0 / 6.0, 2.0 / 3.0, 0.0, 1.0 / 6.0],
 ];
 
+/// Edge integration points and weights
 #[rustfmt::skip]
 pub const IP_TRI_EDGE_3: [[f64; 4]; 3] = [
     [0.5, 0.5, 0.0, 1.0 / 6.0],
@@ -71,6 +79,7 @@ pub const IP_TRI_EDGE_3: [[f64; 4]; 3] = [
     [0.5, 0.0, 0.0, 1.0 / 6.0],
 ];
 
+/// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TRI_INTERNAL_4: [[f64; 4]; 4] = [
     [1.0 / 3.0, 1.0 / 3.0, 0.0, -27.0 / 96.0],
@@ -79,6 +88,7 @@ pub const IP_TRI_INTERNAL_4: [[f64; 4]; 4] = [
     [1.0 / 5.0, 3.0 / 5.0, 0.0,  25.0 / 96.0],
 ];
 
+/// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TRI_INTERNAL_12: [[f64; 4]; 12] = [
     [0.873821971016996, 0.063089014491502, 0.0, 0.0254224531851035],
@@ -95,6 +105,7 @@ pub const IP_TRI_INTERNAL_12: [[f64; 4]; 12] = [
     [0.636502499121398, 0.310352451033784, 0.0, 0.041425537809187 ],
 ];
 
+/// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TRI_INTERNAL_16: [[f64; 4]; 16] = [
     [3.33333333333333e-01, 3.33333333333333e-01, 0.0, 7.21578038388935e-02],
@@ -119,11 +130,13 @@ pub const IP_TRI_INTERNAL_16: [[f64; 4]; 16] = [
 // -- QUA ----------------------------------------------------------------
 // -----------------------------------------------------------------------
 
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_QUA_LEGENDRE_1: [[f64; 4]; 1] = [
     [0.0, 0.0, 0.0, 4.0],
 ];
 
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_QUA_LEGENDRE_4: [[f64; 4]; 4] = [
     [-0.5773502691896257, -0.5773502691896257, 0.0, 1.0],
@@ -132,6 +145,40 @@ pub const IP_QUA_LEGENDRE_4: [[f64; 4]; 4] = [
     [ 0.5773502691896257,  0.5773502691896257, 0.0, 1.0],
 ];
 
+/// Wilson's integration points and weights. "Corner" version
+#[rustfmt::skip]
+pub const IP_QUA_WILSON_CORNER_5: [[f64; 4]; 5] = [
+    [-1.0, -1.0, 0.0, 0.3333333333333333],
+    [ 1.0, -1.0, 0.0, 0.3333333333333333],
+    [ 0.0,  0.0, 0.0, 2.6666666666666665],
+    [-1.0,  1.0, 0.0, 0.3333333333333333],
+    [ 1.0,  1.0, 0.0, 0.3333333333333333],
+];
+
+/// Wilson's integration points and weights. "Stable" version version with w0=0.004 and wa=0.999 to mimic 4-point rule
+#[rustfmt::skip]
+pub const IP_QUA_WILSON_STABLE_5: [[f64; 4]; 5] = [
+    [-0.5776391000000000, -0.5776391000000000, 0.0, 0.999],
+    [ 0.5776391000000000, -0.5776391000000000, 0.0, 0.999],
+    [ 0.0000000000000000,  0.0000000000000000, 0.0, 0.004],
+    [-0.5776391000000000,  0.5776391000000000, 0.0, 0.999],
+    [ 0.5776391000000000,  0.5776391000000000, 0.0, 0.999],
+];
+
+/// Wilson's integration points and weights.
+#[rustfmt::skip]
+pub const IP_QUA_WILSON_8: [[f64; 4]; 8] = [
+    [-0.8819171036881969, -0.8819171036881969, 0.0, 0.1836734693877551],
+    [ 0.0000000000000000, -0.6831300510639732, 0.0, 0.8163265306122449],
+    [ 0.8819171036881969, -0.8819171036881969, 0.0, 0.1836734693877551],
+    [-0.6831300510639732,  0.0000000000000000, 0.0, 0.8163265306122449],
+    [ 0.6831300510639732,  0.0000000000000000, 0.0, 0.8163265306122449],
+    [-0.8819171036881969,  0.8819171036881969, 0.0, 0.1836734693877551],
+    [ 0.0000000000000000,  0.6831300510639732, 0.0, 0.8163265306122449],
+    [ 0.8819171036881969,  0.8819171036881969, 0.0, 0.1836734693877551],
+];
+
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_QUA_LEGENDRE_9: [[f64; 4]; 9] = [
     [-0.7745966692414834, -0.7745966692414834, 0.0, 25.0 / 81.0],
@@ -145,6 +192,7 @@ pub const IP_QUA_LEGENDRE_9: [[f64; 4]; 9] = [
     [ 0.7745966692414834,  0.7745966692414834, 0.0, 25.0 / 81.0],
 ];
 
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_QUA_LEGENDRE_16: [[f64; 4]; 16] = [
     [-0.8611363115940526, -0.8611363115940526, 0.0, 0.1210029932856019],
@@ -165,49 +213,17 @@ pub const IP_QUA_LEGENDRE_16: [[f64; 4]; 16] = [
     [ 0.8611363115940526,  0.8611363115940526, 0.0, 0.1210029932856019],
 ];
 
-// Integration points according to Wilson's Appendix G-7 formulae
-#[rustfmt::skip]
-pub const IP_QUA_WILSON_CORNER_5: [[f64; 4]; 5] = [
-    [-1.0, -1.0, 0.0, 0.3333333333333333],
-    [ 1.0, -1.0, 0.0, 0.3333333333333333],
-    [ 0.0,  0.0, 0.0, 2.6666666666666665],
-    [-1.0,  1.0, 0.0, 0.3333333333333333],
-    [ 1.0,  1.0, 0.0, 0.3333333333333333],
-];
-
-// Integration points according to Wilson's Appendix G-7 formulae
-// "Stable" version with w0=0.004 and wa=0.999 to mimic 4-point rule
-#[rustfmt::skip]
-pub const IP_QUA_WILSON_STABLE_5: [[f64; 4]; 5] = [
-    [-0.5776391000000000, -0.5776391000000000, 0.0, 0.999],
-    [ 0.5776391000000000, -0.5776391000000000, 0.0, 0.999],
-    [ 0.0000000000000000,  0.0000000000000000, 0.0, 0.004],
-    [-0.5776391000000000,  0.5776391000000000, 0.0, 0.999],
-    [ 0.5776391000000000,  0.5776391000000000, 0.0, 0.999],
-];
-
-// Integration points according to Wilson's Appendix G-7 formulae
-#[rustfmt::skip]
-pub const IP_QUA_WILSON_8: [[f64; 4]; 8] = [
-    [-0.8819171036881969, -0.8819171036881969, 0.0, 0.1836734693877551],
-    [ 0.0000000000000000, -0.6831300510639732, 0.0, 0.8163265306122449],
-    [ 0.8819171036881969, -0.8819171036881969, 0.0, 0.1836734693877551],
-    [-0.6831300510639732,  0.0000000000000000, 0.0, 0.8163265306122449],
-    [ 0.6831300510639732,  0.0000000000000000, 0.0, 0.8163265306122449],
-    [-0.8819171036881969,  0.8819171036881969, 0.0, 0.1836734693877551],
-    [ 0.0000000000000000,  0.6831300510639732, 0.0, 0.8163265306122449],
-    [ 0.8819171036881969,  0.8819171036881969, 0.0, 0.1836734693877551],
-];
-
 // -----------------------------------------------------------------------
 // -- TET ----------------------------------------------------------------
 // -----------------------------------------------------------------------
 
+/// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TET_INTERNAL_1: [[f64; 4]; 1] = [
     [1.0 / 4.0, 1.0 / 4.0, 1.0 / 4.0, 1.0 / 6.0],
 ];
 
+/// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TET_INTERNAL_4: [[f64; 4]; 4] = [
     [0.5854101966249684, 0.1381966011250105, 0.1381966011250105, 0.041666666666666],
@@ -216,6 +232,7 @@ pub const IP_TET_INTERNAL_4: [[f64; 4]; 4] = [
     [0.1381966011250105, 0.1381966011250105, 0.1381966011250105, 0.041666666666666],
 ];
 
+/// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TET_INTERNAL_5: [[f64; 4]; 5] = [
     [1.0 / 4.0, 1.0 / 4.0, 1.0 / 4.0, -2.0 / 15.0],
@@ -225,6 +242,7 @@ pub const IP_TET_INTERNAL_5: [[f64; 4]; 5] = [
     [1.0 / 2.0, 1.0 / 6.0, 1.0 / 6.0,  3.0 / 40.0],
 ];
 
+/// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TET_INTERNAL_6: [[f64; 4]; 6] = [
     [ 1.0,  0.0,  0.0, 4.0 / 3.0],
@@ -239,6 +257,18 @@ pub const IP_TET_INTERNAL_6: [[f64; 4]; 6] = [
 // -- HEX ----------------------------------------------------------------
 // -----------------------------------------------------------------------
 
+/// Iron's integration points and weights
+#[rustfmt::skip]
+pub const IP_HEX_IRONS_6: [[f64; 4]; 6] = [
+    [-1.0,  0.0,  0.0, 4.0 / 3.0],
+    [ 1.0,  0.0,  0.0, 4.0 / 3.0],
+    [ 0.0, -1.0,  0.0, 4.0 / 3.0],
+    [ 0.0,  1.0,  0.0, 4.0 / 3.0],
+    [ 0.0,  0.0, -1.0, 4.0 / 3.0],
+    [ 0.0,  0.0,  1.0, 4.0 / 3.0],
+];
+
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_HEX_LEGENDRE_8: [[f64; 4]; 8] = [
     [-0.5773502691896257, -0.5773502691896257, -0.5773502691896257, 1.0],
@@ -251,6 +281,7 @@ pub const IP_HEX_LEGENDRE_8: [[f64; 4]; 8] = [
     [ 0.5773502691896257,  0.5773502691896257,  0.5773502691896257, 1.0],
 ];
 
+/// Wilson's integration points and weights. "Corner" version
 #[rustfmt::skip]
 pub const IP_HEX_WILSON_CORNER_9: [[f64; 4]; 9] = [
     [-1.0, -1.0, -1.0,  0.3333333333333333],
@@ -264,6 +295,7 @@ pub const IP_HEX_WILSON_CORNER_9: [[f64; 4]; 9] = [
     [ 1.0,  1.0,  1.0,  0.3333333333333333],
 ];
 
+/// Wilson's integration points and weights. "Stable" version
 #[rustfmt::skip]
 pub const IP_HEX_WILSON_STABLE_9: [[f64; 4]; 9] = [
     [-0.5776391, -0.5776391, -0.5776391000000000,  0.999],
@@ -277,16 +309,7 @@ pub const IP_HEX_WILSON_STABLE_9: [[f64; 4]; 9] = [
     [ 0.5776391,  0.5776391,  0.5776391000000000,  0.999],
 ];
 
-#[rustfmt::skip]
-pub const IP_HEX_IRONS_6: [[f64; 4]; 6] = [
-    [-1.0,  0.0,  0.0, 4.0 / 3.0],
-    [ 1.0,  0.0,  0.0, 4.0 / 3.0],
-    [ 0.0, -1.0,  0.0, 4.0 / 3.0],
-    [ 0.0,  1.0,  0.0, 4.0 / 3.0],
-    [ 0.0,  0.0, -1.0, 4.0 / 3.0],
-    [ 0.0,  0.0,  1.0, 4.0 / 3.0],
-];
-
+/// Iron's integration points and weights
 #[rustfmt::skip]
 pub const IP_HEX_IRONS_14: [[f64; 4]; 14] = [
     [ 0.7958224257542215,  0.0000000000000000,  0.0000000000000000,  0.8864265927977839],
@@ -305,6 +328,7 @@ pub const IP_HEX_IRONS_14: [[f64; 4]; 14] = [
     [-0.7587869106393281, -0.7587869106393281, -0.7587869106393281,  0.3351800554016621],
 ];
 
+/// Conventional Legendre integration points and weights
 #[rustfmt::skip]
 pub const IP_HEX_LEGENDRE_27: [[f64; 4]; 27] = [
     [-0.774596669241483, -0.774596669241483, -0.774596669241483, 0.171467764060357],

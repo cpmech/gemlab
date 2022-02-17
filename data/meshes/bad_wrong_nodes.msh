@@ -40,7 +40,7 @@
   11  0.0 1.0 2.0
 
 # cells
-# id att geo_ndim nnode  point_ids...
-   0   1        3     8  0 1 2 3 4 5  6  7
+# id att geo_ndim nnode  (wrong) point_ids...
+   0   1        3     8  0 3 2 1 4 5  6  7
    1   0        3     8  4 5 6 7 8 9 10 11
    

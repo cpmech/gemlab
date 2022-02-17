@@ -23,14 +23,19 @@ use russell_lab::{Matrix, Vector};
 /// # Local IDs of edges
 ///
 /// ```text
-///  |\
-///  | \
-///  |  \ 1
-/// 2|   \
+///  |\            p0  p1 p2
+///  | \       e:0 [1, 0, 3]
+///  |  \ 1    e:1 [2, 1, 4]
+/// 2|   \     e:2 [0, 2, 5]
 ///  |    \
 ///  |_____\
 ///     0
 /// ```
+///
+/// # Note about edges
+///
+/// * The order of edge nodes is such that the normals are outward
+/// * The order of edge nodes corresponds to **Lin3** nodes
 pub struct Tri6 {}
 
 impl Tri6 {
@@ -44,9 +49,9 @@ impl Tri6 {
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri6::EDGE_NNODE]; Tri6::NEDGE] = [
-        [0, 1, 3],
-        [1, 2, 4],
-        [2, 0, 5],
+        [1, 0, 3],
+        [2, 1, 4],
+        [0, 2, 5],
     ];
 
     #[rustfmt::skip]

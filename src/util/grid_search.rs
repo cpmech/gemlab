@@ -6,14 +6,14 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// Holds the id and coordinates of an item
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Item {
     id: usize,   // identification number
     x: Vec<f64>, // (ndim) coordinates
 }
 
 /// Holds items
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Container {
     items: Vec<Item>,
 }
@@ -25,7 +25,7 @@ struct Container {
 /// * Durand, Farias, and Pedroso (2015) Computing intersections between
 ///   non-compatible curves and finite elements, Computational Mechanics;
 ///   DOI=10.1007/s00466-015-1181-y
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct GridSearch {
     // constants
     ndim: usize,      // space dimension
@@ -35,9 +35,6 @@ pub struct GridSearch {
     delta: Vec<f64>,  // (ndim) difference between max and min
     size: Vec<f64>,   // (ndim) side lengths of each container
     cf: Vec<usize>,   // (3) coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
-
-    // auxiliary variable
-    ratio: Vec<usize>, // (ndim) ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
 
     // square/cubic halo: bounding box corners around point, including the point
     tol: Vec<f64>,       // tolerances to compare coordinates and define the halo
@@ -79,7 +76,6 @@ impl GridSearch {
             delta: vec![0.0; ndim],
             size: vec![0.0; ndim],
             cf: vec![0; 3], // << must be 3
-            ratio: vec![0; ndim],
             tol: vec![0.0; ndim],
             halo: vec![vec![0.0; ndim]; ncorner],
             ncorner,
@@ -212,7 +208,7 @@ impl GridSearch {
     /// # Output
     ///
     /// * `id` -- if found, returns the identification number of the item
-    pub fn find(&mut self, x: &[f64]) -> Result<Option<usize>, StrError> {
+    pub fn find(&self, x: &[f64]) -> Result<Option<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -253,7 +249,7 @@ impl GridSearch {
     /// # Output
     ///
     /// Returns the ids of points.
-    pub fn find_on_line(&mut self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_line(&self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -296,7 +292,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 2D only.
-    pub fn find_on_circle(&mut self, center: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_circle(&self, center: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -340,7 +336,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_cylinder(&mut self, a: &[f64], b: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_cylinder(&self, a: &[f64], b: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -385,7 +381,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_plane_xy(&mut self, z: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_plane_xy(&self, z: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -424,7 +420,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_plane_yz(&mut self, x: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_plane_yz(&self, x: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -463,7 +459,7 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_plane_xz(&mut self, y: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_plane_xz(&self, y: f64) -> Result<HashSet<usize>, StrError> {
         // check
         if !self.initialized {
             return Err("initialize must be called first");
@@ -566,39 +562,25 @@ impl GridSearch {
         Ok(plot)
     }
 
-    /// Returns the serialized data
-    pub fn encode(&self) -> Result<Vec<u8>, StrError> {
-        let mut serialized = Vec::new();
-        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
-        self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
-        Ok(serialized)
-    }
-
-    /// Creates a new GridSearch from serialized data
-    pub fn decode(serialized: &Vec<u8>) -> Result<Self, StrError> {
-        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
-        let res = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
-        Ok(res)
-    }
-
     /// Calculates the container index where the point x should be located
     ///
     /// # Output
     ///
     /// * returns the index of the container or None if the point is out-of-range
     #[inline]
-    fn container_index(&mut self, x: &[f64]) -> Option<usize> {
+    fn container_index(&self, x: &[f64]) -> Option<usize> {
+        let mut ratio = vec![0; self.ndim]; // (ndim) ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
         let mut index = 0;
         for i in 0..self.ndim {
             if x[i] < self.min[i] || x[i] > self.max[i] {
                 return None;
             }
-            self.ratio[i] = ((x[i] - self.min[i]) / self.size[i]) as usize;
-            if self.ratio[i] == self.ndiv[i] {
+            ratio[i] = ((x[i] - self.min[i]) / self.size[i]) as usize;
+            if ratio[i] == self.ndiv[i] {
                 // the point is exactly on the max edge, thus select inner container
-                self.ratio[i] -= 1; // move to the inside
+                ratio[i] -= 1; // move to the inside
             }
-            index += self.ratio[i] * self.cf[i];
+            index += ratio[i] * self.cf[i];
         }
         Some(index)
     }
@@ -779,6 +761,7 @@ impl fmt::Display for GridSearch {
         write!(f, "ids = {:?}\n", ids).unwrap();
         write!(f, "nitem = {}\n", unique_items.len()).unwrap();
         write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();
+        write!(f, "ndiv = {:?}\n", self.ndiv).unwrap();
         Ok(())
     }
 }
@@ -1016,7 +999,6 @@ mod tests {
         assert_eq!(g2d.delta, [1.0, 2.0]);
         assert_eq!(g2d.size, [0.2, 0.4]);
         assert_eq!(g2d.cf, [1, 5, 25]);
-        assert_eq!(g2d.ratio, [0, 0]);
         assert_eq!(g2d.tol, [1e-4, 1e-4]);
         assert_eq!(g2d.halo.len(), 4);
         assert_eq!(g2d.ncorner, 4);
@@ -1033,7 +1015,6 @@ mod tests {
         assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
         assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
         assert_eq!(g3d.cf, [1, 3, 9]);
-        assert_eq!(g3d.ratio, [0, 0, 0]);
         assert_eq!(g3d.tol, [1e-4, 1e-4, 1e-4]);
         assert_eq!(g3d.halo.len(), 8);
         assert_eq!(g3d.ncorner, 8);
@@ -1041,75 +1022,6 @@ mod tests {
         assert_eq!(g2d.initialized, true);
         assert_approx_eq!(g3d.radius, f64::sqrt(3.0 * (1.0 / 3.0) * (1.0 / 3.0)), 1e-15);
         assert_approx_eq!(g3d.radius_tol, f64::sqrt(3.0 * 1e-4 * 1e-4), 1e-15);
-    }
-
-    #[test]
-    fn encode_decode_work() -> Result<(), StrError> {
-        let item = Item {
-            id: 123,
-            x: vec![1.0, 2.0],
-        };
-        let mut serialized = Vec::new();
-        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
-        item.serialize(&mut serializer).map_err(|_| "serialize failed")?;
-        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
-        let res: Item = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
-        assert_eq!(res.id, item.id);
-        assert_eq!(res.x, item.x);
-
-        let container = Container {
-            items: vec![Item {
-                id: 456,
-                x: vec![2.0, 3.0],
-            }],
-        };
-        let mut serialized = Vec::new();
-        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
-        container.serialize(&mut serializer).map_err(|_| "serialize failed")?;
-        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
-        let res: Container = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
-        assert_eq!(res.items.len(), 1);
-        assert_eq!(res.items[0].id, 456);
-        assert_eq!(res.items[0].x, &[2.0, 3.0]);
-
-        let original2d = get_test_grid_2d();
-        let data2d = original2d.encode()?;
-        let g2d = GridSearch::decode(&data2d)?;
-        assert_eq!(g2d.ndim, 2);
-        assert_eq!(g2d.ndiv, [5, 5]);
-        assert_eq!(g2d.min, [-0.2, -0.2]);
-        assert_eq!(g2d.max, [0.8, 1.8]);
-        assert_eq!(g2d.delta, [1.0, 2.0]);
-        assert_eq!(g2d.size, [0.2, 0.4]);
-        assert_eq!(g2d.cf, [1, 5, 25]);
-        assert_eq!(g2d.ratio, [0, 0]);
-        assert_eq!(g2d.tol, [1e-4, 1e-4]);
-        assert_eq!(g2d.halo.len(), 4);
-        assert_eq!(g2d.ncorner, 4);
-        assert_eq!(g2d.containers.len(), 0);
-        assert_eq!(g2d.initialized, true);
-        assert_approx_eq!(g2d.radius, f64::sqrt(0.1 * 0.1 + 0.2 * 0.2), 1e-15);
-        assert_approx_eq!(g2d.radius_tol, f64::sqrt(2.0 * 1e-4 * 1e-4), 1e-15);
-
-        let original3d = get_test_grid_3d();
-        let data3d = original3d.encode()?;
-        let g3d = GridSearch::decode(&data3d)?;
-        assert_eq!(g3d.ndim, 3);
-        assert_eq!(g3d.ndiv, [3, 3, 3]);
-        assert_eq!(g3d.min, [-1.0, -1.0, -1.0]);
-        assert_eq!(g3d.max, [1.0, 1.0, 1.0]);
-        assert_eq!(g3d.delta, [2.0, 2.0, 2.0]);
-        assert_eq!(g3d.size, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
-        assert_eq!(g3d.cf, [1, 3, 9]);
-        assert_eq!(g3d.ratio, [0, 0, 0]);
-        assert_eq!(g3d.tol, [1e-4, 1e-4, 1e-4]);
-        assert_eq!(g3d.halo.len(), 8);
-        assert_eq!(g3d.ncorner, 8);
-        assert_eq!(g3d.containers.len(), 0);
-        assert_eq!(g2d.initialized, true);
-        assert_approx_eq!(g3d.radius, f64::sqrt(3.0 * (1.0 / 3.0) * (1.0 / 3.0)), 1e-15);
-        assert_approx_eq!(g3d.radius_tol, f64::sqrt(3.0 * 1e-4 * 1e-4), 1e-15);
-        Ok(())
     }
 
     #[test]
@@ -1119,7 +1031,8 @@ mod tests {
             format!("{}", g2d),
             "ids = []\n\
              nitem = 0\n\
-             ncontainer = 0\n"
+             ncontainer = 0\n\
+             ndiv = [5, 5]\n"
         );
 
         let g3d = get_test_grid_3d();
@@ -1127,7 +1040,8 @@ mod tests {
             format!("{}", g3d),
             "ids = []\n\
              nitem = 0\n\
-             ncontainer = 0\n"
+             ncontainer = 0\n\
+             ndiv = [3, 3, 3]\n"
         );
     }
 
@@ -1154,7 +1068,7 @@ mod tests {
 
     #[test]
     fn container_index_works() -> Result<(), StrError> {
-        let mut g2d = get_test_grid_2d();
+        let g2d = get_test_grid_2d();
         for data in get_test_data_2d() {
             let index = g2d.container_index(data.x).unwrap();
             assert_eq!(index, data.container);
@@ -1162,7 +1076,7 @@ mod tests {
         let index = g2d.container_index(&[0.80001, 0.0]);
         assert_eq!(index, None); // outside
 
-        let mut g3d = get_test_grid_3d();
+        let g3d = get_test_grid_3d();
         for data in get_test_data_3d() {
             let index = g3d.container_index(data.x).unwrap();
             assert_eq!(index, data.container);
@@ -1277,7 +1191,8 @@ mod tests {
              24: [400, 500]\n\
              ids = [100, 101, 102, 103, 200, 300, 400, 500, 600]\n\
              nitem = 9\n\
-             ncontainer = 17\n"
+             ncontainer = 17\n\
+             ndiv = [5, 5]\n"
         );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
@@ -1311,7 +1226,8 @@ mod tests {
              26: [300]\n\
              ids = [100, 101, 102, 103, 104, 105, 106, 200, 300, 400, 500]\n\
              nitem = 11\n\
-             ncontainer = 12\n"
+             ncontainer = 12\n\
+             ndiv = [3, 3, 3]\n"
         );
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
@@ -1331,7 +1247,7 @@ mod tests {
         let res = g2d.find(&[0.80001, 0.0]);
         assert_eq!(res, Err("point is outside the grid"));
 
-        let mut g3d = get_test_grid_3d();
+        let g3d = get_test_grid_3d();
         let res = g3d.find(&[0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
         let res = g3d.find(&[1.00001, 0.0, 0.0]);
@@ -1488,7 +1404,7 @@ mod tests {
         let res = g2d.find_on_circle(&[-0.2], 0.3);
         assert_eq!(res, Err("center.len() must equal ndim"));
 
-        let mut g3d = get_test_grid_3d();
+        let g3d = get_test_grid_3d();
         let res = g3d.find_on_circle(&[0.0, 0.0, 0.0], 1.0);
         assert_eq!(res, Err("this works in 2D only"));
     }
@@ -1530,7 +1446,7 @@ mod tests {
         let res = g3d.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0);
         assert_eq!(res, Err("b.len() must equal ndim"));
 
-        let mut g2d = get_test_grid_2d();
+        let g2d = get_test_grid_2d();
         let res = g2d.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0);
         assert_eq!(res, Err("this works in 3D only"));
     }
@@ -1574,7 +1490,7 @@ mod tests {
 
     #[test]
     fn find_on_plane_fails_on_wrong_input() {
-        let mut g2d = get_test_grid_2d();
+        let g2d = get_test_grid_2d();
         let mut g3d = get_test_grid_3d();
         g3d.initialized = false;
         let res = g3d.find_on_plane_xy(-1.0);
@@ -1705,6 +1621,51 @@ mod tests {
         let res = grid.plot();
         assert_eq!(res.err(), Some("initialize must be called first"));
 
+        Ok(())
+    }
+
+    #[test]
+    fn clone_and_serialize_work() -> Result<(), StrError> {
+        let mut grid = GridSearch::new(2)?;
+        grid.initialize(&[3, 3], &[0.0, 0.0], &[1.0, 1.0])?;
+        grid.insert(0, &[0.5, 0.5])?;
+        // clone
+        let mut cloned = grid.clone();
+        cloned.insert(1, &[0.8, 0.8])?;
+        assert_eq!(
+            format!("{}", grid),
+            "4: [0]\n\
+             ids = [0]\n\
+             nitem = 1\n\
+             ncontainer = 1\n\
+             ndiv = [3, 3]\n"
+        );
+        assert_eq!(
+            format!("{}", cloned),
+            "4: [0]\n\
+             8: [1]\n\
+             ids = [0, 1]\n\
+             nitem = 2\n\
+             ncontainer = 2\n\
+             ndiv = [3, 3]\n"
+        );
+        // serialize
+        let mut serialized = Vec::new();
+        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
+        grid.serialize(&mut serializer).map_err(|_| "grid serialize failed")?;
+        assert!(serialized.len() > 0);
+        // deserialize
+        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
+        let grid_read: GridSearch =
+            Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize grid data")?;
+        assert_eq!(
+            format!("{}", grid_read),
+            "4: [0]\n\
+             ids = [0]\n\
+             nitem = 1\n\
+             ncontainer = 1\n\
+             ndiv = [3, 3]\n"
+        );
         Ok(())
     }
 }

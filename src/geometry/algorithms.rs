@@ -379,6 +379,10 @@ mod tests {
             Some("axis_a.len() == ndim must be 3")
         );
         assert_eq!(
+            point_cylinder_distance(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0, &[2.0, 2.0, 2.0]).err(),
+            Some("axis_b.len() must equal center.len() == ndim")
+        );
+        assert_eq!(
             point_cylinder_distance(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0, &[2.0, 2.0]).err(),
             Some("p.len() must equal center.len() == ndim")
         );

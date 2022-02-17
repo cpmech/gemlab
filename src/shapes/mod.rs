@@ -1,39 +1,6 @@
-//! Defines shapes and interpolation functions
-//!
-//! # Example
-//!
-//! ```
-//! // import
-//! use gemlab::shapes::*;
-//! use russell_lab::Vector;
-//!
-//! // shape object
-//! let mut shape = new_shape(Kind::Hex8);
-//! let ndim = shape.get_ndim();
-//!
-//! // compute interp fn and deriv @ ksi=(0,0,0) for all points
-//! let ksi = Vector::new(ndim);
-//! shape.calc_interp(&ksi);
-//! shape.calc_deriv(&ksi);
-//!
-//! // get interp fn and deriv for point m
-//! let m = 0;
-//! let sm = shape.get_interp(m);
-//! let mut dsm_dksi = Vector::new(ndim);
-//! shape.get_deriv(&mut dsm_dksi, m);
-//!
-//! // check interp fn and deriv @ ksi for point m
-//! assert_eq!(sm, 0.125);
-//! assert_eq!(
-//!     format!("{}", dsm_dksi),
-//!     "┌        ┐\n\
-//!      │ -0.125 │\n\
-//!      │ -0.125 │\n\
-//!      │ -0.125 │\n\
-//!      └        ┘"
-//! );
-//! ```
+//! Implements shape objects for numerical integration and other calculations
 
+mod enums;
 mod hex20;
 mod hex8;
 mod lin2;
@@ -53,8 +20,9 @@ mod tri10;
 mod tri15;
 mod tri3;
 mod tri6;
-mod z_int_points;
+mod z_integ_points;
 mod z_integration;
+pub use crate::shapes::enums::*;
 pub use crate::shapes::hex20::*;
 pub use crate::shapes::hex8::*;
 pub use crate::shapes::lin2::*;
@@ -74,5 +42,5 @@ pub use crate::shapes::tri10::*;
 pub use crate::shapes::tri15::*;
 pub use crate::shapes::tri3::*;
 pub use crate::shapes::tri6::*;
-pub use crate::shapes::z_int_points::*;
+pub use crate::shapes::z_integ_points::*;
 pub use crate::shapes::z_integration::*;

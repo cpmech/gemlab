@@ -1,7 +1,7 @@
 # header
-# ndim npoint ncell
-2 4 1
+# space_ndim npoint ncell
+           2      4     1
 
 # points
-# id x y
-0  0.0 0.0
+# id   x   y
+   0 0.0 0.0

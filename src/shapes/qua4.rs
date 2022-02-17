@@ -21,14 +21,19 @@ use russell_lab::{Matrix, Vector};
 /// ```text
 ///        2
 ///  +-----------+         p0  p1
-///  |           |     e:0 [0, 1],
-///  |           |     e:1 [1, 2],
-/// 3|           |1    e:2 [2, 3],
-///  |           |     e:3 [3, 0],
+///  |           |     e:0 [1, 0]
+///  |           |     e:1 [2, 1]
+/// 3|           |1    e:2 [3, 2]
+///  |           |     e:3 [0, 3]
 ///  |           |
 ///  +-----------+
 ///        0
 /// ```
+///
+/// # Note about edges
+///
+/// * The order of edge nodes is such that the normals are outward
+/// * The order of edge nodes corresponds to **Lin2** nodes
 pub struct Qua4 {}
 
 impl Qua4 {
@@ -42,10 +47,10 @@ impl Qua4 {
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua4::EDGE_NNODE]; Qua4::NEDGE] = [
-        [0, 1],
-        [1, 2],
-        [2, 3],
-        [3, 0],
+        [1, 0],
+        [2, 1],
+        [3, 2],
+        [0, 3],
     ];
 
     #[rustfmt::skip]

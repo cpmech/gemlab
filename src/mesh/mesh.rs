@@ -1,17 +1,29 @@
-use super::read_mesh::{parse_mesh, read_mesh};
+use super::read_text_mesh::{parse_text_mesh, read_text_mesh};
 use super::At;
 use crate::shapes::Shape;
 use crate::util::GridSearch;
 use crate::StrError;
-use russell_lab::{sort2, sort3};
+use russell_lab::{sort2, sort4};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fmt;
-use std::fs;
-use std::fs::File;
+use std::fmt::{self, Write as FmtWrite};
+use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
+
+/// Number of divisions along the longest direction for GridSearch
+///
+/// ```text
+/// ndiv_other = min(ndiv_max, max(ndiv_min, (ll_other/ll_long) * ndiv_long))
+/// ```
+const GRID_SEARCH_NDIV_LONG: usize = 20;
+
+/// Minimum number of divisions for GridSearch
+const GRID_SEARCH_NDIV_MIN: usize = 2;
+
+/// Maximum number of divisions for GridSearch
+const GRID_SEARCH_NDIV_MAX: usize = 50;
 
 /// Aliases usize as Point ID
 pub type PointId = usize;
@@ -23,13 +35,21 @@ pub type CellId = usize;
 pub type CellAttributeId = usize;
 
 /// Aliases (usize,usize) as the key of Edge
+///
+/// # Note
+///
+/// Since the local numbering scheme runs over "corners" first, we can compare
+/// edges using only two points; i.e., the middle points don't matter.
 pub type EdgeKey = (usize, usize);
 
-/// Aliases (usize,usize,usize) as the key of Face
-pub type FaceKey = (usize, usize, usize);
-
-/// Aliases usize as the group of boundary Point, Edge or Face
-pub type Group = String;
+/// Aliases (usize,usize,usize,usize) as the key of Face
+///
+/// # Note
+///
+/// If all faces have at most 3 points, the fourth entry in the key will be equal to the total number of points.
+/// In this way, we can compare 4-node (or more nodes) faces with each other, since that the local numbering
+/// scheme runs over the "corners" first; i.e., the middle points don't matter.
+pub type FaceKey = (usize, usize, usize, usize);
 
 /// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -78,6 +98,8 @@ pub struct Cell {
 
     /// List of points defining this cell (nodes); in the right order (unsorted)
     ///
+    /// Note: The list of nodes must follow a **counter-clockwise order**.
+    ///
     /// **raw data**
     pub points: Vec<PointId>,
 }
@@ -108,7 +130,7 @@ pub struct Face {
 }
 
 /// Holds mesh data
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Mesh {
     /// Space dimension of the mesh
     ///
@@ -137,7 +159,7 @@ pub struct Mesh {
 
     /// Set of edges on the boundaries
     ///
-    /// Note: In 2D, a boundary edge is such that it's shared by one 2D cell only (ignore 1D cells)
+    /// Note: In 2D, a boundary edge is such that it is shared by one 2D cell only (1D cells are ignored)
     ///
     /// Note: In 3D, a boundary edge belongs to a boundary face
     ///
@@ -146,35 +168,25 @@ pub struct Mesh {
 
     /// Set of faces on the boundaries
     ///
-    /// Note: A boundary face is such that it's shared by one 3D cell only
+    /// Note: A boundary face is such that it is shared by one 3D cell only
     ///
     /// (derived property)
     pub boundary_faces: HashMap<FaceKey, Face>,
 
-    /// Collects all boundary point groups
+    /// Min coordinates (space_ndim)
     ///
     /// (derived property)
-    pub groups_boundary_points: HashMap<Group, HashSet<PointId>>,
+    pub coords_min: Vec<f64>,
 
-    /// Collects all boundary edge groups
+    /// Max coordinates (space_ndim)
     ///
     /// (derived property)
-    pub groups_boundary_edges: HashMap<Group, HashSet<EdgeKey>>,
+    pub coords_max: Vec<f64>,
 
-    /// Collects all boundary face groups
+    /// Difference max minus min coordinates (space_ndim), i.e., bounding box of Mesh
     ///
     /// (derived property)
-    pub groups_boundary_faces: HashMap<Group, HashSet<FaceKey>>,
-
-    /// Min coordinates
-    ///
-    /// (derived property)
-    pub min: Vec<f64>,
-
-    /// Max coordinates
-    ///
-    /// (derived property)
-    pub max: Vec<f64>,
+    pub coords_delta: Vec<f64>,
 
     /// Allows searching boundary points using their coordinates
     grid_boundary_points: GridSearch,
@@ -185,85 +197,51 @@ pub struct Mesh {
 
 impl Mesh {
     /// Returns a new empty mesh
-    pub(super) fn new(ndim: usize) -> Result<Self, StrError> {
-        if ndim < 2 || ndim > 3 {
-            return Err("ndim must be 2 or 3");
+    pub(super) fn new(space_ndim: usize) -> Result<Self, StrError> {
+        if space_ndim < 2 || space_ndim > 3 {
+            return Err("space_ndim must be 2 or 3");
         }
         Ok(Mesh {
-            space_ndim: ndim,
+            space_ndim,
             points: Vec::new(),
             cells: Vec::new(),
             boundary_points: HashSet::new(),
             boundary_edges: HashMap::new(),
             boundary_faces: HashMap::new(),
-            groups_boundary_points: HashMap::new(),
-            groups_boundary_edges: HashMap::new(),
-            groups_boundary_faces: HashMap::new(),
-            min: Vec::new(),
-            max: Vec::new(),
-            grid_boundary_points: GridSearch::new(ndim)?,
-            derived_props_computed: false,
-        })
-    }
-
-    /// Returns a new mesh with pre-allocated (empty) Point and Cell vectors
-    pub(super) fn new_sized(ndim: usize, npoint: usize, ncell: usize) -> Result<Self, StrError> {
-        if ndim < 2 || ndim > 3 {
-            return Err("ndim must be 2 or 3");
-        }
-        if npoint < 2 {
-            return Err("npoint must be greater than or equal to 2");
-        }
-        if ncell < 1 {
-            return Err("ncell must be greater than or equal to 1");
-        }
-        let zero_point = Point {
-            id: 0,
-            coords: vec![0.0; ndim],
-            shared_by_boundary_edges: HashSet::new(),
-            shared_by_boundary_faces: HashSet::new(),
-        };
-        let zero_cell = Cell {
-            id: 0,
-            attribute_id: 0,
-            geo_ndim: 0,
-            points: Vec::new(),
-        };
-        Ok(Mesh {
-            space_ndim: ndim,
-            points: vec![zero_point; npoint],
-            cells: vec![zero_cell; ncell],
-            boundary_points: HashSet::new(),
-            boundary_edges: HashMap::new(),
-            boundary_faces: HashMap::new(),
-            groups_boundary_points: HashMap::new(),
-            groups_boundary_edges: HashMap::new(),
-            groups_boundary_faces: HashMap::new(),
-            min: Vec::new(),
-            max: Vec::new(),
-            grid_boundary_points: GridSearch::new(ndim)?,
+            coords_min: Vec::new(),
+            coords_max: Vec::new(),
+            coords_delta: Vec::new(),
+            grid_boundary_points: GridSearch::new(space_ndim)?,
             derived_props_computed: false,
         })
     }
 
     /// Parses raw mesh data from a text string and computes derived properties
+    ///
+    /// # Note
+    ///
+    /// This function calls `compute_derived_props` already.
     pub fn from_text(raw_mesh_data: &str) -> Result<Self, StrError> {
-        let mut mesh = parse_mesh(raw_mesh_data)?;
+        let mut mesh = parse_text_mesh(raw_mesh_data)?;
         mesh.compute_derived_props()?;
         Ok(mesh)
     }
 
     /// Reads raw mesh data from text file and computes derived properties
+    ///
+    /// # Note
+    ///
+    /// This function calls `compute_derived_props` already.
     pub fn from_text_file<P>(full_path: &P) -> Result<Self, StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
-        let mut mesh = read_mesh(full_path)?;
+        let mut mesh = read_text_mesh(full_path)?;
         mesh.compute_derived_props()?;
         Ok(mesh)
     }
 
-    /// Reads a binary file containing the mesh and computed properties
+    /// Reads a binary file containing the mesh data and computed properties
     ///
     /// # Input
     ///
@@ -273,19 +251,21 @@ impl Mesh {
         P: AsRef<OsStr> + ?Sized,
     {
         let path = Path::new(full_path).to_path_buf();
-        let mut file = File::open(&path).map_err(|_| "no file found")?;
+        let mut file = File::open(&path).map_err(|_| "file not found")?;
         let metadata = fs::metadata(&path).map_err(|_| "unable to read metadata")?;
-        let mut serialized = vec![0; metadata.len() as usize];
-        file.read(&mut serialized).expect("buffer overflow");
-        Mesh::decode(&serialized)
+        let mut bin = vec![0; metadata.len() as usize];
+        file.read(&mut bin).expect("buffer overflow");
+        let mut des = rmp_serde::Deserializer::new(&bin[..]);
+        let mesh: Mesh = Deserialize::deserialize(&mut des).map_err(|_| "deserialize failed")?;
+        Ok(mesh)
     }
 
-    /// Writes a binary file with the mesh and computed properties
+    /// Writes a binary file with the mesh data and computed properties
     ///
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
-    pub fn save<P>(&self, full_path: &P) -> Result<(), StrError>
+    pub fn write<P>(&self, full_path: &P) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
@@ -293,14 +273,21 @@ impl Mesh {
         if let Some(p) = path.parent() {
             fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
         }
-        let serialized = self.encode()?;
+        let mut bin = Vec::new();
+        let mut ser = rmp_serde::Serializer::new(&mut bin);
+        self.serialize(&mut ser).map_err(|_| "serialize failed")?;
         let mut file = File::create(&path).map_err(|_| "cannot create file")?;
-        file.write_all(&serialized).map_err(|_| "cannot write file")?;
+        file.write_all(&bin).map_err(|_| "cannot write file")?;
         Ok(())
     }
 
     /// Computes derived properties such as boundaries and limits
+    ///
+    /// # Note
+    ///
+    /// This function is automatically called by `from_text` and `from_text_file`.
     pub fn compute_derived_props(&mut self) -> Result<(), StrError> {
+        // derived props
         self.derived_props_computed = false;
         self.boundary_points.clear();
         self.boundary_edges.clear();
@@ -310,132 +297,142 @@ impl Mesh {
         } else {
             self.compute_derived_props_3d()?;
         }
+
+        // limits
         self.compute_limits()?;
+
+        // compute number of divisions for GridSearch
+        let mut index_long = 0;
+        let mut delta_long = self.coords_delta[index_long];
+        for i in 1..self.space_ndim {
+            if self.coords_delta[i] > delta_long {
+                index_long = i;
+                delta_long = self.coords_delta[i];
+            }
+        }
+        let mut ndiv = vec![0; self.space_ndim];
+        for i in 0..self.space_ndim {
+            if i == index_long {
+                ndiv[i] = GRID_SEARCH_NDIV_LONG;
+            } else {
+                ndiv[i] = ((self.coords_delta[i] / delta_long) * (GRID_SEARCH_NDIV_LONG as f64)) as usize;
+            }
+            ndiv[i] = usize::min(GRID_SEARCH_NDIV_MAX, usize::max(GRID_SEARCH_NDIV_MIN, ndiv[i]));
+        }
+
+        // initialize GridSearch and add all boundary points to it
         self.grid_boundary_points
-            .initialize(&vec![10; self.space_ndim], &self.min, &self.max)?;
+            .initialize(&ndiv, &self.coords_min, &self.coords_max)?;
+        for point_id in &self.boundary_points {
+            self.grid_boundary_points
+                .insert(*point_id, &self.points[*point_id].coords)?;
+        }
+
+        // done
         self.derived_props_computed = true;
         Ok(())
     }
 
-    /// Clears all boundary groups
-    pub fn clear_boundary_groups(&mut self) {
-        self.groups_boundary_points.clear();
-        self.groups_boundary_edges.clear();
-        self.groups_boundary_faces.clear();
-    }
-
-    /// Sets group of points on the boundary
-    pub fn set_points(&mut self, group: &str, at: At) -> Result<&mut Self, StrError> {
+    /// Allocates a Shape instance for a given Cell and initializes the associated point coordinates
+    pub fn alloc_shape_cell(&self, cell_id: CellId) -> Result<Shape, StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
-        // find all points near the geometric feature
-        for id in self.find_points(&at)? {
-            // update groups map
-            if self.groups_boundary_points.contains_key(group) {
-                let ids = self.groups_boundary_points.get_mut(group).unwrap();
-                ids.insert(id);
-            // new groups map
-            } else {
-                let mut ids = HashSet::new();
-                ids.insert(id);
-                self.groups_boundary_points.insert(group.to_string(), ids);
+        if cell_id >= self.cells.len() {
+            return Err("cell_id is out-of-bounds");
+        }
+        let cell = &self.cells[cell_id];
+        let nnode = cell.points.len();
+        let mut shape = Shape::new(self.space_ndim, cell.geo_ndim, nnode)?;
+        for m in 0..nnode {
+            let point_id = cell.points[m];
+            for j in 0..self.space_ndim {
+                shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
             }
         }
-        Ok(self)
+        Ok(shape)
     }
 
-    /// Sets group of edges on the boundary
-    pub fn set_edges(&mut self, group: &str, at: At) -> Result<&mut Self, StrError> {
+    /// Allocates a Shape instance for a given boundary Edge and initializes the associated point coordinates
+    pub fn alloc_shape_boundary_edge(&self, edge_key: &EdgeKey) -> Result<Shape, StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
-        // find all points near the geometric feature
-        let indices = &self.find_points(&at)?;
-        for id in indices {
-            // loop over all boundary edges touching this point
-            let point = &self.points[*id];
-            for key in &point.shared_by_boundary_edges {
-                // check if two edge points pass through the geometric feature
-                if indices.contains(&key.0) && indices.contains(&key.1) {
-                    if self.boundary_edges.contains_key(&key) {
-                        // update groups map
-                        if self.groups_boundary_edges.contains_key(group) {
-                            let keys = self.groups_boundary_edges.get_mut(group).unwrap();
-                            keys.insert(key.clone());
-                        // new groups map
-                        } else {
-                            let mut keys = HashSet::new();
-                            keys.insert(key.clone());
-                            self.groups_boundary_edges.insert(group.to_string(), keys);
-                        }
+        match self.boundary_edges.get(edge_key) {
+            None => Err("edge_key is invalid"),
+            Some(edge) => {
+                let nnode = edge.points.len();
+                let mut shape = Shape::new(self.space_ndim, 1, nnode)?;
+                for m in 0..nnode {
+                    let point_id = edge.points[m];
+                    for j in 0..self.space_ndim {
+                        shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
                     }
                 }
+                Ok(shape)
             }
         }
-        Ok(self)
     }
 
-    pub fn get_boundary_point_ids_sorted(&self, group: &str) -> Vec<PointId> {
-        if let Some(points) = self.groups_boundary_points.get(group) {
-            let mut ids: Vec<_> = points.iter().map(|id| *id).collect();
-            ids.sort();
-            return ids;
-        }
-        Vec::new()
-    }
-
-    pub fn get_boundary_edge_keys_sorted(&self, group: &str) -> Vec<EdgeKey> {
-        if let Some(edges) = self.groups_boundary_edges.get(group) {
-            let mut keys: Vec<_> = edges.iter().map(|key| *key).collect();
-            keys.sort();
-            return keys;
-        }
-        Vec::new()
-    }
-
-    pub fn extract_coords(&self, shape: &mut Shape, cell_id: usize) -> Result<(), StrError> {
-        let npoint = self.cells[cell_id].points.len();
-        for m in 0..npoint {
-            let point_id = self.cells[cell_id].points[m];
-            for i in 0..self.space_ndim {
-                shape.set_node(m, i, self.points[point_id].coords[i])?;
-            }
-        }
-        Ok(())
-    }
-
-    // ======================================================================================================
-    // --- private ------------------------------------------------------------------------------------------
-    // ======================================================================================================
-
-    /// Finds points in the mesh
-    fn find_points(&mut self, at: &At) -> Result<HashSet<PointId>, StrError> {
+    /// Allocates a Shape instance for a given boundary Face and initializes the associated point coordinates
+    pub fn alloc_shape_boundary_face(&self, face_key: &FaceKey) -> Result<Shape, StrError> {
         if !self.derived_props_computed {
             return Err("compute_derived_props must be called first");
         }
+        match self.boundary_faces.get(face_key) {
+            None => Err("face_key is invalid"),
+            Some(face) => {
+                let nnode = face.points.len();
+                let mut shape = Shape::new(self.space_ndim, 2, nnode)?;
+                for m in 0..nnode {
+                    let point_id = face.points[m];
+                    for j in 0..self.space_ndim {
+                        shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
+                    }
+                }
+                Ok(shape)
+            }
+        }
+    }
 
-        let mut points: HashSet<PointId> = HashSet::new();
+    /// Finds boundary points in the mesh
+    ///
+    /// # Input
+    ///
+    /// * `at` -- the location constraint
+    ///
+    /// # Output
+    ///
+    /// * Returns a **sorted** list of point ids (boundary points only)
+    ///
+    /// # Note
+    ///
+    /// `compute_derived_props` must be called first, otherwise this function returns an error
+    pub fn find_boundary_points(&self, at: At) -> Result<Vec<PointId>, StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+        let mut point_ids: HashSet<PointId> = HashSet::new();
         match at {
             At::X(x) => {
                 if self.space_ndim == 2 {
-                    for id in self.grid_boundary_points.find_on_line(&[*x, 0.0], &[*x, 1.0]).unwrap() {
-                        points.insert(id);
+                    for id in self.grid_boundary_points.find_on_line(&[x, 0.0], &[x, 1.0])? {
+                        point_ids.insert(id);
                     }
                 } else {
-                    for id in self.grid_boundary_points.find_on_plane_yz(*x).unwrap() {
-                        points.insert(id);
+                    for id in self.grid_boundary_points.find_on_plane_yz(x)? {
+                        point_ids.insert(id);
                     }
                 }
             }
             At::Y(y) => {
                 if self.space_ndim == 2 {
-                    for id in self.grid_boundary_points.find_on_line(&[0.0, *y], &[1.0, *y]).unwrap() {
-                        points.insert(id);
+                    for id in self.grid_boundary_points.find_on_line(&[0.0, y], &[1.0, y])? {
+                        point_ids.insert(id);
                     }
                 } else {
-                    for id in self.grid_boundary_points.find_on_plane_xz(*y).unwrap() {
-                        points.insert(id);
+                    for id in self.grid_boundary_points.find_on_plane_xz(y)? {
+                        point_ids.insert(id);
                     }
                 }
             }
@@ -443,23 +440,19 @@ impl Mesh {
                 if self.space_ndim == 2 {
                     return Err("At::Z works in 3D only");
                 } else {
-                    for id in self.grid_boundary_points.find_on_plane_xy(*z).unwrap() {
-                        points.insert(id);
+                    for id in self.grid_boundary_points.find_on_plane_xy(z)? {
+                        point_ids.insert(id);
                     }
                 }
             }
             At::XY(x, y) => {
                 if self.space_ndim == 2 {
-                    if let Some(id) = self.grid_boundary_points.find(&[*x, *y]).unwrap() {
-                        points.insert(id);
+                    if let Some(id) = self.grid_boundary_points.find(&[x, y])? {
+                        point_ids.insert(id);
                     }
                 } else {
-                    for id in self
-                        .grid_boundary_points
-                        .find_on_line(&[*x, *y, 0.0], &[*x, *y, 1.0])
-                        .unwrap()
-                    {
-                        points.insert(id);
+                    for id in self.grid_boundary_points.find_on_line(&[x, y, 0.0], &[x, y, 1.0])? {
+                        point_ids.insert(id);
                     }
                 }
             }
@@ -467,12 +460,8 @@ impl Mesh {
                 if self.space_ndim == 2 {
                     return Err("At::YZ works in 3D only");
                 } else {
-                    for id in self
-                        .grid_boundary_points
-                        .find_on_line(&[0.0, *y, *z], &[1.0, *y, *z])
-                        .unwrap()
-                    {
-                        points.insert(id);
+                    for id in self.grid_boundary_points.find_on_line(&[0.0, y, z], &[1.0, y, z])? {
+                        point_ids.insert(id);
                     }
                 }
             }
@@ -480,12 +469,8 @@ impl Mesh {
                 if self.space_ndim == 2 {
                     return Err("At::XZ works in 3D only");
                 } else {
-                    for id in self
-                        .grid_boundary_points
-                        .find_on_line(&[*x, 0.0, *z], &[*x, 1.0, *z])
-                        .unwrap()
-                    {
-                        points.insert(id);
+                    for id in self.grid_boundary_points.find_on_line(&[x, 0.0, z], &[x, 1.0, z])? {
+                        point_ids.insert(id);
                     }
                 }
             }
@@ -493,15 +478,15 @@ impl Mesh {
                 if self.space_ndim == 2 {
                     return Err("At::XYZ works in 3D only");
                 } else {
-                    if let Some(id) = self.grid_boundary_points.find(&[*x, *y, *z]).unwrap() {
-                        points.insert(id);
+                    if let Some(id) = self.grid_boundary_points.find(&[x, y, z])? {
+                        point_ids.insert(id);
                     }
                 }
             }
             At::Circle(x, y, r) => {
                 if self.space_ndim == 2 {
-                    for id in self.grid_boundary_points.find_on_circle(&[*x, *y], *r).unwrap() {
-                        points.insert(id);
+                    for id in self.grid_boundary_points.find_on_circle(&[x, y], r)? {
+                        point_ids.insert(id);
                     }
                 } else {
                     return Err("At::Circle works in 2D only");
@@ -513,292 +498,412 @@ impl Mesh {
                 } else {
                     for id in self
                         .grid_boundary_points
-                        .find_on_cylinder(&[*ax, *ay, *az], &[*bx, *by, *bz], *r)
-                        .unwrap()
+                        .find_on_cylinder(&[ax, ay, az], &[bx, by, bz], r)?
                     {
-                        points.insert(id);
+                        point_ids.insert(id);
                     }
                 }
             }
         }
-        Ok(points)
+        let mut ids: Vec<_> = point_ids.into_iter().collect();
+        ids.sort();
+        Ok(ids)
+    }
+
+    /// Finds boundary edges in the mesh
+    ///
+    /// # Input
+    ///
+    /// * `at` -- the location constraint
+    ///
+    /// # Output
+    ///
+    /// * Returns a **sorted** list of edge key ids (boundary edges only)
+    ///
+    /// # Note
+    ///
+    /// `compute_derived_props` must be called first, otherwise this function returns an error
+    pub fn find_boundary_edges(&self, at: At) -> Result<Vec<EdgeKey>, StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+        let mut edge_keys: HashSet<EdgeKey> = HashSet::new();
+        // find all points near the geometric feature
+        let point_ids = &self.find_boundary_points(at)?;
+        for point_id in point_ids {
+            // loop over all boundary edges touching this point
+            let point = &self.points[*point_id];
+            for edge_key in &point.shared_by_boundary_edges {
+                // check if two edge points pass through the geometric feature
+                if point_ids.contains(&edge_key.0) && point_ids.contains(&edge_key.1) {
+                    if self.boundary_edges.contains_key(&edge_key) {
+                        edge_keys.insert(*edge_key);
+                    }
+                }
+            }
+        }
+        let mut keys: Vec<_> = edge_keys.into_iter().collect();
+        keys.sort();
+        Ok(keys)
+    }
+
+    /// Finds boundary faces in the mesh
+    ///
+    /// # Input
+    ///
+    /// * `at` -- the location constraint
+    ///
+    /// # Output
+    ///
+    /// * Returns a **sorted** list of face key ids (boundary faces only)
+    ///
+    /// # Note
+    ///
+    /// `compute_derived_props` must be called first, otherwise this function returns an error
+    pub fn find_boundary_faces(&self, at: At) -> Result<Vec<FaceKey>, StrError> {
+        if !self.derived_props_computed {
+            return Err("compute_derived_props must be called first");
+        }
+        let mut face_keys: HashSet<FaceKey> = HashSet::new();
+        // find all points near the geometric feature
+        let point_ids = &self.find_boundary_points(at)?;
+        for point_id in point_ids {
+            // loop over all boundary faces touching this point
+            let point = &self.points[*point_id];
+            for face_key in &point.shared_by_boundary_faces {
+                // check if the fourth point_id in the face_key is ok
+                let fourth_is_ok = if face_key.3 == self.points.len() {
+                    true
+                } else {
+                    point_ids.contains(&face_key.3)
+                };
+                // check if the face points pass through the geometric feature
+                if fourth_is_ok
+                    && point_ids.contains(&face_key.0)
+                    && point_ids.contains(&face_key.1)
+                    && point_ids.contains(&face_key.2)
+                {
+                    if self.boundary_faces.contains_key(&face_key) {
+                        face_keys.insert(*face_key);
+                    }
+                }
+            }
+        }
+        let mut keys: Vec<_> = face_keys.into_iter().collect();
+        keys.sort();
+        Ok(keys)
     }
 
     /// Computes derived properties of 2D mesh
     fn compute_derived_props_2d(&mut self) -> Result<(), StrError> {
-        // auxiliary
-        let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new();
-        let mut all_edges: HashMap<EdgeKey, Edge> = HashMap::new();
-        let space_ndim = self.space_ndim;
+        // maps all edge keys to (cell_id, e) where e is the cell's local edge index
+        let mut all_edges: HashMap<EdgeKey, Vec<(CellId, usize)>> = HashMap::new(); // (edge_key) => [(cell_id,e)]
 
-        // loop over 2D cells
-        for cell in &self.cells {
-            // check ndim
-            let geo_ndim = cell.geo_ndim;
-            if geo_ndim != 2 {
-                continue; // e.g., 1D line in 2D space
-            }
+        // maps all cell shapes to a Shape instance
+        let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new(); // (geo_ndim,nnode) => Shape
 
-            // shape
-            let npoint = cell.points.len();
-            let shape_key = (geo_ndim, npoint);
-            if !all_shapes.contains_key(&shape_key) {
-                all_shapes.insert(shape_key, Shape::new(space_ndim, geo_ndim, npoint)?);
-            }
-            let shape = all_shapes.get(&shape_key).unwrap();
+        // loop over all cells
+        for cell in &mut self.cells {
+            let nnode = cell.points.len();
 
-            // edges (new derived data)
-            for e in 0..shape.nedge {
-                // collect edge point ids
-                let mut edge_points = vec![0; shape.edge_nnode];
-                for i in 0..shape.edge_nnode {
-                    let local_point_id = shape.get_edge_node_id(e, i);
-                    edge_points[i] = cell.points[local_point_id];
+            // handle 1D shapes
+            if cell.geo_ndim != 2 {
+                for m in 0..nnode {
+                    self.boundary_points.insert(cell.points[m]);
                 }
+                continue; // skip 1D line in 2D because it's not a boundary edge
+            }
 
-                // define key (sorted ids)
-                let mut edge_key: EdgeKey = (edge_points[0], edge_points[1]);
+            // get or allocate Shape
+            let cell_shape =
+                all_shapes
+                    .entry((cell.geo_ndim, nnode))
+                    .or_insert(Shape::new(self.space_ndim, cell.geo_ndim, nnode)?);
+
+            // set the cell node coordinates in the shape object
+            for m in 0..nnode {
+                let point_id = cell.points[m];
+                for j in 0..self.space_ndim {
+                    cell_shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
+                }
+            }
+
+            // check if the determinant of Jacobian is positive => counterclockwise nodes
+            let det_jac = cell_shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
+            if det_jac < 0.0 {
+                return Err("a cell has incorrect ordering of nodes");
+            }
+
+            // set information about all edges
+            for e in 0..cell_shape.nedge {
+                // define edge key (sorted point ids)
+                let mut edge_key: EdgeKey = (
+                    cell.points[cell_shape.get_edge_node_id(e, 0)],
+                    cell.points[cell_shape.get_edge_node_id(e, 1)],
+                );
                 sort2(&mut edge_key);
 
-                // existing edge
-                if all_edges.contains_key(&edge_key) {
-                    let edge = all_edges.get_mut(&edge_key).unwrap();
-                    edge.shared_by_2d_cells.insert(cell.id);
-
-                // new edge
-                } else {
-                    let mut shared_by_2d_cells = HashSet::new();
-                    shared_by_2d_cells.insert(cell.id);
-                    all_edges.insert(
-                        edge_key,
-                        Edge {
-                            points: edge_points,
-                            shared_by_2d_cells,
-                            shared_by_boundary_faces: HashSet::new(),
-                        },
-                    );
-                }
+                // configure edge_key => (cell_id, e)
+                let edge_data = all_edges.entry(edge_key).or_insert(Vec::new());
+                edge_data.push((cell.id, e));
             }
         }
 
-        // find boundary edges and set boundary points
-        for (key, edge) in &all_edges {
-            if edge.shared_by_2d_cells.len() == 1 {
-                self.boundary_edges.insert(*key, edge.clone());
-                for id in &edge.points {
-                    self.boundary_points.insert(*id);
-                }
+        // loop over all edges
+        for (edge_key, cell_ids_and_es) in &all_edges {
+            // skip inner edges (those shared by multiple cells)
+            if cell_ids_and_es.len() != 1 {
+                continue;
             }
+
+            // edge data
+            let (cell_id, e) = cell_ids_and_es[0];
+            let cell = &self.cells[cell_id];
+            let cell_shape = all_shapes.get(&(cell.geo_ndim, cell.points.len())).unwrap(); // must exist due to previous loop
+            let edge_nnode = cell_shape.edge_nnode;
+            let mut edge_points: Vec<PointId> = vec![0; edge_nnode];
+
+            // loop over all edge nodes
+            for i in 0..edge_nnode {
+                // configure edge nodes
+                edge_points[i] = cell.points[cell_shape.get_edge_node_id(e, i)];
+
+                // set boundary points
+                self.points[edge_points[i]].shared_by_boundary_edges.insert(*edge_key);
+                self.boundary_points.insert(edge_points[i]);
+            }
+
+            // append new boundary edge
+            self.boundary_edges.insert(
+                *edge_key,
+                Edge {
+                    points: edge_points,
+                    shared_by_2d_cells: HashSet::from([cell_id]),
+                    shared_by_boundary_faces: HashSet::new(),
+                },
+            );
         }
         Ok(())
     }
 
     /// Computes derived properties of 3D mesh
     fn compute_derived_props_3d(&mut self) -> Result<(), StrError> {
-        // auxiliary
-        let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new();
-        let mut all_faces: HashMap<FaceKey, Face> = HashMap::new();
-        let space_ndim = self.space_ndim;
+        // maps all face keys to (cell_id, f) where f is the cell's local face index
+        let mut all_faces: HashMap<FaceKey, Vec<(CellId, usize)>> = HashMap::new(); // (face_key) => [(cell_id,f)]
 
-        // loop over 3D cells
-        for cell in &self.cells {
-            // check ndim
-            let geo_ndim = cell.geo_ndim;
-            if geo_ndim != 3 {
-                continue; // e.g., 1D line in 3D space or 2D quad in 3D space
-            }
+        // maps all cell shapes to a Shape instance
+        let mut all_shapes: HashMap<(usize, usize), Shape> = HashMap::new(); // (geo_ndim,nnode) => Shape
 
-            // shape
-            let npoint = cell.points.len();
-            let shape_key = (geo_ndim, npoint);
-            if !all_shapes.contains_key(&shape_key) {
-                all_shapes.insert(shape_key, Shape::new(space_ndim, geo_ndim, npoint)?);
-            }
-            let shape = all_shapes.get(&shape_key).unwrap();
+        // loop over all cells
+        for cell in &mut self.cells {
+            let nnode = cell.points.len();
 
-            // faces (new derived data)
-            for f in 0..shape.nface {
-                // collect face point ids
-                let mut face_points = vec![0; shape.face_nnode];
-                for i in 0..shape.face_nnode {
-                    let local_point_id = shape.get_face_node_id(f, i);
-                    face_points[i] = cell.points[local_point_id];
+            // handle 1D and 2D shapes
+            if cell.geo_ndim != 3 {
+                for m in 0..nnode {
+                    self.boundary_points.insert(cell.points[m]);
                 }
+                continue; // skip 1D line or 2D shape in 3D because they don't have faces
+            }
 
-                // define key (sorted ids)
-                let mut face_key: FaceKey = (face_points[0], face_points[1], face_points[2]);
-                sort3(&mut face_key);
+            // get or allocate Shape
+            let cell_shape =
+                all_shapes
+                    .entry((cell.geo_ndim, nnode))
+                    .or_insert(Shape::new(self.space_ndim, cell.geo_ndim, nnode)?);
 
-                // existing face
-                if all_faces.contains_key(&face_key) {
-                    let face = all_faces.get_mut(&face_key).unwrap();
-                    face.shared_by_cells.insert(cell.id);
+            // set the cell node coordinates in the shape object
+            for m in 0..nnode {
+                let point_id = cell.points[m];
+                for j in 0..self.space_ndim {
+                    cell_shape.set_node(point_id, m, j, self.points[point_id].coords[j])?;
+                }
+            }
 
-                // new face
+            // check if the determinant of Jacobian is positive => counterclockwise nodes
+            let det_jac = cell_shape.calc_jacobian(&[0.0, 0.0, 0.0])?;
+            if det_jac < 0.0 {
+                return Err("a cell has incorrect ordering of nodes");
+            }
+
+            // set information about all faces
+            for f in 0..cell_shape.nface {
+                // define face key (sorted ids)
+                let mut face_key: FaceKey = if cell_shape.face_nnode > 3 {
+                    (
+                        cell.points[cell_shape.get_face_node_id(f, 0)],
+                        cell.points[cell_shape.get_face_node_id(f, 1)],
+                        cell.points[cell_shape.get_face_node_id(f, 2)],
+                        cell.points[cell_shape.get_face_node_id(f, 3)],
+                    )
                 } else {
-                    let mut shared_by_cells = HashSet::new();
-                    shared_by_cells.insert(cell.id);
-                    all_faces.insert(
-                        face_key,
-                        Face {
-                            points: face_points,
-                            shared_by_cells,
-                        },
-                    );
-                }
+                    (
+                        cell.points[cell_shape.get_face_node_id(f, 0)],
+                        cell.points[cell_shape.get_face_node_id(f, 1)],
+                        cell.points[cell_shape.get_face_node_id(f, 2)],
+                        self.points.len(),
+                    )
+                };
+                sort4(&mut face_key);
+
+                // configure face_key => (cell_id, f)
+                let face_data = all_faces.entry(face_key).or_insert(Vec::new());
+                face_data.push((cell.id, f));
             }
         }
 
-        // find boundary faces and set boundary points and boundary edges
-        for (face_key, face) in &all_faces {
-            // skip interior faces
-            if face.shared_by_cells.len() != 1 {
+        // sort face keys just so the next loop is deterministic
+        let mut face_keys: Vec<_> = all_faces.keys().collect();
+        face_keys.sort();
+
+        // loop over all faces
+        for face_key in face_keys {
+            let cell_ids_and_fs = all_faces.get(face_key).unwrap();
+            // skip inner faces (those shared by multiple cells)
+            if cell_ids_and_fs.len() != 1 {
                 continue;
             }
 
-            // set boundary face
-            self.boundary_faces.insert(*face_key, face.clone());
+            // face data
+            let (cell_id, f) = cell_ids_and_fs[0];
+            let cell = &self.cells[cell_id];
+            let cell_shape = all_shapes.get(&(cell.geo_ndim, cell.points.len())).unwrap(); // must exist due to previous loop
+            let face_nnode = cell_shape.face_nnode;
+            let mut face_points: Vec<PointId> = vec![0; face_nnode];
+            let face_shape = Shape::new(self.space_ndim, 2, face_nnode)?;
 
-            // set boundary points
-            for id in &face.points {
-                self.boundary_points.insert(*id);
+            // loop over all face nodes
+            for i in 0..face_nnode {
+                // configure face nodes
+                face_points[i] = cell.points[cell_shape.get_face_node_id(f, i)];
+
+                // set boundary points
+                self.points[face_points[i]].shared_by_boundary_faces.insert(*face_key);
+                self.boundary_points.insert(face_points[i]);
             }
 
-            // face shape
-            let face_ndim = 2;
-            let face_npoint = face.points.len();
-            let face_shape_key = (face_ndim, face_npoint);
-            if !all_shapes.contains_key(&face_shape_key) {
-                all_shapes.insert(face_shape_key, Shape::new(space_ndim, face_ndim, face_npoint)?);
-            }
-            let face_shape = all_shapes.get(&face_shape_key).unwrap();
-
-            // boundary edges
-            // let face_nedge = face_shape.get_nedge();
-            // let face_edge_npoint = face_shape.get_edge_npoint();
+            // loop over all face edges
             for e in 0..face_shape.nedge {
-                // collect edge point ids
-                let mut edge_points = vec![0; face_shape.edge_nnode];
-                for i in 0..face_shape.edge_nnode {
-                    let local_point_id = face_shape.get_edge_node_id(e, i);
-                    edge_points[i] = face.points[local_point_id];
-                }
-
-                // define key (sorted ids)
-                let mut edge_key: EdgeKey = (edge_points[0], edge_points[1]);
+                // define edge key (sorted point ids)
+                let mut edge_key: EdgeKey = (
+                    face_points[face_shape.get_edge_node_id(e, 0)],
+                    face_points[face_shape.get_edge_node_id(e, 1)],
+                );
                 sort2(&mut edge_key);
 
-                // existing edge
-                if self.boundary_edges.contains_key(&edge_key) {
-                    let edge = self.boundary_edges.get_mut(&edge_key).unwrap();
-                    edge.shared_by_boundary_faces.insert(*face_key);
+                // handle boundary edge
+                match self.boundary_edges.get_mut(&edge_key) {
+                    Some(edge) => {
+                        // set boundary edge information
+                        edge.shared_by_boundary_faces.insert(*face_key);
+                    }
+                    None => {
+                        // edge data
+                        let edge_nnode = face_shape.edge_nnode;
+                        let mut edge_points: Vec<PointId> = vec![0; edge_nnode];
 
-                // new edge
-                } else {
-                    let mut shared_by_boundary_faces = HashSet::new();
-                    shared_by_boundary_faces.insert(*face_key);
-                    self.boundary_edges.insert(
-                        edge_key,
-                        Edge {
-                            points: edge_points,
-                            shared_by_2d_cells: HashSet::new(),
-                            shared_by_boundary_faces,
-                        },
-                    );
+                        // loop over all edge nodes
+                        for i in 0..edge_nnode {
+                            // configure edge nodes
+                            edge_points[i] = face_points[face_shape.get_edge_node_id(e, i)];
+
+                            // set boundary points
+                            self.points[edge_points[i]].shared_by_boundary_edges.insert(edge_key);
+                        }
+
+                        // append new boundary edge
+                        self.boundary_edges.insert(
+                            edge_key,
+                            Edge {
+                                points: edge_points,
+                                shared_by_2d_cells: HashSet::new(),
+                                shared_by_boundary_faces: HashSet::from([*face_key]),
+                            },
+                        );
+                    }
                 }
             }
+
+            // append new boundary face
+            self.boundary_faces.insert(
+                *face_key,
+                Face {
+                    points: face_points,
+                    shared_by_cells: HashSet::from([cell_id]),
+                },
+            );
         }
         Ok(())
     }
 
     /// Computes the range of coordinates
     fn compute_limits(&mut self) -> Result<(), StrError> {
-        self.min = vec![f64::MAX; self.space_ndim];
-        self.max = vec![f64::MIN; self.space_ndim];
+        self.coords_min = vec![f64::MAX; self.space_ndim];
+        self.coords_max = vec![f64::MIN; self.space_ndim];
+        self.coords_delta = vec![0.0; self.space_ndim];
         for point in &self.points {
             for i in 0..self.space_ndim {
-                if point.coords[i] < self.min[i] {
-                    self.min[i] = point.coords[i];
+                if point.coords[i] < self.coords_min[i] {
+                    self.coords_min[i] = point.coords[i];
                 }
-                if point.coords[i] > self.max[i] {
-                    self.max[i] = point.coords[i];
+                if point.coords[i] > self.coords_max[i] {
+                    self.coords_max[i] = point.coords[i];
                 }
             }
         }
         for i in 0..self.space_ndim {
-            if self.min[i] >= self.max[i] {
+            if self.coords_min[i] >= self.coords_max[i] {
                 return Err("mesh limits are invalid");
             }
+            self.coords_delta[i] = self.coords_max[i] - self.coords_min[i];
         }
         Ok(())
     }
 
-    /// Encodes this mesh to a binary object
-    fn encode(&self) -> Result<Vec<u8>, StrError> {
-        let mut serialized = Vec::new();
-        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
-        self.serialize(&mut serializer).map_err(|_| "serialize failed")?;
-        Ok(serialized)
-    }
-
-    /// Decodes a binary object to Mesh
-    fn decode(serialized: &Vec<u8>) -> Result<Self, StrError> {
-        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
-        let res = Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize data")?;
-        Ok(res)
-    }
-}
-
-impl fmt::Display for Mesh {
-    /// Prints mesh data (may be large)
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // summary
-        write!(f, "ndim = {}\n", self.space_ndim).unwrap();
-        write!(f, "npoint = {}\n", self.points.len()).unwrap();
-        write!(f, "ncell = {}\n", self.cells.len()).unwrap();
-        write!(f, "n_boundary_point = {}\n", self.boundary_points.len()).unwrap();
-        write!(f, "n_boundary_edge = {}\n", self.boundary_edges.len()).unwrap();
-        write!(f, "n_boundary_face = {}\n", self.boundary_faces.len()).unwrap();
-
-        // points: i=index, g=group, x=coordinates, e=shared_by_boundary_edges, f=shared_by_boundary_faces
-        write!(f, "\npoints\n").unwrap();
+    /// Returns a string with information about all points
+    pub(super) fn string_points(&self) -> String {
+        let mut buf = String::new();
         for point in &self.points {
             let mut shared_by_boundary_edges: Vec<_> = point.shared_by_boundary_edges.iter().collect();
             let mut shared_by_boundary_faces: Vec<_> = point.shared_by_boundary_faces.iter().collect();
             shared_by_boundary_edges.sort();
             shared_by_boundary_faces.sort();
             write!(
-                f,
+                &mut buf,
                 "i:{} x:{:?} e:{:?} f:{:?}\n",
                 point.id, point.coords, shared_by_boundary_edges, shared_by_boundary_faces,
             )
             .unwrap();
         }
+        buf
+    }
 
-        // cells: i=index, a=attribute_id, p=points
-        write!(f, "\ncells\n").unwrap();
+    /// Returns a string with information about all cells
+    pub(super) fn string_cells(&self) -> String {
+        let mut buf = String::new();
         for cell in &self.cells {
             write!(
-                f,
-                "i:{} a:{} n:{} p:{:?}\n",
+                &mut buf,
+                "i:{} a:{} g:{} p:{:?}\n",
                 cell.id, cell.attribute_id, cell.geo_ndim, cell.points,
             )
             .unwrap();
         }
+        buf
+    }
 
-        // boundary points: i=index
-        write!(f, "\nboundary_points\n").unwrap();
+    /// Returns a string with information about all boundary points
+    pub(super) fn string_boundary_points(&self) -> String {
+        let mut buf = String::new();
         let mut point_indices: Vec<_> = self.boundary_points.iter().collect();
         point_indices.sort();
-        for index in point_indices {
-            write!(f, "{} ", index).unwrap();
-        }
-        if self.boundary_points.len() > 0 {
-            write!(f, "\n").unwrap();
-        }
+        write!(&mut buf, "{:?}\n", point_indices).unwrap();
+        buf
+    }
 
-        // boundary edges: k=key(point,point), p=point_ids c=shared_by_2d_cells f=shared_by_boundary_faces
-        write!(f, "\nboundary_edges\n").unwrap();
+    /// Returns a string with information about all boundary edges
+    pub(super) fn string_boundary_edges(&self) -> String {
+        let mut buf = String::new();
         let mut keys_and_edges: Vec<_> = self.boundary_edges.keys().zip(self.boundary_edges.values()).collect();
         keys_and_edges.sort_by(|left, right| left.0.cmp(&right.0));
         for (key, edge) in keys_and_edges {
@@ -807,27 +912,65 @@ impl fmt::Display for Mesh {
             shared_by_2d_cells.sort();
             shared_by_boundary_faces.sort();
             write!(
-                f,
+                &mut buf,
                 "k:({},{}) p:{:?} c:{:?} f:{:?}\n",
                 key.0, key.1, edge.points, shared_by_2d_cells, shared_by_boundary_faces,
             )
             .unwrap();
         }
+        buf
+    }
 
-        // boundary_faces: k=key(point,point,point), p=point_ids, c=shared_by_cells
-        write!(f, "\nboundary_faces\n").unwrap();
+    /// Returns a string with information about all boundary faces
+    pub(super) fn string_boundary_faces(&self) -> String {
+        let mut buf = String::new();
         let mut keys_and_faces: Vec<_> = self.boundary_faces.keys().zip(self.boundary_faces.values()).collect();
         keys_and_faces.sort_by(|left, right| left.0.cmp(&right.0));
         for (key, face) in keys_and_faces {
             let mut shared_by_cells: Vec<_> = face.shared_by_cells.iter().collect();
             shared_by_cells.sort();
             write!(
-                f,
-                "k:({},{},{}) p:{:?} c:{:?}\n",
-                key.0, key.1, key.2, face.points, shared_by_cells
+                &mut buf,
+                "k:({},{},{},{}) p:{:?} c:{:?}\n",
+                key.0, key.1, key.2, key.3, face.points, shared_by_cells
             )
             .unwrap();
         }
+        buf
+    }
+}
+
+impl fmt::Display for Mesh {
+    /// Prints mesh data (may be large)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "SUMMARY\n")?;
+        write!(f, "=======\n")?;
+        write!(f, "space_ndim = {}\n", self.space_ndim)?;
+        write!(f, "npoint = {}\n", self.points.len())?;
+        write!(f, "ncell = {}\n", self.cells.len())?;
+        write!(f, "n_boundary_point = {}\n", self.boundary_points.len())?;
+        write!(f, "n_boundary_edge = {}\n", self.boundary_edges.len())?;
+        write!(f, "n_boundary_face = {}\n", self.boundary_faces.len())?;
+
+        write!(f, "\nPOINTS\n")?;
+        write!(f, "======\n")?;
+        write!(f, "{}", self.string_points())?;
+
+        write!(f, "\nCELLS\n")?;
+        write!(f, "=====\n")?;
+        write!(f, "{}", self.string_cells())?;
+
+        write!(f, "\nBOUNDARY POINTS\n")?;
+        write!(f, "===============\n")?;
+        write!(f, "{}", self.string_boundary_points())?;
+
+        write!(f, "\nBOUNDARY EDGES\n")?;
+        write!(f, "==============\n")?;
+        write!(f, "{}", self.string_boundary_edges())?;
+
+        write!(f, "\nBOUNDARY FACES\n")?;
+        write!(f, "==============\n")?;
+        write!(f, "{}", self.string_boundary_faces())?;
         Ok(())
     }
 }
@@ -836,89 +979,1122 @@ impl fmt::Display for Mesh {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Point;
+    use crate::mesh::{At, Edge, Face, Mesh};
+    use crate::shapes::GeoKind;
+    use crate::util::SQRT_2;
+    use crate::StrError;
+    use russell_chk::assert_vec_approx_eq;
+    use russell_lab::Vector;
+    use serde::{Deserialize, Serialize};
+    use std::collections::HashSet;
 
     #[test]
-    fn new_works() {
-        // todo
+    fn new_fails_on_wrong_input() {
+        assert_eq!(Mesh::new(1).err(), Some("space_ndim must be 2 or 3"));
+        assert_eq!(Mesh::new(4).err(), Some("space_ndim must be 2 or 3"));
     }
 
     #[test]
-    fn serialize_works() {
-        // todo
-    }
-
-    #[test]
-    fn compute_derived_props_works() -> Result<(), StrError> {
-        let mesh = Mesh::from_text(
-            r"
-            2 4 1
-            0  0.0 0.0
-            1  1.0 0.0
-            2  1.0 1.0
-            3  0.0 1.0
-            0 0  2 4  0 1 2 3
-        ",
-        )?;
-        println!("{}", mesh);
+    fn new_works() -> Result<(), StrError> {
+        let mesh = Mesh::new(2)?;
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 0);
+        assert_eq!(mesh.cells.len(), 0);
+        assert_eq!(mesh.boundary_points.len(), 0);
+        assert_eq!(mesh.boundary_edges.len(), 0);
+        assert_eq!(mesh.boundary_faces.len(), 0);
+        assert_eq!(mesh.coords_min.len(), 0);
+        assert_eq!(mesh.coords_max.len(), 0);
         assert_eq!(
-            format!("{}", mesh),
-            "ndim = 2\n\
-             npoint = 4\n\
-             ncell = 1\n\
-             n_boundary_point = 4\n\
-             n_boundary_edge = 4\n\
-             n_boundary_face = 0\n\
-             \n\
-             points\n\
-             i:0 x:[0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0] e:[] f:[]\n\
-             \n\
-             cells\n\
-             i:0 a:0 n:2 p:[0, 1, 2, 3]\n\
-             \n\
-             boundary_points\n\
-             0 1 2 3 \n\
-             \n\
-             boundary_edges\n\
-             k:(0,1) p:[0, 1] c:[0] f:[]\n\
-             k:(0,3) p:[3, 0] c:[0] f:[]\n\
-             k:(1,2) p:[1, 2] c:[0] f:[]\n\
-             k:(2,3) p:[2, 3] c:[0] f:[]\n\
-             \n\
-             boundary_faces\n"
+            format!("{}", mesh.grid_boundary_points),
+            "ids = []\n\
+             nitem = 0\n\
+             ncontainer = 0\n\
+             ndiv = [0, 0]\n"
+        );
+        assert_eq!(mesh.derived_props_computed, false);
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_fails_on_invalid_data() -> Result<(), StrError> {
+        assert_eq!(
+            Mesh::from_text("").err(),
+            Some("text string is empty or header is missing")
         );
         Ok(())
     }
 
     #[test]
-    fn display_works() {
-        // todo
+    fn from_text_file_fails_on_invalid_data() -> Result<(), StrError> {
+        assert_eq!(Mesh::from_text_file("").err(), Some("cannot open file"));
+        Ok(())
     }
 
     #[test]
-    fn set_group_works() -> Result<(), StrError> {
-        let mut mesh = parse_mesh(
-            r"
-            2 4 1
-            0 1 0.0 0.0
-            1 1 1.0 0.0
-            2 1 1.0 1.0
-            3 1 0.0 1.0
-            0 1  2 4  0 1 2 3
-        ",
+    fn compute_limits_fails_on_wrong_data() -> Result<(), StrError> {
+        let mut mesh = Mesh::new(2)?;
+        mesh.points.push(Point {
+            id: 0,
+            coords: vec![0.0, 0.0],
+            shared_by_boundary_edges: HashSet::new(),
+            shared_by_boundary_faces: HashSet::new(),
+        });
+        assert_eq!(mesh.compute_limits().err(), Some("mesh limits are invalid"));
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_fails_on_wrong_jacobian_2d() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let res = Mesh::from_text(
+            r"# header
+            # space_ndim npoint ncell
+                       2      6     2
+            
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+            
+            # cells
+            # id att geo_ndim nnode  (wrong) point_ids...
+               0   1        2     4  0 3 2 1
+               1   0        2     4  1 2 5 4",
+        );
+        assert_eq!(res.err(), Some("a cell has incorrect ordering of nodes"));
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_and_strings_work() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mesh = Mesh::from_text(
+            r"# header
+            # space_ndim npoint ncell
+                       2      6     2
+            
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+            
+            # cells
+            # id att geo_ndim nnode  point_ids...
+               0   1        2     4  0 1 2 3
+               1   0        2     4  1 4 5 2",
         )?;
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 6);
+        assert_eq!(mesh.cells.len(), 2);
+        assert_eq!(mesh.boundary_points.len(), 6);
+        assert_eq!(mesh.boundary_edges.len(), 6);
+        assert_eq!(mesh.boundary_faces.len(), 0);
+        assert_eq!(mesh.coords_min, &[0.0, 0.0]);
+        assert_eq!(mesh.coords_max, &[2.0, 1.0]);
 
-        mesh.set_points("origin", At::XY(0.0, 0.0))?
-            .set_edges("left", At::X(0.0))?
-            .set_edges("right", At::X(1.0))?
-            .set_edges("bottom", At::Y(0.0))?
-            .set_edges("top", At::Y(1.0))?;
+        // DO NOT REMOVE THE CODE BELOW
+        // println!("{}", mesh.grid_boundary_points);
+        // let mut plot = mesh.grid_boundary_points.plot()?;
+        // plot.set_figure_size_points(1200.0, 600.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/from_text_and_strings_work.svg")?;
 
-        println!("{}", mesh);
+        assert_eq!(
+            format!("{}", mesh.grid_boundary_points),
+            "0: [0]\n\
+             9: [1]\n\
+             10: [1]\n\
+             19: [4]\n\
+             180: [3]\n\
+             189: [2]\n\
+             190: [2]\n\
+             199: [5]\n\
+             ids = [0, 1, 2, 3, 4, 5]\n\
+             nitem = 6\n\
+             ncontainer = 8\n\
+             ndiv = [20, 10]\n"
+        );
+        assert_eq!(mesh.derived_props_computed, true);
+        assert_eq!(
+            format!("{}", mesh.string_points()),
+            "i:0 x:[0.0, 0.0] e:[(0, 1), (0, 3)] f:[]\n\
+             i:1 x:[1.0, 0.0] e:[(0, 1), (1, 4)] f:[]\n\
+             i:2 x:[1.0, 1.0] e:[(2, 3), (2, 5)] f:[]\n\
+             i:3 x:[0.0, 1.0] e:[(0, 3), (2, 3)] f:[]\n\
+             i:4 x:[2.0, 0.0] e:[(1, 4), (4, 5)] f:[]\n\
+             i:5 x:[2.0, 1.0] e:[(2, 5), (4, 5)] f:[]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_cells()),
+            "i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 g:2 p:[1, 4, 5, 2]\n"
+        );
+        assert_eq!(format!("{}", mesh.string_boundary_points()), "[0, 1, 2, 3, 4, 5]\n");
+        assert_eq!(
+            format!("{}", mesh.string_boundary_edges()),
+            "k:(0,1) p:[1, 0] c:[0] f:[]\n\
+             k:(0,3) p:[0, 3] c:[0] f:[]\n\
+             k:(1,4) p:[4, 1] c:[1] f:[]\n\
+             k:(2,3) p:[3, 2] c:[0] f:[]\n\
+             k:(2,5) p:[2, 5] c:[1] f:[]\n\
+             k:(4,5) p:[5, 4] c:[1] f:[]\n"
+        );
+        assert_eq!(format!("{}", mesh.string_boundary_faces()), "");
+        Ok(())
+    }
 
+    #[test]
+    fn from_text_file_fails_on_wrong_jacobian_3d() -> Result<(), StrError> {
+        let res = Mesh::from_text_file("./data/meshes/bad_wrong_jacobian.msh");
+        assert_eq!(res.err(), Some("a cell has incorrect ordering of nodes"));
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_file_fails_on_wrong_nodes_3d() -> Result<(), StrError> {
+        let res = Mesh::from_text_file("./data/meshes/bad_wrong_nodes.msh");
+        assert_eq!(res.err(), Some("cannot compute inverse due to zero determinant"));
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_file_and_display_work() -> Result<(), StrError> {
+        //
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.points.len(), 12);
+        assert_eq!(mesh.cells.len(), 2);
+        assert_eq!(mesh.boundary_points.len(), 12);
+        assert_eq!(mesh.boundary_edges.len(), 20);
+        assert_eq!(mesh.boundary_faces.len(), 10);
+        assert_eq!(mesh.coords_min, &[0.0, 0.0, 0.0]);
+        assert_eq!(mesh.coords_max, &[1.0, 1.0, 2.0]);
+
+        // DO NOT REMOVE THE CODE BELOW
+        // println!("{}", mesh.grid_boundary_points);
+        // let mut plot = mesh.grid_boundary_points.plot()?;
+        // plot.set_figure_size_points(1200.0, 1200.0)
+        //     .set_equal_axes(true)
+        //     .save_and_show("/tmp/gemlab/from_text_file_and_display_work.svg")?;
+
+        assert_eq!(
+            format!("{}", mesh.grid_boundary_points),
+            "0: [0]\n\
+             9: [1]\n\
+             90: [3]\n\
+             99: [2]\n\
+             900: [4]\n\
+             909: [5]\n\
+             990: [7]\n\
+             999: [6]\n\
+             1000: [4]\n\
+             1009: [5]\n\
+             1090: [7]\n\
+             1099: [6]\n\
+             1900: [8]\n\
+             1909: [9]\n\
+             1990: [11]\n\
+             1999: [10]\n\
+             ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
+             nitem = 12\n\
+             ncontainer = 16\n\
+             ndiv = [10, 10, 20]\n"
+        );
+        assert_eq!(mesh.derived_props_computed, true);
+        assert_eq!(
+            format!("{}", mesh.string_points()),
+            "i:0 x:[0.0, 0.0, 0.0] e:[(0, 1), (0, 3), (0, 4)] f:[(0, 1, 2, 3), (0, 1, 4, 5), (0, 3, 4, 7)]\n\
+             i:1 x:[1.0, 0.0, 0.0] e:[(0, 1), (1, 2), (1, 5)] f:[(0, 1, 2, 3), (0, 1, 4, 5), (1, 2, 5, 6)]\n\
+             i:2 x:[1.0, 1.0, 0.0] e:[(1, 2), (2, 3), (2, 6)] f:[(0, 1, 2, 3), (1, 2, 5, 6), (2, 3, 6, 7)]\n\
+             i:3 x:[0.0, 1.0, 0.0] e:[(0, 3), (2, 3), (3, 7)] f:[(0, 1, 2, 3), (0, 3, 4, 7), (2, 3, 6, 7)]\n\
+             i:4 x:[0.0, 0.0, 1.0] e:[(0, 4), (4, 5), (4, 7), (4, 8)] f:[(0, 1, 4, 5), (0, 3, 4, 7), (4, 5, 8, 9), (4, 7, 8, 11)]\n\
+             i:5 x:[1.0, 0.0, 1.0] e:[(1, 5), (4, 5), (5, 6), (5, 9)] f:[(0, 1, 4, 5), (1, 2, 5, 6), (4, 5, 8, 9), (5, 6, 9, 10)]\n\
+             i:6 x:[1.0, 1.0, 1.0] e:[(2, 6), (5, 6), (6, 7), (6, 10)] f:[(1, 2, 5, 6), (2, 3, 6, 7), (5, 6, 9, 10), (6, 7, 10, 11)]\n\
+             i:7 x:[0.0, 1.0, 1.0] e:[(3, 7), (4, 7), (6, 7), (7, 11)] f:[(0, 3, 4, 7), (2, 3, 6, 7), (4, 7, 8, 11), (6, 7, 10, 11)]\n\
+             i:8 x:[0.0, 0.0, 2.0] e:[(4, 8), (8, 9), (8, 11)] f:[(4, 5, 8, 9), (4, 7, 8, 11), (8, 9, 10, 11)]\n\
+             i:9 x:[1.0, 0.0, 2.0] e:[(5, 9), (8, 9), (9, 10)] f:[(4, 5, 8, 9), (5, 6, 9, 10), (8, 9, 10, 11)]\n\
+             i:10 x:[1.0, 1.0, 2.0] e:[(6, 10), (9, 10), (10, 11)] f:[(5, 6, 9, 10), (6, 7, 10, 11), (8, 9, 10, 11)]\n\
+             i:11 x:[0.0, 1.0, 2.0] e:[(7, 11), (8, 11), (10, 11)] f:[(4, 7, 8, 11), (6, 7, 10, 11), (8, 9, 10, 11)]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_cells()),
+            "i:0 a:1 g:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
+             i:1 a:0 g:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_boundary_points()),
+            "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_boundary_edges()),
+            "k:(0,1) p:[0, 1] c:[] f:[(0, 1, 2, 3), (0, 1, 4, 5)]\n\
+             k:(0,3) p:[3, 0] c:[] f:[(0, 1, 2, 3), (0, 3, 4, 7)]\n\
+             k:(0,4) p:[0, 4] c:[] f:[(0, 1, 4, 5), (0, 3, 4, 7)]\n\
+             k:(1,2) p:[1, 2] c:[] f:[(0, 1, 2, 3), (1, 2, 5, 6)]\n\
+             k:(1,5) p:[5, 1] c:[] f:[(0, 1, 4, 5), (1, 2, 5, 6)]\n\
+             k:(2,3) p:[2, 3] c:[] f:[(0, 1, 2, 3), (2, 3, 6, 7)]\n\
+             k:(2,6) p:[6, 2] c:[] f:[(1, 2, 5, 6), (2, 3, 6, 7)]\n\
+             k:(3,7) p:[3, 7] c:[] f:[(0, 3, 4, 7), (2, 3, 6, 7)]\n\
+             k:(4,5) p:[4, 5] c:[] f:[(0, 1, 4, 5), (4, 5, 8, 9)]\n\
+             k:(4,7) p:[7, 4] c:[] f:[(0, 3, 4, 7), (4, 7, 8, 11)]\n\
+             k:(4,8) p:[4, 8] c:[] f:[(4, 5, 8, 9), (4, 7, 8, 11)]\n\
+             k:(5,6) p:[5, 6] c:[] f:[(1, 2, 5, 6), (5, 6, 9, 10)]\n\
+             k:(5,9) p:[9, 5] c:[] f:[(4, 5, 8, 9), (5, 6, 9, 10)]\n\
+             k:(6,7) p:[6, 7] c:[] f:[(2, 3, 6, 7), (6, 7, 10, 11)]\n\
+             k:(6,10) p:[10, 6] c:[] f:[(5, 6, 9, 10), (6, 7, 10, 11)]\n\
+             k:(7,11) p:[7, 11] c:[] f:[(4, 7, 8, 11), (6, 7, 10, 11)]\n\
+             k:(8,9) p:[8, 9] c:[] f:[(4, 5, 8, 9), (8, 9, 10, 11)]\n\
+             k:(8,11) p:[11, 8] c:[] f:[(4, 7, 8, 11), (8, 9, 10, 11)]\n\
+             k:(9,10) p:[9, 10] c:[] f:[(5, 6, 9, 10), (8, 9, 10, 11)]\n\
+             k:(10,11) p:[10, 11] c:[] f:[(6, 7, 10, 11), (8, 9, 10, 11)]\n"
+        );
+        assert_eq!(
+            format!("{}", mesh.string_boundary_faces()),
+            "k:(0,1,2,3) p:[0, 3, 2, 1] c:[0]\n\
+             k:(0,1,4,5) p:[0, 1, 5, 4] c:[0]\n\
+             k:(0,3,4,7) p:[0, 4, 7, 3] c:[0]\n\
+             k:(1,2,5,6) p:[1, 2, 6, 5] c:[0]\n\
+             k:(2,3,6,7) p:[2, 3, 7, 6] c:[0]\n\
+             k:(4,5,8,9) p:[4, 5, 9, 8] c:[1]\n\
+             k:(4,7,8,11) p:[4, 8, 11, 7] c:[1]\n\
+             k:(5,6,9,10) p:[5, 6, 10, 9] c:[1]\n\
+             k:(6,7,10,11) p:[6, 7, 11, 10] c:[1]\n\
+             k:(8,9,10,11) p:[8, 9, 10, 11] c:[1]\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn grid_search_initialization_works_2d() -> Result<(), StrError> {
+        //
+        // 3.1   6---------12
+        //       |    [6]   |       SOLID
+        // 3.0   5---------11       <-- layer separation
+        //       | [5]  ,-' |       POROUS
+        //       |   ,-'    |
+        // 2.5   4.-'       |
+        //       | '.   [4] |       L
+        //       | [3].     |       A
+        // 2.0   3.    '.   |       Y
+        //       | '--__ '. |       E
+        //       |      '--10  1.8  R
+        //       |          |       2
+        //       |   [2]    |
+        //       |          |
+        // 1.0   2----------9       <-- layer separation
+        //       |          |       L
+        //       |    [1]   |       A
+        // 0.5   1.__       |       Y
+        //       |   '--..  |       E
+        //       |  [0]   '-8  0.2  R
+        // 0.0   0----------7       1
+        //
+        //      0.0        1.0
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/column_distorted_tris_quads.msh")?;
+
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 13);
+        assert_eq!(mesh.cells.len(), 7);
+        assert_eq!(mesh.boundary_points.len(), 13);
+        assert_eq!(mesh.boundary_edges.len(), 13);
+        assert_eq!(mesh.boundary_faces.len(), 0);
+        assert_eq!(mesh.coords_min, &[0.0, 0.0]);
+        assert_eq!(mesh.coords_max, &[1.0, 3.1]);
+
+        // DO NOT REMOVE THE CODE BELOW
+        // println!("{}", mesh.grid_boundary_points);
+        // let mut plot = mesh.grid_boundary_points.plot()?;
+        // plot.set_figure_size_points(600.0, 1200.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/grid_search_initialization_works_2d.svg")?;
+
+        assert_eq!(
+            format!("{}", mesh.grid_boundary_points),
+            "0: [0]\n\
+             5: [7]\n\
+             11: [8]\n\
+             18: [1]\n\
+             36: [2]\n\
+             41: [9]\n\
+             71: [10]\n\
+             72: [3]\n\
+             96: [4]\n\
+             114: [5, 6]\n\
+             119: [11, 12]\n\
+             ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]\n\
+             nitem = 13\n\
+             ncontainer = 11\n\
+             ndiv = [6, 20]\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn alloc_shape_fns_are_correct_2d() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        assert_eq!(mesh.alloc_shape_cell(2).err(), Some("cell_id is out-of-bounds"));
+        assert_eq!(
+            mesh.alloc_shape_boundary_edge(&(1, 0)).err(),
+            Some("edge_key is invalid")
+        );
+        assert_eq!(
+            mesh.alloc_shape_boundary_face(&(0, 1, 2, 3)).err(),
+            Some("face_key is invalid")
+        );
+
+        let shape = mesh.alloc_shape_cell(0)?;
+        assert_eq!(shape.kind, GeoKind::Qua4);
+        assert_eq!(shape.point_ids, &[0, 1, 2, 3]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌         ┐\n\
+             │ 0 1 1 0 │\n\
+             │ 0 0 1 1 │\n\
+             └         ┘"
+        );
+
+        let shape = mesh.alloc_shape_cell(1)?;
+        assert_eq!(shape.kind, GeoKind::Qua4);
+        assert_eq!(shape.point_ids, &[1, 4, 5, 2]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌         ┐\n\
+             │ 1 2 2 1 │\n\
+             │ 0 0 1 1 │\n\
+             └         ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_edge(&(0, 1))?;
+        assert_eq!(shape.kind, GeoKind::Lin2);
+        assert_eq!(shape.point_ids, &[1, 0]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌     ┐\n\
+             │ 1 0 │\n\
+             │ 0 0 │\n\
+             └     ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_edge(&(2, 5))?;
+        assert_eq!(shape.kind, GeoKind::Lin2);
+        assert_eq!(shape.point_ids, &[2, 5]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌     ┐\n\
+             │ 1 2 │\n\
+             │ 1 1 │\n\
+             └     ┘"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn alloc_shape_fns_are_correct_3d() -> Result<(), StrError> {
+        //
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        assert_eq!(mesh.alloc_shape_cell(2).err(), Some("cell_id is out-of-bounds"));
+        assert_eq!(
+            mesh.alloc_shape_boundary_edge(&(1, 0)).err(),
+            Some("edge_key is invalid")
+        );
+        assert_eq!(
+            mesh.alloc_shape_boundary_face(&(3, 2, 1, 0)).err(),
+            Some("face_key is invalid")
+        );
+
+        let shape = mesh.alloc_shape_cell(0)?;
+        assert_eq!(shape.kind, GeoKind::Hex8);
+        assert_eq!(shape.point_ids, &[0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌                 ┐\n\
+             │ 0 1 1 0 0 1 1 0 │\n\
+             │ 0 0 1 1 0 0 1 1 │\n\
+             │ 0 0 0 0 1 1 1 1 │\n\
+             └                 ┘"
+        );
+
+        let shape = mesh.alloc_shape_cell(1)?;
+        assert_eq!(shape.kind, GeoKind::Hex8);
+        assert_eq!(shape.point_ids, &[4, 5, 6, 7, 8, 9, 10, 11]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌                 ┐\n\
+             │ 0 1 1 0 0 1 1 0 │\n\
+             │ 0 0 1 1 0 0 1 1 │\n\
+             │ 1 1 1 1 2 2 2 2 │\n\
+             └                 ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_edge(&(0, 1))?;
+        assert_eq!(shape.kind, GeoKind::Lin2);
+        assert_eq!(shape.point_ids, &[0, 1]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌     ┐\n\
+             │ 0 1 │\n\
+             │ 0 0 │\n\
+             │ 0 0 │\n\
+             └     ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_edge(&(8, 11))?;
+        assert_eq!(shape.kind, GeoKind::Lin2);
+        assert_eq!(shape.point_ids, &[11, 8]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌     ┐\n\
+             │ 0 0 │\n\
+             │ 1 0 │\n\
+             │ 2 2 │\n\
+             └     ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_face(&(0, 1, 2, 3))?;
+        assert_eq!(shape.kind, GeoKind::Qua4);
+        assert_eq!(shape.point_ids, &[0, 3, 2, 1]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌         ┐\n\
+             │ 0 0 1 1 │\n\
+             │ 0 1 1 0 │\n\
+             │ 0 0 0 0 │\n\
+             └         ┘"
+        );
+
+        let shape = mesh.alloc_shape_boundary_face(&(8, 9, 10, 11))?;
+        assert_eq!(shape.kind, GeoKind::Qua4);
+        assert_eq!(shape.point_ids, &[8, 9, 10, 11]);
+        assert_eq!(
+            format!("{}", shape.coords_transp),
+            "┌         ┐\n\
+             │ 0 1 1 0 │\n\
+             │ 0 0 1 1 │\n\
+             │ 2 2 2 2 │\n\
+             └         ┘"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn normals_are_correct_2d() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+
+        // the norm of the normal vector should be equal to 0.5 = edge_length / 2.0
+        // where 2.0 corresponds to the edge_length in the reference system
+        let l = 0.5; // norm of normal vector
+
+        // edge keys and correct normal vectors (solutions)
+        let edge_keys_and_solutions = [
+            // bottom
+            (vec![(0, 1), (1, 4)], [0.0, -l]),
+            // right
+            (vec![(4, 5)], [l, 0.0]),
+            // top
+            (vec![(2, 3), (2, 5)], [0.0, l]),
+            // left
+            (vec![(0, 3)], [-l, 0.0]),
+        ];
+
+        // check if the normal vectors at boundary are outward
+        let mut normal = Vector::new(mesh.space_ndim);
+        let ksi = &[0.0, 0.0, 0.0];
+        for (edge_keys, solution) in &edge_keys_and_solutions {
+            for edge_key in edge_keys {
+                let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
+                edge_shape.calc_boundary_normal(&mut normal, ksi)?;
+                assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn normals_are_correct_3d() -> Result<(), StrError> {
+        //
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+
+        // the norm of the normal vector should be equal to 0.25 = face_area / 4.0
+        // where 4.0 corresponds to the face_area in the reference system
+        let l = 0.25; // norm of normal vector
+
+        // face keys and correct normal vectors (solutions)
+        let face_keys_and_solutions = [
+            // behind
+            (vec![(0, 3, 4, 7), (4, 7, 8, 11)], [-l, 0.0, 0.0]),
+            // front
+            (vec![(1, 2, 5, 6), (5, 6, 9, 10)], [l, 0.0, 0.0]),
+            // left
+            (vec![(0, 1, 4, 5), (4, 5, 8, 9)], [0.0, -l, 0.0]),
+            // right
+            (vec![(2, 3, 6, 7), (6, 7, 10, 11)], [0.0, l, 0.0]),
+            // bottom
+            (vec![(0, 1, 2, 3)], [0.0, 0.0, -l]),
+            // top
+            (vec![(8, 9, 10, 11)], [0.0, 0.0, l]),
+        ];
+
+        // check if the normal vectors at boundary are outward
+        let mut normal = Vector::new(mesh.space_ndim);
+        let ksi = &[0.0, 0.0, 0.0];
+        for (face_keys, solution) in &face_keys_and_solutions {
+            for face_key in face_keys {
+                let mut face_shape = mesh.alloc_shape_boundary_face(face_key)?;
+                face_shape.calc_boundary_normal(&mut normal, ksi)?;
+                assert_vec_approx_eq!(normal.as_data(), solution, 1e-15);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn display_works() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        assert_eq!(
+            format!("{}", mesh),
+            "SUMMARY\n\
+             =======\n\
+             space_ndim = 2\n\
+             npoint = 6\n\
+             ncell = 2\n\
+             n_boundary_point = 6\n\
+             n_boundary_edge = 6\n\
+             n_boundary_face = 0\n\
+             \n\
+             POINTS\n\
+             ======\n\
+             i:0 x:[0.0, 0.0] e:[(0, 1), (0, 3)] f:[]\n\
+             i:1 x:[1.0, 0.0] e:[(0, 1), (1, 4)] f:[]\n\
+             i:2 x:[1.0, 1.0] e:[(2, 3), (2, 5)] f:[]\n\
+             i:3 x:[0.0, 1.0] e:[(0, 3), (2, 3)] f:[]\n\
+             i:4 x:[2.0, 0.0] e:[(1, 4), (4, 5)] f:[]\n\
+             i:5 x:[2.0, 1.0] e:[(2, 5), (4, 5)] f:[]\n\
+             \n\
+             CELLS\n\
+             =====\n\
+             i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
+             i:1 a:0 g:2 p:[1, 4, 5, 2]\n\
+             \n\
+             BOUNDARY POINTS\n\
+             ===============\n\
+             [0, 1, 2, 3, 4, 5]\n\
+             \n\
+             BOUNDARY EDGES\n\
+             ==============\n\
+             k:(0,1) p:[1, 0] c:[0] f:[]\n\
+             k:(0,3) p:[0, 3] c:[0] f:[]\n\
+             k:(1,4) p:[4, 1] c:[1] f:[]\n\
+             k:(2,3) p:[3, 2] c:[0] f:[]\n\
+             k:(2,5) p:[2, 5] c:[1] f:[]\n\
+             k:(4,5) p:[5, 4] c:[1] f:[]\n\
+             \n\
+             BOUNDARY FACES\n\
+             ==============\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn find_boundary_fails_on_wrong_input() -> Result<(), StrError> {
+        let mesh = Mesh::new(2)?;
+        assert_eq!(
+            mesh.find_boundary_points(At::XY(0.0, 0.0)).err(),
+            Some("compute_derived_props must be called first")
+        );
+        assert_eq!(
+            mesh.find_boundary_edges(At::XY(0.0, 0.0)).err(),
+            Some("compute_derived_props must be called first")
+        );
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        assert_eq!(
+            mesh.find_boundary_points(At::Z(0.0)).err(),
+            Some("At::Z works in 3D only")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::YZ(0.0, 0.0)).err(),
+            Some("At::YZ works in 3D only")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::XZ(0.0, 0.0)).err(),
+            Some("At::XZ works in 3D only")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::XYZ(0.0, 0.0, 0.0)).err(),
+            Some("At::XYZ works in 3D only")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+                .err(),
+            Some("At::Cylinder works in 3D only")
+        );
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        assert_eq!(
+            mesh.find_boundary_points(At::Circle(0.0, 0.0, 0.0)).err(),
+            Some("At::Circle works in 2D only")
+        );
+        let mesh = Mesh::new(3)?;
+        assert_eq!(
+            mesh.find_boundary_faces(At::Z(0.0)).err(),
+            Some("compute_derived_props must be called first")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn find_boundary_works_2d() -> Result<(), StrError> {
+        // `.       `.
+        //   3--------2--------5
+        //   | `.     | `.     |
+        //   |   `~.  |        |
+        //   |      `.|        |
+        //   0--------1--------4
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok1.msh")?;
+        assert_eq!(mesh.find_boundary_points(At::XY(0.0, 0.0))?, &[0]);
+        assert_eq!(mesh.find_boundary_points(At::XY(2.0, 1.0))?, &[5]);
+        assert_eq!(
+            mesh.find_boundary_points(At::XY(10.0, 0.0)).err(),
+            Some("point is outside the grid")
+        );
+        assert_eq!(mesh.find_boundary_edges(At::Y(0.0))?, &[(0, 1), (1, 4)]);
+        assert_eq!(mesh.find_boundary_edges(At::X(2.0))?, &[(4, 5)]);
+        assert_eq!(mesh.find_boundary_edges(At::Y(1.0))?, &[(2, 3), (2, 5)]);
+        assert_eq!(mesh.find_boundary_edges(At::X(0.0))?, &[(0, 3)]);
+        assert_eq!(mesh.find_boundary_edges(At::X(10.0))?, &[]);
+        assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, 1.0))?, &[1, 3]);
+        assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, SQRT_2))?, &[2]);
+        assert_eq!(mesh.find_boundary_points(At::Circle(0.0, 0.0, 10.0))?, &[] as &[usize]);
+        Ok(())
+    }
+
+    #[test]
+    fn find_boundary_works_3d() -> Result<(), StrError> {
+        //
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
+        assert_eq!(mesh.find_boundary_points(At::X(0.0))?, &[0, 3, 4, 7, 8, 11]);
+        assert_eq!(mesh.find_boundary_points(At::X(1.0))?, &[1, 2, 5, 6, 9, 10]);
+        assert_eq!(mesh.find_boundary_points(At::X(10.0))?, &[] as &[usize]);
+        assert_eq!(mesh.find_boundary_points(At::Y(0.0))?, &[0, 1, 4, 5, 8, 9]);
+        assert_eq!(mesh.find_boundary_points(At::Y(1.0))?, &[2, 3, 6, 7, 10, 11]);
+        assert_eq!(mesh.find_boundary_points(At::Y(10.0))?, &[] as &[usize]);
+        assert_eq!(mesh.find_boundary_points(At::Z(0.0))?, &[0, 1, 2, 3]);
+        assert_eq!(mesh.find_boundary_points(At::Z(1.0))?, &[4, 5, 6, 7]);
+        assert_eq!(mesh.find_boundary_points(At::Z(2.0))?, &[8, 9, 10, 11]);
+        assert_eq!(mesh.find_boundary_points(At::Z(10.0))?, &[] as &[usize]);
+        assert_eq!(mesh.find_boundary_points(At::XY(0.0, 0.0))?, &[0, 4, 8]);
+        assert_eq!(mesh.find_boundary_points(At::XY(1.0, 1.0))?, &[2, 6, 10]);
+        assert_eq!(mesh.find_boundary_points(At::XY(10.0, 10.0))?, &[] as &[usize]);
+        assert_eq!(mesh.find_boundary_points(At::YZ(0.0, 0.0))?, &[0, 1]);
+        assert_eq!(mesh.find_boundary_points(At::YZ(1.0, 1.0))?, &[6, 7]);
+        assert_eq!(mesh.find_boundary_points(At::XZ(0.0, 0.0))?, &[0, 3]);
+        assert_eq!(mesh.find_boundary_points(At::XZ(1.0, 0.0))?, &[1, 2]);
+        assert_eq!(mesh.find_boundary_points(At::XZ(1.0, 2.0))?, &[9, 10]);
+        assert_eq!(mesh.find_boundary_points(At::XYZ(0.0, 0.0, 0.0))?, &[0]);
+        assert_eq!(mesh.find_boundary_points(At::XYZ(1.0, 1.0, 2.0))?, &[10]);
+        assert_eq!(
+            mesh.find_boundary_points(At::XYZ(10.0, 0.0, 0.0)).err(),
+            Some("point is outside the grid")
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
+            &[1, 3, 5, 7, 9, 11]
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?,
+            &[2, 6, 10]
+        );
+        assert_eq!(
+            mesh.find_boundary_points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?,
+            &[] as &[usize]
+        );
+        assert_eq!(mesh.find_boundary_faces(At::X(0.0))?, &[(0, 3, 4, 7), (4, 7, 8, 11)]);
+        assert_eq!(mesh.find_boundary_faces(At::X(1.0))?, &[(1, 2, 5, 6), (5, 6, 9, 10)]);
+        assert_eq!(mesh.find_boundary_faces(At::Y(0.0))?, &[(0, 1, 4, 5), (4, 5, 8, 9)]);
+        assert_eq!(mesh.find_boundary_faces(At::Y(1.0))?, &[(2, 3, 6, 7), (6, 7, 10, 11)]);
+        assert_eq!(mesh.find_boundary_faces(At::Z(0.0))?, &[(0, 1, 2, 3)]);
+        assert_eq!(mesh.find_boundary_faces(At::Z(2.0))?, &[(8, 9, 10, 11)]);
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_file_works_with_mixed() -> Result<(), StrError> {
+        //
+        //          4--------3
+        //          |        |
+        //          |        |
+        //          |        |
+        //  0-------1--------2
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes2.msh")?;
+        assert_eq!(
+            format!("{}", mesh),
+            "SUMMARY\n\
+             =======\n\
+             space_ndim = 2\n\
+             npoint = 5\n\
+             ncell = 2\n\
+             n_boundary_point = 5\n\
+             n_boundary_edge = 4\n\
+             n_boundary_face = 0\n\
+             \n\
+             POINTS\n\
+             ======\n\
+             i:0 x:[0.0, 0.0] e:[] f:[]\n\
+             i:1 x:[1.0, 0.0] e:[(1, 2), (1, 4)] f:[]\n\
+             i:2 x:[2.0, 0.0] e:[(1, 2), (2, 3)] f:[]\n\
+             i:3 x:[2.0, 1.0] e:[(2, 3), (3, 4)] f:[]\n\
+             i:4 x:[1.0, 1.0] e:[(1, 4), (3, 4)] f:[]\n\
+             \n\
+             CELLS\n\
+             =====\n\
+             i:0 a:1 g:1 p:[0, 1]\n\
+             i:1 a:2 g:2 p:[1, 2, 3, 4]\n\
+             \n\
+             BOUNDARY POINTS\n\
+             ===============\n\
+             [0, 1, 2, 3, 4]\n\
+             \n\
+             BOUNDARY EDGES\n\
+             ==============\n\
+             k:(1,2) p:[2, 1] c:[1] f:[]\n\
+             k:(1,4) p:[1, 4] c:[1] f:[]\n\
+             k:(2,3) p:[3, 2] c:[1] f:[]\n\
+             k:(3,4) p:[4, 3] c:[1] f:[]\n\
+             \n\
+             BOUNDARY FACES\n\
+             ==============\n"
+        );
+
+        //
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //                  5------------6    |            |
+        //                  |    .       |`.  |            |
+        //                  |    0-------|--`.3------------9
+        //                  |   /        |   /`.          /
+        //                  |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        //
+        let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes.msh")?;
+        assert_eq!(
+            format!("{}", mesh),
+            "SUMMARY\n\
+             =======\n\
+             space_ndim = 3\n\
+             npoint = 13\n\
+             ncell = 5\n\
+             n_boundary_point = 13\n\
+             n_boundary_edge = 16\n\
+             n_boundary_face = 10\n\
+             \n\
+             POINTS\n\
+             ======\n\
+             i:0 x:[0.0, 0.0, 0.0] e:[(0, 1), (0, 3), (0, 4)] f:[(0, 1, 2, 3), (0, 1, 4, 5), (0, 3, 4, 7)]\n\
+             i:1 x:[1.0, 0.0, 0.0] e:[(0, 1), (1, 2), (1, 5)] f:[(0, 1, 2, 3), (0, 1, 4, 5), (1, 2, 5, 6)]\n\
+             i:2 x:[1.0, 1.0, 0.0] e:[(1, 2), (2, 3), (2, 6), (2, 8)] f:[(0, 1, 2, 3), (1, 2, 5, 6), (2, 3, 6, 7), (2, 3, 6, 13), (2, 3, 8, 13), (2, 6, 8, 13)]\n\
+             i:3 x:[0.0, 1.0, 0.0] e:[(0, 3), (2, 3), (3, 6), (3, 7), (3, 8)] f:[(0, 1, 2, 3), (0, 3, 4, 7), (2, 3, 6, 7), (2, 3, 6, 13), (2, 3, 8, 13), (3, 6, 8, 13)]\n\
+             i:4 x:[0.0, 0.0, 1.0] e:[(0, 4), (4, 5), (4, 7)] f:[(0, 1, 4, 5), (0, 3, 4, 7), (4, 5, 6, 7)]\n\
+             i:5 x:[1.0, 0.0, 1.0] e:[(1, 5), (4, 5), (5, 6)] f:[(0, 1, 4, 5), (1, 2, 5, 6), (4, 5, 6, 7)]\n\
+             i:6 x:[1.0, 1.0, 1.0] e:[(2, 6), (3, 6), (5, 6), (6, 7), (6, 8)] f:[(1, 2, 5, 6), (2, 3, 6, 7), (2, 3, 6, 13), (2, 6, 8, 13), (3, 6, 8, 13), (4, 5, 6, 7)]\n\
+             i:7 x:[0.0, 1.0, 1.0] e:[(3, 7), (4, 7), (6, 7)] f:[(0, 3, 4, 7), (2, 3, 6, 7), (4, 5, 6, 7)]\n\
+             i:8 x:[1.0, 2.0, 0.0] e:[(2, 8), (3, 8), (6, 8)] f:[(2, 3, 8, 13), (2, 6, 8, 13), (3, 6, 8, 13)]\n\
+             i:9 x:[0.0, 2.0, 0.0] e:[] f:[]\n\
+             i:10 x:[0.0, 2.0, 1.0] e:[] f:[]\n\
+             i:11 x:[1.0, -0.5, 0.0] e:[] f:[]\n\
+             i:12 x:[1.0, -1.0, 0.0] e:[] f:[]\n\
+             \n\
+             CELLS\n\
+             =====\n\
+             i:0 a:1 g:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
+             i:1 a:2 g:3 p:[2, 8, 3, 6]\n\
+             i:2 a:2 g:2 p:[3, 9, 10, 7]\n\
+             i:3 a:2 g:2 p:[8, 9, 3]\n\
+             i:4 a:3 g:1 p:[1, 11, 12]\n\
+             \n\
+             BOUNDARY POINTS\n\
+             ===============\n\
+             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]\n\
+             \n\
+             BOUNDARY EDGES\n\
+             ==============\n\
+             k:(0,1) p:[0, 1] c:[] f:[(0, 1, 2, 3), (0, 1, 4, 5)]\n\
+             k:(0,3) p:[3, 0] c:[] f:[(0, 1, 2, 3), (0, 3, 4, 7)]\n\
+             k:(0,4) p:[0, 4] c:[] f:[(0, 1, 4, 5), (0, 3, 4, 7)]\n\
+             k:(1,2) p:[1, 2] c:[] f:[(0, 1, 2, 3), (1, 2, 5, 6)]\n\
+             k:(1,5) p:[5, 1] c:[] f:[(0, 1, 4, 5), (1, 2, 5, 6)]\n\
+             k:(2,3) p:[2, 3] c:[] f:[(0, 1, 2, 3), (2, 3, 6, 7), (2, 3, 6, 13), (2, 3, 8, 13)]\n\
+             k:(2,6) p:[6, 2] c:[] f:[(1, 2, 5, 6), (2, 3, 6, 7), (2, 3, 6, 13), (2, 6, 8, 13)]\n\
+             k:(2,8) p:[2, 8] c:[] f:[(2, 3, 8, 13), (2, 6, 8, 13)]\n\
+             k:(3,6) p:[3, 6] c:[] f:[(2, 3, 6, 13), (3, 6, 8, 13)]\n\
+             k:(3,7) p:[3, 7] c:[] f:[(0, 3, 4, 7), (2, 3, 6, 7)]\n\
+             k:(3,8) p:[8, 3] c:[] f:[(2, 3, 8, 13), (3, 6, 8, 13)]\n\
+             k:(4,5) p:[4, 5] c:[] f:[(0, 1, 4, 5), (4, 5, 6, 7)]\n\
+             k:(4,7) p:[7, 4] c:[] f:[(0, 3, 4, 7), (4, 5, 6, 7)]\n\
+             k:(5,6) p:[5, 6] c:[] f:[(1, 2, 5, 6), (4, 5, 6, 7)]\n\
+             k:(6,7) p:[6, 7] c:[] f:[(2, 3, 6, 7), (4, 5, 6, 7)]\n\
+             k:(6,8) p:[6, 8] c:[] f:[(2, 6, 8, 13), (3, 6, 8, 13)]\n\
+             \n\
+             BOUNDARY FACES\n\
+             ==============\n\
+             k:(0,1,2,3) p:[0, 3, 2, 1] c:[0]\n\
+             k:(0,1,4,5) p:[0, 1, 5, 4] c:[0]\n\
+             k:(0,3,4,7) p:[0, 4, 7, 3] c:[0]\n\
+             k:(1,2,5,6) p:[1, 2, 6, 5] c:[0]\n\
+             k:(2,3,6,7) p:[2, 3, 7, 6] c:[0]\n\
+             k:(2,3,6,13) p:[2, 6, 3] c:[1]\n\
+             k:(2,3,8,13) p:[2, 3, 8] c:[1]\n\
+             k:(2,6,8,13) p:[2, 8, 6] c:[1]\n\
+             k:(3,6,8,13) p:[8, 3, 6] c:[1]\n\
+             k:(4,5,6,7) p:[4, 5, 6, 7] c:[0]\n"
+         );
+        Ok(())
+    }
+
+    #[test]
+    fn clone_and_serialize_work_2d() -> Result<(), StrError> {
+        // original
+        let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes2.msh")?;
+        assert!(format!("{:?}", mesh).len() > 0);
+        let before = format!("{}", mesh);
+        let grid_before = format!("{}", mesh.grid_boundary_points);
+
+        // ser/des point and edge
+        let point = &mesh.points[0];
+        let edge = mesh.boundary_edges.get(&(1, 2)).unwrap();
+        let point_json = serde_json::to_string(&point).map_err(|_| "json encode failed")?;
+        let edge_json = serde_json::to_string(&edge).map_err(|_| "json encode failed")?;
+        let point_after: Point = serde_json::from_str(&point_json).map_err(|_| "json decode failed")?;
+        let edge_after: Edge = serde_json::from_str(&edge_json).map_err(|_| "json decode failed")?;
+        assert_eq!(format!("{:?}", point_after), format!("{:?}", point));
+        assert_eq!(format!("{:?}", edge_after), format!("{:?}", edge));
+
+        // cloned
+        let cloned = mesh.clone();
+        assert_eq!(format!("{}", cloned), before);
+
+        // serialize to BIN
+        let mut bin = Vec::new();
+        let mut ser = rmp_serde::Serializer::new(&mut bin);
+        mesh.serialize(&mut ser).map_err(|_| "bin encode failed")?;
+        assert!(bin.len() > 0);
+
+        // deserialize from BIN
+        let mut des = rmp_serde::Deserializer::new(&bin[..]);
+        let mesh_bin: Mesh = Deserialize::deserialize(&mut des).map_err(|_| "bin decode failed")?;
+        assert_eq!(format!("{}", mesh_bin), before);
+        assert_eq!(format!("{}", mesh_bin.grid_boundary_points), grid_before);
+
+        Ok(())
+    }
+
+    #[test]
+    fn clone_and_serialize_work_3d() -> Result<(), StrError> {
+        // original
+        let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes.msh")?;
+        assert!(format!("{:?}", mesh).len() > 0);
+        let before = format!("{}", mesh);
+        let grid_before = format!("{}", mesh.grid_boundary_points);
+
+        // ser/des face
+        let face = mesh.boundary_faces.get(&(4, 5, 6, 7)).unwrap();
+        let face_json = serde_json::to_string(&face).map_err(|_| "json encode failed")?;
+        let face_after: Face = serde_json::from_str(&face_json).map_err(|_| "json decode failed")?;
+        assert_eq!(format!("{:?}", face_after), format!("{:?}", face));
+
+        // cloned
+        let cloned = mesh.clone();
+        assert_eq!(format!("{}", cloned), before);
+
+        // serialize to BIN
+        let mut bin = Vec::new();
+        let mut ser = rmp_serde::Serializer::new(&mut bin);
+        mesh.serialize(&mut ser).map_err(|_| "bin encode failed")?;
+        assert!(bin.len() > 0);
+
+        // deserialize from BIN
+        let mut des = rmp_serde::Deserializer::new(&bin[..]);
+        let mesh_bin: Mesh = Deserialize::deserialize(&mut des).map_err(|_| "bin decode failed")?;
+        assert_eq!(format!("{}", mesh_bin), before);
+        assert_eq!(format!("{}", mesh_bin.grid_boundary_points), grid_before);
+        Ok(())
+    }
+
+    #[test]
+    fn read_write_capture_errors() -> Result<(), StrError> {
+        assert_eq!(Mesh::read("/tmp/not_found").err(), Some("file not found"));
+        assert_eq!(
+            Mesh::read("./data/meshes/ok_mixed_shapes2.msh").err(),
+            Some("deserialize failed")
+        );
+        let mesh = Mesh::new(2)?;
+        assert_eq!(mesh.write("/tmp/").err(), Some("cannot create file"));
+        Ok(())
+    }
+
+    #[test]
+    fn read_write_work() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let mesh = Mesh::from_text(
+            r"# header
+            # space_ndim npoint ncell
+                       2      6     2
+            
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+            
+            # cells
+            # id att geo_ndim nnode  point_ids...
+               0   1        2     4  0 1 2 3
+               1   0        2     4  1 4 5 2",
+        )?;
+        mesh.write("/tmp/gemlab/test.msh")?;
+        let mesh_read = Mesh::read("/tmp/gemlab/test.msh")?;
+        assert_eq!(format!("{}", mesh), format!("{}", mesh_read));
         Ok(())
     }
 }

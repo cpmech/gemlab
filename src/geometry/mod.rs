@@ -1,5 +1,6 @@
 //! Contains basic geometric features and algorithms
 
+/// Holds data defining a circle in 2D
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Circle {
     pub center: [f64; 2],
