@@ -665,9 +665,9 @@ impl Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::SQRT_3;
+    use crate::{shapes::AnalyticalTri3, util::SQRT_3};
     use russell_chk::assert_vec_approx_eq;
-    use russell_lab::{copy_matrix, copy_vector, mat_mat_mul, mat_t_mat_mul, Matrix};
+    use russell_lab::{copy_matrix, copy_vector, Matrix};
     use russell_tensor::LinElasticity;
 
     // to test if variables are cleared before sum
@@ -702,48 +702,6 @@ mod tests {
         shape.set_node(0, 0, 0, xa).unwrap();
         shape.set_node(1, 1, 0, xb).unwrap();
         (shape, xa, xb)
-    }
-
-    struct AnalyticalTri3 {
-        x: [f64; 3], // node x-coordinates
-        y: [f64; 3], // node y-coordinates
-        b: [f64; 3], // b-coefficients
-        c: [f64; 3], // c-coefficients
-        area: f64,   // area
-    }
-
-    impl AnalyticalTri3 {
-        pub fn new(tri3: &mut Shape) -> Self {
-            // coefficients
-            let (x0, y0) = (tri3.coords_transp[0][0], tri3.coords_transp[1][0]);
-            let (x1, y1) = (tri3.coords_transp[0][1], tri3.coords_transp[1][1]);
-            let (x2, y2) = (tri3.coords_transp[0][2], tri3.coords_transp[1][2]);
-            let (b0, b1, b2) = (y1 - y2, y2 - y0, y0 - y1);
-            let (c0, c1, c2) = (x2 - x1, x0 - x2, x1 - x0);
-            let (f0, f1, f2) = (x1 * y2 - x2 * y1, x2 * y0 - x0 * y2, x0 * y1 - x1 * y0);
-
-            // area
-            let area = (f0 + f1 + f2) / 2.0;
-
-            // check gradients
-            let gg = Matrix::from(&[
-                [b0 / (2.0 * area), c0 / (2.0 * area)],
-                [b1 / (2.0 * area), c1 / (2.0 * area)],
-                [b2 / (2.0 * area), c2 / (2.0 * area)],
-            ]);
-            let ksi = &tri3.integ_points[0];
-            tri3.calc_gradient(ksi).unwrap();
-            assert_eq!(tri3.temp_gradient.as_data(), gg.as_data());
-
-            // results
-            AnalyticalTri3 {
-                x: [x0, x1, x2],
-                y: [y0, y1, y2],
-                b: [b0, b1, b2],
-                c: [c0, c1, c2],
-                area,
-            }
-        }
     }
 
     #[test]
@@ -884,7 +842,7 @@ mod tests {
     fn integ_vec_c_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (mut tri3, area) = gen_tri3();
-        let ana = AnalyticalTri3::new(&mut tri3);
+        let mut ana = AnalyticalTri3::new(&mut tri3);
         assert_eq!(area, ana.area);
 
         // constant vector function: w(x) = {w₀, w₁}
@@ -892,11 +850,7 @@ mod tests {
         //    cᵐ = ½ (w₀ bₘ + w₁ cₘ)
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
-        let c_correct = &[
-            (W0 * ana.b[0] + W1 * ana.c[0]) / 2.0,
-            (W0 * ana.b[1] + W1 * ana.c[1]) / 2.0,
-            (W0 * ana.b[2] + W1 * ana.c[2]) / 2.0,
-        ];
+        let c_correct = ana.integ_vec_c_constant(W0, W1);
         let mut c = Vector::filled(tri3.nnode, NOISE);
         tri3.integ_vec_c_vg(&mut c, 1.0, |w: &mut Vector, _: usize| {
             w[0] = W0;
@@ -909,11 +863,7 @@ mod tests {
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
         let all_integ_points = tri3.calc_integ_points_coords()?;
-        let c_correct = &[
-            (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[0] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[0] / 6.0,
-            (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[1] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[1] / 6.0,
-            (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[2] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[2] / 6.0,
-        ];
+        let c_correct = ana.integ_vec_c_bilinear();
         let mut c = Vector::filled(tri3.nnode, NOISE);
         tri3.integ_vec_c_vg(&mut c, 1.0, |w: &mut Vector, index: usize| {
             w[0] = all_integ_points[index][0];
@@ -986,7 +936,7 @@ mod tests {
     fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (mut tri3, _) = gen_tri3();
-        let ana = AnalyticalTri3::new(&mut tri3);
+        let mut ana = AnalyticalTri3::new(&mut tri3);
 
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
@@ -996,14 +946,7 @@ mod tests {
         const S11: f64 = 3.0;
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
-        let f_vec_correct = &[
-            (S00 * ana.b[0] + S01 * ana.c[0]) / 2.0,
-            (S01 * ana.b[0] + S11 * ana.c[0]) / 2.0,
-            (S00 * ana.b[1] + S01 * ana.c[1]) / 2.0,
-            (S01 * ana.b[1] + S11 * ana.c[1]) / 2.0,
-            (S00 * ana.b[2] + S01 * ana.c[2]) / 2.0,
-            (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
-        ];
+        let f_vec_correct = ana.integ_vec_d_constant(S00, S11, S01);
 
         // constants
         let young = 10_000.0;
@@ -1069,34 +1012,12 @@ mod tests {
         tri3.set_node(2, 1, 1, 0.0).unwrap();
         tri3.set_node(3, 2, 0, 2.0).unwrap();
         tri3.set_node(3, 2, 1, 1.5).unwrap();
-        let ana = AnalyticalTri3::new(&mut tri3);
+        let mut ana = AnalyticalTri3::new(&mut tri3);
 
         // constants
         let young = 10_000.0;
         let poisson = 0.2;
         let thickness = 0.25; // thickness
-        let dim_dd = 2 * tri3.space_ndim;
-        let dim_kk = tri3.nnode * tri3.space_ndim;
-
-        // solution: compute B-matrix (dim_dd,dim_kk)
-        let r = 2.0 * ana.area;
-        let s = r * SQRT_2;
-        #[rustfmt::skip]
-        let bb = Matrix::from(&[
-            [ana.b[0]/r,        0.0, ana.b[1]/r,        0.0, ana.b[2]/r,        0.0],
-            [       0.0, ana.c[0]/r,        0.0, ana.c[1]/r,        0.0, ana.c[2]/r],
-            [       0.0,        0.0,        0.0,        0.0,        0.0,        0.0],
-            [ana.c[0]/s, ana.b[0]/s, ana.c[1]/s, ana.b[1]/s, ana.c[2]/s, ana.b[2]/s],
-        ]);
-        assert_eq!(bb.dims(), (dim_dd, dim_kk));
-
-        // solution: compute K = Bᵀ ⋅ D ⋅ B
-        let ela = LinElasticity::new(young, poisson, true, true);
-        let dd_ela = ela.get_modulus();
-        let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
-        let mut kk_correct = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &bb, &dd_ela.mat)?;
-        mat_mat_mul(&mut kk_correct, thickness * ana.area, &bb_t_dd, &bb)?;
 
         // element instance with callback function calc_dd for integration
         let n_integ_point = tri3.integ_points.len();
@@ -1134,6 +1055,7 @@ mod tests {
         ]);
 
         // check
+        let kk_correct = ana.integ_stiffness(young, poisson, thickness)?;
         assert_vec_approx_eq!(kk_correct.as_data(), kk_bhatti.as_data(), 1e-12);
         assert_vec_approx_eq!(kk_correct.as_data(), element.kk.as_data(), 1e-12);
         Ok(())
