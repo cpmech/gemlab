@@ -1055,7 +1055,7 @@ mod tests {
         ]);
 
         // check
-        let kk_correct = ana.integ_stiffness(young, poisson, thickness)?;
+        let kk_correct = ana.integ_stiffness(young, poisson, true, thickness)?;
         assert_vec_approx_eq!(kk_correct.as_data(), kk_bhatti.as_data(), 1e-12);
         assert_vec_approx_eq!(kk_correct.as_data(), element.kk.as_data(), 1e-12);
         Ok(())

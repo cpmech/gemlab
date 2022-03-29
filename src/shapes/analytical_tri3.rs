@@ -135,8 +135,14 @@ impl AnalyticalTri3 {
     /// ```text
     /// K = Bᵀ ⋅ D ⋅ B
     /// ```
-    pub fn integ_stiffness(&mut self, young: f64, poisson: f64, thickness: f64) -> Result<Matrix, StrError> {
-        let ela = LinElasticity::new(young, poisson, true, true);
+    pub fn integ_stiffness(
+        &mut self,
+        young: f64,
+        poisson: f64,
+        plane_stress: bool,
+        thickness: f64,
+    ) -> Result<Matrix, StrError> {
+        let ela = LinElasticity::new(young, poisson, true, plane_stress);
         let dd_ela = ela.get_modulus();
         let dim_dd = 4;
         let dim_kk = 6;
