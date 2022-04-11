@@ -152,10 +152,11 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `zero_a` -- fills `a` vector with zeros, otherwise accumulate values into `a`
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `fn_s(index_ip: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function,
     ///   however written as a function of the index of the integration point.
-    pub fn integ_vec_a_ns<F>(&mut self, a: &mut Vector, thickness: f64, fn_s: F) -> Result<(), StrError>
+    pub fn integ_vec_a_ns<F>(&mut self, a: &mut Vector, zero_a: bool, thickness: f64, fn_s: F) -> Result<(), StrError>
     where
         F: Fn(usize) -> Result<f64, StrError>,
     {
@@ -165,7 +166,9 @@ impl Shape {
         }
 
         // clear output vector
-        a.fill(0.0);
+        if zero_a {
+            a.fill(0.0);
+        }
 
         // loop over integration points
         for index in 0..self.integ_points.len() {
@@ -232,10 +235,11 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `zero_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `fn_v(v: &mut Vector, index_ip: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`,
     ///    however written as function of the index of the integration point.
-    pub fn integ_vec_b_nv<F>(&mut self, b: &mut Vector, thickness: f64, fn_v: F) -> Result<(), StrError>
+    pub fn integ_vec_b_nv<F>(&mut self, b: &mut Vector, zero_b: bool, thickness: f64, fn_v: F) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -248,7 +252,9 @@ impl Shape {
         let mut v = Vector::new(self.space_ndim);
 
         // clear output vector
-        b.fill(0.0);
+        if zero_b {
+            b.fill(0.0);
+        }
 
         // loop over integration points
         for index in 0..self.integ_points.len() {
@@ -307,10 +313,11 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `zero_c` -- fills `c` vector with zeros, otherwise accumulate values into `c`
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `fn_w(w: &mut Vector, index_ip: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`,
     ///   however written as a function of the index of the integration point.
-    pub fn integ_vec_c_vg<F>(&mut self, c: &mut Vector, thickness: f64, fn_w: F) -> Result<(), StrError>
+    pub fn integ_vec_c_vg<F>(&mut self, c: &mut Vector, zero_c: bool, thickness: f64, fn_w: F) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -323,7 +330,9 @@ impl Shape {
         let mut w = Vector::new(self.space_ndim);
 
         // clear output vector
-        c.fill(0.0);
+        if zero_c {
+            c.fill(0.0);
+        }
 
         // loop over integration points
         for index in 0..self.integ_points.len() {
@@ -387,13 +396,20 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `zero_d` -- fills `d` vector with zeros, otherwise accumulate values into `d`
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `calc_sig` -- calculates the σ tensor at given integration point using `calc_sig(sig,index_ip)`
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_vec_d_tg<F>(&mut self, d: &mut Vector, thickness: f64, calc_sig: F) -> Result<(), StrError>
+    pub fn integ_vec_d_tg<F>(
+        &mut self,
+        d: &mut Vector,
+        zero_d: bool,
+        thickness: f64,
+        calc_sig: F,
+    ) -> Result<(), StrError>
     where
         F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
     {
@@ -409,7 +425,9 @@ impl Shape {
         let mut sig = Tensor2::new(true, self.space_ndim == 2);
 
         // clear output vector
-        d.fill(0.0);
+        if zero_d {
+            d.fill(0.0);
+        }
 
         // loop over integration points
         for index in 0..self.integ_points.len() {
@@ -784,7 +802,7 @@ mod tests {
         let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let mut a = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_a_ns(&mut a, 1.0, |_| Ok(CS))?;
+        tri3.integ_vec_a_ns(&mut a, true, 1.0, |_| Ok(CS))?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
@@ -801,7 +819,7 @@ mod tests {
         let (mut lin2, xa, xb) = gen_lin2();
         let all_integ_points = lin2.calc_integ_points_coords()?;
         let mut a = Vector::new(lin2.nnode);
-        lin2.integ_vec_a_ns(&mut a, 1.0, |index_ip: usize| Ok(all_integ_points[index_ip][0]))?;
+        lin2.integ_vec_a_ns(&mut a, true, 1.0, |index_ip: usize| Ok(all_integ_points[index_ip][0]))?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
@@ -815,7 +833,7 @@ mod tests {
         let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        tri3.integ_vec_b_nv(&mut b, 1.0, |v: &mut Vector, _: usize| {
+        tri3.integ_vec_b_nv(&mut b, true, 1.0, |v: &mut Vector, _: usize| {
             v.fill(CS);
             Ok(())
         })?;
@@ -828,7 +846,7 @@ mod tests {
         let (mut lin2, xa, xb) = gen_lin2();
         let all_integ_points = lin2.calc_integ_points_coords()?;
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
-        lin2.integ_vec_b_nv(&mut b, 1.0, |v: &mut Vector, index: usize| {
+        lin2.integ_vec_b_nv(&mut b, true, 1.0, |v: &mut Vector, index: usize| {
             v.fill(all_integ_points[index][0]);
             Ok(())
         })?;
@@ -852,7 +870,7 @@ mod tests {
         const W1: f64 = 3.0;
         let c_correct = ana.integ_vec_c_constant(W0, W1);
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_c_vg(&mut c, 1.0, |w: &mut Vector, _: usize| {
+        tri3.integ_vec_c_vg(&mut c, true, 1.0, |w: &mut Vector, _: usize| {
             w[0] = W0;
             w[1] = W1;
             Ok(())
@@ -865,7 +883,7 @@ mod tests {
         let all_integ_points = tri3.calc_integ_points_coords()?;
         let c_correct = ana.integ_vec_c_bilinear();
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_c_vg(&mut c, 1.0, |w: &mut Vector, index: usize| {
+        tri3.integ_vec_c_vg(&mut c, true, 1.0, |w: &mut Vector, index: usize| {
             w[0] = all_integ_points[index][0];
             w[1] = all_integ_points[index][1];
             Ok(())
@@ -920,9 +938,10 @@ mod tests {
             }
         }
         pub fn calculate_f(&mut self, state: &StateElement) -> Result<(), StrError> {
-            self.shape.integ_vec_d_tg(&mut self.f, self.thickness, |sig, index_ip| {
-                copy_vector(&mut sig.vec, &state.stress[index_ip].sigma.vec)
-            })
+            self.shape
+                .integ_vec_d_tg(&mut self.f, true, self.thickness, |sig, index_ip| {
+                    copy_vector(&mut sig.vec, &state.stress[index_ip].sigma.vec)
+                })
         }
         pub fn calculate_kk(&mut self, state: &StateElement) -> Result<(), StrError> {
             self.shape
