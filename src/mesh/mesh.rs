@@ -1395,7 +1395,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_cell(0)?;
         assert_eq!(shape.kind, GeoKind::Qua4);
-        assert_eq!(shape.point_ids, &[0, 1, 2, 3]);
+        assert_eq!(shape.node_to_point, &[0, 1, 2, 3]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌         ┐\n\
@@ -1406,7 +1406,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_cell(1)?;
         assert_eq!(shape.kind, GeoKind::Qua4);
-        assert_eq!(shape.point_ids, &[1, 4, 5, 2]);
+        assert_eq!(shape.node_to_point, &[1, 4, 5, 2]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌         ┐\n\
@@ -1417,7 +1417,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_boundary_edge(&(0, 1))?;
         assert_eq!(shape.kind, GeoKind::Lin2);
-        assert_eq!(shape.point_ids, &[1, 0]);
+        assert_eq!(shape.node_to_point, &[1, 0]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌     ┐\n\
@@ -1428,7 +1428,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_boundary_edge(&(2, 5))?;
         assert_eq!(shape.kind, GeoKind::Lin2);
-        assert_eq!(shape.point_ids, &[2, 5]);
+        assert_eq!(shape.node_to_point, &[2, 5]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌     ┐\n\
@@ -1476,7 +1476,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_cell(0)?;
         assert_eq!(shape.kind, GeoKind::Hex8);
-        assert_eq!(shape.point_ids, &[0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(shape.node_to_point, &[0, 1, 2, 3, 4, 5, 6, 7]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌                 ┐\n\
@@ -1488,7 +1488,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_cell(1)?;
         assert_eq!(shape.kind, GeoKind::Hex8);
-        assert_eq!(shape.point_ids, &[4, 5, 6, 7, 8, 9, 10, 11]);
+        assert_eq!(shape.node_to_point, &[4, 5, 6, 7, 8, 9, 10, 11]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌                 ┐\n\
@@ -1500,7 +1500,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_boundary_edge(&(0, 1))?;
         assert_eq!(shape.kind, GeoKind::Lin2);
-        assert_eq!(shape.point_ids, &[0, 1]);
+        assert_eq!(shape.node_to_point, &[0, 1]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌     ┐\n\
@@ -1512,7 +1512,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_boundary_edge(&(8, 11))?;
         assert_eq!(shape.kind, GeoKind::Lin2);
-        assert_eq!(shape.point_ids, &[11, 8]);
+        assert_eq!(shape.node_to_point, &[11, 8]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌     ┐\n\
@@ -1524,7 +1524,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_boundary_face(&(0, 1, 2, 3))?;
         assert_eq!(shape.kind, GeoKind::Qua4);
-        assert_eq!(shape.point_ids, &[0, 3, 2, 1]);
+        assert_eq!(shape.node_to_point, &[0, 3, 2, 1]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌         ┐\n\
@@ -1536,7 +1536,7 @@ mod tests {
 
         let shape = mesh.alloc_shape_boundary_face(&(8, 9, 10, 11))?;
         assert_eq!(shape.kind, GeoKind::Qua4);
-        assert_eq!(shape.point_ids, &[8, 9, 10, 11]);
+        assert_eq!(shape.node_to_point, &[8, 9, 10, 11]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌         ┐\n\

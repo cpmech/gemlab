@@ -5,18 +5,6 @@ use crate::StrError;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::{Tensor2, Tensor4};
 
-/// Defines a trait for the callback in the tensor(T)-gradient(G) integration function
-pub trait IntegTG {
-    /// Implements the σ(x(ξ)) tensor function with x being identified by the index of the integration point
-    fn calc_sig(&self, sig: &mut Tensor2, index_ip: usize) -> Result<(), StrError>;
-}
-
-/// Defines a trait for the callback in the gradient(T)-4th-tensor(D)-gradient(G) integration function
-pub trait IntegGDG {
-    /// Implements the D(x(ξ)) tensor function where x being identified by the index of the integration point
-    fn calc_dd(&self, dd: &mut Tensor4, index_ip: usize) -> Result<(), StrError>;
-}
-
 impl Shape {
     /// Selects integrations points and weights
     ///
@@ -164,10 +152,11 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `zero_a` -- fills `a` vector with zeros, otherwise accumulate values into `a`
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `fn_s(index_ip: usize) -> f64` -- s(x(ξ)) or s(ℓ) scalar function,
     ///   however written as a function of the index of the integration point.
-    pub fn integ_vec_a_ns<F>(&mut self, a: &mut Vector, thickness: f64, fn_s: F) -> Result<(), StrError>
+    pub fn integ_vec_a_ns<F>(&mut self, a: &mut Vector, zero_a: bool, thickness: f64, fn_s: F) -> Result<(), StrError>
     where
         F: Fn(usize) -> Result<f64, StrError>,
     {
@@ -177,7 +166,9 @@ impl Shape {
         }
 
         // clear output vector
-        a.fill(0.0);
+        if zero_a {
+            a.fill(0.0);
+        }
 
         // loop over integration points
         for index in 0..self.integ_points.len() {
@@ -244,10 +235,11 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `zero_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `fn_v(v: &mut Vector, index_ip: usize)` -- v(x(ξ)) vector function with `v.dim() == space_ndim`,
     ///    however written as function of the index of the integration point.
-    pub fn integ_vec_b_nv<F>(&mut self, b: &mut Vector, thickness: f64, fn_v: F) -> Result<(), StrError>
+    pub fn integ_vec_b_nv<F>(&mut self, b: &mut Vector, zero_b: bool, thickness: f64, fn_v: F) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -260,7 +252,9 @@ impl Shape {
         let mut v = Vector::new(self.space_ndim);
 
         // clear output vector
-        b.fill(0.0);
+        if zero_b {
+            b.fill(0.0);
+        }
 
         // loop over integration points
         for index in 0..self.integ_points.len() {
@@ -319,10 +313,11 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `zero_c` -- fills `c` vector with zeros, otherwise accumulate values into `c`
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
     /// * `fn_w(w: &mut Vector, index_ip: usize)` -- w(x(ξ)) vector function with `w.dim() == space_ndim`,
     ///   however written as a function of the index of the integration point.
-    pub fn integ_vec_c_vg<F>(&mut self, c: &mut Vector, thickness: f64, fn_w: F) -> Result<(), StrError>
+    pub fn integ_vec_c_vg<F>(&mut self, c: &mut Vector, zero_c: bool, thickness: f64, fn_w: F) -> Result<(), StrError>
     where
         F: Fn(&mut Vector, usize) -> Result<(), StrError>,
     {
@@ -335,7 +330,9 @@ impl Shape {
         let mut w = Vector::new(self.space_ndim);
 
         // clear output vector
-        c.fill(0.0);
+        if zero_c {
+            c.fill(0.0);
+        }
 
         // loop over integration points
         for index in 0..self.integ_points.len() {
@@ -399,15 +396,22 @@ impl Shape {
     ///
     /// # Input
     ///
+    /// * `zero_d` -- fills `d` vector with zeros, otherwise accumulate values into `d`
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    /// * `element` -- an instance that implements the σ(x(ξ)) callback function
+    /// * `calc_sig` -- calculates the σ tensor at given integration point using `calc_sig(sig,index_ip)`
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_vec_d_tg<T>(&mut self, d: &mut Vector, thickness: f64, element: &T) -> Result<(), StrError>
+    pub fn integ_vec_d_tg<F>(
+        &mut self,
+        d: &mut Vector,
+        zero_d: bool,
+        thickness: f64,
+        calc_sig: F,
+    ) -> Result<(), StrError>
     where
-        T: IntegTG,
+        F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
     {
         // check
         if self.space_ndim == 1 {
@@ -421,7 +425,9 @@ impl Shape {
         let mut sig = Tensor2::new(true, self.space_ndim == 2);
 
         // clear output vector
-        d.fill(0.0);
+        if zero_d {
+            d.fill(0.0);
+        }
 
         // loop over integration points
         for index in 0..self.integ_points.len() {
@@ -432,8 +438,8 @@ impl Shape {
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(iota)?;
 
-            // calculate σ
-            element.calc_sig(&mut sig, index)?;
+            // calculate σ tensor
+            calc_sig(&mut sig, index)?;
 
             // add contribution to d vector
             let coef = thickness * det_jac * weight;
@@ -534,14 +540,14 @@ impl Shape {
     /// # Input
     ///
     /// * `thickness` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
-    /// * `element` -- an instance that implements the D(x(ξ)) callback function
+    /// * `calc_dd` -- calculates the D tensor at given integration point using `calc_dd(dd,index_ip)`
     ///
     /// # Note
     ///
     /// This function is only available for space_ndim = 2D or 3D.
-    pub fn integ_mat_10_gdg<T>(&mut self, kk: &mut Matrix, thickness: f64, element: &T) -> Result<(), StrError>
+    pub fn integ_mat_10_gdg<F>(&mut self, kk: &mut Matrix, thickness: f64, calc_dd: F) -> Result<(), StrError>
     where
-        T: IntegGDG,
+        F: Fn(&mut Tensor4, usize) -> Result<(), StrError>,
     {
         // check
         let (nrow_kk, ncol_kk) = kk.dims();
@@ -549,7 +555,7 @@ impl Shape {
             return Err("space_ndim must be 2 or 3");
         }
         if nrow_kk != ncol_kk || nrow_kk != self.nnode * self.space_ndim {
-            return Err("'K' matrix must be square with dim equal to nnode * space_ndim");
+            return Err("K matrix must be square with dim equal to nnode * space_ndim");
         }
 
         // allocate auxiliary tensor
@@ -567,8 +573,8 @@ impl Shape {
             // calculate Jacobian and Gradient
             let det_jac = self.calc_gradient(iota)?;
 
-            // calculate constitutive modulus
-            element.calc_dd(&mut dd, index)?;
+            // calculate D tensor
+            calc_dd(&mut dd, index)?;
 
             // add contribution to K matrix
             let coef = det_jac * weight * thickness;
@@ -677,11 +683,10 @@ impl Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::SQRT_3;
+    use crate::{shapes::AnalyticalTri3, util::SQRT_3};
     use russell_chk::assert_vec_approx_eq;
-    use russell_lab::{copy_matrix, copy_vector, mat_mat_mul, mat_t_mat_mul, Matrix};
+    use russell_lab::{copy_matrix, copy_vector, Matrix};
     use russell_tensor::LinElasticity;
-    use std::cell::RefCell;
 
     // to test if variables are cleared before sum
     const NOISE: f64 = 1234.56;
@@ -715,48 +720,6 @@ mod tests {
         shape.set_node(0, 0, 0, xa).unwrap();
         shape.set_node(1, 1, 0, xb).unwrap();
         (shape, xa, xb)
-    }
-
-    struct AnalyticalTri3 {
-        x: [f64; 3], // node x-coordinates
-        y: [f64; 3], // node y-coordinates
-        b: [f64; 3], // b-coefficients
-        c: [f64; 3], // c-coefficients
-        area: f64,   // area
-    }
-
-    impl AnalyticalTri3 {
-        pub fn new(tri3: &mut Shape) -> Self {
-            // coefficients
-            let (x0, y0) = (tri3.coords_transp[0][0], tri3.coords_transp[1][0]);
-            let (x1, y1) = (tri3.coords_transp[0][1], tri3.coords_transp[1][1]);
-            let (x2, y2) = (tri3.coords_transp[0][2], tri3.coords_transp[1][2]);
-            let (b0, b1, b2) = (y1 - y2, y2 - y0, y0 - y1);
-            let (c0, c1, c2) = (x2 - x1, x0 - x2, x1 - x0);
-            let (f0, f1, f2) = (x1 * y2 - x2 * y1, x2 * y0 - x0 * y2, x0 * y1 - x1 * y0);
-
-            // area
-            let area = (f0 + f1 + f2) / 2.0;
-
-            // check gradients
-            let gg = Matrix::from(&[
-                [b0 / (2.0 * area), c0 / (2.0 * area)],
-                [b1 / (2.0 * area), c1 / (2.0 * area)],
-                [b2 / (2.0 * area), c2 / (2.0 * area)],
-            ]);
-            let ksi = &tri3.integ_points[0];
-            tri3.calc_gradient(ksi).unwrap();
-            assert_eq!(tri3.temp_gradient.as_data(), gg.as_data());
-
-            // results
-            AnalyticalTri3 {
-                x: [x0, x1, x2],
-                y: [y0, y1, y2],
-                b: [b0, b1, b2],
-                c: [c0, c1, c2],
-                area,
-            }
-        }
     }
 
     #[test]
@@ -839,7 +802,7 @@ mod tests {
         let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let mut a = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_a_ns(&mut a, 1.0, |_| Ok(CS))?;
+        tri3.integ_vec_a_ns(&mut a, true, 1.0, |_| Ok(CS))?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
@@ -856,7 +819,7 @@ mod tests {
         let (mut lin2, xa, xb) = gen_lin2();
         let all_integ_points = lin2.calc_integ_points_coords()?;
         let mut a = Vector::new(lin2.nnode);
-        lin2.integ_vec_a_ns(&mut a, 1.0, |index_ip: usize| Ok(all_integ_points[index_ip][0]))?;
+        lin2.integ_vec_a_ns(&mut a, true, 1.0, |index_ip: usize| Ok(all_integ_points[index_ip][0]))?;
         let cf = (xb - xa) / 6.0;
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
@@ -870,7 +833,7 @@ mod tests {
         let (mut tri3, area) = gen_tri3();
         const CS: f64 = 3.0;
         let mut b = Vector::filled(tri3.nnode * tri3.space_ndim, NOISE);
-        tri3.integ_vec_b_nv(&mut b, 1.0, |v: &mut Vector, _: usize| {
+        tri3.integ_vec_b_nv(&mut b, true, 1.0, |v: &mut Vector, _: usize| {
             v.fill(CS);
             Ok(())
         })?;
@@ -883,7 +846,7 @@ mod tests {
         let (mut lin2, xa, xb) = gen_lin2();
         let all_integ_points = lin2.calc_integ_points_coords()?;
         let mut b = Vector::filled(lin2.nnode * lin2.space_ndim, NOISE);
-        lin2.integ_vec_b_nv(&mut b, 1.0, |v: &mut Vector, index: usize| {
+        lin2.integ_vec_b_nv(&mut b, true, 1.0, |v: &mut Vector, index: usize| {
             v.fill(all_integ_points[index][0]);
             Ok(())
         })?;
@@ -897,7 +860,7 @@ mod tests {
     fn integ_vec_c_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (mut tri3, area) = gen_tri3();
-        let ana = AnalyticalTri3::new(&mut tri3);
+        let mut ana = AnalyticalTri3::new(&mut tri3);
         assert_eq!(area, ana.area);
 
         // constant vector function: w(x) = {w₀, w₁}
@@ -905,13 +868,9 @@ mod tests {
         //    cᵐ = ½ (w₀ bₘ + w₁ cₘ)
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
-        let c_correct = &[
-            (W0 * ana.b[0] + W1 * ana.c[0]) / 2.0,
-            (W0 * ana.b[1] + W1 * ana.c[1]) / 2.0,
-            (W0 * ana.b[2] + W1 * ana.c[2]) / 2.0,
-        ];
+        let c_correct = ana.integ_vec_c_constant(W0, W1);
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_c_vg(&mut c, 1.0, |w: &mut Vector, _: usize| {
+        tri3.integ_vec_c_vg(&mut c, true, 1.0, |w: &mut Vector, _: usize| {
             w[0] = W0;
             w[1] = W1;
             Ok(())
@@ -922,13 +881,9 @@ mod tests {
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
         let all_integ_points = tri3.calc_integ_points_coords()?;
-        let c_correct = &[
-            (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[0] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[0] / 6.0,
-            (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[1] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[1] / 6.0,
-            (ana.x[0] + ana.x[1] + ana.x[2]) * ana.b[2] / 6.0 + (ana.y[0] + ana.y[1] + ana.y[2]) * ana.c[2] / 6.0,
-        ];
+        let c_correct = ana.integ_vec_c_bilinear();
         let mut c = Vector::filled(tri3.nnode, NOISE);
-        tri3.integ_vec_c_vg(&mut c, 1.0, |w: &mut Vector, index: usize| {
+        tri3.integ_vec_c_vg(&mut c, true, 1.0, |w: &mut Vector, index: usize| {
             w[0] = all_integ_points[index][0];
             w[1] = all_integ_points[index][1];
             Ok(())
@@ -937,67 +892,62 @@ mod tests {
         Ok(())
     }
 
-    pub struct StressState2d {
-        pub sig: Tensor2,  // (effective) stress
-        pub ivs: Vec<f64>, // internal values
-        pub aux: Vec<f64>, // auxiliary
+    #[derive(Clone)]
+    pub struct StateStress {
+        pub sigma: Tensor2,            // total or effective stress
+        pub internal_values: Vec<f64>, // internal values
     }
 
-    impl StressState2d {
-        pub fn new(nivs: usize, naux: usize) -> Self {
-            StressState2d {
-                sig: Tensor2::new(true, true),
-                ivs: vec![0.0; nivs],
-                aux: vec![0.0; naux],
-            }
-        }
+    pub struct StateElement {
+        pub stress: Vec<StateStress>, // (n_integ_point)
     }
 
     struct LinElastModel2d {
         lin_elast: LinElasticity,
-        n_times_called: usize, // for testing purposes
     }
 
     impl LinElastModel2d {
         pub fn new(young: f64, poisson: f64, plane_stress: bool) -> Self {
             LinElastModel2d {
                 lin_elast: LinElasticity::new(young, poisson, true, plane_stress),
-                n_times_called: 0,
             }
         }
-        pub fn consistent_modulus(&mut self, dd: &mut Tensor4, _state: &StressState2d) -> Result<(), StrError> {
+        pub fn consistent_modulus(&self, dd: &mut Tensor4, _state: &StateStress) -> Result<(), StrError> {
             let dd_ela = self.lin_elast.get_modulus();
-            self.n_times_called += 1;
             copy_matrix(&mut dd.mat, &dd_ela.mat)
         }
     }
 
     struct ElemElast2d {
-        state: StressState2d,
-        model: RefCell<LinElastModel2d>,
-        n_times_dd_computed: RefCell<usize>, // for testing purposes
+        shape: Shape,
+        model: LinElastModel2d,
+        thickness: f64,
+        pub f: Vector,
+        pub kk: Matrix,
     }
 
     impl ElemElast2d {
-        pub fn new(young: f64, poisson: f64, plane_stress: bool) -> Self {
+        pub fn new(shape: Shape, young: f64, poisson: f64, plane_stress: bool, thickness: f64) -> Self {
+            let neq = shape.nnode * shape.space_ndim;
             ElemElast2d {
-                state: StressState2d::new(1, 1),
-                model: RefCell::new(LinElastModel2d::new(young, poisson, plane_stress)),
-                n_times_dd_computed: RefCell::new(0),
+                shape,
+                model: LinElastModel2d::new(young, poisson, plane_stress),
+                thickness,
+                f: Vector::new(neq),
+                kk: Matrix::new(neq, neq),
             }
         }
-    }
-
-    impl IntegTG for ElemElast2d {
-        fn calc_sig(&self, sig: &mut Tensor2, _index_ip: usize) -> Result<(), StrError> {
-            copy_vector(&mut sig.vec, &self.state.sig.vec)
+        pub fn calculate_f(&mut self, state: &StateElement) -> Result<(), StrError> {
+            self.shape
+                .integ_vec_d_tg(&mut self.f, true, self.thickness, |sig, index_ip| {
+                    copy_vector(&mut sig.vec, &state.stress[index_ip].sigma.vec)
+                })
         }
-    }
-
-    impl IntegGDG for ElemElast2d {
-        fn calc_dd(&self, dd: &mut Tensor4, _index_ip: usize) -> Result<(), StrError> {
-            *self.n_times_dd_computed.borrow_mut() += 1;
-            self.model.borrow_mut().consistent_modulus(dd, &self.state)
+        pub fn calculate_kk(&mut self, state: &StateElement) -> Result<(), StrError> {
+            self.shape
+                .integ_mat_10_gdg(&mut self.kk, self.thickness, |dd, index_ip| {
+                    self.model.consistent_modulus(dd, &state.stress[index_ip])
+                })
         }
     }
 
@@ -1005,7 +955,7 @@ mod tests {
     fn integ_vec_d_works() -> Result<(), StrError> {
         // shape and analytical gradient
         let (mut tri3, _) = gen_tri3();
-        let ana = AnalyticalTri3::new(&mut tri3);
+        let mut ana = AnalyticalTri3::new(&mut tri3);
 
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
@@ -1015,27 +965,37 @@ mod tests {
         const S11: f64 = 3.0;
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
-        let d_correct = &[
-            (S00 * ana.b[0] + S01 * ana.c[0]) / 2.0,
-            (S01 * ana.b[0] + S11 * ana.c[0]) / 2.0,
-            (S00 * ana.b[1] + S01 * ana.c[1]) / 2.0,
-            (S01 * ana.b[1] + S11 * ana.c[1]) / 2.0,
-            (S00 * ana.b[2] + S01 * ana.c[2]) / 2.0,
-            (S01 * ana.b[2] + S11 * ana.c[2]) / 2.0,
-        ];
+        let f_vec_correct = ana.integ_vec_d_constant(S00, S11, S01);
+
+        // constants
+        let young = 10_000.0;
+        let poisson = 0.2;
+        let thickness = 1.0;
 
         // element instance with callback function calc_sig for integration
-        let mut element = ElemElast2d::new(10_000.0, 0.2, true);
-        element.state.sig.sym_set(0, 0, S00);
-        element.state.sig.sym_set(1, 1, S11);
-        element.state.sig.sym_set(2, 2, S22);
-        element.state.sig.sym_set(0, 1, S01);
+        let n_integ_point = tri3.integ_points.len();
+        let mut element = ElemElast2d::new(tri3, young, poisson, true, thickness);
+
+        // state at all integration points
+        #[rustfmt::skip]
+        let sigma = Tensor2::from_matrix(&[
+            [S00, S01, 0.0],
+            [S01, S11, 0.0],
+            [0.0, 0.0, S22],
+        ],true,true)?;
+        let state = StateElement {
+            stress: vec![
+                StateStress {
+                    sigma,
+                    internal_values: Vec::new()
+                };
+                n_integ_point
+            ],
+        };
 
         // test integration
-        let dim_d = tri3.nnode * tri3.space_ndim;
-        let mut d = Vector::filled(dim_d, NOISE);
-        tri3.integ_vec_d_tg(&mut d, 1.0, &element)?;
-        assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
+        element.calculate_f(&state)?;
+        assert_vec_approx_eq!(element.f.as_data(), f_vec_correct, 1e-14);
         Ok(())
     }
 
@@ -1071,41 +1031,36 @@ mod tests {
         tri3.set_node(2, 1, 1, 0.0).unwrap();
         tri3.set_node(3, 2, 0, 2.0).unwrap();
         tri3.set_node(3, 2, 1, 1.5).unwrap();
-        let ana = AnalyticalTri3::new(&mut tri3);
+        let mut ana = AnalyticalTri3::new(&mut tri3);
 
         // constants
         let young = 10_000.0;
         let poisson = 0.2;
         let thickness = 0.25; // thickness
-        let dim_dd = 2 * tri3.space_ndim;
-        let dim_kk = tri3.nnode * tri3.space_ndim;
-
-        // solution: compute B-matrix (dim_dd,dim_kk)
-        let r = 2.0 * ana.area;
-        let s = r * SQRT_2;
-        #[rustfmt::skip]
-        let bb = Matrix::from(&[
-            [ana.b[0]/r,        0.0, ana.b[1]/r,        0.0, ana.b[2]/r,        0.0],
-            [       0.0, ana.c[0]/r,        0.0, ana.c[1]/r,        0.0, ana.c[2]/r],
-            [       0.0,        0.0,        0.0,        0.0,        0.0,        0.0],
-            [ana.c[0]/s, ana.b[0]/s, ana.c[1]/s, ana.b[1]/s, ana.c[2]/s, ana.b[2]/s],
-        ]);
-        assert_eq!(bb.dims(), (dim_dd, dim_kk));
-
-        // solution: compute K = Bᵀ ⋅ D ⋅ B
-        let ela = LinElasticity::new(young, poisson, true, true);
-        let dd_ela = ela.get_modulus();
-        let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
-        let mut kk_correct = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &bb, &dd_ela.mat)?;
-        mat_mat_mul(&mut kk_correct, thickness * ana.area, &bb_t_dd, &bb)?;
 
         // element instance with callback function calc_dd for integration
-        let element = ElemElast2d::new(young, poisson, true);
+        let n_integ_point = tri3.integ_points.len();
+        let mut element = ElemElast2d::new(tri3, young, poisson, true, thickness);
 
-        // perform integration
-        let mut kk = Matrix::new(dim_kk, dim_kk);
-        tri3.integ_mat_10_gdg(&mut kk, thickness, &element)?;
+        // state at all integration points
+        #[rustfmt::skip]
+        let sigma = Tensor2::from_matrix(&[
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+        ],true,true)?;
+        let state = StateElement {
+            stress: vec![
+                StateStress {
+                    sigma,
+                    internal_values: Vec::new()
+                };
+                n_integ_point
+            ],
+        };
+
+        // test integration
+        element.calculate_kk(&state)?;
 
         // results from Bhatti's book
         #[rustfmt::skip]
@@ -1119,9 +1074,9 @@ mod tests {
         ]);
 
         // check
+        let kk_correct = ana.integ_stiffness(young, poisson, true, thickness)?;
         assert_vec_approx_eq!(kk_correct.as_data(), kk_bhatti.as_data(), 1e-12);
-        assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
-        assert_eq!(*element.n_times_dd_computed.borrow(), tri3.integ_points.len());
+        assert_vec_approx_eq!(kk_correct.as_data(), element.kk.as_data(), 1e-12);
         Ok(())
     }
 }

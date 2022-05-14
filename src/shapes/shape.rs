@@ -22,10 +22,13 @@ pub type IntegPointConstants = &'static [[f64; 4]];
 ///                  for instance, a line in the 2D space has `geo_ndim = 1` and
 ///                  `space_ndim = 2`. Another example is a triangle in the 3D space
 ///                  which has `geo_ndim = 2` and `space_ndim = 3`.
+/// * `local` refers to a numbering scheme for the nodes of the shape (or element)
+/// * `global` refers to a numbering scheme applied for the whole mesh
 ///
 /// We also consider the following counting variables:
 ///
-/// * `nnode` -- number of points that define the shape (number of nodes)
+/// * `nnode` -- (local) number of points that define the shape (number of nodes)
+/// * `npoint` -- (global) number of points in the whole mesh; not used here but important to remember
 /// * `nedge` -- number of edges
 /// * `nface` -- number of faces
 /// * `edge_nnode` -- number of points that define the edge (number of nodes)
@@ -198,8 +201,8 @@ pub struct Shape {
     /// Tells if at least the last entry of the coordinates matrix has been input
     ok_last_coord: bool,
 
-    /// Global point ids corresponding to coords_transp (nnode)
-    pub point_ids: Vec<usize>,
+    /// Maps local node index to global point id (aka "connectivity"); corresponds to coords_transp (nnode)
+    pub node_to_point: Vec<usize>,
 
     /// Matrix Xᵀ: (space_ndim,nnode) transposed coordinates matrix (real space)
     pub coords_transp: Matrix,
@@ -499,7 +502,7 @@ impl Shape {
             fn_interp,
             fn_deriv,
             ok_last_coord: false,
-            point_ids: vec![0; nnode],
+            node_to_point: vec![0; nnode],
             coords_transp: Matrix::new(space_ndim, nnode),
             coords_min: vec![f64::MAX; space_ndim],
             coords_max: vec![f64::MIN; space_ndim],
@@ -582,13 +585,14 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `point_id` -- the global point id that can be used for reference
+    /// * `point_id` -- the global point id to configure the `node_to_point` map; aka "connectivity"
     /// * `m` -- node index from 0 to nnode - 1
     /// * `j` -- dimension index from 0 to space_ndim - 1
     /// * `value` -- the X(m,j) component
     ///
     /// # Updated variables
     ///
+    /// * `node_to_point` -- (nnode) array of point ids that works as a map from "local node index" to "global point id"
     /// * `coords_transp` -- Matrix Xᵀ: (space_ndim,nnode) transposed coordinates matrix (real space)
     pub fn set_node(&mut self, point_id: usize, m: usize, j: usize, value: f64) -> Result<(), StrError> {
         if m >= self.nnode {
@@ -597,7 +601,7 @@ impl Shape {
         if j >= self.space_ndim {
             return Err("index of space dimension is invalid");
         }
-        self.point_ids[m] = point_id;
+        self.node_to_point[m] = point_id;
         self.coords_transp[j][m] = value;
         if value < self.coords_min[j] {
             self.coords_min[j] = value;
@@ -1431,7 +1435,7 @@ mod tests {
         shape.set_node(456, 1, 1, 4.56)?;
         shape.set_node(789, 2, 0, -7.89)?;
         shape.set_node(789, 2, 1, 7.89)?;
-        assert_eq!(shape.point_ids, &[123, 456, 789]);
+        assert_eq!(shape.node_to_point, &[123, 456, 789]);
         assert_eq!(
             format!("{}", shape.coords_transp),
             "┌                   ┐\n\

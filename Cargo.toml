@@ -1,6 +1,6 @@
 [package]
 name = "gemlab"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 description = "Geometry laboratory for finite element analyses"
@@ -12,11 +12,15 @@ categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
 
 [dependencies]
-plotpy = { path = "../plotpy", version = "0.2" }
+plotpy = "0.3"
+# plotpy = { path = "../plotpy", version = "0.3" }
 russell_chk = "0.2"
-russell_lab = { path = "../russell/russell_lab", version = "0.2" }
-russell_sparse = { path = "../russell/russell_sparse", version = "0.2" }
-russell_tensor = { path = "../russell/russell_tensor", version = "0.1" }
+russell_lab = "0.3"
+russell_sparse = "0.3"
+russell_tensor = "0.2"
+# russell_lab = { path = "../russell/russell_lab", version = "0.3" }
+# russell_sparse = { path = "../russell/russell_sparse", version = "0.3" }
+# russell_tensor = { path = "../russell/russell_tensor", version = "0.2" }
 rmp-serde = "1.0.0"
 serde = { version = "1.0.136", features = ["derive"] }
 

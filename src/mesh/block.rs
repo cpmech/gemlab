@@ -1559,7 +1559,7 @@ mod tests {
 
         // check point ids
         let face_shape = mesh.alloc_shape_boundary_face(&(34, 45, 70, 77))?;
-        assert_eq!(face_shape.point_ids, &[45, 34, 70, 77, 49, 75, 79, 80]);
+        assert_eq!(face_shape.node_to_point, &[45, 34, 70, 77, 49, 75, 79, 80]);
 
         // check if the normal vectors at boundary are outward
         let mut normal = Vector::new(mesh.space_ndim);
