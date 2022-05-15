@@ -1,6 +1,5 @@
 use super::{Cell, Mesh, Point, PointId};
 use crate::StrError;
-use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -93,12 +92,7 @@ impl DataForReadTextMesh {
             return Err("point data contains extra values");
         }
 
-        mesh.points.push(Point {
-            id,
-            coords,
-            shared_by_boundary_edges: HashSet::new(),
-            shared_by_boundary_faces: HashSet::new(),
-        });
+        mesh.points.push(Point { id, coords });
 
         self.current_npoint += 1; // next point
 
@@ -483,7 +477,7 @@ mod tests {
     fn read_text_mesh_2d_works() -> Result<(), StrError> {
         let mesh = read_text_mesh("./data/meshes/ok1.msh")?;
         assert_eq!(
-            format!("{}", mesh),
+            format!("{:?}", mesh),
             "SUMMARY\n\
              =======\n\
              space_ndim = 2\n\
@@ -524,7 +518,7 @@ mod tests {
     fn read_text_mesh_3d_works() -> Result<(), StrError> {
         let mesh = read_text_mesh("./data/meshes/ok2.msh")?;
         assert_eq!(
-            format!("{}", mesh),
+            format!("{:?}", mesh),
             "SUMMARY\n\
              =======\n\
              space_ndim = 3\n\
@@ -677,7 +671,7 @@ mod tests {
                1   0        2     4  1 4 5 2",
         )?;
         assert_eq!(
-            format!("{}", mesh),
+            format!("{:?}", mesh),
             "SUMMARY\n\
              =======\n\
              space_ndim = 2\n\
@@ -742,7 +736,7 @@ mod tests {
                1   0        3     8  4 5 6 7 8 9 10 11",
         )?;
         assert_eq!(
-            format!("{}", mesh),
+            format!("{:?}", mesh),
             "SUMMARY\n\
              =======\n\
              space_ndim = 3\n\

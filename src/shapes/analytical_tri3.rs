@@ -1,4 +1,4 @@
-use crate::shapes::{GeoKind, Shape};
+use crate::shapes::{GeoKind, Shape, StateOfShape, IP_TRI_INTERNAL_1};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
@@ -26,13 +26,13 @@ pub struct AnalyticalTri3 {
 }
 
 impl AnalyticalTri3 {
-    pub fn new(tri3: &mut Shape) -> Self {
-        assert_eq!(tri3.kind, GeoKind::Tri3);
+    pub fn new(shape: &Shape, state: &mut StateOfShape) -> Self {
+        assert_eq!(shape.kind, GeoKind::Tri3);
 
         // coefficients
-        let (x0, y0) = (tri3.coords_transp[0][0], tri3.coords_transp[1][0]);
-        let (x1, y1) = (tri3.coords_transp[0][1], tri3.coords_transp[1][1]);
-        let (x2, y2) = (tri3.coords_transp[0][2], tri3.coords_transp[1][2]);
+        let (x0, y0) = (state.coords_transp[0][0], state.coords_transp[1][0]);
+        let (x1, y1) = (state.coords_transp[0][1], state.coords_transp[1][1]);
+        let (x2, y2) = (state.coords_transp[0][2], state.coords_transp[1][2]);
         let (b0, b1, b2) = (y1 - y2, y2 - y0, y0 - y1);
         let (c0, c1, c2) = (x2 - x1, x0 - x2, x1 - x0);
         let (f0, f1, f2) = (x1 * y2 - x2 * y1, x2 * y0 - x0 * y2, x0 * y1 - x1 * y0);
@@ -46,9 +46,8 @@ impl AnalyticalTri3 {
             [b1 / (2.0 * area), c1 / (2.0 * area)],
             [b2 / (2.0 * area), c2 / (2.0 * area)],
         ]);
-        let ksi = &tri3.integ_points[0];
-        tri3.calc_gradient(ksi).unwrap();
-        assert_eq!(tri3.temp_gradient.as_data(), gg.as_data());
+        shape.calc_gradient(state, &IP_TRI_INTERNAL_1[0]).unwrap();
+        assert_eq!(state.gradient.as_data(), gg.as_data());
 
         // B-matrix
         let r = 2.0 * area;
@@ -158,10 +157,10 @@ impl AnalyticalTri3 {
 
 #[cfg(test)]
 mod tests {
-    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
-
     use super::AnalyticalTri3;
-    use crate::{shapes::Shape, StrError};
+    use crate::shapes::{Shape, StateOfShape};
+    use crate::StrError;
+    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     #[test]
     fn new_works() -> Result<(), StrError> {
@@ -170,14 +169,15 @@ mod tests {
         // [@bhatti] Bhatti, M.A. (2005) Fundamental Finite Element Analysis
         //          and Applications, Wiley, 700p.
         //
-        let mut tri3 = Shape::new(2, 2, 3)?;
-        tri3.set_node(0, 0, 0, 0.0)?;
-        tri3.set_node(0, 0, 1, 0.0)?;
-        tri3.set_node(1, 1, 0, 0.2)?;
-        tri3.set_node(1, 1, 1, 0.0)?;
-        tri3.set_node(2, 2, 0, 0.1)?;
-        tri3.set_node(2, 2, 1, 0.1)?;
-        let ana = AnalyticalTri3::new(&mut tri3);
+        let shape = Shape::new(2, 2, 3)?;
+        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        state.set_node(0, 0, 0, 0.0)?;
+        state.set_node(0, 0, 1, 0.0)?;
+        state.set_node(1, 1, 0, 0.2)?;
+        state.set_node(1, 1, 1, 0.0)?;
+        state.set_node(2, 2, 0, 0.1)?;
+        state.set_node(2, 2, 1, 0.1)?;
+        let ana = AnalyticalTri3::new(&shape, &mut state);
         assert_eq!(ana.x, [0.0, 0.2, 0.1]);
         assert_eq!(ana.y, [0.0, 0.0, 0.1]);
         assert_approx_eq!(ana.area, 0.01, 1e-15);

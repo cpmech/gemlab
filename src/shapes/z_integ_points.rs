@@ -1,13 +1,16 @@
 // This file defines several constants with integration points data.
-//
-// Each integration point (IP) is defined by 3 reference
-// coordinates (r, s, t) and the weight (w).
-//
-// The 1D and 2D geometries have s and/or t equal to zero as appropriate.
-//
-// The data structure is a 2D array such that [[f64; 4]; NIP]
-// where NIP is the number of integration points in a particular set.
-// "4" corresponds to (r, s, t) and the weight (w).
+
+/// Defines an alias for integration points' constants (coordinates and weights)
+///
+/// Each integration point (IP) is defined by 3 reference
+/// coordinates (r, s, t) and the weight (w).
+///
+/// The 1D and 2D geometries have `s` and/or `t` equal to zero as appropriate.
+///
+/// The data structure is a 2D array such that [[f64; 4]; NIP]
+/// where `NIP` is the number of integration points in a particular set.
+/// Therein, `4` corresponds to (r, s, t) and the weight (w).
+pub type IntegPointConstants = &'static [[f64; 4]];
 
 // -----------------------------------------------------------------------
 // -- LIN ----------------------------------------------------------------
