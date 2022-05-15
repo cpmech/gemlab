@@ -441,7 +441,7 @@ impl Shape {
     #[inline]
     pub fn calc_interp(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
         if ksi.len() < self.geo_ndim {
-            return Err("ksi.len() must ≥ geo_ndim");
+            return Err("ksi.len() must be ≥ geo_ndim");
         }
         (self.fn_interp)(&mut state.interp, ksi);
         Ok(())
@@ -476,7 +476,7 @@ impl Shape {
     #[inline]
     pub fn calc_deriv(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
         if ksi.len() < self.geo_ndim {
-            return Err("ksi.len() must ≥ geo_ndim");
+            return Err("ksi.len() must be ≥ geo_ndim");
         }
         (self.fn_deriv)(&mut state.deriv, ksi);
         Ok(())
@@ -935,7 +935,7 @@ impl Shape {
     ///
     /// * `e` -- index of edge in [0, nedge-1]
     /// * `i` -- index of local node [0, edge_nnode-1]
-    pub fn get_edge_node_id(&self, e: usize, i: usize) -> usize {
+    pub fn edge_node_id(&self, e: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
             GeoKind::Lin3 => 0,
@@ -964,7 +964,7 @@ impl Shape {
     ///
     /// * `f` -- index of face in [0, nface-1]
     /// * `i` -- index of local node [0, face_nnode-1]
-    pub fn get_face_node_id(&self, f: usize, i: usize) -> usize {
+    pub fn face_node_id(&self, f: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
             GeoKind::Lin3 => 0,
@@ -994,7 +994,7 @@ impl Shape {
     /// * `f` -- index of face in [0, nface-1]
     /// * `k` -- index of face's edge (not the index of cell's edge) in [0, face_nedge-1]
     /// * `i` -- index of local node [0, edge_nnode-1]
-    pub fn get_face_edge_node_id(&self, f: usize, k: usize, i: usize) -> usize {
+    pub fn face_edge_node_id(&self, f: usize, k: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
             GeoKind::Lin3 => 0,
@@ -1022,7 +1022,7 @@ impl Shape {
     /// # Output
     ///
     /// * `ksi` -- (geo_ndim) reference coordinates `ξᵐ` at node m
-    pub fn get_reference_coords(&self, m: usize) -> &'static [f64] {
+    pub fn reference_coords(&self, m: usize) -> &'static [f64] {
         match self.kind {
             GeoKind::Lin2 => &Lin2::NODE_REFERENCE_COORDS[m],
             GeoKind::Lin3 => &Lin3::NODE_REFERENCE_COORDS[m],
@@ -1051,7 +1051,7 @@ impl Shape {
 #[cfg(test)]
 mod tests {
     use super::{GeoClass, GeoKind, Shape};
-    use crate::shapes::{ref_domain_limits, StateOfShape, IP_LIN_LEGENDRE_1};
+    use crate::shapes::{ref_domain_limits, StateOfShape, IP_LIN_LEGENDRE_2};
     use crate::util::{PI, SQRT_3};
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq, assert_vec_approx_eq};
@@ -1120,7 +1120,7 @@ mod tests {
         let mut ksi_aux = vec![0.0; shape.space_ndim];
         let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
         for m in 0..shape.nnode {
-            let ksi = shape.get_reference_coords(m);
+            let ksi = shape.reference_coords(m);
             if shape.geo_ndim == shape.space_ndim {
                 gen_coords(&mut x, ksi, shape.class);
             } else if shape.geo_ndim == 1 && shape.space_ndim == 2 {
@@ -1156,7 +1156,7 @@ mod tests {
         }
         let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
         for m in 0..shape.nnode {
-            let ksi = shape.get_reference_coords(m);
+            let ksi = shape.reference_coords(m);
             for j in 0..shape.geo_ndim {
                 let point_id = 100 + m;
                 state.set_node(point_id, m, j, scale * ksi[j])?;
@@ -1176,28 +1176,17 @@ mod tests {
         // shape and state
         let shape = Shape::new(1, 1, 2)?;
         let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
-        state.set_node(100, 0, 0, 0.0)?;
-        state.set_node(200, 1, 0, 1.0)?;
 
-        // calc_jacobian
+        // calc_interp
         assert_eq!(
-            shape.calc_jacobian(&mut state, &[]).err(),
-            Some("ksi.len() must equal geo_ndim at least")
-        );
-        assert_eq!(
-            shape.calc_jacobian(&mut state, &[0.0]).err(),
-            Some("the last node coordinate has not been input yet")
+            shape.calc_interp(&mut state, &[]).err(),
+            Some("ksi.len() must be ≥ geo_ndim")
         );
 
-        // calc_coords
-        let mut x = Vector::new(1);
+        // calc_deriv
         assert_eq!(
-            shape.calc_coords(&mut x, &mut state, &[0.0]).err(),
-            Some("the last node coordinate has not been input yet")
-        );
-        assert_eq!(
-            shape.calc_coords(&mut x, &mut state, &[]).err(),
-            Some("ksi.len() must equal geo_ndim at least")
+            shape.calc_deriv(&mut state, &[]).err(),
+            Some("ksi.len() must be ≥ geo_ndim")
         );
 
         // calc_coords
@@ -1205,6 +1194,17 @@ mod tests {
         assert_eq!(
             shape.calc_coords(&mut x, &mut state, &[0.0]).err(),
             Some("x.dim() must equal space_ndim")
+        );
+        let mut x = Vector::new(1);
+        assert_eq!(
+            shape.calc_coords(&mut x, &mut state, &[0.0]).err(),
+            Some("the last node coordinate has not been given yet")
+        );
+
+        // calc_jacobian
+        assert_eq!(
+            shape.calc_jacobian(&mut state, &[0.0]).err(),
+            Some("the last node coordinate has not been given yet")
         );
 
         // calc_boundary_normal
@@ -1221,12 +1221,8 @@ mod tests {
         );
         let mut normal = Vector::new(2);
         assert_eq!(
-            shape.calc_boundary_normal(&mut normal, &mut state, &[]).err(),
-            Some("ksi.len() must equal geo_ndim at least")
-        );
-        assert_eq!(
             shape.calc_boundary_normal(&mut normal, &mut state, &[0.0]).err(),
-            Some("the last node coordinate has not been input yet")
+            Some("the last node coordinate has not been given yet")
         );
 
         // approximate_ksi
@@ -1246,15 +1242,9 @@ mod tests {
             Some("x.dim() must equal space_ndim")
         );
         let x = Vector::new(1);
-        let mut ksi = vec![0.0; 0];
         assert_eq!(
             shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
-            Some("ksi.len() must equal geo_ndim")
-        );
-        let mut ksi = vec![0.0; 1];
-        assert_eq!(
-            shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
-            Some("the last node coordinate has not been input yet")
+            Some("the last node coordinate has not been given yet")
         );
 
         // calc_gradient
@@ -1267,18 +1257,14 @@ mod tests {
         let shape = Shape::new(1, 1, 2)?;
         let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
         assert_eq!(
-            shape.calc_gradient(&mut state, &[]).err(),
-            Some("ksi.len() must equal geo_ndim at least")
-        );
-        assert_eq!(
             shape.calc_gradient(&mut state, &[0.0]).err(),
-            Some("the last node coordinate has not been input yet")
+            Some("the last node coordinate has not been given yet")
         );
 
         // calc_integ_points_coords
         assert_eq!(
-            shape.calc_integ_points_coords(&mut state, &IP_LIN_LEGENDRE_1).err(),
-            Some("the last node coordinate has not been input yet")
+            shape.calc_integ_points_coords(&mut state, &IP_LIN_LEGENDRE_2).err(),
+            Some("the last node coordinate has not been given yet")
         );
         Ok(())
     }
@@ -1289,25 +1275,25 @@ mod tests {
             let space_ndim = geo_ndim;
             let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
             match shape.class {
-                GeoClass::Lin => assert_eq!(shape.get_edge_node_id(0, 0), 0),
-                GeoClass::Tri => assert_eq!(shape.get_edge_node_id(0, 0), 1),
-                GeoClass::Qua => assert_eq!(shape.get_edge_node_id(0, 0), 1),
-                GeoClass::Tet => assert_eq!(shape.get_edge_node_id(0, 0), 0),
-                GeoClass::Hex => assert_eq!(shape.get_edge_node_id(0, 0), 0),
+                GeoClass::Lin => assert_eq!(shape.edge_node_id(0, 0), 0),
+                GeoClass::Tri => assert_eq!(shape.edge_node_id(0, 0), 1),
+                GeoClass::Qua => assert_eq!(shape.edge_node_id(0, 0), 1),
+                GeoClass::Tet => assert_eq!(shape.edge_node_id(0, 0), 0),
+                GeoClass::Hex => assert_eq!(shape.edge_node_id(0, 0), 0),
             }
             match shape.class {
-                GeoClass::Lin => assert_eq!(shape.get_face_node_id(0, 0), 0),
-                GeoClass::Tri => assert_eq!(shape.get_face_node_id(0, 0), 0),
-                GeoClass::Qua => assert_eq!(shape.get_face_node_id(0, 0), 0),
-                GeoClass::Tet => assert_eq!(shape.get_face_node_id(0, 0), 0),
-                GeoClass::Hex => assert_eq!(shape.get_face_node_id(0, 0), 0),
+                GeoClass::Lin => assert_eq!(shape.face_node_id(0, 0), 0),
+                GeoClass::Tri => assert_eq!(shape.face_node_id(0, 0), 0),
+                GeoClass::Qua => assert_eq!(shape.face_node_id(0, 0), 0),
+                GeoClass::Tet => assert_eq!(shape.face_node_id(0, 0), 0),
+                GeoClass::Hex => assert_eq!(shape.face_node_id(0, 0), 0),
             }
             match shape.class {
-                GeoClass::Lin => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
-                GeoClass::Tri => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
-                GeoClass::Qua => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
-                GeoClass::Tet => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
-                GeoClass::Hex => assert_eq!(shape.get_face_edge_node_id(0, 0, 0), 0),
+                GeoClass::Lin => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
+                GeoClass::Tri => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
+                GeoClass::Qua => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
+                GeoClass::Tet => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
+                GeoClass::Hex => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
             }
         }
         Ok(())
@@ -1349,7 +1335,7 @@ mod tests {
             // loop over nodes of shape
             for m in 0..shape.nnode {
                 // get ξᵐ corresponding to node m
-                let ksi = shape.get_reference_coords(m);
+                let ksi = shape.reference_coords(m);
 
                 // compute interpolation function Nⁿ(ξᵐ)
                 shape.calc_interp(&mut state, ksi)?;
@@ -1510,7 +1496,7 @@ mod tests {
             let mut x_correct = Vector::new(shape.space_ndim);
             for m in 0..shape.nnode {
                 // get ξᵐ corresponding to node m
-                let ksi = shape.get_reference_coords(m);
+                let ksi = shape.reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
                 shape.calc_coords(&mut x, &mut state, ksi)?;
@@ -1777,7 +1763,7 @@ mod tests {
                 // set edge coordinates
                 for i in 0..edge_nnode {
                     for j in 0..space_ndim {
-                        let m = shape.get_edge_node_id(e, i);
+                        let m = shape.edge_node_id(e, i);
                         let point_id = 100 + m;
                         edge_state.set_node(point_id, i, j, state.coords_transp[j][m])?;
                     }
@@ -1866,7 +1852,7 @@ mod tests {
                 // set face coordinates
                 for i in 0..face_nnode {
                     for j in 0..space_ndim {
-                        let m = shape.get_face_node_id(f, i);
+                        let m = shape.face_node_id(f, i);
                         let point_id = 100 + m;
                         face_state.set_node(point_id, i, j, state.coords_transp[j][m])?;
                     }
@@ -1919,7 +1905,7 @@ mod tests {
             let mut ksi = vec![0.0; shape.geo_ndim];
             for m in 0..shape.nnode {
                 // get ξᵐ corresponding to node m
-                let ksi_ref = shape.get_reference_coords(m);
+                let ksi_ref = shape.reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
                 shape.calc_coords(&mut x, &mut state, ksi_ref)?;
@@ -2038,7 +2024,7 @@ mod tests {
         let (xa, xb) = (2.0, 5.0);
         state.set_node(point_id, 0, 0, xa)?;
         state.set_node(point_id, 1, 0, xb)?;
-        let integ_points = shape.calc_integ_points_coords(&mut state, &IP_LIN_LEGENDRE_1)?;
+        let integ_points = shape.calc_integ_points_coords(&mut state, &IP_LIN_LEGENDRE_2)?;
         assert_eq!(integ_points.len(), 2);
         let ksi_a = -1.0 / SQRT_3;
         let ksi_b = 1.0 / SQRT_3;

@@ -339,7 +339,7 @@ impl Block {
                     let mut points = vec![0; shape_out.nnode];
                     for m in 0..shape_out.nnode {
                         // reference natural coordinates of the new cell nodes
-                        let ksi_ref = shape_out.get_reference_coords(m);
+                        let ksi_ref = shape_out.reference_coords(m);
 
                         // scale and translate the reference coordinates
                         for a in 0..space_ndim {
