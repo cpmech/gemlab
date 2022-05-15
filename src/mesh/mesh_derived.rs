@@ -1,20 +1,3 @@
-/// Aliases (usize,usize) as the key of Edge
-///
-/// # Note
-///
-/// Since the local numbering scheme runs over "corners" first, we can compare
-/// edges using only two points; i.e., the middle points don't matter.
-pub type EdgeKey = (usize, usize);
-
-/// Aliases (usize,usize,usize,usize) as the key of Face
-///
-/// # Note
-///
-/// If all faces have at most 3 points, the fourth entry in the key will be equal to the total number of points.
-/// In this way, we can compare 4-node (or more nodes) faces with each other, since that the local numbering
-/// scheme runs over the "corners" first; i.e., the middle points don't matter.
-pub type FaceKey = (usize, usize, usize, usize);
-
 /// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PointDerived {
@@ -26,31 +9,6 @@ pub struct PointDerived {
 
     /// Set of boundary faces sharing this point
     pub shared_by_boundary_faces: HashSet<FaceKey>,
-}
-
-/// Holds edge data (derived data structure)
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct EdgeDerived {
-    /// List of points defining this edge; in the right order (unsorted)
-    pub points: Vec<PointId>,
-
-    /// Set of 2D cells sharing this edge (to find the boundary)
-    ///
-    /// **2D mesh only**
-    pub shared_by_2d_cells: HashSet<CellId>,
-
-    /// Set of boundary faces sharing this edge
-    pub shared_by_boundary_faces: HashSet<FaceKey>,
-}
-
-/// Holds face data (derived data structure)
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct FaceDerived {
-    /// List of points defining this face; in the right order (unsorted)
-    pub points: Vec<PointId>,
-
-    /// Set of cells sharing this face
-    pub shared_by_cells: HashSet<CellId>,
 }
 
 /// Holds mesh data (derived)
