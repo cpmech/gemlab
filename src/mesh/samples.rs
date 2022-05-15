@@ -1,5 +1,6 @@
 use super::{Cell, Mesh, Point};
 
+/// Holds samples of meshes
 pub struct Samples;
 
 impl Samples {
