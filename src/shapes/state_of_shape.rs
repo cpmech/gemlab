@@ -155,17 +155,17 @@ mod tests {
         let point_id = 123;
         assert_eq!(
             state.set_node(point_id, 3, 0, 0.0).err(),
-            Some("index of node is invalid")
+            Some("index of node must be in 0 ≤ m ≤ nnode - 1")
         );
         assert_eq!(
             state.set_node(point_id, 0, 2, 0.0).err(),
-            Some("index of space dimension is invalid")
+            Some("index of space dimension must be in 0 ≤ j ≤ space_ndim - 1")
         );
         Ok(())
     }
 
     #[test]
-    fn set_node_resets_ok_last_coord() -> Result<(), StrError> {
+    fn set_node_resets_last_coord_given() -> Result<(), StrError> {
         let point_id = 123;
         let mut state = StateOfShape::new(1, 1, 2)?;
         assert_eq!(state.last_coord_given, false);
