@@ -1,6 +1,7 @@
-// This file defines several constants with integration points data.
+use super::GeoClass;
+use crate::StrError;
 
-/// Defines an alias for integration points' constants (coordinates and weights)
+/// Defines an alias for integration points data (coordinates and weights)
 ///
 /// Each integration point (IP) is defined by 3 reference
 /// coordinates (r, s, t) and the weight (w).
@@ -10,7 +11,116 @@
 /// The data structure is a 2D array such that [[f64; 4]; NIP]
 /// where `NIP` is the number of integration points in a particular set.
 /// Therein, `4` corresponds to (r, s, t) and the weight (w).
-pub type IntegPointConstants = &'static [[f64; 4]];
+pub type IntegPointData = &'static [[f64; 4]];
+
+/// Selects integration points constants (coordinates and weights)
+///
+/// # Input
+///
+/// * `class` -- The geometry class
+/// * `n_integ_point` -- Number of integration points desired (see Options below)
+///
+/// # Options
+///
+/// `n_integ_point` for **Lin** class:
+///
+/// * `1` -- Conventional Legendre integration points and weights
+/// * `2` -- Conventional Legendre integration points and weights
+/// * `3` -- Conventional Legendre integration points and weights
+/// * `4` -- Conventional Legendre integration points and weights
+/// * `5` -- Conventional Legendre integration points and weights
+///
+/// `n_integ_point` for **Tri** class:
+///
+/// * `1` -- Internal integration points and weights
+/// * `3` -- Internal integration points and weights
+/// * `1_003` -- Edge integration points and weights
+/// * `4` -- Internal integration points and weights
+/// * `12` -- Internal integration points and weights
+/// * `16` -- Internal integration points and weights
+///
+/// `n_integ_point` for **Qua** class:
+///
+/// * `1` -- Conventional Legendre integration points and weights
+/// * `4` -- Conventional Legendre integration points and weights
+/// * `5` -- Wilson's integration points and weights. "Corner" version
+/// * `1_005` -- 5 points. Wilson's integration points and weights. "Stable" version version with w0=0.004 and wa=0.999 to mimic 4-point rule
+/// * `8` -- Wilson's integration points and weights.
+/// * `9` -- Conventional Legendre integration points and weights
+/// * `16` -- Conventional Legendre integration points and weights
+///
+/// `n_integ_point` for **Tet** class:
+///
+/// * `1` -- Internal integration points and weights
+/// * `4` -- Internal integration points and weights
+/// * `5` -- Internal integration points and weights
+/// * `6` -- Internal integration points and weights
+///
+/// `n_integ_point` for **Hex** class:
+///
+/// * `6` -- Iron's integration points and weights
+/// * `8` -- Conventional Legendre integration points and weights
+/// * `9` -- Wilson's integration points and weights. "Corner" version
+/// * `1_009` -- Wilson's integration points and weights. "Stable" version
+/// * `14` -- Iron's integration points and weights
+/// * `27` -- Conventional Legendre integration points and weights
+pub fn select_integ_points(class: GeoClass, n_integ_point: usize) -> Result<IntegPointData, StrError> {
+    let ips: IntegPointData = match class {
+        // Lin
+        GeoClass::Lin => match n_integ_point {
+            1 => &IP_LIN_LEGENDRE_1,
+            2 => &IP_LIN_LEGENDRE_2,
+            3 => &IP_LIN_LEGENDRE_3,
+            4 => &IP_LIN_LEGENDRE_4,
+            5 => &IP_LIN_LEGENDRE_5,
+            _ => return Err("desired number of integration points is not available for Lin class"),
+        },
+        // Tri
+        GeoClass::Tri => match n_integ_point {
+            1 => &IP_TRI_INTERNAL_1,
+            3 => &IP_TRI_INTERNAL_3,
+            1_003 => &IP_TRI_EDGE_3,
+            4 => &IP_TRI_INTERNAL_4,
+            12 => &IP_TRI_INTERNAL_12,
+            16 => &IP_TRI_INTERNAL_16,
+            _ => return Err("desired number of integration points is not available for Tri class"),
+        },
+        // Qua
+        GeoClass::Qua => match n_integ_point {
+            1 => &IP_QUA_LEGENDRE_1,
+            4 => &IP_QUA_LEGENDRE_4,
+            5 => &IP_QUA_WILSON_CORNER_5,
+            1_005 => &IP_QUA_WILSON_STABLE_5,
+            8 => &IP_QUA_WILSON_8,
+            9 => &IP_QUA_LEGENDRE_9,
+            16 => &IP_QUA_LEGENDRE_16,
+            _ => return Err("desired number of integration points is not available for Qua class"),
+        },
+        // Tet
+        GeoClass::Tet => match n_integ_point {
+            1 => &IP_TET_INTERNAL_1,
+            4 => &IP_TET_INTERNAL_4,
+            5 => &IP_TET_INTERNAL_5,
+            6 => &IP_TET_INTERNAL_6,
+            _ => return Err("desired number of integration points is not available for Tet class"),
+        },
+        // Hex
+        GeoClass::Hex => match n_integ_point {
+            6 => &IP_HEX_IRONS_6,
+            8 => &IP_HEX_LEGENDRE_8,
+            9 => &IP_HEX_WILSON_CORNER_9,
+            1_009 => &IP_HEX_WILSON_STABLE_9,
+            14 => &IP_HEX_IRONS_14,
+            27 => &IP_HEX_LEGENDRE_27,
+            _ => return Err("desired number of integration points is not available for Hex class"),
+        },
+    };
+    Ok(ips)
+}
+
+//
+// Next, we define several constants with integration points data.
+//
 
 // -----------------------------------------------------------------------
 // -- LIN ----------------------------------------------------------------
@@ -362,3 +472,72 @@ pub const IP_HEX_LEGENDRE_27: [[f64; 4]; 27] = [
     [ 0.000000000000000,  0.774596669241483,  0.774596669241483, 0.274348422496571],
     [ 0.774596669241483,  0.774596669241483,  0.774596669241483, 0.171467764060357],
 ];
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use super::select_integ_points;
+    use crate::shapes::GeoClass;
+    use crate::StrError;
+
+    #[test]
+    fn select_integ_points_works() -> Result<(), StrError> {
+        // Lin
+        for n_integ_point in [1, 2, 3, 4, 5] {
+            let ips = select_integ_points(GeoClass::Lin, n_integ_point)?;
+            assert_eq!(ips.len(), n_integ_point);
+        }
+        assert_eq!(
+            select_integ_points(GeoClass::Lin, 100).err(),
+            Some("desired number of integration points is not available for Lin class")
+        );
+
+        // Tri
+        for n_integ_point in [1, 3, 4, 12, 16] {
+            let ips = select_integ_points(GeoClass::Tri, n_integ_point)?;
+            assert_eq!(ips.len(), n_integ_point);
+        }
+        let ips = select_integ_points(GeoClass::Tri, 1_003)?;
+        assert_eq!(ips.len(), 3);
+        assert_eq!(
+            select_integ_points(GeoClass::Tri, 100).err(),
+            Some("desired number of integration points is not available for Tri class")
+        );
+
+        // Qua
+        for n_integ_point in [1, 4, 5, 8, 9, 16] {
+            let ips = select_integ_points(GeoClass::Qua, n_integ_point)?;
+            assert_eq!(ips.len(), n_integ_point);
+        }
+        let ips = select_integ_points(GeoClass::Qua, 1_005)?;
+        assert_eq!(ips.len(), 5);
+        assert_eq!(
+            select_integ_points(GeoClass::Qua, 100).err(),
+            Some("desired number of integration points is not available for Qua class")
+        );
+
+        // Tet
+        for n_integ_point in [1, 4, 5, 6] {
+            let ips = select_integ_points(GeoClass::Tet, n_integ_point)?;
+            assert_eq!(ips.len(), n_integ_point);
+        }
+        assert_eq!(
+            select_integ_points(GeoClass::Tet, 100).err(),
+            Some("desired number of integration points is not available for Tet class")
+        );
+
+        // Hex
+        for n_integ_point in [6, 8, 9, 14, 27] {
+            let ips = select_integ_points(GeoClass::Hex, n_integ_point)?;
+            assert_eq!(ips.len(), n_integ_point);
+        }
+        let ips = select_integ_points(GeoClass::Hex, 1_009)?;
+        assert_eq!(ips.len(), 9);
+        assert_eq!(
+            select_integ_points(GeoClass::Hex, 100).err(),
+            Some("desired number of integration points is not available for Hex class")
+        );
+        Ok(())
+    }
+}

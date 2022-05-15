@@ -1,4 +1,4 @@
-use super::{geo_class_and_kind, ref_domain_limits, GeoClass, GeoKind, IntegPointConstants, StateOfShape};
+use super::{geo_class_and_kind, ref_domain_limits, GeoClass, GeoKind, IntegPointData, StateOfShape};
 use super::{
     Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet10, Tet4, Tri10, Tri15, Tri3, Tri6,
 };
@@ -913,7 +913,7 @@ impl Shape {
     pub fn calc_integ_points_coords(
         &self,
         state: &mut StateOfShape,
-        integ_points: IntegPointConstants,
+        integ_points: IntegPointData,
     ) -> Result<Vec<Vector>, StrError> {
         if !state.last_coord_given {
             return Err("the last node coordinate has not been given yet");
