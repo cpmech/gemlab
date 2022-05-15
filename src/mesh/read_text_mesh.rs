@@ -301,7 +301,9 @@ pub(super) fn parse_text_mesh(text: &str) -> Result<Mesh, StrError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_text_mesh, read_text_mesh, DataForReadTextMesh, Mesh, StrError};
+    use super::{parse_text_mesh, read_text_mesh, DataForReadTextMesh};
+    use crate::mesh::{Mesh, Samples};
+    use crate::StrError;
 
     #[test]
     fn parse_sizes_captures_errors() -> Result<(), StrError> {
@@ -475,89 +477,17 @@ mod tests {
 
     #[test]
     fn read_text_mesh_2d_works() -> Result<(), StrError> {
-        let mesh = read_text_mesh("./data/meshes/ok1.msh")?;
-        assert_eq!(
-            format!("{:?}", mesh),
-            "SUMMARY\n\
-             =======\n\
-             space_ndim = 2\n\
-             npoint = 6\n\
-             ncell = 2\n\
-             n_boundary_point = 0\n\
-             n_boundary_edge = 0\n\
-             n_boundary_face = 0\n\
-             \n\
-             POINTS\n\
-             ======\n\
-             i:0 x:[0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0] e:[] f:[]\n\
-             i:4 x:[2.0, 0.0] e:[] f:[]\n\
-             i:5 x:[2.0, 1.0] e:[] f:[]\n\
-             \n\
-             CELLS\n\
-             =====\n\
-             i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
-             i:1 a:0 g:2 p:[1, 4, 5, 2]\n\
-             \n\
-             BOUNDARY POINTS\n\
-             ===============\n\
-             []\n\
-             \n\
-             BOUNDARY EDGES\n\
-             ==============\n\
-             \n\
-             BOUNDARY FACES\n\
-             ==============\n"
-        );
+        let mesh = read_text_mesh("./data/meshes/two_quads_horizontal.msh")?;
+        let sample = Samples::two_quads_horizontal();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
         Ok(())
     }
 
     #[test]
     fn read_text_mesh_3d_works() -> Result<(), StrError> {
-        let mesh = read_text_mesh("./data/meshes/ok2.msh")?;
-        assert_eq!(
-            format!("{:?}", mesh),
-            "SUMMARY\n\
-             =======\n\
-             space_ndim = 3\n\
-             npoint = 12\n\
-             ncell = 2\n\
-             n_boundary_point = 0\n\
-             n_boundary_edge = 0\n\
-             n_boundary_face = 0\n\
-             \n\
-             POINTS\n\
-             ======\n\
-             i:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
-             i:4 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
-             i:5 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
-             i:6 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
-             i:7 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
-             i:8 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
-             i:9 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
-             i:10 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
-             i:11 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
-             \n\
-             CELLS\n\
-             =====\n\
-             i:0 a:1 g:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
-             i:1 a:0 g:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
-             \n\
-             BOUNDARY POINTS\n\
-             ===============\n\
-             []\n\
-             \n\
-             BOUNDARY EDGES\n\
-             ==============\n\
-             \n\
-             BOUNDARY FACES\n\
-             ==============\n"
-        );
+        let mesh = read_text_mesh("./data/meshes/two_cubes_vertical.msh")?;
+        let sample = Samples::two_cubes_vertical();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
         Ok(())
     }
 
@@ -668,43 +598,10 @@ mod tests {
             # cells
             # id att geo_ndim nnode  point_ids...
                0   1        2     4  0 1 2 3
-               1   0        2     4  1 4 5 2",
+               1   2        2     4  1 4 5 2",
         )?;
-        assert_eq!(
-            format!("{:?}", mesh),
-            "SUMMARY\n\
-             =======\n\
-             space_ndim = 2\n\
-             npoint = 6\n\
-             ncell = 2\n\
-             n_boundary_point = 0\n\
-             n_boundary_edge = 0\n\
-             n_boundary_face = 0\n\
-             \n\
-             POINTS\n\
-             ======\n\
-             i:0 x:[0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0] e:[] f:[]\n\
-             i:4 x:[2.0, 0.0] e:[] f:[]\n\
-             i:5 x:[2.0, 1.0] e:[] f:[]\n\
-             \n\
-             CELLS\n\
-             =====\n\
-             i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
-             i:1 a:0 g:2 p:[1, 4, 5, 2]\n\
-             \n\
-             BOUNDARY POINTS\n\
-             ===============\n\
-             []\n\
-             \n\
-             BOUNDARY EDGES\n\
-             ==============\n\
-             \n\
-             BOUNDARY FACES\n\
-             ==============\n"
-        );
+        let sample = Samples::two_quads_horizontal();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
         Ok(())
     }
 
@@ -733,49 +630,10 @@ mod tests {
             # cells
             # id att geo_ndim nnode  point_ids...
                0   1        3     8  0 1 2 3 4 5  6  7
-               1   0        3     8  4 5 6 7 8 9 10 11",
+               1   2        3     8  4 5 6 7 8 9 10 11",
         )?;
-        assert_eq!(
-            format!("{:?}", mesh),
-            "SUMMARY\n\
-             =======\n\
-             space_ndim = 3\n\
-             npoint = 12\n\
-             ncell = 2\n\
-             n_boundary_point = 0\n\
-             n_boundary_edge = 0\n\
-             n_boundary_face = 0\n\
-             \n\
-             POINTS\n\
-             ======\n\
-             i:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
-             i:4 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
-             i:5 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
-             i:6 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
-             i:7 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
-             i:8 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
-             i:9 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
-             i:10 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
-             i:11 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
-             \n\
-             CELLS\n\
-             =====\n\
-             i:0 a:1 g:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
-             i:1 a:0 g:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
-             \n\
-             BOUNDARY POINTS\n\
-             ===============\n\
-             []\n\
-             \n\
-             BOUNDARY EDGES\n\
-             ==============\n\
-             \n\
-             BOUNDARY FACES\n\
-             ==============\n"
-        );
+        let sample = Samples::two_cubes_vertical();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
         Ok(())
     }
 }
