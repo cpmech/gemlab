@@ -1,4 +1,3 @@
-use super::read_text_mesh::{parse_text_mesh, read_text_mesh};
 use crate::StrError;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
@@ -63,39 +62,6 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    /// Returns a new empty mesh
-    pub(super) fn new(space_ndim: usize) -> Result<Self, StrError> {
-        if space_ndim < 2 || space_ndim > 3 {
-            return Err("space_ndim must be 2 or 3");
-        }
-        Ok(Mesh {
-            space_ndim,
-            points: Vec::new(),
-            cells: Vec::new(),
-        })
-    }
-
-    /// Parses raw mesh data from a text string
-    ///
-    /// # Note
-    ///
-    /// This function calls `compute_derived_props` already.
-    pub fn from_text(raw_mesh_data: &str) -> Result<Self, StrError> {
-        parse_text_mesh(raw_mesh_data)
-    }
-
-    /// Reads raw mesh data from text file
-    ///
-    /// # Note
-    ///
-    /// This function calls `compute_derived_props` already.
-    pub fn from_text_file<P>(full_path: &P) -> Result<Self, StrError>
-    where
-        P: AsRef<OsStr> + ?Sized,
-    {
-        read_text_mesh(full_path)
-    }
-
     /// Reads a binary file containing the mesh data
     ///
     /// # Input
@@ -145,192 +111,23 @@ mod tests {
     use crate::StrError;
 
     #[test]
-    fn new_fails_on_wrong_input() {
-        assert_eq!(Mesh::new(1).err(), Some("space_ndim must be 2 or 3"));
-        assert_eq!(Mesh::new(4).err(), Some("space_ndim must be 2 or 3"));
-    }
-
-    #[test]
-    fn new_works() -> Result<(), StrError> {
-        let mesh = Mesh::new(2)?;
-        assert_eq!(mesh.space_ndim, 2);
-        assert_eq!(mesh.points.len(), 0);
-        assert_eq!(mesh.cells.len(), 0);
-        Ok(())
-    }
-
-    #[test]
-    fn from_text_fails_on_invalid_data() -> Result<(), StrError> {
-        assert_eq!(
-            Mesh::from_text("").err(),
-            Some("text string is empty or header is missing")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn from_text_file_fails_on_invalid_data() -> Result<(), StrError> {
-        assert_eq!(Mesh::from_text_file("").err(), Some("cannot open file"));
-        Ok(())
-    }
-
-    #[test]
-    fn from_text_fails_on_wrong_jacobian_2d() -> Result<(), StrError> {
-        //
-        //  3--------2--------5
-        //  |        |        |
-        //  |        |        |
-        //  |        |        |
-        //  0--------1--------4
-        //
-        let res = Mesh::from_text(
-            r"# header
-            # space_ndim npoint ncell
-                       2      6     2
-            
-            # points
-            # id   x   y
-               0 0.0 0.0
-               1 1.0 0.0
-               2 1.0 1.0
-               3 0.0 1.0
-               4 2.0 0.0
-               5 2.0 1.0
-            
-            # cells
-            # id att geo_ndim nnode  (wrong) point_ids...
-               0   1        2     4  0 3 2 1
-               1   0        2     4  1 2 5 4",
-        );
-        assert_eq!(res.err(), Some("a cell has incorrect ordering of nodes"));
-        Ok(())
-    }
-
-    #[test]
-    fn from_text_works() -> Result<(), StrError> {
-        //
-        //  3--------2--------5
-        //  |        |        |
-        //  |        |        |
-        //  |        |        |
-        //  0--------1--------4
-        //
-        let mesh = Mesh::from_text(
-            r"# header
-            # space_ndim npoint ncell
-                       2      6     2
-            
-            # points
-            # id   x   y
-               0 0.0 0.0
-               1 1.0 0.0
-               2 1.0 1.0
-               3 0.0 1.0
-               4 2.0 0.0
-               5 2.0 1.0
-            
-            # cells
-            # id att geo_ndim nnode  point_ids...
-               0   1        2     4  0 1 2 3
-               1   0        2     4  1 4 5 2",
-        )?;
-        assert_eq!(mesh.space_ndim, 2);
-        assert_eq!(mesh.points.len(), 6);
-        assert_eq!(mesh.cells.len(), 2);
-        Ok(())
-    }
-
-    #[test]
-    fn from_text_file_fails_on_wrong_jacobian_3d() -> Result<(), StrError> {
-        let res = Mesh::from_text_file("./data/meshes/bad_wrong_jacobian.msh");
-        assert_eq!(res.err(), Some("a cell has incorrect ordering of nodes"));
-        Ok(())
-    }
-
-    #[test]
-    fn from_text_file_fails_on_wrong_nodes_3d() -> Result<(), StrError> {
-        let res = Mesh::from_text_file("./data/meshes/bad_wrong_nodes.msh");
-        assert_eq!(res.err(), Some("cannot compute inverse due to zero determinant"));
-        Ok(())
-    }
-
-    #[test]
-    fn from_text_file_works() -> Result<(), StrError> {
-        //
-        //       8-------------11
-        //      /.             /|
-        //     / .            / |
-        //    /  .           /  |
-        //   /   .          /   |
-        //  9-------------10    |
-        //  |    .         |    |
-        //  |    4---------|----7
-        //  |   /.         |   /|
-        //  |  / .         |  / |
-        //  | /  .         | /  |
-        //  |/   .         |/   |
-        //  5--------------6    |
-        //  |    .         |    |
-        //  |    0---------|----3
-        //  |   /          |   /
-        //  |  /           |  /
-        //  | /            | /
-        //  |/             |/
-        //  1--------------2
-        //
-        let mesh = Mesh::from_text_file("./data/meshes/ok2.msh")?;
-        assert_eq!(mesh.space_ndim, 3);
-        assert_eq!(mesh.points.len(), 12);
-        assert_eq!(mesh.cells.len(), 2);
-        Ok(())
-    }
-
-    #[test]
-    fn from_text_file_works_with_mixed() -> Result<(), StrError> {
-        //
-        //          4--------3
-        //          |        |
-        //          |        |
-        //          |        |
-        //  0-------1--------2
-        //
-        let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes2.msh")?;
-        assert_eq!(format!("{:?}", mesh), "");
-
-        //
-        //                       4------------7-----------10
-        //                      /.           /|            |
-        //                     / .          / |            |
-        //                    /  .         /  |            |
-        //                   /   .        /   |            |
-        //                  5------------6    |            |
-        //                  |    .       |`.  |            |
-        //                  |    0-------|--`.3------------9
-        //                  |   /        |   /`.          /
-        //                  |  /         |  /   `.       /
-        //                  | /          | /      `.    /
-        //                  |/           |/         `. /
-        //  12-----11-------1------------2------------8
-        //
-        let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes.msh")?;
-        assert_eq!(format!("{:?}", mesh), "");
-        Ok(())
-    }
-
-    #[test]
-    fn read_write_capture_errors() -> Result<(), StrError> {
+    fn read_and_write_capture_errors() -> Result<(), StrError> {
         assert_eq!(Mesh::read("/tmp/not_found").err(), Some("file not found"));
         assert_eq!(
-            Mesh::read("./data/meshes/ok_mixed_shapes2.msh").err(),
+            Mesh::read("./data/meshes/two_quads_horizontal.msh").err(),
             Some("deserialize failed")
         );
-        let mesh = Mesh::new(2)?;
+        let mesh = Mesh {
+            space_ndim: 2,
+            points: Vec::new(),
+            cells: Vec::new(),
+        };
         assert_eq!(mesh.write("/tmp/").err(), Some("cannot create file"));
         Ok(())
     }
 
     #[test]
-    fn read_write_work() -> Result<(), StrError> {
+    fn read_and_write_work() -> Result<(), StrError> {
         //
         //  3--------2--------5
         //  |        |        |

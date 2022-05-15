@@ -277,7 +277,11 @@ impl Block {
         }
 
         // resulting mesh
-        let mut mesh = Mesh::new(space_ndim)?;
+        let mut mesh = Mesh {
+            space_ndim,
+            points: Vec::new(),
+            cells: Vec::new(),
+        };
 
         // shape object corresponding to the new (output) cells
         let shape_out = Shape::new(space_ndim, space_ndim, output_npoint)?;
