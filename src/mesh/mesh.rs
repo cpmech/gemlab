@@ -295,6 +295,7 @@ mod tests {
         //  0-------1--------2
         //
         let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes2.msh")?;
+        assert_eq!(format!("{:?}", mesh), "");
 
         //
         //                       4------------7-----------10
@@ -312,6 +313,7 @@ mod tests {
         //  12-----11-------1------------2------------8
         //
         let mesh = Mesh::from_text_file("./data/meshes/ok_mixed_shapes.msh")?;
+        assert_eq!(format!("{:?}", mesh), "");
         Ok(())
     }
 

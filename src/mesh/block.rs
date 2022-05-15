@@ -636,6 +636,7 @@ mod tests {
              ==============\n"
         );
 
+        /*
         // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.0 / 2.0
         // where 2.0 corresponds to the edge_length in the reference system
         let l = 0.5; // magnitude of normal vector
@@ -651,6 +652,7 @@ mod tests {
             // left
             (vec![(0, 3), (3, 7)], [-l, 0.0]),
         ];
+        */
 
         // check if the normal vectors at boundary are outward
         // let mut normal = Vector::new(mesh.space_ndim);
@@ -753,6 +755,7 @@ mod tests {
              ==============\n"
         );
 
+        /*
         // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.0 / 2.0
         // where 2.0 corresponds to the edge_length in the reference system
         let l = 0.5; // magnitude of normal vector
@@ -768,6 +771,7 @@ mod tests {
             // left
             (vec![(0, 3), (3, 14)], [-l, 0.0]),
         ];
+        */
 
         // check if the normal vectors at boundary are outward
         // let mut normal = Vector::new(mesh.space_ndim);
@@ -815,6 +819,7 @@ mod tests {
         assert_eq!(mesh.points[24].coords, &[1.5, 1.5]);
         assert_eq!(mesh.cells[3].points, &[2, 10, 21, 15, 13, 22, 23, 17, 24]);
 
+        /*
         // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.0 / 2.0
         // where 2.0 corresponds to the edge_length in the reference system
         let l = 0.5; // magnitude of normal vector
@@ -830,6 +835,7 @@ mod tests {
             // left
             (vec![(0, 3), (3, 16)], [-l, 0.0]),
         ];
+        */
 
         // check if the normal vectors at boundary are outward
         // let mut normal = Vector::new(mesh.space_ndim);
@@ -883,6 +889,7 @@ mod tests {
         assert_eq!(mesh.cells[2].points, &[3, 2, 20, 21, 10, 22, 23, 24, 6, 25, 26, 27]);
         assert_eq!(mesh.cells[3].points, &[2, 13, 28, 20, 19, 29, 30, 25, 16, 31, 32, 22]);
 
+        /*
         // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.5 / 2.0
         // where 2.0 corresponds to the edge_length in the reference system
         let l = 0.75; // magnitude of normal vector
@@ -898,6 +905,7 @@ mod tests {
             // left
             (vec![(0, 3), (3, 21)], [-l, 0.0]),
         ];
+        */
 
         // check if the normal vectors at boundary are outward
         // let mut normal = Vector::new(mesh.space_ndim);
@@ -970,6 +978,7 @@ mod tests {
             &[2, 17, 40, 28, 23, 41, 42, 33, 20, 43, 44, 30, 45, 46, 47, 48]
         );
 
+        /*
         // the magnitude of the normal vector should be equal to edge_length / 2.0 = 1.5 / 2.0
         // where 2.0 corresponds to the edge_length in the reference system
         let l = 0.75; // magnitude of normal vector
@@ -985,6 +994,7 @@ mod tests {
             // left
             (vec![(0, 3), (3, 29)], [-l, 0.0]),
         ];
+        */
 
         // check if the normal vectors at boundary are outward
         // let mut normal = Vector::new(mesh.space_ndim);
@@ -1065,6 +1075,7 @@ mod tests {
             &[2, 18, 41, 29, 27, 42, 43, 37, 24, 44, 45, 34, 21, 46, 47, 31, 48]
         );
 
+        /*
         // the magnitude of the normal vector should be equal to edge_length / 2.0 = 2.0 / 2.0
         // where 2.0 corresponds to the edge_length in the reference system
         let l = 1.0; // magnitude of normal vector
@@ -1080,6 +1091,7 @@ mod tests {
             // left
             (vec![(0, 3), (3, 30)], [-l, 0.0]),
         ];
+        */
 
         // check if the normal vectors at boundary are outward
         // let mut normal = Vector::new(mesh.space_ndim);
