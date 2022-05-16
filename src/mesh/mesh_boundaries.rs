@@ -1,41 +1,10 @@
-use super::{alloc_cell_shapes, Cell, CellId, Mesh, PointId};
+use super::{all_edges_2d, all_faces_3d, alloc_cell_shapes, CellId, Edge, EdgeKey, Face, FaceKey, Mesh, PointId};
 use crate::{shapes::Shape, StrError};
-use russell_lab::{sort2, sort4};
+use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
-/// Aliases (usize,usize) as the key of Edge
-///
-/// # Note
-///
-/// Since the local numbering scheme runs over "corners" first, we can compare
-/// edges using only two points; i.e., the middle points don't matter.
-pub type EdgeKey = (usize, usize);
-
-/// Aliases (usize,usize,usize,usize) as the key of Face
-///
-/// # Note
-///
-/// If all faces have at most 3 points, the fourth entry in the key will be equal to the total number of points.
-/// In this way, we can compare 4-node (or more nodes) faces with each other, since that the local numbering
-/// scheme runs over the "corners" first; i.e., the middle points don't matter.
-pub type FaceKey = (usize, usize, usize, usize);
-
-/// Holds edge data (derived data structure)
-#[derive(Clone, Debug)]
-pub struct Edge {
-    /// List of points defining this edge; in the right order (unsorted)
-    pub points: Vec<PointId>,
-}
-
-/// Holds face data (derived data structure)
-#[derive(Clone, Debug)]
-pub struct Face {
-    /// List of points defining this face; in the right order (unsorted)
-    pub points: Vec<PointId>,
-}
-
 /// Holds points, edges and faces on the boundaries of a mesh
-pub struct MeshBoundaries {
+pub struct Boundary {
     /// Set of points on the boundaries
     ///
     /// Note: a boundary point belongs to a boundary edge or a boundary face
@@ -55,187 +24,174 @@ pub struct MeshBoundaries {
     pub faces: HashMap<FaceKey, Face>,
 }
 
-impl MeshBoundaries {
-    /// Finds the boundary entities and allocates a new instance
+impl Boundary {
+    /// Allocates a new instance
     pub fn new(mesh: &Mesh) -> Result<Self, StrError> {
-        // maps all face keys to (cell_id, f) where f is the cell's local face index
-        // let mut all_faces: HashMap<FaceKey, Vec<(CellId, usize)>> = HashMap::new(); // (face_key) => [(cell_id,f)]
-
-        // let shapes = alloc_cell_shapes(mesh)?;
-        // let mut edges: HashMap<EdgeKey, Edge> = HashMap::new();
-        // let mut faces: HashMap<FaceKey, Face> = HashMap::new();
-
-        // match mesh.space_ndim {
-        //     2 => find_boundaries_2d(mesh, &shapes)?,
-        //     _ => panic!("space_ndim must be 2 or 3"),
-        // };
-
-        Ok(MeshBoundaries {
+        let shapes = alloc_cell_shapes(mesh)?;
+        let (boundary_edges, boundary_faces) = match mesh.space_ndim {
+            2 => {
+                let edges = all_edges_2d(mesh, &shapes)?;
+                let boundary_edges = Boundary::two_dim(mesh, &shapes, &edges)?;
+                (boundary_edges, HashMap::new())
+            }
+            3 => {
+                let faces = all_faces_3d(mesh, &shapes)?;
+                Boundary::three_dim(mesh, &shapes, &faces)?
+            }
+            _ => panic!("space_ndim must be 2 or 3"),
+        };
+        Ok(Boundary {
             points: HashSet::new(),
-            edges: HashMap::new(),
-            faces: HashMap::new(),
+            edges: boundary_edges,
+            faces: boundary_faces,
         })
     }
-}
 
-/// Maps all edges (internal and boundary) in 2D
-///
-/// # Output
-///
-/// Returns a map relating edge keys to `Vec<(cell_id, e)>` where:
-///
-/// * `cell_id` -- the id of the cell sharing the edge
-/// * `e` -- is the cell's local edge index
-///
-/// # Panics
-///
-/// The `mesh.space_ndim` must be equal to 2, otherwise a panic occurs.
-pub fn map_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> HashMap<EdgeKey, Vec<(CellId, usize)>> {
-    assert_eq!(mesh.space_ndim, 2);
-    let mut edges: HashMap<EdgeKey, Vec<(CellId, usize)>> = HashMap::new();
-    mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
-        if shape.geo_ndim == 2 {
-            for e in 0..shape.nedge {
+    /// Finds boundary entities in 2D
+    ///
+    /// **Note:** Call this function after `all_edges_2d`.
+    ///
+    /// # Input
+    ///
+    /// * `mesh` -- the Mesh
+    /// * `shapes` -- the shapes of cells (len == cells.len())
+    /// * `edges` -- all edges (internal and boundary)
+    ///
+    /// # Output
+    ///
+    /// * Returns a map relating edge keys to Edge
+    pub fn two_dim(
+        mesh: &Mesh,
+        shapes: &Vec<Shape>,
+        edges: &HashMap<EdgeKey, Vec<(CellId, usize)>>,
+    ) -> Result<HashMap<EdgeKey, Edge>, StrError> {
+        if mesh.space_ndim != 2 {
+            return Err("this function works in 2D only");
+        }
+        let mut boundary_edges: HashMap<EdgeKey, Edge> = HashMap::new();
+        for (edge_key, shared_by) in edges {
+            if shared_by.len() != 1 {
+                continue; // skip internal edges (those shared by multiple cells)
+            }
+            let (cell_id, e) = shared_by[0];
+            let cell = &mesh.cells[cell_id];
+            let shape = &shapes[cell_id];
+            boundary_edges.entry(*edge_key).or_insert(Edge {
+                points: (0..shape.edge_nnode)
+                    .into_iter()
+                    .map(|i| cell.points[shape.edge_node_id(e, i)])
+                    .collect(),
+            });
+        }
+        Ok(boundary_edges)
+    }
+
+    /// Finds boundary entities in 3D
+    ///
+    /// **Note:** Call this function after `all_faces`.
+    ///
+    /// # Input
+    ///
+    /// * `mesh` -- the Mesh
+    /// * `shapes` -- the shapes of cells (len == cells.len())
+    /// * `faces` -- all faces (internal and boundary)
+    ///
+    /// # Output
+    ///
+    /// * Returns:
+    ///     - a map relating edge keys to Edge
+    ///     - a map relating face keys to Face
+    pub fn three_dim(
+        mesh: &Mesh,
+        shapes: &Vec<Shape>,
+        faces: &HashMap<FaceKey, Vec<(CellId, usize)>>,
+    ) -> Result<(HashMap<EdgeKey, Edge>, HashMap<FaceKey, Face>), StrError> {
+        if mesh.space_ndim != 3 {
+            return Err("this function works in 3D only");
+        }
+
+        // sort face keys just so the next loop is deterministic
+        let mut face_keys: Vec<_> = faces.keys().collect();
+        face_keys.sort();
+
+        // loop over all faces
+        let mut boundary_edges: HashMap<EdgeKey, Edge> = HashMap::new();
+        let mut boundary_faces: HashMap<FaceKey, Face> = HashMap::new();
+        for face_key in face_keys {
+            // skip internal faces (those shared by multiple cells)
+            let shared_by = faces.get(face_key).unwrap();
+            if shared_by.len() != 1 {
+                continue;
+            }
+
+            // cell and face
+            let (cell_id, f) = shared_by[0];
+            let cell = &mesh.cells[cell_id];
+            let shape = &shapes[cell_id];
+            let face_nnode = shape.face_nnode;
+            let face_shape = Shape::new(mesh.space_ndim, 2, face_nnode)?;
+
+            // ids of points on faces
+            let face_points: Vec<PointId> = (0..face_nnode)
+                .into_iter()
+                .map(|i| cell.points[shape.face_node_id(f, i)])
+                .collect();
+
+            // loop over all face edges
+            for e in 0..face_shape.nedge {
+                // define edge key (sorted point ids)
                 let mut edge_key: EdgeKey = (
-                    cell.points[shape.edge_node_id(e, 0)],
-                    cell.points[shape.edge_node_id(e, 1)],
+                    face_points[face_shape.edge_node_id(e, 0)],
+                    face_points[face_shape.edge_node_id(e, 1)],
                 );
                 sort2(&mut edge_key);
-                let data = edges.entry(edge_key).or_insert(Vec::new());
-                data.push((cell.id, e));
-            }
-        }
-    });
-    edges
-}
 
-/// Maps all faces (internal and boundary)
-///
-/// Returns a map relating face keys to `Vec<(cell_id, f)>` where:
-///
-/// * `cell_id` -- the id of the cell sharing the face
-/// * `f` -- is the cell's local face index
-///
-/// # Panics
-///
-/// The `mesh.space_ndim` must be equal to 3, otherwise a panic occurs.
-pub fn map_faces(mesh: &Mesh, shapes: &Vec<Shape>) -> HashMap<FaceKey, Vec<(CellId, usize)>> {
-    assert_eq!(mesh.space_ndim, 3);
-    let mut faces: HashMap<FaceKey, Vec<(CellId, usize)>> = HashMap::new();
-    mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
-        if shape.geo_ndim == 3 {
-            for f in 0..shape.nface {
-                let mut face_key: FaceKey = if shape.face_nnode > 3 {
-                    (
-                        cell.points[shape.face_node_id(f, 0)],
-                        cell.points[shape.face_node_id(f, 1)],
-                        cell.points[shape.face_node_id(f, 2)],
-                        cell.points[shape.face_node_id(f, 3)],
-                    )
-                } else {
-                    (
-                        cell.points[shape.face_node_id(f, 0)],
-                        cell.points[shape.face_node_id(f, 1)],
-                        cell.points[shape.face_node_id(f, 2)],
-                        mesh.points.len(),
-                    )
-                };
-                sort4(&mut face_key);
-                let data = faces.entry(face_key).or_insert(Vec::new());
-                data.push((cell.id, f));
-            }
-        }
-    });
-    faces
-}
-
-/*
-fn find_boundaries_2d(
-    mesh: &Mesh,
-    shapes: &Vec<Shape>,
-) -> Result<(HashSet<PointId>, HashMap<EdgeKey, Edge>), StrError> {
-    // holds the ids of points on boundary or on shapes with geo_ndim == 1
-    let mut points: HashSet<PointId> = HashSet::new();
-
-    // find all edges
-    mesh.cells
-        .iter()
-        .zip(shapes)
-        .for_each(|(cell, shape)| match shape.geo_ndim {
-            1 => {
-                for m in 0..shape.nnode {
-                    points.insert(cell.points[m]);
-                }
-            }
-            2 => {
-                for e in 0..shape.nedge {
-                    let mut edge_key: EdgeKey = (
-                        cell.points[shape.edge_node_id(e, 0)],
-                        cell.points[shape.edge_node_id(e, 1)],
-                    );
-                    sort2(&mut edge_key);
-                    match all_edges.get_mut(&edge_key) {
-                        Some((_, _, internal)) => {
-                            *internal = true;
-                        }
-                        None => {
-                            all_edges.insert(edge_key, (cell.id, e, false));
-                        }
-                    }
-                }
-            }
-            _ => panic!("shape.geo_ndim is invalid in 2D"),
-        });
-
-    // allocate boundary edges
-    let edges: HashMap<_, _> = all_edges
-        .iter()
-        .filter_map(|(edge_key, (cell_id, e, internal))| match internal {
-            true => None,
-            false => Some((
-                *edge_key,
-                Edge {
-                    points: (0..shapes[*cell_id].edge_nnode)
+                // insert boundary edge
+                boundary_edges.entry(edge_key).or_insert(Edge {
+                    points: (0..face_shape.edge_nnode)
                         .into_iter()
-                        .map(|i| shapes[*cell_id].edge_node_id(*e, i))
+                        .map(|i| face_points[face_shape.edge_node_id(e, i)])
                         .collect(),
-                },
-            )),
-        })
-        .collect();
+                });
+            }
 
-    Ok((points, edges))
+            // insert boundary face
+            boundary_faces.entry(*face_key).or_insert(Face { points: face_points });
+        }
+        Ok((boundary_edges, boundary_faces))
+    }
 }
-*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{map_edges_2d, map_faces};
-    use crate::mesh::{alloc_cell_shapes, Samples};
+    use super::Boundary;
+    use crate::mesh::Samples;
     use crate::StrError;
 
     #[test]
-    fn map_edges_2d_works() -> Result<(), StrError> {
+    fn boundary_2d_works() -> Result<(), StrError> {
         //  3---------2---------5
         //  |         |         |
         //  |   [0]   |   [1]   |
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = alloc_cell_shapes(&mesh)?;
-        let edges = map_edges_2d(&mesh, &shapes);
-        let mut keys: Vec<_> = edges.keys().collect();
-        keys.sort();
-        assert_eq!(keys, [&(0, 1), &(0, 3), &(1, 2), &(1, 4), &(2, 3), &(2, 5), &(4, 5)]);
-        assert_eq!(edges.get(&(0, 1)).unwrap(), &[(0, 0)]);
-        assert_eq!(edges.get(&(0, 3)).unwrap(), &[(0, 3)]);
-        assert_eq!(edges.get(&(1, 2)).unwrap(), &[(0, 1), (1, 3)]);
-        assert_eq!(edges.get(&(1, 4)).unwrap(), &[(1, 0)]);
-        assert_eq!(edges.get(&(2, 3)).unwrap(), &[(0, 2)]);
-        assert_eq!(edges.get(&(2, 5)).unwrap(), &[(1, 2)]);
-        assert_eq!(edges.get(&(4, 5)).unwrap(), &[(1, 1)]);
+        let boundary = Boundary::new(&mesh)?;
+        let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
+        edge_keys.sort();
+        assert_eq!(
+            edge_keys,
+            [&(0, 1), &(0, 3), &(1, 2), &(1, 4), &(2, 3), &(2, 5), &(4, 5)]
+        );
+        assert_eq!(boundary.edges.get(&(0, 1)).unwrap().points, &[0, 0]);
+        assert_eq!(boundary.edges.get(&(0, 3)).unwrap().points, &[0, 3]);
+        assert_eq!(boundary.edges.get(&(1, 2)).unwrap().points, &[0, 1]);
+        assert_eq!(boundary.edges.get(&(1, 4)).unwrap().points, &[1, 0]);
+        assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[0, 2]);
+        assert_eq!(boundary.edges.get(&(2, 5)).unwrap().points, &[1, 2]);
+        assert_eq!(boundary.edges.get(&(4, 5)).unwrap().points, &[1, 1]);
 
         //           4---------3
         //           |         |
@@ -243,20 +199,19 @@ mod tests {
         //           |         |
         //  0--------1---------2
         let mesh = Samples::mixed_shapes_2d();
-        let shapes = alloc_cell_shapes(&mesh)?;
-        let edges = map_edges_2d(&mesh, &shapes);
-        let mut keys: Vec<_> = edges.keys().collect();
-        keys.sort();
-        assert_eq!(keys, [&(1, 2), &(1, 4), &(2, 3), &(3, 4)]);
-        assert_eq!(edges.get(&(1, 2)).unwrap(), &[(1, 0)]);
-        assert_eq!(edges.get(&(1, 4)).unwrap(), &[(1, 3)]);
-        assert_eq!(edges.get(&(2, 3)).unwrap(), &[(1, 1)]);
-        assert_eq!(edges.get(&(3, 4)).unwrap(), &[(1, 2)]);
+        let boundary = Boundary::new(&mesh)?;
+        let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
+        edge_keys.sort();
+        assert_eq!(edge_keys, [&(1, 2), &(1, 4), &(2, 3), &(3, 4)]);
+        assert_eq!(boundary.edges.get(&(1, 2)).unwrap().points, &[1, 0]);
+        assert_eq!(boundary.edges.get(&(1, 4)).unwrap().points, &[1, 3]);
+        assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[1, 1]);
+        assert_eq!(boundary.edges.get(&(3, 4)).unwrap().points, &[1, 2]);
         Ok(())
     }
 
     #[test]
-    fn map_faces_works() -> Result<(), StrError> {
+    fn boundary_3d_works() -> Result<(), StrError> {
         //      8-------------11
         //     /.             /|
         //    / .            / |
@@ -278,12 +233,11 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = alloc_cell_shapes(&mesh)?;
-        let faces = map_faces(&mesh, &shapes);
-        let mut keys: Vec<_> = faces.keys().collect();
-        keys.sort();
+        let boundary = Boundary::new(&mesh)?;
+        let mut face_keys: Vec<_> = boundary.faces.keys().collect();
+        face_keys.sort();
         assert_eq!(
-            keys,
+            face_keys,
             [
                 &(0, 1, 2, 3),
                 &(0, 1, 4, 5),
@@ -298,17 +252,17 @@ mod tests {
                 &(8, 9, 10, 11),
             ]
         );
-        assert_eq!(faces.get(&(0, 1, 2, 3)).unwrap(), &[(0, 4)]);
-        assert_eq!(faces.get(&(0, 1, 4, 5)).unwrap(), &[(0, 2)]);
-        assert_eq!(faces.get(&(0, 3, 4, 7)).unwrap(), &[(0, 0)]);
-        assert_eq!(faces.get(&(1, 2, 5, 6)).unwrap(), &[(0, 1)]);
-        assert_eq!(faces.get(&(2, 3, 6, 7)).unwrap(), &[(0, 3)]);
-        assert_eq!(faces.get(&(4, 5, 6, 7)).unwrap(), &[(0, 5), (1, 4)]);
-        assert_eq!(faces.get(&(4, 5, 8, 9)).unwrap(), &[(1, 2)]);
-        assert_eq!(faces.get(&(4, 7, 8, 11)).unwrap(), &[(1, 0)]);
-        assert_eq!(faces.get(&(5, 6, 9, 10)).unwrap(), &[(1, 1)]);
-        assert_eq!(faces.get(&(6, 7, 10, 11)).unwrap(), &[(1, 3)]);
-        assert_eq!(faces.get(&(8, 9, 10, 11)).unwrap(), &[(1, 5)]);
+        assert_eq!(boundary.faces.get(&(0, 1, 2, 3)).unwrap().points, &[0, 4]);
+        assert_eq!(boundary.faces.get(&(0, 1, 4, 5)).unwrap().points, &[0, 2]);
+        assert_eq!(boundary.faces.get(&(0, 3, 4, 7)).unwrap().points, &[0, 0]);
+        assert_eq!(boundary.faces.get(&(1, 2, 5, 6)).unwrap().points, &[0, 1]);
+        assert_eq!(boundary.faces.get(&(2, 3, 6, 7)).unwrap().points, &[0, 3]);
+        assert_eq!(boundary.faces.get(&(4, 5, 6, 7)).unwrap().points, &[0, 5]);
+        assert_eq!(boundary.faces.get(&(4, 5, 8, 9)).unwrap().points, &[1, 2]);
+        assert_eq!(boundary.faces.get(&(4, 7, 8, 11)).unwrap().points, &[1, 0]);
+        assert_eq!(boundary.faces.get(&(5, 6, 9, 10)).unwrap().points, &[1, 1]);
+        assert_eq!(boundary.faces.get(&(6, 7, 10, 11)).unwrap().points, &[1, 3]);
+        assert_eq!(boundary.faces.get(&(8, 9, 10, 11)).unwrap().points, &[1, 5]);
 
         //                       4------------7-----------10
         //                      /.           /|            |
@@ -325,12 +279,11 @@ mod tests {
         //  12-----11-------1------------2------------8
         //
         let mesh = Samples::mixed_shapes_3d();
-        let shapes = alloc_cell_shapes(&mesh)?;
-        let faces = map_faces(&mesh, &shapes);
-        let mut keys: Vec<_> = faces.keys().collect();
-        keys.sort();
+        let boundary = Boundary::new(&mesh)?;
+        let mut face_keys: Vec<_> = boundary.faces.keys().collect();
+        face_keys.sort();
         assert_eq!(
-            keys,
+            face_keys,
             [
                 &(0, 1, 2, 3),
                 &(0, 1, 4, 5),
@@ -344,16 +297,16 @@ mod tests {
                 &(4, 5, 6, 7),
             ]
         );
-        assert_eq!(faces.get(&(0, 1, 2, 3)).unwrap(), &[(0, 4)]);
-        assert_eq!(faces.get(&(0, 1, 4, 5)).unwrap(), &[(0, 2)]);
-        assert_eq!(faces.get(&(0, 3, 4, 7)).unwrap(), &[(0, 0)]);
-        assert_eq!(faces.get(&(1, 2, 5, 6)).unwrap(), &[(0, 1)]);
-        assert_eq!(faces.get(&(2, 3, 6, 7)).unwrap(), &[(0, 3)]);
-        assert_eq!(faces.get(&(2, 3, 6, 13)).unwrap(), &[(1, 0)]);
-        assert_eq!(faces.get(&(2, 3, 8, 13)).unwrap(), &[(1, 2)]);
-        assert_eq!(faces.get(&(2, 6, 8, 13)).unwrap(), &[(1, 1)]);
-        assert_eq!(faces.get(&(3, 6, 8, 13)).unwrap(), &[(1, 3)]);
-        assert_eq!(faces.get(&(4, 5, 6, 7)).unwrap(), &[(0, 5)]);
+        assert_eq!(boundary.faces.get(&(0, 1, 2, 3)).unwrap().points, &[0, 4]);
+        assert_eq!(boundary.faces.get(&(0, 1, 4, 5)).unwrap().points, &[0, 2]);
+        assert_eq!(boundary.faces.get(&(0, 3, 4, 7)).unwrap().points, &[0, 0]);
+        assert_eq!(boundary.faces.get(&(1, 2, 5, 6)).unwrap().points, &[0, 1]);
+        assert_eq!(boundary.faces.get(&(2, 3, 6, 7)).unwrap().points, &[0, 3]);
+        assert_eq!(boundary.faces.get(&(2, 3, 6, 13)).unwrap().points, &[1, 0]);
+        assert_eq!(boundary.faces.get(&(2, 3, 8, 13)).unwrap().points, &[1, 2]);
+        assert_eq!(boundary.faces.get(&(2, 6, 8, 13)).unwrap().points, &[1, 1]);
+        assert_eq!(boundary.faces.get(&(3, 6, 8, 13)).unwrap().points, &[1, 3]);
+        assert_eq!(boundary.faces.get(&(4, 5, 6, 7)).unwrap().points, &[0, 5]);
         Ok(())
     }
 }
