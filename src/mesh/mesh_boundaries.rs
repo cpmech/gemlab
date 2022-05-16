@@ -181,17 +181,13 @@ mod tests {
         let boundary = Boundary::new(&mesh)?;
         let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
         edge_keys.sort();
-        assert_eq!(
-            edge_keys,
-            [&(0, 1), &(0, 3), &(1, 2), &(1, 4), &(2, 3), &(2, 5), &(4, 5)]
-        );
-        assert_eq!(boundary.edges.get(&(0, 1)).unwrap().points, &[0, 0]);
+        assert_eq!(edge_keys, [&(0, 1), &(0, 3), &(1, 4), &(2, 3), &(2, 5), &(4, 5)]);
+        assert_eq!(boundary.edges.get(&(0, 1)).unwrap().points, &[1, 0]);
         assert_eq!(boundary.edges.get(&(0, 3)).unwrap().points, &[0, 3]);
-        assert_eq!(boundary.edges.get(&(1, 2)).unwrap().points, &[0, 1]);
-        assert_eq!(boundary.edges.get(&(1, 4)).unwrap().points, &[1, 0]);
-        assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[0, 2]);
-        assert_eq!(boundary.edges.get(&(2, 5)).unwrap().points, &[1, 2]);
-        assert_eq!(boundary.edges.get(&(4, 5)).unwrap().points, &[1, 1]);
+        assert_eq!(boundary.edges.get(&(1, 4)).unwrap().points, &[4, 1]);
+        assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[3, 2]);
+        assert_eq!(boundary.edges.get(&(2, 5)).unwrap().points, &[2, 5]);
+        assert_eq!(boundary.edges.get(&(4, 5)).unwrap().points, &[5, 4]);
 
         //           4---------3
         //           |         |
@@ -203,10 +199,10 @@ mod tests {
         let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
         edge_keys.sort();
         assert_eq!(edge_keys, [&(1, 2), &(1, 4), &(2, 3), &(3, 4)]);
-        assert_eq!(boundary.edges.get(&(1, 2)).unwrap().points, &[1, 0]);
-        assert_eq!(boundary.edges.get(&(1, 4)).unwrap().points, &[1, 3]);
-        assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[1, 1]);
-        assert_eq!(boundary.edges.get(&(3, 4)).unwrap().points, &[1, 2]);
+        assert_eq!(boundary.edges.get(&(1, 2)).unwrap().points, &[2, 1]);
+        assert_eq!(boundary.edges.get(&(1, 4)).unwrap().points, &[1, 4]);
+        assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[3, 2]);
+        assert_eq!(boundary.edges.get(&(3, 4)).unwrap().points, &[4, 3]);
         Ok(())
     }
 
@@ -234,8 +230,35 @@ mod tests {
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
         let boundary = Boundary::new(&mesh)?;
+        let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
         let mut face_keys: Vec<_> = boundary.faces.keys().collect();
+        edge_keys.sort();
         face_keys.sort();
+        assert_eq!(
+            edge_keys,
+            [
+                &(0, 1),
+                &(0, 3),
+                &(0, 4),
+                &(1, 2),
+                &(1, 5),
+                &(2, 3),
+                &(2, 6),
+                &(3, 7),
+                &(4, 5),
+                &(4, 7),
+                &(4, 8),
+                &(5, 6),
+                &(5, 9),
+                &(6, 7),
+                &(6, 10),
+                &(7, 11),
+                &(8, 9),
+                &(8, 11),
+                &(9, 10),
+                &(10, 11),
+            ]
+        );
         assert_eq!(
             face_keys,
             [
@@ -244,7 +267,6 @@ mod tests {
                 &(0, 3, 4, 7),
                 &(1, 2, 5, 6),
                 &(2, 3, 6, 7),
-                &(4, 5, 6, 7),
                 &(4, 5, 8, 9),
                 &(4, 7, 8, 11),
                 &(5, 6, 9, 10),
@@ -252,17 +274,36 @@ mod tests {
                 &(8, 9, 10, 11),
             ]
         );
-        assert_eq!(boundary.faces.get(&(0, 1, 2, 3)).unwrap().points, &[0, 4]);
-        assert_eq!(boundary.faces.get(&(0, 1, 4, 5)).unwrap().points, &[0, 2]);
-        assert_eq!(boundary.faces.get(&(0, 3, 4, 7)).unwrap().points, &[0, 0]);
-        assert_eq!(boundary.faces.get(&(1, 2, 5, 6)).unwrap().points, &[0, 1]);
-        assert_eq!(boundary.faces.get(&(2, 3, 6, 7)).unwrap().points, &[0, 3]);
-        assert_eq!(boundary.faces.get(&(4, 5, 6, 7)).unwrap().points, &[0, 5]);
-        assert_eq!(boundary.faces.get(&(4, 5, 8, 9)).unwrap().points, &[1, 2]);
-        assert_eq!(boundary.faces.get(&(4, 7, 8, 11)).unwrap().points, &[1, 0]);
-        assert_eq!(boundary.faces.get(&(5, 6, 9, 10)).unwrap().points, &[1, 1]);
-        assert_eq!(boundary.faces.get(&(6, 7, 10, 11)).unwrap().points, &[1, 3]);
-        assert_eq!(boundary.faces.get(&(8, 9, 10, 11)).unwrap().points, &[1, 5]);
+        assert_eq!(boundary.edges.get(&(0, 1)).unwrap().points, &[0, 1]);
+        assert_eq!(boundary.edges.get(&(0, 3)).unwrap().points, &[3, 0]);
+        assert_eq!(boundary.edges.get(&(0, 4)).unwrap().points, &[0, 4]);
+        assert_eq!(boundary.edges.get(&(1, 2)).unwrap().points, &[1, 2]);
+        assert_eq!(boundary.edges.get(&(1, 5)).unwrap().points, &[5, 1]);
+        assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[2, 3]);
+        assert_eq!(boundary.edges.get(&(2, 6)).unwrap().points, &[6, 2]);
+        assert_eq!(boundary.edges.get(&(3, 7)).unwrap().points, &[3, 7]);
+        assert_eq!(boundary.edges.get(&(4, 5)).unwrap().points, &[4, 5]);
+        assert_eq!(boundary.edges.get(&(4, 7)).unwrap().points, &[7, 4]);
+        assert_eq!(boundary.edges.get(&(4, 8)).unwrap().points, &[4, 8]);
+        assert_eq!(boundary.edges.get(&(5, 6)).unwrap().points, &[5, 6]);
+        assert_eq!(boundary.edges.get(&(5, 9)).unwrap().points, &[9, 5]);
+        assert_eq!(boundary.edges.get(&(6, 7)).unwrap().points, &[6, 7]);
+        assert_eq!(boundary.edges.get(&(6, 10)).unwrap().points, &[10, 6]);
+        assert_eq!(boundary.edges.get(&(7, 11)).unwrap().points, &[7, 11]);
+        assert_eq!(boundary.edges.get(&(8, 9)).unwrap().points, &[8, 9]);
+        assert_eq!(boundary.edges.get(&(8, 11)).unwrap().points, &[11, 8]);
+        assert_eq!(boundary.edges.get(&(9, 10)).unwrap().points, &[9, 10]);
+        assert_eq!(boundary.edges.get(&(10, 11)).unwrap().points, &[10, 11]);
+        assert_eq!(boundary.faces.get(&(0, 1, 2, 3)).unwrap().points, &[0, 3, 2, 1]);
+        assert_eq!(boundary.faces.get(&(0, 1, 4, 5)).unwrap().points, &[0, 1, 5, 4]);
+        assert_eq!(boundary.faces.get(&(0, 3, 4, 7)).unwrap().points, &[0, 4, 7, 3]);
+        assert_eq!(boundary.faces.get(&(1, 2, 5, 6)).unwrap().points, &[1, 2, 6, 5]);
+        assert_eq!(boundary.faces.get(&(2, 3, 6, 7)).unwrap().points, &[2, 3, 7, 6]);
+        assert_eq!(boundary.faces.get(&(4, 5, 8, 9)).unwrap().points, &[4, 5, 9, 8]);
+        assert_eq!(boundary.faces.get(&(4, 7, 8, 11)).unwrap().points, &[4, 8, 11, 7]);
+        assert_eq!(boundary.faces.get(&(5, 6, 9, 10)).unwrap().points, &[5, 6, 10, 9]);
+        assert_eq!(boundary.faces.get(&(6, 7, 10, 11)).unwrap().points, &[6, 7, 11, 10]);
+        assert_eq!(boundary.faces.get(&(8, 9, 10, 11)).unwrap().points, &[8, 9, 10, 11]);
 
         //                       4------------7-----------10
         //                      /.           /|            |
@@ -280,8 +321,31 @@ mod tests {
         //
         let mesh = Samples::mixed_shapes_3d();
         let boundary = Boundary::new(&mesh)?;
+        let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
         let mut face_keys: Vec<_> = boundary.faces.keys().collect();
+        edge_keys.sort();
         face_keys.sort();
+        assert_eq!(
+            edge_keys,
+            [
+                &(0, 1),
+                &(0, 3),
+                &(0, 4),
+                &(1, 2),
+                &(1, 5),
+                &(2, 3),
+                &(2, 6),
+                &(2, 8),
+                &(3, 6),
+                &(3, 7),
+                &(3, 8),
+                &(4, 5),
+                &(4, 7),
+                &(5, 6),
+                &(6, 7),
+                &(6, 8),
+            ]
+        );
         assert_eq!(
             face_keys,
             [
@@ -297,16 +361,32 @@ mod tests {
                 &(4, 5, 6, 7),
             ]
         );
-        assert_eq!(boundary.faces.get(&(0, 1, 2, 3)).unwrap().points, &[0, 4]);
-        assert_eq!(boundary.faces.get(&(0, 1, 4, 5)).unwrap().points, &[0, 2]);
-        assert_eq!(boundary.faces.get(&(0, 3, 4, 7)).unwrap().points, &[0, 0]);
-        assert_eq!(boundary.faces.get(&(1, 2, 5, 6)).unwrap().points, &[0, 1]);
-        assert_eq!(boundary.faces.get(&(2, 3, 6, 7)).unwrap().points, &[0, 3]);
-        assert_eq!(boundary.faces.get(&(2, 3, 6, 13)).unwrap().points, &[1, 0]);
-        assert_eq!(boundary.faces.get(&(2, 3, 8, 13)).unwrap().points, &[1, 2]);
-        assert_eq!(boundary.faces.get(&(2, 6, 8, 13)).unwrap().points, &[1, 1]);
-        assert_eq!(boundary.faces.get(&(3, 6, 8, 13)).unwrap().points, &[1, 3]);
-        assert_eq!(boundary.faces.get(&(4, 5, 6, 7)).unwrap().points, &[0, 5]);
+        assert_eq!(boundary.edges.get(&(0, 1)).unwrap().points, &[0, 1]);
+        assert_eq!(boundary.edges.get(&(0, 3)).unwrap().points, &[3, 0]);
+        assert_eq!(boundary.edges.get(&(0, 4)).unwrap().points, &[0, 4]);
+        assert_eq!(boundary.edges.get(&(1, 2)).unwrap().points, &[1, 2]);
+        assert_eq!(boundary.edges.get(&(1, 5)).unwrap().points, &[5, 1]);
+        assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[2, 3]);
+        assert_eq!(boundary.edges.get(&(2, 6)).unwrap().points, &[6, 2]);
+        assert_eq!(boundary.edges.get(&(2, 8)).unwrap().points, &[2, 8]);
+        assert_eq!(boundary.edges.get(&(3, 6)).unwrap().points, &[3, 6]);
+        assert_eq!(boundary.edges.get(&(3, 7)).unwrap().points, &[3, 7]);
+        assert_eq!(boundary.edges.get(&(3, 8)).unwrap().points, &[8, 3]);
+        assert_eq!(boundary.edges.get(&(4, 5)).unwrap().points, &[4, 5]);
+        assert_eq!(boundary.edges.get(&(4, 7)).unwrap().points, &[7, 4]);
+        assert_eq!(boundary.edges.get(&(5, 6)).unwrap().points, &[5, 6]);
+        assert_eq!(boundary.edges.get(&(6, 7)).unwrap().points, &[6, 7]);
+        assert_eq!(boundary.edges.get(&(6, 8)).unwrap().points, &[6, 8]);
+        assert_eq!(boundary.faces.get(&(0, 1, 2, 3)).unwrap().points, &[0, 3, 2, 1]);
+        assert_eq!(boundary.faces.get(&(0, 1, 4, 5)).unwrap().points, &[0, 1, 5, 4]);
+        assert_eq!(boundary.faces.get(&(0, 3, 4, 7)).unwrap().points, &[0, 4, 7, 3]);
+        assert_eq!(boundary.faces.get(&(1, 2, 5, 6)).unwrap().points, &[1, 2, 6, 5]);
+        assert_eq!(boundary.faces.get(&(2, 3, 6, 7)).unwrap().points, &[2, 3, 7, 6]);
+        assert_eq!(boundary.faces.get(&(2, 3, 6, 13)).unwrap().points, &[2, 6, 3]);
+        assert_eq!(boundary.faces.get(&(2, 3, 8, 13)).unwrap().points, &[2, 3, 8]);
+        assert_eq!(boundary.faces.get(&(2, 6, 8, 13)).unwrap().points, &[2, 8, 6]);
+        assert_eq!(boundary.faces.get(&(3, 6, 8, 13)).unwrap().points, &[8, 3, 6]);
+        assert_eq!(boundary.faces.get(&(4, 5, 6, 7)).unwrap().points, &[4, 5, 6, 7]);
         Ok(())
     }
 }
