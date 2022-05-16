@@ -1,15 +1,10 @@
 use super::{all_edges_2d, all_faces_3d, alloc_cell_shapes, CellId, Edge, EdgeKey, Face, FaceKey, Mesh, PointId};
 use crate::{shapes::Shape, StrError};
 use russell_lab::sort2;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// Holds points, edges and faces on the boundaries of a mesh
 pub struct Boundary {
-    /// Set of points on the boundaries
-    ///
-    /// Note: a boundary point belongs to a boundary edge or a boundary face
-    pub points: HashSet<PointId>,
-
     /// Set of edges on the boundaries
     ///
     /// Note:
@@ -41,7 +36,6 @@ impl Boundary {
             _ => panic!("space_ndim must be 2 or 3"),
         };
         Ok(Boundary {
-            points: HashSet::new(),
             edges: boundary_edges,
             faces: boundary_faces,
         })
