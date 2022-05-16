@@ -119,6 +119,7 @@ impl Samples {
     /// Returns a mesh with mixed shapes in 3D
     ///
     /// ```text
+    /// Note: the tetrahedron (2,8,3,6) is incompatible
     ///                       4------------7-----------10
     ///                      /.           /|            |
     ///                     / .          / |            |
