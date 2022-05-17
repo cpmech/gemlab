@@ -232,34 +232,36 @@ impl Boundary {
 mod tests {
     use super::Boundary;
     use crate::mesh::{EdgeKey, FaceKey, PointId, Samples};
+    use crate::util::AsArray2D;
     use crate::StrError;
 
-    fn validate(
+    fn validate_edges<'a, T>(
         boundary: &Boundary,
-        correct_edge_keys: &[EdgeKey], // sorted
-        correct_face_keys: &[FaceKey], // sorted
-        correct_edge_points: &[Vec<PointId>],
-        correct_face_points: &[Vec<PointId>],
-    ) {
-        assert_eq!(correct_edge_keys.len(), correct_edge_points.len());
-        assert_eq!(correct_face_keys.len(), correct_face_points.len());
-        let mut edge_keys: Vec<_> = boundary.edges.keys().map(|k| *k).collect();
-        let mut face_keys: Vec<_> = boundary.faces.keys().map(|k| *k).collect();
-        edge_keys.sort();
-        face_keys.sort();
-        assert_eq!(edge_keys, correct_edge_keys);
-        assert_eq!(face_keys, correct_face_keys);
-        for i in 0..edge_keys.len() {
-            assert_eq!(
-                boundary.edges.get(&edge_keys[i]).unwrap().points,
-                correct_edge_points[i]
-            );
+        correct_keys: &[EdgeKey], // sorted
+        correct_points: &'a T,
+    ) where
+        T: AsArray2D<'a, PointId>,
+    {
+        let mut keys: Vec<_> = boundary.edges.keys().map(|k| *k).collect();
+        keys.sort();
+        assert_eq!(keys, correct_keys);
+        for i in 0..keys.len() {
+            assert_eq!(boundary.edges.get(&keys[i]).unwrap().points, correct_points.row(i));
         }
-        for i in 0..face_keys.len() {
-            assert_eq!(
-                boundary.faces.get(&face_keys[i]).unwrap().points,
-                correct_face_points[i]
-            );
+    }
+
+    fn validate_faces<'a, T>(
+        boundary: &Boundary,
+        correct_keys: &[FaceKey], // sorted
+        correct_points: &'a T,
+    ) where
+        T: AsArray2D<'a, PointId>,
+    {
+        let mut keys: Vec<_> = boundary.faces.keys().map(|k| *k).collect();
+        keys.sort();
+        assert_eq!(keys, correct_keys);
+        for i in 0..keys.len() {
+            assert_eq!(boundary.faces.get(&keys[i]).unwrap().points, correct_points.row(i));
         }
     }
 
@@ -272,13 +274,9 @@ mod tests {
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
         let boundary = Boundary::new(&mesh)?;
-        validate(
-            &boundary,
-            &[(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)],
-            &[],
-            &[vec![1, 0], vec![0, 3], vec![4, 1], vec![3, 2], vec![2, 5], vec![5, 4]],
-            &[],
-        );
+        let correct_keys = [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)];
+        let correct_points = [[1, 0], [0, 3], [4, 1], [3, 2], [2, 5], [5, 4]];
+        validate_edges(&boundary, &correct_keys, &correct_points);
         assert_eq!(boundary.min, &[0.0, 0.0]);
         assert_eq!(boundary.max, &[2.0, 1.0]);
         let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
@@ -304,12 +302,18 @@ mod tests {
         //  0----4-----8----1---18---21----16
         let mesh = Samples::block_2d_four_quad16();
         let boundary = Boundary::new(&mesh)?;
-        let mut edge_keys: Vec<_> = boundary.edges.keys().map(|k| *k).collect();
-        edge_keys.sort();
-        assert_eq!(
-            edge_keys,
-            [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)]
-        );
+        let correct_keys = [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)];
+        let correct_points = [
+            [1, 0, 8, 4],
+            [0, 3, 11, 7],
+            [16, 1, 21, 18],
+            [3, 29, 35, 32],
+            [17, 16, 22, 19],
+            [40, 17, 43, 41],
+            [29, 28, 34, 31],
+            [28, 40, 44, 42],
+        ];
+        validate_edges(&boundary, &correct_keys, &correct_points);
         Ok(())
     }
 
