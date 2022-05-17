@@ -231,8 +231,37 @@ impl Boundary {
 #[cfg(test)]
 mod tests {
     use super::Boundary;
-    use crate::mesh::Samples;
+    use crate::mesh::{EdgeKey, FaceKey, PointId, Samples};
     use crate::StrError;
+
+    fn validate(
+        boundary: &Boundary,
+        correct_edge_keys: &[EdgeKey], // sorted
+        correct_face_keys: &[FaceKey], // sorted
+        correct_edge_points: &[Vec<PointId>],
+        correct_face_points: &[Vec<PointId>],
+    ) {
+        assert_eq!(correct_edge_keys.len(), correct_edge_points.len());
+        assert_eq!(correct_face_keys.len(), correct_face_points.len());
+        let mut edge_keys: Vec<_> = boundary.edges.keys().map(|k| *k).collect();
+        let mut face_keys: Vec<_> = boundary.faces.keys().map(|k| *k).collect();
+        edge_keys.sort();
+        face_keys.sort();
+        assert_eq!(edge_keys, correct_edge_keys);
+        assert_eq!(face_keys, correct_face_keys);
+        for i in 0..edge_keys.len() {
+            assert_eq!(
+                boundary.edges.get(&edge_keys[i]).unwrap().points,
+                correct_edge_points[i]
+            );
+        }
+        for i in 0..face_keys.len() {
+            assert_eq!(
+                boundary.faces.get(&face_keys[i]).unwrap().points,
+                correct_face_points[i]
+            );
+        }
+    }
 
     #[test]
     fn boundary_2d_works() -> Result<(), StrError> {
@@ -243,20 +272,44 @@ mod tests {
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
         let boundary = Boundary::new(&mesh)?;
-        let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
-        edge_keys.sort();
-        assert_eq!(edge_keys, [&(0, 1), &(0, 3), &(1, 4), &(2, 3), &(2, 5), &(4, 5)]);
-        assert_eq!(boundary.edges.get(&(0, 1)).unwrap().points, &[1, 0]);
-        assert_eq!(boundary.edges.get(&(0, 3)).unwrap().points, &[0, 3]);
-        assert_eq!(boundary.edges.get(&(1, 4)).unwrap().points, &[4, 1]);
-        assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[3, 2]);
-        assert_eq!(boundary.edges.get(&(2, 5)).unwrap().points, &[2, 5]);
-        assert_eq!(boundary.edges.get(&(4, 5)).unwrap().points, &[5, 4]);
+        validate(
+            &boundary,
+            &[(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)],
+            &[],
+            &[vec![1, 0], vec![0, 3], vec![4, 1], vec![3, 2], vec![2, 5], vec![5, 4]],
+            &[],
+        );
         assert_eq!(boundary.min, &[0.0, 0.0]);
         assert_eq!(boundary.max, &[2.0, 1.0]);
         let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5]);
+        Ok(())
+    }
+
+    #[test]
+    fn boundary_2d_block_works() -> Result<(), StrError> {
+        // 29---34----31---28---44---42----40
+        //  |               |               |
+        // 32   39    38   33   48   47    43
+        //  |               |               |
+        // 35   36    37   30   45   46    41
+        //  |               |               |
+        //  3---10-----6----2---23---20----17
+        //  |               |               |
+        //  7   15    14    9   27   26    22
+        //  |               |               |
+        // 11   12    13    5   24   25    19
+        //  |               |               |
+        //  0----4-----8----1---18---21----16
+        let mesh = Samples::block_2d_four_quad16();
+        let boundary = Boundary::new(&mesh)?;
+        let mut edge_keys: Vec<_> = boundary.edges.keys().map(|k| *k).collect();
+        edge_keys.sort();
+        assert_eq!(
+            edge_keys,
+            [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)]
+        );
         Ok(())
     }
 
@@ -269,9 +322,9 @@ mod tests {
         //  0--------1---------2
         let mesh = Samples::mixed_shapes_2d();
         let boundary = Boundary::new(&mesh)?;
-        let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
+        let mut edge_keys: Vec<_> = boundary.edges.keys().map(|k| *k).collect();
         edge_keys.sort();
-        assert_eq!(edge_keys, [&(1, 2), &(1, 4), &(2, 3), &(3, 4)]);
+        assert_eq!(edge_keys, [(1, 2), (1, 4), (2, 3), (3, 4)]);
         assert_eq!(boundary.edges.get(&(1, 2)).unwrap().points, &[2, 1]);
         assert_eq!(boundary.edges.get(&(1, 4)).unwrap().points, &[1, 4]);
         assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[3, 2]);
@@ -308,48 +361,48 @@ mod tests {
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
         let boundary = Boundary::new(&mesh)?;
-        let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
-        let mut face_keys: Vec<_> = boundary.faces.keys().collect();
+        let mut edge_keys: Vec<_> = boundary.edges.keys().map(|k| *k).collect();
+        let mut face_keys: Vec<_> = boundary.faces.keys().map(|k| *k).collect();
         edge_keys.sort();
         face_keys.sort();
         assert_eq!(
             edge_keys,
             [
-                &(0, 1),
-                &(0, 3),
-                &(0, 4),
-                &(1, 2),
-                &(1, 5),
-                &(2, 3),
-                &(2, 6),
-                &(3, 7),
-                &(4, 5),
-                &(4, 7),
-                &(4, 8),
-                &(5, 6),
-                &(5, 9),
-                &(6, 7),
-                &(6, 10),
-                &(7, 11),
-                &(8, 9),
-                &(8, 11),
-                &(9, 10),
-                &(10, 11),
+                (0, 1),
+                (0, 3),
+                (0, 4),
+                (1, 2),
+                (1, 5),
+                (2, 3),
+                (2, 6),
+                (3, 7),
+                (4, 5),
+                (4, 7),
+                (4, 8),
+                (5, 6),
+                (5, 9),
+                (6, 7),
+                (6, 10),
+                (7, 11),
+                (8, 9),
+                (8, 11),
+                (9, 10),
+                (10, 11),
             ]
         );
         assert_eq!(
             face_keys,
             [
-                &(0, 1, 2, 3),
-                &(0, 1, 4, 5),
-                &(0, 3, 4, 7),
-                &(1, 2, 5, 6),
-                &(2, 3, 6, 7),
-                &(4, 5, 8, 9),
-                &(4, 7, 8, 11),
-                &(5, 6, 9, 10),
-                &(6, 7, 10, 11),
-                &(8, 9, 10, 11),
+                (0, 1, 2, 3),
+                (0, 1, 4, 5),
+                (0, 3, 4, 7),
+                (1, 2, 5, 6),
+                (2, 3, 6, 7),
+                (4, 5, 8, 9),
+                (4, 7, 8, 11),
+                (5, 6, 9, 10),
+                (6, 7, 10, 11),
+                (8, 9, 10, 11),
             ]
         );
         assert_eq!(boundary.edges.get(&(0, 1)).unwrap().points, &[0, 1]);
@@ -408,44 +461,44 @@ mod tests {
         //
         let mesh = Samples::mixed_shapes_3d();
         let boundary = Boundary::new(&mesh)?;
-        let mut edge_keys: Vec<_> = boundary.edges.keys().collect();
-        let mut face_keys: Vec<_> = boundary.faces.keys().collect();
+        let mut edge_keys: Vec<_> = boundary.edges.keys().map(|k| *k).collect();
+        let mut face_keys: Vec<_> = boundary.faces.keys().map(|k| *k).collect();
         edge_keys.sort();
         face_keys.sort();
         assert_eq!(
             edge_keys,
             [
-                &(0, 1),
-                &(0, 3),
-                &(0, 4),
-                &(1, 2),
-                &(1, 5),
-                &(2, 3),
-                &(2, 6),
-                &(2, 8),
-                &(3, 6),
-                &(3, 7),
-                &(3, 8),
-                &(4, 5),
-                &(4, 7),
-                &(5, 6),
-                &(6, 7),
-                &(6, 8),
+                (0, 1),
+                (0, 3),
+                (0, 4),
+                (1, 2),
+                (1, 5),
+                (2, 3),
+                (2, 6),
+                (2, 8),
+                (3, 6),
+                (3, 7),
+                (3, 8),
+                (4, 5),
+                (4, 7),
+                (5, 6),
+                (6, 7),
+                (6, 8),
             ]
         );
         assert_eq!(
             face_keys,
             [
-                &(0, 1, 2, 3),
-                &(0, 1, 4, 5),
-                &(0, 3, 4, 7),
-                &(1, 2, 5, 6),
-                &(2, 3, 6, 7),
-                &(2, 3, 6, 13),
-                &(2, 3, 8, 13),
-                &(2, 6, 8, 13),
-                &(3, 6, 8, 13),
-                &(4, 5, 6, 7),
+                (0, 1, 2, 3),
+                (0, 1, 4, 5),
+                (0, 3, 4, 7),
+                (1, 2, 5, 6),
+                (2, 3, 6, 7),
+                (2, 3, 6, 13),
+                (2, 3, 8, 13),
+                (2, 6, 8, 13),
+                (3, 6, 8, 13),
+                (4, 5, 6, 7),
             ]
         );
         assert_eq!(boundary.edges.get(&(0, 1)).unwrap().points, &[0, 1]);
