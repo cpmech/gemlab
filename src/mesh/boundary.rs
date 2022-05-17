@@ -34,7 +34,7 @@ impl Boundary {
     /// Allocates a new instance
     pub fn new(mesh: &Mesh) -> Result<Self, StrError> {
         let shapes = alloc_cell_shapes(mesh)?;
-        let boundary = match mesh.space_ndim {
+        let mut boundary = match mesh.space_ndim {
             2 => {
                 let edges = all_edges_2d(mesh, &shapes)?;
                 Boundary::two_dim(mesh, &shapes, &edges)?
@@ -45,6 +45,22 @@ impl Boundary {
             }
             _ => panic!("space_ndim must be 2 or 3"),
         };
+        // handle points of (rods in 2D or 3D) or (shells in 3D)
+        mesh.cells.iter().for_each(|cell| {
+            if cell.geo_ndim == 1 || (cell.geo_ndim == 2 && mesh.space_ndim == 3) {
+                cell.points.iter().for_each(|id| {
+                    boundary.points.insert(*id);
+                    for j in 0..mesh.space_ndim {
+                        if mesh.points[*id].coords[j] < boundary.min[j] {
+                            boundary.min[j] = mesh.points[*id].coords[j];
+                        }
+                        if mesh.points[*id].coords[j] > boundary.max[j] {
+                            boundary.max[j] = mesh.points[*id].coords[j];
+                        }
+                    }
+                });
+            }
+        });
         Ok(boundary)
     }
 
@@ -238,6 +254,9 @@ mod tests {
         assert_eq!(boundary.edges.get(&(4, 5)).unwrap().points, &[5, 4]);
         assert_eq!(boundary.min, &[0.0, 0.0]);
         assert_eq!(boundary.max, &[2.0, 1.0]);
+        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        points.sort();
+        assert_eq!(points, &[0, 1, 2, 3, 4, 5]);
         Ok(())
     }
 
@@ -257,8 +276,11 @@ mod tests {
         assert_eq!(boundary.edges.get(&(1, 4)).unwrap().points, &[1, 4]);
         assert_eq!(boundary.edges.get(&(2, 3)).unwrap().points, &[3, 2]);
         assert_eq!(boundary.edges.get(&(3, 4)).unwrap().points, &[4, 3]);
-        assert_eq!(boundary.min, &[1.0, 0.0]); // note that the line 0->1 is not considered
+        assert_eq!(boundary.min, &[0.0, 0.0]);
         assert_eq!(boundary.max, &[2.0, 1.0]);
+        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        points.sort();
+        assert_eq!(points, &[0, 1, 2, 3, 4]);
         Ok(())
     }
 
@@ -362,6 +384,9 @@ mod tests {
         assert_eq!(boundary.faces.get(&(8, 9, 10, 11)).unwrap().points, &[8, 9, 10, 11]);
         assert_eq!(boundary.min, &[0.0, 0.0, 0.0]);
         assert_eq!(boundary.max, &[1.0, 1.0, 2.0]);
+        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        points.sort();
+        assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
         Ok(())
     }
 
@@ -449,8 +474,11 @@ mod tests {
         assert_eq!(boundary.faces.get(&(2, 6, 8, 13)).unwrap().points, &[2, 8, 6]);
         assert_eq!(boundary.faces.get(&(3, 6, 8, 13)).unwrap().points, &[8, 3, 6]);
         assert_eq!(boundary.faces.get(&(4, 5, 6, 7)).unwrap().points, &[4, 5, 6, 7]);
-        assert_eq!(boundary.min, &[0.0, 0.0, 0.0]);
-        assert_eq!(boundary.max, &[1.0, 2.0, 1.0]); // Note that the line 12-11-1 is not considered
+        assert_eq!(boundary.min, &[0.0, -1.0, 0.0]);
+        assert_eq!(boundary.max, &[1.0, 2.0, 1.0]);
+        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        points.sort();
+        assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
         Ok(())
     }
 }
