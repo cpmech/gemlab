@@ -166,19 +166,21 @@ impl Samples {
     /// Returns a mesh with four quad4 cells
     ///
     /// ```text
-    ///   7---------------6---------------8
-    ///   |               |               |
-    ///   |               |               |
-    ///   |      [2]      |      [3]      |
-    ///   |               |               |
-    ///   |               |               |
-    ///   3---------------2---------------5
-    ///   |               |               |
-    ///   |               |               |
-    ///   |      [0]      |      [1]      |
-    ///   |               |               |
-    ///   |               |               |
-    ///   0---------------1---------------4
+    /// 2.0   7---------------6---------------8
+    ///       |               |               |
+    ///       |               |               |
+    ///       |      [2]      |      [3]      |
+    ///       |               |               |
+    ///       |               |               |
+    /// 1.0   3---------------2---------------5
+    ///       |               |               |
+    ///       |               |               |
+    ///       |      [0]      |      [1]      |
+    ///       |               |               |
+    ///       |               |               |
+    /// 0.0   0---------------1---------------4
+    ///
+    ///      0.0             1.0             2.0
     ///
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
@@ -210,19 +212,21 @@ impl Samples {
     /// Returns a mesh with four quad8 cells
     ///
     /// ```text
-    ///  14------16------13------20------18
-    ///   |               |               |
-    ///   |               |               |
-    ///  17      [2]     15      [3]     19
-    ///   |               |               |
-    ///   |               |               |
-    ///   3-------6-------2------12-------9
-    ///   |               |               |
-    ///   |               |               |
-    ///   7      [0]      5      [1]     11
-    ///   |               |               |
-    ///   |               |               |
-    ///   0-------4-------1------10-------8
+    /// 2.0  14------16------13------20------18
+    ///       |               |               |
+    ///       |               |               |
+    /// 1.5  17      [2]     15      [3]     19
+    ///       |               |               |
+    ///       |               |               |
+    /// 1.0   3-------6-------2------12-------9
+    ///       |               |               |
+    ///       |               |               |
+    /// 0.5   7      [0]      5      [1]     11
+    ///       |               |               |
+    ///       |               |               |
+    /// 0.0   0-------4-------1------10-------8
+    ///
+    ///      0.0     0.5     1.0     1.5     2.0
     ///
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
@@ -268,19 +272,21 @@ impl Samples {
     /// ```text
     /// cell ids as in block_2d_four_quad8
     ///
-    ///  16------18------15------23------21
-    ///   |               |               |
-    ///   |               |               |
-    ///  19      20      17      24      22
-    ///   |               |               |
-    ///   |               |               |
-    ///   3-------6-------2------13------10
-    ///   |               |               |
-    ///   |               |               |
-    ///   7       8       5      14      12
-    ///   |               |               |
-    ///   |               |               |
-    ///   0-------4-------1------11-------9
+    /// 2.0  16------18------15------23------21
+    ///       |               |               |
+    ///       |               |               |
+    /// 1.5  19      20      17      24      22
+    ///       |               |               |
+    ///       |               |               |
+    /// 1.0   3-------6-------2------13------10
+    ///       |               |               |
+    ///       |               |               |
+    /// 0.5   7       8       5      14      12
+    ///       |               |               |
+    ///       |               |               |
+    /// 0.0   0-------4-------1------11-------9
+    ///
+    ///      0.0     0.5     1.0     1.5     2.0
     ///
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
@@ -290,34 +296,37 @@ impl Samples {
         Mesh {
             space_ndim: 2,
             points: vec![
-                Point { id:  0, coords: vec![] },
-                Point { id:  1, coords: vec![] },
-                Point { id:  2, coords: vec![] },
-                Point { id:  3, coords: vec![] },
-                Point { id:  4, coords: vec![] },
-                Point { id:  5, coords: vec![] },
-                Point { id:  6, coords: vec![] },
-                Point { id:  7, coords: vec![] },
-                Point { id:  8, coords: vec![] },
-                Point { id:  9, coords: vec![] },
-                Point { id: 10, coords: vec![] },
-                Point { id: 11, coords: vec![] },
-                Point { id: 12, coords: vec![] },
-                Point { id: 13, coords: vec![] },
-                Point { id: 14, coords: vec![] },
-                Point { id: 15, coords: vec![] },
-                Point { id: 16, coords: vec![] },
-                Point { id: 17, coords: vec![] },
-                Point { id: 18, coords: vec![] },
-                Point { id: 19, coords: vec![] },
-                Point { id: 20, coords: vec![] },
-                Point { id: 21, coords: vec![] },
-                Point { id: 22, coords: vec![] },
-                Point { id: 23, coords: vec![] },
-                Point { id: 24, coords: vec![] },
+                Point { id:  0, coords: vec![0.0, 0.0] },
+                Point { id:  1, coords: vec![1.0, 0.0] },
+                Point { id:  2, coords: vec![1.0, 1.0] },
+                Point { id:  3, coords: vec![0.0, 1.0] },
+                Point { id:  4, coords: vec![0.5, 0.0] },
+                Point { id:  5, coords: vec![1.0, 0.5] },
+                Point { id:  6, coords: vec![0.5, 1.0] },
+                Point { id:  7, coords: vec![0.0, 0.5] },
+                Point { id:  8, coords: vec![0.5, 0.5] },
+                Point { id:  9, coords: vec![2.0, 0.0] },
+                Point { id: 10, coords: vec![2.0, 1.0] },
+                Point { id: 11, coords: vec![1.5, 0.0] },
+                Point { id: 12, coords: vec![2.0, 0.5] },
+                Point { id: 13, coords: vec![1.5, 1.0] },
+                Point { id: 14, coords: vec![1.5, 0.5] },
+                Point { id: 15, coords: vec![1.0, 2.0] },
+                Point { id: 16, coords: vec![0.0, 2.0] },
+                Point { id: 17, coords: vec![1.0, 1.5] },
+                Point { id: 18, coords: vec![0.5, 2.0] },
+                Point { id: 19, coords: vec![0.0, 1.5] },
+                Point { id: 20, coords: vec![0.5, 1.5] },
+                Point { id: 21, coords: vec![2.0, 2.0] },
+                Point { id: 22, coords: vec![2.0, 1.5] },
+                Point { id: 23, coords: vec![1.5, 2.0] },
+                Point { id: 24, coords: vec![1.5, 1.5] },
             ],
             cells: vec![
-                Cell { id: 4, attribute_id: 3, geo_ndim: 1, points: vec![] },
+                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8] },
+                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1,  9, 10,  2, 11, 12, 13,  5, 14] },
+                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3,  2, 15, 16,  6, 17, 18, 19, 20] },
+                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 10, 21, 15, 13, 22, 23, 17, 24] },
             ],
         }
     }
@@ -327,19 +336,21 @@ impl Samples {
     /// ```text
     /// cell ids as in block_2d_four_quad8
     ///
-    ///  21---26---23----20---32---30----28
-    ///   |               |               |
-    ///  24              25              31
-    ///   |               |               |
-    ///  27              22              29
-    ///   |               |               |
-    ///   3---10-----6----2---19---16----13
-    ///   |               |               |
-    ///   7               9              18
-    ///   |               |               |
-    ///  11               5              15
-    ///   |               |               |
-    ///   0----4-----8----1---14---17----12
+    /// 3.0  21---26---23----20---32---30----28
+    ///       |               |               |
+    /// 2.5  24              25              31
+    ///       |               |               |
+    /// 2.0  27              22              29
+    ///       |               |               |
+    /// 1.5   3---10-----6----2---19---16----13
+    ///       |               |               |
+    /// 1.0   7               9              18
+    ///       |               |               |
+    /// 0.5  11               5              15
+    ///       |               |               |
+    /// 0.0   0----4-----8----1---14---17----12
+    ///
+    ///      0.0  0.5   1.0  1.5  2.0  2.5   3.0
     ///
     /// xmin = 0.0, xmax = 3.0
     /// ymin = 0.0, ymax = 3.0
@@ -349,10 +360,45 @@ impl Samples {
         Mesh {
             space_ndim: 2,
             points: vec![
-                Point { id: 0, coords: vec![] },
+                Point { id:  0, coords: vec![0.0, 0.0] },
+                Point { id:  1, coords: vec![1.5, 0.0] },
+                Point { id:  2, coords: vec![1.5, 1.5] },
+                Point { id:  3, coords: vec![0.0, 1.5] },
+                Point { id:  4, coords: vec![0.5, 0.0] },
+                Point { id:  5, coords: vec![1.5, 0.5] },
+                Point { id:  6, coords: vec![1.0, 1.5] },
+                Point { id:  7, coords: vec![0.0, 1.0] },
+                Point { id:  8, coords: vec![1.0, 0.0] },
+                Point { id:  9, coords: vec![1.5, 1.0] },
+                Point { id: 10, coords: vec![0.5, 1.5] },
+                Point { id: 11, coords: vec![0.0, 0.5] },
+                Point { id: 12, coords: vec![3.0, 0.0] },
+                Point { id: 13, coords: vec![3.0, 1.5] },
+                Point { id: 14, coords: vec![2.0, 0.0] },
+                Point { id: 15, coords: vec![3.0, 0.5] },
+                Point { id: 16, coords: vec![2.5, 1.5] },
+                Point { id: 17, coords: vec![2.5, 0.0] },
+                Point { id: 18, coords: vec![3.0, 1.0] },
+                Point { id: 19, coords: vec![2.0, 1.5] },
+                Point { id: 20, coords: vec![1.5, 3.0] },
+                Point { id: 21, coords: vec![0.0, 3.0] },
+                Point { id: 22, coords: vec![1.5, 2.0] },
+                Point { id: 23, coords: vec![1.0, 3.0] },
+                Point { id: 24, coords: vec![0.0, 2.5] },
+                Point { id: 25, coords: vec![1.5, 2.5] },
+                Point { id: 26, coords: vec![0.5, 3.0] },
+                Point { id: 27, coords: vec![0.0, 2.0] },
+                Point { id: 28, coords: vec![3.0, 3.0] },
+                Point { id: 29, coords: vec![3.0, 2.0] },
+                Point { id: 30, coords: vec![2.5, 3.0] },
+                Point { id: 31, coords: vec![3.0, 2.5] },
+                Point { id: 32, coords: vec![2.0, 3.0] },
             ],
             cells: vec![
-                Cell { id: 4, attribute_id: 3, geo_ndim: 1, points: vec![] },
+                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11] },
+                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1, 12, 13,  2, 14, 15, 16,  9, 17, 18, 19,  5] },
+                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3,  2, 20, 21, 10, 22, 23, 24,  6, 25, 26, 27] },
+                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 13, 28, 20, 19, 29, 30, 25, 16, 31, 32, 22] },
             ],
         }
     }
@@ -362,19 +408,21 @@ impl Samples {
     /// ```text
     /// cell ids as in block_2d_four_quad8
     ///
-    ///  29---34----31---28---44---42----40
-    ///   |               |               |
-    ///  32   39    38   33   48   47    43
-    ///   |               |               |
-    ///  35   36    37   30   45   46    41
-    ///   |               |               |
-    ///   3---10-----6----2---23---20----17
-    ///   |               |               |
-    ///   7   15    14    9   27   26    22
-    ///   |               |               |
-    ///  11   12    13    5   24   25    19
-    ///   |               |               |
-    ///   0----4-----8----1---18---21----16
+    /// 3.0  29---34----31---28---44---42----40
+    ///       |               |               |
+    /// 2.5  32   39    38   33   48   47    43
+    ///       |               |               |
+    /// 2.0  35   36    37   30   45   46    41
+    ///       |               |               |
+    /// 1.5   3---10-----6----2---23---20----17
+    ///       |               |               |
+    /// 1.0   7   15    14    9   27   26    22
+    ///       |               |               |
+    /// 0.5  11   12    13    5   24   25    19
+    ///       |               |               |
+    /// 0.0   0----4-----8----1---18---21----16
+    ///
+    ///      0.0  0.5   1.0  1.5  2.0  2.5   3.0
     ///
     /// xmin = 0.0, xmax = 3.0
     /// ymin = 0.0, ymax = 3.0
@@ -384,10 +432,61 @@ impl Samples {
         Mesh {
             space_ndim: 2,
             points: vec![
-                Point { id: 0, coords: vec![] },
+                Point { id:  0, coords: vec![0.0, 0.0] },
+                Point { id:  1, coords: vec![1.5, 0.0] },
+                Point { id:  2, coords: vec![1.5, 1.5] },
+                Point { id:  3, coords: vec![0.0, 1.5] },
+                Point { id:  4, coords: vec![0.5, 0.0] },
+                Point { id:  5, coords: vec![1.5, 0.5] },
+                Point { id:  6, coords: vec![1.0, 1.5] },
+                Point { id:  7, coords: vec![0.0, 1.0] },
+                Point { id:  8, coords: vec![1.0, 0.0] },
+                Point { id:  9, coords: vec![1.5, 1.0] },
+                Point { id: 10, coords: vec![0.5, 1.5] },
+                Point { id: 11, coords: vec![0.0, 0.5] },
+                Point { id: 12, coords: vec![0.5, 0.5] },
+                Point { id: 13, coords: vec![1.0, 0.5] },
+                Point { id: 14, coords: vec![1.0, 1.0] },
+                Point { id: 15, coords: vec![0.5, 1.0] },
+                Point { id: 16, coords: vec![3.0, 0.0] },
+                Point { id: 17, coords: vec![3.0, 1.5] },
+                Point { id: 18, coords: vec![2.0, 0.0] },
+                Point { id: 19, coords: vec![3.0, 0.5] },
+                Point { id: 20, coords: vec![2.5, 1.5] },
+                Point { id: 21, coords: vec![2.5, 0.0] },
+                Point { id: 22, coords: vec![3.0, 1.0] },
+                Point { id: 23, coords: vec![2.0, 1.5] },
+                Point { id: 24, coords: vec![2.0, 0.5] },
+                Point { id: 25, coords: vec![2.5, 0.5] },
+                Point { id: 26, coords: vec![2.5, 1.0] },
+                Point { id: 27, coords: vec![2.0, 1.0] },
+                Point { id: 28, coords: vec![1.5, 3.0] },
+                Point { id: 29, coords: vec![0.0, 3.0] },
+                Point { id: 30, coords: vec![1.5, 2.0] },
+                Point { id: 31, coords: vec![1.0, 3.0] },
+                Point { id: 32, coords: vec![0.0, 2.5] },
+                Point { id: 33, coords: vec![1.5, 2.5] },
+                Point { id: 34, coords: vec![0.5, 3.0] },
+                Point { id: 35, coords: vec![0.0, 2.0] },
+                Point { id: 36, coords: vec![0.5, 2.0] },
+                Point { id: 37, coords: vec![1.0, 2.0] },
+                Point { id: 38, coords: vec![1.0, 2.5] },
+                Point { id: 39, coords: vec![0.5, 2.5] },
+                Point { id: 40, coords: vec![3.0, 3.0] },
+                Point { id: 41, coords: vec![3.0, 2.0] },
+                Point { id: 42, coords: vec![2.5, 3.0] },
+                Point { id: 43, coords: vec![3.0, 2.5] },
+                Point { id: 44, coords: vec![2.0, 3.0] },
+                Point { id: 45, coords: vec![2.0, 2.0] },
+                Point { id: 46, coords: vec![2.5, 2.0] },
+                Point { id: 47, coords: vec![2.5, 2.5] },
+                Point { id: 48, coords: vec![2.0, 2.5] },
             ],
             cells: vec![
-                Cell { id: 4, attribute_id: 3, geo_ndim: 1, points: vec![] },
+                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15] },
+                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1, 16, 17,  2, 18, 19, 20,  9, 21, 22, 23,  5, 24, 25, 26, 27] },
+                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3,  2, 28, 29, 10, 30, 31, 32,  6, 33, 34, 35, 36, 37, 38, 39] },
+                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 17, 40, 28, 23, 41, 42, 33, 20, 43, 44, 30, 45, 46, 47, 48] },
             ],
         }
     }
@@ -397,36 +496,89 @@ impl Samples {
     /// ```text
     /// cell ids as in block_2d_four_quad8
     ///
-    ///  30---38---35---32---29---47---45---43---41
-    ///   |                   |                   |
-    ///  33                  37                  46
-    ///   |                   |                   |
-    ///  36        40        34        48        44
-    ///   |                   |                   |
-    ///  39                  31                  42
-    ///   |                   |                   |
-    ///   3---14---10----6----2---27---24---21---18
-    ///   |                   |                   |
-    ///   7                  13                  26
-    ///   |                   |                   |
-    ///  11        16         9        28        23
-    ///   |                   |                   |
-    ///  15                   5                  20
-    ///   |                   |                   |
-    ///   0----4----8---12----1---19---22---25---17
+    /// 4.0  30---38---35---32---29---47---45---43---41
+    ///       |                   |                   |
+    /// 3.5  33                  37                  46
+    ///       |                   |                   |
+    /// 3.0  36        40        34        48        44
+    ///       |                   |                   |
+    /// 2.5  39                  31                  42
+    ///       |                   |                   |
+    /// 2.0   3---14---10----6----2---27---24---21---18
+    ///       |                   |                   |
+    /// 1.5   7                  13                  26
+    ///       |                   |                   |
+    /// 1.0  11        16         9        28        23
+    ///       |                   |                   |
+    /// 0.5  15                   5                  20
+    ///       |                   |                   |
+    /// 0.0   0----4----8---12----1---19---22---25---17
+    ///
+    ///      0.0  0.5  1.0  1.5  2.0  2.5  3.0  3.5  4.0
     ///
     /// xmin = 0.0, xmax = 4.0
     /// ymin = 0.0, ymax = 4.0
     /// ```
     #[rustfmt::skip]
-    pub fn block_2d_four_quad13() -> Mesh {
+    pub fn block_2d_four_quad17() -> Mesh {
         Mesh {
             space_ndim: 2,
             points: vec![
-                Point { id: 0, coords: vec![] },
+                Point { id:  0, coords: vec![0.0, 0.0] },
+                Point { id:  1, coords: vec![2.0, 0.0] },
+                Point { id:  2, coords: vec![2.0, 2.0] },
+                Point { id:  3, coords: vec![0.0, 2.0] },
+                Point { id:  4, coords: vec![0.5, 0.0] },
+                Point { id:  5, coords: vec![2.0, 0.5] },
+                Point { id:  6, coords: vec![1.5, 2.0] },
+                Point { id:  7, coords: vec![0.0, 1.5] },
+                Point { id:  8, coords: vec![1.0, 0.0] },
+                Point { id:  9, coords: vec![2.0, 1.0] },
+                Point { id: 10, coords: vec![1.0, 2.0] },
+                Point { id: 11, coords: vec![0.0, 1.0] },
+                Point { id: 12, coords: vec![1.5, 0.0] },
+                Point { id: 13, coords: vec![2.0, 1.5] },
+                Point { id: 14, coords: vec![0.5, 2.0] },
+                Point { id: 15, coords: vec![0.0, 0.5] },
+                Point { id: 16, coords: vec![1.0, 1.0] },
+                Point { id: 17, coords: vec![4.0, 0.0] },
+                Point { id: 18, coords: vec![4.0, 2.0] },
+                Point { id: 19, coords: vec![2.5, 0.0] },
+                Point { id: 20, coords: vec![4.0, 0.5] },
+                Point { id: 21, coords: vec![3.5, 2.0] },
+                Point { id: 22, coords: vec![3.0, 0.0] },
+                Point { id: 23, coords: vec![4.0, 1.0] },
+                Point { id: 24, coords: vec![3.0, 2.0] },
+                Point { id: 25, coords: vec![3.5, 0.0] },
+                Point { id: 26, coords: vec![4.0, 1.5] },
+                Point { id: 27, coords: vec![2.5, 2.0] },
+                Point { id: 28, coords: vec![3.0, 1.0] },
+                Point { id: 29, coords: vec![2.0, 4.0] },
+                Point { id: 30, coords: vec![0.0, 4.0] },
+                Point { id: 31, coords: vec![2.0, 2.5] },
+                Point { id: 32, coords: vec![1.5, 4.0] },
+                Point { id: 33, coords: vec![0.0, 3.5] },
+                Point { id: 34, coords: vec![2.0, 3.0] },
+                Point { id: 35, coords: vec![1.0, 4.0] },
+                Point { id: 36, coords: vec![0.0, 3.0] },
+                Point { id: 37, coords: vec![2.0, 3.5] },
+                Point { id: 38, coords: vec![0.5, 4.0] },
+                Point { id: 39, coords: vec![0.0, 2.5] },
+                Point { id: 40, coords: vec![1.0, 3.0] },
+                Point { id: 41, coords: vec![4.0, 4.0] },
+                Point { id: 42, coords: vec![4.0, 2.5] },
+                Point { id: 43, coords: vec![3.5, 4.0] },
+                Point { id: 44, coords: vec![4.0, 3.0] },
+                Point { id: 45, coords: vec![3.0, 4.0] },
+                Point { id: 46, coords: vec![4.0, 3.5] },
+                Point { id: 47, coords: vec![2.5, 4.0] },
+                Point { id: 48, coords: vec![3.0, 3.0] },
             ],
             cells: vec![
-                Cell { id: 4, attribute_id: 3, geo_ndim: 1, points: vec![] },
+                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16] },
+                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1, 17, 18,  2, 19, 20, 21, 13, 22, 23, 24,  9, 25, 26, 27,  5, 28] },
+                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3,  2, 29, 30, 14, 31, 32, 33, 10, 34, 35, 36,  6, 37, 38, 39, 40] },
+                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 18, 41, 29, 27, 42, 43, 37, 24, 44, 45, 34, 21, 46, 47, 31, 48] },
             ],
         }
     }
@@ -487,10 +639,43 @@ impl Samples {
         Mesh {
             space_ndim: 3,
             points: vec![
-                Point { id: 0, coords: vec![] },
+                Point { id:  0, coords: vec![0.0, 0.0, 0.0] },
+                Point { id:  1, coords: vec![1.0, 0.0, 0.0] },
+                Point { id:  2, coords: vec![1.0, 1.0, 0.0] },
+                Point { id:  3, coords: vec![0.0, 1.0, 0.0] },
+                Point { id:  4, coords: vec![0.0, 0.0, 2.0] },
+                Point { id:  5, coords: vec![1.0, 0.0, 2.0] },
+                Point { id:  6, coords: vec![1.0, 1.0, 2.0] },
+                Point { id:  7, coords: vec![0.0, 1.0, 2.0] },
+                Point { id:  8, coords: vec![2.0, 0.0, 0.0] },
+                Point { id:  9, coords: vec![2.0, 1.0, 0.0] },
+                Point { id: 10, coords: vec![2.0, 0.0, 2.0] },
+                Point { id: 11, coords: vec![2.0, 1.0, 2.0] },
+                Point { id: 12, coords: vec![1.0, 2.0, 0.0] },
+                Point { id: 13, coords: vec![0.0, 2.0, 0.0] },
+                Point { id: 14, coords: vec![1.0, 2.0, 2.0] },
+                Point { id: 15, coords: vec![0.0, 2.0, 2.0] },
+                Point { id: 16, coords: vec![2.0, 2.0, 0.0] },
+                Point { id: 17, coords: vec![2.0, 2.0, 2.0] },
+                Point { id: 18, coords: vec![0.0, 0.0, 4.0] },
+                Point { id: 19, coords: vec![1.0, 0.0, 4.0] },
+                Point { id: 20, coords: vec![1.0, 1.0, 4.0] },
+                Point { id: 21, coords: vec![0.0, 1.0, 4.0] },
+                Point { id: 22, coords: vec![2.0, 0.0, 4.0] },
+                Point { id: 23, coords: vec![2.0, 1.0, 4.0] },
+                Point { id: 24, coords: vec![1.0, 2.0, 4.0] },
+                Point { id: 25, coords: vec![0.0, 2.0, 4.0] },
+                Point { id: 26, coords: vec![2.0, 2.0, 4.0] },
             ],
             cells: vec![
-                Cell { id: 4, attribute_id: 3, geo_ndim: 1, points: vec![] },
+                Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,  1,  2,  3,  4,  5,  6,  7] },
+                Cell { id: 1, attribute_id: 1, geo_ndim: 3, points: vec![1,  8,  9,  2,  5, 10, 11,  6] },
+                Cell { id: 2, attribute_id: 1, geo_ndim: 3, points: vec![3,  2, 12, 13,  7,  6, 14, 15] },
+                Cell { id: 3, attribute_id: 1, geo_ndim: 3, points: vec![2,  9, 16, 12,  6, 11, 17, 14] },
+                Cell { id: 4, attribute_id: 1, geo_ndim: 3, points: vec![4,  5,  6,  7, 18, 19, 20, 21] },
+                Cell { id: 5, attribute_id: 1, geo_ndim: 3, points: vec![5, 10, 11,  6, 19, 22, 23, 20] },
+                Cell { id: 6, attribute_id: 1, geo_ndim: 3, points: vec![7,  6, 14, 15, 21, 20, 24, 25] },
+                Cell { id: 7, attribute_id: 1, geo_ndim: 3, points: vec![6, 11, 17, 14, 20, 23, 26, 24] },
             ],
         }
     }
@@ -551,10 +736,97 @@ impl Samples {
         Mesh {
             space_ndim: 3,
             points: vec![
-                Point { id: 0, coords: vec![] },
+                Point { id:  0, coords: vec![0.0, 0.0, 0.0] },
+                Point { id:  1, coords: vec![1.0, 0.0, 0.0] },
+                Point { id:  2, coords: vec![1.0, 1.0, 0.0] },
+                Point { id:  3, coords: vec![0.0, 1.0, 0.0] },
+                Point { id:  4, coords: vec![0.0, 0.0, 2.0] },
+                Point { id:  5, coords: vec![1.0, 0.0, 2.0] },
+                Point { id:  6, coords: vec![1.0, 1.0, 2.0] },
+                Point { id:  7, coords: vec![0.0, 1.0, 2.0] },
+                Point { id:  8, coords: vec![0.5, 0.0, 0.0] },
+                Point { id:  9, coords: vec![1.0, 0.5, 0.0] },
+                Point { id: 10, coords: vec![0.5, 1.0, 0.0] },
+                Point { id: 11, coords: vec![0.0, 0.5, 0.0] },
+                Point { id: 12, coords: vec![0.5, 0.0, 2.0] },
+                Point { id: 13, coords: vec![1.0, 0.5, 2.0] },
+                Point { id: 14, coords: vec![0.5, 1.0, 2.0] },
+                Point { id: 15, coords: vec![0.0, 0.5, 2.0] },
+                Point { id: 16, coords: vec![0.0, 0.0, 1.0] },
+                Point { id: 17, coords: vec![1.0, 0.0, 1.0] },
+                Point { id: 18, coords: vec![1.0, 1.0, 1.0] },
+                Point { id: 19, coords: vec![0.0, 1.0, 1.0] },
+                Point { id: 20, coords: vec![2.0, 0.0, 0.0] },
+                Point { id: 21, coords: vec![2.0, 1.0, 0.0] },
+                Point { id: 22, coords: vec![2.0, 0.0, 2.0] },
+                Point { id: 23, coords: vec![2.0, 1.0, 2.0] },
+                Point { id: 24, coords: vec![1.5, 0.0, 0.0] },
+                Point { id: 25, coords: vec![2.0, 0.5, 0.0] },
+                Point { id: 26, coords: vec![1.5, 1.0, 0.0] },
+                Point { id: 27, coords: vec![1.5, 0.0, 2.0] },
+                Point { id: 28, coords: vec![2.0, 0.5, 2.0] },
+                Point { id: 29, coords: vec![1.5, 1.0, 2.0] },
+                Point { id: 30, coords: vec![2.0, 0.0, 1.0] },
+                Point { id: 31, coords: vec![2.0, 1.0, 1.0] },
+                Point { id: 32, coords: vec![1.0, 2.0, 0.0] },
+                Point { id: 33, coords: vec![0.0, 2.0, 0.0] },
+                Point { id: 34, coords: vec![1.0, 2.0, 2.0] },
+                Point { id: 35, coords: vec![0.0, 2.0, 2.0] },
+                Point { id: 36, coords: vec![1.0, 1.5, 0.0] },
+                Point { id: 37, coords: vec![0.5, 2.0, 0.0] },
+                Point { id: 38, coords: vec![0.0, 1.5, 0.0] },
+                Point { id: 39, coords: vec![1.0, 1.5, 2.0] },
+                Point { id: 40, coords: vec![0.5, 2.0, 2.0] },
+                Point { id: 41, coords: vec![0.0, 1.5, 2.0] },
+                Point { id: 42, coords: vec![1.0, 2.0, 1.0] },
+                Point { id: 43, coords: vec![0.0, 2.0, 1.0] },
+                Point { id: 44, coords: vec![2.0, 2.0, 0.0] },
+                Point { id: 45, coords: vec![2.0, 2.0, 2.0] },
+                Point { id: 46, coords: vec![2.0, 1.5, 0.0] },
+                Point { id: 47, coords: vec![1.5, 2.0, 0.0] },
+                Point { id: 48, coords: vec![2.0, 1.5, 2.0] },
+                Point { id: 49, coords: vec![1.5, 2.0, 2.0] },
+                Point { id: 50, coords: vec![2.0, 2.0, 1.0] },
+                Point { id: 51, coords: vec![0.0, 0.0, 4.0] },
+                Point { id: 52, coords: vec![1.0, 0.0, 4.0] },
+                Point { id: 53, coords: vec![1.0, 1.0, 4.0] },
+                Point { id: 54, coords: vec![0.0, 1.0, 4.0] },
+                Point { id: 55, coords: vec![0.5, 0.0, 4.0] },
+                Point { id: 56, coords: vec![1.0, 0.5, 4.0] },
+                Point { id: 57, coords: vec![0.5, 1.0, 4.0] },
+                Point { id: 58, coords: vec![0.0, 0.5, 4.0] },
+                Point { id: 59, coords: vec![0.0, 0.0, 3.0] },
+                Point { id: 60, coords: vec![1.0, 0.0, 3.0] },
+                Point { id: 61, coords: vec![1.0, 1.0, 3.0] },
+                Point { id: 62, coords: vec![0.0, 1.0, 3.0] },
+                Point { id: 63, coords: vec![2.0, 0.0, 4.0] },
+                Point { id: 64, coords: vec![2.0, 1.0, 4.0] },
+                Point { id: 65, coords: vec![1.5, 0.0, 4.0] },
+                Point { id: 66, coords: vec![2.0, 0.5, 4.0] },
+                Point { id: 67, coords: vec![1.5, 1.0, 4.0] },
+                Point { id: 68, coords: vec![2.0, 0.0, 3.0] },
+                Point { id: 69, coords: vec![2.0, 1.0, 3.0] },
+                Point { id: 70, coords: vec![1.0, 2.0, 4.0] },
+                Point { id: 71, coords: vec![0.0, 2.0, 4.0] },
+                Point { id: 72, coords: vec![1.0, 1.5, 4.0] },
+                Point { id: 73, coords: vec![0.5, 2.0, 4.0] },
+                Point { id: 74, coords: vec![0.0, 1.5, 4.0] },
+                Point { id: 75, coords: vec![1.0, 2.0, 3.0] },
+                Point { id: 76, coords: vec![0.0, 2.0, 3.0] },
+                Point { id: 77, coords: vec![2.0, 2.0, 4.0] },
+                Point { id: 78, coords: vec![2.0, 1.5, 4.0] },
+                Point { id: 79, coords: vec![1.5, 2.0, 4.0] },
+                Point { id: 80, coords: vec![2.0, 2.0, 3.0] },
             ],
             cells: vec![
-                Cell { id: 4, attribute_id: 3, geo_ndim: 1, points: vec![] },
+                Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] },
+                Cell { id: 1, attribute_id: 1, geo_ndim: 3, points: vec![1, 20, 21,  2,  5, 22, 23,  6, 24, 25, 26,  9, 27, 28, 29, 13, 17, 30, 31, 18] },
+                Cell { id: 2, attribute_id: 1, geo_ndim: 3, points: vec![3,  2, 32, 33,  7,  6, 34, 35, 10, 36, 37, 38, 14, 39, 40, 41, 19, 18, 42, 43] },
+                Cell { id: 3, attribute_id: 1, geo_ndim: 3, points: vec![2, 21, 44, 32,  6, 23, 45, 34, 26, 46, 47, 36, 29, 48, 49, 39, 18, 31, 50, 42] },
+                Cell { id: 4, attribute_id: 1, geo_ndim: 3, points: vec![4,  5,  6,  7, 51, 52, 53, 54, 12, 13, 14, 15, 55, 56, 57, 58, 59, 60, 61, 62] },
+                Cell { id: 5, attribute_id: 1, geo_ndim: 3, points: vec![5, 22, 23,  6, 52, 63, 64, 53, 27, 28, 29, 13, 65, 66, 67, 56, 60, 68, 69, 61] },
+                Cell { id: 6, attribute_id: 1, geo_ndim: 3, points: vec![7,  6, 34, 35, 54, 53, 70, 71, 14, 39, 40, 41, 57, 72, 73, 74, 62, 61, 75, 76] },
+                Cell { id: 7, attribute_id: 1, geo_ndim: 3, points: vec![6, 23, 45, 34, 53, 64, 77, 70, 29, 48, 49, 39, 67, 78, 79, 72, 61, 69, 80, 75] },
             ],
         }
     }
@@ -572,20 +844,132 @@ mod tests {
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 2);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
 
         let mesh = Samples::two_cubes_vertical();
         assert_eq!(mesh.space_ndim, 3);
         assert_eq!(mesh.points.len(), 12);
         assert_eq!(mesh.cells.len(), 2);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
 
         let mesh = Samples::mixed_shapes_2d();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 5);
         assert_eq!(mesh.cells.len(), 2);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
 
         let mesh = Samples::mixed_shapes_3d();
         assert_eq!(mesh.space_ndim, 3);
         assert_eq!(mesh.points.len(), 13);
         assert_eq!(mesh.cells.len(), 5);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+
+        let mesh = Samples::block_2d_four_quad4();
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 9);
+        assert_eq!(mesh.cells.len(), 4);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+
+        let mesh = Samples::block_2d_four_quad8();
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 21);
+        assert_eq!(mesh.cells.len(), 4);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+
+        let mesh = Samples::block_2d_four_quad9();
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 25);
+        assert_eq!(mesh.cells.len(), 4);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+
+        let mesh = Samples::block_2d_four_quad12();
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 33);
+        assert_eq!(mesh.cells.len(), 4);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+
+        let mesh = Samples::block_2d_four_quad16();
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 49);
+        assert_eq!(mesh.cells.len(), 4);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+
+        let mesh = Samples::block_2d_four_quad17();
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 49);
+        assert_eq!(mesh.cells.len(), 4);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+
+        let mesh = Samples::block_3d_eight_hex8();
+        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.points.len(), 27);
+        assert_eq!(mesh.cells.len(), 8);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+
+        let mesh = Samples::block_3d_eight_hex20();
+        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.points.len(), 81);
+        assert_eq!(mesh.cells.len(), 8);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
     }
 }
