@@ -4,7 +4,7 @@ use crate::StrError;
 use russell_lab::{sort2, sort4};
 use std::collections::HashMap;
 
-/// Aliases (usize,usize) as the key of Edge
+/// Aliases (usize,usize) as the key of edges
 ///
 /// # Note
 ///
@@ -12,23 +12,23 @@ use std::collections::HashMap;
 /// edges using only two points; i.e., the middle points don't matter.
 pub type EdgeKey = (usize, usize);
 
-/// Aliases (usize,usize,usize,usize) as the key of Face
+/// Aliases (usize,usize,usize,usize) as the key of faces
 ///
 /// # Note
 ///
-/// If all faces have at most 3 points, the fourth entry in the key will be equal to the total number of points.
-/// In this way, we can compare 4-node (or more nodes) faces with each other, since that the local numbering
-/// scheme runs over the "corners" first; i.e., the middle points don't matter.
+/// If a face has at most 3 points, the fourth entry in the key will be set to the total number of points.
+/// In this way, we can compare 4-node (or more nodes) faces with each other. Since the local numbering
+/// scheme runs over the "corners" first, the middle points don't matter.
 pub type FaceKey = (usize, usize, usize, usize);
 
-/// Holds edge data (derived data structure)
+/// Holds the point ids of an edge (an entity belonging to a cell in 2D or a face in 3D)
 #[derive(Clone, Debug)]
 pub struct Edge {
     /// List of points defining this edge; in the right order (unsorted)
     pub points: Vec<PointId>,
 }
 
-/// Holds face data (derived data structure)
+/// Holds the point ids of a face (an entity belonging to a cell in 3D)
 #[derive(Clone, Debug)]
 pub struct Face {
     /// List of points defining this face; in the right order (unsorted)
