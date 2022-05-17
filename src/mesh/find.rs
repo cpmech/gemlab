@@ -2,32 +2,36 @@
 #![allow(unused_imports)]
 
 use super::{Boundary, Mesh};
-use crate::util::GridSearch;
+use crate::util::{num_divisions, GridSearch};
 use crate::StrError;
-
-/// Number of divisions along the longest direction for GridSearch
-///
-/// ```text
-/// ndiv_other = min(ndiv_max, max(ndiv_min, (ll_other/ll_long) * ndiv_long))
-/// ```
-const GRID_SEARCH_NDIV_LONG: usize = 20;
 
 /// Minimum number of divisions for GridSearch
 const GRID_SEARCH_NDIV_MIN: usize = 2;
 
-/// Maximum number of divisions for GridSearch
-const GRID_SEARCH_NDIV_MAX: usize = 50;
+/// Number of divisions for the longest direction in GridSearch
+const GRID_SEARCH_NDIV_LONG: usize = 20;
 
+/// Implements functions to find points, edges, and faces on the boundary of a mesh
 pub struct Find {
     grid: GridSearch,
-
-    pub min: Vec<f64>,   // (space_ndim)
-    pub max: Vec<f64>,   // (space_ndim)
-    pub delta: Vec<f64>, // (space_ndim)
 }
 
 impl Find {
-    // pub fn new(mesh: &Mesh, boundary: &Boundary) -> Result<Self, StrError> {
-    //     Ok(Find { grid })
-    // }
+    /// Allocates a new instance
+    pub fn new(mesh: &Mesh, boundary: &Boundary) -> Result<Self, StrError> {
+        let ndiv = num_divisions(
+            GRID_SEARCH_NDIV_MIN,
+            GRID_SEARCH_NDIV_LONG,
+            &boundary.min,
+            &boundary.max,
+        )?;
+        let mut grid = GridSearch::new(mesh.space_ndim)?;
+        grid.initialize(&ndiv, &boundary.min, &boundary.max)?;
+        Ok(Find { grid })
+    }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {}
