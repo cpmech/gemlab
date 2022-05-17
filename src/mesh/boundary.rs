@@ -20,7 +20,7 @@ pub struct Boundary {
 
     /// Set of faces on the boundaries
     ///
-    /// Note: A boundary face is such that it is shared by one 3D cell only
+    /// Note: A boundary face is such that it is shared by one 3D cell only (2D cells are ignored)
     pub faces: HashMap<FaceKey, Face>,
 
     /// The minimum coordinates; len = space_ndim
