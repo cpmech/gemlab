@@ -46,13 +46,19 @@ pub struct Face {
 ///
 /// * Returns a map relating edge keys to `Vec<(cell_id, e)>` where:
 ///     - `cell_id` -- the id of the cell sharing the edge
-///     - `e` -- is the cell's local edge index
+///     - `e` -- is the cell's local edge index (or 0 if the cell.geo_ndim == 1)
 pub fn all_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<HashMap<EdgeKey, Vec<(CellId, usize)>>, StrError> {
     if mesh.space_ndim != 2 {
         return Err("this function works in 2D only");
     }
     let mut edges: HashMap<EdgeKey, Vec<(CellId, usize)>> = HashMap::new();
     mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
+        if shape.geo_ndim == 1 {
+            let mut edge_key: EdgeKey = (cell.points[0], cell.points[1]);
+            sort2(&mut edge_key);
+            let data = edges.entry(edge_key).or_insert(Vec::new());
+            data.push((cell.id, 0));
+        }
         if shape.geo_ndim == 2 {
             for e in 0..shape.nedge {
                 let mut edge_key: EdgeKey = (
@@ -79,13 +85,23 @@ pub fn all_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<HashMap<EdgeKey,
 ///
 /// * Returns a map relating face keys to `Vec<(cell_id, f)>` where:
 ///     - `cell_id` -- the id of the cell sharing the face
-///     - `f` -- is the cell's local face index
+///     - `f` -- is the cell's local face index (or 0 if the cell.geo_ndim == 1 or 2)
 pub fn all_faces_3d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<HashMap<FaceKey, Vec<(CellId, usize)>>, StrError> {
     if mesh.space_ndim != 3 {
         return Err("this function works in 3D only");
     }
     let mut faces: HashMap<FaceKey, Vec<(CellId, usize)>> = HashMap::new();
     mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
+        if shape.geo_ndim == 2 {
+            let mut face_key: FaceKey = if shape.nnode > 3 {
+                (cell.points[0], cell.points[1], cell.points[2], cell.points[3])
+            } else {
+                (cell.points[0], cell.points[1], cell.points[2], mesh.points.len())
+            };
+            sort4(&mut face_key);
+            let data = faces.entry(face_key).or_insert(Vec::new());
+            data.push((cell.id, 0));
+        }
         if shape.geo_ndim == 3 {
             for f in 0..shape.nface {
                 let mut face_key: FaceKey = if shape.face_nnode > 3 {
@@ -140,7 +156,11 @@ mod tests {
         assert_eq!(edges.get(&(2, 3)).unwrap(), &[(0, 2)]);
         assert_eq!(edges.get(&(2, 5)).unwrap(), &[(1, 2)]);
         assert_eq!(edges.get(&(4, 5)).unwrap(), &[(1, 1)]);
+        Ok(())
+    }
 
+    #[test]
+    fn all_edges_2d_mixed_works() -> Result<(), StrError> {
         //           4---------3
         //           |         |
         //           |   [1]   |
@@ -151,7 +171,8 @@ mod tests {
         let edges = all_edges_2d(&mesh, &shapes)?;
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
-        assert_eq!(keys, [&(1, 2), &(1, 4), &(2, 3), &(3, 4)]);
+        assert_eq!(keys, [&(0, 1), &(1, 2), &(1, 4), &(2, 3), &(3, 4)]);
+        assert_eq!(edges.get(&(0, 1)).unwrap(), &[(0, 0)]);
         assert_eq!(edges.get(&(1, 2)).unwrap(), &[(1, 0)]);
         assert_eq!(edges.get(&(1, 4)).unwrap(), &[(1, 3)]);
         assert_eq!(edges.get(&(2, 3)).unwrap(), &[(1, 1)]);
@@ -213,7 +234,11 @@ mod tests {
         assert_eq!(faces.get(&(5, 6, 9, 10)).unwrap(), &[(1, 1)]);
         assert_eq!(faces.get(&(6, 7, 10, 11)).unwrap(), &[(1, 3)]);
         assert_eq!(faces.get(&(8, 9, 10, 11)).unwrap(), &[(1, 5)]);
+        Ok(())
+    }
 
+    #[test]
+    fn all_faces_3d_mixed_works() -> Result<(), StrError> {
         //                       4------------7-----------10
         //                      /.           /|            |
         //                     / .          / |            |
@@ -245,6 +270,8 @@ mod tests {
                 &(2, 3, 8, 13),
                 &(2, 6, 8, 13),
                 &(3, 6, 8, 13),
+                &(3, 7, 9, 10),
+                &(3, 8, 9, 13),
                 &(4, 5, 6, 7),
             ]
         );
@@ -257,6 +284,8 @@ mod tests {
         assert_eq!(faces.get(&(2, 3, 8, 13)).unwrap(), &[(1, 2)]);
         assert_eq!(faces.get(&(2, 6, 8, 13)).unwrap(), &[(1, 1)]);
         assert_eq!(faces.get(&(3, 6, 8, 13)).unwrap(), &[(1, 3)]);
+        assert_eq!(faces.get(&(3, 7, 9, 10)).unwrap(), &[(2, 0)]);
+        assert_eq!(faces.get(&(3, 8, 9, 13)).unwrap(), &[(3, 0)]);
         assert_eq!(faces.get(&(4, 5, 6, 7)).unwrap(), &[(0, 5)]);
         Ok(())
     }
