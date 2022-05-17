@@ -99,6 +99,14 @@ where
 ///     res
 /// }
 ///
+/// fn str_row<'a, T, U>(array: &'a T, i: usize) -> String
+/// where
+///     T: AsArray2D<'a, U>,
+///     U: 'a + std::fmt::Debug,
+/// {
+///     format!("{:?}", array.row(i))
+/// }
+///
 /// // heap-allocated 2D array (vector of vectors)
 /// const IGNORED: f64 = 123.456;
 /// let a = vec![
@@ -107,6 +115,7 @@ where
 ///     vec![5.0, 6.0],
 /// ];
 /// assert_eq!(sum(&a), 21.0);
+/// assert_eq!(str_row(&a, 1), "[3.0, 4.0, 123.456, 123.456, 123.456]");
 ///
 /// // heap-allocated 2D array (aka slice of slices)
 /// let b: &[&[f64]] = &[
@@ -115,6 +124,7 @@ where
 ///     &[50.0, 60.0, IGNORED, IGNORED],
 /// ];
 /// assert_eq!(sum(&b), 210.0);
+/// assert_eq!(str_row(&b, 0), "[10.0, 20.0]");
 ///
 /// // stack-allocated (fixed-size) 2D array
 /// let c = [
@@ -123,6 +133,7 @@ where
 ///     [500.0, 600.0],
 /// ];
 /// assert_eq!(sum(&c), 2100.0);
+/// assert_eq!(str_row(&c, 0), "[100.0, 200.0]");
 /// ```
 pub trait AsArray2D<'a, U: 'a> {
     /// Returns the (m,n) size of the array
@@ -138,6 +149,13 @@ pub trait AsArray2D<'a, U: 'a> {
     ///
     /// This function panics if the indices are out of range.
     fn at(&self, i: usize, j: usize) -> U;
+
+    /// Returns the i-th row
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the index is out of range.
+    fn row(&self, i: usize) -> &[U];
 }
 
 /// Defines a heap-allocated 2D array (vector of vectors)
@@ -159,6 +177,9 @@ where
     }
     fn at(&self, i: usize, j: usize) -> U {
         self[i][j]
+    }
+    fn row(&self, i: usize) -> &[U] {
+        &self[i]
     }
 }
 
@@ -182,6 +203,9 @@ where
     fn at(&self, i: usize, j: usize) -> U {
         self[i][j]
     }
+    fn row(&self, i: usize) -> &[U] {
+        &self[i]
+    }
 }
 
 /// Defines a stack-allocated (fixed-size) 2D array
@@ -198,6 +222,9 @@ where
     }
     fn at(&self, i: usize, j: usize) -> U {
         self[i][j]
+    }
+    fn row(&self, i: usize) -> &[U] {
+        &self[i]
     }
 }
 
@@ -238,6 +265,14 @@ mod tests {
         buf
     }
 
+    fn array_2d_str_row<'a, T, U>(array: &'a T, i: usize) -> String
+    where
+        T: AsArray2D<'a, U>,
+        U: 'a + std::fmt::Debug,
+    {
+        format!("{:?}", array.row(i))
+    }
+
     #[test]
     fn as_array_1d_works() {
         // heap-allocated 1D array (vector)
@@ -268,6 +303,7 @@ mod tests {
              3,4,\n\
              5,6,\n"
         );
+        assert_eq!(array_2d_str_row(&a_data, 1), "[3.0, 4.0, 123.456, 123.456, 123.456]");
 
         // heap-allocated 2D array (aka slice of slices)
         let b_data: &[&[f64]] = &[&[10.0, 20.0], &[30.0, 40.0, IGNORED], &[50.0, 60.0, IGNORED, IGNORED]];
@@ -277,6 +313,7 @@ mod tests {
              30,40,\n\
              50,60,\n"
         );
+        assert_eq!(array_2d_str_row(&b_data, 0), "[10.0, 20.0]");
 
         // stack-allocated (fixed-size) 2D array
         let c_data = [[100.0, 200.0], [300.0, 400.0], [500.0, 600.0]];
@@ -286,5 +323,6 @@ mod tests {
              300,400,\n\
              500,600,\n"
         );
+        assert_eq!(array_2d_str_row(&c_data, 2), "[500.0, 600.0]");
     }
 }
