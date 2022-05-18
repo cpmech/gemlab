@@ -1,6 +1,6 @@
 use super::{Cell, Constraint, Mesh, Point};
 use crate::shapes::{Shape, StateOfShape};
-use crate::util::{AsArray2D, GridSearch};
+use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol};
 use crate::StrError;
 use russell_lab::Vector;
 use std::collections::HashSet;
@@ -87,7 +87,6 @@ pub struct Block {
 impl Block {
     // constants
     const NAT_LENGTH: f64 = 2.0; // length of shape along each direction in reference coords space
-    const NAT_TOLERANCE: f64 = 1e-4; // tolerance to compare coordinates in the reference space
 
     // valid output npoint
     const VALID_OUTPUT_NPOINT_2D: [usize; 6] = [4, 8, 9, 12, 16, 17];
@@ -106,22 +105,16 @@ impl Block {
         let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
         let state_of_shape = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
 
-        // constants
-        const NDIV: usize = 2;
-        const GRID_NDIV: usize = 20;
-        const GRID_MIN: f64 = -1.0;
-        const GRID_MAX: f64 = 1.0;
-
         // grid
-        let mut grid_ksi = GridSearch::new(space_ndim)?;
-        grid_ksi.set_tolerances(&vec![Block::NAT_TOLERANCE; space_ndim])?;
-        grid_ksi.initialize(
-            &vec![GRID_NDIV; space_ndim],
-            &vec![GRID_MIN; space_ndim],
-            &vec![GRID_MAX; space_ndim],
+        let grid_ksi = GridSearch::new(
+            &vec![-1.0; space_ndim],
+            &vec![1.0; space_ndim],
+            GsNdiv::Default,
+            GsTol::Default,
         )?;
 
         // done
+        const NDIV: usize = 2;
         Ok(Block {
             attribute_id: 1,
             space_ndim,
