@@ -34,9 +34,10 @@ mod tests {
         let mesh = Samples::two_quads_horizontal();
         let boundary = Boundary::new(&mesh)?;
         let find = Find::new(&mesh, &boundary)?;
-        let mut plot = find.grid.plot()?;
-        plot.set_equal_axes(true).set_figure_size_points(800.0, 400.0);
-        plot.save("/tmp/gemlab/find_new_works.svg")?;
+        // // do not delete this //
+        // let mut plot = find.grid.plot()?;
+        // plot.set_equal_axes(true).set_figure_size_points(800.0, 400.0);
+        // plot.save("/tmp/gemlab/find_new_works.svg")?;
         assert_eq!(
             format!("{}", find.grid),
             "0: [0]\n\
