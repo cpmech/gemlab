@@ -27,7 +27,7 @@ pub const GS_DEFAULT_TOL: f64 = 1e-4;
 
 /// Option to select GridSearch number of divisions (ndiv)
 pub enum GsNdiv {
-    /// Use default values ([GS_DEFAULT_NDIV] for all directions)
+    /// Use the proportional option (Prop) with a default values ([GS_DEFAULT_NDIV])
     Default,
 
     /// Proportional number of divisions driven by the longest direction
@@ -114,7 +114,7 @@ impl GridSearch {
 
         // ndiv
         let vec_ndiv = match ndiv {
-            GsNdiv::Default => vec![GS_DEFAULT_NDIV; ndim],
+            GsNdiv::Default => num_divisions(2, GS_DEFAULT_NDIV, min, max)?,
             GsNdiv::Prop(ndiv_long) => num_divisions(2, ndiv_long, min, max)?,
             GsNdiv::Spec(nx, ny, nz) => {
                 if ndim == 2 {
@@ -972,15 +972,28 @@ mod tests {
         );
 
         assert_eq!(
-            GridSearch::new(&[0.0, 0.0], &[0.0, 1.0], GsNdiv::Default, GsTol::Default).err(),
+            GridSearch::new(&[0.0, 0.0], &[0.0, 1.0], GsNdiv::Spec(10, 10, 10), GsTol::Default).err(),
+            Some("max must be greater than min")
+        );
+
+        assert_eq!(
+            GridSearch::new(
+                &[0.0, 0.0, 0.0],
+                &[1.0, 0.0, 1.0],
+                GsNdiv::Spec(10, 10, 10),
+                GsTol::Default
+            )
+            .err(),
             Some("max must be greater than min")
         );
         assert_eq!(
-            GridSearch::new(&[0.0, 0.0, 0.0], &[1.0, 0.0, 1.0], GsNdiv::Default, GsTol::Default).err(),
-            Some("max must be greater than min")
-        );
-        assert_eq!(
-            GridSearch::new(&[0.0, 0.0, 0.0], &[1.0, 1.0, 0.0], GsNdiv::Default, GsTol::Default).err(),
+            GridSearch::new(
+                &[0.0, 0.0, 0.0],
+                &[1.0, 1.0, 0.0],
+                GsNdiv::Spec(10, 10, 10),
+                GsTol::Default
+            )
+            .err(),
             Some("max must be greater than min")
         );
 
