@@ -56,8 +56,14 @@ impl Find {
     ///
     /// # Output
     ///
-    /// * Returns a **sorted** list of point ids (boundary points only)
-    pub fn points(&self, at: At) -> Result<Vec<PointId>, StrError> {
+    /// * Returns a set of point ids (boundary points only). You may sort
+    ///   the point ids using the following code snipped:
+    ///
+    /// ``` text
+    /// let mut ids: Vec<_> = point_ids.iter().collect();
+    /// ids.sort();
+    /// ```
+    pub fn points(&self, at: At) -> Result<HashSet<PointId>, StrError> {
         let mut point_ids: HashSet<PointId> = HashSet::new();
         match at {
             At::X(x) => {
@@ -148,9 +154,39 @@ impl Find {
                 }
             }
         }
-        let mut ids: Vec<_> = point_ids.into_iter().collect();
-        ids.sort();
-        Ok(ids)
+        Ok(point_ids)
+    }
+
+    /// Finds boundary edges in the mesh
+    ///
+    /// # Input
+    ///
+    /// * `at` -- the location constraint
+    ///
+    /// # Output
+    ///
+    /// * Returns a set of edge keys (boundary edges only). You may sort
+    ///   the edge keys using the following code snipped:
+    ///
+    /// ``` text
+    /// let mut keys: Vec<_> = edge_keys.iter().collect();
+    /// keys.sort();
+    /// ```
+    pub fn edges(&self, at: At) -> Result<HashSet<EdgeKey>, StrError> {
+        let mut edge_keys: HashSet<EdgeKey> = HashSet::new();
+        // find all points constrained by "at"
+        let point_ids = self.points(at)?;
+        for point_id in &point_ids {
+            // select all edges connected to the found points
+            let edges = self.point_to_edges.get(point_id).unwrap(); // unwrap here because there should be no hanging edges
+            for edge_key in edges {
+                // accept edge when at least two edge points validate "At"
+                if point_ids.contains(&edge_key.0) && point_ids.contains(&edge_key.1) {
+                    edge_keys.insert(*edge_key);
+                }
+            }
+        }
+        Ok(edge_keys)
     }
 }
 
@@ -162,6 +198,7 @@ mod tests {
     use crate::mesh::{At, Boundary, Samples};
     use crate::util::SQRT_2;
     use crate::StrError;
+    use std::collections::HashSet;
 
     #[allow(dead_code)]
     fn plot_grid_two_quads_horizontal(find: &Find) -> Result<(), StrError> {
@@ -228,66 +265,140 @@ mod tests {
         Ok(())
     }
 
+    fn check<T>(found: &HashSet<T>, correct: &[T])
+    where
+        T: Copy + Ord + std::fmt::Debug,
+    {
+        let mut ids: Vec<T> = found.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, correct);
+    }
+
     #[test]
     fn find_points_works_2d() -> Result<(), StrError> {
         // `.       `.
         //   3--------2--------5
         //   | `.     | `.     |
-        //   |   `~.  |        |
+        //   |   `~.  | circle |
         //   |      `.|        |
         //   0--------1--------4
-        //
+        //           circle
         let mesh = Samples::two_quads_horizontal();
         let find = Find::new(&mesh, &Boundary::new(&mesh)?)?;
-        assert_eq!(find.points(At::XY(0.0, 0.0))?, &[0]);
-        assert_eq!(find.points(At::XY(2.0, 1.0))?, &[5]);
+        check(&find.points(At::XY(0.0, 0.0))?, &[0]);
+        check(&find.points(At::XY(2.0, 1.0))?, &[5]);
         assert_eq!(find.points(At::XY(10.0, 0.0)).err(), Some("point is outside the grid"));
-        assert_eq!(find.points(At::Circle(0.0, 0.0, 1.0))?, &[1, 3]);
-        assert_eq!(find.points(At::Circle(0.0, 0.0, SQRT_2))?, &[2]);
-        assert_eq!(find.points(At::Circle(0.0, 0.0, 10.0))?, &[] as &[usize]);
+        check(&find.points(At::Circle(0.0, 0.0, 1.0))?, &[1, 3]);
+        check(&find.points(At::Circle(0.0, 0.0, SQRT_2))?, &[2]);
+        check(&find.points(At::Circle(0.0, 0.0, 10.0))?, &[]);
         Ok(())
     }
 
     #[test]
     fn find_points_works_3d() -> Result<(), StrError> {
+        //      8-----------11  2.0
+        //     /.           /|
+        //    / .          / |
+        //   /  .         /  |
+        //  9-----------10   |
+        //  |   .        |   |
+        //  |   4--------|---7  1.0
+        //  |  /.        |  /|
+        //  | / .        | / |
+        //  |/  .        |/  |
+        //  5------------6   |          z
+        //  |   .        |   |          ↑
+        //  |   0--------|---3  0.0     o → y
+        //  |  /         |  /          ↙
+        //  | /          | /          x
+        //  |/           |/
+        //  1------------2   1.0
+        // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
         let find = Find::new(&mesh, &Boundary::new(&mesh)?)?;
         // plot_grid_two_cubes_vertical(&find)?;
-        assert_eq!(find.points(At::X(0.0))?, &[0, 3, 4, 7, 8, 11]);
-        assert_eq!(find.points(At::X(1.0))?, &[1, 2, 5, 6, 9, 10]);
-        assert_eq!(find.points(At::X(10.0))?, &[] as &[usize]);
-        assert_eq!(find.points(At::Y(0.0))?, &[0, 1, 4, 5, 8, 9]);
-        assert_eq!(find.points(At::Y(1.0))?, &[2, 3, 6, 7, 10, 11]);
-        assert_eq!(find.points(At::Y(10.0))?, &[] as &[usize]);
-        assert_eq!(find.points(At::Z(0.0))?, &[0, 1, 2, 3]);
-        assert_eq!(find.points(At::Z(1.0))?, &[4, 5, 6, 7]);
-        assert_eq!(find.points(At::Z(2.0))?, &[8, 9, 10, 11]);
-        assert_eq!(find.points(At::Z(10.0))?, &[] as &[usize]);
-        assert_eq!(find.points(At::XY(0.0, 0.0))?, &[0, 4, 8]);
-        assert_eq!(find.points(At::XY(1.0, 1.0))?, &[2, 6, 10]);
-        assert_eq!(find.points(At::XY(10.0, 10.0))?, &[] as &[usize]);
-        assert_eq!(find.points(At::YZ(0.0, 0.0))?, &[0, 1]);
-        assert_eq!(find.points(At::YZ(1.0, 1.0))?, &[6, 7]);
-        assert_eq!(find.points(At::XZ(0.0, 0.0))?, &[0, 3]);
-        assert_eq!(find.points(At::XZ(1.0, 0.0))?, &[1, 2]);
-        assert_eq!(find.points(At::XZ(1.0, 2.0))?, &[9, 10]);
-        assert_eq!(find.points(At::XYZ(0.0, 0.0, 0.0))?, &[0]);
-        assert_eq!(find.points(At::XYZ(1.0, 1.0, 2.0))?, &[10]);
+        check(&find.points(At::X(0.0))?, &[0, 3, 4, 7, 8, 11]);
+        check(&find.points(At::X(1.0))?, &[1, 2, 5, 6, 9, 10]);
+        check(&find.points(At::X(10.0))?, &[]);
+        check(&find.points(At::Y(0.0))?, &[0, 1, 4, 5, 8, 9]);
+        check(&find.points(At::Y(1.0))?, &[2, 3, 6, 7, 10, 11]);
+        check(&find.points(At::Y(10.0))?, &[]);
+        check(&find.points(At::Z(0.0))?, &[0, 1, 2, 3]);
+        check(&find.points(At::Z(1.0))?, &[4, 5, 6, 7]);
+        check(&find.points(At::Z(2.0))?, &[8, 9, 10, 11]);
+        check(&find.points(At::Z(10.0))?, &[]);
+        check(&find.points(At::XY(0.0, 0.0))?, &[0, 4, 8]);
+        check(&find.points(At::XY(1.0, 1.0))?, &[2, 6, 10]);
+        check(&find.points(At::XY(10.0, 10.0))?, &[]);
+        check(&find.points(At::YZ(0.0, 0.0))?, &[0, 1]);
+        check(&find.points(At::YZ(1.0, 1.0))?, &[6, 7]);
+        check(&find.points(At::XZ(0.0, 0.0))?, &[0, 3]);
+        check(&find.points(At::XZ(1.0, 0.0))?, &[1, 2]);
+        check(&find.points(At::XZ(1.0, 2.0))?, &[9, 10]);
+        check(&find.points(At::XYZ(0.0, 0.0, 0.0))?, &[0]);
+        check(&find.points(At::XYZ(1.0, 1.0, 2.0))?, &[10]);
         assert_eq!(
             find.points(At::XYZ(10.0, 0.0, 0.0)).err(),
             Some("point is outside the grid")
         );
-        assert_eq!(
-            find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
-            &[1, 3, 5, 7, 9, 11]
+        check(
+            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
+            &[1, 3, 5, 7, 9, 11],
         );
-        assert_eq!(
-            find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?,
-            &[2, 6, 10]
+        check(
+            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?,
+            &[2, 6, 10],
         );
-        assert_eq!(
-            find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?,
-            &[] as &[usize]
+        check(
+            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?,
+            &[] as &[usize],
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn find_edges_works_2d() -> Result<(), StrError> {
+        // 3--------2--------5
+        // |        |        |
+        // |        |        |
+        // |        |        |
+        // 0--------1--------4
+        let mesh = Samples::two_quads_horizontal();
+        let find = Find::new(&mesh, &Boundary::new(&mesh)?)?;
+        check(&find.edges(At::Y(0.0))?, &[(0, 1), (1, 4)]);
+        check(&find.edges(At::X(2.0))?, &[(4, 5)]);
+        check(&find.edges(At::Y(1.0))?, &[(2, 3), (2, 5)]);
+        check(&find.edges(At::X(0.0))?, &[(0, 3)]);
+        check(&find.edges(At::X(1.0))?, &[]); // internal
+        check(&find.edges(At::X(10.0))?, &[]); // far away
+        Ok(())
+    }
+
+    #[test]
+    fn find_edges_works_3d() -> Result<(), StrError> {
+        //      8-----------11  2.0
+        //     /.           /|
+        //    / .          / |
+        //   /  .         /  |
+        //  9-----------10   |
+        //  |   .        |   |
+        //  |   4--------|---7  1.0
+        //  |  /.        |  /|
+        //  | / .        | / |
+        //  |/  .        |/  |
+        //  5------------6   |          z
+        //  |   .        |   |          ↑
+        //  |   0--------|---3  0.0     o → y
+        //  |  /         |  /          ↙
+        //  | /          | /          x
+        //  |/           |/
+        //  1------------2   1.0
+        // 0.0          1.0
+        let mesh = Samples::two_cubes_vertical();
+        let find = Find::new(&mesh, &Boundary::new(&mesh)?)?;
+        check(
+            &find.edges(At::X(0.0))?,
+            &[(0, 3), (0, 4), (3, 7), (4, 7), (4, 8), (7, 11), (8, 11)],
         );
         Ok(())
     }
