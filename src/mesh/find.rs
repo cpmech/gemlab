@@ -349,10 +349,7 @@ mod tests {
             &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?,
             &[2, 6, 10],
         );
-        check(
-            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?,
-            &[] as &[usize],
-        );
+        check(&find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
         Ok(())
     }
 
@@ -400,6 +397,47 @@ mod tests {
             &find.edges(At::X(0.0))?,
             &[(0, 3), (0, 4), (3, 7), (4, 7), (4, 8), (7, 11), (8, 11)],
         );
+        check(
+            &find.edges(At::X(1.0))?,
+            &[(1, 2), (1, 5), (2, 6), (5, 6), (5, 9), (6, 10), (9, 10)],
+        );
+        check(&find.edges(At::X(10.0))?, &[]);
+        check(
+            &find.edges(At::Y(0.0))?,
+            &[(0, 1), (0, 4), (1, 5), (4, 5), (4, 8), (5, 9), (8, 9)],
+        );
+        check(
+            &find.edges(At::Y(1.0))?,
+            &[(2, 3), (2, 6), (3, 7), (6, 7), (6, 10), (7, 11), (10, 11)],
+        );
+        check(&find.edges(At::Y(10.0))?, &[]);
+        check(&find.edges(At::Z(0.0))?, &[(0, 1), (0, 3), (1, 2), (2, 3)]);
+        check(&find.edges(At::Z(2.0))?, &[(8, 9), (8, 11), (9, 10), (10, 11)]);
+        check(&find.edges(At::Z(10.0))?, &[]);
+        check(&find.edges(At::XY(0.0, 0.0))?, &[(0, 4), (4, 8)]);
+        check(&find.edges(At::XY(1.0, 1.0))?, &[(2, 6), (6, 10)]);
+        check(&find.edges(At::XY(10.0, 10.0))?, &[]);
+        check(&find.edges(At::YZ(0.0, 0.0))?, &[(0, 1)]);
+        check(&find.edges(At::YZ(1.0, 1.0))?, &[(6, 7)]);
+        check(&find.edges(At::YZ(10.0, 10.0))?, &[]);
+        check(&find.edges(At::XZ(0.0, 0.0))?, &[(0, 3)]);
+        check(&find.edges(At::XZ(1.0, 0.0))?, &[(1, 2)]);
+        check(&find.edges(At::XZ(1.0, 2.0))?, &[(9, 10)]);
+        check(&find.edges(At::XZ(10.0, 10.0))?, &[]);
+        check(&find.edges(At::XYZ(0.0, 0.0, 0.0))?, &[]);
+        assert_eq!(
+            find.edges(At::XYZ(10.0, 0.0, 0.0)).err(),
+            Some("point is outside the grid")
+        );
+        check(
+            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
+            &[(1, 5), (3, 7), (5, 9), (7, 11)],
+        );
+        check(
+            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?,
+            &[(2, 6), (6, 10)],
+        );
+        check(&find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
         Ok(())
     }
 }
