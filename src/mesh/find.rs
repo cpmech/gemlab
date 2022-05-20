@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 /// Implements functions to find points, edges, and faces on the boundary of a mesh
 pub struct Find {
     space_ndim: usize,
+    num_points: usize,
     grid: GridSearch,
     point_to_edges: HashMap<PointId, HashSet<EdgeKey>>,
     point_to_faces: HashMap<PointId, HashSet<FaceKey>>,
@@ -42,13 +43,14 @@ impl Find {
         // done
         Ok(Find {
             space_ndim: mesh.space_ndim,
+            num_points: mesh.points.len(),
             grid,
             point_to_edges,
             point_to_faces,
         })
     }
 
-    /// Finds boundary points in the mesh
+    /// Finds boundary points
     ///
     /// # Input
     ///
@@ -157,7 +159,7 @@ impl Find {
         Ok(point_ids)
     }
 
-    /// Finds boundary edges in the mesh
+    /// Finds boundary edges
     ///
     /// # Input
     ///
@@ -187,6 +189,47 @@ impl Find {
             }
         }
         Ok(edge_keys)
+    }
+
+    /// Finds boundary faces
+    ///
+    /// # Input
+    ///
+    /// * `at` -- the location constraint
+    ///
+    /// # Output
+    ///
+    /// * Returns a set of face keys (boundary faces only). You may sort
+    ///   the face keys using the following code snipped:
+    ///
+    /// ``` text
+    /// let mut keys: Vec<_> = face_keys.iter().collect();
+    /// keys.sort();
+    /// ```
+    pub fn faces(&self, at: At) -> Result<HashSet<FaceKey>, StrError> {
+        let mut face_keys: HashSet<FaceKey> = HashSet::new();
+        // find all points constrained by "at"
+        let point_ids = self.points(at)?;
+        for point_id in &point_ids {
+            // select all faces connected to the found points
+            let faces = self.point_to_faces.get(point_id).unwrap(); // unwrap here because there should be no hanging faces
+            for face_key in faces {
+                // accept face when at least four face points validate "At"
+                let fourth_is_ok = if face_key.3 == self.num_points {
+                    true
+                } else {
+                    point_ids.contains(&face_key.3)
+                };
+                if point_ids.contains(&face_key.0)
+                    && point_ids.contains(&face_key.1)
+                    && point_ids.contains(&face_key.2)
+                    && fourth_is_ok
+                {
+                    face_keys.insert(*face_key);
+                }
+            }
+        }
+        Ok(face_keys)
     }
 }
 
@@ -438,6 +481,58 @@ mod tests {
             &[(2, 6), (6, 10)],
         );
         check(&find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
+        Ok(())
+    }
+
+    #[test]
+    fn find_faces_works() -> Result<(), StrError> {
+        //      8-----------11  2.0
+        //     /.           /|
+        //    / .          / |
+        //   /  .         /  |
+        //  9-----------10   |
+        //  |   .        |   |
+        //  |   4--------|---7  1.0
+        //  |  /.        |  /|
+        //  | / .        | / |
+        //  |/  .        |/  |
+        //  5------------6   |          z
+        //  |   .        |   |          ↑
+        //  |   0--------|---3  0.0     o → y
+        //  |  /         |  /          ↙
+        //  | /          | /          x
+        //  |/           |/
+        //  1------------2   1.0
+        // 0.0          1.0
+        let mesh = Samples::two_cubes_vertical();
+        let find = Find::new(&mesh, &Boundary::new(&mesh)?)?;
+        check(&find.faces(At::X(0.0))?, &[(0, 3, 4, 7), (4, 7, 8, 11)]);
+        check(&find.faces(At::X(1.0))?, &[(1, 2, 5, 6), (5, 6, 9, 10)]);
+        check(&find.faces(At::X(10.0))?, &[]);
+        check(&find.faces(At::Y(0.0))?, &[(0, 1, 4, 5), (4, 5, 8, 9)]);
+        check(&find.faces(At::Y(1.0))?, &[(2, 3, 6, 7), (6, 7, 10, 11)]);
+        check(&find.faces(At::Y(10.0))?, &[]);
+        check(&find.faces(At::Z(0.0))?, &[(0, 1, 2, 3)]);
+        check(&find.faces(At::Z(2.0))?, &[(8, 9, 10, 11)]);
+        check(&find.faces(At::Z(10.0))?, &[]);
+        check(&find.faces(At::XY(0.0, 0.0))?, &[]);
+        check(&find.faces(At::XY(1.0, 1.0))?, &[]);
+        check(&find.faces(At::XY(10.0, 10.0))?, &[]);
+        check(&find.faces(At::YZ(0.0, 0.0))?, &[]);
+        check(&find.faces(At::YZ(1.0, 1.0))?, &[]);
+        check(&find.faces(At::YZ(10.0, 10.0))?, &[]);
+        check(&find.faces(At::XZ(0.0, 0.0))?, &[]);
+        check(&find.faces(At::XZ(1.0, 0.0))?, &[]);
+        check(&find.faces(At::XZ(1.0, 2.0))?, &[]);
+        check(&find.faces(At::XZ(10.0, 10.0))?, &[]);
+        check(&find.faces(At::XYZ(0.0, 0.0, 0.0))?, &[]);
+        assert_eq!(
+            find.faces(At::XYZ(10.0, 0.0, 0.0)).err(),
+            Some("point is outside the grid")
+        );
+        check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?, &[]);
+        check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?, &[]);
+        check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
         Ok(())
     }
 }
