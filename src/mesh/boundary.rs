@@ -320,7 +320,7 @@ mod tests {
         // 11   12    13    5   24   25    19
         //  |               |               |
         //  0----4-----8----1---18---21----16
-        let mesh = Samples::block_2d_four_quad16();
+        let mesh = Samples::block_2d_four_qua16();
         let boundary = Boundary::new(&mesh)?;
         let correct_keys = [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)];
         let correct_points = [

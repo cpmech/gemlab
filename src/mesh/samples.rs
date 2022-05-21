@@ -169,7 +169,7 @@ impl Samples {
         }
     }
 
-    /// Returns a mesh with four quad4 cells
+    /// Returns a mesh with four qua4 cells
     ///
     /// ```text
     /// 2.0   7---------------6---------------8
@@ -192,7 +192,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 2.0
     /// ```
     #[rustfmt::skip]
-    pub fn block_2d_four_quad4() -> Mesh {
+    pub fn block_2d_four_qua4() -> Mesh {
         Mesh {
             space_ndim: 2,
             points: vec![
@@ -215,7 +215,7 @@ impl Samples {
         }
     }
 
-    /// Returns a mesh with four quad8 cells
+    /// Returns a mesh with four qua8 cells
     ///
     /// ```text
     /// 2.0  14------16------13------20------18
@@ -238,7 +238,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 2.0
     /// ```
     #[rustfmt::skip]
-    pub fn block_2d_four_quad8() -> Mesh {
+    pub fn block_2d_four_qua8() -> Mesh {
         Mesh {
             space_ndim: 2,
             points: vec![
@@ -273,10 +273,10 @@ impl Samples {
         }
     }
 
-    /// Returns a mesh with four quad9 cells
+    /// Returns a mesh with four qua9 cells
     ///
     /// ```text
-    /// cell ids as in block_2d_four_quad8
+    /// cell ids as in block_2d_four_qua8
     ///
     /// 2.0  16------18------15------23------21
     ///       |               |               |
@@ -298,7 +298,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 2.0
     /// ```
     #[rustfmt::skip]
-    pub fn block_2d_four_quad9() -> Mesh {
+    pub fn block_2d_four_qua9() -> Mesh {
         Mesh {
             space_ndim: 2,
             points: vec![
@@ -337,10 +337,10 @@ impl Samples {
         }
     }
 
-    /// Returns a mesh with four quad12 cells
+    /// Returns a mesh with four qua12 cells
     ///
     /// ```text
-    /// cell ids as in block_2d_four_quad8
+    /// cell ids as in block_2d_four_qua8
     ///
     /// 3.0  21---26---23----20---32---30----28
     ///       |               |               |
@@ -362,7 +362,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 3.0
     /// ```
     #[rustfmt::skip]
-    pub fn block_2d_four_quad12() -> Mesh {
+    pub fn block_2d_four_qua12() -> Mesh {
         Mesh {
             space_ndim: 2,
             points: vec![
@@ -409,10 +409,10 @@ impl Samples {
         }
     }
 
-    /// Returns a mesh with four quad16 cells
+    /// Returns a mesh with four qua16 cells
     ///
     /// ```text
-    /// cell ids as in block_2d_four_quad8
+    /// cell ids as in block_2d_four_qua8
     ///
     /// 3.0  29---34----31---28---44---42----40
     ///       |               |               |
@@ -434,7 +434,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 3.0
     /// ```
     #[rustfmt::skip]
-    pub fn block_2d_four_quad16() -> Mesh {
+    pub fn block_2d_four_qua16() -> Mesh {
         Mesh {
             space_ndim: 2,
             points: vec![
@@ -497,10 +497,10 @@ impl Samples {
         }
     }
 
-    /// Returns a mesh with four quad17 cells
+    /// Returns a mesh with four qua17 cells
     ///
     /// ```text
-    /// cell ids as in block_2d_four_quad8
+    /// cell ids as in block_2d_four_qua8
     ///
     /// 4.0  30---38---35---32---29---47---45---43---41
     ///       |                   |                   |
@@ -526,7 +526,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 4.0
     /// ```
     #[rustfmt::skip]
-    pub fn block_2d_four_quad17() -> Mesh {
+    pub fn block_2d_four_qua17() -> Mesh {
         Mesh {
             space_ndim: 2,
             points: vec![
@@ -836,6 +836,83 @@ impl Samples {
             ],
         }
     }
+
+    /// Returns a mesh of a quarter of a ring with eight Qua8 (radius=1 thickness=1)
+    ///
+    /// ```text
+    /// 2.0   14---36--,__11
+    ///        |          `,-..33
+    /// 1.75  24   [7]   22     `-,
+    ///        |         ,  [5]    ,8-
+    /// 1.5   13--35--10/        20    *
+    ///        |       ,`*32    ,'      30
+    /// 1.25  23 [6] 21     *.7     [3]   *
+    ///        |     ,  [4]  , *.          5
+    /// 1.0   12-34-9      19    29     18' *
+    ///              `31. ,' [2]   *  _,     *
+    ///                  6.       _.4'        *
+    ///                   28  _.17   *   [1]  27
+    ///                     3'  [0]  26        *
+    ///                     25        *        *
+    ///        +             0---15---1---16---2
+    ///
+    ///                     1.0 1.25  1.5 1.75  2.0
+    /// ```
+    #[rustfmt::skip]
+    pub fn ring_eight_qua8_rad1_thick1() -> Mesh {
+        Mesh {
+            space_ndim: 2,
+            points: vec![
+                Point { id:  0, coords: vec![1.000000000000000e+00, 0.000000000000000e+00] },
+                Point { id:  1, coords: vec![1.500000000000000e+00, 0.000000000000000e+00] },
+                Point { id:  2, coords: vec![2.000000000000000e+00, 0.000000000000000e+00] },
+                Point { id:  3, coords: vec![9.127002149692066e-01, 4.086298050744269e-01] },
+                Point { id:  4, coords: vec![1.357995128834866e+00, 6.079951288348657e-01] },
+                Point { id:  5, coords: vec![1.825400429938413e+00, 8.172596101488537e-01] },
+                Point { id:  6, coords: vec![7.071067811865476e-01, 7.071067811865475e-01] },
+                Point { id:  7, coords: vec![1.060660171779821e+00, 1.060660171779821e+00] },
+                Point { id:  8, coords: vec![1.414213562373095e+00, 1.414213562373095e+00] },
+                Point { id:  9, coords: vec![4.086298050744270e-01, 9.127002149692066e-01] },
+                Point { id: 10, coords: vec![6.079951288348662e-01, 1.357995128834866e+00] },
+                Point { id: 11, coords: vec![8.172596101488541e-01, 1.825400429938413e+00] },
+                Point { id: 12, coords: vec![6.123233995736766e-17, 1.000000000000000e+00] },
+                Point { id: 13, coords: vec![9.184850993605148e-17, 1.500000000000000e+00] },
+                Point { id: 14, coords: vec![1.224646799147353e-16, 2.000000000000000e+00] },
+                Point { id: 15, coords: vec![1.250000000000000e+00, 0.000000000000000e+00] },
+                Point { id: 16, coords: vec![1.750000000000000e+00, 0.000000000000000e+00] },
+                Point { id: 17, coords: vec![1.131662607362388e+00, 5.066626073623883e-01] },
+                Point { id: 18, coords: vec![1.584327650307344e+00, 7.093276503073436e-01] },
+                Point { id: 19, coords: vec![8.838834764831844e-01, 8.838834764831842e-01] },
+                Point { id: 20, coords: vec![1.237436867076458e+00, 1.237436867076458e+00] },
+                Point { id: 21, coords: vec![5.066626073623884e-01, 1.131662607362388e+00] },
+                Point { id: 22, coords: vec![7.093276503073440e-01, 1.584327650307344e+00] },
+                Point { id: 23, coords: vec![7.654042494670958e-17, 1.250000000000000e+00] },
+                Point { id: 24, coords: vec![1.071565949253934e-16, 1.750000000000000e+00] },
+                Point { id: 25, coords: vec![9.759662299218728e-01, 2.179218163747866e-01] },
+                Point { id: 26, coords: vec![1.448413825153672e+00, 3.234138251536718e-01] },
+                Point { id: 27, coords: vec![1.951932459843746e+00, 4.358436327495732e-01] },
+                Point { id: 28, coords: vec![8.212291819630956e-01, 5.705984846564395e-01] },
+                Point { id: 29, coords: vec![1.228743911043582e+00, 8.537439110435825e-01] },
+                Point { id: 30, coords: vec![1.642458363926191e+00, 1.141196969312879e+00] },
+                Point { id: 31, coords: vec![5.705984846564395e-01, 8.212291819630954e-01] },
+                Point { id: 32, coords: vec![8.537439110435825e-01, 1.228743911043582e+00] },
+                Point { id: 33, coords: vec![1.141196969312879e+00, 1.642458363926191e+00] },
+                Point { id: 34, coords: vec![2.179218163747867e-01, 9.759662299218727e-01] },
+                Point { id: 35, coords: vec![3.234138251536719e-01, 1.448413825153672e+00] },
+                Point { id: 36, coords: vec![4.358436327495734e-01, 1.951932459843745e+00] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![ 0, 1, 4, 3,15,26,17,25] },
+                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![ 1, 2, 5, 4,16,27,18,26] },
+                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![ 3, 4, 7, 6,17,29,19,28] },
+                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![ 4, 5, 8, 7,18,30,20,29] },
+                Cell { id: 4, attribute_id: 1, geo_ndim: 2, points: vec![ 6, 7,10, 9,19,32,21,31] },
+                Cell { id: 5, attribute_id: 1, geo_ndim: 2, points: vec![ 7, 8,11,10,20,33,22,32] },
+                Cell { id: 6, attribute_id: 1, geo_ndim: 2, points: vec![ 9,10,13,12,21,35,23,34] },
+                Cell { id: 7, attribute_id: 1, geo_ndim: 2, points: vec![10,11,14,13,22,36,24,35] },
+            ],
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -890,7 +967,7 @@ mod tests {
             assert_eq!(mesh.cells[i].id, i);
         }
 
-        let mesh = Samples::block_2d_four_quad4();
+        let mesh = Samples::block_2d_four_qua4();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
@@ -901,7 +978,7 @@ mod tests {
             assert_eq!(mesh.cells[i].id, i);
         }
 
-        let mesh = Samples::block_2d_four_quad8();
+        let mesh = Samples::block_2d_four_qua8();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 21);
         assert_eq!(mesh.cells.len(), 4);
@@ -912,7 +989,7 @@ mod tests {
             assert_eq!(mesh.cells[i].id, i);
         }
 
-        let mesh = Samples::block_2d_four_quad9();
+        let mesh = Samples::block_2d_four_qua9();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(mesh.cells.len(), 4);
@@ -923,7 +1000,7 @@ mod tests {
             assert_eq!(mesh.cells[i].id, i);
         }
 
-        let mesh = Samples::block_2d_four_quad12();
+        let mesh = Samples::block_2d_four_qua12();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
@@ -934,7 +1011,7 @@ mod tests {
             assert_eq!(mesh.cells[i].id, i);
         }
 
-        let mesh = Samples::block_2d_four_quad16();
+        let mesh = Samples::block_2d_four_qua16();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
@@ -945,7 +1022,7 @@ mod tests {
             assert_eq!(mesh.cells[i].id, i);
         }
 
-        let mesh = Samples::block_2d_four_quad17();
+        let mesh = Samples::block_2d_four_qua17();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
@@ -970,6 +1047,17 @@ mod tests {
         let mesh = Samples::block_3d_eight_hex20();
         assert_eq!(mesh.space_ndim, 3);
         assert_eq!(mesh.points.len(), 81);
+        assert_eq!(mesh.cells.len(), 8);
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+
+        let mesh = Samples::ring_eight_qua8_rad1_thick1();
+        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 8);
         for i in 0..mesh.points.len() {
             assert_eq!(mesh.points[i].id, i);
