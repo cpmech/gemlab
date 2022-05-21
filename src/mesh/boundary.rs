@@ -234,6 +234,7 @@ mod tests {
     use crate::mesh::{EdgeKey, FaceKey, PointId, Samples};
     use crate::util::AsArray2D;
     use crate::StrError;
+    use russell_chk::assert_vec_approx_eq;
 
     fn validate_edges<'a, T>(
         boundary: &Boundary,
@@ -341,6 +342,67 @@ mod tests {
         assert_eq!(
             points,
             &[0, 1, 3, 4, 7, 8, 11, 16, 17, 18, 19, 21, 22, 28, 29, 31, 32, 34, 35, 40, 41, 42, 43, 44]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn boundary_2d_ring_works() -> Result<(), StrError> {
+        // 2.0   14---36--,__11
+        //        |          `,-..33
+        // 1.75  24   [7]   22     `-,
+        //        |         ,  [5]    ,8.
+        // 1.5   13--35--10/        20   `*
+        //        |       ,`*32    ,'      30
+        // 1.25  23 [6] 21     *.7     [3]   *
+        //        |     ,  [4]  , *.          5
+        // 1.0   12-34-9      19    29     18' *
+        //              `31. ,' [2]   *  _,     *
+        //                  6.       _.4'        *
+        //                   28  _.17   *   [1]  27
+        //                     3'  [0]  26        *
+        //                     25        *        *
+        //        +             0---15---1---16---2
+        //
+        //                     1.0 1.25  1.5 1.75  2.0
+        let mesh = Samples::ring_eight_qua8_rad1_thick1();
+        let boundary = Boundary::new(&mesh)?;
+        let correct_keys = [
+            (0, 1),
+            (0, 3),
+            (1, 2),
+            (2, 5),
+            (3, 6),
+            (5, 8),
+            (6, 9),
+            (8, 11),
+            (9, 12),
+            (11, 14),
+            (12, 13),
+            (13, 14),
+        ];
+        let correct_points = [
+            [1, 0, 15],
+            [0, 3, 25],
+            [2, 1, 16],
+            [5, 2, 27],
+            [3, 6, 28],
+            [8, 5, 30],
+            [6, 9, 31],
+            [11, 8, 33],
+            [9, 12, 34],
+            [14, 11, 36],
+            [12, 13, 23],
+            [13, 14, 24],
+        ];
+        validate_edges(&boundary, &correct_keys, &correct_points);
+        assert_vec_approx_eq!(boundary.min, &[0.0, 0.0], 1e-15);
+        assert_vec_approx_eq!(boundary.max, &[2.0, 2.0], 1e-15);
+        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        points.sort();
+        assert_eq!(
+            points,
+            &[0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 13, 14, 15, 16, 23, 24, 25, 27, 28, 30, 31, 33, 34, 36,]
         );
         Ok(())
     }
