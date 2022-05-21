@@ -3,7 +3,7 @@ use crate::shapes::{Shape, StateOfShape};
 use crate::StrError;
 
 #[inline]
-pub fn alloc_cell_shapes(mesh: &Mesh) -> Result<Vec<Shape>, StrError> {
+pub fn alloc_shapes(mesh: &Mesh) -> Result<Vec<Shape>, StrError> {
     mesh.cells
         .iter()
         .map(|cell| Shape::new(mesh.space_ndim, cell.geo_ndim, cell.points.len()))
