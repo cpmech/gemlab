@@ -343,7 +343,7 @@ mod tests {
         let find = Find::new(&mesh, &Boundary::new(&mesh)?)?;
         check(&find.points(At::XY(0.0, 0.0))?, &[0]);
         check(&find.points(At::XY(2.0, 1.0))?, &[5]);
-        assert_eq!(find.points(At::XY(10.0, 0.0)).err(), Some("point is outside the grid"));
+        check(&find.points(At::XY(10.0, 0.0))?, &[]);
         check(&find.points(At::Circle(0.0, 0.0, 1.0))?, &[1, 3]);
         check(&find.points(At::Circle(0.0, 0.0, SQRT_2))?, &[2]);
         check(&find.points(At::Circle(0.0, 0.0, 10.0))?, &[]);
@@ -393,10 +393,7 @@ mod tests {
         check(&find.points(At::XZ(1.0, 2.0))?, &[9, 10]);
         check(&find.points(At::XYZ(0.0, 0.0, 0.0))?, &[0]);
         check(&find.points(At::XYZ(1.0, 1.0, 2.0))?, &[10]);
-        assert_eq!(
-            find.points(At::XYZ(10.0, 0.0, 0.0)).err(),
-            Some("point is outside the grid")
-        );
+        check(&find.points(At::XYZ(10.0, 0.0, 0.0))?, &[]);
         check(
             &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
             &[1, 3, 5, 7, 9, 11],
@@ -481,10 +478,7 @@ mod tests {
         check(&find.edges(At::XZ(1.0, 2.0))?, &[(9, 10)]);
         check(&find.edges(At::XZ(10.0, 10.0))?, &[]);
         check(&find.edges(At::XYZ(0.0, 0.0, 0.0))?, &[]);
-        assert_eq!(
-            find.edges(At::XYZ(10.0, 0.0, 0.0)).err(),
-            Some("point is outside the grid")
-        );
+        check(&find.edges(At::XYZ(10.0, 0.0, 0.0))?, &[]);
         check(
             &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
             &[(1, 5), (3, 7), (5, 9), (7, 11)],
@@ -539,13 +533,65 @@ mod tests {
         check(&find.faces(At::XZ(1.0, 2.0))?, &[]);
         check(&find.faces(At::XZ(10.0, 10.0))?, &[]);
         check(&find.faces(At::XYZ(0.0, 0.0, 0.0))?, &[]);
-        assert_eq!(
-            find.faces(At::XYZ(10.0, 0.0, 0.0)).err(),
-            Some("point is outside the grid")
-        );
+        check(&find.faces(At::XYZ(10.0, 0.0, 0.0))?, &[]);
         check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?, &[]);
         check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?, &[]);
         check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
+        Ok(())
+    }
+
+    #[test]
+    fn find_works_with_ring() -> Result<(), StrError> {
+        // 2.0   14---36--,__11
+        //        |          `,-..33
+        // 1.75  24   [7]   22     `-,
+        //        |         ,  [5]    ,8.
+        // 1.5   13--35--10/        20   `*
+        //        |       ,`*32    ,'      30
+        // 1.25  23 [6] 21     *.7     [3]   *
+        //        |     ,  [4]  , *.          5
+        // 1.0   12-34-9      19    29     18' *
+        //              `31. ,' [2]   *  _,     *
+        //                  6.       _.4'        *
+        //                   28  _.17   *   [1]  27
+        //                     3'  [0]  26        *
+        //                     25        *        *
+        //        +             0---15---1---16---2
+        //
+        //                     1.0 1.25  1.5 1.75  2.0
+        let mesh = Samples::ring_eight_qua8_rad1_thick1();
+        let find = Find::new(&mesh, &Boundary::new(&mesh)?)?;
+        let (r, rr) = (1.0, 2.0);
+        check(&find.points(At::XY(1.00, 0.00))?, &[0]);
+        check(&find.points(At::XY(1.25, 0.00))?, &[15]);
+        check(&find.points(At::XY(1.50, 0.00))?, &[1]);
+        check(&find.points(At::XY(1.75, 0.00))?, &[16]);
+        check(&find.points(At::XY(2.00, 0.00))?, &[2]);
+        check(&find.points(At::XY(0.00, 1.00))?, &[12]);
+        check(&find.points(At::XY(0.00, 1.25))?, &[23]);
+        check(&find.points(At::XY(0.00, 1.75))?, &[24]);
+        check(&find.points(At::XY(0.00, 1.50))?, &[13]);
+        check(&find.points(At::XY(0.00, 2.00))?, &[14]);
+        check(&find.points(At::XY(SQRT_2 / 2.0, SQRT_2 / 2.0))?, &[6]);
+        check(&find.points(At::XY(SQRT_2, SQRT_2))?, &[8]);
+        check(
+            &find.points(At::Circle(0.0, 0.0, r))?,
+            &[0, 3, 6, 9, 12, 25, 28, 31, 34],
+        );
+        check(
+            &find.points(At::Circle(0.0, 0.0, rr))?,
+            &[2, 5, 8, 11, 14, 27, 30, 33, 36],
+        );
+        check(&find.edges(At::Y(0.0))?, &[(0, 1), (1, 2)]);
+        check(&find.edges(At::X(0.0))?, &[(12, 13), (13, 14)]);
+        check(
+            &find.edges(At::Circle(0.0, 0.0, r))?,
+            &[(0, 3), (3, 6), (6, 9), (9, 12)],
+        );
+        check(
+            &find.edges(At::Circle(0.0, 0.0, rr))?,
+            &[(2, 5), (5, 8), (8, 11), (11, 14)],
+        );
         Ok(())
     }
 }
