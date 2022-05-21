@@ -50,7 +50,7 @@ mod tests {
     use crate::StrError;
 
     #[test]
-    fn shapes_new_works() -> Result<(), StrError> {
+    fn shapes_new_works_2d() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
         let shapes = Shapes::new(&mesh)?;
         assert_eq!(shapes.len(), 2);
@@ -62,7 +62,24 @@ mod tests {
     }
 
     #[test]
-    fn states_new_works() -> Result<(), StrError> {
+    fn shapes_new_works_3d() -> Result<(), StrError> {
+        let mesh = Samples::two_cubes_vertical();
+        let shapes = Shapes::new(&mesh)?;
+        assert_eq!(shapes.len(), 2);
+        assert_eq!(shapes[0].kind, GeoKind::Hex8);
+        assert_eq!(shapes[1].kind, GeoKind::Hex8);
+        assert_eq!(shapes[0].nnode, 8);
+        assert_eq!(shapes[1].nnode, 8);
+        Ok(())
+    }
+
+    #[test]
+    fn states_new_works_2d() -> Result<(), StrError> {
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
         let mesh = Samples::two_quads_horizontal();
         let shapes = Shapes::new(&mesh)?;
         let states = States::new(&mesh, &shapes)?;
@@ -80,6 +97,51 @@ mod tests {
              │ 1 2 2 1 │\n\
              │ 0 0 1 1 │\n\
              └         ┘"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn states_new_works_3d() -> Result<(), StrError> {
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        let mesh = Samples::two_cubes_vertical();
+        let shapes = Shapes::new(&mesh)?;
+        let states = States::new(&mesh, &shapes)?;
+        assert_eq!(states.len(), 2);
+        assert_eq!(
+            format!("{}", states[0].coords_transp),
+            "┌                 ┐\n\
+             │ 0 1 1 0 0 1 1 0 │\n\
+             │ 0 0 1 1 0 0 1 1 │\n\
+             │ 0 0 0 0 1 1 1 1 │\n\
+             └                 ┘"
+        );
+        assert_eq!(
+            format!("{}", states[1].coords_transp),
+            "┌                 ┐\n\
+             │ 0 1 1 0 0 1 1 0 │\n\
+             │ 0 0 1 1 0 0 1 1 │\n\
+             │ 1 1 1 1 2 2 2 2 │\n\
+             └                 ┘"
         );
         Ok(())
     }
