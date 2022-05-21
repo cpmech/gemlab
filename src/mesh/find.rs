@@ -251,7 +251,7 @@ impl Find {
 #[cfg(test)]
 mod tests {
     use super::Find;
-    use crate::mesh::{alloc_shapes, At, Boundary, Samples};
+    use crate::mesh::{At, Boundary, Samples, Shapes};
     use crate::util::SQRT_2;
     use crate::StrError;
     use std::collections::HashSet;
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn new_works() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
-        let shapes = alloc_shapes(&mesh)?;
+        let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         // plot_grid_two_quads_horizontal(&find)?;
@@ -299,7 +299,7 @@ mod tests {
     fn find_points_fails_on_wrong_input() -> Result<(), StrError> {
         // 2d
         let mesh = Samples::two_quads_horizontal();
-        let shapes = alloc_shapes(&mesh)?;
+        let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         assert_eq!(find.points(At::Z(0.0)).err(), Some("At::Z works in 3D only"));
@@ -316,7 +316,7 @@ mod tests {
 
         // 3d
         let mesh = Samples::two_cubes_vertical();
-        let shapes = alloc_shapes(&mesh)?;
+        let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         assert_eq!(
@@ -345,7 +345,7 @@ mod tests {
         //   0--------1--------4
         //           circle
         let mesh = Samples::two_quads_horizontal();
-        let shapes = alloc_shapes(&mesh)?;
+        let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         check(&find.points(At::XY(0.0, 0.0))?, &[0]);
@@ -378,7 +378,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
-        let shapes = alloc_shapes(&mesh)?;
+        let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         // plot_grid_two_cubes_vertical(&find)?;
@@ -423,7 +423,7 @@ mod tests {
         // |        |        |
         // 0--------1--------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = alloc_shapes(&mesh)?;
+        let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         check(&find.edges(At::Y(0.0))?, &[(0, 1), (1, 4)]);
@@ -456,7 +456,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
-        let shapes = alloc_shapes(&mesh)?;
+        let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         check(
@@ -525,7 +525,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
-        let shapes = alloc_shapes(&mesh)?;
+        let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         check(&find.faces(At::X(0.0))?, &[(0, 3, 4, 7), (4, 7, 8, 11)]);
@@ -575,7 +575,7 @@ mod tests {
         //
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let shapes = alloc_shapes(&mesh)?;
+        let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         let (r, rr) = (1.0, 2.0);
