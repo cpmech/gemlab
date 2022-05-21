@@ -1,4 +1,4 @@
-use super::{all_edges_2d, all_faces_3d, alloc_cell_shapes, CellId, Edge, EdgeKey, Face, FaceKey, Mesh, PointId};
+use super::{all_edges_2d, all_faces_3d, CellId, Edge, EdgeKey, Face, FaceKey, Mesh, PointId};
 use crate::{shapes::Shape, StrError};
 use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
@@ -32,16 +32,15 @@ pub struct Boundary {
 
 impl Boundary {
     /// Allocates a new instance
-    pub fn new(mesh: &Mesh) -> Result<Self, StrError> {
-        let shapes = alloc_cell_shapes(mesh)?;
+    pub fn new(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<Self, StrError> {
         let mut boundary = match mesh.space_ndim {
             2 => {
-                let edges = all_edges_2d(mesh, &shapes)?;
-                Boundary::two_dim(mesh, &shapes, &edges)?
+                let edges = all_edges_2d(mesh, shapes)?;
+                Boundary::two_dim(mesh, shapes, &edges)?
             }
             3 => {
-                let faces = all_faces_3d(mesh, &shapes)?;
-                Boundary::three_dim(mesh, &shapes, &faces)?
+                let faces = all_faces_3d(mesh, shapes)?;
+                Boundary::three_dim(mesh, shapes, &faces)?
             }
             _ => panic!("space_ndim must be 2 or 3"),
         };
@@ -231,7 +230,7 @@ impl Boundary {
 #[cfg(test)]
 mod tests {
     use super::Boundary;
-    use crate::mesh::{EdgeKey, FaceKey, PointId, Samples};
+    use crate::mesh::{alloc_cell_shapes, EdgeKey, FaceKey, PointId, Samples};
     use crate::util::AsArray2D;
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -274,7 +273,8 @@ mod tests {
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let boundary = Boundary::new(&mesh)?;
+        let shapes = alloc_cell_shapes(&mesh)?;
+        let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_keys = [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [4, 1], [3, 2], [2, 5], [5, 4]];
         validate_edges(&boundary, &correct_keys, &correct_points);
@@ -294,7 +294,8 @@ mod tests {
         //           |         |
         //  0--------1---------2
         let mesh = Samples::mixed_shapes_2d();
-        let boundary = Boundary::new(&mesh)?;
+        let shapes = alloc_cell_shapes(&mesh)?;
+        let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_keys = [(1, 2), (1, 4), (2, 3), (3, 4)];
         let correct_points = [[2, 1], [1, 4], [3, 2], [4, 3]];
         validate_edges(&boundary, &correct_keys, &correct_points);
@@ -322,7 +323,8 @@ mod tests {
         //  |               |               |
         //  0----4-----8----1---18---21----16
         let mesh = Samples::block_2d_four_qua16();
-        let boundary = Boundary::new(&mesh)?;
+        let shapes = alloc_cell_shapes(&mesh)?;
+        let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_keys = [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)];
         let correct_points = [
             [1, 0, 8, 4],
@@ -366,7 +368,8 @@ mod tests {
         //
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let boundary = Boundary::new(&mesh)?;
+        let shapes = alloc_cell_shapes(&mesh)?;
+        let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_keys = [
             (0, 1),
             (0, 3),
@@ -430,7 +433,8 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let boundary = Boundary::new(&mesh)?;
+        let shapes = alloc_cell_shapes(&mesh)?;
+        let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -526,7 +530,8 @@ mod tests {
         //  12-----11-------1------------2------------8
         //
         let mesh = Samples::mixed_shapes_3d();
-        let boundary = Boundary::new(&mesh)?;
+        let shapes = alloc_cell_shapes(&mesh)?;
+        let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -643,7 +648,8 @@ mod tests {
         //   |/                  |/                  |/
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
-        let boundary = Boundary::new(&mesh)?;
+        let shapes = alloc_cell_shapes(&mesh)?;
+        let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
