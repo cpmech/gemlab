@@ -210,6 +210,16 @@ impl GridSearch {
         self.set_halo(x);
         let mut tmp = vec![0.0; self.ndim];
         for c in 0..self.ncorner {
+            let mut outside = false;
+            for i in 0..self.ndim {
+                if self.halo[c][i] < self.min[i] || self.halo[c][i] > self.max[i] {
+                    outside = true;
+                    break;
+                }
+            }
+            if outside {
+                continue; // no need to add HALO points outside the grid
+            }
             tmp.copy_from_slice(&self.halo[c][0..self.ndim]);
             let index_corner = self.container_index(&tmp);
             if index_corner != index {
@@ -1271,6 +1281,27 @@ mod tests {
         let mut indices: Vec<_> = grid.containers.into_keys().collect();
         indices.sort();
         assert_eq!(indices, &[0, 1, 3, 4, 5, 6, 7, 11, 12, 13, 17, 18, 19, 20, 21, 23, 24]);
+        Ok(())
+    }
+
+    #[test]
+    fn insert_2d_works_boundaries() -> Result<(), StrError> {
+        let mut grid = GridSearch::new(&[0.0, 0.0], &[2.0, 1.0], GsNdiv::Spec(2, 1, 0), GsTol::Default)?;
+        grid.insert(0, &[0.0, 0.0])?;
+        grid.insert(1, &[1.0, 0.0])?;
+        grid.insert(2, &[1.0, 1.0])?;
+        grid.insert(3, &[0.0, 1.0])?;
+        grid.insert(4, &[2.0, 0.0])?;
+        grid.insert(5, &[2.0, 1.0])?;
+        assert_eq!(
+            format!("{}", grid),
+            "0: [0, 1, 2, 3]\n\
+             1: [1, 2, 4, 5]\n\
+             ids = [0, 1, 2, 3, 4, 5]\n\
+             nitem = 6\n\
+             ncontainer = 2\n\
+             ndiv = [2, 1]\n"
+        );
         Ok(())
     }
 
