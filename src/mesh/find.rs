@@ -5,15 +5,28 @@ use std::collections::{HashMap, HashSet};
 
 /// Implements functions to find points, edges, and faces on the boundary of a mesh
 pub struct Find {
+    /// Space number of dimension
     space_ndim: usize,
+
+    /// Total number of points in the mesh
     num_points: usize,
+
+    /// Tool to quickly find points by coordinates
     grid: GridSearch,
+
+    /// Maps a point id to edges sharing the point
     point_to_edges: HashMap<PointId, HashSet<EdgeKey>>,
+
+    /// Maps a point id to faces sharing the point
     point_to_faces: HashMap<PointId, HashSet<FaceKey>>,
 }
 
 impl Find {
     /// Allocates a new instance
+    ///
+    /// # Panics
+    ///
+    /// If the `boundary` does not correspond to `mesh`, a panic will occur.
     pub fn new(mesh: &Mesh, boundary: &Boundary) -> Result<Self, StrError> {
         // add point ids to grid
         let mut grid = GridSearch::new(&boundary.min, &boundary.max, GsNdiv::Default, GsTol::Default)?;
