@@ -170,13 +170,7 @@ mod tests {
         //          and Applications, Wiley, 700p.
         //
         let shape = Shape::new(2, 2, 3)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
-        state.set_node(0, 0, 0, 0.0)?;
-        state.set_node(0, 0, 1, 0.0)?;
-        state.set_node(1, 1, 0, 0.2)?;
-        state.set_node(1, 1, 1, 0.0)?;
-        state.set_node(2, 2, 0, 0.1)?;
-        state.set_node(2, 2, 1, 0.1)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [0.2, 0.0], [0.1, 0.1]])?;
         let ana = AnalyticalTri3::new(&shape, &mut state);
         assert_eq!(ana.x, [0.0, 0.2, 0.1]);
         assert_eq!(ana.y, [0.0, 0.0, 0.1]);

@@ -509,11 +509,6 @@ impl Shape {
     ///            while lengths greater than geo_ndim are allowed (and ignored). In this way,
     ///            we can pass a slice with integration point data such as `[f64; 4]`.
     ///
-    /// # Warning
-    ///
-    /// * You must set the coordinates matrix first (via the `set_node` method of `state`),
-    ///   otherwise the computations will generate wrong results.
-    ///
     /// # Panics
     ///
     /// * This function does NOT check for sizes in `state`;
@@ -521,9 +516,6 @@ impl Shape {
     pub fn calc_coords(&self, x: &mut Vector, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
         if x.dim() != self.space_ndim {
             return Err("x.dim() must equal space_ndim");
-        }
-        if !state.last_coord_given {
-            return Err("the last node coordinate has not been given yet");
         }
         self.calc_interp(state, ksi)?;
         mat_vec_mul(x, 1.0, &state.coords_transp, &state.interp)
@@ -577,19 +569,11 @@ impl Shape {
     /// * If `geo_ndim = 1` and `space_ndim > 1`, returns the norm of the Jacobian vector
     /// * Otherwise, returns zero
     ///
-    /// # Warning
-    ///
-    /// * You must set the coordinates matrix first (via the `set_node` method of `state`),
-    ///   otherwise the computations will generate wrong results.
-    ///
     /// # Panics
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
     pub fn calc_jacobian(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<f64, StrError> {
-        if !state.last_coord_given {
-            return Err("the last node coordinate has not been given yet");
-        }
         self.calc_deriv(state, ksi)?;
         mat_mat_mul(&mut state.jacobian, 1.0, &state.coords_transp, &state.deriv)?;
         if self.geo_ndim == self.space_ndim {
@@ -683,11 +667,6 @@ impl Shape {
     /// * `state.deriv` -- interpolation functions (nnode)
     /// * `state.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
     ///
-    /// # Warning
-    ///
-    /// * You must set the coordinates matrix first (via the `set_node` method of `state`),
-    ///   otherwise the computations will generate wrong results.
-    ///
     /// # Panics
     ///
     /// * This function does NOT check for sizes in `state`;
@@ -704,9 +683,6 @@ impl Shape {
         }
         if normal.dim() != self.space_ndim {
             return Err("normal.dim() must equal space_ndim");
-        }
-        if !state.last_coord_given {
-            return Err("the last node coordinate has not been given yet");
         }
 
         // compute Jacobian
@@ -756,11 +732,6 @@ impl Shape {
     ///
     /// * Returns the number of iterations
     ///
-    /// # Warning
-    ///
-    /// * You must set the coordinates matrix first (via the `set_node` method of `state`),
-    ///   otherwise the computations will generate wrong results.
-    ///
     /// # Panics
     ///
     /// * This function does NOT check for sizes in `state`;
@@ -782,9 +753,6 @@ impl Shape {
         }
         if ksi.len() != self.geo_ndim {
             return Err("ksi.len() must equal geo_ndim");
-        }
-        if !state.last_coord_given {
-            return Err("the last node coordinate has not been given yet");
         }
 
         // use linear scale to guess ksi
@@ -856,11 +824,6 @@ impl Shape {
     ///
     /// * Returns the determinant of the Jacobian.
     ///
-    /// # Warning
-    ///
-    /// * You must set the coordinates matrix first (via the `set_node` method of `state`),
-    ///   otherwise the computations will generate wrong results.
-    ///
     /// # Panics
     ///
     /// * This function does NOT check for sizes in `state`;
@@ -868,9 +831,6 @@ impl Shape {
     pub fn calc_gradient(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<f64, StrError> {
         if self.geo_ndim != self.space_ndim {
             return Err("geo_ndim must equal space_ndim");
-        }
-        if !state.last_coord_given {
-            return Err("the last node coordinate has not been given yet");
         }
         let det_jac = self.calc_jacobian(state, ksi)?;
         mat_mat_mul(&mut state.gradient, 1.0, &state.deriv, &state.inv_jacobian)?;
@@ -901,11 +861,6 @@ impl Shape {
     /// * Returns an array with `n_integ_point` (number of integration points) vectors, where
     ///   each vector has a dimension equal to `space_ndim`.
     ///
-    /// # Warning
-    ///
-    /// * You must set the coordinates matrix first (via the `set_node` method of `state`),
-    ///   otherwise the computations will generate wrong results.
-    ///
     /// # Panics
     ///
     /// * This function does NOT check for sizes in `state`;
@@ -915,9 +870,6 @@ impl Shape {
         state: &mut StateOfShape,
         integ_points: IntegPointData,
     ) -> Result<Vec<Vector>, StrError> {
-        if !state.last_coord_given {
-            return Err("the last node coordinate has not been given yet");
-        }
         let mut all_coords = Vec::new();
         for iota in integ_points {
             let mut x = Vector::new(self.space_ndim);
@@ -1118,7 +1070,7 @@ mod tests {
     fn gen_state_with_coords_matrix(shape: &Shape) -> Result<StateOfShape, StrError> {
         let mut x = Vector::new(shape.space_ndim);
         let mut ksi_aux = vec![0.0; shape.space_ndim];
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut coords: Vec<Vec<f64>> = Vec::new();
         for m in 0..shape.nnode {
             let ksi = shape.reference_coords(m);
             if shape.geo_ndim == shape.space_ndim {
@@ -1135,12 +1087,9 @@ mod tests {
             } else {
                 panic!("(geo_ndim,space_ndim) pair is invalid");
             }
-            let point_id = 100 + m;
-            for j in 0..shape.space_ndim {
-                state.set_node(point_id, m, j, x[j])?;
-            }
+            coords.push(x.as_data().clone());
         }
-        Ok(state)
+        StateOfShape::new(shape.geo_ndim, &coords)
     }
 
     // Generates state with a pre-set matrix of coordinates such that the
@@ -1154,15 +1103,12 @@ mod tests {
         if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
             scale = 2.0;
         }
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut coords: Vec<Vec<f64>> = Vec::new();
         for m in 0..shape.nnode {
             let ksi = shape.reference_coords(m);
-            for j in 0..shape.geo_ndim {
-                let point_id = 100 + m;
-                state.set_node(point_id, m, j, scale * ksi[j])?;
-            }
+            coords.push(ksi.iter().map(|value| scale * value).collect());
         }
-        Ok(state)
+        StateOfShape::new(shape.geo_ndim, &coords)
     }
 
     #[test]
@@ -1175,7 +1121,7 @@ mod tests {
 
         // shape and state
         let shape = Shape::new(1, 1, 2)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
 
         // calc_interp
         assert_eq!(
@@ -1195,17 +1141,6 @@ mod tests {
             shape.calc_coords(&mut x, &mut state, &[0.0]).err(),
             Some("x.dim() must equal space_ndim")
         );
-        let mut x = Vector::new(1);
-        assert_eq!(
-            shape.calc_coords(&mut x, &mut state, &[0.0]).err(),
-            Some("the last node coordinate has not been given yet")
-        );
-
-        // calc_jacobian
-        assert_eq!(
-            shape.calc_jacobian(&mut state, &[0.0]).err(),
-            Some("the last node coordinate has not been given yet")
-        );
 
         // calc_boundary_normal
         let mut normal = Vector::new(1);
@@ -1214,20 +1149,15 @@ mod tests {
             Some("geo_ndim must be smaller than space_ndim")
         );
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
         assert_eq!(
             shape.calc_boundary_normal(&mut normal, &mut state, &[0.0]).err(),
             Some("normal.dim() must equal space_ndim")
         );
-        let mut normal = Vector::new(2);
-        assert_eq!(
-            shape.calc_boundary_normal(&mut normal, &mut state, &[0.0]).err(),
-            Some("the last node coordinate has not been given yet")
-        );
 
         // approximate_ksi
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
         let mut ksi = vec![0.0; 1];
         let x = Vector::new(2);
         assert_eq!(
@@ -1235,36 +1165,19 @@ mod tests {
             Some("geo_ndim must equal space_ndim")
         );
         let shape = Shape::new(1, 1, 2)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
         let x = Vector::new(2);
         assert_eq!(
             shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
             Some("x.dim() must equal space_ndim")
         );
-        let x = Vector::new(1);
-        assert_eq!(
-            shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
-            Some("the last node coordinate has not been given yet")
-        );
 
         // calc_gradient
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
         assert_eq!(
             shape.calc_gradient(&mut state, &[0.0]).err(),
             Some("geo_ndim must equal space_ndim")
-        );
-        let shape = Shape::new(1, 1, 2)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
-        assert_eq!(
-            shape.calc_gradient(&mut state, &[0.0]).err(),
-            Some("the last node coordinate has not been given yet")
-        );
-
-        // calc_integ_points_coords
-        assert_eq!(
-            shape.calc_integ_points_coords(&mut state, &IP_LIN_LEGENDRE_2).err(),
-            Some("the last node coordinate has not been given yet")
         );
         Ok(())
     }
@@ -1327,7 +1240,12 @@ mod tests {
             // allocate shape and state
             let space_ndim = geo_ndim;
             let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-            let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let mut state = StateOfShape::new(
+                shape.geo_ndim,
+                &(0..shape.nnode)
+                    .map(|_| vec![0.0; shape.space_ndim])
+                    .collect::<Vec<_>>(),
+            )?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
@@ -1399,7 +1317,12 @@ mod tests {
             // allocate shape and state
             let space_ndim = geo_ndim;
             let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-            let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
+            let mut state = StateOfShape::new(
+                shape.geo_ndim,
+                &(0..shape.nnode)
+                    .map(|_| vec![0.0; shape.space_ndim])
+                    .collect::<Vec<_>>(),
+            )?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
@@ -1606,28 +1529,14 @@ mod tests {
 
     #[test]
     fn calc_jacobian_special_cases_work() -> Result<(), StrError> {
-        let point_id = 123;
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
         let l = 3.5;
-        state.set_node(point_id, 0, 0, 0.0)?;
-        state.set_node(point_id, 0, 1, 0.0)?;
-        state.set_node(point_id, 1, 0, l)?;
-        state.set_node(point_id, 1, 1, 0.0)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [l, 0.0]])?;
         let norm_jac_vec = shape.calc_jacobian(&mut state, &[0.0])?;
         assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
 
         let shape = Shape::new(3, 2, 3)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
-        state.set_node(point_id, 0, 0, 0.0)?;
-        state.set_node(point_id, 0, 1, 0.0)?;
-        state.set_node(point_id, 0, 2, 0.0)?;
-        state.set_node(point_id, 1, 0, 1.0)?;
-        state.set_node(point_id, 1, 1, 0.0)?;
-        state.set_node(point_id, 1, 2, 0.0)?;
-        state.set_node(point_id, 2, 0, 0.5)?;
-        state.set_node(point_id, 2, 1, 1.0)?;
-        state.set_node(point_id, 2, 2, 1.0)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 1.0, 1.0]])?;
         let norm_jac_vec = shape.calc_jacobian(&mut state, &[0.0, 0.0])?;
         assert_eq!(norm_jac_vec, 0.0);
         Ok(())
@@ -1756,18 +1665,16 @@ mod tests {
 
             // loop over edges
             for e in 0..shape.nedge {
-                let edge_nnode = shape.edge_nnode;
                 let edge_shape = Shape::new(space_ndim, 1, shape.edge_nnode)?;
-                let mut edge_state = StateOfShape::new(edge_shape.space_ndim, edge_shape.geo_ndim, edge_shape.nnode)?;
-
-                // set edge coordinates
-                for i in 0..edge_nnode {
-                    for j in 0..space_ndim {
-                        let m = shape.edge_node_id(e, i);
-                        let point_id = 100 + m;
-                        edge_state.set_node(point_id, i, j, state.coords_transp[j][m])?;
-                    }
-                }
+                let mut edge_state = StateOfShape::new(
+                    edge_shape.geo_ndim,
+                    &(0..edge_shape.nnode)
+                        .map(|i| {
+                            let m = shape.edge_node_id(e, i);
+                            (0..shape.space_ndim).map(|j| state.coords_transp[j][m]).collect()
+                        })
+                        .collect::<Vec<_>>(),
+                )?;
 
                 // calc normal vector
                 edge_shape.calc_boundary_normal(&mut normal, &mut edge_state, ksi)?;
@@ -1845,18 +1752,16 @@ mod tests {
 
             // loop over faces
             for f in 0..shape.nface {
-                let face_nnode = shape.face_nnode;
                 let face_shape = Shape::new(space_ndim, 2, shape.face_nnode)?;
-                let mut face_state = StateOfShape::new(face_shape.space_ndim, face_shape.geo_ndim, face_shape.nnode)?;
-
-                // set face coordinates
-                for i in 0..face_nnode {
-                    for j in 0..space_ndim {
-                        let m = shape.face_node_id(f, i);
-                        let point_id = 100 + m;
-                        face_state.set_node(point_id, i, j, state.coords_transp[j][m])?;
-                    }
-                }
+                let mut face_state = StateOfShape::new(
+                    face_shape.geo_ndim,
+                    &(0..face_shape.nnode)
+                        .map(|i| {
+                            let m = shape.face_node_id(f, i);
+                            (0..shape.space_ndim).map(|j| state.coords_transp[j][m]).collect()
+                        })
+                        .collect::<Vec<_>>(),
+                )?;
 
                 // calc normal vector
                 face_shape.calc_boundary_normal(&mut normal, &mut face_state, ksi)?;
@@ -2018,12 +1923,9 @@ mod tests {
 
     #[test]
     fn calc_integ_points_coords() -> Result<(), StrError> {
-        let point_id = 123;
         let shape = Shape::new(1, 1, 2)?;
-        let mut state = StateOfShape::new(shape.space_ndim, shape.geo_ndim, shape.nnode)?;
         let (xa, xb) = (2.0, 5.0);
-        state.set_node(point_id, 0, 0, xa)?;
-        state.set_node(point_id, 1, 0, xb)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[xa], [xb]])?;
         let integ_points = shape.calc_integ_points_coords(&mut state, &IP_LIN_LEGENDRE_2)?;
         assert_eq!(integ_points.len(), 2);
         let ksi_a = -1.0 / SQRT_3;
