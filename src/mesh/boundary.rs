@@ -91,11 +91,6 @@ impl Boundary {
                 continue;
             }
 
-            // skip already handled edges
-            if boundary.edges.contains_key(edge_key) {
-                continue;
-            }
-
             // cell and edge
             let (cell_id, e) = shared_by[0];
             let cell = &mesh.cells[cell_id];
