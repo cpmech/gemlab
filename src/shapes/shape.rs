@@ -4,12 +4,27 @@ use super::{
 };
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, vector_norm, Matrix, NormVec, Vector};
+use std::fmt;
 
 /// Defines an alias for interpolation functions
-type FnInterp = fn(&mut Vector, &[f64]);
+#[derive(Clone)]
+struct FnInterp(fn(&mut Vector, &[f64]));
 
 /// Defines an alias for derivative of interpolation functions
-type FnDeriv = fn(&mut Matrix, &[f64]);
+#[derive(Clone)]
+struct FnDeriv(fn(&mut Matrix, &[f64]));
+
+impl fmt::Debug for FnInterp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FnInterp")
+    }
+}
+
+impl fmt::Debug for FnDeriv {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FnDeriv")
+    }
+}
 
 /// Implements an isoparametric geometric shape for numerical integration and more
 ///
@@ -161,6 +176,7 @@ type FnDeriv = fn(&mut Matrix, &[f64]);
 /// # Warning
 ///
 /// All public properties are **readonly** and should **not** be modified externally.
+#[derive(Clone, Debug)]
 pub struct Shape {
     /// Geometry class
     pub class: GeoClass,
@@ -192,10 +208,10 @@ pub struct Shape {
     /// Face's number of edges
     pub face_nedge: usize,
 
-    /// Function to calculate interpolation functions
+    /// Callback to evaluate interpolation functions
     fn_interp: FnInterp,
 
-    /// Function to calculate local derivatives (w.r.t. ksi) of interpolation functions
+    /// Callback to evaluate local derivatives (w.r.t. ksi) of interpolation functions
     fn_deriv: FnDeriv,
 }
 
@@ -221,8 +237,8 @@ impl Shape {
             usize,
             usize,
             usize,
-            FnInterp,
-            FnDeriv,
+            fn(&mut Vector, &[f64]),
+            fn(&mut Matrix, &[f64]),
         ) = match kind {
             // Lin
             GeoKind::Lin2 => (
@@ -409,8 +425,8 @@ impl Shape {
             edge_nnode,
             face_nnode,
             face_nedge,
-            fn_interp,
-            fn_deriv,
+            fn_interp: FnInterp(fn_interp),
+            fn_deriv: FnDeriv(fn_deriv),
         })
     }
 
@@ -443,7 +459,7 @@ impl Shape {
         if ksi.len() < self.geo_ndim {
             return Err("ksi.len() must be ≥ geo_ndim");
         }
-        (self.fn_interp)(&mut state.interp, ksi);
+        (self.fn_interp.0)(&mut state.interp, ksi);
         Ok(())
     }
 
@@ -478,7 +494,7 @@ impl Shape {
         if ksi.len() < self.geo_ndim {
             return Err("ksi.len() must be ≥ geo_ndim");
         }
-        (self.fn_deriv)(&mut state.deriv, ksi);
+        (self.fn_deriv.0)(&mut state.deriv, ksi);
         Ok(())
     }
 
@@ -1009,6 +1025,19 @@ mod tests {
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq, assert_vec_approx_eq};
     use russell_lab::{copy_vector, scale_vector, vector_norm, NormVec, Vector};
     use std::collections::HashMap;
+
+    #[test]
+    fn derive_works() -> Result<(), StrError> {
+        let shape = Shape::new(2, 1, 2)?;
+        let shape_clone = shape.clone();
+        assert_eq!(format!("{:?}", shape), "Shape { class: Lin, kind: Lin2, space_ndim: 2, geo_ndim: 1, nnode: 2, nedge: 0, nface: 0, edge_nnode: 0, face_nnode: 0, face_nedge: 0, fn_interp: FnInterp, fn_deriv: FnDeriv }");
+        assert_eq!(shape_clone.class, shape.class);
+        assert_eq!(shape_clone.kind, shape.kind);
+        assert_eq!(shape_clone.space_ndim, shape.space_ndim);
+        assert_eq!(shape_clone.geo_ndim, shape.geo_ndim);
+        assert_eq!(shape_clone.nnode, shape.nnode);
+        Ok(())
+    }
 
     const RMIN: f64 = 1.0;
     const RMAX: f64 = 10.0;
