@@ -116,7 +116,7 @@ pub fn all_faces_3d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<HashMap<FaceKey,
 
 #[cfg(test)]
 mod tests {
-    use super::{all_edges_2d, all_faces_3d};
+    use super::{all_edges_2d, all_faces_3d, Edge, Face};
     use crate::mesh::{Samples, Shapes};
     use crate::StrError;
 
@@ -267,5 +267,21 @@ mod tests {
         assert_eq!(faces.get(&(3, 6, 8, 13)).unwrap(), &[(1, 3)]);
         assert_eq!(faces.get(&(4, 5, 6, 7)).unwrap(), &[(0, 5)]);
         Ok(())
+    }
+
+    #[test]
+    fn derive_works() {
+        let edge = Edge {
+            points: vec![10, 20, 33],
+        };
+        let face = Face {
+            points: vec![1, 2, 3, 4],
+        };
+        let edge_clone = edge.clone();
+        let face_clone = face.clone();
+        assert_eq!(format!("{:?}", edge), "Edge { points: [10, 20, 33] }");
+        assert_eq!(format!("{:?}", face), "Face { points: [1, 2, 3, 4] }");
+        assert_eq!(edge_clone.points.len(), 3);
+        assert_eq!(face_clone.points.len(), 4);
     }
 }
