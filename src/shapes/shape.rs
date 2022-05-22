@@ -1231,6 +1231,12 @@ mod tests {
             shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
             Some("x.dim() must equal space_ndim")
         );
+        let mut ksi = vec![0.0; 3];
+        let x = Vector::new(2);
+        assert_eq!(
+            shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
+            Some("ksi.len() must equal geo_ndim")
+        );
 
         // calc_gradient
         let shape = Shape::new(2, 1, 2)?;
