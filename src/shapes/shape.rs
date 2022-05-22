@@ -771,15 +771,9 @@ impl Shape {
         }
 
         // use linear scale to guess ksi
-        let (min_ksi, max_ksi, del_ksi) = ref_domain_limits(self.class);
+        let (min_ksi, _, del_ksi) = ref_domain_limits(self.class);
         for j in 0..self.geo_ndim {
             ksi[j] = (x[j] - state.coords_min[j]) / (state.coords_max[j] - state.coords_min[j]) * del_ksi + min_ksi;
-            if ksi[j] < min_ksi {
-                ksi[j] = min_ksi;
-            }
-            if ksi[j] > max_ksi {
-                ksi[j] = max_ksi;
-            }
         }
 
         // perform iterations
@@ -801,7 +795,7 @@ impl Shape {
             }
         }
 
-        Err("inverse mapping failed to converge")
+        Err("approximate_ksi failed to converge")
     }
 
     /// Calculates the gradient of the interpolation functions
@@ -1236,6 +1230,11 @@ mod tests {
         assert_eq!(
             shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
             Some("ksi.len() must equal geo_ndim")
+        );
+        let mut ksi = vec![0.0; 2];
+        assert_eq!(
+            shape.approximate_ksi(&mut ksi, &mut state, &x, 0, 1e-5).err(),
+            Some("approximate_ksi failed to converge")
         );
 
         // calc_gradient
