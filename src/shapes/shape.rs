@@ -1020,8 +1020,8 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
-    fn derive_works() -> Result<(), StrError> {
-        let shape = Shape::new(2, 1, 2)?;
+    fn derive_works() {
+        let shape = Shape::new(2, 1, 2).unwrap();
         let shape_clone = shape.clone();
         assert_eq!(format!("{:?}", shape), "Shape { class: Lin, kind: Lin2, space_ndim: 2, geo_ndim: 1, nnode: 2, nedge: 0, nface: 0, edge_nnode: 0, face_nnode: 0, face_nedge: 0, fn_interp: FnInterp, fn_deriv: FnDeriv }");
         assert_eq!(shape_clone.class, shape.class);
@@ -1029,7 +1029,6 @@ mod tests {
         assert_eq!(shape_clone.space_ndim, shape.space_ndim);
         assert_eq!(shape_clone.geo_ndim, shape.geo_ndim);
         assert_eq!(shape_clone.nnode, shape.nnode);
-        Ok(())
     }
 
     const RMIN: f64 = 1.0;
@@ -1076,10 +1075,6 @@ mod tests {
         assert_eq!(x.dim(), ksi.len());
         let (min_ksi, _, del_ksi) = ref_domain_limits(class);
         let r = RMIN + (ksi[0] - min_ksi) * (RMAX - RMIN) / del_ksi;
-        if x.dim() == 1 {
-            x[0] = r;
-            return;
-        }
         let a = AMIN + (ksi[1] - min_ksi) * (AMAX - AMIN) / del_ksi;
         x[0] = r * f64::cos(a);
         x[1] = r * f64::sin(a);
@@ -1101,13 +1096,12 @@ mod tests {
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = 1.0;
                 gen_coords(&mut x, &ksi_aux, shape.class);
-            } else if shape.geo_ndim == 2 && shape.space_ndim == 3 {
+            } else {
+                // shape.geo_ndim == 2 && shape.space_ndim == 3
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = ksi[1];
                 ksi_aux[2] = 1.0;
                 gen_coords(&mut x, &ksi_aux, shape.class);
-            } else {
-                panic!("(geo_ndim,space_ndim) pair is invalid");
             }
             coords.push(x.as_data().clone());
         }
