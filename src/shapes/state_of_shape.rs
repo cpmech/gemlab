@@ -172,6 +172,29 @@ mod tests {
         assert_eq!(state.jacobian.dims(), (space_ndim, geo_ndim));
         assert_eq!(state.inv_jacobian.dims(), (space_ndim, space_ndim));
         assert_eq!(state.gradient.dims(), (nnode, space_ndim));
+
+        let space_ndim = 3;
+        let geo_ndim = 3;
+        let nnode = 4;
+        let state = StateOfShape::new(
+            geo_ndim,
+            &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        )?;
+        assert_eq!(
+            format!("{}", state.coords_transp),
+            "┌         ┐\n\
+             │ 0 1 0 0 │\n\
+             │ 0 0 1 0 │\n\
+             │ 0 0 0 1 │\n\
+             └         ┘"
+        );
+        assert_eq!(state.coords_min, &[0.0, 0.0, 0.0]);
+        assert_eq!(state.coords_max, &[1.0, 1.0, 1.0]);
+        assert_eq!(state.interp.dim(), nnode);
+        assert_eq!(state.deriv.dims(), (nnode, geo_ndim));
+        assert_eq!(state.jacobian.dims(), (space_ndim, geo_ndim));
+        assert_eq!(state.inv_jacobian.dims(), (space_ndim, space_ndim));
+        assert_eq!(state.gradient.dims(), (nnode, space_ndim));
         Ok(())
     }
 
