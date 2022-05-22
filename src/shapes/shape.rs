@@ -789,7 +789,7 @@ impl Shape {
                 return Ok(it);
             }
             self.calc_jacobian(state, ksi)?;
-            mat_vec_mul(&mut delta_ksi, 1.0, &state.inv_jacobian, &residual)?;
+            mat_vec_mul(&mut delta_ksi, 1.0, &state.inv_jacobian, &residual).unwrap(); // cannot fail because all dims have been checked
             for j in 0..self.geo_ndim {
                 ksi[j] += delta_ksi[j];
             }
@@ -842,7 +842,7 @@ impl Shape {
             return Err("geo_ndim must equal space_ndim");
         }
         let det_jac = self.calc_jacobian(state, ksi)?;
-        mat_mat_mul(&mut state.gradient, 1.0, &state.deriv, &state.inv_jacobian)?;
+        mat_mat_mul(&mut state.gradient, 1.0, &state.deriv, &state.inv_jacobian).unwrap(); // cannot fail because the dims are properly defined
         Ok(det_jac)
     }
 
@@ -1236,14 +1236,44 @@ mod tests {
             shape.approximate_ksi(&mut ksi, &mut state, &x, 0, 1e-5).err(),
             Some("approximate_ksi failed to converge")
         );
+        let mut bug_for_calc_coords = state.clone(); // this would never happen, unless there is a bug in StateOfShape
+        bug_for_calc_coords.coords_transp = Matrix::new(0, 0);
+        assert_eq!(
+            shape
+                .approximate_ksi(&mut ksi, &mut bug_for_calc_coords, &x, 2, 1e-5)
+                .err(),
+            Some("matrix and vectors are incompatible")
+        );
+        let mut bug_for_calc_jacobian = state.clone(); // this would never happen, unless there is a bug in StateOfShape
+        bug_for_calc_jacobian.jacobian = Matrix::new(0, 0);
+        let x = Vector::from(&[1000.0, 1000.0]);
+        assert_eq!(
+            shape
+                .approximate_ksi(&mut ksi, &mut bug_for_calc_jacobian, &x, 2, 1e-5)
+                .err(),
+            Some("matrices are incompatible")
+        );
 
         // calc_gradient
+        assert_eq!(
+            shape.calc_gradient(&mut bug_for_calc_jacobian, &[0.0, 0.0]).err(),
+            Some("matrices are incompatible")
+        );
         let shape = Shape::new(2, 1, 2)?;
         let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 1.0]])?;
         assert_eq!(
             shape.calc_gradient(&mut state, &[0.0]).err(),
             Some("geo_ndim must equal space_ndim")
         );
+
+        // calc_integ_points_coords
+        assert_eq!(
+            shape
+                .calc_integ_points_coords(&mut bug_for_calc_coords, &IP_LIN_LEGENDRE_2)
+                .err(),
+            Some("matrix and vectors are incompatible")
+        );
+
         Ok(())
     }
 
