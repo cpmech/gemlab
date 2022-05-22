@@ -35,14 +35,14 @@ impl Boundary {
     pub fn new(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<Self, StrError> {
         let mut boundary = match mesh.space_ndim {
             2 => {
-                let edges = all_edges_2d(mesh, shapes)?;
-                Boundary::two_dim(mesh, shapes, &edges)?
+                let edges = all_edges_2d(mesh, shapes).unwrap(); // should not fail
+                Boundary::two_dim(mesh, shapes, &edges)
             }
             3 => {
-                let faces = all_faces_3d(mesh, shapes)?;
-                Boundary::three_dim(mesh, shapes, &faces)?
+                let faces = all_faces_3d(mesh, shapes).unwrap(); // should not fail
+                Boundary::three_dim(mesh, shapes, &faces)
             }
-            _ => panic!("space_ndim must be 2 or 3"),
+            _ => return Err("space_ndim must be 2 or 3"),
         };
         // handle points of (rods in 2D or 3D) or (shells in 3D)
         mesh.cells.iter().for_each(|cell| {
@@ -72,15 +72,8 @@ impl Boundary {
     /// * `mesh` -- the Mesh
     /// * `shapes` -- the shapes of cells (len == cells.len())
     /// * `edges` -- all edges (internal and boundary)
-    pub fn two_dim(
-        mesh: &Mesh,
-        shapes: &Vec<Shape>,
-        edges: &HashMap<EdgeKey, Vec<(CellId, usize)>>,
-    ) -> Result<Boundary, StrError> {
-        // check
-        if mesh.space_ndim != 2 {
-            return Err("this function works in 2D only");
-        }
+    fn two_dim(mesh: &Mesh, shapes: &Vec<Shape>, edges: &HashMap<EdgeKey, Vec<(CellId, usize)>>) -> Boundary {
+        assert_eq!(mesh.space_ndim, 2);
 
         // output
         let mut boundary = Boundary {
@@ -128,7 +121,7 @@ impl Boundary {
             // new edge
             boundary.edges.insert(*edge_key, edge);
         }
-        Ok(boundary)
+        boundary
     }
 
     /// Finds boundary entities in 3D
@@ -140,15 +133,8 @@ impl Boundary {
     /// * `mesh` -- the Mesh
     /// * `shapes` -- the shapes of cells (len == cells.len())
     /// * `faces` -- all faces (internal and boundary)
-    pub fn three_dim(
-        mesh: &Mesh,
-        shapes: &Vec<Shape>,
-        faces: &HashMap<FaceKey, Vec<(CellId, usize)>>,
-    ) -> Result<Boundary, StrError> {
-        // check
-        if mesh.space_ndim != 3 {
-            return Err("this function works in 3D only");
-        }
+    fn three_dim(mesh: &Mesh, shapes: &Vec<Shape>, faces: &HashMap<FaceKey, Vec<(CellId, usize)>>) -> Boundary {
+        assert_eq!(mesh.space_ndim, 3);
 
         // output
         let mut boundary = Boundary {
@@ -194,7 +180,7 @@ impl Boundary {
             }
 
             // loop over all edges on face
-            let face_shape = Shape::new(mesh.space_ndim, 2, shape.face_nnode)?;
+            let face_shape = Shape::new(mesh.space_ndim, 2, shape.face_nnode).unwrap(); // should not fail
             for e in 0..face_shape.nedge {
                 // define edge key (sorted point ids)
                 let mut edge_key: EdgeKey = (
@@ -221,7 +207,7 @@ impl Boundary {
             // new face
             boundary.faces.insert(*face_key, face);
         }
-        Ok(boundary)
+        boundary
     }
 }
 
@@ -230,10 +216,23 @@ impl Boundary {
 #[cfg(test)]
 mod tests {
     use super::Boundary;
-    use crate::mesh::{EdgeKey, FaceKey, PointId, Samples, Shapes};
+    use crate::mesh::{EdgeKey, FaceKey, Mesh, PointId, Samples, Shapes};
     use crate::util::AsArray2D;
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
+
+    #[test]
+    fn capture_some_wrong_input() {
+        let mesh = Mesh {
+            space_ndim: 1,
+            points: Vec::new(),
+            cells: Vec::new(),
+        };
+        assert_eq!(
+            Boundary::new(&mesh, &Vec::new()).err(),
+            Some("space_ndim must be 2 or 3")
+        );
+    }
 
     fn validate_edges<'a, T>(
         boundary: &Boundary,
@@ -292,7 +291,7 @@ mod tests {
         //           |         |
         //           |   [1]   |
         //           |         |
-        //  0--------1---------2
+        //  0--------1---------2--------5
         let mesh = Samples::mixed_shapes_2d();
         let shapes = Shapes::new(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
@@ -300,10 +299,10 @@ mod tests {
         let correct_points = [[2, 1], [1, 4], [3, 2], [4, 3]];
         validate_edges(&boundary, &correct_keys, &correct_points);
         assert_eq!(boundary.min, &[0.0, 0.0]);
-        assert_eq!(boundary.max, &[2.0, 1.0]);
+        assert_eq!(boundary.max, &[3.0, 1.0]);
         let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
         points.sort();
-        assert_eq!(points, &[0, 1, 2, 3, 4]);
+        assert_eq!(points, &[0, 1, 2, 3, 4, 5]);
         Ok(())
     }
 

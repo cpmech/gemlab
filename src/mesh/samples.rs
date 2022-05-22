@@ -98,11 +98,11 @@ impl Samples {
     ///                  |    [1]    |   [*] indicates id
     ///                  |    (2)    |   (*) indicates attribute_id
     ///                  |           |
-    /// 0.0  0-----------1-----------2
-    ///           [0]
-    ///           (1)
+    /// 0.0  0-----------1-----------2-----------5
+    ///           [0]                     [2]
+    ///           (1)                     (1)
     ///
-    ///     0.0         1.0         2.0
+    ///     0.0         1.0         2.0         3.0
     /// ```
     #[rustfmt::skip]
     pub fn mixed_shapes_2d() -> Mesh {
@@ -114,10 +114,12 @@ impl Samples {
                 Point { id: 2, coords: vec![2.0, 0.0] },
                 Point { id: 3, coords: vec![2.0, 1.0] },
                 Point { id: 4, coords: vec![1.0, 1.0] },
+                Point { id: 5, coords: vec![3.0, 0.0] },
             ],
             cells: vec![
                 Cell { id: 0, attribute_id: 1, geo_ndim: 1, points: vec![0, 1] },
                 Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 2, 3, 4] },
+                Cell { id: 2, attribute_id: 1, geo_ndim: 1, points: vec![2, 5] },
             ],
         }
     }
@@ -844,7 +846,7 @@ impl Samples {
     ///        |          `,-..33
     /// 1.75  24   [7]   22     `-,
     ///        |         ,  [5]    ,8.
-    /// 1.5   13--35--10/        20   `* 
+    /// 1.5   13--35--10/        20   `*
     ///        |       ,`*32    ,'      30
     /// 1.25  23 [6] 21     *.7     [3]   *
     ///        |     ,  [4]  , *.          5
@@ -947,8 +949,8 @@ mod tests {
 
         let mesh = Samples::mixed_shapes_2d();
         assert_eq!(mesh.space_ndim, 2);
-        assert_eq!(mesh.points.len(), 5);
-        assert_eq!(mesh.cells.len(), 2);
+        assert_eq!(mesh.points.len(), 6);
+        assert_eq!(mesh.cells.len(), 3);
         for i in 0..mesh.points.len() {
             assert_eq!(mesh.points[i].id, i);
         }
