@@ -145,7 +145,7 @@ impl Block {
                     xx[6][j] = (coords.at(2, j) + coords.at(3, j)) / 2.0;
                     xx[7][j] = (coords.at(3, j) + coords.at(0, j)) / 2.0;
                 }
-                StateOfShape::new(geo_ndim, &xx)?
+                StateOfShape::new(geo_ndim, &xx).unwrap() // should not fail here
             }
         } else {
             if nrow == 20 {
@@ -176,7 +176,7 @@ impl Block {
                     xx[18][j] = (coords.at(2, j) + coords.at(6, j)) / 2.0;
                     xx[19][j] = (coords.at(3, j) + coords.at(7, j)) / 2.0;
                 }
-                StateOfShape::new(geo_ndim, &xx)?
+                StateOfShape::new(geo_ndim, &xx).unwrap() // should not fail here
             }
         };
 
@@ -186,7 +186,8 @@ impl Block {
             &vec![1.0; space_ndim],
             GsNdiv::Default,
             GsTol::Default,
-        )?;
+        )
+        .unwrap(); // should not fail here
 
         // done
         const NDIV: usize = 2;
@@ -435,6 +436,24 @@ mod tests {
         assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b2d.shape.nnode, 8);
 
+        let b2d = Block::new(&[
+            [0.0, 0.0],
+            [2.0, 0.0],
+            [2.0, 2.0],
+            [0.0, 2.0],
+            [1.0, 0.0],
+            [2.0, 1.0],
+            [1.0, 2.0],
+            [0.0, 1.0],
+        ])?;
+        assert_eq!(
+            format!("{}", b2d.state.coords_transp),
+            "┌                 ┐\n\
+             │ 0 2 2 0 1 2 1 0 │\n\
+             │ 0 0 2 2 0 1 2 1 │\n\
+             └                 ┘"
+        );
+
         let b3d = Block::new(&[
             [0.0, 0.0, 0.0],
             [2.0, 0.0, 0.0],
@@ -458,6 +477,37 @@ mod tests {
         assert_eq!(b3d.ndiv, &[2, 2, 2]);
         assert_eq!(format!("{:?}", b3d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(b3d.shape.nnode, 20);
+
+        let b3d = Block::new(&[
+            [0.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [2.0, 2.0, 0.0],
+            [0.0, 2.0, 0.0],
+            [0.0, 0.0, 2.0],
+            [2.0, 0.0, 2.0],
+            [2.0, 2.0, 2.0],
+            [0.0, 2.0, 2.0],
+            [1.0, 0.0, 0.0],
+            [2.0, 1.0, 0.0],
+            [1.0, 2.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [1.0, 0.0, 2.0],
+            [2.0, 1.0, 2.0],
+            [1.0, 2.0, 2.0],
+            [0.0, 1.0, 2.0],
+            [0.0, 0.0, 1.0],
+            [2.0, 0.0, 1.0],
+            [2.0, 2.0, 1.0],
+            [0.0, 2.0, 1.0],
+        ])?;
+        assert_eq!(
+            format!("{}", b3d.state.coords_transp),
+            "┌                                         ┐\n\
+             │ 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 0 │\n\
+             │ 0 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 │\n\
+             │ 0 0 0 0 2 2 2 2 0 0 0 0 2 2 2 2 1 1 1 1 │\n\
+             └                                         ┘"
+        );
         Ok(())
     }
 
