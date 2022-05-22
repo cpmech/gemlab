@@ -1903,6 +1903,74 @@ mod tests {
         Ok(())
     }
 
+    /// Returns Shape and StateOfShape for an equilateral triangle
+    ///
+    /// ```text
+    /// Equilateral triangle
+    ///
+    ///           /
+    ///        2   \
+    ///       / \   \
+    ///      / ↑ \   l
+    ///     5  h  4   \
+    ///    /   ↓   \   \
+    ///   /         \   /
+    ///  0-----3-----1
+    ///
+    ///  |--s--|--s--|
+    ///
+    ///  |-----l-----|
+    /// ```
+    fn equilateral_triangle() -> Result<(Shape, StateOfShape), StrError> {
+        let l = 5.0;
+        let s = l / 2.0;
+        let h = l * SQRT_3 / 2.0;
+        let (x0, y0) = (3.0, 4.0);
+        let (x1, y1) = (x0 + l, y0);
+        let (x2, y2) = (x0 + s, y0 + h);
+        let (x3, y3) = (x0 + s, y0);
+        let (x4, y4) = (x0 + 1.5 * s, y0 + 0.5 * h);
+        let (x5, y5) = (x0 + 0.5 * s, y0 + 0.5 * h);
+        let shape = Shape::new(2, 2, 6)?;
+        let state = StateOfShape::new(
+            shape.geo_ndim,
+            &[[x0, y0], [x1, y1], [x2, y2], [x3, y3], [x4, y4], [x5, y5]],
+        )?;
+        Ok((shape, state))
+    }
+
+    #[test]
+    fn approximate_ksi_works_outside() -> Result<(), StrError> {
+        let (shape, mut state) = equilateral_triangle()?;
+        assert_eq!(
+            format!("{:.2}", state.coords_transp),
+            "┌                               ┐\n\
+             │ 3.00 8.00 5.50 5.50 6.75 4.25 │\n\
+             │ 4.00 4.00 8.33 4.00 6.17 6.17 │\n\
+             └                               ┘"
+        );
+        let mut ksi = vec![0.0; shape.geo_ndim];
+        for (nit_correct, x_data, tol) in &[
+            (0, [3.0, 4.0], 1e-15),
+            (0, [8.0, 4.0], 1e-15),
+            (1, [5.5, 8.33], 1e-14),
+            (0, [5.5, 4.0], 1e-15),
+            (1, [6.75, 6.17], 1e-14),
+            (1, [4.25, 6.17], 1e-14),
+            (2, [10.0, 10.0], 1e-14),
+            (2, [-10.0, -10.0], 1e-13),
+            (6, [100.0, 100.0], 1e-12),
+        ] {
+            let x = Vector::from(x_data);
+            let nit = shape.approximate_ksi(&mut ksi, &mut state, &x, 30, *tol)?;
+            let mut x_out = Vector::new(2);
+            shape.calc_coords(&mut x_out, &mut state, &ksi)?;
+            assert_vec_approx_eq!(x.as_data(), x_out.as_data(), *tol);
+            assert_eq!(nit, *nit_correct);
+        }
+        Ok(())
+    }
+
     // Holds arguments for numerical differentiation of N w.r.t x => G (gradient) matrix
     struct ArgsNumG<'a> {
         shape: &'a Shape,    // shape
