@@ -138,6 +138,18 @@ mod tests {
              │  1.23  4.56  7.89 │\n\
              └                   ┘"
         );
+        assert_eq!(state.coords_min, &[-7.89, 1.23]);
+        assert_eq!(state.coords_max, &[-1.23, 7.89]);
+        Ok(())
+    }
+
+    #[test]
+    fn derive_works() -> Result<(), StrError> {
+        let state = StateOfShape::new(2, &[[-1.23, 1.23], [-4.56, 4.56], [-7.89, 7.89]])?;
+        let state_clone = state.clone();
+        assert_eq!(format!("{:?}", state), "StateOfShape { coords_transp: NumMatrix { nrow: 2, ncol: 3, data: [-1.23, -4.56, -7.89, 1.23, 4.56, 7.89] }, coords_min: [-7.89, 1.23], coords_max: [-1.23, 7.89], interp: NumVector { data: [0.0, 0.0, 0.0] }, deriv: NumMatrix { nrow: 3, ncol: 2, data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] }, jacobian: NumMatrix { nrow: 2, ncol: 2, data: [0.0, 0.0, 0.0, 0.0] }, inv_jacobian: NumMatrix { nrow: 2, ncol: 2, data: [0.0, 0.0, 0.0, 0.0] }, gradient: NumMatrix { nrow: 3, ncol: 2, data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] } }");
+        assert_eq!(state_clone.coords_min, &[-7.89, 1.23]);
+        assert_eq!(state_clone.coords_max, &[-1.23, 7.89]);
         Ok(())
     }
 }
