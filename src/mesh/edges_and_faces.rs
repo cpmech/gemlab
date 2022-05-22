@@ -117,8 +117,25 @@ pub fn all_faces_3d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<HashMap<FaceKey,
 #[cfg(test)]
 mod tests {
     use super::{all_edges_2d, all_faces_3d, Edge, Face};
-    use crate::mesh::{Samples, Shapes};
+    use crate::mesh::{Mesh, Samples, Shapes};
     use crate::StrError;
+
+    #[test]
+    fn capture_some_wrong_input() {
+        let mesh = Mesh {
+            space_ndim: 1,
+            points: Vec::new(),
+            cells: Vec::new(),
+        };
+        assert_eq!(
+            all_edges_2d(&mesh, &Vec::new()).err(),
+            Some("this function works in 2D only")
+        );
+        assert_eq!(
+            all_faces_3d(&mesh, &Vec::new()).err(),
+            Some("this function works in 3D only")
+        );
+    }
 
     #[test]
     fn all_edges_2d_works() -> Result<(), StrError> {
