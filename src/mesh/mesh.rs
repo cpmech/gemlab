@@ -109,6 +109,7 @@ impl Mesh {
 mod tests {
     use crate::mesh::{Mesh, Samples};
     use crate::StrError;
+    use serde_json;
 
     #[test]
     fn read_and_write_capture_errors() -> Result<(), StrError> {
@@ -164,10 +165,16 @@ mod tests {
     fn derive_works() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
         let mesh_clone = mesh.clone();
-        assert_eq!(format!("{:?}", mesh), "Mesh { space_ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: [0, 1, 2, 3] }, Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: [1, 4, 5, 2] }] }");
+        let correct ="Mesh { space_ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: [0, 1, 2, 3] }, Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: [1, 4, 5, 2] }] }";
+        assert_eq!(format!("{:?}", mesh), correct);
         assert_eq!(mesh_clone.space_ndim, mesh.space_ndim);
         assert_eq!(mesh_clone.points.len(), mesh.points.len());
         assert_eq!(mesh_clone.cells.len(), mesh.cells.len());
+        // serialize
+        let mesh_json = serde_json::to_string(&mesh).unwrap();
+        // deserialize
+        let mesh_read: Mesh = serde_json::from_str(&mesh_json).unwrap();
+        assert_eq!(format!("{:?}", mesh_read), correct);
         Ok(())
     }
 }
