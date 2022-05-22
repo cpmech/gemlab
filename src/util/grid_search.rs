@@ -1683,29 +1683,15 @@ mod tests {
     }
 
     #[test]
-    fn clone_and_serialize_work() -> Result<(), StrError> {
-        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], GsNdiv::Spec(3, 3, 0), GsTol::Default)?;
+    fn derive_works() -> Result<(), StrError> {
+        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], GsNdiv::Spec(1, 1, 0), GsTol::Default)?;
+        // debug
         grid.insert(0, &[0.5, 0.5])?;
+        let correct = "GridSearch { ndim: 2, ndiv: [1, 1], min: [0.0, 0.0], max: [1.0, 1.0], delta: [1.0, 1.0], size: [1.0, 1.0], cf: [1, 1, 1], tol: [0.0001, 0.0001], halo: [[0.4999, 0.4999], [0.5001, 0.4999], [0.5001, 0.5001], [0.4999, 0.5001]], ncorner: 4, containers: {0: Container { items: [Item { id: 0, x: [0.5, 0.5] }] }}, radius: 0.7071067811865476, radius_tol: 0.0001414213562373095 }";
+        assert_eq!(format!("{:?}", grid), correct);
         // clone
-        let mut cloned = grid.clone();
-        cloned.insert(1, &[0.8, 0.8])?;
-        assert_eq!(
-            format!("{}", grid),
-            "4: [0]\n\
-             ids = [0]\n\
-             nitem = 1\n\
-             ncontainer = 1\n\
-             ndiv = [3, 3]\n"
-        );
-        assert_eq!(
-            format!("{}", cloned),
-            "4: [0]\n\
-             8: [1]\n\
-             ids = [0, 1]\n\
-             nitem = 2\n\
-             ncontainer = 2\n\
-             ndiv = [3, 3]\n"
-        );
+        let cloned = grid.clone();
+        assert_eq!(format!("{:?}", cloned), correct);
         // serialize
         let mut serialized = Vec::new();
         let mut serializer = rmp_serde::Serializer::new(&mut serialized);
@@ -1715,14 +1701,7 @@ mod tests {
         let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
         let grid_read: GridSearch =
             Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize grid data")?;
-        assert_eq!(
-            format!("{}", grid_read),
-            "4: [0]\n\
-             ids = [0]\n\
-             nitem = 1\n\
-             ncontainer = 1\n\
-             ndiv = [3, 3]\n"
-        );
+        assert_eq!(format!("{:?}", grid_read), correct);
         Ok(())
     }
 }
