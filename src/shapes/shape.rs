@@ -708,23 +708,19 @@ impl Shape {
         self.calc_deriv(state, ksi)?;
         mat_mat_mul(&mut state.jacobian, 1.0, &state.coords_transp, &state.deriv)?;
 
-        // line in 2D
-        if self.geo_ndim == 1 && self.space_ndim == 2 {
+        // line in 2D (geo_ndim == 1 && self.space_ndim == 2)
+        if self.space_ndim == 2 {
             normal[0] = -state.jacobian[1][0];
             normal[1] = state.jacobian[0][0];
             return Ok(());
         }
 
-        // surface in 3D
-        if self.geo_ndim == 2 && self.space_ndim == 3 {
-            let jj = &state.jacobian;
-            normal[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
-            normal[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
-            normal[2] = jj[0][0] * jj[1][1] - jj[1][0] * jj[0][1];
-            return Ok(());
-        }
-
-        Err("geo_ndim and space_ndim combination is invalid for boundary normal")
+        // surface in 3D (geo_ndim == 2 && space_ndim == 3)
+        let jj = &state.jacobian;
+        normal[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
+        normal[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
+        normal[2] = jj[0][0] * jj[1][1] - jj[1][0] * jj[0][1];
+        Ok(())
     }
 
     /// Approximates the reference coordinates from given real coordinates (inverse mapping)
@@ -1026,7 +1022,7 @@ mod tests {
     use crate::util::{PI, SQRT_3};
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq, assert_vec_approx_eq};
-    use russell_lab::{copy_vector, scale_vector, vector_norm, NormVec, Vector};
+    use russell_lab::{copy_vector, scale_vector, vector_norm, Matrix, NormVec, Vector};
     use std::collections::HashMap;
 
     #[test]
@@ -1174,6 +1170,23 @@ mod tests {
             shape.calc_coords(&mut x, &mut state, &[0.0, 0.0]).err(),
             Some("x.dim() must equal space_ndim")
         );
+        let mut x = Vector::new(2);
+        assert_eq!(
+            shape.calc_coords(&mut x, &mut state, &[]).err(),
+            Some("ksi.len() must be ≥ geo_ndim")
+        );
+
+        // calc_jacobian
+        assert_eq!(
+            shape.calc_jacobian(&mut state, &[]).err(),
+            Some("ksi.len() must be ≥ geo_ndim")
+        );
+        let mut impossible = state.clone(); // this would never happen, unless there is a bug in StateOfShape
+        impossible.jacobian = Matrix::new(0, 0);
+        assert_eq!(
+            shape.calc_jacobian(&mut impossible, &[0.0, 0.0]).err(),
+            Some("matrices are incompatible")
+        );
 
         // calc_boundary_normal
         let shape = Shape::new(2, 3, 4)?;
@@ -1189,6 +1202,17 @@ mod tests {
         assert_eq!(
             shape.calc_boundary_normal(&mut normal, &mut state, &[0.0]).err(),
             Some("normal.dim() must equal space_ndim")
+        );
+        let mut normal = Vector::new(2);
+        assert_eq!(
+            shape.calc_boundary_normal(&mut normal, &mut state, &[]).err(),
+            Some("ksi.len() must be ≥ geo_ndim")
+        );
+        assert_eq!(
+            shape
+                .calc_boundary_normal(&mut normal, &mut impossible, &[0.0, 0.0])
+                .err(),
+            Some("matrices are incompatible")
         );
 
         // approximate_ksi
