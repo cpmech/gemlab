@@ -135,7 +135,29 @@ mod tests {
 
     #[test]
     fn new_works() -> Result<(), StrError> {
-        let state = StateOfShape::new(2, &[[-1.23, 1.23], [-4.56, 4.56], [-7.89, 7.89]])?;
+        let space_ndim = 2;
+        let geo_ndim = 1;
+        let nnode = 2;
+        let state = StateOfShape::new(geo_ndim, &[[-1.23, 1.23], [-4.56, 4.56]])?;
+        assert_eq!(
+            format!("{}", state.coords_transp),
+            "┌             ┐\n\
+             │ -1.23 -4.56 │\n\
+             │  1.23  4.56 │\n\
+             └             ┘"
+        );
+        assert_eq!(state.coords_min, &[-4.56, 1.23]);
+        assert_eq!(state.coords_max, &[-1.23, 4.56]);
+        assert_eq!(state.interp.dim(), nnode);
+        assert_eq!(state.deriv.dims(), (nnode, geo_ndim));
+        assert_eq!(state.jacobian.dims(), (space_ndim, geo_ndim));
+        assert_eq!(state.inv_jacobian.dims(), (0, 0));
+        assert_eq!(state.gradient.dims(), (0, 0));
+
+        let space_ndim = 2;
+        let geo_ndim = 2;
+        let nnode = 3;
+        let state = StateOfShape::new(geo_ndim, &[[-1.23, 1.23], [-4.56, 4.56], [-7.89, 7.89]])?;
         assert_eq!(
             format!("{}", state.coords_transp),
             "┌                   ┐\n\
@@ -145,6 +167,11 @@ mod tests {
         );
         assert_eq!(state.coords_min, &[-7.89, 1.23]);
         assert_eq!(state.coords_max, &[-1.23, 7.89]);
+        assert_eq!(state.interp.dim(), nnode);
+        assert_eq!(state.deriv.dims(), (nnode, geo_ndim));
+        assert_eq!(state.jacobian.dims(), (space_ndim, geo_ndim));
+        assert_eq!(state.inv_jacobian.dims(), (space_ndim, space_ndim));
+        assert_eq!(state.gradient.dims(), (nnode, space_ndim));
         Ok(())
     }
 
