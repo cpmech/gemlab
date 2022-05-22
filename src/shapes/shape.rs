@@ -32,7 +32,7 @@ impl fmt::Debug for FnDeriv {
 ///
 /// Here, we consider the following dimensions:
 ///
-/// * `space_ndim` -- is the number of dimensions of the space under study
+/// * `space_ndim` -- is the number of dimensions of the space under study (2 or 3)
 /// * `geo_ndim` -- is the number of dimensions of the geometry element (shape),
 ///                  for instance, a line in the 2D space has `geo_ndim = 1` and
 ///                  `space_ndim = 2`. Another example is a triangle in the 3D space
@@ -220,7 +220,7 @@ impl Shape {
     ///
     /// # Input
     ///
-    /// * `space_ndim` -- the space dimension (1, 2, or 3)
+    /// * `space_ndim` -- the space dimension (2 or 3)
     /// * `geo_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space
     /// * `nnode` -- the number of points defining the shape (number of nodes)
     ///
@@ -229,6 +229,9 @@ impl Shape {
     /// Some methods require that the coordinates matrix be set first.
     /// This can be accomplished by calling the `set_node` method.
     pub fn new(space_ndim: usize, geo_ndim: usize, nnode: usize) -> Result<Self, StrError> {
+        if space_ndim < 2 || space_ndim > 3 {
+            return Err("space_ndim must be 2 or 3");
+        }
         // collect geometry data
         let (class, kind) = geo_class_and_kind(geo_ndim, nnode)?;
         let (nedge, nface, edge_nnode, face_nnode, face_nedge, fn_interp, fn_deriv): (
@@ -694,7 +697,7 @@ impl Shape {
         ksi: &[f64],
     ) -> Result<(), StrError> {
         // check
-        if self.geo_ndim == self.space_ndim {
+        if self.geo_ndim >= self.space_ndim {
             return Err("geo_ndim must be smaller than space_ndim");
         }
         if normal.dim() != self.space_ndim {
@@ -1143,14 +1146,15 @@ mod tests {
     #[test]
     fn capture_some_wrong_input() -> Result<(), StrError> {
         // new
+        assert_eq!(Shape::new(1, 1, 1).err(), Some("space_ndim must be 2 or 3"));
         assert_eq!(
-            Shape::new(1, 1, 1).err(),
+            Shape::new(2, 1, 1).err(),
             Some("(geo_ndim,nnode) combination is invalid")
         );
 
         // shape and state
-        let shape = Shape::new(1, 1, 2)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
+        let shape = Shape::new(2, 1, 2)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 1.0]])?;
 
         // calc_interp
         assert_eq!(
@@ -1165,20 +1169,23 @@ mod tests {
         );
 
         // calc_coords
-        let mut x = Vector::new(2);
+        let mut x = Vector::new(3);
         assert_eq!(
-            shape.calc_coords(&mut x, &mut state, &[0.0]).err(),
+            shape.calc_coords(&mut x, &mut state, &[0.0, 0.0]).err(),
             Some("x.dim() must equal space_ndim")
         );
 
         // calc_boundary_normal
-        let mut normal = Vector::new(1);
+        let shape = Shape::new(2, 3, 4)?;
+        let mut normal = Vector::new(2);
+        let ksi = &[0.0, 0.0, 0.0];
         assert_eq!(
-            shape.calc_boundary_normal(&mut normal, &mut state, &[0.0]).err(),
+            shape.calc_boundary_normal(&mut normal, &mut state, ksi).err(),
             Some("geo_ndim must be smaller than space_ndim")
         );
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
+        let mut normal = Vector::new(1);
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 1.0]])?;
         assert_eq!(
             shape.calc_boundary_normal(&mut normal, &mut state, &[0.0]).err(),
             Some("normal.dim() must equal space_ndim")
@@ -1186,16 +1193,16 @@ mod tests {
 
         // approximate_ksi
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 1.0]])?;
         let mut ksi = vec![0.0; 1];
         let x = Vector::new(2);
         assert_eq!(
             shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
             Some("geo_ndim must equal space_ndim")
         );
-        let shape = Shape::new(1, 1, 2)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
-        let x = Vector::new(2);
+        let shape = Shape::new(2, 2, 3)?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]])?;
+        let x = Vector::new(1);
         assert_eq!(
             shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
             Some("x.dim() must equal space_ndim")
@@ -1203,7 +1210,7 @@ mod tests {
 
         // calc_gradient
         let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0], [1.0]])?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 1.0]])?;
         assert_eq!(
             shape.calc_gradient(&mut state, &[0.0]).err(),
             Some("geo_ndim must equal space_ndim")
@@ -1214,7 +1221,7 @@ mod tests {
     #[test]
     fn getters_work() -> Result<(), StrError> {
         for (geo_ndim, nnode) in GeoKind::PAIRS {
-            let space_ndim = geo_ndim;
+            let space_ndim = usize::max(2, geo_ndim);
             let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
             match shape.class {
                 GeoClass::Lin => assert_eq!(shape.edge_node_id(0, 0), 0),
@@ -1267,7 +1274,7 @@ mod tests {
         // loop over shapes
         for (geo_ndim, nnode) in GeoKind::PAIRS {
             // allocate shape and state
-            let space_ndim = geo_ndim;
+            let space_ndim = usize::max(2, geo_ndim);
             let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
             let mut state = StateOfShape::new(
                 shape.geo_ndim,
@@ -1344,7 +1351,7 @@ mod tests {
         // loop over shapes
         for (geo_ndim, nnode) in GeoKind::PAIRS {
             // allocate shape and state
-            let space_ndim = geo_ndim;
+            let space_ndim = usize::max(2, geo_ndim);
             let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
             let mut state = StateOfShape::new(
                 shape.geo_ndim,
@@ -1433,7 +1440,7 @@ mod tests {
         // loop over shapes
         for (geo_ndim, nnode) in pairs {
             // allocate shape
-            let space_ndim = geo_ndim;
+            let space_ndim = usize::max(2, geo_ndim);
             let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
 
             // set tolerance
@@ -1516,7 +1523,7 @@ mod tests {
         // loop over shapes
         for (geo_ndim, nnode) in GeoKind::PAIRS {
             // allocate shape
-            let space_ndim = geo_ndim;
+            let space_ndim = usize::max(2, geo_ndim);
             let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
 
             // set tolerance
@@ -1906,7 +1913,7 @@ mod tests {
         // loop over shapes
         for (geo_ndim, nnode) in pairs {
             // allocate shape
-            let space_ndim = geo_ndim;
+            let space_ndim = usize::max(2, geo_ndim);
             let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
 
             // generate state with coordinates matrix
@@ -1952,19 +1959,19 @@ mod tests {
 
     #[test]
     fn calc_integ_points_coords() -> Result<(), StrError> {
-        let shape = Shape::new(1, 1, 2)?;
+        let shape = Shape::new(2, 1, 2)?;
         let (xa, xb) = (2.0, 5.0);
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[xa], [xb]])?;
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[xa, 8.0], [xb, 8.0]])?;
         let integ_points = shape.calc_integ_points_coords(&mut state, &IP_LIN_LEGENDRE_2)?;
         assert_eq!(integ_points.len(), 2);
         let ksi_a = -1.0 / SQRT_3;
         let ksi_b = 1.0 / SQRT_3;
         let x_ksi_a = xa + (ksi_a + 1.0) * (xb - xa) / 2.0;
         let x_ksi_b = xa + (ksi_b + 1.0) * (xb - xa) / 2.0;
-        assert_eq!(integ_points[0].dim(), 1);
-        assert_eq!(integ_points[1].dim(), 1);
-        assert_approx_eq!(integ_points[0][0], x_ksi_a, 1e-15);
-        assert_approx_eq!(integ_points[1][0], x_ksi_b, 1e-15);
+        assert_eq!(integ_points[0].dim(), 2);
+        assert_eq!(integ_points[1].dim(), 2);
+        assert_vec_approx_eq!(integ_points[0].as_data(), &[x_ksi_a, 8.0], 1e-15);
+        assert_vec_approx_eq!(integ_points[1].as_data(), &[x_ksi_b, 8.0], 1e-15);
         Ok(())
     }
 }

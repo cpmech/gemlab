@@ -71,8 +71,8 @@ impl StateOfShape {
         T: AsArray2D<'a, f64>,
     {
         let (nnode, space_ndim) = coords.size();
-        if space_ndim < 1 || space_ndim > 3 {
-            return Err("space_ndim must be 1, 2 or 3");
+        if space_ndim < 2 || space_ndim > 3 {
+            return Err("space_ndim must be 2 or 3");
         }
         geo_class_and_kind(geo_ndim, nnode)?; // just to check combination
         let mut state = StateOfShape {
@@ -119,12 +119,17 @@ mod tests {
     #[test]
     fn new_fails_on_wrong_input() {
         assert_eq!(
-            StateOfShape::new(1, &[[], []]).err(),
-            Some("space_ndim must be 1, 2 or 3")
+            StateOfShape::new(100, &[[1.0, 1.0], [2.0, 2.0]]).err(),
+            Some("(geo_ndim,nnode) combination is invalid")
+        );
+        assert_eq!(StateOfShape::new(1, &[[], []]).err(), Some("space_ndim must be 2 or 3"));
+        assert_eq!(
+            StateOfShape::new(1, &[[0.0], [0.0]]).err(),
+            Some("space_ndim must be 2 or 3")
         );
         assert_eq!(
             StateOfShape::new(1, &[[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]]).err(),
-            Some("space_ndim must be 1, 2 or 3")
+            Some("space_ndim must be 2 or 3")
         );
     }
 
