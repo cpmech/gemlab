@@ -72,7 +72,7 @@ where
 {
     // check
     if a.dim() != shape.nnode {
-        return Err("the length of vector 'a' must be equal to nnode");
+        return Err("a.len() must be equal to shape.nnode");
     }
 
     // clear output vector
@@ -103,13 +103,24 @@ where
 #[cfg(test)]
 mod tests {
     use super::shape_scalar;
-    use crate::shapes::{Verification, IP_LIN_LEGENDRE_2, IP_TRI_INTERNAL_1};
+    use crate::shapes::{Shape, StateOfShape, Verification, IP_LIN_LEGENDRE_2, IP_TRI_INTERNAL_1};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
     // to test if variables are cleared before sum
     const NOISE: f64 = 1234.56;
+
+    #[test]
+    fn capture_some_errors() {
+        let shape = Shape::new(2, 1, 2).unwrap();
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
+        let mut a = Vector::new(3);
+        assert_eq!(
+            shape_scalar(&mut a, &mut state, &shape, &[], &[], 1.0, false).err(),
+            Some("a.len() must be equal to shape.nnode")
+        );
+    }
 
     #[test]
     fn shape_scalar_works_lin2() -> Result<(), StrError> {
