@@ -1929,7 +1929,7 @@ mod tests {
 
     #[test]
     fn approximate_ksi_works_outside() -> Result<(), StrError> {
-        let (shape, mut state) = Verification::equilateral_triangle_tri6(5.0);
+        let (shape, mut state, _) = Verification::equilateral_triangle_tri6(5.0);
         assert_eq!(
             format!("{:.2}", state.coords_transp),
             "┌                               ┐\n\
