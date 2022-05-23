@@ -1012,7 +1012,7 @@ impl Shape {
 #[cfg(test)]
 mod tests {
     use super::{GeoClass, GeoKind, Shape};
-    use crate::shapes::{ref_domain_limits, StateOfShape, IP_LIN_LEGENDRE_2};
+    use crate::shapes::{ref_domain_limits, StateOfShape, Verification, IP_LIN_LEGENDRE_2};
     use crate::util::{PI, SQRT_3};
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq, assert_vec_approx_eq};
@@ -1927,45 +1927,9 @@ mod tests {
         Ok(())
     }
 
-    /// Returns Shape and StateOfShape for an equilateral triangle
-    ///
-    /// ```text
-    /// Equilateral triangle
-    ///
-    ///           /
-    ///        2   \
-    ///       / \   \
-    ///      / ↑ \   l
-    ///     5  h  4   \
-    ///    /   ↓   \   \
-    ///   /         \   /
-    ///  0-----3-----1
-    ///
-    ///  |--s--|--s--|
-    ///
-    ///  |-----l-----|
-    /// ```
-    fn equilateral_triangle() -> Result<(Shape, StateOfShape), StrError> {
-        let l = 5.0;
-        let s = l / 2.0;
-        let h = l * SQRT_3 / 2.0;
-        let (x0, y0) = (3.0, 4.0);
-        let (x1, y1) = (x0 + l, y0);
-        let (x2, y2) = (x0 + s, y0 + h);
-        let (x3, y3) = (x0 + s, y0);
-        let (x4, y4) = (x0 + 1.5 * s, y0 + 0.5 * h);
-        let (x5, y5) = (x0 + 0.5 * s, y0 + 0.5 * h);
-        let shape = Shape::new(2, 2, 6)?;
-        let state = StateOfShape::new(
-            shape.geo_ndim,
-            &[[x0, y0], [x1, y1], [x2, y2], [x3, y3], [x4, y4], [x5, y5]],
-        )?;
-        Ok((shape, state))
-    }
-
     #[test]
     fn approximate_ksi_works_outside() -> Result<(), StrError> {
-        let (shape, mut state) = equilateral_triangle()?;
+        let (shape, mut state) = Verification::equilateral_triangle_tri6(5.0);
         assert_eq!(
             format!("{:.2}", state.coords_transp),
             "┌                               ┐\n\

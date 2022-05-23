@@ -1,6 +1,5 @@
 //! Implements shape objects for numerical integration and other calculations
 
-mod analytical_tri3;
 mod enums;
 mod hex20;
 mod hex8;
@@ -23,7 +22,7 @@ mod tri10;
 mod tri15;
 mod tri3;
 mod tri6;
-pub use crate::shapes::analytical_tri3::*;
+mod verification;
 pub use crate::shapes::enums::*;
 pub use crate::shapes::hex20::*;
 pub use crate::shapes::hex8::*;
@@ -46,3 +45,4 @@ pub use crate::shapes::tri10::*;
 pub use crate::shapes::tri15::*;
 pub use crate::shapes::tri3::*;
 pub use crate::shapes::tri6::*;
+pub use crate::shapes::verification::*;
