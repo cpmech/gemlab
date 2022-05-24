@@ -142,7 +142,7 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, shape: &Shape, s
 #[cfg(test)]
 mod tests {
     use super::mat_gdg;
-    use crate::shapes::{AnalyticalTri3, Shape, StateOfShape, IP_TRI_INTERNAL_1};
+    use crate::shapes::{AnalyticalTet4, AnalyticalTri3, Shape, StateOfShape, IP_TET_INTERNAL_1, IP_TRI_INTERNAL_1};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::{copy_matrix, Matrix};
@@ -160,7 +160,7 @@ mod tests {
     }
 
     #[test]
-    fn stiffness_works() -> Result<(), StrError> {
+    fn stiffness_works_tri3_plane_stress() -> Result<(), StrError> {
         // Element # 0 from example 1.6 from [@bhatti] page 32
         // Solid bracket with thickness = 0.25
         //              1     -10                connectivity:
@@ -212,6 +212,35 @@ mod tests {
             [ -2.604166666666667e+02,  0.000000000000000e+00,  2.604166666666667e+02, -1.736111111111111e+03,  0.000000000000000e+00,  1.736111111111111e+03],
         ]);
         assert_vec_approx_eq!(kk_correct.as_data(), kk_bhatti.as_data(), 1e-12);
+        Ok(())
+    }
+
+    #[test]
+    fn stiffness_works_tet4() -> Result<(), StrError> {
+        // shape and state
+        let shape = Shape::new(3, 3, 4)?;
+        let mut state = StateOfShape::new(
+            shape.geo_ndim,
+            &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
+        )?;
+
+        // constants
+        let young = 480.0;
+        let poisson = 1.0 / 3.0;
+        let model = LinElasticity::new(young, poisson, false, false);
+
+        // stiffness
+        let nrow = shape.nnode * shape.space_ndim;
+        let mut kk = Matrix::new(nrow, nrow);
+        let ips = &IP_TET_INTERNAL_1;
+        mat_gdg(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
+            copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+        })?;
+
+        // compare against analytical solution
+        let mut ana = AnalyticalTet4::new(&shape, &mut state);
+        let kk_correct = ana.integ_stiffness(young, poisson)?;
+        assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
         Ok(())
     }
 }

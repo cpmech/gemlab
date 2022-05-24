@@ -127,12 +127,12 @@ impl AnalyticalTri3 {
         ]
     }
 
-    /// Performs the integ_mat_10_gdg operation resulting in the "stiffness" matrix
+    /// Calculates the stiffness matrix
     ///
     /// solution:
     ///
     /// ```text
-    /// K = Bᵀ ⋅ D ⋅ B
+    /// K = Bᵀ ⋅ D ⋅ B ⋅ th ⋅ area
     /// ```
     pub fn integ_stiffness(
         &mut self,
@@ -142,12 +142,12 @@ impl AnalyticalTri3 {
         th: f64,
     ) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, true, plane_stress);
-        let dd_ela = ela.get_modulus();
+        let dd = ela.get_modulus();
         let dim_dd = 4;
         let dim_kk = 6;
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bb, &dd_ela.mat)?;
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bb, &dd.mat)?;
         mat_mat_mul(&mut kk, th * self.area, &bb_t_dd, &self.bb)?;
         Ok(kk)
     }
