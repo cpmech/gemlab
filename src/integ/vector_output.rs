@@ -54,8 +54,8 @@ use russell_lab::Vector;
 ///
 /// * `shape` -- Shape functions
 /// * `ips` -- Integration points (n_integ_point)
-/// * `erase_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
+/// * `erase_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
 /// * `fn_s` -- Function `f(p)` corresponding to `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 pub fn shape_times_scalar<F>(
     a: &mut Vector,
