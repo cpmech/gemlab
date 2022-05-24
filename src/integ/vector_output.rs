@@ -580,6 +580,26 @@ mod tests {
     }
 
     #[test]
+    fn c_vector_dot_gradient_works_bilinear() -> Result<(), StrError> {
+        // bilinear vector function: w(x) = {x, y}
+        // solution:
+        //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
+        let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
+        let ips = &IP_TRI_INTERNAL_1;
+        let x_ips = shape.calc_integ_points_coords(&mut state, ips)?;
+        let mut c = Vector::filled(shape.nnode, NOISE);
+        c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, p| {
+            w[0] = x_ips[p][0];
+            w[1] = x_ips[p][1];
+            Ok(())
+        })?;
+        let mut ana = AnalyticalTri3::new(&shape, &mut state);
+        let c_correct = ana.integ_vec_c_bilinear();
+        assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
+        Ok(())
+    }
+
+    #[test]
     fn d_tensor_dot_gradient_works() -> Result<(), StrError> {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
