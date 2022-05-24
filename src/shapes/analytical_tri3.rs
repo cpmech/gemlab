@@ -139,7 +139,7 @@ impl AnalyticalTri3 {
         young: f64,
         poisson: f64,
         plane_stress: bool,
-        thickness: f64,
+        th: f64,
     ) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, true, plane_stress);
         let dd_ela = ela.get_modulus();
@@ -148,7 +148,7 @@ impl AnalyticalTri3 {
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
         mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bb, &dd_ela.mat)?;
-        mat_mat_mul(&mut kk, thickness * self.area, &bb_t_dd, &self.bb)?;
+        mat_mat_mul(&mut kk, th * self.area, &bb_t_dd, &self.bb)?;
         Ok(kk)
     }
 }
