@@ -3,7 +3,7 @@ use crate::util::AsArray1D;
 use crate::StrError;
 use russell_lab::Vector;
 
-/// Implements the shape(N)-scalar(S) integration case
+/// Implements the shape(N) times scalar(S) integration case
 ///
 /// Interpolation functions times scalar field:
 ///
@@ -54,11 +54,11 @@ use russell_lab::Vector;
 /// # Input
 ///
 /// * `shape` -- Shape functions
-/// * `integ_points` -- Integration points (n_integ_point)
+/// * `ips` -- Integration points (n_integ_point)
 /// * `s` -- All values produced by `s(x(ιᵖ))` (n_integ_point)
 /// * `erase_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
-pub fn shape_scalar<'a, T>(
+pub fn shape_times_scalar<'a, T>(
     a: &mut Vector,
     state: &mut StateOfShape,
     shape: &Shape,
@@ -72,7 +72,7 @@ where
 {
     // check
     if a.dim() != shape.nnode {
-        return Err("a.len() must be equal to shape.nnode");
+        return Err("a.len() must be equal to nnode");
     }
 
     // clear output vector
@@ -98,11 +98,115 @@ where
     Ok(())
 }
 
+/// Implements the the shape(N) times vector(V) integration case
+///
+/// Interpolation functions times vector field:
+///
+/// ```text
+/// →    ⌠    → →   → →
+/// bᵐ = │ Nᵐ(x(ξ)) v(x) tₕ dΩ
+///      ⌡
+///      Ωₑ
+/// ```
+///
+/// The numerical integration is:
+///
+/// ```text
+/// →    nip-1     →   → →          →
+/// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+///       p=0
+/// ```
+///
+/// # Output
+///
+/// ```text
+///     ┌     ┐
+///     | b⁰₀ |
+///     | b⁰₁ |
+///     | b¹₀ |
+/// b = | b¹₁ |
+///     | b²₀ |
+///     | b²₁ |
+///     | ··· |
+///     | bᵐᵢ |  ⟸  ii := i + m * space_ndim
+///     └     ┘       
+///
+/// m = ii / space_ndim
+/// i = ii % space_ndim
+/// ```
+///
+/// * `b` -- A vector containing all `bᵐᵢ` values, one after another, and sequentially placed
+///          as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
+///          The length of `b` must be equal to `nnode * space_ndim`.
+///
+/// # Updated
+///
+/// * `state` -- Will be updated by the Shape functions
+///
+/// # Input
+///
+/// * `shape` -- Shape functions
+/// * `ips` -- Integration points (n_integ_point)
+/// * `v` -- All values produced by `v(x(ιᵖ))` (n_integ_point)
+/// * `erase_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
+/// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+pub fn shape_times_vector(
+    b: &mut Vector,
+    state: &mut StateOfShape,
+    shape: &Shape,
+    ips: IntegPointData,
+    v: &Vec<Vector>,
+    th: f64,
+    erase_b: bool,
+) -> Result<(), StrError> {
+    // check
+    if b.dim() != shape.nnode * shape.space_ndim {
+        return Err("b.len() must be equal to nnode * space_ndim");
+    }
+
+    // clear output vector
+    if erase_b {
+        b.fill(0.0);
+    }
+
+    // loop over integration points
+    for index in 0..ips.len() {
+        // ksi coordinates and weight
+        let iota = &ips[index];
+        let weight = ips[index][3];
+
+        // calculate interpolation functions and Jacobian
+        shape.calc_interp(state, iota)?;
+        let det_jac = shape.calc_jacobian(state, iota)?;
+
+        // add contribution to b vector
+        let coef = th * det_jac * weight;
+        let nn = &state.interp;
+        if shape.space_ndim == 1 {
+            for m in 0..shape.nnode {
+                b[m] += coef * nn[m] * v[index][0];
+            }
+        } else if shape.space_ndim == 2 {
+            for m in 0..shape.nnode {
+                b[0 + m * 2] += coef * nn[m] * v[index][0];
+                b[1 + m * 2] += coef * nn[m] * v[index][1];
+            }
+        } else {
+            for m in 0..shape.nnode {
+                b[0 + m * 3] += coef * nn[m] * v[index][0];
+                b[1 + m * 3] += coef * nn[m] * v[index][1];
+                b[2 + m * 3] += coef * nn[m] * v[index][2];
+            }
+        }
+    }
+    Ok(())
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::shape_scalar;
+    use super::{shape_times_scalar, shape_times_vector};
     use crate::shapes::{Shape, StateOfShape, Verification, IP_LIN_LEGENDRE_2, IP_TRI_INTERNAL_1};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -117,13 +221,13 @@ mod tests {
         let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
         let mut a = Vector::new(3);
         assert_eq!(
-            shape_scalar(&mut a, &mut state, &shape, &[], &[], 1.0, false).err(),
-            Some("a.len() must be equal to shape.nnode")
+            shape_times_scalar(&mut a, &mut state, &shape, &[], &[], 1.0, false).err(),
+            Some("a.len() must be equal to nnode")
         );
     }
 
     #[test]
-    fn shape_scalar_works_lin2() -> Result<(), StrError> {
+    fn shape_times_scalar_works_lin2() -> Result<(), StrError> {
         // lin2 with linear source term:
         //
         // s(x) = x
@@ -138,10 +242,10 @@ mod tests {
         let l = 6.0;
         let (shape, mut state) = Verification::line_segment_lin2(l);
         let ips = &IP_LIN_LEGENDRE_2;
-        let mut a = Vector::filled(shape.nnode, NOISE);
         let x_ips = shape.calc_integ_points_coords(&mut state, ips)?;
-        let s: Vec<f64> = x_ips.iter().map(|x| x[0]).collect();
-        shape_scalar(&mut a, &mut state, &shape, ips, &s, 1.0, true)?;
+        let s: Vec<_> = x_ips.iter().map(|x| x[0]).collect();
+        let mut a = Vector::filled(shape.nnode, NOISE);
+        shape_times_scalar(&mut a, &mut state, &shape, ips, &s, 1.0, true)?;
         let cf = l / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
@@ -150,7 +254,7 @@ mod tests {
     }
 
     #[test]
-    fn shape_scalar_works_tri3() -> Result<(), StrError> {
+    fn shape_times_scalar_works_tri3() -> Result<(), StrError> {
         // tri3 with a constant source term:
         //
         // s(x) = cₛ
@@ -164,13 +268,53 @@ mod tests {
         let l = 5.0;
         let (shape, mut state, area) = Verification::equilateral_triangle_tri3(l);
         let ips = &IP_TRI_INTERNAL_1;
-        let mut a = Vector::filled(shape.nnode, NOISE);
         const CS: f64 = 3.0;
-        let s: Vec<f64> = (0..ips.len()).map(|_| CS).collect();
-        shape_scalar(&mut a, &mut state, &shape, ips, &s, 1.0, true)?;
+        let s: Vec<_> = (0..ips.len()).map(|_| CS).collect();
+        let mut a = Vector::filled(shape.nnode, NOISE);
+        shape_times_scalar(&mut a, &mut state, &shape, ips, &s, 1.0, true)?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
+        Ok(())
+    }
+
+    #[test]
+    fn shape_times_vector_works_lin2() -> Result<(), StrError> {
+        // This test is similar to the shape_times_scalar with lin2, however using a vector
+        // So, each component of `b` equals `Fₛ`
+        let l = 6.0;
+        let (shape, mut state) = Verification::line_segment_lin2(l);
+        let ips = &IP_LIN_LEGENDRE_2;
+        let x_ips = shape.calc_integ_points_coords(&mut state, ips)?;
+        let v: Vec<_> = x_ips.iter().map(|x| Vector::filled(shape.space_ndim, x[0])).collect();
+        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        shape_times_vector(&mut b, &mut state, &shape, ips, &v, 1.0, true)?;
+        let cf = l / 6.0;
+        let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
+        let b_correct = &[
+            cf * (2.0 * xa + xb),
+            cf * (2.0 * xa + xb),
+            cf * (xa + 2.0 * xb),
+            cf * (xa + 2.0 * xb),
+        ];
+        assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
+        Ok(())
+    }
+
+    #[test]
+    fn shape_times_vector_works_tri3() -> Result<(), StrError> {
+        // This test is similar to the shape_times_scalar with tri3, however using a vector
+        // So, each component of `b` equals `Fₛ`
+        let l = 5.0;
+        let (shape, mut state, area) = Verification::equilateral_triangle_tri3(l);
+        let ips = &IP_TRI_INTERNAL_1;
+        const CS: f64 = 3.0;
+        let v: Vec<_> = (0..ips.len()).map(|_| Vector::filled(shape.space_ndim, CS)).collect();
+        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        shape_times_vector(&mut b, &mut state, &shape, ips, &v, 1.0, true)?;
+        let cf = CS * area / 3.0;
+        let b_correct = &[cf, cf, cf, cf, cf, cf];
+        assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
         Ok(())
     }
 }
