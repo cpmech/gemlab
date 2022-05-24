@@ -4,7 +4,7 @@ use crate::StrError;
 use russell_lab::Matrix;
 use russell_tensor::Tensor4;
 
-/// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case (e.g., stiffness matrix)
+/// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case (stiffness matrix)
 ///
 /// Stiffness tensors:
 ///
@@ -58,8 +58,8 @@ use russell_tensor::Tensor4;
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `erase_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
-/// * `fn_dd` -- Function f(p) corresponding to `D(x(ιᵖ))`
-pub fn stiffness<F>(
+/// * `fn_dd` -- Function f(D,p) corresponding to `D(x(ιᵖ))`
+pub fn mat_gdg<F>(
     kk: &mut Matrix,
     state: &mut StateOfShape,
     shape: &Shape,
@@ -74,7 +74,7 @@ where
     // check
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk != ncol_kk || nrow_kk != shape.nnode * shape.space_ndim {
-        return Err("K matrix must be square with dim equal to nnode * space_ndim");
+        return Err("K.dims() must be equal to (nnode*space_ndim,nnode*space_ndim)");
     }
 
     // allocate auxiliary tensor
@@ -99,7 +99,7 @@ where
 
         // add contribution to K matrix
         let c = det_jac * weight * th;
-        stiffness_add_to_mat_kk(kk, &dd, c, shape, state);
+        mat_gdg_add_to_mat_kk(kk, &dd, c, shape, state);
     }
     Ok(())
 }
@@ -107,7 +107,7 @@ where
 /// Adds contribution to the K-matrix in integ_mat_10_gdg
 #[inline]
 #[rustfmt::skip]
-fn stiffness_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, shape: &Shape, state: &mut StateOfShape) {
+fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, shape: &Shape, state: &mut StateOfShape) {
     let s = SQRT_2;
     let g = &state.gradient;
     let d = &dd.mat;
@@ -141,12 +141,23 @@ fn stiffness_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, shape: &Shape,
 
 #[cfg(test)]
 mod tests {
-    use super::stiffness;
+    use super::mat_gdg;
     use crate::shapes::{AnalyticalTri3, Shape, StateOfShape, IP_TRI_INTERNAL_1};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::{copy_matrix, Matrix};
     use russell_tensor::LinElasticity;
+
+    #[test]
+    fn capture_some_errors() {
+        let shape = Shape::new(2, 1, 2).unwrap();
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
+        let mut kk = Matrix::new(2, 2);
+        assert_eq!(
+            mat_gdg(&mut kk, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
+            Some("K.dims() must be equal to (nnode*space_ndim,nnode*space_ndim)")
+        );
+    }
 
     #[test]
     fn stiffness_works() -> Result<(), StrError> {
@@ -181,7 +192,7 @@ mod tests {
         let nrow = shape.nnode * shape.space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = &IP_TRI_INTERNAL_1;
-        stiffness(&mut kk, &mut state, &shape, ips, th, true, |dd, _| {
+        mat_gdg(&mut kk, &mut state, &shape, ips, th, true, |dd, _| {
             copy_matrix(&mut dd.mat, &model.get_modulus().mat)
         })?;
 
