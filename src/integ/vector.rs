@@ -1,5 +1,4 @@
 use crate::shapes::{IntegPointData, Shape, StateOfShape};
-use crate::util::AsArray1D;
 use crate::StrError;
 use russell_lab::Vector;
 
@@ -55,20 +54,20 @@ use russell_lab::Vector;
 ///
 /// * `shape` -- Shape functions
 /// * `ips` -- Integration points (n_integ_point)
-/// * `s` -- All values produced by `s(x(ιᵖ))` (n_integ_point)
 /// * `erase_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
-pub fn shape_times_scalar<'a, T>(
+/// * `fn_s` -- Function `f(p)` corresponding to `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+pub fn shape_times_scalar<F>(
     a: &mut Vector,
     state: &mut StateOfShape,
     shape: &Shape,
     ips: IntegPointData,
-    s: &'a T,
     th: f64,
     erase_a: bool,
+    fn_s: F,
 ) -> Result<(), StrError>
 where
-    T: AsArray1D<'a, f64>,
+    F: Fn(usize) -> Result<f64, StrError>,
 {
     // check
     if a.dim() != shape.nnode {
@@ -81,18 +80,22 @@ where
     }
 
     // loop over integration points
-    for index in 0..ips.len() {
+    for p in 0..ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[index];
-        let weight = ips[index][3];
+        let iota = &ips[p];
+        let weight = ips[p][3];
 
         // calculate interpolation functions and Jacobian
         shape.calc_interp(state, iota)?;
         let det_jac = shape.calc_jacobian(state, iota)?;
 
+        // calculate s
+        let s = fn_s(p)?;
+
         // loop over nodes and perform sum
+        let val = s * th * det_jac * weight;
         for m in 0..shape.nnode {
-            a[m] += state.interp[m] * s.at(index) * th * det_jac * weight;
+            a[m] += state.interp[m] * val;
         }
     }
     Ok(())
@@ -221,7 +224,7 @@ mod tests {
         let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
         let mut a = Vector::new(3);
         assert_eq!(
-            shape_times_scalar(&mut a, &mut state, &shape, &[], &[], 1.0, false).err(),
+            shape_times_scalar(&mut a, &mut state, &shape, &[], 1.0, false, |_| Ok(0.0)).err(),
             Some("a.len() must be equal to nnode")
         );
     }
@@ -243,9 +246,8 @@ mod tests {
         let (shape, mut state) = Verification::line_segment_lin2(l);
         let ips = &IP_LIN_LEGENDRE_2;
         let x_ips = shape.calc_integ_points_coords(&mut state, ips)?;
-        let s: Vec<_> = x_ips.iter().map(|x| x[0]).collect();
         let mut a = Vector::filled(shape.nnode, NOISE);
-        shape_times_scalar(&mut a, &mut state, &shape, ips, &s, 1.0, true)?;
+        shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][0]))?;
         let cf = l / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
@@ -269,9 +271,8 @@ mod tests {
         let (shape, mut state, area) = Verification::equilateral_triangle_tri3(l);
         let ips = &IP_TRI_INTERNAL_1;
         const CS: f64 = 3.0;
-        let s: Vec<_> = (0..ips.len()).map(|_| CS).collect();
         let mut a = Vector::filled(shape.nnode, NOISE);
-        shape_times_scalar(&mut a, &mut state, &shape, ips, &s, 1.0, true)?;
+        shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(CS))?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
