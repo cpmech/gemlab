@@ -147,7 +147,7 @@ where
 ///
 /// * `shape` -- Shape functions
 /// * `ips` -- Integration points (n_integ_point)
-/// * `v` -- All values produced by `v(x(ιᵖ))` (n_integ_point)
+/// * `v` -- All values produced by `v(x(ιᵖ))` (n_integ_point); each v has len = space_ndim
 /// * `erase_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 pub fn shape_times_vector(
