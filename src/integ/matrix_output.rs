@@ -177,7 +177,7 @@ mod tests {
         // [@bhatti] Bhatti, M.A. (2005) Fundamental Finite Element Analysis
         //           and Applications, Wiley, 700p.
 
-        // shape, state and analytical solution
+        // shape and state
         let shape = Shape::new(2, 2, 3)?;
         let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [2.0, 0.0], [2.0, 1.5]])?;
 
