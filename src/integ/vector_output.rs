@@ -57,7 +57,7 @@ use russell_lab::Vector;
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `erase_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
 /// * `fn_s` -- Function `f(p)` corresponding to `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
-pub fn shape_times_scalar<F>(
+pub fn a_shape_times_scalar<F>(
     a: &mut Vector,
     state: &mut StateOfShape,
     shape: &Shape,
@@ -150,22 +150,29 @@ where
 ///
 /// * `shape` -- Shape functions
 /// * `ips` -- Integration points (n_integ_point)
-/// * `v` -- All values produced by `v(x(ιᵖ))` (n_integ_point); each v has len = space_ndim
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `erase_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
-pub fn shape_times_vector(
+/// * `fn_v` -- Function `f(v,p)` corresponding to `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+///             The dim of `v` is equal to `space_ndim`.
+pub fn b_shape_times_vector<F>(
     b: &mut Vector,
     state: &mut StateOfShape,
     shape: &Shape,
     ips: IntegPointData,
-    v: &Vec<Vector>,
     th: f64,
     erase_b: bool,
-) -> Result<(), StrError> {
+    fn_v: F,
+) -> Result<(), StrError>
+where
+    F: Fn(&mut Vector, usize) -> Result<(), StrError>,
+{
     // check
     if b.dim() != shape.nnode * shape.space_ndim {
         return Err("b.len() must be equal to nnode * space_ndim");
     }
+
+    // allocate auxiliary vector
+    let mut v = Vector::new(shape.space_ndim);
 
     // clear output vector
     if erase_b {
@@ -173,28 +180,31 @@ pub fn shape_times_vector(
     }
 
     // loop over integration points
-    for index in 0..ips.len() {
+    for p in 0..ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[index];
-        let weight = ips[index][3];
+        let iota = &ips[p];
+        let weight = ips[p][3];
 
         // calculate interpolation functions and Jacobian
         shape.calc_interp(state, iota)?;
         let det_jac = shape.calc_jacobian(state, iota)?;
+
+        // calculate v
+        fn_v(&mut v, p)?;
 
         // add contribution to b vector
         let coef = th * det_jac * weight;
         let nn = &state.interp;
         if shape.space_ndim == 2 {
             for m in 0..shape.nnode {
-                b[0 + m * 2] += coef * nn[m] * v[index][0];
-                b[1 + m * 2] += coef * nn[m] * v[index][1];
+                b[0 + m * 2] += coef * nn[m] * v[0];
+                b[1 + m * 2] += coef * nn[m] * v[1];
             }
         } else {
             for m in 0..shape.nnode {
-                b[0 + m * 3] += coef * nn[m] * v[index][0];
-                b[1 + m * 3] += coef * nn[m] * v[index][1];
-                b[2 + m * 3] += coef * nn[m] * v[index][2];
+                b[0 + m * 3] += coef * nn[m] * v[0];
+                b[1 + m * 3] += coef * nn[m] * v[1];
+                b[2 + m * 3] += coef * nn[m] * v[2];
             }
         }
     }
@@ -246,8 +256,9 @@ pub fn shape_times_vector(
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `erase_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
-/// * `fn_w` -- Function `f(p)` corresponding to `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
-pub fn vector_dot_gradient<F>(
+/// * `fn_w` -- Function `f(w,p)` corresponding to `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+///             The dim of `w` is equal to `space_ndim`.
+pub fn c_vector_dot_gradient<F>(
     c: &mut Vector,
     state: &mut StateOfShape,
     shape: &Shape,
@@ -304,7 +315,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{shape_times_scalar, shape_times_vector, vector_dot_gradient};
+    use super::{a_shape_times_scalar, b_shape_times_vector, c_vector_dot_gradient};
     use crate::shapes::{AnalyticalTri3, Shape, StateOfShape, Verification, IP_LIN_LEGENDRE_2, IP_TRI_INTERNAL_1};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -319,13 +330,13 @@ mod tests {
         let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
         let mut a = Vector::new(3);
         assert_eq!(
-            shape_times_scalar(&mut a, &mut state, &shape, &[], 1.0, false, |_| Ok(0.0)).err(),
+            a_shape_times_scalar(&mut a, &mut state, &shape, &[], 1.0, false, |_| Ok(0.0)).err(),
             Some("a.len() must be equal to nnode")
         );
     }
 
     #[test]
-    fn shape_times_scalar_works_lin2() -> Result<(), StrError> {
+    fn a_shape_times_scalar_works_lin2() -> Result<(), StrError> {
         // lin2 with linear source term:
         //
         // s(x) = x
@@ -342,7 +353,7 @@ mod tests {
         let ips = &IP_LIN_LEGENDRE_2;
         let x_ips = shape.calc_integ_points_coords(&mut state, ips)?;
         let mut a = Vector::filled(shape.nnode, NOISE);
-        shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][0]))?;
+        a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][0]))?;
         let cf = l / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
@@ -351,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn shape_times_scalar_works_tri3() -> Result<(), StrError> {
+    fn a_shape_times_scalar_works_tri3() -> Result<(), StrError> {
         // tri3 with a constant source term:
         //
         // s(x) = cₛ
@@ -367,7 +378,7 @@ mod tests {
         let ips = &IP_TRI_INTERNAL_1;
         const CS: f64 = 3.0;
         let mut a = Vector::filled(shape.nnode, NOISE);
-        shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(CS))?;
+        a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(CS))?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
         assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
@@ -375,16 +386,19 @@ mod tests {
     }
 
     #[test]
-    fn shape_times_vector_works_lin2() -> Result<(), StrError> {
+    fn b_shape_times_vector_works_lin2() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with lin2, however using a vector
         // So, each component of `b` equals `Fₛ`
         let l = 6.0;
         let (shape, mut state) = Verification::line_segment_lin2(l);
         let ips = &IP_LIN_LEGENDRE_2;
         let x_ips = shape.calc_integ_points_coords(&mut state, ips)?;
-        let v: Vec<_> = x_ips.iter().map(|x| Vector::filled(shape.space_ndim, x[0])).collect();
         let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
-        shape_times_vector(&mut b, &mut state, &shape, ips, &v, 1.0, true)?;
+        b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, p| {
+            v[0] = x_ips[p][0];
+            v[1] = x_ips[p][0]; // << note use of x component here too
+            Ok(())
+        })?;
         let cf = l / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let b_correct = &[
@@ -398,16 +412,19 @@ mod tests {
     }
 
     #[test]
-    fn shape_times_vector_works_tri3() -> Result<(), StrError> {
+    fn b_shape_times_vector_works_tri3() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let l = 5.0;
         let (shape, mut state, area) = Verification::equilateral_triangle_tri3(l);
         let ips = &IP_TRI_INTERNAL_1;
         const CS: f64 = 3.0;
-        let v: Vec<_> = (0..ips.len()).map(|_| Vector::filled(shape.space_ndim, CS)).collect();
         let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
-        shape_times_vector(&mut b, &mut state, &shape, ips, &v, 1.0, true)?;
+        b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
+            v[0] = CS;
+            v[1] = CS;
+            Ok(())
+        })?;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
         assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
@@ -415,7 +432,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_dot_gradient_works_constant() -> Result<(), StrError> {
+    fn c_vector_dot_gradient_works_constant() -> Result<(), StrError> {
         // constant vector function: w(x) = {w₀, w₁}
         // solution:
         //    cᵐ = ½ (w₀ bₘ + w₁ cₘ)
@@ -426,7 +443,7 @@ mod tests {
         let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
         let ips = &IP_TRI_INTERNAL_1;
         let mut c = Vector::filled(shape.nnode, NOISE);
-        vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
+        c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
             w[0] = W0;
             w[1] = W1;
             Ok(())
