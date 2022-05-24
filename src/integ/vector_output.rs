@@ -333,6 +333,16 @@ mod tests {
             a_shape_times_scalar(&mut a, &mut state, &shape, &[], 1.0, false, |_| Ok(0.0)).err(),
             Some("a.len() must be equal to nnode")
         );
+        let mut b = Vector::new(5);
+        assert_eq!(
+            b_shape_times_vector(&mut b, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
+            Some("b.len() must be equal to nnode * space_ndim")
+        );
+        let mut c = Vector::new(3);
+        assert_eq!(
+            c_vector_dot_gradient(&mut c, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
+            Some("c.len() must be equal to nnode")
+        );
     }
 
     #[test]
