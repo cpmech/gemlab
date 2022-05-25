@@ -482,12 +482,14 @@ mod tests {
         let cf = l / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
-        let mut a = Vector::filled(shape.nnode, NOISE);
+        // integration points
         let tolerances = [1e-15, 1e-14, 1e-15, 1e-15];
         let selection: Vec<_> = [2, 3, 4, 5]
             .iter()
             .map(|n| select_integ_points(GeoClass::Lin, *n).unwrap())
             .collect();
+        // check
+        let mut a = Vector::filled(shape.nnode, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
@@ -514,11 +516,13 @@ mod tests {
         let (shape, mut state, area) = Verification::equilateral_triangle_tri3(l);
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
+        // integration points
         let tolerances = [1e-14, 1e-14, 1e-15, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
             .iter()
             .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
             .collect();
+        // check
         let mut a = Vector::filled(shape.nnode, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
@@ -539,6 +543,9 @@ mod tests {
             shape.geo_ndim,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
+        let ana = AnalyticalTet4::new(&shape, &state);
+        let a_correct = ana.integ_vec_a_linear_along_z(&state);
+        // integration points
         // Note that the tolerance is high for IP_TET_INTERNAL_1
         // because the numerical integration performs poorly with few IPs
         let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15];
@@ -546,13 +553,12 @@ mod tests {
             .iter()
             .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
             .collect();
+        // check
+        let mut a = Vector::filled(shape.nnode, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
-            let mut a = Vector::filled(shape.nnode, NOISE);
             a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
-            let ana = AnalyticalTet4::new(&shape, &state);
-            let a_correct = ana.integ_vec_a_linear_along_z(&state);
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
@@ -572,11 +578,13 @@ mod tests {
             cf * (xa + 2.0 * xb),
             cf * (xa + 2.0 * xb),
         ];
+        // integration points
         let tolerances = [1e-15, 1e-15];
         let selection: Vec<_> = [2, 3]
             .iter()
             .map(|n| select_integ_points(GeoClass::Lin, *n).unwrap())
             .collect();
+        // check
         let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
@@ -601,17 +609,57 @@ mod tests {
         const CS: f64 = 3.0;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
+        // integration points
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [1, 3]
             .iter()
             .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
             .collect();
+        // check
         let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
                 v[0] = CS;
                 v[1] = CS;
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(b.as_data(), b_correct, tol);
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn b_shape_times_vector_works_tet4_constant() -> Result<(), StrError> {
+        // tet 4 with constant vector
+        //
+        // v(x) = {bx,by,bz}
+        //
+        let shape = Shape::new(3, 3, 4)?;
+        let mut state = StateOfShape::new(
+            shape.geo_ndim,
+            &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
+        )?;
+        const BX: f64 = 2.0;
+        const BY: f64 = 3.0;
+        const BZ: f64 = 4.0;
+        let ana = AnalyticalTet4::new(&shape, &state);
+        let b_correct = ana.integ_vec_b_constant(BX, BY, BZ);
+        // integration points
+        let tolerances = [1e-15, 1e-15];
+        let selection: Vec<_> = [1, 4]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .collect();
+        // check
+        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            println!("nip={}, tol={:.e}", ips.len(), tol);
+            b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
+                v[0] = BX;
+                v[1] = BY;
+                v[2] = BZ;
                 Ok(())
             })
             .unwrap();
@@ -630,11 +678,13 @@ mod tests {
         let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
         let ana = AnalyticalTri3::new(&shape, &mut state);
         let c_correct = ana.integ_vec_c_constant(W0, W1);
+        // integration points
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [1, 3]
             .iter()
             .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
             .collect();
+        // check
         let mut c = Vector::filled(shape.nnode, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
@@ -657,11 +707,13 @@ mod tests {
         let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
         let ana = AnalyticalTri3::new(&shape, &mut state);
         let c_correct = ana.integ_vec_c_bilinear(&state);
+        // integration points
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [1, 3]
             .iter()
             .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
             .collect();
+        // check
         let mut c = Vector::filled(shape.nnode, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
@@ -690,11 +742,13 @@ mod tests {
         let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
         let ana = AnalyticalTri3::new(&shape, &mut state);
         let d_correct = ana.integ_vec_d_constant(S00, S11, S01);
+        // integration points
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
             .iter()
             .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
             .collect();
+        // check
         let mut d = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);

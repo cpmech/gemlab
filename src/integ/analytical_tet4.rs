@@ -139,6 +139,28 @@ impl AnalyticalTet4 {
         ]
     }
 
+    /// Integrates shape times vector with constant function
+    ///
+    /// ```text
+    /// v(x) = {bx,by,bz}
+    /// ```
+    pub fn integ_vec_b_constant(&self, bx: f64, by: f64, bz: f64) -> Vec<f64> {
+        vec![
+            bx * self.volume / 4.0,
+            by * self.volume / 4.0,
+            bz * self.volume / 4.0,
+            bx * self.volume / 4.0,
+            by * self.volume / 4.0,
+            bz * self.volume / 4.0,
+            bx * self.volume / 4.0,
+            by * self.volume / 4.0,
+            bz * self.volume / 4.0,
+            bx * self.volume / 4.0,
+            by * self.volume / 4.0,
+            bz * self.volume / 4.0,
+        ]
+    }
+
     /// Calculates the stiffness matrix
     ///
     /// solution:
