@@ -238,7 +238,7 @@ mod tests {
         })?;
 
         // compare against analytical solution
-        let mut ana = AnalyticalTet4::new(&shape, &mut state);
+        let mut ana = AnalyticalTet4::new(&shape, &state);
         let kk_correct = ana.integ_stiffness(young, poisson)?;
         assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
         Ok(())

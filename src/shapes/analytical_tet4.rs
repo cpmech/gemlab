@@ -5,15 +5,6 @@ use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
 use russell_tensor::LinElasticity;
 
 pub struct AnalyticalTet4 {
-    // Holds the x-coordinates of nodes
-    // pub x: [f64; 4],
-
-    // // Holds the y-coordinates of nodes
-    // pub y: [f64; 4],
-
-    // // Holds the z-coordinates of nodes
-    // pub z: [f64; 4],
-
     // Holds the a-coefficients
     pub a: [f64; 4],
 
@@ -31,7 +22,7 @@ pub struct AnalyticalTet4 {
 }
 
 impl AnalyticalTet4 {
-    pub fn new(shape: &Shape, state: &mut StateOfShape) -> Self {
+    pub fn new(shape: &Shape, state: &StateOfShape) -> Self {
         assert_eq!(shape.kind, GeoKind::Tet4);
 
         let x1 = state.coords_transp[0][0];
@@ -57,7 +48,7 @@ impl AnalyticalTet4 {
         let x34 = x3 - x4;
         let x21 = -x12;
         let x31 = -x13;
-        // let x41 = -x14; // don't need this
+        // let x41 = -x14; // no needed
         let x32 = -x23;
         let x42 = -x24;
         let x43 = -x34;
@@ -70,7 +61,7 @@ impl AnalyticalTet4 {
         let y34 = y3 - y4;
         let y21 = -y12;
         let y31 = -y13;
-        // let y41 = -y14; // don't need this
+        // let y41 = -y14; // no needed
         let y32 = -y23;
         let y42 = -y24;
         let y43 = -y34;
@@ -83,7 +74,7 @@ impl AnalyticalTet4 {
         let z34 = z3 - z4;
         let z21 = -z12;
         let z31 = -z13;
-        // let z41 = -z14; // don't need this
+        // let z41 = -z14; // no needed
         let z32 = -z23;
         let z42 = -z24;
         let z43 = -z34;
@@ -122,6 +113,26 @@ impl AnalyticalTet4 {
             volume: jj_det / 6.0,
             bb,
         }
+    }
+
+    /// Integrates shape times scalar with linear scalar function
+    ///
+    /// ```text
+    /// s(x) = x[2] = z
+    /// ```
+    pub fn integ_vec_a_linear_along_z(&self, state: &StateOfShape) -> Vec<f64> {
+        let (z1, z2, z3, z4) = (
+            state.coords_transp[2][0],
+            state.coords_transp[2][1],
+            state.coords_transp[2][2],
+            state.coords_transp[2][3],
+        );
+        vec![
+            (self.volume * (2.0 * z1 + z2 + z3 + z4)) / 20.0,
+            (self.volume * (z1 + 2.0 * z2 + z3 + z4)) / 20.0,
+            (self.volume * (z1 + z2 + 2.0 * z3 + z4)) / 20.0,
+            (self.volume * (z1 + z2 + z3 + 2.0 * z4)) / 20.0,
+        ]
     }
 
     /// Calculates the stiffness matrix

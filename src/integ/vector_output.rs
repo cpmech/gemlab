@@ -428,7 +428,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::{a_shape_times_scalar, b_shape_times_vector, c_vector_dot_gradient, d_tensor_dot_gradient};
-    use crate::shapes::{AnalyticalTri3, Shape, StateOfShape, Verification, IP_LIN_LEGENDRE_2, IP_TRI_INTERNAL_1};
+    use crate::shapes::{
+        select_integ_points, AnalyticalTet4, AnalyticalTri3, GeoClass, Shape, StateOfShape, Verification,
+        IP_LIN_LEGENDRE_2, IP_TRI_INTERNAL_1,
+    };
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
@@ -463,7 +466,7 @@ mod tests {
     }
 
     #[test]
-    fn a_shape_times_scalar_works_lin2() -> Result<(), StrError> {
+    fn a_shape_times_scalar_works_lin2_linear() -> Result<(), StrError> {
         // lin2 with linear source term:
         //
         // s(x) = x
@@ -489,7 +492,7 @@ mod tests {
     }
 
     #[test]
-    fn a_shape_times_scalar_works_tri3() -> Result<(), StrError> {
+    fn a_shape_times_scalar_works_tri3_constant() -> Result<(), StrError> {
         // tri3 with a constant source term:
         //
         // s(x) = cₛ
@@ -513,7 +516,36 @@ mod tests {
     }
 
     #[test]
-    fn b_shape_times_vector_works_lin2() -> Result<(), StrError> {
+    fn a_shape_times_scalar_works_tet4_linear() -> Result<(), StrError> {
+        // tet 4 with a linear source term:
+        //
+        // s(x) = z = x[2]
+        //
+        let shape = Shape::new(3, 3, 4)?;
+        let mut state = StateOfShape::new(
+            shape.geo_ndim,
+            &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
+        )?;
+        let selection: Vec<_> = [1, 4, 5, 8, 14]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .collect();
+        // Note that the tolerance is high for IP_TET_INTERNAL_1
+        // because the numerical integration performs poorly with few IPs
+        let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15];
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
+            let mut a = Vector::filled(shape.nnode, NOISE);
+            a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
+            let ana = AnalyticalTet4::new(&shape, &state);
+            let a_correct = ana.integ_vec_a_linear_along_z(&state);
+            assert_vec_approx_eq!(a.as_data(), a_correct, tol);
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn b_shape_times_vector_works_lin2_linear() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with lin2, however using a vector
         // So, each component of `b` equals `Fₛ`
         let l = 6.0;
@@ -539,7 +571,7 @@ mod tests {
     }
 
     #[test]
-    fn b_shape_times_vector_works_tri3() -> Result<(), StrError> {
+    fn b_shape_times_vector_works_tri3_constant() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let l = 5.0;
@@ -559,7 +591,7 @@ mod tests {
     }
 
     #[test]
-    fn c_vector_dot_gradient_works_constant() -> Result<(), StrError> {
+    fn c_vector_dot_gradient_works_tri3_constant() -> Result<(), StrError> {
         // constant vector function: w(x) = {w₀, w₁}
         // solution:
         //    cᵐ = ½ (w₀ bₘ + w₁ cₘ)
@@ -580,7 +612,7 @@ mod tests {
     }
 
     #[test]
-    fn c_vector_dot_gradient_works_bilinear() -> Result<(), StrError> {
+    fn c_vector_dot_gradient_works_tri3_bilinear() -> Result<(), StrError> {
         // bilinear vector function: w(x) = {x, y}
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
@@ -600,7 +632,7 @@ mod tests {
     }
 
     #[test]
-    fn d_tensor_dot_gradient_works() -> Result<(), StrError> {
+    fn d_tensor_dot_gradient_tri3_works_constant() -> Result<(), StrError> {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
         //    dᵐ₀ = ½ (σ₀₀ bₘ + σ₀₁ cₘ)
