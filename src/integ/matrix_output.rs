@@ -197,7 +197,7 @@ mod tests {
         })?;
 
         // compare against analytical solution
-        let mut ana = AnalyticalTri3::new(&shape, &mut state);
+        let ana = AnalyticalTri3::new(&shape, &mut state);
         let kk_correct = ana.integ_stiffness(young, poisson, plane_stress, th)?;
         assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
 

@@ -605,7 +605,7 @@ mod tests {
             w[1] = W1;
             Ok(())
         })?;
-        let mut ana = AnalyticalTri3::new(&shape, &mut state);
+        let ana = AnalyticalTri3::new(&shape, &mut state);
         let c_correct = ana.integ_vec_c_constant(W0, W1);
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
         Ok(())
@@ -625,8 +625,8 @@ mod tests {
             w[1] = x_ips[p][1];
             Ok(())
         })?;
-        let mut ana = AnalyticalTri3::new(&shape, &mut state);
-        let c_correct = ana.integ_vec_c_bilinear();
+        let ana = AnalyticalTri3::new(&shape, &mut state);
+        let c_correct = ana.integ_vec_c_bilinear(&state);
         assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
         Ok(())
     }
@@ -651,7 +651,7 @@ mod tests {
             sig.sym_set(0, 1, S01);
             Ok(())
         })?;
-        let mut ana = AnalyticalTri3::new(&shape, &mut state);
+        let ana = AnalyticalTri3::new(&shape, &mut state);
         let d_correct = ana.integ_vec_d_constant(S00, S11, S01);
         assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
         Ok(())

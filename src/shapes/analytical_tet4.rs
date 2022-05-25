@@ -120,6 +120,10 @@ impl AnalyticalTet4 {
     /// ```text
     /// s(x) = x[2] = z
     /// ```
+    ///
+    /// # Input
+    ///
+    /// * `shape` -- the same shape used in `new` because we need the nodal coordinates here
     pub fn integ_vec_a_linear_along_z(&self, state: &StateOfShape) -> Vec<f64> {
         let (z1, z2, z3, z4) = (
             state.coords_transp[2][0],
