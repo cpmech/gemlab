@@ -54,7 +54,6 @@ pub type IntegPointData = &'static [[f64; 4]];
 /// * `1` -- Internal integration points and weights
 /// * `4` -- Internal integration points and weights
 /// * `5` -- Internal integration points and weights
-/// * `6` -- Internal integration points and weights
 ///
 /// `n_integ_point` for **Hex** class:
 ///
@@ -101,7 +100,6 @@ pub fn select_integ_points(class: GeoClass, n_integ_point: usize) -> Result<Inte
             1 => &IP_TET_INTERNAL_1,
             4 => &IP_TET_INTERNAL_4,
             5 => &IP_TET_INTERNAL_5,
-            6 => &IP_TET_INTERNAL_6,
             _ => return Err("desired number of integration points is not available for Tet class"),
         },
         // Hex
@@ -330,13 +328,16 @@ pub const IP_QUA_LEGENDRE_16: [[f64; 4]; 16] = [
 // -- TET ----------------------------------------------------------------
 // -----------------------------------------------------------------------
 
-/// Internal integration points and weights
+/// Internal integration points and weights, 1 point, degree 1
+/// 
+/// Reference: Wriggers (2008), page 12, table 4.5,
+/// Nonlinear Finite Element Methods, Springer.
 #[rustfmt::skip]
 pub const IP_TET_INTERNAL_1: [[f64; 4]; 1] = [
     [1.0 / 4.0, 1.0 / 4.0, 1.0 / 4.0, 1.0 / 6.0],
 ];
 
-/// Internal integration points and weights
+/// Internal integration points and weights, 4 points, degree 2
 #[rustfmt::skip]
 pub const IP_TET_INTERNAL_4: [[f64; 4]; 4] = [
     [0.5854101966249684, 0.1381966011250105, 0.1381966011250105, 0.041666666666666],
@@ -345,7 +346,10 @@ pub const IP_TET_INTERNAL_4: [[f64; 4]; 4] = [
     [0.1381966011250105, 0.1381966011250105, 0.1381966011250105, 0.041666666666666],
 ];
 
-/// Internal integration points and weights
+/// Internal integration points and weights, 4 points, degree 3
+/// 
+/// Reference: Wriggers (2008), page 12, table 4.5,
+/// Nonlinear Finite Element Methods, Springer.
 #[rustfmt::skip]
 pub const IP_TET_INTERNAL_5: [[f64; 4]; 5] = [
     [1.0 / 4.0, 1.0 / 4.0, 1.0 / 4.0, -2.0 / 15.0],
@@ -353,17 +357,6 @@ pub const IP_TET_INTERNAL_5: [[f64; 4]; 5] = [
     [1.0 / 6.0, 1.0 / 6.0, 1.0 / 2.0,  3.0 / 40.0],
     [1.0 / 6.0, 1.0 / 2.0, 1.0 / 6.0,  3.0 / 40.0],
     [1.0 / 2.0, 1.0 / 6.0, 1.0 / 6.0,  3.0 / 40.0],
-];
-
-/// Internal integration points and weights
-#[rustfmt::skip]
-pub const IP_TET_INTERNAL_6: [[f64; 4]; 6] = [
-    [ 1.0,  0.0,  0.0, 4.0 / 3.0],
-    [-1.0,  0.0,  0.0, 4.0 / 3.0],
-    [ 0.0,  1.0,  0.0, 4.0 / 3.0],
-    [ 0.0, -1.0,  0.0, 4.0 / 3.0],
-    [ 0.0,  0.0,  1.0, 4.0 / 3.0],
-    [ 0.0,  0.0, -1.0, 4.0 / 3.0],
 ];
 
 // -----------------------------------------------------------------------
