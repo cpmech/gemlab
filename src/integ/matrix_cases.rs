@@ -143,8 +143,8 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, shape: &Shape, s
 #[cfg(test)]
 mod tests {
     use super::mat_gdg;
-    use crate::integ::select_integ_points;
-    use crate::shapes::{AnalyticalTet4, AnalyticalTri3, GeoClass, Shape, StateOfShape};
+    use crate::integ::{select_integ_points, AnalyticalTet4, AnalyticalTri3};
+    use crate::shapes::{GeoClass, Shape, StateOfShape};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::{copy_matrix, Matrix};

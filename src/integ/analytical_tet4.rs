@@ -1,4 +1,4 @@
-use super::{GeoKind, Shape, StateOfShape};
+use crate::shapes::{GeoKind, Shape, StateOfShape};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
