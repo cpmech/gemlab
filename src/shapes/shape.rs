@@ -1,4 +1,4 @@
-use super::{geo_class_and_kind, ref_domain_limits, GeoClass, GeoKind, IntegPointData, StateOfShape};
+use super::{geo_class_and_kind, ref_domain_limits, GeoClass, GeoKind, StateOfShape};
 use super::{
     Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet10, Tet4, Tri10, Tri15, Tri3, Tri6,
 };
@@ -877,7 +877,7 @@ impl Shape {
     pub fn calc_integ_points_coords(
         &self,
         state: &mut StateOfShape,
-        integ_points: IntegPointData,
+        integ_points: &[[f64; 4]],
     ) -> Result<Vec<Vector>, StrError> {
         let mut all_coords = Vec::new();
         for iota in integ_points {
@@ -1012,7 +1012,7 @@ impl Shape {
 #[cfg(test)]
 mod tests {
     use super::{GeoClass, GeoKind, Shape};
-    use crate::shapes::{ref_domain_limits, StateOfShape, Verification, IP_LIN_LEGENDRE_2};
+    use crate::shapes::{ref_domain_limits, StateOfShape, Verification};
     use crate::util::{PI, SQRT_3};
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq, assert_vec_approx_eq};
@@ -1263,7 +1263,7 @@ mod tests {
         // calc_integ_points_coords
         assert_eq!(
             shape
-                .calc_integ_points_coords(&mut bug_for_calc_coords, &IP_LIN_LEGENDRE_2)
+                .calc_integ_points_coords(&mut bug_for_calc_coords, &[[0.0, 0.0, 0.0, 2.0]])
                 .err(),
             Some("matrix and vectors are incompatible")
         );
@@ -2047,7 +2047,11 @@ mod tests {
         let shape = Shape::new(2, 1, 2)?;
         let (xa, xb) = (2.0, 5.0);
         let mut state = StateOfShape::new(shape.geo_ndim, &[[xa, 8.0], [xb, 8.0]])?;
-        let integ_points = shape.calc_integ_points_coords(&mut state, &IP_LIN_LEGENDRE_2)?;
+        let ip_lin_legendre_2: [[f64; 4]; 2] = [
+            [-0.5773502691896257, 0.0, 0.0, 1.0],
+            [0.5773502691896257, 0.0, 0.0, 1.0],
+        ];
+        let integ_points = shape.calc_integ_points_coords(&mut state, &ip_lin_legendre_2)?;
         assert_eq!(integ_points.len(), 2);
         let ksi_a = -1.0 / SQRT_3;
         let ksi_b = 1.0 / SQRT_3;

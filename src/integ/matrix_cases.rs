@@ -1,4 +1,5 @@
-use crate::shapes::{IntegPointData, Shape, StateOfShape};
+use super::IntegPointData;
+use crate::shapes::{Shape, StateOfShape};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::Matrix;
@@ -142,7 +143,8 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, shape: &Shape, s
 #[cfg(test)]
 mod tests {
     use super::mat_gdg;
-    use crate::shapes::{AnalyticalTet4, AnalyticalTri3, Shape, StateOfShape, IP_TET_INTERNAL_1, IP_TRI_INTERNAL_1};
+    use crate::integ::select_integ_points;
+    use crate::shapes::{AnalyticalTet4, AnalyticalTri3, GeoClass, Shape, StateOfShape};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::{copy_matrix, Matrix};
@@ -191,15 +193,10 @@ mod tests {
         // stiffness
         let nrow = shape.nnode * shape.space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
-        let ips = &IP_TRI_INTERNAL_1;
+        let ips = select_integ_points(GeoClass::Tri, 1)?;
         mat_gdg(&mut kk, &mut state, &shape, ips, th, true, |dd, _| {
             copy_matrix(&mut dd.mat, &model.get_modulus().mat)
         })?;
-
-        // compare against analytical solution
-        let ana = AnalyticalTri3::new(&shape, &mut state);
-        let kk_correct = ana.integ_stiffness(young, poisson, plane_stress, th)?;
-        assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
 
         // compare against results from Bhatti's book
         #[rustfmt::skip]
@@ -211,7 +208,26 @@ mod tests {
             [  0.000000000000000e+00, -5.208333333333334e+02, -6.944444444444445e+02,  5.208333333333334e+02,  6.944444444444445e+02,  0.000000000000000e+00],
             [ -2.604166666666667e+02,  0.000000000000000e+00,  2.604166666666667e+02, -1.736111111111111e+03,  0.000000000000000e+00,  1.736111111111111e+03],
         ]);
-        assert_vec_approx_eq!(kk_correct.as_data(), kk_bhatti.as_data(), 1e-12);
+        assert_vec_approx_eq!(kk.as_data(), kk_bhatti.as_data(), 1e-12);
+
+        // analytical solution
+        let ana = AnalyticalTri3::new(&shape, &mut state);
+        let kk_correct = ana.integ_stiffness(young, poisson, plane_stress, th)?;
+
+        // compare against analytical solution
+        let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-11, 1e-12];
+        let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            mat_gdg(&mut kk, &mut state, &shape, ips, th, true, |dd, _| {
+                copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+            })
+            .unwrap();
+            assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), tol); // 1e-12
+        });
         Ok(())
     }
 
@@ -229,18 +245,26 @@ mod tests {
         let poisson = 1.0 / 3.0;
         let model = LinElasticity::new(young, poisson, false, false);
 
-        // stiffness
-        let nrow = shape.nnode * shape.space_ndim;
-        let mut kk = Matrix::new(nrow, nrow);
-        let ips = &IP_TET_INTERNAL_1;
-        mat_gdg(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
-            copy_matrix(&mut dd.mat, &model.get_modulus().mat)
-        })?;
-
-        // compare against analytical solution
+        // analytical solution
         let mut ana = AnalyticalTet4::new(&shape, &state);
         let kk_correct = ana.integ_stiffness(young, poisson)?;
-        assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), 1e-12);
+
+        // check
+        let nrow = shape.nnode * shape.space_ndim;
+        let mut kk = Matrix::new(nrow, nrow);
+        let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-12];
+        let selection: Vec<_> = [1, 4, 5, 8, 14]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            mat_gdg(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
+                copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+            })
+            .unwrap();
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol); //1e-12
+        });
         Ok(())
     }
 }

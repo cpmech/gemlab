@@ -1,4 +1,5 @@
-use crate::shapes::{IntegPointData, Shape, StateOfShape};
+use super::IntegPointData;
+use crate::shapes::{Shape, StateOfShape};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::Vector;
@@ -428,10 +429,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::{a_shape_times_scalar, b_shape_times_vector, c_vector_dot_gradient, d_tensor_dot_gradient};
-    use crate::shapes::{
-        select_integ_points, AnalyticalTet4, AnalyticalTri3, GeoClass, Shape, StateOfShape, Verification,
-        IP_LIN_LEGENDRE_2, IP_TRI_INTERNAL_1,
-    };
+    use crate::integ::select_integ_points;
+    use crate::shapes::{AnalyticalTet4, AnalyticalTri3, GeoClass, Shape, StateOfShape, Verification};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
@@ -480,14 +479,21 @@ mod tests {
         //        └           ┘
         let l = 6.0;
         let (shape, mut state) = Verification::line_segment_lin2(l);
-        let ips = &IP_LIN_LEGENDRE_2;
-        let x_ips = shape.calc_integ_points_coords(&mut state, ips)?;
-        let mut a = Vector::filled(shape.nnode, NOISE);
-        a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][0]))?;
         let cf = l / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
-        assert_vec_approx_eq!(a.as_data(), a_correct, 1e-15);
+        let mut a = Vector::filled(shape.nnode, NOISE);
+        let tolerances = [1e-15, 1e-14, 1e-15, 1e-15];
+        let selection: Vec<_> = [2, 3, 4, 5]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Lin, *n).unwrap())
+            .collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
+            a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
+            assert_vec_approx_eq!(a.as_data(), a_correct, tol);
+        });
         Ok(())
     }
 
@@ -533,14 +539,15 @@ mod tests {
             shape.geo_ndim,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
+        // Note that the tolerance is high for IP_TET_INTERNAL_1
+        // because the numerical integration performs poorly with few IPs
+        let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15];
         let selection: Vec<_> = [1, 4, 5, 8, 14]
             .iter()
             .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
             .collect();
-        // Note that the tolerance is high for IP_TET_INTERNAL_1
-        // because the numerical integration performs poorly with few IPs
-        let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
             let mut a = Vector::filled(shape.nnode, NOISE);
             a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
@@ -557,14 +564,6 @@ mod tests {
         // So, each component of `b` equals `Fₛ`
         let l = 6.0;
         let (shape, mut state) = Verification::line_segment_lin2(l);
-        let ips = &IP_LIN_LEGENDRE_2;
-        let x_ips = shape.calc_integ_points_coords(&mut state, ips)?;
-        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
-        b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, p| {
-            v[0] = x_ips[p][0];
-            v[1] = x_ips[p][0]; // << note use of x component here too
-            Ok(())
-        })?;
         let cf = l / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let b_correct = &[
@@ -573,7 +572,23 @@ mod tests {
             cf * (xa + 2.0 * xb),
             cf * (xa + 2.0 * xb),
         ];
-        assert_vec_approx_eq!(b.as_data(), b_correct, 1e-15);
+        let tolerances = [1e-15, 1e-15];
+        let selection: Vec<_> = [2, 3]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Lin, *n).unwrap())
+            .collect();
+        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
+            b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, p| {
+                v[0] = x_ips[p][0];
+                v[1] = x_ips[p][0]; // << note use of x component here too
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(b.as_data(), b_correct, tol);
+        });
         Ok(())
     }
 
@@ -583,17 +598,25 @@ mod tests {
         // So, each component of `b` equals `Fₛ`
         let l = 5.0;
         let (shape, mut state, area) = Verification::equilateral_triangle_tri3(l);
-        let ips = &IP_TRI_INTERNAL_1;
         const CS: f64 = 3.0;
-        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
-        b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
-            v[0] = CS;
-            v[1] = CS;
-            Ok(())
-        })?;
         let cf = CS * area / 3.0;
         let b_correct = &[cf, cf, cf, cf, cf, cf];
-        assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
+        let tolerances = [1e-14, 1e-14];
+        let selection: Vec<_> = [1, 3]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .collect();
+        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
+                v[0] = CS;
+                v[1] = CS;
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(b.as_data(), b_correct, tol);
+        });
         Ok(())
     }
 
@@ -605,16 +628,24 @@ mod tests {
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
         let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
-        let ips = &IP_TRI_INTERNAL_1;
-        let mut c = Vector::filled(shape.nnode, NOISE);
-        c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
-            w[0] = W0;
-            w[1] = W1;
-            Ok(())
-        })?;
         let ana = AnalyticalTri3::new(&shape, &mut state);
         let c_correct = ana.integ_vec_c_constant(W0, W1);
-        assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
+        let tolerances = [1e-14, 1e-14];
+        let selection: Vec<_> = [1, 3]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .collect();
+        let mut c = Vector::filled(shape.nnode, NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
+                w[0] = W0;
+                w[1] = W1;
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(c.as_data(), c_correct, tol);
+        });
         Ok(())
     }
 
@@ -624,17 +655,25 @@ mod tests {
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
         let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
-        let ips = &IP_TRI_INTERNAL_1;
-        let x_ips = shape.calc_integ_points_coords(&mut state, ips)?;
-        let mut c = Vector::filled(shape.nnode, NOISE);
-        c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, p| {
-            w[0] = x_ips[p][0];
-            w[1] = x_ips[p][1];
-            Ok(())
-        })?;
         let ana = AnalyticalTri3::new(&shape, &mut state);
         let c_correct = ana.integ_vec_c_bilinear(&state);
-        assert_vec_approx_eq!(c.as_data(), c_correct, 1e-14);
+        let tolerances = [1e-14, 1e-14];
+        let selection: Vec<_> = [1, 3]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .collect();
+        let mut c = Vector::filled(shape.nnode, NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
+            c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, p| {
+                w[0] = x_ips[p][0];
+                w[1] = x_ips[p][1];
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(c.as_data(), c_correct, tol);
+        });
         Ok(())
     }
 
@@ -649,18 +688,26 @@ mod tests {
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
         let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
-        let ips = &IP_TRI_INTERNAL_1;
-        let mut d = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
-        d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
-            sig.sym_set(0, 0, S00);
-            sig.sym_set(1, 1, S11);
-            sig.sym_set(2, 2, S22);
-            sig.sym_set(0, 1, S01);
-            Ok(())
-        })?;
         let ana = AnalyticalTri3::new(&shape, &mut state);
         let d_correct = ana.integ_vec_d_constant(S00, S11, S01);
-        assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
+        let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
+        let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .collect();
+        let mut d = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
+                sig.sym_set(0, 0, S00);
+                sig.sym_set(1, 1, S11);
+                sig.sym_set(2, 2, S22);
+                sig.sym_set(0, 1, S01);
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(d.as_data(), d_correct, tol);
+        });
         Ok(())
     }
 }

@@ -1,4 +1,4 @@
-use super::GeoClass;
+use crate::shapes::GeoClass;
 use crate::StrError;
 
 /// Defines an alias for integration points data (coordinates and weights)
@@ -553,7 +553,7 @@ mod tests {
         );
 
         // Tet
-        for n_integ_point in [1, 4, 5, 6] {
+        for n_integ_point in [1, 4, 5, 8, 14] {
             let ips = select_integ_points(GeoClass::Tet, n_integ_point)?;
             assert_eq!(ips.len(), n_integ_point);
         }
