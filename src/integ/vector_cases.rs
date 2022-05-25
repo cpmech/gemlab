@@ -503,15 +503,22 @@ mod tests {
         // Fₛ = ———— │ 1 │
         //        3  │ 1 │
         //           └   ┘
+        const CS: f64 = 3.0;
         let l = 5.0;
         let (shape, mut state, area) = Verification::equilateral_triangle_tri3(l);
-        let ips = &IP_TRI_INTERNAL_1;
-        const CS: f64 = 3.0;
-        let mut a = Vector::filled(shape.nnode, NOISE);
-        a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(CS))?;
         let cf = CS * area / 3.0;
         let a_correct = &[cf, cf, cf];
-        assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
+        let tolerances = [1e-14, 1e-14, 1e-15, 1e-14, 1e-13, 1e-14];
+        let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .collect();
+        let mut a = Vector::filled(shape.nnode, NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(CS)).unwrap();
+            assert_vec_approx_eq!(a.as_data(), a_correct, tol);
+        });
         Ok(())
     }
 
