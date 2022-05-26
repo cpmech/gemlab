@@ -153,21 +153,21 @@ impl AnalyticalTet4 {
         ]
     }
 
-    /// Integrates shape times vector with constant vector v(x) = {bx,by,bz}
-    pub fn integ_vec_b_constant(&self, bx: f64, by: f64, bz: f64) -> Vec<f64> {
+    /// Integrates shape times vector with constant vector v(x) = {v0, v1, v2}
+    pub fn integ_vec_b_constant(&self, v0: f64, v1: f64, v2: f64) -> Vec<f64> {
         vec![
-            bx * self.volume / 4.0,
-            by * self.volume / 4.0,
-            bz * self.volume / 4.0,
-            bx * self.volume / 4.0,
-            by * self.volume / 4.0,
-            bz * self.volume / 4.0,
-            bx * self.volume / 4.0,
-            by * self.volume / 4.0,
-            bz * self.volume / 4.0,
-            bx * self.volume / 4.0,
-            by * self.volume / 4.0,
-            bz * self.volume / 4.0,
+            v0 * self.volume / 4.0,
+            v1 * self.volume / 4.0,
+            v2 * self.volume / 4.0,
+            v0 * self.volume / 4.0,
+            v1 * self.volume / 4.0,
+            v2 * self.volume / 4.0,
+            v0 * self.volume / 4.0,
+            v1 * self.volume / 4.0,
+            v2 * self.volume / 4.0,
+            v0 * self.volume / 4.0,
+            v1 * self.volume / 4.0,
+            v2 * self.volume / 4.0,
         ]
     }
 

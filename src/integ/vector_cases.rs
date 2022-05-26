@@ -474,11 +474,11 @@ mod tests {
         //
         // solution:
         //
-        //        ┌           ┐
-        //      l │ 2 xa + xb │
-        // Fₛ = — │           │
-        //      6 │ xa + 2 xb │
-        //        └           ┘
+        //       ┌           ┐
+        //     l │ 2 xa + xb │
+        // a = — │           │
+        //     6 │ xa + 2 xb │
+        //       └           ┘
         let l = 6.0;
         let (shape, mut state) = Verification::line_segment_lin2(l);
         let cf = l / 6.0;
@@ -503,21 +503,12 @@ mod tests {
 
     #[test]
     fn vec_a_shape_times_scalar_works_tri3_constant() -> Result<(), StrError> {
-        // tri3 with a constant source term:
-        //
-        // s(x) = cₛ
-        //
-        // solution:
-        //           ┌   ┐
-        //      cₛ A │ 1 │
-        // Fₛ = ———— │ 1 │
-        //        3  │ 1 │
-        //           └   ┘
+        // tri3 with a constant source term s(x) = cₛ
         const CS: f64 = 3.0;
         let l = 5.0;
-        let (shape, mut state, area) = Verification::equilateral_triangle_tri3(l);
-        let cf = CS * area / 3.0;
-        let a_correct = &[cf, cf, cf];
+        let (shape, mut state, _) = Verification::equilateral_triangle_tri3(l);
+        let ana = AnalyticalTri3::new(&shape, &state);
+        let a_correct = ana.integ_vec_a_constant(CS);
         // integration points
         let tolerances = [1e-14, 1e-14, 1e-15, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
@@ -536,10 +527,7 @@ mod tests {
 
     #[test]
     fn vec_a_shape_times_scalar_works_tet4_linear() -> Result<(), StrError> {
-        // tet 4 with a linear source term:
-        //
-        // s(x) = z = x[2]
-        //
+        // tet 4 with a linear source term s(x) = z = x₂
         let shape = Shape::new(3, 3, 4)?;
         let mut state = StateOfShape::new(
             shape.geo_ndim,
@@ -548,7 +536,7 @@ mod tests {
         let ana = AnalyticalTet4::new(&shape, &state);
         let a_correct = ana.integ_vec_a_linear_along_z(&state);
         // integration points
-        // Note that the tolerance is high for IP_TET_INTERNAL_1
+        // Note that the tolerance is high for n_integ_point = 1
         // because the numerical integration performs poorly with few IPs
         let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15];
         let selection: Vec<_> = [1, 4, 5, 8, 14]
@@ -568,8 +556,7 @@ mod tests {
 
     #[test]
     fn vec_b_shape_times_vector_works_lin2_linear() -> Result<(), StrError> {
-        // This test is similar to the shape_times_scalar with lin2, however using a vector
-        // So, each component of `b` equals `Fₛ`
+        // This test is similar to the shape_times_scalar with lin2
         let l = 6.0;
         let (shape, mut state) = Verification::line_segment_lin2(l);
         let cf = l / 6.0;
@@ -607,10 +594,11 @@ mod tests {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let l = 5.0;
-        let (shape, mut state, area) = Verification::equilateral_triangle_tri3(l);
-        const CS: f64 = 3.0;
-        let cf = CS * area / 3.0;
-        let b_correct = &[cf, cf, cf, cf, cf, cf];
+        let (shape, mut state, _) = Verification::equilateral_triangle_tri3(l);
+        const V0: f64 = -3.0;
+        const V1: f64 = 8.0;
+        let ana = AnalyticalTri3::new(&shape, &state);
+        let b_correct = ana.integ_vec_b_constant(V0, V1);
         // integration points
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [1, 3]
@@ -622,8 +610,8 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
-                v[0] = CS;
-                v[1] = CS;
+                v[0] = V0;
+                v[1] = V1;
                 Ok(())
             })
             .unwrap();
@@ -635,19 +623,16 @@ mod tests {
     #[test]
     fn vec_b_shape_times_vector_works_tet4_constant() -> Result<(), StrError> {
         // tet 4 with constant vector
-        //
-        // v(x) = {bx,by,bz}
-        //
         let shape = Shape::new(3, 3, 4)?;
         let mut state = StateOfShape::new(
             shape.geo_ndim,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
-        const BX: f64 = 2.0;
-        const BY: f64 = 3.0;
-        const BZ: f64 = 4.0;
+        const V0: f64 = 2.0;
+        const V1: f64 = 3.0;
+        const V2: f64 = 4.0;
         let ana = AnalyticalTet4::new(&shape, &state);
-        let b_correct = ana.integ_vec_b_constant(BX, BY, BZ);
+        let b_correct = ana.integ_vec_b_constant(V0, V1, V2);
         // integration points
         let tolerances = [1e-15, 1e-15];
         let selection: Vec<_> = [1, 4]
@@ -659,9 +644,9 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
-                v[0] = BX;
-                v[1] = BY;
-                v[2] = BZ;
+                v[0] = V0;
+                v[1] = V1;
+                v[2] = V2;
                 Ok(())
             })
             .unwrap();
