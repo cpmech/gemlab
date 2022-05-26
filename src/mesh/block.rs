@@ -534,7 +534,6 @@ mod tests {
         let constraint = Constraint::Arc(Circle {
             center: [-1.0, -1.0],
             radius: 2.0,
-            tolerance: 1e-3,
         });
         block.set_edge_constraint(0, constraint);
         let ok = match block.edge_constraints[0] {
@@ -560,7 +559,6 @@ mod tests {
         let constraint = Constraint::ArcX(Circle {
             center: [-1.0, -1.0],
             radius: 2.0,
-            tolerance: 1e-3,
         });
         block.set_face_constraint(0, constraint);
         let ok = match block.face_constraints[0] {

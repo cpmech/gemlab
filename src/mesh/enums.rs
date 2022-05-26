@@ -52,10 +52,9 @@ mod tests {
         let constraint = Constraint::Arc(Circle {
             center: [2.0, 3.0],
             radius: 1.0,
-            tolerance: 1e-2,
         });
         let clone = constraint.clone();
-        let correct = "Arc(Circle { center: [2.0, 3.0], radius: 1.0, tolerance: 0.01 })";
+        let correct = "Arc(Circle { center: [2.0, 3.0], radius: 1.0 })";
         assert_eq!(format!("{:?}", constraint), correct);
         assert_eq!(format!("{:?}", clone), correct);
     }
