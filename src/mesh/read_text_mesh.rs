@@ -243,7 +243,7 @@ impl Mesh {
     ///
     /// # Examples
     ///
-    /// See `examples` directory and [super::Samples] for more examples
+    /// See `examples` and `data/meshes` directories for more examples
     /// (with pretty formatted strings).
     ///
     /// ```
