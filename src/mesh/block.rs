@@ -537,7 +537,11 @@ mod tests {
             tolerance: 1e-3,
         });
         block.set_edge_constraint(0, constraint);
-        assert_eq!(block.edge_constraints[0], Some(constraint));
+        let ok = match block.edge_constraints[0] {
+            Some(..) => true,
+            None => false,
+        };
+        assert_eq!(ok, true);
         Ok(())
     }
 
@@ -559,7 +563,11 @@ mod tests {
             tolerance: 1e-3,
         });
         block.set_face_constraint(0, constraint);
-        assert_eq!(block.face_constraints[0], Some(constraint));
+        let ok = match block.face_constraints[0] {
+            Some(..) => true,
+            None => false,
+        };
+        assert_eq!(ok, true);
         Ok(())
     }
 

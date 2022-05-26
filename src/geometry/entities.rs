@@ -1,5 +1,5 @@
 /// Holds data defining a circle in 2D
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Circle {
     pub center: [f64; 2],
     pub radius: f64,
@@ -20,10 +20,8 @@ mod tests {
             tolerance: 1e-3,
         };
         let clone = circle.clone();
-        assert_eq!(circle, clone);
-        assert_eq!(
-            format!("{:?}", circle),
-            "Circle { center: [-1.0, -1.0], radius: 2.0, tolerance: 0.001 }"
-        );
+        let correct = "Circle { center: [-1.0, -1.0], radius: 2.0, tolerance: 0.001 }";
+        assert_eq!(format!("{:?}", circle), correct);
+        assert_eq!(format!("{:?}", clone), correct);
     }
 }
