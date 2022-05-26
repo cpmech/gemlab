@@ -867,10 +867,7 @@ mod tests {
 
     #[test]
     fn vec_c_vector_dot_gradient_works_tet4_constant() -> Result<(), StrError> {
-        // tet 4 with constant vector
-        //
-        // w(x) = {w0, w1, w2}
-        //
+        // tet 4 with constant vector  w(x) = {w0, w1, w2}
         let shape = Shape::new(3, 3, 4)?;
         let mut state = StateOfShape::new(
             shape.geo_ndim,
@@ -942,10 +939,6 @@ mod tests {
     #[test]
     fn vec_d_tensor_dot_gradient_tet4_works_constant() -> Result<(), StrError> {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
-        // solution:
-        //    dᵐ₀ = ⅙ (σ₀₀ aₘ + σ₀₁ bₘ + σ₀₂ cₘ)
-        //    dᵐ₁ = ⅙ (σ₁₀ aₘ + σ₁₁ bₘ + σ₁₂ cₘ)
-        //    dᵐ₂ = ⅙ (σ₂₀ aₘ + σ₂₁ bₘ + σ₂₂ cₘ)
         let shape = Shape::new(3, 3, 4)?;
         let mut state = StateOfShape::new(
             shape.geo_ndim,
