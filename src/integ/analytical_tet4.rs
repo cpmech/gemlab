@@ -172,7 +172,8 @@ impl AnalyticalTet4 {
 
     /// Integrates vector dot gradient with constant vector w(x) = {w0, w1, w2}
     ///
-    /// solution:
+    /// Solution:
+    ///
     /// ```text
     /// cᵐ = ½ (w₀ aₘ + w₁ bₘ + w₂ cₘ)
     /// ```
@@ -182,6 +183,32 @@ impl AnalyticalTet4 {
             (w0 * self.a[1] + w1 * self.b[1] + w2 * self.c[1]) / 6.0,
             (w0 * self.a[2] + w1 * self.b[2] + w2 * self.c[2]) / 6.0,
             (w0 * self.a[3] + w1 * self.b[3] + w2 * self.c[3]) / 6.0,
+        ]
+    }
+
+    /// Integrates tensor dot gradient with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
+    ///
+    /// Solution:
+    ///
+    /// ```text
+    ///    dᵐ₀ = ⅙ (σ₀₀ aₘ + σ₀₁ bₘ + σ₀₂ cₘ)
+    ///    dᵐ₁ = ⅙ (σ₁₀ aₘ + σ₁₁ bₘ + σ₁₂ cₘ)
+    ///    dᵐ₂ = ⅙ (σ₂₀ aₘ + σ₂₁ bₘ + σ₂₂ cₘ)
+    /// ```
+    pub fn integ_vec_d_constant(&self, s00: f64, s11: f64, s22: f64, s01: f64, s12: f64, s02: f64) -> Vec<f64> {
+        vec![
+            (s00 * self.a[0] + s01 * self.b[0] + s02 * self.c[0]) / 6.0,
+            (s01 * self.a[0] + s11 * self.b[0] + s12 * self.c[0]) / 6.0,
+            (s02 * self.a[0] + s12 * self.b[0] + s22 * self.c[0]) / 6.0,
+            (s00 * self.a[1] + s01 * self.b[1] + s02 * self.c[1]) / 6.0,
+            (s01 * self.a[1] + s11 * self.b[1] + s12 * self.c[1]) / 6.0,
+            (s02 * self.a[1] + s12 * self.b[1] + s22 * self.c[1]) / 6.0,
+            (s00 * self.a[2] + s01 * self.b[2] + s02 * self.c[2]) / 6.0,
+            (s01 * self.a[2] + s11 * self.b[2] + s12 * self.c[2]) / 6.0,
+            (s02 * self.a[2] + s12 * self.b[2] + s22 * self.c[2]) / 6.0,
+            (s00 * self.a[3] + s01 * self.b[3] + s02 * self.c[3]) / 6.0,
+            (s01 * self.a[3] + s11 * self.b[3] + s12 * self.c[3]) / 6.0,
+            (s02 * self.a[3] + s12 * self.b[3] + s22 * self.c[3]) / 6.0,
         ]
     }
 

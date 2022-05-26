@@ -802,4 +802,49 @@ mod tests {
         });
         Ok(())
     }
+
+    #[test]
+    fn d_tensor_dot_gradient_tet4_works_constant() -> Result<(), StrError> {
+        // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
+        // solution:
+        //    dᵐ₀ = ⅙ (σ₀₀ aₘ + σ₀₁ bₘ + σ₀₂ cₘ)
+        //    dᵐ₁ = ⅙ (σ₁₀ aₘ + σ₁₁ bₘ + σ₁₂ cₘ)
+        //    dᵐ₂ = ⅙ (σ₂₀ aₘ + σ₂₁ bₘ + σ₂₂ cₘ)
+        let shape = Shape::new(3, 3, 4)?;
+        let mut state = StateOfShape::new(
+            shape.geo_ndim,
+            &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
+        )?;
+        const S00: f64 = 2.0;
+        const S11: f64 = 3.0;
+        const S22: f64 = 4.0;
+        const S01: f64 = 5.0;
+        const S12: f64 = 6.0;
+        const S02: f64 = 7.0;
+        let ana = AnalyticalTet4::new(&shape, &state);
+        let d_correct = ana.integ_vec_d_constant(S00, S11, S22, S01, S12, S02);
+        // integration points
+        let tolerances = [1e-14, 1e-14, 1e-13, 1e-14, 1e-14];
+        let selection: Vec<_> = [1, 4, 5, 8, 14]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .collect();
+        // check
+        let mut d = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
+                sig.sym_set(0, 0, S00);
+                sig.sym_set(1, 1, S11);
+                sig.sym_set(2, 2, S22);
+                sig.sym_set(0, 1, S01);
+                sig.sym_set(1, 2, S12);
+                sig.sym_set(0, 2, S02);
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(d.as_data(), d_correct, tol);
+        });
+        Ok(())
+    }
 }
