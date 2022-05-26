@@ -68,7 +68,7 @@ impl AnalyticalTri3 {
         }
     }
 
-    /// Performs the integ_vec_c operation given constant vector function w(x) = {w₀, w₁}
+    /// Integrates vector dot gradient with constant vector function w(x) = {w₀, w₁}
     ///
     /// solution:
     /// ```text
@@ -86,7 +86,7 @@ impl AnalyticalTri3 {
         ]
     }
 
-    /// Performs the integ_vec_c operation given bilinear vector function w(x) = {x, y}
+    /// Integrates vector dot gradient with bilinear vector function w(x) = {x, y}
     ///
     /// solution:
     /// ```text
@@ -95,7 +95,8 @@ impl AnalyticalTri3 {
     ///
     /// # Input
     ///
-    /// * `shape` -- the same shape used in `new` because we need the nodal coordinates here
+    /// * `shape` -- The same shape used in `new` because we need the nodal coordinates here
+    ///              Do not change the coordinates, otherwise the values will be wrong.
     pub fn integ_vec_c_bilinear(&self, state: &StateOfShape) -> Vec<f64> {
         let (x0, x1, x2) = (
             state.coords_transp[0][0],
@@ -107,15 +108,14 @@ impl AnalyticalTri3 {
             state.coords_transp[1][1],
             state.coords_transp[1][2],
         );
-        let ana = self;
         vec![
-            (x0 + x1 + x2) * ana.b[0] / 6.0 + (y0 + y1 + y2) * ana.c[0] / 6.0,
-            (x0 + x1 + x2) * ana.b[1] / 6.0 + (y0 + y1 + y2) * ana.c[1] / 6.0,
-            (x0 + x1 + x2) * ana.b[2] / 6.0 + (y0 + y1 + y2) * ana.c[2] / 6.0,
+            (x0 + x1 + x2) * self.b[0] / 6.0 + (y0 + y1 + y2) * self.c[0] / 6.0,
+            (x0 + x1 + x2) * self.b[1] / 6.0 + (y0 + y1 + y2) * self.c[1] / 6.0,
+            (x0 + x1 + x2) * self.b[2] / 6.0 + (y0 + y1 + y2) * self.c[2] / 6.0,
         ]
     }
 
-    /// Performs the integ_vec_d operation given constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
+    /// Integrates tensor dot gradient with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
     ///
     /// solution:
     /// ```text
@@ -127,14 +127,13 @@ impl AnalyticalTri3 {
     ///
     /// * `s₀₀, s₁₁, s₀₁` -- components of a constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
     pub fn integ_vec_d_constant(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
-        let ana = self;
         vec![
-            (s00 * ana.b[0] + s01 * ana.c[0]) / 2.0,
-            (s01 * ana.b[0] + s11 * ana.c[0]) / 2.0,
-            (s00 * ana.b[1] + s01 * ana.c[1]) / 2.0,
-            (s01 * ana.b[1] + s11 * ana.c[1]) / 2.0,
-            (s00 * ana.b[2] + s01 * ana.c[2]) / 2.0,
-            (s01 * ana.b[2] + s11 * ana.c[2]) / 2.0,
+            (s00 * self.b[0] + s01 * self.c[0]) / 2.0,
+            (s01 * self.b[0] + s11 * self.c[0]) / 2.0,
+            (s00 * self.b[1] + s01 * self.c[1]) / 2.0,
+            (s01 * self.b[1] + s11 * self.c[1]) / 2.0,
+            (s00 * self.b[2] + s01 * self.c[2]) / 2.0,
+            (s01 * self.b[2] + s11 * self.c[2]) / 2.0,
         ]
     }
 

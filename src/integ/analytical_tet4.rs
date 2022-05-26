@@ -17,6 +17,9 @@ pub struct AnalyticalTet4 {
     // Holds the volume of the tetrahedron
     pub volume: f64,
 
+    /// Gradients (nnode,space_ndim) dN/dx
+    pub gg: Matrix,
+
     /// Holds the B-matrix
     pub bb: Matrix,
 }
@@ -94,8 +97,20 @@ impl AnalyticalTet4 {
         let b4 = x21 * z13 - x31 * z12;
         let c4 = x13 * y21 - x12 * y31;
 
-        let r = jj_det;
+        // auxiliary
+        let r = jj_det; // == 6 * V
         let s = r * SQRT_2;
+
+        // gradients
+        #[rustfmt::skip]
+        let gg = Matrix::from(&[
+            [a1/r, b1/r, c1/r],
+            [a2/r, b2/r, c2/r],
+            [a3/r, b3/r, c3/r],
+            [a4/r, b4/r, c4/r],
+        ]);
+
+        // B-matrix
         #[rustfmt::skip]
         let bb = Matrix::from(&[
             [a1/r,  0.0,  0.0, a2/r,  0.0,  0.0, a3/r,  0.0,  0.0, a4/r,  0.0,  0.0],
@@ -111,19 +126,17 @@ impl AnalyticalTet4 {
             b: [b1, b2, b3, b4],
             c: [c1, c2, c3, c4],
             volume: jj_det / 6.0,
+            gg,
             bb,
         }
     }
 
-    /// Integrates shape times scalar with linear scalar function
-    ///
-    /// ```text
-    /// s(x) = x[2] = z
-    /// ```
+    /// Integrates shape times scalar with linear scalar function s(x) = x[2] = z
     ///
     /// # Input
     ///
-    /// * `shape` -- the same shape used in `new` because we need the nodal coordinates here
+    /// * `shape` -- The same shape used in `new` because we need the nodal coordinates here.
+    ///              Do not change the coordinates, otherwise the values will be wrong.
     pub fn integ_vec_a_linear_along_z(&self, state: &StateOfShape) -> Vec<f64> {
         let (z1, z2, z3, z4) = (
             state.coords_transp[2][0],
@@ -139,11 +152,7 @@ impl AnalyticalTet4 {
         ]
     }
 
-    /// Integrates shape times vector with constant function
-    ///
-    /// ```text
-    /// v(x) = {bx,by,bz}
-    /// ```
+    /// Integrates shape times vector with constant vector v(x) = {bx,by,bz}
     pub fn integ_vec_b_constant(&self, bx: f64, by: f64, bz: f64) -> Vec<f64> {
         vec![
             bx * self.volume / 4.0,
@@ -158,6 +167,21 @@ impl AnalyticalTet4 {
             bx * self.volume / 4.0,
             by * self.volume / 4.0,
             bz * self.volume / 4.0,
+        ]
+    }
+
+    /// Integrates vector dot gradient with constant vector w(x) = {w0, w1, w2}
+    ///
+    /// solution:
+    /// ```text
+    /// cᵐ = ½ (w₀ aₘ + w₁ bₘ + w₂ cₘ)
+    /// ```
+    pub fn integ_vec_c_constant(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
+        vec![
+            (w0 * self.a[0] + w1 * self.b[0] + w2 * self.c[0]) / 6.0,
+            (w0 * self.a[1] + w1 * self.b[1] + w2 * self.c[1]) / 6.0,
+            (w0 * self.a[2] + w1 * self.b[2] + w2 * self.c[2]) / 6.0,
+            (w0 * self.a[3] + w1 * self.b[3] + w2 * self.c[3]) / 6.0,
         ]
     }
 
@@ -198,7 +222,11 @@ mod tests {
         let mut state =
             StateOfShape::new(3, &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]).unwrap();
         let mut tet = AnalyticalTet4::new(&shape, &mut state);
+        shape.calc_gradient(&mut state, &[0.1, 0.1, 0.1])?;
         assert_eq!(tet.volume, 1.0 / 6.0);
+        // println!("gg=\n{}", tet.gg);
+        // println!("gradient=\n{}", state.gradient);
+        assert_vec_approx_eq!(tet.gg.as_data(), state.gradient.as_data(), 1e-15);
         let ee = 480.0;
         let nu = 1.0 / 3.0;
         let eb = ee / (12.0 * (1.0 - 2.0 * nu) * (1.0 + nu));
@@ -228,8 +256,12 @@ mod tests {
         let mut state =
             StateOfShape::new(3, &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]]).unwrap();
         let mut tet = AnalyticalTet4::new(&shape, &mut state);
-        let kk = tet.integ_stiffness(ee, nu)?;
+        shape.calc_gradient(&mut state, &[0.1, 0.2, 0.3])?;
         assert_eq!(tet.volume, 4.0);
+        println!("gg=\n{}", tet.gg);
+        // println!("gradient=\n{}", state.gradient);
+        assert_vec_approx_eq!(tet.gg.as_data(), state.gradient.as_data(), 1e-15);
+        let kk = tet.integ_stiffness(ee, nu)?;
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
             [ 745.0,  540.0, 120.0,  -5.0,  30.0,  60.0,-270.0, -240.0,   0.0,-470.0, -330.0,-180.0],

@@ -655,7 +655,7 @@ mod tests {
         // check
         let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            println!("nip={}, tol={:.e}", ips.len(), tol);
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
             b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
                 v[0] = BX;
                 v[1] = BY;
@@ -721,6 +721,44 @@ mod tests {
             c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, p| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(c.as_data(), c_correct, tol);
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn c_vector_dot_gradient_works_tet4_constant() -> Result<(), StrError> {
+        // tet 4 with constant vector
+        //
+        // w(x) = {w0, w1, w2}
+        //
+        let shape = Shape::new(3, 3, 4)?;
+        let mut state = StateOfShape::new(
+            shape.geo_ndim,
+            &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
+        )?;
+        const W0: f64 = 2.0;
+        const W1: f64 = 3.0;
+        const W2: f64 = 4.0;
+        let ana = AnalyticalTet4::new(&shape, &state);
+        let c_correct = ana.integ_vec_c_constant(W0, W1, W2);
+        // integration points
+        let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
+        let selection: Vec<_> = [1, 4, 5, 8, 14]
+            .iter()
+            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .collect();
+        // check
+        let mut c = Vector::filled(shape.nnode, NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
+                w[0] = W0;
+                w[1] = W1;
+                w[2] = W2;
                 Ok(())
             })
             .unwrap();
