@@ -1,4 +1,4 @@
-//! Contains basic geometric features and algorithms
+//! Fundamental geometry entities and algorithms
 
 /// Holds data defining a circle in 2D
 #[derive(Clone, Copy, Debug, PartialEq)]

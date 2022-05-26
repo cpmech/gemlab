@@ -1,4 +1,4 @@
-//! Implements shape objects for numerical integration and other calculations
+//! Interpolation functions and derivatives for geometric shapes
 
 mod enums;
 mod hex20;

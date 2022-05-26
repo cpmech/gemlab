@@ -1,4 +1,4 @@
-//! Implements functions to perform numerical integration using Shapes
+//! Functions to perform numerical integration using Shapes
 
 mod analytical_tet4;
 mod analytical_tri3;

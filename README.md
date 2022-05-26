@@ -1,6 +1,6 @@
-# Geometry laboratory for finite element analyses
+# Geometry, meshes, and integration for finite element analyses
 
-This repository contains structures and functions to perform geometry computations and generate meshes for finite element analyses.
+This repository contains structures and functions to perform geometry computations, generate meshes, and perform numerical integration for finite element analyses (FEM/FEA).
 
 We use `Vector` and `Matrix` from [Russell Lab](https://github.com/cpmech/russell), thus some Debian packages are required.
 
@@ -28,7 +28,7 @@ gemlab = "0.2"
 ## Todo
 
 - [x] Implement read/write mesh functions
-- [ ] Add tests to the z_integration file
+- [x] Add tests for the numerical integrations
 - [ ] Implement triangle and tetrahedron generators
 
 ## Examples

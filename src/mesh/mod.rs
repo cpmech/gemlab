@@ -1,4 +1,4 @@
-//! Defines finite element mesh and generators
+//! Mesh definitions, read/write, boundary, find, and generators for FEA
 
 mod block;
 mod boundary;
