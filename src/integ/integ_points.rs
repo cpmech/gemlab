@@ -1,4 +1,4 @@
-use crate::shapes::GeoClass;
+use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 
 /// Defines an alias for integration points data (coordinates and weights)
@@ -12,6 +12,38 @@ use crate::StrError;
 /// where `NIP` is the number of integration points in a particular set.
 /// Therein, `4` corresponds to (r, s, t) and the weight (w).
 pub type IntegPointData = &'static [[f64; 4]];
+
+/// Returns a default set of integration points and weights
+///
+/// **Note:** The default set is chosen based on the number of nodes
+/// and the "probable" use case in finite element analyses.
+pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
+    match kind {
+        // Lin
+        GeoKind::Lin2 => &IP_LIN_LEGENDRE_2,
+        GeoKind::Lin3 => &IP_LIN_LEGENDRE_3,
+        GeoKind::Lin4 => &IP_LIN_LEGENDRE_4,
+        GeoKind::Lin5 => &IP_LIN_LEGENDRE_5,
+        // Tri
+        GeoKind::Tri3 => &IP_TRI_INTERNAL_1,
+        GeoKind::Tri6 => &IP_TRI_INTERNAL_4,
+        GeoKind::Tri10 => &IP_TRI_INTERNAL_12,
+        GeoKind::Tri15 => &IP_TRI_INTERNAL_16,
+        // Qua
+        GeoKind::Qua4 => &IP_QUA_LEGENDRE_4,
+        GeoKind::Qua8 => &IP_QUA_LEGENDRE_9,
+        GeoKind::Qua9 => &IP_QUA_LEGENDRE_9,
+        GeoKind::Qua12 => &IP_QUA_LEGENDRE_16,
+        GeoKind::Qua16 => &IP_QUA_LEGENDRE_16,
+        GeoKind::Qua17 => &IP_QUA_LEGENDRE_16,
+        // Tet
+        GeoKind::Tet4 => &IP_TET_INTERNAL_1,
+        GeoKind::Tet10 => &IP_TET_FELIPPA_14,
+        // Hex
+        GeoKind::Hex8 => &IP_HEX_LEGENDRE_8,
+        GeoKind::Hex20 => &IP_HEX_LEGENDRE_27,
+    }
+}
 
 /// Selects integration points constants (coordinates and weights)
 ///
@@ -518,9 +550,36 @@ pub const IP_HEX_LEGENDRE_27: [[f64; 4]; 27] = [
 
 #[cfg(test)]
 mod tests {
-    use super::select_integ_points;
-    use crate::shapes::GeoClass;
+    use super::{default_integ_points, select_integ_points};
+    use crate::shapes::{GeoClass, GeoKind};
     use crate::StrError;
+
+    #[test]
+    fn default_integ_points_works() {
+        // Lin
+        assert_eq!(default_integ_points(GeoKind::Lin2).len(), 2);
+        assert_eq!(default_integ_points(GeoKind::Lin3).len(), 3);
+        assert_eq!(default_integ_points(GeoKind::Lin4).len(), 4);
+        assert_eq!(default_integ_points(GeoKind::Lin5).len(), 5);
+        // Tri
+        assert_eq!(default_integ_points(GeoKind::Tri3).len(), 1);
+        assert_eq!(default_integ_points(GeoKind::Tri6).len(), 4);
+        assert_eq!(default_integ_points(GeoKind::Tri10).len(), 12);
+        assert_eq!(default_integ_points(GeoKind::Tri15).len(), 16);
+        // Qua
+        assert_eq!(default_integ_points(GeoKind::Qua4).len(), 4);
+        assert_eq!(default_integ_points(GeoKind::Qua8).len(), 9);
+        assert_eq!(default_integ_points(GeoKind::Qua9).len(), 9);
+        assert_eq!(default_integ_points(GeoKind::Qua12).len(), 16);
+        assert_eq!(default_integ_points(GeoKind::Qua16).len(), 16);
+        assert_eq!(default_integ_points(GeoKind::Qua17).len(), 16);
+        // Tet
+        assert_eq!(default_integ_points(GeoKind::Tet4).len(), 1);
+        assert_eq!(default_integ_points(GeoKind::Tet10).len(), 14);
+        // Hex
+        assert_eq!(default_integ_points(GeoKind::Hex8).len(), 8);
+        assert_eq!(default_integ_points(GeoKind::Hex20).len(), 27);
+    }
 
     #[test]
     fn select_integ_points_works() -> Result<(), StrError> {
