@@ -83,9 +83,6 @@ pub type GeoNdim = usize;
 /// GeoNnode is the number of nodes associated with a geometric feature
 pub type GeoNnode = usize;
 
-/// GeoKey identifies a geometric feature given its space dimension and number of nodes
-pub type GeoKey = (GeoNdim, GeoNnode);
-
 impl GeoKind {
     /// Holds all (geo_ndim,nnode) pairs
     pub const PAIRS: [(usize, usize); 18] = [
