@@ -54,8 +54,8 @@ pub type IntegPointData = &'static [[f64; 4]];
 /// * `1` -- Internal integration points and weights, degree 1
 /// * `4` -- Internal integration points and weights, degree 2 (from Felippa's code)
 /// * `5` -- Internal integration points and weights, degree 3 (with negative weight)
-/// * `8` -- Internal integration points and weights, degree 3 (from Felippa's code)
-/// * `14` -- Internal integration points and weights, degree 14 (from Felippa's code)
+/// * `8` -- Internal (Felippa's) ips and weights, degree 3 (from Felippa's code)
+/// * `14` -- Internal (Felippa's) ips and weights, degree 14 (from Felippa's code)
 ///
 /// `n_integ_point` for **Hex** class:
 ///
@@ -102,8 +102,8 @@ pub fn select_integ_points(class: GeoClass, n_integ_point: usize) -> Result<Inte
             1 => &IP_TET_INTERNAL_1,
             4 => &IP_TET_INTERNAL_4,
             5 => &IP_TET_INTERNAL_5,
-            8 => &IP_TET_INTERNAL_8,
-            14 => &IP_TET_INTERNAL_14,
+            8 => &IP_TET_FELIPPA_8,
+            14 => &IP_TET_FELIPPA_14,
             _ => return Err("desired number of integration points is not available for Tet class"),
         },
         // Hex
@@ -344,6 +344,8 @@ pub const IP_TET_INTERNAL_1: [[f64; 4]; 1] = [
 /// Internal integration points and weights, 4 points, degree 2
 /// 
 /// Reference: Felippa Advanced FEM, page 17-21, Table 17.1
+/// See also Felippa (2004) A compendium of FEM integration formulas for symbolic work
+/// Engineering Computations, 21, 7/8, pg 867
 #[rustfmt::skip]
 pub const IP_TET_INTERNAL_4: [[f64; 4]; 4] = [
     [0.13819660112501051518, 0.13819660112501051518, 0.13819660112501051518, 0.041666666666666666667],
@@ -368,8 +370,10 @@ pub const IP_TET_INTERNAL_5: [[f64; 4]; 5] = [
 /// Internal integration points and weights, 8 points, degree 3
 /// 
 /// Reference: Felippa Advanced FEM, page 17-21, Table 17.1
+/// See also Felippa (2004) A compendium of FEM integration formulas for symbolic work
+/// Engineering Computations, 21, 7/8, pg 867
 #[rustfmt::skip]
-pub const IP_TET_INTERNAL_8: [[f64; 4]; 8] = [
+pub const IP_TET_FELIPPA_8: [[f64; 4]; 8] = [
     [0.32805469671142664734,  0.32805469671142664734,  0.32805469671142664734,  0.023087994418643690387], 
     [0.015835909865720057993, 0.32805469671142664734,  0.32805469671142664734,  0.023087994418643690387], 
     [0.32805469671142664734,  0.015835909865720057993, 0.32805469671142664734,  0.023087994418643690387], 
@@ -382,9 +386,11 @@ pub const IP_TET_INTERNAL_8: [[f64; 4]; 8] = [
 
 /// Internal integration points and weights, 14 points, degree 4
 /// 
-/// Reference: Felippa Advanced FEM, page 17-21, Table 17.1
+/// References: Felippa Advanced FEM, page 17-21, Table 17.1
+/// See also Felippa (2004) A compendium of FEM integration formulas for symbolic work
+/// Engineering Computations, 21, 7/8, pg 867
 #[rustfmt::skip]
-pub const IP_TET_INTERNAL_14: [[f64; 4]; 14] = [
+pub const IP_TET_FELIPPA_14: [[f64; 4]; 14] = [
     [0.092735250310891226402, 0.092735250310891226402, 0.092735250310891226402, 0.012248840519393658257 ], 
     [0.72179424906732632079,  0.092735250310891226402, 0.092735250310891226402, 0.012248840519393658257 ], 
     [0.092735250310891226402, 0.72179424906732632079,  0.092735250310891226402, 0.012248840519393658257 ], 
