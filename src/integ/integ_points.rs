@@ -17,6 +17,16 @@ pub type IntegPointData = &'static [[f64; 4]];
 ///
 /// **Note:** The default set is chosen based on the number of nodes
 /// and the "probable" use case in finite element analyses.
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::integ::default_integ_points;
+/// use gemlab::shapes::GeoKind;
+///
+/// let ips = default_integ_points(GeoKind::Tet4);
+/// assert_eq!(ips, [[0.25, 0.25, 0.25, 1.0/6.0]]);
+/// ```
 pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
     match kind {
         // Lin
@@ -97,6 +107,20 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
 /// * `1_009` -- Wilson's integration points and weights. "Stable" version
 /// * `14` -- Iron's integration points and weights
 /// * `27` -- Conventional Legendre integration points and weights
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::integ::select_integ_points;
+/// use gemlab::shapes::GeoClass;
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     let ips = select_integ_points(GeoClass::Tet, 1)?;
+///     assert_eq!(ips, [[0.25, 0.25, 0.25, 1.0/6.0]]);
+///     Ok(())
+/// }
+/// ```
 pub fn select_integ_points(class: GeoClass, n_integ_point: usize) -> Result<IntegPointData, StrError> {
     let ips: IntegPointData = match class {
         // Lin
