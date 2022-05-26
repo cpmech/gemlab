@@ -60,7 +60,7 @@ use russell_tensor::Tensor4;
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `erase_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `fn_dd` -- Function f(D,p) corresponding to `D(x(ιᵖ))`
-pub fn mat_gdg<F>(
+pub fn mat_gdg_stiffness<F>(
     kk: &mut Matrix,
     state: &mut StateOfShape,
     shape: &Shape,
@@ -142,7 +142,7 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, shape: &Shape, s
 
 #[cfg(test)]
 mod tests {
-    use super::mat_gdg;
+    use super::mat_gdg_stiffness;
     use crate::integ::{select_integ_points, AnalyticalTet4, AnalyticalTri3};
     use crate::shapes::{GeoClass, Shape, StateOfShape};
     use crate::StrError;
@@ -156,13 +156,13 @@ mod tests {
         let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
-            mat_gdg(&mut kk, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
+            mat_gdg_stiffness(&mut kk, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
             Some("K.dims() must be equal to (nnode*space_ndim,nnode*space_ndim)")
         );
     }
 
     #[test]
-    fn stiffness_works_tri3_plane_stress() -> Result<(), StrError> {
+    fn mat_gdg_stiffness_works_tri3_plane_stress() -> Result<(), StrError> {
         // Element # 0 from example 1.6 from [@bhatti] page 32
         // Solid bracket with thickness = 0.25
         //              1     -10                connectivity:
@@ -194,7 +194,7 @@ mod tests {
         let nrow = shape.nnode * shape.space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = select_integ_points(GeoClass::Tri, 1)?;
-        mat_gdg(&mut kk, &mut state, &shape, ips, th, true, |dd, _| {
+        mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, th, true, |dd, _| {
             copy_matrix(&mut dd.mat, &model.get_modulus().mat)
         })?;
 
@@ -222,7 +222,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            mat_gdg(&mut kk, &mut state, &shape, ips, th, true, |dd, _| {
+            mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, th, true, |dd, _| {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();
@@ -232,7 +232,7 @@ mod tests {
     }
 
     #[test]
-    fn stiffness_works_tet4() -> Result<(), StrError> {
+    fn mat_gdg_stiffness_works_tet4() -> Result<(), StrError> {
         // shape and state
         let shape = Shape::new(3, 3, 4)?;
         let mut state = StateOfShape::new(
@@ -259,7 +259,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            mat_gdg(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
+            mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();

@@ -5,7 +5,7 @@ use crate::StrError;
 use russell_lab::Vector;
 use russell_tensor::Tensor2;
 
-/// Implements the shape(N) times scalar(S) integration case A
+/// Implements the shape(N) times scalar(S) integration case
 ///
 /// Interpolation functions times scalar field:
 ///
@@ -60,7 +60,7 @@ use russell_tensor::Tensor2;
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `erase_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
 /// * `fn_s` -- Function `f(p)` corresponding to `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
-pub fn a_shape_times_scalar<F>(
+pub fn vec_a_shape_times_scalar<F>(
     a: &mut Vector,
     state: &mut StateOfShape,
     shape: &Shape,
@@ -104,7 +104,7 @@ where
     Ok(())
 }
 
-/// Implements the the shape(N) times vector(V) integration case B
+/// Implements the the shape(N) times vector(V) integration case
 ///
 /// Interpolation functions times vector field:
 ///
@@ -157,7 +157,7 @@ where
 /// * `erase_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
 /// * `fn_v` -- Function `f(v,p)` corresponding to `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///             The dim of `v` is equal to `space_ndim`.
-pub fn b_shape_times_vector<F>(
+pub fn vec_b_shape_times_vector<F>(
     b: &mut Vector,
     state: &mut StateOfShape,
     shape: &Shape,
@@ -214,7 +214,7 @@ where
     Ok(())
 }
 
-/// Implements the vector(V) dot gradient(G) integration case C
+/// Implements the vector(V) dot gradient(G) integration case
 ///
 /// Vector dot gradient:
 ///
@@ -261,7 +261,7 @@ where
 /// * `erase_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
 /// * `fn_w` -- Function `f(w,p)` corresponding to `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///             The dim of `w` is equal to `space_ndim`.
-pub fn c_vector_dot_gradient<F>(
+pub fn vec_c_vector_dot_gradient<F>(
     c: &mut Vector,
     state: &mut StateOfShape,
     shape: &Shape,
@@ -314,7 +314,7 @@ where
     Ok(())
 }
 
-/// Implements the tensor(T) dot gradient(G) integration case D
+/// Implements the tensor(T) dot gradient(G) integration case
 ///
 /// Tensor dot gradient:
 ///
@@ -366,7 +366,7 @@ where
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `erase_d` -- Fills `d` vector with zeros, otherwise accumulate values into `d`
 /// * `fn_sig` -- Function `f(sig,p)` corresponding to `σ(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
-pub fn d_tensor_dot_gradient<F>(
+pub fn vec_d_tensor_dot_gradient<F>(
     d: &mut Vector,
     state: &mut StateOfShape,
     shape: &Shape,
@@ -428,7 +428,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{a_shape_times_scalar, b_shape_times_vector, c_vector_dot_gradient, d_tensor_dot_gradient};
+    use super::{
+        vec_a_shape_times_scalar, vec_b_shape_times_vector, vec_c_vector_dot_gradient, vec_d_tensor_dot_gradient,
+    };
     use crate::integ::{select_integ_points, AnalyticalTet4, AnalyticalTri3};
     use crate::shapes::{GeoClass, Shape, StateOfShape, Verification};
     use crate::StrError;
@@ -444,28 +446,28 @@ mod tests {
         let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
         let mut a = Vector::new(3);
         assert_eq!(
-            a_shape_times_scalar(&mut a, &mut state, &shape, &[], 1.0, false, |_| Ok(0.0)).err(),
+            vec_a_shape_times_scalar(&mut a, &mut state, &shape, &[], 1.0, false, |_| Ok(0.0)).err(),
             Some("a.len() must be equal to nnode")
         );
         let mut b = Vector::new(5);
         assert_eq!(
-            b_shape_times_vector(&mut b, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
+            vec_b_shape_times_vector(&mut b, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
             Some("b.len() must be equal to nnode * space_ndim")
         );
         let mut c = Vector::new(3);
         assert_eq!(
-            c_vector_dot_gradient(&mut c, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
+            vec_c_vector_dot_gradient(&mut c, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
             Some("c.len() must be equal to nnode")
         );
         let mut d = Vector::new(5);
         assert_eq!(
-            d_tensor_dot_gradient(&mut d, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
+            vec_d_tensor_dot_gradient(&mut d, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
             Some("d.len() must be equal to nnode * space_ndim")
         );
     }
 
     #[test]
-    fn a_shape_times_scalar_works_lin2_linear() -> Result<(), StrError> {
+    fn vec_a_shape_times_scalar_works_lin2_linear() -> Result<(), StrError> {
         // lin2 with linear source term:
         //
         // s(x) = x
@@ -493,14 +495,14 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
-            a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
+            vec_a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
     }
 
     #[test]
-    fn a_shape_times_scalar_works_tri3_constant() -> Result<(), StrError> {
+    fn vec_a_shape_times_scalar_works_tri3_constant() -> Result<(), StrError> {
         // tri3 with a constant source term:
         //
         // s(x) = cₛ
@@ -526,14 +528,14 @@ mod tests {
         let mut a = Vector::filled(shape.nnode, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(CS)).unwrap();
+            vec_a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(CS)).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
     }
 
     #[test]
-    fn a_shape_times_scalar_works_tet4_linear() -> Result<(), StrError> {
+    fn vec_a_shape_times_scalar_works_tet4_linear() -> Result<(), StrError> {
         // tet 4 with a linear source term:
         //
         // s(x) = z = x[2]
@@ -558,14 +560,14 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
-            a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
+            vec_a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
     }
 
     #[test]
-    fn b_shape_times_vector_works_lin2_linear() -> Result<(), StrError> {
+    fn vec_b_shape_times_vector_works_lin2_linear() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with lin2, however using a vector
         // So, each component of `b` equals `Fₛ`
         let l = 6.0;
@@ -589,7 +591,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
-            b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, p| {
+            vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, p| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
                 Ok(())
@@ -601,7 +603,7 @@ mod tests {
     }
 
     #[test]
-    fn b_shape_times_vector_works_tri3_constant() -> Result<(), StrError> {
+    fn vec_b_shape_times_vector_works_tri3_constant() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let l = 5.0;
@@ -619,7 +621,7 @@ mod tests {
         let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
+            vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
                 v[0] = CS;
                 v[1] = CS;
                 Ok(())
@@ -631,7 +633,7 @@ mod tests {
     }
 
     #[test]
-    fn b_shape_times_vector_works_tet4_constant() -> Result<(), StrError> {
+    fn vec_b_shape_times_vector_works_tet4_constant() -> Result<(), StrError> {
         // tet 4 with constant vector
         //
         // v(x) = {bx,by,bz}
@@ -656,7 +658,7 @@ mod tests {
         let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
+            vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
                 v[0] = BX;
                 v[1] = BY;
                 v[2] = BZ;
@@ -669,7 +671,7 @@ mod tests {
     }
 
     #[test]
-    fn c_vector_dot_gradient_works_tri3_constant() -> Result<(), StrError> {
+    fn vec_c_vector_dot_gradient_works_tri3_constant() -> Result<(), StrError> {
         // constant vector function: w(x) = {w₀, w₁}
         // solution:
         //    cᵐ = ½ (w₀ bₘ + w₁ cₘ)
@@ -688,7 +690,7 @@ mod tests {
         let mut c = Vector::filled(shape.nnode, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
+            vec_c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(())
@@ -700,7 +702,7 @@ mod tests {
     }
 
     #[test]
-    fn c_vector_dot_gradient_works_tri3_bilinear() -> Result<(), StrError> {
+    fn vec_c_vector_dot_gradient_works_tri3_bilinear() -> Result<(), StrError> {
         // bilinear vector function: w(x) = {x, y}
         // solution:
         //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
@@ -718,7 +720,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
-            c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, p| {
+            vec_c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, p| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(())
@@ -730,7 +732,7 @@ mod tests {
     }
 
     #[test]
-    fn c_vector_dot_gradient_works_tet4_constant() -> Result<(), StrError> {
+    fn vec_c_vector_dot_gradient_works_tet4_constant() -> Result<(), StrError> {
         // tet 4 with constant vector
         //
         // w(x) = {w0, w1, w2}
@@ -755,7 +757,7 @@ mod tests {
         let mut c = Vector::filled(shape.nnode, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
+            vec_c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;
@@ -768,7 +770,7 @@ mod tests {
     }
 
     #[test]
-    fn d_tensor_dot_gradient_tri3_works_constant() -> Result<(), StrError> {
+    fn vec_d_tensor_dot_gradient_tri3_works_constant() -> Result<(), StrError> {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
         //    dᵐ₀ = ½ (σ₀₀ bₘ + σ₀₁ cₘ)
@@ -790,7 +792,7 @@ mod tests {
         let mut d = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
+            vec_d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -804,7 +806,7 @@ mod tests {
     }
 
     #[test]
-    fn d_tensor_dot_gradient_tet4_works_constant() -> Result<(), StrError> {
+    fn vec_d_tensor_dot_gradient_tet4_works_constant() -> Result<(), StrError> {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
         // solution:
         //    dᵐ₀ = ⅙ (σ₀₀ aₘ + σ₀₁ bₘ + σ₀₂ cₘ)
@@ -833,7 +835,7 @@ mod tests {
         let mut d = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
+            vec_d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
