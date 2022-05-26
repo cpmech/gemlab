@@ -75,7 +75,6 @@ use std::collections::HashSet;
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
-///     #[rustfmt::skip]
 ///     let mut block = Block::new(&[
 ///         [0.0, 0.0],
 ///         [2.0, 0.0],
