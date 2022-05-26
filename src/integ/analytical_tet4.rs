@@ -286,7 +286,7 @@ mod tests {
         let mut tet = AnalyticalTet4::new(&shape, &mut state);
         shape.calc_gradient(&mut state, &[0.1, 0.2, 0.3])?;
         assert_eq!(tet.volume, 4.0);
-        println!("gg=\n{}", tet.gg);
+        // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
         assert_vec_approx_eq!(tet.gg.as_data(), state.gradient.as_data(), 1e-15);
         let kk = tet.integ_stiffness(ee, nu)?;

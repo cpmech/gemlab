@@ -60,6 +60,65 @@ use russell_tensor::Tensor4;
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `erase_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `fn_dd` -- Function f(D,p) corresponding to `D(x(ιᵖ))`
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::integ::{mat_gdg_stiffness, select_integ_points};
+/// use gemlab::shapes::{GeoClass, Shape, StateOfShape};
+/// use gemlab::StrError;
+/// use russell_tensor::LinElasticity;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::{copy_matrix, Matrix};
+///
+/// fn main() -> Result<(), StrError> {
+///     // shape and state
+///     let space_ndim = 3;
+///     let geo_ndim = 3;
+///     let nnode = 4;
+///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+///     let mut state = StateOfShape::new(
+///         shape.geo_ndim,
+///         &[[2.0, 3.0, 4.0],
+///           [6.0, 3.0, 2.0],
+///           [2.0, 5.0, 1.0],
+///           [4.0, 3.0, 6.0]],
+///     )?;
+///
+///     // constants
+///     let young = 480.0;
+///     let poisson = 1.0 / 3.0;
+///     let two_dim = false;
+///     let plane_stress = false;
+///     let model = LinElasticity::new(young, poisson, two_dim, plane_stress);
+///
+///     // stiffness
+///     let nrow = shape.nnode * shape.space_ndim;
+///     let mut kk = Matrix::new(nrow, nrow);
+///     let ips = select_integ_points(GeoClass::Tet, 1)?;
+///     mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
+///         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+///     })?;
+///
+///     // check
+///     let kk_correct = Matrix::from(&[
+///         [ 745.0,  540.0, 120.0,  -5.0,  30.0,  60.0,-270.0, -240.0,   0.0,-470.0, -330.0,-180.0],
+///         [ 540.0, 1720.0, 270.0,-120.0, 520.0, 210.0,-120.0,-1080.0, -60.0,-300.0,-1160.0,-420.0],
+///         [ 120.0,  270.0, 565.0,   0.0, 150.0, 175.0,   0.0, -120.0,-270.0,-120.0, -300.0,-470.0],
+///         [  -5.0, -120.0,   0.0, 145.0, -90.0, -60.0, -90.0,  120.0,   0.0, -50.0,   90.0,  60.0],
+///         [  30.0,  520.0, 150.0, -90.0, 220.0,  90.0,  60.0, -360.0, -60.0,   0.0, -380.0,-180.0],
+///         [  60.0,  210.0, 175.0, -60.0,  90.0, 145.0,   0.0, -120.0, -90.0,   0.0, -180.0,-230.0],
+///         [-270.0, -120.0,   0.0, -90.0,  60.0,   0.0, 180.0,    0.0,   0.0, 180.0,   60.0,   0.0],
+///         [-240.0,-1080.0,-120.0, 120.0,-360.0,-120.0,   0.0,  720.0,   0.0, 120.0,  720.0, 240.0],
+///         [   0.0,  -60.0,-270.0,   0.0, -60.0, -90.0,   0.0,    0.0, 180.0,   0.0,  120.0, 180.0],
+///         [-470.0, -300.0,-120.0, -50.0,   0.0,   0.0, 180.0,  120.0,   0.0, 340.0,  180.0, 120.0],
+///         [-330.0,-1160.0,-300.0,  90.0,-380.0,-180.0,  60.0,  720.0, 120.0, 180.0,  820.0, 360.0],
+///         [-180.0, -420.0,-470.0,  60.0,-180.0,-230.0,   0.0,  240.0, 180.0, 120.0,  360.0, 520.0],
+///     ]);
+///     assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-12);
+///     Ok(())
+/// }
+/// ```
 pub fn mat_gdg_stiffness<F>(
     kk: &mut Matrix,
     state: &mut StateOfShape,
