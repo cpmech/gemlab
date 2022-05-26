@@ -66,7 +66,37 @@ use std::collections::HashSet;
 ///       | ,'             | ,'
 ///       +----------------+'
 ///               1
-///  
+/// ```
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::mesh::Block;
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     #[rustfmt::skip]
+///     let mut block = Block::new(&[
+///         [0.0, 0.0],
+///         [2.0, 0.0],
+///         [2.0, 2.0],
+///         [0.0, 2.0],
+///     ])?;
+///     let mesh = block.subdivide(4)?;
+///     // 7---------6---------8
+///     // |         |         |
+///     // |   [2]   |   [3]   |
+///     // |         |         |
+///     // 3---------2---------5
+///     // |         |         |
+///     // |   [0]   |   [1]   |
+///     // |         |         |
+///     // 0---------1---------4
+///     assert_eq!(mesh.points.len(), 9);
+///     assert_eq!(mesh.cells.len(), 4);
+///     Ok(())
+/// }
+/// ```
 pub struct Block {
     attribute_id: usize,      // attribute ID of all elements in this block
     space_ndim: usize,        // space dimension
