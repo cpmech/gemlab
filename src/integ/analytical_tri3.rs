@@ -6,13 +6,13 @@ use russell_tensor::LinElasticity;
 
 /// Performs analytical integrations on a Tri3
 pub struct AnalyticalTri3 {
-    // Holds the b-coefficients
+    /// Holds the b-coefficients
     pub b: [f64; 3],
 
-    // Holds the c-coefficients
+    /// Holds the c-coefficients
     pub c: [f64; 3],
 
-    // Holds the area of the triangle
+    /// Holds the area of the triangle
     pub area: f64,
 
     /// Holds the gradients

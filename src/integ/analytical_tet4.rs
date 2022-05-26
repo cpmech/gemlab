@@ -6,16 +6,16 @@ use russell_tensor::LinElasticity;
 
 /// Performs analytical integrations on a Tet4
 pub struct AnalyticalTet4 {
-    // Holds the a-coefficients
+    /// Holds the a-coefficients
     pub a: [f64; 4],
 
-    // Holds the b-coefficients
+    /// Holds the b-coefficients
     pub b: [f64; 4],
 
-    // Holds the c-coefficients
+    /// Holds the c-coefficients
     pub c: [f64; 4],
 
-    // Holds the volume of the tetrahedron
+    /// Holds the volume of the tetrahedron
     pub volume: f64,
 
     /// Gradients (nnode,space_ndim) dN/dx
