@@ -240,6 +240,33 @@ impl Mesh {
     }
 
     /// Allocates a new Mesh by parsing raw mesh data from a text string
+    ///
+    /// # Examples
+    ///
+    /// See `examples` directory and [super::Samples] for more examples
+    /// (with pretty formatted strings).
+    ///
+    /// ```
+    /// use gemlab::mesh::Mesh;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     // 1.0  3-------2
+    ///     //      |`. [1] |
+    ///     //      |  `.   |
+    ///     //      | [0]`. |
+    ///     // 0.0  0------`1
+    ///     //     0.0     1.0
+    ///     let mesh = Mesh::from_text(
+    ///         "2 4 2\n# points\n0 0.0 0.0\n1 1.0 0.0\n2 1.0 1.0\n3 0.0 1.0\n# cells\n0 1 2 3  0 1 3\n1 1 2 3  2 3 1\n",
+    ///     )?;
+    ///     assert_eq!(mesh.points.len(), 4);
+    ///     assert_eq!(mesh.cells.len(), 2);
+    ///     assert_eq!(mesh.cells[0].points, &[0, 1, 3]);
+    ///     assert_eq!(mesh.cells[1].points, &[2, 3, 1]);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn from_text(text: &str) -> Result<Self, StrError> {
         // auxiliary data structure
         let mut data = DataForReadTextMesh::new();

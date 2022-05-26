@@ -47,6 +47,41 @@ pub struct Cell {
 }
 
 /// Holds mesh data
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::mesh::{Cell, Mesh, Point};
+///
+/// //          [#] indicates id
+/// //      y   (#) indicates attribute_id
+/// //      ↑
+/// // 1.0  3-----------2-----------5
+/// //      |           |           |
+/// //      |    [0]    |    [1]    |
+/// //      |    (1)    |    (2)    |
+/// //      |           |           |
+/// // 0.0  0-----------1-----------4  → x
+/// //     0.0         1.0         2.0
+///
+/// let mesh = Mesh {
+///     space_ndim: 2,
+///     points: vec![
+///         Point { id: 0, coords: vec![0.0, 0.0] },
+///         Point { id: 1, coords: vec![1.0, 0.0] },
+///         Point { id: 2, coords: vec![1.0, 1.0] },
+///         Point { id: 3, coords: vec![0.0, 1.0] },
+///         Point { id: 4, coords: vec![2.0, 0.0] },
+///         Point { id: 5, coords: vec![2.0, 1.0] },
+///     ],
+///     cells: vec![
+///         Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
+///         Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+///     ],
+/// };
+/// ```
+///
+/// See more examples in [super::Samples]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Mesh {
     /// Space dimension of the mesh
