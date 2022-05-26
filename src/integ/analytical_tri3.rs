@@ -6,19 +6,23 @@ use russell_tensor::LinElasticity;
 
 /// Performs analytical integrations on a Tri3
 pub struct AnalyticalTri3 {
-    /// Holds the b-coefficients
-    pub b: [f64; 3],
-
-    /// Holds the c-coefficients
-    pub c: [f64; 3],
-
     /// Holds the area of the triangle
     pub area: f64,
 
-    /// Holds the gradients
+    /// Holds the gradients (G-matrix)
+    ///
+    /// ```text
+    ///             →
+    /// →  →    dNᵐ(ξ)
+    /// Gᵐ(ξ) = ——————
+    ///            →
+    ///           dx
+    /// ```
+    ///
+    /// Organized as the G matrix (nnode=3, space_ndim=2)
     pub gg: Matrix,
 
-    /// Holds the B-matrix
+    /// Holds the B-matrix (4, 6)
     pub bb: Matrix,
 }
 
@@ -30,8 +34,8 @@ impl AnalyticalTri3 {
         let (x0, y0) = (state.coords_transp[0][0], state.coords_transp[1][0]);
         let (x1, y1) = (state.coords_transp[0][1], state.coords_transp[1][1]);
         let (x2, y2) = (state.coords_transp[0][2], state.coords_transp[1][2]);
-        let (b0, b1, b2) = (y1 - y2, y2 - y0, y0 - y1);
-        let (c0, c1, c2) = (x2 - x1, x0 - x2, x1 - x0);
+        let (a0, a1, a2) = (y1 - y2, y2 - y0, y0 - y1);
+        let (b0, b1, b2) = (x2 - x1, x0 - x2, x1 - x0);
         let (f0, f1, f2) = (x1 * y2 - x2 * y1, x2 * y0 - x0 * y2, x0 * y1 - x1 * y0);
 
         // area
@@ -44,28 +48,22 @@ impl AnalyticalTri3 {
         // gradients
         #[rustfmt::skip]
         let gg = Matrix::from(&[
-            [b0/r, c0/r],
-            [b1/r, c1/r],
-            [b2/r, c2/r],
+            [a0/r, b0/r],
+            [a1/r, b1/r],
+            [a2/r, b2/r],
         ]);
 
         // B-matrix
         #[rustfmt::skip]
         let bb = Matrix::from(&[
-            [b0/r,  0.0, b1/r,  0.0, b2/r,  0.0],
-            [ 0.0, c0/r,  0.0, c1/r,  0.0, c2/r],
+            [a0/r,  0.0, a1/r,  0.0, a2/r,  0.0],
+            [ 0.0, b0/r,  0.0, b1/r,  0.0, b2/r],
             [ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
-            [c0/s, b0/s, c1/s, b1/s, c2/s, b2/s],
+            [b0/s, a0/s, b1/s, a1/s, b2/s, a2/s],
         ]);
 
         // results
-        AnalyticalTri3 {
-            b: [b0, b1, b2],
-            c: [c0, c1, c2],
-            area,
-            gg,
-            bb,
-        }
+        AnalyticalTri3 { area, gg, bb }
     }
 
     /// Integrates shape times scalar with constant function s(x) = cₛ
@@ -113,21 +111,22 @@ impl AnalyticalTri3 {
     /// solution:
     ///
     /// ```text
-    /// cᵐ = ½ (w₀ bₘ + w₁ cₘ)
+    /// cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
     /// ```
     pub fn integ_vec_c_constant(&self, w0: f64, w1: f64) -> Vec<f64> {
         vec![
-            (w0 * self.b[0] + w1 * self.c[0]) / 2.0,
-            (w0 * self.b[1] + w1 * self.c[1]) / 2.0,
-            (w0 * self.b[2] + w1 * self.c[2]) / 2.0,
+            (w0 * self.gg[0][0] + w1 * self.gg[0][1]) * self.area,
+            (w0 * self.gg[1][0] + w1 * self.gg[1][1]) * self.area,
+            (w0 * self.gg[2][0] + w1 * self.gg[2][1]) * self.area,
         ]
     }
 
     /// Integrates vector dot gradient with bilinear vector function w(x) = {x, y}
     ///
     /// solution:
+    ///
     /// ```text
-    /// cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
+    /// cᵐ = ((x₀+x₁+x₂) Gᵐ₀ + (y₀+y₁+y₂) Gᵐ₁) A / 3
     /// ```
     ///
     /// # Input
@@ -146,9 +145,9 @@ impl AnalyticalTri3 {
             state.coords_transp[1][2],
         );
         vec![
-            (x0 + x1 + x2) * self.b[0] / 6.0 + (y0 + y1 + y2) * self.c[0] / 6.0,
-            (x0 + x1 + x2) * self.b[1] / 6.0 + (y0 + y1 + y2) * self.c[1] / 6.0,
-            (x0 + x1 + x2) * self.b[2] / 6.0 + (y0 + y1 + y2) * self.c[2] / 6.0,
+            ((x0 + x1 + x2) * self.gg[0][0] + (y0 + y1 + y2) * self.gg[0][1]) * self.area / 3.0,
+            ((x0 + x1 + x2) * self.gg[1][0] + (y0 + y1 + y2) * self.gg[1][1]) * self.area / 3.0,
+            ((x0 + x1 + x2) * self.gg[2][0] + (y0 + y1 + y2) * self.gg[2][1]) * self.area / 3.0,
         ]
     }
 
@@ -157,8 +156,8 @@ impl AnalyticalTri3 {
     /// solution:
     ///
     /// ```text
-    /// dᵐ₀ = ½ (σ₀₀ bₘ + σ₀₁ cₘ)
-    /// dᵐ₁ = ½ (σ₁₀ bₘ + σ₁₁ cₘ)
+    /// dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁) A
+    /// dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁) A
     /// ```
     ///
     /// σ₂₂ is ignored.
@@ -168,12 +167,12 @@ impl AnalyticalTri3 {
     /// * `s₀₀, s₁₁, s₀₁` -- components of the constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
     pub fn integ_vec_d_constant(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
         vec![
-            (s00 * self.b[0] + s01 * self.c[0]) / 2.0,
-            (s01 * self.b[0] + s11 * self.c[0]) / 2.0,
-            (s00 * self.b[1] + s01 * self.c[1]) / 2.0,
-            (s01 * self.b[1] + s11 * self.c[1]) / 2.0,
-            (s00 * self.b[2] + s01 * self.c[2]) / 2.0,
-            (s01 * self.b[2] + s11 * self.c[2]) / 2.0,
+            (s00 * self.gg[0][0] + s01 * self.gg[0][1]) * self.area,
+            (s01 * self.gg[0][0] + s11 * self.gg[0][1]) * self.area,
+            (s00 * self.gg[1][0] + s01 * self.gg[1][1]) * self.area,
+            (s01 * self.gg[1][0] + s11 * self.gg[1][1]) * self.area,
+            (s00 * self.gg[2][0] + s01 * self.gg[2][1]) * self.area,
+            (s01 * self.gg[2][0] + s11 * self.gg[2][1]) * self.area,
         ]
     }
 
@@ -204,7 +203,7 @@ mod tests {
     use super::AnalyticalTri3;
     use crate::shapes::{Shape, StateOfShape};
     use crate::StrError;
-    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+    use russell_chk::assert_approx_eq;
 
     #[test]
     fn new_works() -> Result<(), StrError> {
@@ -217,8 +216,17 @@ mod tests {
         let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [0.2, 0.0], [0.1, 0.1]])?;
         let ana = AnalyticalTri3::new(&shape, &mut state);
         assert_approx_eq!(ana.area, 0.01, 1e-15);
-        assert_vec_approx_eq!(ana.b, [-0.1, 0.1, 0.0], 1e-15);
-        assert_vec_approx_eq!(ana.c, [-0.1, -0.1, 0.2], 1e-15);
+        // a = [-0.1, 0.1, 0.0]
+        // b = [-0.1, -0.1, 0.2]
+        // A = 0.01, Gmi = ai/(2 A) = -0.1 / 0.02 = -5
+        assert_eq!(
+            format!("{:.2}", ana.gg),
+            "┌             ┐\n\
+             │ -5.00 -5.00 │\n\
+             │  5.00 -5.00 │\n\
+             │  0.00 10.00 │\n\
+             └             ┘"
+        );
         Ok(())
     }
 }

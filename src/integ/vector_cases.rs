@@ -60,6 +60,36 @@ use russell_tensor::Tensor2;
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `erase_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
 /// * `fn_s` -- Function `f(p)` corresponding to `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+///
+/// # Examples
+///
+/// See also the `examples` directory.
+///
+/// ```
+/// use gemlab::integ::{default_integ_points, vec_a_shape_times_scalar};
+/// use gemlab::shapes::{Shape, StateOfShape};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     let space_ndim = 2;
+///     let geo_ndim = 2;
+///     let nnode = 3;
+///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+///     let mut state = StateOfShape::new(
+///         shape.geo_ndim,
+///         &[[2.0, 3.0],
+///           [6.0, 3.0],
+///           [2.0, 6.0]],
+///     )?;
+///     let ips = default_integ_points(shape.kind);
+///     let mut a = Vector::filled(shape.nnode, 0.0);
+///     vec_a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(5.0))?;
+///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
+///     Ok(())
+/// }
+/// ```
 pub fn vec_a_shape_times_scalar<F>(
     a: &mut Vector,
     state: &mut StateOfShape,
@@ -157,6 +187,40 @@ where
 /// * `erase_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
 /// * `fn_v` -- Function `f(v,p)` corresponding to `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///             The dim of `v` is equal to `space_ndim`.
+///
+/// # Examples
+///
+/// See also the `examples` directory.
+///
+/// ```
+/// use gemlab::integ::{default_integ_points, vec_b_shape_times_vector};
+/// use gemlab::shapes::{Shape, StateOfShape};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     let space_ndim = 2;
+///     let geo_ndim = 2;
+///     let nnode = 3;
+///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+///     let mut state = StateOfShape::new(
+///         shape.geo_ndim,
+///         &[[2.0, 3.0],
+///           [6.0, 3.0],
+///           [2.0, 6.0]],
+///     )?;
+///     let ips = default_integ_points(shape.kind);
+///     let mut b = Vector::filled(shape.nnode * shape.space_ndim, 0.0);
+///     vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
+///         v[0] = 1.0;
+///         v[1] = 2.0;
+///         Ok(())
+///     })?;
+///     assert_vec_approx_eq!(b.as_data(), &[2.0, 4.0, 2.0, 4.0, 2.0, 4.0], 1e-14);
+///     Ok(())
+/// }
+/// ```
 pub fn vec_b_shape_times_vector<F>(
     b: &mut Vector,
     state: &mut StateOfShape,
@@ -261,6 +325,47 @@ where
 /// * `erase_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
 /// * `fn_w` -- Function `f(w,p)` corresponding to `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///             The dim of `w` is equal to `space_ndim`.
+///
+/// # Examples
+///
+/// See also the `examples` directory.
+///
+/// ```
+/// use gemlab::integ::{default_integ_points, vec_c_vector_dot_gradient};
+/// use gemlab::shapes::{Shape, StateOfShape};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     let space_ndim = 2;
+///     let geo_ndim = 2;
+///     let nnode = 3;
+///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+///     let mut state = StateOfShape::new(
+///         shape.geo_ndim,
+///         &[[2.0, 3.0],
+///           [6.0, 3.0],
+///           [2.0, 6.0]],
+///     )?;
+///     let ips = default_integ_points(shape.kind);
+///     let mut c = Vector::filled(shape.nnode, 0.0);
+///     vec_c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
+///         w[0] = 1.0;
+///         w[1] = 2.0;
+///         Ok(())
+///     })?;
+///     // solution (A = 6):
+///     // cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
+///     //     ┌       ┐
+///     //     │ -¼ -⅓ │
+///     // G = │  ¼  0 │
+///     //     │  0  ⅓ │
+///     //     └       ┘
+///     assert_vec_approx_eq!(c.as_data(), &[-5.5, 1.5, 4.0], 1e-14);
+///     Ok(())
+/// }
+/// ```
 pub fn vec_c_vector_dot_gradient<F>(
     c: &mut Vector,
     state: &mut StateOfShape,
@@ -366,6 +471,49 @@ where
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `erase_d` -- Fills `d` vector with zeros, otherwise accumulate values into `d`
 /// * `fn_sig` -- Function `f(sig,p)` corresponding to `σ(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+///
+/// # Examples
+///
+/// See also the `examples` directory.
+///
+/// ```
+/// use gemlab::integ::{default_integ_points, vec_d_tensor_dot_gradient};
+/// use gemlab::shapes::{Shape, StateOfShape};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     let space_ndim = 2;
+///     let geo_ndim = 2;
+///     let nnode = 3;
+///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+///     let mut state = StateOfShape::new(
+///         shape.geo_ndim,
+///         &[[2.0, 3.0],
+///           [6.0, 3.0],
+///           [2.0, 6.0]],
+///     )?;
+///     let ips = default_integ_points(shape.kind);
+///     let mut d = Vector::filled(shape.nnode * shape.space_ndim, 0.0);
+///     vec_d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
+///         sig.sym_set(0, 0, 1.0);
+///         sig.sym_set(1, 1, 2.0);
+///         sig.sym_set(0, 1, 3.0);
+///         Ok(())
+///     })?;
+///     // solution (A = 6):
+///     // dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁) A
+///     // dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁) A
+///     //     ┌       ┐
+///     //     │ -¼ -⅓ │
+///     // G = │  ¼  0 │
+///     //     │  0  ⅓ │
+///     //     └       ┘
+///     assert_vec_approx_eq!(d.as_data(), &[-7.5, -8.5, 1.5, 4.5, 6.0, 4.0], 1e-14);
+///     Ok(())
+/// }
+/// ```
 pub fn vec_d_tensor_dot_gradient<F>(
     d: &mut Vector,
     state: &mut StateOfShape,
@@ -658,8 +806,6 @@ mod tests {
     #[test]
     fn vec_c_vector_dot_gradient_works_tri3_constant() -> Result<(), StrError> {
         // constant vector function: w(x) = {w₀, w₁}
-        // solution:
-        //    cᵐ = ½ (w₀ bₘ + w₁ cₘ)
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
         let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
@@ -689,8 +835,6 @@ mod tests {
     #[test]
     fn vec_c_vector_dot_gradient_works_tri3_bilinear() -> Result<(), StrError> {
         // bilinear vector function: w(x) = {x, y}
-        // solution:
-        //    cᵐ = ⅙ bₘ (x₀+x₁+x₂) + ⅙ cₘ (y₀+y₁+y₂)
         let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
         let ana = AnalyticalTri3::new(&shape, &mut state);
         let c_correct = ana.integ_vec_c_bilinear(&state);

@@ -64,7 +64,7 @@ use russell_tensor::Tensor4;
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ::{mat_gdg_stiffness, default_integ_points};
+/// use gemlab::integ;
 /// use gemlab::shapes::{Shape, StateOfShape};
 /// use gemlab::StrError;
 /// use russell_tensor::LinElasticity;
@@ -94,8 +94,8 @@ use russell_tensor::Tensor4;
 ///     // stiffness
 ///     let nrow = shape.nnode * shape.space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
-///     let ips = default_integ_points(shape.kind);
-///     mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
+///     let ips = integ::default_integ_points(shape.kind);
+///     integ::mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
 ///         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
 ///     })?;
 ///
