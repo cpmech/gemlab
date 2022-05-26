@@ -4,6 +4,7 @@ use crate::StrError;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
 use russell_tensor::LinElasticity;
 
+/// Performs analytical integrations on a Tet4
 pub struct AnalyticalTet4 {
     // Holds the a-coefficients
     pub a: [f64; 4],
