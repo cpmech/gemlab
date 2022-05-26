@@ -131,7 +131,7 @@ impl AnalyticalTet4 {
         }
     }
 
-    /// Integrates shape times scalar with linear scalar function s(x) = x[2] = z
+    /// Integrates shape times scalar with linear scalar function s(x) = x₂ = z
     ///
     /// # Input
     ///
