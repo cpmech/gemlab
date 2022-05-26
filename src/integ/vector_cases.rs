@@ -86,6 +86,8 @@ use russell_tensor::Tensor2;
 ///     let ips = default_integ_points(shape.kind);
 ///     let mut a = Vector::filled(shape.nnode, 0.0);
 ///     vec_a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(5.0))?;
+///     // solution (A = 6):
+///     // aᵐ = cₛ A / 3
 ///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
 ///     Ok(())
 /// }
@@ -217,6 +219,9 @@ where
 ///         v[1] = 2.0;
 ///         Ok(())
 ///     })?;
+///     // solution (A = 6):
+///     // bᵐ₀ = v₀ A / 3
+///     // bᵐ₁ = v₁ A / 3
 ///     assert_vec_approx_eq!(b.as_data(), &[2.0, 4.0, 2.0, 4.0, 2.0, 4.0], 1e-14);
 ///     Ok(())
 /// }

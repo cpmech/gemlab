@@ -71,11 +71,7 @@ impl AnalyticalTri3 {
     /// solution:
     ///
     /// ```text
-    ///          ┌   ┐
-    ///     cₛ A │ 1 │
-    /// a = ———— │ 1 │
-    ///       3  │ 1 │
-    ///          └   ┘
+    /// aᵐ = cₛ A / 3
     /// ```
     pub fn integ_vec_a_constant(&self, cs: f64) -> Vec<f64> {
         vec![cs * self.area / 3.0, cs * self.area / 3.0, cs * self.area / 3.0]
@@ -86,6 +82,8 @@ impl AnalyticalTri3 {
     /// solution:
     ///
     /// ```text
+    /// bᵐ₀ = v₀ A / 3
+    /// bᵐ₁ = v₁ A / 3
     ///       ┌    ┐
     ///       │ v0 │
     ///       │ v1 │
