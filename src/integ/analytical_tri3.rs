@@ -37,16 +37,19 @@ impl AnalyticalTri3 {
         // area
         let area = (f0 + f1 + f2) / 2.0;
 
+        // auxiliary
+        let r = 2.0 * area;
+        let s = r * SQRT_2;
+
         // gradients
+        #[rustfmt::skip]
         let gg = Matrix::from(&[
-            [b0 / (2.0 * area), c0 / (2.0 * area)],
-            [b1 / (2.0 * area), c1 / (2.0 * area)],
-            [b2 / (2.0 * area), c2 / (2.0 * area)],
+            [b0/r, c0/r],
+            [b1/r, c1/r],
+            [b2/r, c2/r],
         ]);
 
         // B-matrix
-        let r = 2.0 * area;
-        let s = r * SQRT_2;
         #[rustfmt::skip]
         let bb = Matrix::from(&[
             [b0/r,  0.0, b1/r,  0.0, b2/r,  0.0],
