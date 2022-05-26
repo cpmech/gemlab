@@ -1,6 +1,7 @@
 use crate::StrError;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
+use std::fmt::{self, Write as FmtWrite};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
@@ -103,6 +104,47 @@ impl Mesh {
     }
 }
 
+impl fmt::Display for Mesh {
+    /// Returns a text representation of the Mesh (can be used with [Mesh::from_text])
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "# header\n").unwrap();
+        write!(f, "# space_ndim npoint ncell\n").unwrap();
+        write!(f, "{} {} {}\n", self.space_ndim, self.points.len(), self.cells.len()).unwrap();
+        write!(f, "\n# points\n").unwrap();
+        write!(f, "# id x y {{z}}\n").unwrap();
+        self.points.iter().for_each(|point| {
+            if self.space_ndim == 2 {
+                write!(f, "{} {} {}\n", point.id, point.coords[0], point.coords[1]).unwrap();
+            } else {
+                write!(
+                    f,
+                    "{} {} {} {}\n",
+                    point.id, point.coords[0], point.coords[1], point.coords[2]
+                )
+                .unwrap();
+            }
+        });
+        write!(f, "\n# cells\n").unwrap();
+        write!(f, "# id attribute_id geo_ndim nnode  points\n").unwrap();
+        self.cells.iter().for_each(|cell| {
+            write!(
+                f,
+                "{} {} {} {} {}\n",
+                cell.id,
+                cell.attribute_id,
+                cell.geo_ndim,
+                cell.points.len(),
+                cell.points.iter().fold(&mut String::new(), |acc, cur| {
+                    write!(acc, " {}", cur).unwrap();
+                    acc
+                }),
+            )
+            .unwrap();
+        });
+        Ok(())
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -176,5 +218,87 @@ mod tests {
         let mesh_read: Mesh = serde_json::from_str(&mesh_json).unwrap();
         assert_eq!(format!("{:?}", mesh_read), correct);
         Ok(())
+    }
+
+    #[test]
+    fn display_works_2d() {
+        let mesh = Samples::two_quads_horizontal();
+        let text = format!("{}", mesh);
+        assert_eq!(
+            text,
+            "# header\n\
+             # space_ndim npoint ncell\n\
+             2 6 2\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 0 0\n\
+             1 1 0\n\
+             2 1 1\n\
+             3 0 1\n\
+             4 2 0\n\
+             5 2 1\n\
+             \n\
+             # cells\n\
+             # id attribute_id geo_ndim nnode  points\n\
+             0 1 2 4  0 1 2 3\n\
+             1 2 2 4  1 4 5 2\n"
+        );
+        let mesh_in = Mesh::from_text(&text).unwrap();
+        assert_eq!(format!("{}", mesh_in), text);
+    }
+
+    #[test]
+    fn display_works_3d() {
+        let mesh = Samples::two_cubes_vertical();
+        let text = format!("{}", mesh);
+        assert_eq!(
+            text,
+            "# header\n\
+             # space_ndim npoint ncell\n\
+             3 12 2\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 0 0 0\n\
+             1 1 0 0\n\
+             2 1 1 0\n\
+             3 0 1 0\n\
+             4 0 0 1\n\
+             5 1 0 1\n\
+             6 1 1 1\n\
+             7 0 1 1\n\
+             8 0 0 2\n\
+             9 1 0 2\n\
+             10 1 1 2\n\
+             11 0 1 2\n\
+             \n\
+             # cells\n\
+             # id attribute_id geo_ndim nnode  points\n\
+             0 1 3 8  0 1 2 3 4 5 6 7\n\
+             1 2 3 8  4 5 6 7 8 9 10 11\n"
+        );
+        let mesh_in = Mesh::from_text(&text).unwrap();
+        assert_eq!(format!("{}", mesh_in), text);
+    }
+
+    #[test]
+    fn display_works_mixed_2d() {
+        let mesh = Samples::mixed_shapes_2d();
+        let text = format!("{}", mesh);
+        let mesh_in = Mesh::from_text(&text).unwrap();
+        assert_eq!(format!("{}", mesh_in), text);
+        assert_eq!(mesh_in.cells[0].points.len(), 2);
+        assert_eq!(mesh_in.cells[1].points.len(), 4);
+    }
+
+    #[test]
+    fn display_works_mixed_3d() {
+        let mesh = Samples::mixed_shapes_3d();
+        let text = format!("{}", mesh);
+        let mesh_in = Mesh::from_text(&text).unwrap();
+        assert_eq!(format!("{}", mesh_in), text);
+        assert_eq!(mesh_in.cells[0].points.len(), 8);
+        assert_eq!(mesh_in.cells[4].points.len(), 3);
     }
 }
