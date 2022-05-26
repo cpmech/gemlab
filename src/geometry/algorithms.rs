@@ -10,6 +10,21 @@ use crate::StrError;
 /// # Output
 ///
 /// Returns the unsigned distance between the two points.
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::geometry::point_point_distance;
+/// use gemlab::StrError;
+/// use gemlab::util::SQRT_2;
+/// use russell_chk::assert_approx_eq;
+///
+/// fn main() -> Result<(), StrError> {
+///     let d = point_point_distance(&[0.0, 0.0], &[1.0, 1.0])?;
+///     assert_approx_eq!(d, SQRT_2, 1e-15);
+///     Ok(())
+/// }
+/// ```
 pub fn point_point_distance(a: &[f64], b: &[f64]) -> Result<f64, StrError> {
     let ndim = a.len();
     if ndim < 2 || ndim > 3 {
@@ -54,6 +69,29 @@ pub fn point_point_distance(a: &[f64], b: &[f64]) -> Result<f64, StrError> {
 /// # Output
 ///
 /// Returns the unsigned distance.
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::geometry::point_line_distance;
+/// use gemlab::StrError;
+/// use gemlab::util::{SQRT_2, SQRT_3};
+/// use russell_chk::assert_approx_eq;
+///
+/// fn main() -> Result<(), StrError> {
+///     let a = &[-10.0, -10.0, -10.0];
+///     let b = &[100.0, 100.0, 100.0];
+///     let d = point_line_distance(a, b, &[1.0, 1.0, 1.0])?;
+///     assert_approx_eq!(d, 0.0, 1e-15);
+///
+///     let d = point_line_distance(a, b, &[1.0, 1.0, 0.0])?;
+///     assert_approx_eq!(d, SQRT_2 / SQRT_3, 1e-15);
+///
+///     let d = point_line_distance(a, b, &[0.0, 1.0, 1.0])?;
+///     assert_approx_eq!(d, SQRT_2 / SQRT_3, 1e-15);
+///     Ok(())
+/// }
+/// ```
 pub fn point_line_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrError> {
     let ndim = a.len();
     if ndim < 2 || ndim > 3 {
@@ -112,6 +150,32 @@ pub fn point_line_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrEr
 /// # Note
 ///
 /// This works in 2D only.
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::geometry::point_circle_distance;
+/// use gemlab::StrError;
+/// use gemlab::util::SQRT_2;
+/// use russell_chk::assert_approx_eq;
+///
+/// fn main() -> Result<(), StrError> {
+///     let center = &[3.0, 4.0];
+///     let radius = 5.0;
+///     let d = point_circle_distance(center, radius, &[3.0, 4.0])?;
+///     assert_eq!(d, -radius);
+///
+///     let d = point_circle_distance(center, radius, &[8.0, 4.0])?;
+///     assert_eq!(d, 0.0);
+///
+///     let d = point_circle_distance(center, radius, &[3.0, 9.0])?;
+///     assert_eq!(d, 0.0);
+///
+///     let d = point_circle_distance(center, radius, &[8.0, 9.0])?;
+///     assert_approx_eq!(d, radius * SQRT_2 - radius, 1e-15);
+///     Ok(())
+/// }
+/// ```
 pub fn point_circle_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
     let ndim = center.len();
     if ndim != 2 {
@@ -141,6 +205,31 @@ pub fn point_circle_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f
 /// # Note
 ///
 /// This works in 3D only.
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::geometry::point_cylinder_distance;
+/// use gemlab::StrError;
+/// use gemlab::util::{SQRT_2, SQRT_3};
+/// use russell_chk::assert_approx_eq;
+///
+/// fn main() -> Result<(), StrError> {
+///     let a = &[-10.0, -10.0, -10.0];
+///     let b = &[100.0, 100.0, 100.0];
+///     let radius = 5.0;
+///     let d = point_cylinder_distance(a, b, radius, &[0.0, 0.0, 0.0])?;
+///     assert_eq!(d, -radius);
+///
+///     let d = point_cylinder_distance(a, b, radius, &[1.0, 1.0, 0.0])?;
+///     assert_approx_eq!(d, SQRT_2 / SQRT_3 - radius, 1e-15);
+///
+///     let z = radius * SQRT_3 / SQRT_2;
+///     let d = point_cylinder_distance(a, b, radius, &[0.0, 0.0, z])?;
+///     assert_approx_eq!(d, 0.0, 1e-14);
+///     Ok(())
+/// }
+/// ```
 pub fn point_cylinder_distance(a: &[f64], b: &[f64], radius: f64, p: &[f64]) -> Result<f64, StrError> {
     let ndim = a.len();
     if ndim != 3 {
