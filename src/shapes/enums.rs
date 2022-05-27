@@ -201,6 +201,22 @@ pub fn geo_class_and_kind(geo_ndim: usize, nnode: usize) -> Result<(GeoClass, Ge
 /// * `ξ_min` = -1.0
 /// * `ξ_max` = +1.0
 /// * `Δξ` = 2.0
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::shapes;
+///
+/// let (min, max, del) = shapes::ref_domain_limits(shapes::GeoClass::Tet);
+/// assert_eq!(min, 0.0);
+/// assert_eq!(max, 1.0);
+/// assert_eq!(del, 1.0);
+///
+/// let (min, max, del) = shapes::ref_domain_limits(shapes::GeoClass::Hex);
+/// assert_eq!(min, -1.0);
+/// assert_eq!(max, 1.0);
+/// assert_eq!(del, 2.0);
+/// ```
 #[inline]
 pub fn ref_domain_limits(class: GeoClass) -> (f64, f64, f64) {
     if class == GeoClass::Tri || class == GeoClass::Tet {
