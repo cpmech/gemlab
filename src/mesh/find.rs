@@ -75,7 +75,7 @@ impl Find {
     ///   the point ids using the following code snipped:
     ///
     /// ``` text
-    /// let mut ids: Vec<_> = point_ids.iter().collect();
+    /// let mut ids: Vec<_> = point_ids.iter().copied().collect();
     /// ids.sort();
     /// ```
     pub fn points(&self, at: At) -> Result<HashSet<PointId>, StrError> {
@@ -184,7 +184,7 @@ impl Find {
     ///   the edge keys using the following code snipped:
     ///
     /// ``` text
-    /// let mut keys: Vec<_> = edge_keys.iter().collect();
+    /// let mut keys: Vec<_> = edge_keys.iter().copied().collect();
     /// keys.sort();
     /// ```
     pub fn edges(&self, at: At) -> Result<HashSet<EdgeKey>, StrError> {
@@ -216,7 +216,7 @@ impl Find {
     ///   the face keys using the following code snipped:
     ///
     /// ``` text
-    /// let mut keys: Vec<_> = face_keys.iter().collect();
+    /// let mut keys: Vec<_> = face_keys.iter().copied().collect();
     /// keys.sort();
     /// ```
     pub fn faces(&self, at: At) -> Result<HashSet<FaceKey>, StrError> {
