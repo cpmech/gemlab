@@ -783,7 +783,7 @@ impl Shape {
     ///
     /// **Note:** This function works with `geo_ndim == space_ndim` only.
     ///
-    /// We use Newton iterations with the inverse of the Jacobian to compute ξ(x).
+    /// We use Newton iterations with the inverse of the Jacobian to compute `ξ(x)`.
     ///
     /// # Output
     ///
@@ -807,6 +807,43 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     // 7.0        2.                ξ₀   ξ₁
+    ///     //           /  `.       node    r    s
+    ///     //          /     `.        0  0.0  0.0
+    ///     //     (3.5,6.0)    `.      1  1.0  0.0
+    ///     //        /           `.    2  0.0  1.0
+    ///     //       /              `.
+    ///     // 5.0  0-----------------1
+    ///     //     3.0   4.0   5.0   6.0
+    ///     #[rustfmt::skip]
+    ///     let coords = &[
+    ///         [3.0, 5.0],
+    ///         [6.0, 5.0],
+    ///         [4.0, 7.0],
+    ///     ];
+    ///     let shape = Shape::new(2, 2, 3)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     // x @ middle of edge (0,2)
+    ///     let x = Vector::from(&[3.5, 6.0]);
+    ///
+    ///     // find ξ corresponding to x @ middle of edge (0,2)
+    ///     let mut ksi = vec![0.0; shape.space_ndim];
+    ///     shape.approximate_ksi(&mut ksi, &mut state, &x, 10, 1e-8)?;
+    ///     assert_vec_approx_eq!(ksi, &[0.0, 0.5], 1e-8);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn approximate_ksi(
         &self,
         ksi: &mut [f64],
