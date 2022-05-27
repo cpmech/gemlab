@@ -1070,7 +1070,6 @@ impl Shape {
     ///     //  1'-----[1]------2'
     ///     let shape = Shape::new(3, 3, 8)?;
     ///     let edges: Vec<_> = (0..shape.nedge)
-    ///         .into_iter()
     ///         .map(|e| (shape.edge_node_id(e, 0), shape.edge_node_id(e, 1)))
     ///         .collect();
     ///     assert_eq!(
@@ -1146,7 +1145,6 @@ impl Shape {
     ///     // 1----------------2'
     ///     let shape = Shape::new(3, 3, 8)?;
     ///     let faces: Vec<_> = (0..shape.nface)
-    ///         .into_iter()
     ///         .map(|f| {
     ///             (
     ///                 shape.face_node_id(f, 0),
@@ -1224,10 +1222,8 @@ impl Shape {
     ///     // 1----------------2'
     ///     let shape = Shape::new(3, 3, 8)?;
     ///     let data: Vec<Vec<_>> = (0..shape.nface)
-    ///         .into_iter()
     ///         .map(|f| {
     ///             (0..shape.face_nedge)
-    ///                 .into_iter()
     ///                 .map(|k|
     ///                     (shape.face_edge_node_id(f, k, 0),
     ///                      shape.face_edge_node_id(f, k, 1))
@@ -1294,7 +1290,6 @@ impl Shape {
     ///     //  0-------------1
     ///     let shape = Shape::new(2, 2, 4)?;
     ///     let ref_coords: Vec<_> = (0..shape.nnode)
-    ///         .into_iter()
     ///         .map(|m| shape.reference_coords(m))
     ///         .collect();
     ///     assert_eq!(ref_coords, &[
