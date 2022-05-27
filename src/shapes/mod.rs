@@ -11,8 +11,10 @@
 //!                  has `geo_ndim = 2` and `space_ndim = 3`.
 //! * `local` -- refers to a numbering scheme for the nodes of the shape (or element)
 //! * `global` -- refers to a numbering scheme applied for the whole mesh
-//! * `spatial (real) space` -- is the "real" space mapped by the x₀,x₁,x₂ coordinates
-//! * `reference (natural) space` -- is the "virtual" space mapped by the ξ₀,ξ₁,ξ₂ coordinates
+//! * `spatial (real) space` -- is the "real" space mapped by the x₀,x₁,x₂ coordinates (see figure below)
+//! * `reference (natural) space` -- is the "virtual" space mapped by the ξ₀,ξ₁,ξ₂ coordinates (see figure below)
+//!
+//! ![Real and reference space mapping](https://github.com/cpmech/gemlab/raw/main/data/figures/mapping-real-to-reference.png)
 //!
 //! We also consider the following counting variables:
 //!
@@ -52,7 +54,12 @@
 //!
 //! # Derivatives on the reference space and gradients on the real space
 //!
-//! ## General case with `geo_ndim == space_ndim`
+//! Here, we consider two cases:
+//!
+//! * General case with geo_ndim == space_ndim; and
+//! * Line in multi-dimensions with geo_ndim == 1 and space_ndim > 1.
+//!
+//! ## General case with geo_ndim == space_ndim
 //!
 //! If `geo_ndim == space_ndim`, we define the Jacobian tensor as
 //!
@@ -74,9 +81,9 @@
 //!           dξ
 //! ```
 //!
-//! are the derivatives of each interpolation function `Nm` with respect to the
-//! reference coordinate. `Lm` are (geo_ndim) vectors and can be organized in
-//! an (nnode,geo_ndim) matrix `L` of "local" derivatives.
+//! are the derivatives of each interpolation function `Nᵐ` with respect to the
+//! reference coordinate. `Lᵐ` are (geo_ndim) vectors and can be organized in
+//! an (nnode,geo_ndim) matrix `L` of **local** derivatives.
 //!
 //! We can write the Jacobian in matrix notation as follows
 //!
@@ -84,9 +91,9 @@
 //! J = Xᵀ · L
 //! ```
 //!
-//! where X is the (nnode,space_ndim) matrix of coordinates and L is the (nnode,geo_ndim) matrix.
+//! where `X` is the (nnode,space_ndim) matrix of coordinates and `L` is the (nnode,geo_ndim) matrix.
 //!
-//! We define the gradient of interpolation functions (i.e., derivatives of interpolation
+//! Next, we define the gradient of interpolation functions (i.e., derivatives of interpolation
 //! functions w.r.t real coordinates) by means of
 //!
 //! ```text
@@ -99,7 +106,7 @@
 //!
 //! which can be organized in an (nnode,space_ndim) matrix `G`.
 //!
-//! The inverse Jacobian allows us to determine the gradient vectors G as follows
+//! The inverse Jacobian allows us to determine the gradient vectors `G` as follows
 //!
 //! ```text
 //! →       →  →        →
@@ -112,12 +119,12 @@
 //! G = L · J⁻¹
 //! ```
 //!
-//! where G is an (nnode,space_ndim) matrix.
+//! where `G` is an (nnode,space_ndim) matrix.
 //!
-//! ## Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
+//! ## Line in multi-dimensions with geo_ndim == 1 and space_ndim > 1
 //!
-//! In this case, the Jacobian equals the (space_ndim,1) base vector `g1` tangent
-//! to the line element, i.e.,
+//! In this case, the Jacobian equals the (space_ndim,1) base vector `g₁` which
+//! is tangent to the line element, i.e.,
 //!
 //! ```text
 //!                          →
@@ -127,7 +134,7 @@
 //! ```
 //!
 //! We also consider a parametric coordinate `ℓ` which varies
-//! from 0 to `ℓ_max` (the length of the line) according to
+//! from `0` to `ℓ_max` (the length of the line) according to
 //!
 //! ```text
 //!                ℓ_max
@@ -138,6 +145,8 @@
 //! ξ(ℓ) = ————— - 1
 //!        ℓ_max
 //! ```
+//!
+//! Note that:
 //!
 //! ```text
 //! 0 ≤ ℓ ≤ ℓ_max
