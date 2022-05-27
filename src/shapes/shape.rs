@@ -672,7 +672,7 @@ impl Shape {
     /// * `geo_ndim = 1` and `space_ndim = 2` -- line in 2D, or
     /// * `geo_ndim = 2` and `space_ndim = 3` -- surface in 3D.
     ///
-    /// # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
+    /// ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
     ///
     /// Base vector tangent with the line:
     ///
@@ -700,7 +700,7 @@ impl Shape {
     /// dℓ = ||g₁|| dξ = ||n|| dξ
     /// ```
     ///
-    /// # Boundary surface (geo_ndim == 2 and space_ndim == 3)
+    /// ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
     ///
     /// Base vectors tangent to the surface:
     ///
@@ -746,6 +746,12 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+    ///
+    /// ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
     pub fn calc_boundary_normal(
         &self,
         normal: &mut Vector,
@@ -764,14 +770,14 @@ impl Shape {
         self.calc_deriv(state, ksi)?;
         mat_mat_mul(&mut state.jacobian, 1.0, &state.coords_transp, &state.deriv)?;
 
-        // line in 2D (geo_ndim == 1 && self.space_ndim == 2)
+        // line in 2D (geo_ndim = 1 && self.space_ndim = 2)
         if self.space_ndim == 2 {
             normal[0] = -state.jacobian[1][0];
             normal[1] = state.jacobian[0][0];
             return Ok(());
         }
 
-        // surface in 3D (geo_ndim == 2 && space_ndim == 3)
+        // surface in 3D (geo_ndim = 2 && space_ndim = 3)
         let jj = &state.jacobian;
         normal[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
         normal[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
@@ -1234,7 +1240,6 @@ mod tests {
                 ksi_aux[1] = 1.0;
                 gen_coords(&mut x, &ksi_aux, shape.class);
             } else {
-                // shape.geo_ndim == 2 && shape.space_ndim == 3
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = ksi[1];
                 ksi_aux[2] = 1.0;

@@ -59,7 +59,7 @@
 //! Here, we consider two cases:
 //!
 //! * General case with geo_ndim == space_ndim; and
-//! * Line in multi-dimensions with geo_ndim == 1 and space_ndim > 1.
+//! * Line in multi-dimensions with geo_ndim = 1 and space_ndim > 1.
 //!
 //! ## General case with geo_ndim == space_ndim
 //!
@@ -123,7 +123,7 @@
 //!
 //! where `G` is an (nnode,space_ndim) matrix.
 //!
-//! ## Line in multi-dimensions with geo_ndim == 1 and space_ndim > 1
+//! ## Line in multi-dimensions with geo_ndim = 1 and space_ndim > 1
 //!
 //! In this case, the Jacobian equals the (space_ndim,1) base vector `g₁` which
 //! is tangent to the line element, i.e.,
