@@ -856,7 +856,7 @@ impl Shape {
 
     /// Calculates the gradient of the interpolation functions
     ///
-    /// **Note:** This function works with `geo_ndim == space_ndim` only
+    /// **Note:** This function works with `geo_ndim == space_ndim` only.
     ///
     /// ```text
     ///             →
@@ -870,6 +870,16 @@ impl Shape {
     ///
     /// ```text
     /// G = L · J⁻¹
+    /// ```
+    ///
+    /// where
+    ///
+    /// ```text
+    ///             →
+    /// →  →    dNᵐ(ξ)
+    /// Lᵐ(ξ) = ——————
+    ///            →
+    ///           dξ
     /// ```
     ///
     /// # Output
@@ -893,6 +903,40 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_lab::Matrix;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let a = 3.0;
+    ///     let coords = &[[0.0, 0.0], [2.0 * a, 0.0], [2.0 * a, a], [0.0, a]];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     shape.calc_gradient(&mut state, &[0.0, 0.0])?;
+    ///
+    ///     let correct_gg = Matrix::from(&[
+    ///         [-1.0/(4.0*a), -1.0/(2.0*a)],
+    ///         [ 1.0/(4.0*a), -1.0/(2.0*a)],
+    ///         [ 1.0/(4.0*a),  1.0/(2.0*a)],
+    ///         [-1.0/(4.0*a),  1.0/(2.0*a)],
+    ///     ]);
+    ///     assert_vec_approx_eq!(state.gradient.as_data(), correct_gg.as_data(), 1e-15);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_gradient(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<f64, StrError> {
         if self.geo_ndim != self.space_ndim {
             return Err("geo_ndim must equal space_ndim");
