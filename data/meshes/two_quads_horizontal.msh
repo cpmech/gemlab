@@ -1,0 +1,26 @@
+#
+# 1.0  3-----------2-----------5
+#      |           |           |
+#      |    [0]    |    [1]    |  [*] indicates id
+#      |    (1)    |    (2)    |  (*) indicates attribute_id
+#      |           |           |
+# 0.0  0-----------1-----------4
+#     0.0         1.0         2.0
+#
+# header
+# space_ndim npoint ncell
+           2      6     2
+
+# points
+# id    x   y
+   0  0.0 0.0
+   1  1.0 0.0
+   2  1.0 1.0
+   3  0.0 1.0
+   4  2.0 0.0
+   5  2.0 1.0
+
+# cells
+# id att geo_ndim nnode  point_ids...
+   0   1        2     4  0 1 2 3
+   1   2        2     4  1 4 5 2

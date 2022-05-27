@@ -1,6 +1,5 @@
 use super::{Cell, Mesh, Point, PointId};
 use crate::StrError;
-use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -93,12 +92,7 @@ impl DataForReadTextMesh {
             return Err("point data contains extra values");
         }
 
-        mesh.points.push(Point {
-            id,
-            coords,
-            shared_by_boundary_edges: HashSet::new(),
-            shared_by_boundary_faces: HashSet::new(),
-        });
+        mesh.points.push(Point { id, coords });
 
         self.current_npoint += 1; // next point
 
@@ -167,147 +161,186 @@ impl DataForReadTextMesh {
     }
 }
 
-/// Reads raw mesh data from text file
-pub(super) fn read_text_mesh<P>(full_path: &P) -> Result<Mesh, StrError>
-where
-    P: AsRef<OsStr> + ?Sized,
-{
-    let path = Path::new(full_path).to_path_buf();
-    let input = File::open(path).map_err(|_| "cannot open file")?;
-    let buffered = BufReader::new(input);
-    let mut lines_iter = buffered.lines();
+impl Mesh {
+    /// Allocates a new Mesh by reading raw mesh data from a text file
+    pub fn from_text_file<P>(full_path: &P) -> Result<Self, StrError>
+    where
+        P: AsRef<OsStr> + ?Sized,
+    {
+        let path = Path::new(full_path).to_path_buf();
+        let input = File::open(path).map_err(|_| "cannot open file")?;
+        let buffered = BufReader::new(input);
+        let mut lines_iter = buffered.lines();
 
-    // auxiliary data structure
-    let mut data = DataForReadTextMesh::new();
+        // auxiliary data structure
+        let mut data = DataForReadTextMesh::new();
 
-    // read and parse sizes
-    loop {
-        match lines_iter.next() {
-            Some(v) => {
-                let line = v.unwrap(); // must panic because no error expected here
-                if data.parse_sizes(&line)? {
-                    break;
-                }
-            }
-            None => return Err("file is empty or header is missing"),
-        }
-    }
-
-    // allocate mesh
-    let mut mesh = Mesh::new(data.space_ndim)?;
-
-    // read and parse points
-    loop {
-        match lines_iter.next() {
-            Some(v) => {
-                let line = v.unwrap(); // must panic because no error expected here
-                if data.parse_point(&mut mesh, &line)? {
-                    if data.current_npoint == data.npoint {
+        // read and parse sizes
+        loop {
+            match lines_iter.next() {
+                Some(v) => {
+                    let line = v.unwrap(); // must panic because no error expected here
+                    if data.parse_sizes(&line)? {
                         break;
                     }
                 }
+                None => return Err("file is empty or header is missing"),
             }
-            None => break,
         }
+
+        // allocate mesh
+        let mut mesh = Mesh {
+            space_ndim: data.space_ndim,
+            points: Vec::new(),
+            cells: Vec::new(),
+        };
+
+        // read and parse points
+        loop {
+            match lines_iter.next() {
+                Some(v) => {
+                    let line = v.unwrap(); // must panic because no error expected here
+                    if data.parse_point(&mut mesh, &line)? {
+                        if data.current_npoint == data.npoint {
+                            break;
+                        }
+                    }
+                }
+                None => break,
+            }
+        }
+
+        // check data
+        if data.current_npoint != data.npoint {
+            return Err("not all points have been found");
+        }
+
+        // read and parse cells
+        loop {
+            match lines_iter.next() {
+                Some(v) => {
+                    let line = v.unwrap(); // must panic because no error expected here
+                    if data.parse_cell(&mut mesh, &line)? {
+                        if data.current_ncell == data.ncell {
+                            break;
+                        }
+                    }
+                }
+                None => break,
+            }
+        }
+
+        // check data
+        if data.current_ncell != data.ncell {
+            return Err("not all cells have been found");
+        }
+
+        // done
+        Ok(mesh)
     }
 
-    // check data
-    if data.current_npoint != data.npoint {
-        return Err("not all points have been found");
-    }
+    /// Allocates a new Mesh by parsing raw mesh data from a text string
+    ///
+    /// # Examples
+    ///
+    /// See `examples` and `data/meshes` directories for more examples
+    /// (with pretty formatted strings).
+    ///
+    /// ```
+    /// use gemlab::mesh::Mesh;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     // 1.0  3-------2
+    ///     //      |`. [1] |
+    ///     //      |  `.   |
+    ///     //      | [0]`. |
+    ///     // 0.0  0------`1
+    ///     //     0.0     1.0
+    ///     let mesh = Mesh::from_text(
+    ///         "2 4 2\n# points\n0 0.0 0.0\n1 1.0 0.0\n2 1.0 1.0\n3 0.0 1.0\n# cells\n0 1 2 3  0 1 3\n1 1 2 3  2 3 1\n",
+    ///     )?;
+    ///     assert_eq!(mesh.points.len(), 4);
+    ///     assert_eq!(mesh.cells.len(), 2);
+    ///     assert_eq!(mesh.cells[0].points, &[0, 1, 3]);
+    ///     assert_eq!(mesh.cells[1].points, &[2, 3, 1]);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn from_text(text: &str) -> Result<Self, StrError> {
+        // auxiliary data structure
+        let mut data = DataForReadTextMesh::new();
 
-    // read and parse cells
-    loop {
-        match lines_iter.next() {
-            Some(v) => {
-                let line = v.unwrap(); // must panic because no error expected here
-                if data.parse_cell(&mut mesh, &line)? {
-                    if data.current_ncell == data.ncell {
+        // read and parse sizes
+        let mut lines_iter = text.lines();
+        loop {
+            match lines_iter.next() {
+                Some(line) => {
+                    if data.parse_sizes(line)? {
                         break;
                     }
                 }
+                None => return Err("text string is empty or header is missing"),
             }
-            None => break,
         }
-    }
 
-    // check data
-    if data.current_ncell != data.ncell {
-        return Err("not all cells have been found");
-    }
+        // allocate mesh
+        let mut mesh = Mesh {
+            space_ndim: data.space_ndim,
+            points: Vec::new(),
+            cells: Vec::new(),
+        };
 
-    // done
-    Ok(mesh)
-}
-
-/// Parses raw mesh data from text string
-pub(super) fn parse_text_mesh(text: &str) -> Result<Mesh, StrError> {
-    // auxiliary data structure
-    let mut data = DataForReadTextMesh::new();
-
-    // read and parse sizes
-    let mut lines_iter = text.lines();
-    loop {
-        match lines_iter.next() {
-            Some(line) => {
-                if data.parse_sizes(line)? {
-                    break;
-                }
-            }
-            None => return Err("text string is empty or header is missing"),
-        }
-    }
-
-    // allocate mesh
-    let mut mesh = Mesh::new(data.space_ndim)?;
-
-    // read and parse points
-    loop {
-        match lines_iter.next() {
-            Some(line) => {
-                if data.parse_point(&mut mesh, line)? {
-                    if data.current_npoint == data.npoint {
-                        break;
+        // read and parse points
+        loop {
+            match lines_iter.next() {
+                Some(line) => {
+                    if data.parse_point(&mut mesh, line)? {
+                        if data.current_npoint == data.npoint {
+                            break;
+                        }
                     }
                 }
+                None => break,
             }
-            None => break,
         }
-    }
 
-    // check data
-    if data.current_npoint != data.npoint {
-        return Err("not all points have been found");
-    }
+        // check data
+        if data.current_npoint != data.npoint {
+            return Err("not all points have been found");
+        }
 
-    // read and parse cells
-    loop {
-        match lines_iter.next() {
-            Some(line) => {
-                if data.parse_cell(&mut mesh, line)? {
-                    if data.current_ncell == data.ncell {
-                        break;
+        // read and parse cells
+        loop {
+            match lines_iter.next() {
+                Some(line) => {
+                    if data.parse_cell(&mut mesh, line)? {
+                        if data.current_ncell == data.ncell {
+                            break;
+                        }
                     }
                 }
+                None => break,
             }
-            None => break,
         }
-    }
 
-    // check data
-    if data.current_ncell != data.ncell {
-        return Err("not all cells have been found");
-    }
+        // check data
+        if data.current_ncell != data.ncell {
+            return Err("not all cells have been found");
+        }
 
-    // done
-    Ok(mesh)
+        // done
+        Ok(mesh)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_text_mesh, read_text_mesh, DataForReadTextMesh, Mesh, StrError};
+    use super::DataForReadTextMesh;
+    use crate::mesh::{Mesh, Samples};
+    use crate::StrError;
 
     #[test]
     fn parse_sizes_captures_errors() -> Result<(), StrError> {
@@ -345,8 +378,11 @@ mod tests {
         data.npoint = 2;
         data.ncell = 1;
 
-        // let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
-        let mut mesh = Mesh::new(data.space_ndim)?;
+        let mut mesh = Mesh {
+            space_ndim: data.space_ndim,
+            points: Vec::new(),
+            cells: Vec::new(),
+        };
 
         assert_eq!(
             data.parse_point(&mut mesh, &String::from(" wrong \n")).err(),
@@ -394,8 +430,11 @@ mod tests {
         data.npoint = 2;
         data.ncell = 1;
 
-        // let mut mesh = Mesh::new_sized(data.ndim, data.npoint, data.ncell)?;
-        let mut mesh = Mesh::new(data.space_ndim)?;
+        let mut mesh = Mesh {
+            space_ndim: data.space_ndim,
+            points: Vec::new(),
+            cells: Vec::new(),
+        };
 
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" wrong \n")).err(),
@@ -447,130 +486,62 @@ mod tests {
     }
 
     #[test]
-    fn read_text_mesh_handle_wrong_files() -> Result<(), StrError> {
+    fn from_text_file_captures_errors() -> Result<(), StrError> {
         assert_eq!(
-            read_text_mesh(&String::from("__wrong__")).err(),
+            Mesh::from_text_file(&String::from("__wrong__")).err(),
             Some("cannot open file")
         );
         assert_eq!(
-            read_text_mesh(&String::from("./data/meshes/bad_empty.msh")).err(),
+            Mesh::from_text_file(&String::from("./data/meshes/bad_empty.msh")).err(),
             Some("file is empty or header is missing")
         );
         assert_eq!(
-            read_text_mesh(&String::from("./data/meshes/bad_extra_cell_data.msh")).err(),
+            Mesh::from_text_file(&String::from("./data/meshes/bad_extra_cell_data.msh")).err(),
             Some("cell data contains extra values")
         );
         assert_eq!(
-            read_text_mesh(&String::from("./data/meshes/bad_extra_point_data.msh")).err(),
+            Mesh::from_text_file(&String::from("./data/meshes/bad_extra_point_data.msh")).err(),
             Some("point data contains extra values")
         );
         assert_eq!(
-            read_text_mesh(&String::from("./data/meshes/bad_missing_header.msh")).err(),
+            Mesh::from_text_file(&String::from("./data/meshes/bad_missing_header.msh")).err(),
             Some("file is empty or header is missing")
         );
         assert_eq!(
-            read_text_mesh(&String::from("./data/meshes/bad_missing_points.msh")).err(),
+            Mesh::from_text_file(&String::from("./data/meshes/bad_missing_points.msh")).err(),
             Some("not all points have been found")
         );
         assert_eq!(
-            read_text_mesh(&String::from("./data/meshes/bad_missing_cells.msh")).err(),
+            Mesh::from_text_file(&String::from("./data/meshes/bad_missing_cells.msh")).err(),
             Some("not all cells have been found")
         );
         Ok(())
     }
 
     #[test]
-    fn read_text_mesh_2d_works() -> Result<(), StrError> {
-        let mesh = read_text_mesh("./data/meshes/ok1.msh")?;
-        assert_eq!(
-            format!("{}", mesh),
-            "SUMMARY\n\
-             =======\n\
-             space_ndim = 2\n\
-             npoint = 6\n\
-             ncell = 2\n\
-             n_boundary_point = 0\n\
-             n_boundary_edge = 0\n\
-             n_boundary_face = 0\n\
-             \n\
-             POINTS\n\
-             ======\n\
-             i:0 x:[0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0] e:[] f:[]\n\
-             i:4 x:[2.0, 0.0] e:[] f:[]\n\
-             i:5 x:[2.0, 1.0] e:[] f:[]\n\
-             \n\
-             CELLS\n\
-             =====\n\
-             i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
-             i:1 a:0 g:2 p:[1, 4, 5, 2]\n\
-             \n\
-             BOUNDARY POINTS\n\
-             ===============\n\
-             []\n\
-             \n\
-             BOUNDARY EDGES\n\
-             ==============\n\
-             \n\
-             BOUNDARY FACES\n\
-             ==============\n"
-        );
+    fn from_text_file_works() -> Result<(), StrError> {
+        let mesh = Mesh::from_text_file("./data/meshes/two_quads_horizontal.msh")?;
+        let sample = Samples::two_quads_horizontal();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
+
+        let mesh = Mesh::from_text_file("./data/meshes/two_cubes_vertical.msh")?;
+        let sample = Samples::two_cubes_vertical();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
+
+        let mesh = Mesh::from_text_file("./data/meshes/mixed_shapes_2d.msh")?;
+        let sample = Samples::mixed_shapes_2d();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
+
+        let mesh = Mesh::from_text_file("./data/meshes/mixed_shapes_3d.msh")?;
+        let sample = Samples::mixed_shapes_3d();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
         Ok(())
     }
 
     #[test]
-    fn read_text_mesh_3d_works() -> Result<(), StrError> {
-        let mesh = read_text_mesh("./data/meshes/ok2.msh")?;
+    fn from_text_captures_errors() -> Result<(), StrError> {
         assert_eq!(
-            format!("{}", mesh),
-            "SUMMARY\n\
-             =======\n\
-             space_ndim = 3\n\
-             npoint = 12\n\
-             ncell = 2\n\
-             n_boundary_point = 0\n\
-             n_boundary_edge = 0\n\
-             n_boundary_face = 0\n\
-             \n\
-             POINTS\n\
-             ======\n\
-             i:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
-             i:4 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
-             i:5 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
-             i:6 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
-             i:7 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
-             i:8 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
-             i:9 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
-             i:10 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
-             i:11 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
-             \n\
-             CELLS\n\
-             =====\n\
-             i:0 a:1 g:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
-             i:1 a:0 g:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
-             \n\
-             BOUNDARY POINTS\n\
-             ===============\n\
-             []\n\
-             \n\
-             BOUNDARY EDGES\n\
-             ==============\n\
-             \n\
-             BOUNDARY FACES\n\
-             ==============\n"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn parse_text_mesh_handle_wrong_data() -> Result<(), StrError> {
-        assert_eq!(
-            parse_text_mesh(
+            Mesh::from_text(
                 "# header\n\
                  # space_ndim npoint ncell\n"
             )
@@ -579,7 +550,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse_text_mesh(
+            Mesh::from_text(
                 "# header\n\
                  # space_ndim npoint ncell\n\
                             2      4     1\n\
@@ -593,7 +564,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse_text_mesh(
+            Mesh::from_text(
                 "# header\n\
                  # space_ndim npoint ncell\n\
                             2      6     2\n\
@@ -616,7 +587,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse_text_mesh(
+            Mesh::from_text(
                 "# header\n\
                  # space_ndim npoint ncell\n\
                             2      4     1\n\
@@ -635,7 +606,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse_text_mesh(
+            Mesh::from_text(
                 "# header\n\
                  # space_ndim npoint ncell\n\
                             2      4     1\n\
@@ -656,8 +627,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_mesh_2d_works() -> Result<(), StrError> {
-        let mesh = parse_text_mesh(
+    fn from_text_works() -> Result<(), StrError> {
+        let mesh = Mesh::from_text(
             r"# header
             # space_ndim npoint ncell
                        2      6     2
@@ -674,49 +645,12 @@ mod tests {
             # cells
             # id att geo_ndim nnode  point_ids...
                0   1        2     4  0 1 2 3
-               1   0        2     4  1 4 5 2",
+               1   2        2     4  1 4 5 2",
         )?;
-        assert_eq!(
-            format!("{}", mesh),
-            "SUMMARY\n\
-             =======\n\
-             space_ndim = 2\n\
-             npoint = 6\n\
-             ncell = 2\n\
-             n_boundary_point = 0\n\
-             n_boundary_edge = 0\n\
-             n_boundary_face = 0\n\
-             \n\
-             POINTS\n\
-             ======\n\
-             i:0 x:[0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0] e:[] f:[]\n\
-             i:4 x:[2.0, 0.0] e:[] f:[]\n\
-             i:5 x:[2.0, 1.0] e:[] f:[]\n\
-             \n\
-             CELLS\n\
-             =====\n\
-             i:0 a:1 g:2 p:[0, 1, 2, 3]\n\
-             i:1 a:0 g:2 p:[1, 4, 5, 2]\n\
-             \n\
-             BOUNDARY POINTS\n\
-             ===============\n\
-             []\n\
-             \n\
-             BOUNDARY EDGES\n\
-             ==============\n\
-             \n\
-             BOUNDARY FACES\n\
-             ==============\n"
-        );
-        Ok(())
-    }
+        let sample = Samples::two_quads_horizontal();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
-    #[test]
-    fn parse_text_mesh_3d_works() -> Result<(), StrError> {
-        let mesh = parse_text_mesh(
+        let mesh = Mesh::from_text(
             r"# header
             # space_ndim npoint ncell
                        3     12     2
@@ -739,49 +673,58 @@ mod tests {
             # cells
             # id att geo_ndim nnode  point_ids...
                0   1        3     8  0 1 2 3 4 5  6  7
-               1   0        3     8  4 5 6 7 8 9 10 11",
+               1   2        3     8  4 5 6 7 8 9 10 11",
         )?;
-        assert_eq!(
-            format!("{}", mesh),
-            "SUMMARY\n\
-             =======\n\
-             space_ndim = 3\n\
-             npoint = 12\n\
-             ncell = 2\n\
-             n_boundary_point = 0\n\
-             n_boundary_edge = 0\n\
-             n_boundary_face = 0\n\
-             \n\
-             POINTS\n\
-             ======\n\
-             i:0 x:[0.0, 0.0, 0.0] e:[] f:[]\n\
-             i:1 x:[1.0, 0.0, 0.0] e:[] f:[]\n\
-             i:2 x:[1.0, 1.0, 0.0] e:[] f:[]\n\
-             i:3 x:[0.0, 1.0, 0.0] e:[] f:[]\n\
-             i:4 x:[0.0, 0.0, 1.0] e:[] f:[]\n\
-             i:5 x:[1.0, 0.0, 1.0] e:[] f:[]\n\
-             i:6 x:[1.0, 1.0, 1.0] e:[] f:[]\n\
-             i:7 x:[0.0, 1.0, 1.0] e:[] f:[]\n\
-             i:8 x:[0.0, 0.0, 2.0] e:[] f:[]\n\
-             i:9 x:[1.0, 0.0, 2.0] e:[] f:[]\n\
-             i:10 x:[1.0, 1.0, 2.0] e:[] f:[]\n\
-             i:11 x:[0.0, 1.0, 2.0] e:[] f:[]\n\
-             \n\
-             CELLS\n\
-             =====\n\
-             i:0 a:1 g:3 p:[0, 1, 2, 3, 4, 5, 6, 7]\n\
-             i:1 a:0 g:3 p:[4, 5, 6, 7, 8, 9, 10, 11]\n\
-             \n\
-             BOUNDARY POINTS\n\
-             ===============\n\
-             []\n\
-             \n\
-             BOUNDARY EDGES\n\
-             ==============\n\
-             \n\
-             BOUNDARY FACES\n\
-             ==============\n"
-        );
+        let sample = Samples::two_cubes_vertical();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
         Ok(())
     }
+
+    /*
+    #[test]
+    fn from_text_fails_on_wrong_jacobian_2d() -> Result<(), StrError> {
+        //
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        //
+        let res = Mesh::from_text(
+            r"# header
+            # space_ndim npoint ncell
+                       2      6     2
+
+            # points
+            # id   x   y
+               0 0.0 0.0
+               1 1.0 0.0
+               2 1.0 1.0
+               3 0.0 1.0
+               4 2.0 0.0
+               5 2.0 1.0
+
+            # cells
+            # id att geo_ndim nnode  (wrong) point_ids...
+               0   1        2     4  0 3 2 1
+               1   0        2     4  1 2 5 4",
+        );
+        assert_eq!(res.err(), Some("a cell has incorrect ordering of nodes"));
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_file_fails_on_wrong_jacobian_3d() -> Result<(), StrError> {
+        let res = Mesh::from_text_file("./data/meshes/bad_wrong_jacobian.msh");
+        assert_eq!(res.err(), Some("a cell has incorrect ordering of nodes"));
+        Ok(())
+    }
+
+    #[test]
+    fn from_text_file_fails_on_wrong_nodes_3d() -> Result<(), StrError> {
+        let res = Mesh::from_text_file("./data/meshes/bad_wrong_nodes.msh");
+        assert_eq!(res.err(), Some("cannot compute inverse due to zero determinant"));
+        Ok(())
+    }
+    */
 }

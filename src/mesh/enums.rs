@@ -32,7 +32,7 @@ pub enum At {
     Cylinder(f64, f64, f64, f64, f64, f64, f64),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Constraint {
     /// Arc
     Arc(Circle),
@@ -52,13 +52,10 @@ mod tests {
         let constraint = Constraint::Arc(Circle {
             center: [2.0, 3.0],
             radius: 1.0,
-            tolerance: 1e-2,
         });
         let clone = constraint.clone();
-        assert_eq!(constraint, clone);
-        assert_eq!(
-            format!("{:?}", constraint),
-            "Arc(Circle { center: [2.0, 3.0], radius: 1.0, tolerance: 0.01 })"
-        );
+        let correct = "Arc(Circle { center: [2.0, 3.0], radius: 1.0 })";
+        assert_eq!(format!("{:?}", constraint), correct);
+        assert_eq!(format!("{:?}", clone), correct);
     }
 }
