@@ -418,6 +418,49 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let coords = &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     shape.calc_deriv(&mut state, &[-1.0, -1.0])?;
+    ///     assert_eq!(
+    ///         format!("{}", state.deriv),
+    ///         "┌           ┐\n\
+    ///          │ -0.5 -0.5 │\n\
+    ///          │  0.5    0 │\n\
+    ///          │    0    0 │\n\
+    ///          │    0  0.5 │\n\
+    ///          └           ┘"
+    ///     );
+    ///
+    ///     shape.calc_deriv(&mut state, &[1.0, 1.0])?;
+    ///     assert_eq!(
+    ///         format!("{}", state.deriv),
+    ///         "┌           ┐\n\
+    ///          │    0    0 │\n\
+    ///          │    0 -0.5 │\n\
+    ///          │  0.5  0.5 │\n\
+    ///          │ -0.5    0 │\n\
+    ///          └           ┘"
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     #[inline]
     pub fn calc_deriv(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
         if ksi.len() < self.geo_ndim {
