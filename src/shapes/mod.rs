@@ -2,7 +2,7 @@
 //!
 //! # Definitions
 //!
-//! Here, we consider the following dimensions:
+//! Here, we consider the following definitions:
 //!
 //! * `space_ndim` -- is the number of dimensions of the space under study (2 or 3)
 //! * `geo_ndim` -- is the number of dimensions of the geometry element (shape).
