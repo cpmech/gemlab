@@ -1048,6 +1048,51 @@ impl Shape {
     ///
     /// * `e` -- index of edge in [0, nedge-1]
     /// * `i` -- index of local node [0, edge_nnode-1]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::Shape;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //          .4-----[7]------7
+    ///     //        ,' |            ,'|
+    ///     //      [4] [8]         [6] |  [#] indicates local
+    ///     //    ,'     |        ,'    |      edge number "e"
+    ///     //  5'========[5]===6'     [11]
+    ///     //  |               |       |
+    ///     //  |        |      |       |
+    ///     // [9]      ,0-[3]- | - - - 3
+    ///     //  |     ,'       [10]  [2]
+    ///     //  |   [0]         |   ,'
+    ///     //  | ,'            | ,'
+    ///     //  1'-----[1]------2'
+    ///     let shape = Shape::new(3, 3, 8)?;
+    ///     let edges: Vec<_> = (0..shape.nedge)
+    ///         .into_iter()
+    ///         .map(|e| (shape.edge_node_id(e, 0), shape.edge_node_id(e, 1)))
+    ///         .collect();
+    ///     assert_eq!(
+    ///         edges,
+    ///         &[
+    ///             (0, 1),
+    ///             (1, 2),
+    ///             (2, 3),
+    ///             (3, 0),
+    ///             (4, 5),
+    ///             (5, 6),
+    ///             (6, 7),
+    ///             (7, 4),
+    ///             (0, 4),
+    ///             (1, 5),
+    ///             (2, 6),
+    ///             (3, 7)
+    ///         ]
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn edge_node_id(&self, e: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
