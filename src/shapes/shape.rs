@@ -553,17 +553,31 @@ impl Shape {
     ///        ∂ξⱼ   m
     /// ```
     ///
-    /// Thus
+    /// where
+    ///
+    /// ```text
+    ///             →
+    /// →  →    dNᵐ(ξ)
+    /// Lᵐ(ξ) = ——————
+    ///            →
+    ///           dξ
+    /// ```
+    ///
+    /// Thus, in matrix notation
     ///
     /// ```text
     /// jacobian := J = Xᵀ · L
+    /// ```
     ///
     /// or (line in multi-dimensions, geom_ndim < space_ndim)
     ///
+    /// ```text
     /// jacobian := Jline = Xᵀ · L
+    /// ```
     ///
     /// or (3D surface, geo_ndim = 2 and space_ndim = 3)
     ///
+    /// ```text
     /// jacobian := Jsurf = Xᵀ · L
     /// ```
     ///
@@ -575,7 +589,7 @@ impl Shape {
     ///
     /// # Output
     ///
-    /// * `state.deriv` -- interpolation functions (nnode)
+    /// * `state.deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
     /// * `state.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
     /// * `state.inv_jacobian` -- If `geo_ndim = space_ndim`: inverse Jacobian matrix (space_ndim,space_ndim)
     ///
@@ -601,6 +615,7 @@ impl Shape {
     /// ```
     /// use gemlab::shapes::{Shape, StateOfShape};
     /// use gemlab::StrError;
+    /// use russell_chk::assert_approx_eq;
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //  3-------------2         ξ₀   ξ₁
@@ -610,30 +625,25 @@ impl Shape {
     ///     //  |             |     2  1.0  1.0
     ///     //  |             |     3 -1.0  1.0
     ///     //  0-------------1
-    ///     let coords = &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    ///     let a = 3.0;
+    ///     let coords = &[[0.0, 0.0], [2.0 * a, 0.0], [2.0 * a, a], [0.0, a]];
     ///     let shape = Shape::new(2, 2, 4)?;
     ///     let mut state = StateOfShape::new(2, coords)?;
     ///
-    ///     shape.calc_deriv(&mut state, &[-1.0, -1.0])?;
-    ///     assert_eq!(
-    ///         format!("{}", state.deriv),
-    ///         "┌           ┐\n\
-    ///          │ -0.5 -0.5 │\n\
-    ///          │  0.5    0 │\n\
-    ///          │    0    0 │\n\
-    ///          │    0  0.5 │\n\
-    ///          └           ┘"
-    ///     );
+    ///     let det_jj = shape.calc_jacobian(&mut state, &[0.0, 0.0])?;
+    ///     assert_approx_eq!(det_jj, a * a / 2.0, 1e-15);
     ///
-    ///     shape.calc_deriv(&mut state, &[1.0, 1.0])?;
+    ///     // the solution is
+    ///     //  ┌         ┐
+    ///     //  │  a   0  │
+    ///     //  │  0  a/2 │
+    ///     //  └         ┘
     ///     assert_eq!(
-    ///         format!("{}", state.deriv),
-    ///         "┌           ┐\n\
-    ///          │    0    0 │\n\
-    ///          │    0 -0.5 │\n\
-    ///          │  0.5  0.5 │\n\
-    ///          │ -0.5    0 │\n\
-    ///          └           ┘"
+    ///         format!("{}", state.jacobian),
+    ///         "┌         ┐\n\
+    ///          │   3   0 │\n\
+    ///          │   0 1.5 │\n\
+    ///          └         ┘"
     ///     );
     ///     Ok(())
     /// }
