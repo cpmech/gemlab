@@ -23,58 +23,58 @@ pub enum GeoClass {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GeoKind {
     /// Line (segment) with 2 nodes (linear functions)
-    Lin2 = 1_002,
+    Lin2,
 
     /// Line (segment) with 3 nodes (quadratic functions)
-    Lin3 = 1_003,
+    Lin3,
 
     /// Line (segment) with 4 nodes (cubic functions)
-    Lin4 = 1_004,
+    Lin4,
 
     /// Line (segment) with 5 nodes (quartic functions)
-    Lin5 = 1_005,
+    Lin5,
 
     /// Triangle with 3 nodes (linear edges)
-    Tri3 = 2_003,
+    Tri3,
 
     /// Triangle with 6 nodes (quadratic edges)
-    Tri6 = 2_006,
+    Tri6,
 
     /// Triangle with 10 nodes (cubic edges; interior node)
-    Tri10 = 2_010,
+    Tri10,
 
     /// Triangle with 15 nodes (quartic edges; interior nodes)
-    Tri15 = 2_015,
+    Tri15,
 
     /// Quadrilateral with 4 nodes (linear edges)
-    Qua4 = 2_004,
+    Qua4,
 
     /// Quadrilateral with 8 nodes (quadratic edges)
-    Qua8 = 2_008,
+    Qua8,
 
     /// Quadrilateral with 9 nodes (quadratic edges; interior node)
-    Qua9 = 2_009,
+    Qua9,
 
     /// Quadrilateral with 12 nodes (cubic edges)
-    Qua12 = 2_012,
+    Qua12,
 
     /// Quadrilateral with 16 nodes (cubic edges; interior nodes)
-    Qua16 = 2_016,
+    Qua16,
 
     /// Quadrilateral with 17 nodes (quartic edges; interior node)
-    Qua17 = 2_017,
+    Qua17,
 
     /// Tetrahedron with 4 nodes (linear faces)
-    Tet4 = 3_004,
+    Tet4,
 
     /// Tetrahedron with 10 nodes (quadratic faces)
-    Tet10 = 3_010,
+    Tet10,
 
     /// Hexahedron with 8 nodes (bilinear faces)
-    Hex8 = 3_008,
+    Hex8,
 
     /// Hexahedron with 20 nodes (quadratic faces)
-    Hex20 = 3_020,
+    Hex20,
 }
 
 /// GeoNdim is the (local) space dimension of the geometric feature
