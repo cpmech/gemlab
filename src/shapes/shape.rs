@@ -1122,6 +1122,54 @@ impl Shape {
     ///
     /// * `f` -- index of face in [0, nface-1]
     /// * `i` -- index of local node [0, face_nnode-1]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::Shape;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //           4----------------7
+    ///     //         ,'|              ,'|
+    ///     //       ,'  |  ___       ,'  |
+    ///     //     ,'    |,'5,'  [0],'    |
+    ///     //   ,'      |~~~     ,'      |
+    ///     // 5'===============6'  ,'|   |
+    ///     // |   ,'|   |      |   |3|   |
+    ///     // |   |2|   |      |   |,'   |
+    ///     // |   |,'   0- - - | +- - - -3
+    ///     // |       ,'       |       ,'
+    ///     // |     ,' [1]  ___|     ,'
+    ///     // |   ,'      ,'4,'|   ,'
+    ///     // | ,'        ~~~  | ,'
+    ///     // 1----------------2'
+    ///     let shape = Shape::new(3, 3, 8)?;
+    ///     let faces: Vec<_> = (0..shape.nface)
+    ///         .into_iter()
+    ///         .map(|f| {
+    ///             (
+    ///                 shape.face_node_id(f, 0),
+    ///                 shape.face_node_id(f, 1),
+    ///                 shape.face_node_id(f, 2),
+    ///                 shape.face_node_id(f, 3),
+    ///             )
+    ///         })
+    ///         .collect();
+    ///     assert_eq!(
+    ///         faces,
+    ///         &[
+    ///             (0, 4, 7, 3),
+    ///             (1, 2, 6, 5),
+    ///             (0, 1, 5, 4),
+    ///             (2, 3, 7, 6),
+    ///             (0, 3, 2, 1),
+    ///             (4, 5, 6, 7),
+    ///         ]
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn face_node_id(&self, f: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
