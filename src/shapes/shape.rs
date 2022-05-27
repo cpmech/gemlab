@@ -26,11 +26,12 @@ impl fmt::Debug for FnDeriv {
     }
 }
 
-/// Implements an isoparametric geometric shape for numerical integration and more
+/// Collects functions for interpolations and computing the derivatives
+/// and gradients related to geometric shapes (elements)
 ///
 /// # Warning
 ///
-/// All public properties are **readonly** and should **not** be modified externally.
+/// All public properties here are **readonly** and must **not** be modified externally.
 #[derive(Clone, Debug)]
 pub struct Shape {
     /// Geometry class
@@ -76,13 +77,42 @@ impl Shape {
     /// # Input
     ///
     /// * `space_ndim` -- the space dimension (2 or 3)
-    /// * `geo_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space
+    /// * `geo_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space or a 2D triangle in a 3D space
     /// * `nnode` -- the number of points defining the shape (number of nodes)
     ///
-    /// # Note
+    /// # Examples
     ///
-    /// Some methods require that the coordinates matrix be set first.
-    /// This can be accomplished by calling the `set_node` method.
+    /// ```
+    /// use gemlab::shapes::{GeoClass, GeoKind, Shape};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //          .4--------------7
+    ///     //        ,' |            ,'|         ξ₀   ξ₁   ξ₂
+    ///     //      ,'              ,'  |  node    r    s    t
+    ///     //    ,'     |        ,'    |     0 -1.0 -1.0 -1.0
+    ///     //  5'==============6'      |     1  1.0 -1.0 -1.0
+    ///     //  |               |       |     2  1.0  1.0 -1.0
+    ///     //  |        |      |       |     3 -1.0  1.0 -1.0
+    ///     //  |       ,0- - - | - - - 3     4 -1.0 -1.0  1.0
+    ///     //  |     ,'        |     ,'      5  1.0 -1.0  1.0
+    ///     //  |   ,'          |   ,'        6  1.0  1.0  1.0
+    ///     //  | ,'            | ,'          7 -1.0  1.0  1.0
+    ///     //  1'--------------2'
+    ///     let shape = Shape::new(3, 3, 8)?;
+    ///     assert_eq!(shape.class, GeoClass::Hex);
+    ///     assert_eq!(shape.kind, GeoKind::Hex8);
+    ///     assert_eq!(shape.space_ndim, 3);
+    ///     assert_eq!(shape.geo_ndim, 3);
+    ///     assert_eq!(shape.nnode, 8);
+    ///     assert_eq!(shape.nedge, 12);
+    ///     assert_eq!(shape.nface, 6);
+    ///     assert_eq!(shape.edge_nnode, 2);
+    ///     assert_eq!(shape.face_nnode, 4);
+    ///     assert_eq!(shape.face_nedge, 4);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn new(space_ndim: usize, geo_ndim: usize, nnode: usize) -> Result<Self, StrError> {
         if space_ndim < 2 || space_ndim > 3 {
             return Err("space_ndim must be 2 or 3");
@@ -290,7 +320,7 @@ impl Shape {
 
     /// Calculates the interpolation functions
     ///
-    /// Computes Nᵐ from:
+    /// Computes Nᵐ used in interpolations such as:
     ///
     /// ```text
     /// → →         →  →
@@ -298,7 +328,7 @@ impl Shape {
     ///        m         
     /// ```
     ///
-    /// # Output
+    /// # Updated
     ///
     /// * `state.interp` -- interpolation functions (nnode)
     ///
@@ -312,6 +342,47 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let coords = &[
+    ///         [0.0, 0.0],
+    ///         [1.0, 0.0],
+    ///         [1.0, 1.0],
+    ///         [0.0, 1.0],
+    ///     ];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     shape.calc_interp(&mut state, &[-1.0, -1.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[1.0, 0.0, 0.0, 0.0]);
+    ///
+    ///     shape.calc_interp(&mut state, &[1.0, -1.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[0.0, 1.0, 0.0, 0.0]);
+    ///
+    ///     shape.calc_interp(&mut state, &[1.0, 1.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[0.0, 0.0, 1.0, 0.0]);
+    ///
+    ///     shape.calc_interp(&mut state, &[-1.0, 1.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[0.0, 0.0, 0.0, 1.0]);
+    ///
+    ///     shape.calc_interp(&mut state, &[0.0, 0.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[0.25, 0.25, 0.25, 0.25]);
+    ///     Ok(())
+    /// }
+    /// ```
     #[inline]
     pub fn calc_interp(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
         if ksi.len() < self.geo_ndim {

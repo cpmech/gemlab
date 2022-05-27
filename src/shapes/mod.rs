@@ -14,6 +14,8 @@
 //! * `spatial (real) space` -- is the "real" space mapped by the x₀,x₁,x₂ coordinates (see figure below)
 //! * `reference (natural) space` -- is the "virtual" space mapped by the ξ₀,ξ₁,ξ₂ coordinates (see figure below)
 //!
+//! **Note:** In the code, we use (r,s,t) as (ξ₀,ξ₁,ξ₂) and `ksi` to represent the vector `ξ`.
+//!
 //! ![Real and reference space mapping](https://github.com/cpmech/gemlab/raw/main/data/figures/mapping-real-to-reference.png)
 //!
 //! We also consider the following counting variables:
