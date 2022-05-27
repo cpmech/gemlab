@@ -1,9 +1,19 @@
-use gemlab::mesh::{At, Mesh};
-use gemlab::shapes::Shape;
+use gemlab::integ::default_integ_points;
+use gemlab::mesh::{At, Boundary, Find, Mesh, NormalVector, Shapes, States};
+use gemlab::shapes::{Shape, StateOfShape};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
 use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
-use russell_lab::Vector;
+use std::collections::HashSet;
+
+fn check<T>(found: &HashSet<T>, correct: &[T])
+where
+    T: Copy + Ord + std::fmt::Debug,
+{
+    let mut ids: Vec<T> = found.iter().copied().collect();
+    ids.sort();
+    assert_eq!(ids, correct);
+}
 
 #[test]
 fn column_distorted_tris_quads() -> Result<(), StrError> {
@@ -13,9 +23,6 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
     // check sizes
     assert_eq!(mesh.points.len(), 13);
     assert_eq!(mesh.cells.len(), 7);
-    assert_eq!(mesh.boundary_points.len(), 13);
-    assert_eq!(mesh.boundary_edges.len(), 13);
-    assert_eq!(mesh.boundary_faces.len(), 0);
 
     // check cells
     assert_eq!(mesh.cells[0].points, &[0, 7, 8, 1]);
@@ -26,12 +33,16 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
     assert_eq!(mesh.cells[5].points, &[4, 11, 5]);
     assert_eq!(mesh.cells[6].points, &[5, 11, 12, 6]);
 
+    // boundary
+    let shapes = Shapes::new(&mesh)?;
+    let boundary = Boundary::new(&mesh, &shapes)?;
+
     // check edges
-    let edge = mesh.boundary_edges.get(&(0, 1)).unwrap();
+    let edge = boundary.edges.get(&(0, 1)).unwrap();
     assert_eq!(edge.points, &[0, 1]);
-    let edge = mesh.boundary_edges.get(&(9, 10)).unwrap();
+    let edge = boundary.edges.get(&(9, 10)).unwrap();
     assert_eq!(edge.points, &[10, 9]);
-    let edge = mesh.boundary_edges.get(&(3, 4)).unwrap();
+    let edge = boundary.edges.get(&(3, 4)).unwrap();
     assert_eq!(edge.points, &[3, 4]);
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
@@ -60,31 +71,32 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
     ];
 
     // check if the normal vectors at boundary are outward
-    let mut normal = Vector::new(mesh.space_ndim);
     let ksi = &[0.0, 0.0, 0.0];
     for (edge_keys, solution) in &edge_keys_and_solutions {
         for edge_key in edge_keys {
-            let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
-            assert_eq!(edge_shape.nnode, 2);
-            edge_shape.calc_boundary_normal(&mut normal, ksi)?;
-            assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
+            let mut normal = NormalVector::at_edge(&mesh, &boundary, *edge_key)?;
+            normal.evaluate(ksi)?;
+            assert_vec_approx_eq!(normal.value.as_data(), solution, 1e-14);
         }
     }
 
+    // find
+    let find = Find::new(&mesh, &boundary)?;
+
     // find points
-    let points = mesh.find_boundary_points(At::X(0.0))?;
-    assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6]);
-    let points = mesh.find_boundary_points(At::X(1.0))?;
-    assert_eq!(points, &[7, 8, 9, 10, 11, 12]);
+    let points = find.points(At::X(0.0))?;
+    check(&points, &[0, 1, 2, 3, 4, 5, 6]);
+    let points = find.points(At::X(1.0))?;
+    check(&points, &[7, 8, 9, 10, 11, 12]);
 
     // find edges
-    let edges = mesh.find_boundary_edges(At::X(0.0))?;
-    assert_eq!(edges, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6)]);
-    let edges = mesh.find_boundary_edges(At::X(1.0))?;
-    assert_eq!(edges, &[(7, 8), (8, 9), (9, 10), (10, 11), (11, 12)]);
+    let edges = find.edges(At::X(0.0))?;
+    check(&edges, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6)]);
+    let edges = find.edges(At::X(1.0))?;
+    check(&edges, &[(7, 8), (8, 9), (9, 10), (10, 11), (11, 12)]);
 
     // find faces
-    let faces = mesh.find_boundary_faces(At::X(0.0))?;
+    let faces = find.faces(At::X(0.0))?;
     assert_eq!(faces.len(), 0);
     Ok(())
 }
@@ -93,6 +105,8 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
 fn rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
+    let shapes = Shapes::new(&mesh)?;
+    let boundary = Boundary::new(&mesh, &shapes)?;
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
     // for both tris or quas where 2.0 corresponds to the edge_length in the reference system
@@ -109,52 +123,57 @@ fn rectangle_tris_quads() -> Result<(), StrError> {
     ];
 
     // check if the normal vectors at boundary are outward
-    let mut normal = Vector::new(mesh.space_ndim);
     let ksi = &[0.0, 0.0, 0.0];
     for (edge_keys, solution) in &edge_keys_and_solutions {
         for edge_key in edge_keys {
-            let mut edge_shape = mesh.alloc_shape_boundary_edge(edge_key)?;
-            assert_eq!(edge_shape.nnode, 2);
-            edge_shape.calc_boundary_normal(&mut normal, ksi)?;
-            assert_vec_approx_eq!(normal.as_data(), solution, 1e-14);
+            let mut normal = NormalVector::at_edge(&mesh, &boundary, *edge_key)?;
+            normal.evaluate(ksi)?;
+            assert_vec_approx_eq!(normal.value.as_data(), solution, 1e-14);
         }
     }
 
-    // find edges
-    let edges = mesh.find_boundary_edges(At::X(0.0))?;
-    assert_eq!(edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
-    let edges = mesh.find_boundary_edges(At::X(4.0))?;
-    assert_eq!(edges, &[(2, 6), (6, 9), (9, 13)]);
+    // find
+    let find = Find::new(&mesh, &boundary)?;
 
-    // edge (4,7)
-    let mut shape_edge_4_7 = Shape::new(2, 1, 2)?;
-    shape_edge_4_7.set_node(7, 0, 0, mesh.points[7].coords[0])?;
-    shape_edge_4_7.set_node(7, 0, 1, mesh.points[7].coords[1])?;
-    shape_edge_4_7.set_node(11, 1, 0, mesh.points[11].coords[0])?;
-    shape_edge_4_7.set_node(11, 1, 1, mesh.points[11].coords[1])?;
-    let length_edge_4_7 = SQRT_2;
+    // find edges
+    let edges = find.edges(At::X(0.0))?;
+    check(&edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
+    let edges = find.edges(At::X(4.0))?;
+    check(&edges, &[(2, 6), (6, 9), (9, 13)]);
+
+    // edge (7,11)
+    let shape_edge_7_11 = Shape::new(2, 1, 2)?;
+    let mut state_edge_7_11 = StateOfShape::new(
+        1,
+        &[
+            [mesh.points[7].coords[0], mesh.points[7].coords[1]],
+            [mesh.points[11].coords[0], mesh.points[11].coords[1]],
+        ],
+    )?;
+    let ips = default_integ_points(shape_edge_7_11.kind);
     let mut length_numerical = 0.0;
-    for index in 0..shape_edge_4_7.integ_points.len() {
-        let iota = &shape_edge_4_7.integ_points[index];
-        let weight = shape_edge_4_7.integ_points[index][3];
-        let det_jac = shape_edge_4_7.calc_jacobian(iota)?;
+    for index in 0..ips.len() {
+        let iota = &ips[index];
+        let weight = ips[index][3];
+        let det_jac = shape_edge_7_11.calc_jacobian(&mut state_edge_7_11, iota)?;
         length_numerical += weight * det_jac;
     }
-    assert_approx_eq!(length_edge_4_7, length_numerical, 1e-14);
-    let mut normal = Vector::new(2);
-    shape_edge_4_7.calc_boundary_normal(&mut normal, &[0.0, 0.0])?;
-    let l = length_edge_4_7 / 2.0;
-    assert_vec_approx_eq!(normal.as_data(), &[-l / SQRT_2, l / SQRT_2], 1e-14);
+    assert_approx_eq!(length_numerical, SQRT_2, 1e-14);
+
+    // states
+    let mut states = States::new(&mesh, &shapes)?;
 
     // cell 5
-    let mut shape_cell_5 = mesh.alloc_shape_cell(5)?;
+    let shape_cell_5 = Shape::new(2, 2, 4)?;
+    let state_cell_5 = &mut states[5];
+    let ips = default_integ_points(shape_cell_5.kind);
     let mut area_numerical = 0.0;
-    for index in 0..shape_cell_5.integ_points.len() {
-        let iota = &shape_cell_5.integ_points[index];
-        let weight = shape_cell_5.integ_points[index][3];
-        let det_jac = shape_cell_5.calc_jacobian(iota)?;
+    for index in 0..ips.len() {
+        let iota = &ips[index];
+        let weight = ips[index][3];
+        let det_jac = shape_cell_5.calc_jacobian(state_cell_5, iota)?;
         area_numerical += weight * det_jac;
     }
-    assert_approx_eq!(area_numerical, length_edge_4_7 * length_edge_4_7, 1e-15);
+    assert_approx_eq!(area_numerical, 2.0, 1e-15);
     Ok(())
 }
