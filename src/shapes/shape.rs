@@ -478,11 +478,7 @@ impl Shape {
     /// → →         →  →
     /// x(ξ) = Σ Nᵐ(ξ) xᵐ
     ///        m         
-    /// ```
     ///
-    /// or
-    ///
-    /// ```text
     /// x := Xᵀ ⋅ N
     /// ```
     ///
@@ -553,33 +549,18 @@ impl Shape {
     ///        ∂ξⱼ   m
     /// ```
     ///
-    /// where
-    ///
-    /// ```text
-    ///             →
-    /// →  →    dNᵐ(ξ)
-    /// Lᵐ(ξ) = ——————
-    ///            →
-    ///           dξ
-    /// ```
-    ///
     /// Thus, in matrix notation
     ///
     /// ```text
     /// jacobian := J = Xᵀ · L
-    /// ```
-    ///
-    /// or (line in multi-dimensions, geom_ndim < space_ndim)
-    ///
-    /// ```text
     /// jacobian := Jline = Xᵀ · L
-    /// ```
-    ///
-    /// or (3D surface, geo_ndim = 2 and space_ndim = 3)
-    ///
-    /// ```text
     /// jacobian := Jsurf = Xᵀ · L
     /// ```
+    ///
+    /// where:
+    ///
+    /// * `Jline`` -- Jacobian for line in multi-dimensions (geom_ndim < space_ndim)
+    /// * `Jsurf`` -- Jacobian for 3D surfaces (geo_ndim = 2 and space_ndim = 3)
     ///
     /// If `geo_ndim = space_ndim`, we also compute the inverse Jacobian
     ///
@@ -667,68 +648,12 @@ impl Shape {
 
     /// Computes the boundary normal vector
     ///
-    /// **Note:** This function works with `geo_ndim < space_ndim` only. In particular we must have:
+    /// **Important:** This function only works with:
     ///
     /// * `geo_ndim = 1` and `space_ndim = 2` -- line in 2D, or
     /// * `geo_ndim = 2` and `space_ndim = 3` -- surface in 3D.
     ///
-    /// ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
-    ///
-    /// Base vector tangent with the line:
-    ///
-    /// ```text
-    ///          →
-    ///         dx
-    /// g₁(ξ) = —— = Xᵀ · L = first_column(J)
-    ///         dξ
-    /// ```
-    ///
-    /// Normal vector:
-    ///
-    /// ```text
-    /// →   →    →
-    /// n = e₃ × g₁
-    ///
-    ///   →       →
-    /// ||n|| = ||g₁||
-    /// ```
-    ///
-    /// Thus
-    ///
-    /// ```text
-    ///        →           →
-    /// dℓ = ||g₁|| dξ = ||n|| dξ
-    /// ```
-    ///
-    /// ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
-    ///
-    /// Base vectors tangent to the surface:
-    ///
-    /// ```text
-    ///          →
-    /// →  →    dx
-    /// g₁(ξ) = ——— = first_column(J)
-    ///         dξ₁
-    ///
-    ///          →
-    /// →  →    dx
-    /// g₂(ξ) = ——— = second_column(J)
-    ///         dξ₂
-    /// ```
-    ///
-    /// Normal vector:
-    ///
-    /// ```text
-    /// →   →    →
-    /// n = g₁ × g₂
-    /// ```
-    ///
-    /// Thus
-    ///
-    /// ```text
-    ///         →
-    /// dA := ||n|| dξ₁ dξ₂
-    /// ```
+    /// i.e., `geo_ndim < space_ndim`.
     ///
     /// # Input
     ///
@@ -751,7 +676,63 @@ impl Shape {
     ///
     /// ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
     ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //                 .
+    ///     //                /|\  →
+    ///     //                 |   n
+    ///     //                 |
+    ///     //  0----+----2----+----1
+    ///     const L: f64 = 5.0;
+    ///     let coords = &[[0.0, 0.0], [L, 0.0], [L / 2.0, 0.0]];
+    ///     let shape = Shape::new(2, 1, 3)?;
+    ///     let mut state = StateOfShape::new(1, coords)?;
+    ///     let mut normal = Vector::new(2);
+    ///     shape.calc_boundary_normal(&mut normal, &mut state, &[0.5, 0.0])?;
+    ///     assert_eq!(normal.as_data(), &[0.0, L / 2.0]);
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
     /// ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //           .   .  .   . ,.2|
+    ///     //         ' .           ,,'||
+    ///     //       '   .         ,,'  ||
+    ///     //     '     .       .,'    ||  →
+    ///     //  .  .   . .   .  3'      ||  n
+    ///     //           z     ||   ==========)
+    ///     //  .        |     ||       ||
+    ///     //          ,*---y || .  . ,1
+    ///     //  .      x       ||    ,,'
+    ///     //      ,'         ||  ,,'
+    ///     //  . ,'           ||,,'
+    ///     //  . . .   .   .  |0'
+    ///     let coords = &[
+    ///         [1.0, 1.0, 0.0],
+    ///         [0.0, 1.0, 0.0],
+    ///         [0.0, 1.0, 1.0],
+    ///         [1.0, 1.0, 1.0],
+    ///     ];
+    ///     let shape = Shape::new(3, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let mut normal = Vector::new(3);
+    ///     shape.calc_boundary_normal(&mut normal, &mut state, &[0.0, 0.0, 0.0])?;
+    ///     const A: f64 = 1.0;
+    ///     assert_eq!(normal.as_data(), &[0.0, A / 4.0, 0.0]);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_boundary_normal(
         &self,
         normal: &mut Vector,
@@ -770,14 +751,14 @@ impl Shape {
         self.calc_deriv(state, ksi)?;
         mat_mat_mul(&mut state.jacobian, 1.0, &state.coords_transp, &state.deriv)?;
 
-        // line in 2D (geo_ndim = 1 && self.space_ndim = 2)
+        // line in 2D (geo_ndim = 1 and self.space_ndim = 2)
         if self.space_ndim == 2 {
             normal[0] = -state.jacobian[1][0];
             normal[1] = state.jacobian[0][0];
             return Ok(());
         }
 
-        // surface in 3D (geo_ndim = 2 && space_ndim = 3)
+        // surface in 3D (geo_ndim = 2 and space_ndim = 3)
         let jj = &state.jacobian;
         normal[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
         normal[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
@@ -823,12 +804,12 @@ impl Shape {
     /// use russell_lab::Vector;
     ///
     /// fn main() -> Result<(), StrError> {
-    ///     // 7.0        2.                ξ₀   ξ₁
-    ///     //           /  `.       node    r    s
-    ///     //          /     `.        0  0.0  0.0
-    ///     //     (3.5,6.0)    `.      1  1.0  0.0
-    ///     //        /           `.    2  0.0  1.0
-    ///     //       /              `.
+    ///     // 7.0        2                ξ₀   ξ₁
+    ///     //           / `.       node    r    s
+    ///     //          /    `.        0  0.0  0.0
+    ///     //     (3.5,6.0)   `.      1  1.0  0.0
+    ///     //        /          `.    2  0.0  1.0
+    ///     //       /             `.
     ///     // 5.0  0-----------------1
     ///     //     3.0   4.0   5.0   6.0
     ///     #[rustfmt::skip]
@@ -913,16 +894,6 @@ impl Shape {
     ///
     /// ```text
     /// G = L · J⁻¹
-    /// ```
-    ///
-    /// where
-    ///
-    /// ```text
-    ///             →
-    /// →  →    dNᵐ(ξ)
-    /// Lᵐ(ξ) = ——————
-    ///            →
-    ///           dξ
     /// ```
     ///
     /// # Output

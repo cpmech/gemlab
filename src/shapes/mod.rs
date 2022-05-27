@@ -123,7 +123,7 @@
 //!
 //! where `G` is an (nnode,space_ndim) matrix.
 //!
-//! ## Line in multi-dimensions with geo_ndim = 1 and space_ndim > 1
+//! ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
 //!
 //! In this case, the Jacobian equals the (space_ndim,1) base vector `g₁` which
 //! is tangent to the line element, i.e.,
@@ -155,6 +155,85 @@
 //!
 //! -1 ≤ ξ ≤ +1
 //! ```
+//!
+//! # Normal vectors
+//!
+//! ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+//!
+//! Base vector tangent to the line:
+//!
+//! ```text
+//!          →
+//!         dx
+//! g₁(ξ) = —— = Xᵀ · L = first_column(J)
+//!         dξ
+//! ```
+//!
+//! Normal vector:
+//!
+//! ```text
+//! →   →    →
+//! n = e₃ × g₁
+//!
+//!   →       →
+//! ||n|| = ||g₁||
+//! ```
+//!
+//! Thus
+//!
+//! ```text
+//!        →           →
+//! dℓ = ||g₁|| dξ = ||n|| dξ
+//! ```
+//!
+//! For a straight line (segment):
+//!
+//! ```text
+//!   →
+//! ||n|| = Δℓ / Δξ = L / 2
+//! ```
+//!
+//! because all [GeoClass::Lin] have `Δξ = 2`.
+//!
+//! ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
+//!
+//! Base vectors tangent to the surface:
+//!
+//! ```text
+//!          →
+//! →  →    dx
+//! g₁(ξ) = ——— = first_column(J)
+//!         dξ₁
+//!
+//!          →
+//! →  →    dx
+//! g₂(ξ) = ——— = second_column(J)
+//!         dξ₂
+//! ```
+//!
+//! Normal vector:
+//!
+//! ```text
+//! →   →    →
+//! n = g₁ × g₂
+//! ```
+//!
+//! Thus
+//!
+//! ```text
+//!         →
+//! dA := ||n|| dξ₁ dξ₂
+//! ```
+//!
+//! For flat quadrilateral faces:
+//!
+//! ```text
+//!   →
+//! ||n|| = A / (Δξ₁ Δξ₂) = A / 4
+//! ```
+//!
+//! because all [GeoClass::Qua] have `Δξᵢ = 2`.
+//!
 
 mod enums;
 mod hex20;
