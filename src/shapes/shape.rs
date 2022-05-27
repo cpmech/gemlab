@@ -501,6 +501,40 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let (x0, y0) = (10.0, 10.0);
+    ///     let (w, h) = (10.0, 5.0);
+    ///     let coords = &[
+    ///         [10.0,  5.0],
+    ///         [20.0,  5.0],
+    ///         [20.0, 10.0],
+    ///         [10.0, 10.0],
+    ///     ];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     let mut x = Vector::new(shape.space_ndim);
+    ///     shape.calc_coords(&mut x, &mut state, &[0.0, 0.0])?;
+    ///     assert_vec_approx_eq!(x.as_data(), &[15.0, 7.5], 1e-15);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_coords(&self, x: &mut Vector, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
         if x.dim() != self.space_ndim {
             return Err("x.dim() must equal space_ndim");
@@ -561,6 +595,49 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let coords = &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     shape.calc_deriv(&mut state, &[-1.0, -1.0])?;
+    ///     assert_eq!(
+    ///         format!("{}", state.deriv),
+    ///         "┌           ┐\n\
+    ///          │ -0.5 -0.5 │\n\
+    ///          │  0.5    0 │\n\
+    ///          │    0    0 │\n\
+    ///          │    0  0.5 │\n\
+    ///          └           ┘"
+    ///     );
+    ///
+    ///     shape.calc_deriv(&mut state, &[1.0, 1.0])?;
+    ///     assert_eq!(
+    ///         format!("{}", state.deriv),
+    ///         "┌           ┐\n\
+    ///          │    0    0 │\n\
+    ///          │    0 -0.5 │\n\
+    ///          │  0.5  0.5 │\n\
+    ///          │ -0.5    0 │\n\
+    ///          └           ┘"
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_jacobian(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<f64, StrError> {
         self.calc_deriv(state, ksi)?;
         mat_mat_mul(&mut state.jacobian, 1.0, &state.coords_transp, &state.deriv)?;
