@@ -1,37 +1,35 @@
-//! Interpolation functions and derivatives for geometric shapes
+//! Interpolation functions and derivatives for geometric shapes (elements)
 //!
 //! # Definitions
 //!
 //! Here, we consider the following dimensions:
 //!
 //! * `space_ndim` -- is the number of dimensions of the space under study (2 or 3)
-//! * `geo_ndim` -- is the number of dimensions of the geometry element (shape),
-//!                  for instance, a line in the 2D space has `geo_ndim = 1` and
-//!                  `space_ndim = 2`. Another example is a triangle in the 3D space
-//!                  which has `geo_ndim = 2` and `space_ndim = 3`.
-//! * `local` refers to a numbering scheme for the nodes of the shape (or element)
-//! * `global` refers to a numbering scheme applied for the whole mesh
+//! * `geo_ndim` -- is the number of dimensions of the geometry element (shape).
+//!                  For instance, a line in the 2D space has `geo_ndim = 1` and
+//!                  `space_ndim = 2`. Another example: a triangle in the 3D space
+//!                  has `geo_ndim = 2` and `space_ndim = 3`.
+//! * `local` -- refers to a numbering scheme for the nodes of the shape (or element)
+//! * `global` -- refers to a numbering scheme applied for the whole mesh
+//! * `spatial (real) space` -- is the "real" space mapped by the x₀,x₁,x₂ coordinates
+//! * `reference (natural) space` -- is the "virtual" space mapped by the ξ₀,ξ₁,ξ₂ coordinates
 //!
 //! We also consider the following counting variables:
 //!
-//! * `nnode` -- (local) number of points that define the shape (number of nodes)
-//! * `npoint` -- (global) number of points in the whole mesh; not used in this module but important to remember
-//! * `nedge` -- number of edges
-//! * `nface` -- number of faces
-//! * `edge_nnode` -- number of points that define the edge (number of nodes)
-//! * `face_nnode` -- number of points that define the face (number of nodes)
-//! * `face_nedge` -- face's number of edges
-//! * `n_integ_point` -- number of integration (Gauss) points
-//!
-//! When performing numerical integrations, we use the following notation:
-//! |J| is the determinant of the Jacobian, ||J|| is the norm of the Jacobian vector
-//! for line in multi-dimensions, `n_integ_point` is the number of integration points,
-//! `ιp := ξp` is the reference coordinate of the integration point,
-//! and `wp` is the weight of the p-th integration point.
+//! * `nnode` -- (local) number of points (aka nodes) that define the shape/element.
+//! * `npoint` -- (global) number of points in the whole mesh; not used in this module
+//!               but important to remember
+//! * `nedge` -- number of edges on the shape (2D or 3D)
+//! * `nface` -- number of faces on the shape (3D only)
+//! * `edge_nnode` -- number of points/nodes that define the edge
+//! * `face_nnode` -- number of points/nodes that define the face
+//! * `face_nedge` -- number of edges on the face
 //!
 //! # Isoparametric formulation
 //!
-//! The isoparametric formulation establishes that
+//! The isoparametric formulation establishes that we can calculate the coordinates `x(ξ)`
+//! within the shape/element from the shape functions `Nᵐ(ξ)` and the coordinates at each
+//! node by using the formula:
 //!
 //! ```text
 //! → →         →  →
@@ -40,19 +38,21 @@
 //! ```
 //!
 //! where `x` is the (space_ndim) vector of real coordinates, `ξ` is the (geo_ndim)
-//! vector of reference coordinates, `Nm` are the (nnode) interpolation functions,
-//! and `xm` are the (nnode) coordinates of each m-node of the geometric shape.
+//! vector of reference coordinates, `Nᵐ` are the (nnode) interpolation functions,
+//! and `xᵐ` are the (nnode) coordinates of each m-node of the geometric shape.
 //!
-//! Given an (nnode,space_ndim) matrix of coordinates X, we can calculate the
-//! (space_ndim) vector of coordinates x by means of
+//! Given an (nnode,space_ndim) **matrix** of coordinates `X`, we can calculate the
+//! (space_ndim) **vector** of coordinates `x` by means of
 //!
 //! ```text
 //! x = Xᵀ ⋅ N
 //! ```
 //!
-//! where `N` is an (nnode) array formed with all `Nm`.
+//! where `N` is an (nnode) **vector** formed with all `Nᵐ` values.
 //!
-//! # General case (geo_ndim == space_ndim)
+//! # Derivatives on the reference space and gradients on the real space
+//!
+//! ## General case with `geo_ndim == space_ndim`
 //!
 //! If `geo_ndim == space_ndim`, we define the Jacobian tensor as
 //!
@@ -114,7 +114,7 @@
 //!
 //! where G is an (nnode,space_ndim) matrix.
 //!
-//! # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
+//! ## Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
 //!
 //! In this case, the Jacobian equals the (space_ndim,1) base vector `g1` tangent
 //! to the line element, i.e.,
