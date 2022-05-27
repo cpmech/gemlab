@@ -26,11 +26,12 @@ impl fmt::Debug for FnDeriv {
     }
 }
 
-/// Implements an isoparametric geometric shape for numerical integration and more
+/// Collects functions for interpolations and computing the derivatives
+/// and gradients related to geometric shapes (elements)
 ///
 /// # Warning
 ///
-/// All public properties are **readonly** and should **not** be modified externally.
+/// All public properties here are **readonly** and must **not** be modified externally.
 #[derive(Clone, Debug)]
 pub struct Shape {
     /// Geometry class
@@ -76,13 +77,42 @@ impl Shape {
     /// # Input
     ///
     /// * `space_ndim` -- the space dimension (2 or 3)
-    /// * `geo_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space
+    /// * `geo_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space or a 2D triangle in a 3D space
     /// * `nnode` -- the number of points defining the shape (number of nodes)
     ///
-    /// # Note
+    /// # Examples
     ///
-    /// Some methods require that the coordinates matrix be set first.
-    /// This can be accomplished by calling the `set_node` method.
+    /// ```
+    /// use gemlab::shapes::{GeoClass, GeoKind, Shape};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //          .4--------------7
+    ///     //        ,' |            ,'|         ξ₀   ξ₁   ξ₂
+    ///     //      ,'              ,'  |  node    r    s    t
+    ///     //    ,'     |        ,'    |     0 -1.0 -1.0 -1.0
+    ///     //  5'==============6'      |     1  1.0 -1.0 -1.0
+    ///     //  |               |       |     2  1.0  1.0 -1.0
+    ///     //  |        |      |       |     3 -1.0  1.0 -1.0
+    ///     //  |       ,0- - - | - - - 3     4 -1.0 -1.0  1.0
+    ///     //  |     ,'        |     ,'      5  1.0 -1.0  1.0
+    ///     //  |   ,'          |   ,'        6  1.0  1.0  1.0
+    ///     //  | ,'            | ,'          7 -1.0  1.0  1.0
+    ///     //  1'--------------2'
+    ///     let shape = Shape::new(3, 3, 8)?;
+    ///     assert_eq!(shape.class, GeoClass::Hex);
+    ///     assert_eq!(shape.kind, GeoKind::Hex8);
+    ///     assert_eq!(shape.space_ndim, 3);
+    ///     assert_eq!(shape.geo_ndim, 3);
+    ///     assert_eq!(shape.nnode, 8);
+    ///     assert_eq!(shape.nedge, 12);
+    ///     assert_eq!(shape.nface, 6);
+    ///     assert_eq!(shape.edge_nnode, 2);
+    ///     assert_eq!(shape.face_nnode, 4);
+    ///     assert_eq!(shape.face_nedge, 4);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn new(space_ndim: usize, geo_ndim: usize, nnode: usize) -> Result<Self, StrError> {
         if space_ndim < 2 || space_ndim > 3 {
             return Err("space_ndim must be 2 or 3");
@@ -290,7 +320,7 @@ impl Shape {
 
     /// Calculates the interpolation functions
     ///
-    /// Computes Nᵐ from:
+    /// Computes Nᵐ used in interpolations such as:
     ///
     /// ```text
     /// → →         →  →
@@ -298,7 +328,7 @@ impl Shape {
     ///        m         
     /// ```
     ///
-    /// # Output
+    /// # Updated
     ///
     /// * `state.interp` -- interpolation functions (nnode)
     ///
@@ -312,6 +342,47 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let coords = &[
+    ///         [0.0, 0.0],
+    ///         [1.0, 0.0],
+    ///         [1.0, 1.0],
+    ///         [0.0, 1.0],
+    ///     ];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     shape.calc_interp(&mut state, &[-1.0, -1.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[1.0, 0.0, 0.0, 0.0]);
+    ///
+    ///     shape.calc_interp(&mut state, &[1.0, -1.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[0.0, 1.0, 0.0, 0.0]);
+    ///
+    ///     shape.calc_interp(&mut state, &[1.0, 1.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[0.0, 0.0, 1.0, 0.0]);
+    ///
+    ///     shape.calc_interp(&mut state, &[-1.0, 1.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[0.0, 0.0, 0.0, 1.0]);
+    ///
+    ///     shape.calc_interp(&mut state, &[0.0, 0.0])?;
+    ///     assert_eq!(state.interp.as_data(), &[0.25, 0.25, 0.25, 0.25]);
+    ///     Ok(())
+    /// }
+    /// ```
     #[inline]
     pub fn calc_interp(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
         if ksi.len() < self.geo_ndim {
@@ -347,6 +418,49 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let coords = &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     shape.calc_deriv(&mut state, &[-1.0, -1.0])?;
+    ///     assert_eq!(
+    ///         format!("{}", state.deriv),
+    ///         "┌           ┐\n\
+    ///          │ -0.5 -0.5 │\n\
+    ///          │  0.5    0 │\n\
+    ///          │    0    0 │\n\
+    ///          │    0  0.5 │\n\
+    ///          └           ┘"
+    ///     );
+    ///
+    ///     shape.calc_deriv(&mut state, &[1.0, 1.0])?;
+    ///     assert_eq!(
+    ///         format!("{}", state.deriv),
+    ///         "┌           ┐\n\
+    ///          │    0    0 │\n\
+    ///          │    0 -0.5 │\n\
+    ///          │  0.5  0.5 │\n\
+    ///          │ -0.5    0 │\n\
+    ///          └           ┘"
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     #[inline]
     pub fn calc_deriv(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
         if ksi.len() < self.geo_ndim {
@@ -364,11 +478,7 @@ impl Shape {
     /// → →         →  →
     /// x(ξ) = Σ Nᵐ(ξ) xᵐ
     ///        m         
-    /// ```
     ///
-    /// or
-    ///
-    /// ```text
     /// x := Xᵀ ⋅ N
     /// ```
     ///
@@ -387,6 +497,40 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let (x0, y0) = (10.0, 10.0);
+    ///     let (w, h) = (10.0, 5.0);
+    ///     let coords = &[
+    ///         [10.0,  5.0],
+    ///         [20.0,  5.0],
+    ///         [20.0, 10.0],
+    ///         [10.0, 10.0],
+    ///     ];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     let mut x = Vector::new(shape.space_ndim);
+    ///     shape.calc_coords(&mut x, &mut state, &[0.0, 0.0])?;
+    ///     assert_vec_approx_eq!(x.as_data(), &[15.0, 7.5], 1e-15);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_coords(&self, x: &mut Vector, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
         if x.dim() != self.space_ndim {
             return Err("x.dim() must equal space_ndim");
@@ -405,19 +549,18 @@ impl Shape {
     ///        ∂ξⱼ   m
     /// ```
     ///
-    /// Thus
+    /// Thus, in matrix notation
     ///
     /// ```text
     /// jacobian := J = Xᵀ · L
-    ///
-    /// or (line in multi-dimensions, geom_ndim < space_ndim)
-    ///
     /// jacobian := Jline = Xᵀ · L
-    ///
-    /// or (3D surface, geo_ndim = 2 and space_ndim = 3)
-    ///
     /// jacobian := Jsurf = Xᵀ · L
     /// ```
+    ///
+    /// where:
+    ///
+    /// * `Jline`` -- Jacobian for line in multi-dimensions (geom_ndim < space_ndim)
+    /// * `Jsurf`` -- Jacobian for 3D surfaces (geo_ndim = 2 and space_ndim = 3)
     ///
     /// If `geo_ndim = space_ndim`, we also compute the inverse Jacobian
     ///
@@ -427,7 +570,7 @@ impl Shape {
     ///
     /// # Output
     ///
-    /// * `state.deriv` -- interpolation functions (nnode)
+    /// * `state.deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
     /// * `state.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
     /// * `state.inv_jacobian` -- If `geo_ndim = space_ndim`: inverse Jacobian matrix (space_ndim,space_ndim)
     ///
@@ -447,6 +590,45 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_approx_eq;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let a = 3.0;
+    ///     let coords = &[[0.0, 0.0], [2.0 * a, 0.0], [2.0 * a, a], [0.0, a]];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     let det_jj = shape.calc_jacobian(&mut state, &[0.0, 0.0])?;
+    ///     assert_approx_eq!(det_jj, a * a / 2.0, 1e-15);
+    ///
+    ///     // the solution is
+    ///     //  ┌         ┐
+    ///     //  │  a   0  │
+    ///     //  │  0  a/2 │
+    ///     //  └         ┘
+    ///     assert_eq!(
+    ///         format!("{}", state.jacobian),
+    ///         "┌         ┐\n\
+    ///          │   3   0 │\n\
+    ///          │   0 1.5 │\n\
+    ///          └         ┘"
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_jacobian(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<f64, StrError> {
         self.calc_deriv(state, ksi)?;
         mat_mat_mul(&mut state.jacobian, 1.0, &state.coords_transp, &state.deriv)?;
@@ -466,68 +648,12 @@ impl Shape {
 
     /// Computes the boundary normal vector
     ///
-    /// **Note:** This function works with `geo_ndim < space_ndim` only. In particular we must have:
+    /// **Important:** This function only works with:
     ///
     /// * `geo_ndim = 1` and `space_ndim = 2` -- line in 2D, or
     /// * `geo_ndim = 2` and `space_ndim = 3` -- surface in 3D.
     ///
-    /// # Line in multi-dimensions (geo_ndim == 1 and space_ndim > 1)
-    ///
-    /// Base vector tangent with the line:
-    ///
-    /// ```text
-    ///          →
-    ///         dx
-    /// g₁(ξ) = —— = Xᵀ · L = first_column(J)
-    ///         dξ
-    /// ```
-    ///
-    /// Normal vector:
-    ///
-    /// ```text
-    /// →   →    →
-    /// n = e₃ × g₁
-    ///
-    ///   →       →
-    /// ||n|| = ||g₁||
-    /// ```
-    ///
-    /// Thus
-    ///
-    /// ```text
-    ///        →           →
-    /// dℓ = ||g₁|| dξ = ||n|| dξ
-    /// ```
-    ///
-    /// # Boundary surface (geo_ndim == 2 and space_ndim == 3)
-    ///
-    /// Base vectors tangent to the surface:
-    ///
-    /// ```text
-    ///          →
-    /// →  →    dx
-    /// g₁(ξ) = ——— = first_column(J)
-    ///         dξ₁
-    ///
-    ///          →
-    /// →  →    dx
-    /// g₂(ξ) = ——— = second_column(J)
-    ///         dξ₂
-    /// ```
-    ///
-    /// Normal vector:
-    ///
-    /// ```text
-    /// →   →    →
-    /// n = g₁ × g₂
-    /// ```
-    ///
-    /// Thus
-    ///
-    /// ```text
-    ///         →
-    /// dA := ||n|| dξ₁ dξ₂
-    /// ```
+    /// i.e., `geo_ndim < space_ndim`.
     ///
     /// # Input
     ///
@@ -545,6 +671,68 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //                 .
+    ///     //                /|\  →
+    ///     //                 |   n
+    ///     //                 |
+    ///     //  0----+----2----+----1
+    ///     const L: f64 = 5.0;
+    ///     let coords = &[[0.0, 0.0], [L, 0.0], [L / 2.0, 0.0]];
+    ///     let shape = Shape::new(2, 1, 3)?;
+    ///     let mut state = StateOfShape::new(1, coords)?;
+    ///     let mut normal = Vector::new(2);
+    ///     shape.calc_boundary_normal(&mut normal, &mut state, &[0.5, 0.0])?;
+    ///     assert_eq!(normal.as_data(), &[0.0, L / 2.0]);
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
+    /// ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //           .   .  .   . ,.2|
+    ///     //         ' .           ,,'||
+    ///     //       '   .         ,,'  ||
+    ///     //     '     .       .,'    ||  →
+    ///     //  .  .   . .   .  3'      ||  n
+    ///     //           z     ||   ==========)
+    ///     //  .        |     ||       ||
+    ///     //          ,*---y || .  . ,1
+    ///     //  .      x       ||    ,,'
+    ///     //      ,'         ||  ,,'
+    ///     //  . ,'           ||,,'
+    ///     //  . . .   .   .  |0'
+    ///     let coords = &[
+    ///         [1.0, 1.0, 0.0],
+    ///         [0.0, 1.0, 0.0],
+    ///         [0.0, 1.0, 1.0],
+    ///         [1.0, 1.0, 1.0],
+    ///     ];
+    ///     let shape = Shape::new(3, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let mut normal = Vector::new(3);
+    ///     shape.calc_boundary_normal(&mut normal, &mut state, &[0.0, 0.0, 0.0])?;
+    ///     const A: f64 = 1.0;
+    ///     assert_eq!(normal.as_data(), &[0.0, A / 4.0, 0.0]);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_boundary_normal(
         &self,
         normal: &mut Vector,
@@ -563,14 +751,14 @@ impl Shape {
         self.calc_deriv(state, ksi)?;
         mat_mat_mul(&mut state.jacobian, 1.0, &state.coords_transp, &state.deriv)?;
 
-        // line in 2D (geo_ndim == 1 && self.space_ndim == 2)
+        // line in 2D (geo_ndim = 1 and self.space_ndim = 2)
         if self.space_ndim == 2 {
             normal[0] = -state.jacobian[1][0];
             normal[1] = state.jacobian[0][0];
             return Ok(());
         }
 
-        // surface in 3D (geo_ndim == 2 && space_ndim == 3)
+        // surface in 3D (geo_ndim = 2 and space_ndim = 3)
         let jj = &state.jacobian;
         normal[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
         normal[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
@@ -582,7 +770,7 @@ impl Shape {
     ///
     /// **Note:** This function works with `geo_ndim == space_ndim` only.
     ///
-    /// We use Newton iterations with the inverse of the Jacobian to compute ξ(x).
+    /// We use Newton iterations with the inverse of the Jacobian to compute `ξ(x)`.
     ///
     /// # Output
     ///
@@ -606,6 +794,43 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     // 7.0        2                ξ₀   ξ₁
+    ///     //           / `.       node    r    s
+    ///     //          /    `.        0  0.0  0.0
+    ///     //     (3.5,6.0)   `.      1  1.0  0.0
+    ///     //        /          `.    2  0.0  1.0
+    ///     //       /             `.
+    ///     // 5.0  0-----------------1
+    ///     //     3.0   4.0   5.0   6.0
+    ///     #[rustfmt::skip]
+    ///     let coords = &[
+    ///         [3.0, 5.0],
+    ///         [6.0, 5.0],
+    ///         [4.0, 7.0],
+    ///     ];
+    ///     let shape = Shape::new(2, 2, 3)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     // x @ middle of edge (0,2)
+    ///     let x = Vector::from(&[3.5, 6.0]);
+    ///
+    ///     // find ξ corresponding to x @ middle of edge (0,2)
+    ///     let mut ksi = vec![0.0; shape.space_ndim];
+    ///     shape.approximate_ksi(&mut ksi, &mut state, &x, 10, 1e-8)?;
+    ///     assert_vec_approx_eq!(ksi, &[0.0, 0.5], 1e-8);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn approximate_ksi(
         &self,
         ksi: &mut [f64],
@@ -655,7 +880,7 @@ impl Shape {
 
     /// Calculates the gradient of the interpolation functions
     ///
-    /// **Note:** This function works with `geo_ndim == space_ndim` only
+    /// **Note:** This function works with `geo_ndim == space_ndim` only.
     ///
     /// ```text
     ///             →
@@ -692,6 +917,40 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_lab::Matrix;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let a = 3.0;
+    ///     let coords = &[[0.0, 0.0], [2.0 * a, 0.0], [2.0 * a, a], [0.0, a]];
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     shape.calc_gradient(&mut state, &[0.0, 0.0])?;
+    ///
+    ///     let correct_gg = Matrix::from(&[
+    ///         [-1.0/(4.0*a), -1.0/(2.0*a)],
+    ///         [ 1.0/(4.0*a), -1.0/(2.0*a)],
+    ///         [ 1.0/(4.0*a),  1.0/(2.0*a)],
+    ///         [-1.0/(4.0*a),  1.0/(2.0*a)],
+    ///     ]);
+    ///     assert_vec_approx_eq!(state.gradient.as_data(), correct_gg.as_data(), 1e-15);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_gradient(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<f64, StrError> {
         if self.geo_ndim != self.space_ndim {
             return Err("geo_ndim must equal space_ndim");
@@ -729,6 +988,44 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  6 2
+    ///     //  5 | `.    * indicates the
+    ///     //  4 | * `.    location of ips
+    ///     //  3 |     `.
+    ///     //  2 |       `.
+    ///     //  1 | *     * `.
+    ///     //  0 0-----------1
+    ///     //    0 1 2 3 4 5 6
+    ///     #[rustfmt::skip]
+    ///     let coords = &[
+    ///         [0.0, 0.0],
+    ///         [6.0, 0.0],
+    ///         [0.0, 6.0],
+    ///     ];
+    ///     let shape = Shape::new(2, 2, 3)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
+    ///         [1.0/6.0, 1.0/6.0, 0.0, 1.0/6.0], // last column
+    ///         [2.0/3.0, 1.0/6.0, 0.0, 1.0/6.0], // is the weight
+    ///         [1.0/6.0, 2.0/3.0, 0.0, 1.0/6.0],
+    ///     ];
+    ///
+    ///     let x_ips = shape.calc_integ_points_coords(&mut state, &IP_TRI_INTERNAL_3)?;
+    ///     assert_eq!(x_ips[0].as_data(), &[1.0, 1.0]);
+    ///     assert_eq!(x_ips[1].as_data(), &[4.0, 1.0]);
+    ///     assert_eq!(x_ips[2].as_data(), &[1.0, 4.0]);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_integ_points_coords(
         &self,
         state: &mut StateOfShape,
@@ -751,6 +1048,51 @@ impl Shape {
     ///
     /// * `e` -- index of edge in [0, nedge-1]
     /// * `i` -- index of local node [0, edge_nnode-1]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::Shape;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //          .4-----[7]------7
+    ///     //        ,' |            ,'|
+    ///     //      [4] [8]         [6] |  [#] indicates local
+    ///     //    ,'     |        ,'    |      edge number "e"
+    ///     //  5'========[5]===6'     [11]
+    ///     //  |               |       |
+    ///     //  |        |      |       |
+    ///     // [9]      ,0-[3]- | - - - 3
+    ///     //  |     ,'       [10]  [2]
+    ///     //  |   [0]         |   ,'
+    ///     //  | ,'            | ,'
+    ///     //  1'-----[1]------2'
+    ///     let shape = Shape::new(3, 3, 8)?;
+    ///     let edges: Vec<_> = (0..shape.nedge)
+    ///         .into_iter()
+    ///         .map(|e| (shape.edge_node_id(e, 0), shape.edge_node_id(e, 1)))
+    ///         .collect();
+    ///     assert_eq!(
+    ///         edges,
+    ///         &[
+    ///             (0, 1),
+    ///             (1, 2),
+    ///             (2, 3),
+    ///             (3, 0),
+    ///             (4, 5),
+    ///             (5, 6),
+    ///             (6, 7),
+    ///             (7, 4),
+    ///             (0, 4),
+    ///             (1, 5),
+    ///             (2, 6),
+    ///             (3, 7)
+    ///         ]
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn edge_node_id(&self, e: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
@@ -780,6 +1122,54 @@ impl Shape {
     ///
     /// * `f` -- index of face in [0, nface-1]
     /// * `i` -- index of local node [0, face_nnode-1]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::Shape;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //           4----------------7
+    ///     //         ,'|              ,'|
+    ///     //       ,'  |  ___       ,'  |
+    ///     //     ,'    |,'5,'  [0],'    |
+    ///     //   ,'      |~~~     ,'      |
+    ///     // 5'===============6'  ,'|   |
+    ///     // |   ,'|   |      |   |3|   |
+    ///     // |   |2|   |      |   |,'   |
+    ///     // |   |,'   0- - - | +- - - -3
+    ///     // |       ,'       |       ,'
+    ///     // |     ,' [1]  ___|     ,'
+    ///     // |   ,'      ,'4,'|   ,'
+    ///     // | ,'        ~~~  | ,'
+    ///     // 1----------------2'
+    ///     let shape = Shape::new(3, 3, 8)?;
+    ///     let faces: Vec<_> = (0..shape.nface)
+    ///         .into_iter()
+    ///         .map(|f| {
+    ///             (
+    ///                 shape.face_node_id(f, 0),
+    ///                 shape.face_node_id(f, 1),
+    ///                 shape.face_node_id(f, 2),
+    ///                 shape.face_node_id(f, 3),
+    ///             )
+    ///         })
+    ///         .collect();
+    ///     assert_eq!(
+    ///         faces,
+    ///         &[
+    ///             (0, 4, 7, 3),
+    ///             (1, 2, 6, 5),
+    ///             (0, 1, 5, 4),
+    ///             (2, 3, 7, 6),
+    ///             (0, 3, 2, 1),
+    ///             (4, 5, 6, 7),
+    ///         ]
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn face_node_id(&self, f: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
@@ -810,6 +1200,55 @@ impl Shape {
     /// * `f` -- index of face in [0, nface-1]
     /// * `k` -- index of face's edge (not the index of cell's edge) in [0, face_nedge-1]
     /// * `i` -- index of local node [0, edge_nnode-1]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::Shape;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //           4----------------7
+    ///     //         ,'|              ,'|
+    ///     //       ,'  |  ___       ,'  |
+    ///     //     ,'    |,'5,'  [0],'    |
+    ///     //   ,'      |~~~     ,'      |
+    ///     // 5'===============6'  ,'|   |
+    ///     // |   ,'|   |      |   |3|   |
+    ///     // |   |2|   |      |   |,'   |
+    ///     // |   |,'   0- - - | +- - - -3
+    ///     // |       ,'       |       ,'
+    ///     // |     ,' [1]  ___|     ,'
+    ///     // |   ,'      ,'4,'|   ,'
+    ///     // | ,'        ~~~  | ,'
+    ///     // 1----------------2'
+    ///     let shape = Shape::new(3, 3, 8)?;
+    ///     let data: Vec<Vec<_>> = (0..shape.nface)
+    ///         .into_iter()
+    ///         .map(|f| {
+    ///             (0..shape.face_nedge)
+    ///                 .into_iter()
+    ///                 .map(|k|
+    ///                     (shape.face_edge_node_id(f, k, 0),
+    ///                      shape.face_edge_node_id(f, k, 1))
+    ///                 ).collect()
+    ///         })
+    ///         .collect();
+    ///     println!("{:?}", data);
+    ///     assert_eq!(
+    ///         data,
+    ///         &[
+    ///             [(0, 4), (4, 7), (7, 3), (3, 0)], // face 0
+    ///             [(1, 2), (2, 6), (6, 5), (5, 1)], // face 1
+    ///             [(0, 1), (1, 5), (5, 4), (4, 0)], // face 2
+    ///             [(2, 3), (3, 7), (7, 6), (6, 2)], // face 3
+    ///             [(0, 3), (3, 2), (2, 1), (1, 0)], // face 4
+    ///             [(4, 5), (5, 6), (6, 7), (7, 4)], // face 5
+    ///         ]
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn face_edge_node_id(&self, f: usize, k: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
@@ -838,6 +1277,35 @@ impl Shape {
     /// # Output
     ///
     /// * `ksi` -- (geo_ndim) reference coordinates `ξᵐ` at node m
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::Shape;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let ref_coords: Vec<_> = (0..shape.nnode)
+    ///         .into_iter()
+    ///         .map(|m| shape.reference_coords(m))
+    ///         .collect();
+    ///     assert_eq!(ref_coords, &[
+    ///         [-1.0, -1.0],
+    ///         [ 1.0, -1.0],
+    ///         [ 1.0,  1.0],
+    ///         [-1.0,  1.0],
+    ///     ]);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn reference_coords(&self, m: usize) -> &'static [f64] {
         match self.kind {
             GeoKind::Lin2 => &Lin2::NODE_REFERENCE_COORDS[m],
@@ -952,7 +1420,6 @@ mod tests {
                 ksi_aux[1] = 1.0;
                 gen_coords(&mut x, &ksi_aux, shape.class);
             } else {
-                // shape.geo_ndim == 2 && shape.space_ndim == 3
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = ksi[1];
                 ksi_aux[2] = 1.0;

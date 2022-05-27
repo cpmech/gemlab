@@ -30,6 +30,7 @@ gemlab = "0.2"
 - [x] Implement read/write mesh functions
 - [x] Add tests for the numerical integrations
 - [ ] Implement triangle and tetrahedron generators
+- [ ] Implement drawing functions
 
 ## Examples
 

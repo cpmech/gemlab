@@ -2,7 +2,7 @@
 //!
 //! # Definitions
 //!
-//! Here, we consider the following dimensions:
+//! Here, we consider the following definitions:
 //!
 //! * `space_ndim` -- is the number of dimensions of the space under study (2 or 3)
 //! * `geo_ndim` -- is the number of dimensions of the geometry element (shape).
@@ -13,6 +13,8 @@
 //! * `global` -- refers to a numbering scheme applied for the whole mesh
 //! * `spatial (real) space` -- is the "real" space mapped by the x₀,x₁,x₂ coordinates (see figure below)
 //! * `reference (natural) space` -- is the "virtual" space mapped by the ξ₀,ξ₁,ξ₂ coordinates (see figure below)
+//!
+//! **Note:** In the code, we use (r,s,t) as (ξ₀,ξ₁,ξ₂) and `ksi` to represent the vector `ξ`.
 //!
 //! ![Real and reference space mapping](https://github.com/cpmech/gemlab/raw/main/data/figures/mapping-real-to-reference.png)
 //!
@@ -57,7 +59,7 @@
 //! Here, we consider two cases:
 //!
 //! * General case with geo_ndim == space_ndim; and
-//! * Line in multi-dimensions with geo_ndim == 1 and space_ndim > 1.
+//! * Line in multi-dimensions with geo_ndim = 1 and space_ndim > 1.
 //!
 //! ## General case with geo_ndim == space_ndim
 //!
@@ -121,7 +123,7 @@
 //!
 //! where `G` is an (nnode,space_ndim) matrix.
 //!
-//! ## Line in multi-dimensions with geo_ndim == 1 and space_ndim > 1
+//! ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
 //!
 //! In this case, the Jacobian equals the (space_ndim,1) base vector `g₁` which
 //! is tangent to the line element, i.e.,
@@ -153,6 +155,85 @@
 //!
 //! -1 ≤ ξ ≤ +1
 //! ```
+//!
+//! # Normal vectors
+//!
+//! ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+//!
+//! Base vector tangent to the line:
+//!
+//! ```text
+//!          →
+//!         dx
+//! g₁(ξ) = —— = Xᵀ · L = first_column(J)
+//!         dξ
+//! ```
+//!
+//! Normal vector:
+//!
+//! ```text
+//! →   →    →
+//! n = e₃ × g₁
+//!
+//!   →       →
+//! ||n|| = ||g₁||
+//! ```
+//!
+//! Thus
+//!
+//! ```text
+//!        →           →
+//! dℓ = ||g₁|| dξ = ||n|| dξ
+//! ```
+//!
+//! For a straight line (segment):
+//!
+//! ```text
+//!   →
+//! ||n|| = Δℓ / Δξ = L / 2
+//! ```
+//!
+//! because all [GeoClass::Lin] have `Δξ = 2`.
+//!
+//! ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
+//!
+//! Base vectors tangent to the surface:
+//!
+//! ```text
+//!          →
+//! →  →    dx
+//! g₁(ξ) = ——— = first_column(J)
+//!         dξ₁
+//!
+//!          →
+//! →  →    dx
+//! g₂(ξ) = ——— = second_column(J)
+//!         dξ₂
+//! ```
+//!
+//! Normal vector:
+//!
+//! ```text
+//! →   →    →
+//! n = g₁ × g₂
+//! ```
+//!
+//! Thus
+//!
+//! ```text
+//!         →
+//! dA := ||n|| dξ₁ dξ₂
+//! ```
+//!
+//! For flat quadrilateral faces:
+//!
+//! ```text
+//!   →
+//! ||n|| = A / (Δξ₁ Δξ₂) = A / 4
+//! ```
+//!
+//! because all [GeoClass::Qua] have `Δξᵢ = 2`.
+//!
 
 mod enums;
 mod hex20;

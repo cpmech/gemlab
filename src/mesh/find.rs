@@ -75,7 +75,7 @@ impl Find {
     ///   the point ids using the following code snipped:
     ///
     /// ``` text
-    /// let mut ids: Vec<_> = point_ids.iter().collect();
+    /// let mut ids: Vec<_> = point_ids.iter().copied().collect();
     /// ids.sort();
     /// ```
     pub fn points(&self, at: At) -> Result<HashSet<PointId>, StrError> {
@@ -184,7 +184,7 @@ impl Find {
     ///   the edge keys using the following code snipped:
     ///
     /// ``` text
-    /// let mut keys: Vec<_> = edge_keys.iter().collect();
+    /// let mut keys: Vec<_> = edge_keys.iter().copied().collect();
     /// keys.sort();
     /// ```
     pub fn edges(&self, at: At) -> Result<HashSet<EdgeKey>, StrError> {
@@ -216,11 +216,14 @@ impl Find {
     ///   the face keys using the following code snipped:
     ///
     /// ``` text
-    /// let mut keys: Vec<_> = face_keys.iter().collect();
+    /// let mut keys: Vec<_> = face_keys.iter().copied().collect();
     /// keys.sort();
     /// ```
     pub fn faces(&self, at: At) -> Result<HashSet<FaceKey>, StrError> {
         let mut face_keys: HashSet<FaceKey> = HashSet::new();
+        if self.space_ndim != 3 {
+            return Ok(face_keys);
+        }
         // find all points constrained by "at"
         let point_ids = self.points(at)?;
         for point_id in &point_ids {
@@ -501,6 +504,21 @@ mod tests {
             &[(2, 6), (6, 10)],
         );
         check(&find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
+        Ok(())
+    }
+
+    #[test]
+    fn find_faces_returns_empty_in_2d() -> Result<(), StrError> {
+        // 3--------2--------5
+        // |        |        |
+        // |        |        |
+        // |        |        |
+        // 0--------1--------4
+        let mesh = Samples::two_quads_horizontal();
+        let shapes = Shapes::new(&mesh)?;
+        let boundary = Boundary::new(&mesh, &shapes)?;
+        let find = Find::new(&mesh, &boundary)?;
+        assert_eq!(find.faces(At::X(0.0))?.len(), 0);
         Ok(())
     }
 

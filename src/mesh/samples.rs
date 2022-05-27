@@ -126,6 +126,8 @@ impl Samples {
 
     /// Returns a mesh with mixed shapes in 3D
     ///
+    /// **Note:** There is a tetrahedron (Tet4) on with nodes (2,8,3,6).
+    ///
     /// ```text
     /// Note: the tetrahedron (2,8,3,6) is incompatible
     ///                       4------------7-----------10
