@@ -988,6 +988,44 @@ impl Shape {
     ///
     /// * This function does NOT check for sizes in `state`;
     ///   thus, make sure that `state` is compatible with this `shape`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  6 2
+    ///     //  5 | `.    * indicates the
+    ///     //  4 | * `.    location of ips
+    ///     //  3 |     `.
+    ///     //  2 |       `.
+    ///     //  1 | *     * `.
+    ///     //  0 0-----------1
+    ///     //    0 1 2 3 4 5 6
+    ///     #[rustfmt::skip]
+    ///     let coords = &[
+    ///         [0.0, 0.0],
+    ///         [6.0, 0.0],
+    ///         [0.0, 6.0],
+    ///     ];
+    ///     let shape = Shape::new(2, 2, 3)?;
+    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///
+    ///     const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
+    ///         [1.0/6.0, 1.0/6.0, 0.0, 1.0/6.0], // last column
+    ///         [2.0/3.0, 1.0/6.0, 0.0, 1.0/6.0], // is the weight
+    ///         [1.0/6.0, 2.0/3.0, 0.0, 1.0/6.0],
+    ///     ];
+    ///
+    ///     let x_ips = shape.calc_integ_points_coords(&mut state, &IP_TRI_INTERNAL_3)?;
+    ///     assert_eq!(x_ips[0].as_data(), &[1.0, 1.0]);
+    ///     assert_eq!(x_ips[1].as_data(), &[4.0, 1.0]);
+    ///     assert_eq!(x_ips[2].as_data(), &[1.0, 4.0]);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn calc_integ_points_coords(
         &self,
         state: &mut StateOfShape,
