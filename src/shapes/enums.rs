@@ -140,6 +140,21 @@ impl GeoKind {
 }
 
 /// Returns the GeoClass and GeoKind for given geo_ndim and nnode
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::shapes;
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     let (geo_ndim, nnode) = (3, 20);
+///     let (class, kind) = shapes::geo_class_and_kind(geo_ndim, nnode)?;
+///     assert_eq!(class, shapes::GeoClass::Hex);
+///     assert_eq!(kind, shapes::GeoKind::Hex20);
+///     Ok(())
+/// }
+/// ```
 pub fn geo_class_and_kind(geo_ndim: usize, nnode: usize) -> Result<(GeoClass, GeoKind), StrError> {
     match (geo_ndim, nnode) {
         // Lin
