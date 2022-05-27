@@ -1277,6 +1277,35 @@ impl Shape {
     /// # Output
     ///
     /// * `ksi` -- (geo_ndim) reference coordinates `ξᵐ` at node m
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::Shape;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///     let shape = Shape::new(2, 2, 4)?;
+    ///     let ref_coords: Vec<_> = (0..shape.nnode)
+    ///         .into_iter()
+    ///         .map(|m| shape.reference_coords(m))
+    ///         .collect();
+    ///     assert_eq!(ref_coords, &[
+    ///         [-1.0, -1.0],
+    ///         [ 1.0, -1.0],
+    ///         [ 1.0,  1.0],
+    ///         [-1.0,  1.0],
+    ///     ]);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn reference_coords(&self, m: usize) -> &'static [f64] {
         match self.kind {
             GeoKind::Lin2 => &Lin2::NODE_REFERENCE_COORDS[m],
