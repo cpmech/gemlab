@@ -585,7 +585,7 @@ mod tests {
         vec_a_shape_times_scalar, vec_b_shape_times_vector, vec_c_vector_dot_gradient, vec_d_tensor_dot_gradient,
     };
     use crate::integ::{select_integ_points, AnalyticalTet4, AnalyticalTri3};
-    use crate::shapes::{GeoClass, Shape, StateOfShape, Verification};
+    use crate::shapes::{GeoClass, Shape, StateOfShape};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
@@ -628,13 +628,14 @@ mod tests {
         // solution:
         //
         //       ┌           ┐
-        //     l │ 2 xa + xb │
+        //     L │ 2 xa + xb │
         // a = — │           │
         //     6 │ xa + 2 xb │
         //       └           ┘
-        let l = 6.0;
-        let (shape, mut state) = Verification::line_segment_lin2(l);
-        let cf = l / 6.0;
+        const L: f64 = 6.0;
+        let shape = Shape::new(2, 1, 2).unwrap();
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [3.0 + L, 4.0]]).unwrap();
+        let cf = L / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
         // integration points
@@ -658,8 +659,8 @@ mod tests {
     fn vec_a_shape_times_scalar_works_tri3_constant() -> Result<(), StrError> {
         // tri3 with a constant source term s(x) = cₛ
         const CS: f64 = 3.0;
-        let l = 5.0;
-        let (shape, mut state, _) = Verification::equilateral_triangle_tri3(l);
+        let shape = Shape::new(2, 2, 3).unwrap();
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
         let ana = AnalyticalTri3::new(&shape, &state);
         let a_correct = ana.integ_vec_a_constant(CS);
         // integration points
@@ -710,9 +711,10 @@ mod tests {
     #[test]
     fn vec_b_shape_times_vector_works_lin2_linear() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with lin2
-        let l = 6.0;
-        let (shape, mut state) = Verification::line_segment_lin2(l);
-        let cf = l / 6.0;
+        const L: f64 = 6.0;
+        let shape = Shape::new(2, 1, 2).unwrap();
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [3.0 + L, 4.0]]).unwrap();
+        let cf = L / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let b_correct = &[
             cf * (2.0 * xa + xb),
@@ -746,10 +748,10 @@ mod tests {
     fn vec_b_shape_times_vector_works_tri3_constant() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
-        let l = 5.0;
-        let (shape, mut state, _) = Verification::equilateral_triangle_tri3(l);
         const V0: f64 = -3.0;
         const V1: f64 = 8.0;
+        let shape = Shape::new(2, 2, 3).unwrap();
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
         let ana = AnalyticalTri3::new(&shape, &state);
         let b_correct = ana.integ_vec_b_constant(V0, V1);
         // integration points
@@ -776,14 +778,14 @@ mod tests {
     #[test]
     fn vec_b_shape_times_vector_works_tet4_constant() -> Result<(), StrError> {
         // tet 4 with constant vector
+        const V0: f64 = 2.0;
+        const V1: f64 = 3.0;
+        const V2: f64 = 4.0;
         let shape = Shape::new(3, 3, 4)?;
         let mut state = StateOfShape::new(
             shape.geo_ndim,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
-        const V0: f64 = 2.0;
-        const V1: f64 = 3.0;
-        const V2: f64 = 4.0;
         let ana = AnalyticalTet4::new(&shape, &state);
         let b_correct = ana.integ_vec_b_constant(V0, V1, V2);
         // integration points
@@ -813,8 +815,9 @@ mod tests {
         // constant vector function: w(x) = {w₀, w₁}
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
-        let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
-        let ana = AnalyticalTri3::new(&shape, &mut state);
+        let shape = Shape::new(2, 2, 3).unwrap();
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
+        let ana = AnalyticalTri3::new(&shape, &state);
         let c_correct = ana.integ_vec_c_constant(W0, W1);
         // integration points
         let tolerances = [1e-14, 1e-14];
@@ -840,8 +843,9 @@ mod tests {
     #[test]
     fn vec_c_vector_dot_gradient_works_tri3_bilinear() -> Result<(), StrError> {
         // bilinear vector function: w(x) = {x, y}
-        let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
-        let ana = AnalyticalTri3::new(&shape, &mut state);
+        let shape = Shape::new(2, 2, 3).unwrap();
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
+        let ana = AnalyticalTri3::new(&shape, &state);
         let c_correct = ana.integ_vec_c_bilinear(&state);
         // integration points
         let tolerances = [1e-14, 1e-14];
@@ -868,14 +872,14 @@ mod tests {
     #[test]
     fn vec_c_vector_dot_gradient_works_tet4_constant() -> Result<(), StrError> {
         // tet 4 with constant vector  w(x) = {w0, w1, w2}
+        const W0: f64 = 2.0;
+        const W1: f64 = 3.0;
+        const W2: f64 = 4.0;
         let shape = Shape::new(3, 3, 4)?;
         let mut state = StateOfShape::new(
             shape.geo_ndim,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
-        const W0: f64 = 2.0;
-        const W1: f64 = 3.0;
-        const W2: f64 = 4.0;
         let ana = AnalyticalTet4::new(&shape, &state);
         let c_correct = ana.integ_vec_c_constant(W0, W1, W2);
         // integration points
@@ -910,8 +914,9 @@ mod tests {
         const S11: f64 = 3.0;
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
-        let (shape, mut state, _) = Verification::equilateral_triangle_tri3(5.0);
-        let ana = AnalyticalTri3::new(&shape, &mut state);
+        let shape = Shape::new(2, 2, 3).unwrap();
+        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
+        let ana = AnalyticalTri3::new(&shape, &state);
         let d_correct = ana.integ_vec_d_constant(S00, S11, S01);
         // integration points
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
