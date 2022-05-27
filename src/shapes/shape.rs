@@ -1200,6 +1200,55 @@ impl Shape {
     /// * `f` -- index of face in [0, nface-1]
     /// * `k` -- index of face's edge (not the index of cell's edge) in [0, face_nedge-1]
     /// * `i` -- index of local node [0, edge_nnode-1]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::Shape;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //           4----------------7
+    ///     //         ,'|              ,'|
+    ///     //       ,'  |  ___       ,'  |
+    ///     //     ,'    |,'5,'  [0],'    |
+    ///     //   ,'      |~~~     ,'      |
+    ///     // 5'===============6'  ,'|   |
+    ///     // |   ,'|   |      |   |3|   |
+    ///     // |   |2|   |      |   |,'   |
+    ///     // |   |,'   0- - - | +- - - -3
+    ///     // |       ,'       |       ,'
+    ///     // |     ,' [1]  ___|     ,'
+    ///     // |   ,'      ,'4,'|   ,'
+    ///     // | ,'        ~~~  | ,'
+    ///     // 1----------------2'
+    ///     let shape = Shape::new(3, 3, 8)?;
+    ///     let data: Vec<Vec<_>> = (0..shape.nface)
+    ///         .into_iter()
+    ///         .map(|f| {
+    ///             (0..shape.face_nedge)
+    ///                 .into_iter()
+    ///                 .map(|k|
+    ///                     (shape.face_edge_node_id(f, k, 0),
+    ///                      shape.face_edge_node_id(f, k, 1))
+    ///                 ).collect()
+    ///         })
+    ///         .collect();
+    ///     println!("{:?}", data);
+    ///     assert_eq!(
+    ///         data,
+    ///         &[
+    ///             [(0, 4), (4, 7), (7, 3), (3, 0)], // face 0
+    ///             [(1, 2), (2, 6), (6, 5), (5, 1)], // face 1
+    ///             [(0, 1), (1, 5), (5, 4), (4, 0)], // face 2
+    ///             [(2, 3), (3, 7), (7, 6), (6, 2)], // face 3
+    ///             [(0, 3), (3, 2), (2, 1), (1, 0)], // face 4
+    ///             [(4, 5), (5, 6), (6, 7), (7, 4)], // face 5
+    ///         ]
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn face_edge_node_id(&self, f: usize, k: usize, i: usize) -> usize {
         match self.kind {
             GeoKind::Lin2 => 0,
