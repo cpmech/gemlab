@@ -1,4 +1,4 @@
-use super::Mesh;
+use super::{CellId, Mesh};
 use crate::shapes::{Shape, StateOfShape};
 use crate::StrError;
 
@@ -13,17 +13,30 @@ pub fn allocate_shapes(mesh: &Mesh) -> Result<Vec<Shape>, StrError> {
         .collect()
 }
 
-/// Allocates all states corresponding to all shapes in a mesh
+/// Allocates StateOfShape for a given cell_id
+#[inline]
+pub fn allocate_state(mesh: &Mesh, cell_id: CellId) -> Result<StateOfShape, StrError> {
+    let cell = &mesh.cells[cell_id];
+    StateOfShape::new(
+        cell.geo_ndim,
+        &cell
+            .points
+            .iter()
+            .map(|id| mesh.points[*id].coords.clone())
+            .collect::<Vec<_>>(),
+    )
+}
+
+/// Allocates all states corresponding to all cells/shapes in a mesh
 ///
 /// Returns a vector with len = number of cells.
 #[inline]
-pub fn allocate_states(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<Vec<StateOfShape>, StrError> {
+pub fn allocate_states(mesh: &Mesh) -> Result<Vec<StateOfShape>, StrError> {
     mesh.cells
         .iter()
-        .zip(shapes)
-        .map(|(cell, shape)| {
+        .map(|cell| {
             StateOfShape::new(
-                shape.geo_ndim,
+                cell.geo_ndim,
                 &cell
                     .points
                     .iter()
@@ -38,13 +51,13 @@ pub fn allocate_states(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<Vec<StateOfSh
 
 #[cfg(test)]
 mod tests {
-    use super::{allocate_shapes, allocate_states};
+    use super::{allocate_shapes, allocate_state, allocate_states};
     use crate::mesh::Samples;
     use crate::shapes::GeoKind;
     use crate::StrError;
 
     #[test]
-    fn shapes_new_works_2d() -> Result<(), StrError> {
+    fn allocate_shapes_works_2d() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
         assert_eq!(shapes.len(), 2);
@@ -56,7 +69,7 @@ mod tests {
     }
 
     #[test]
-    fn shapes_new_works_3d() -> Result<(), StrError> {
+    fn allocate_shapes_works_3d() -> Result<(), StrError> {
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
         assert_eq!(shapes.len(), 2);
@@ -68,15 +81,33 @@ mod tests {
     }
 
     #[test]
-    fn states_new_works_2d() -> Result<(), StrError> {
+    fn allocate_state_works_2d() -> Result<(), StrError> {
         //  3--------2--------5
         //  |        |        |
         //  |        |        |
         //  |        |        |
         //  0--------1--------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_shapes(&mesh)?;
-        let states = allocate_states(&mesh, &shapes)?;
+        let state = allocate_state(&mesh, 1)?;
+        assert_eq!(
+            format!("{}", state.coords_transp),
+            "┌         ┐\n\
+             │ 1 2 2 1 │\n\
+             │ 0 0 1 1 │\n\
+             └         ┘"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn allocate_states_works_2d() -> Result<(), StrError> {
+        //  3--------2--------5
+        //  |        |        |
+        //  |        |        |
+        //  |        |        |
+        //  0--------1--------4
+        let mesh = Samples::two_quads_horizontal();
+        let states = allocate_states(&mesh)?;
         assert_eq!(states.len(), 2);
         assert_eq!(
             format!("{}", states[0].coords_transp),
@@ -96,7 +127,7 @@ mod tests {
     }
 
     #[test]
-    fn states_new_works_3d() -> Result<(), StrError> {
+    fn allocate_state_works_3d() -> Result<(), StrError> {
         //       8-------------11
         //      /.             /|
         //     / .            / |
@@ -118,8 +149,42 @@ mod tests {
         //  |/             |/
         //  1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_shapes(&mesh)?;
-        let states = allocate_states(&mesh, &shapes)?;
+        let state = allocate_state(&mesh, 1)?;
+        assert_eq!(
+            format!("{}", state.coords_transp),
+            "┌                 ┐\n\
+             │ 0 1 1 0 0 1 1 0 │\n\
+             │ 0 0 1 1 0 0 1 1 │\n\
+             │ 1 1 1 1 2 2 2 2 │\n\
+             └                 ┘"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn allocate_states_works_3d() -> Result<(), StrError> {
+        //       8-------------11
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7
+        //  |   /.         |   /|
+        //  |  / .         |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |
+        //  |    .         |    |
+        //  |    0---------|----3
+        //  |   /          |   /
+        //  |  /           |  /
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2
+        let mesh = Samples::two_cubes_vertical();
+        let states = allocate_states(&mesh)?;
         assert_eq!(states.len(), 2);
         assert_eq!(
             format!("{}", states[0].coords_transp),

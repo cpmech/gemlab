@@ -161,7 +161,7 @@ fn rectangle_tris_quads() -> Result<(), StrError> {
     assert_approx_eq!(length_numerical, SQRT_2, 1e-14);
 
     // states
-    let mut states = allocate_states(&mesh, &shapes)?;
+    let mut states = allocate_states(&mesh)?;
 
     // cell 5
     let shape_cell_5 = Shape::new(2, 2, 4)?;
