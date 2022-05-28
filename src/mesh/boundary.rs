@@ -4,6 +4,137 @@ use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
 /// Holds points, edges and faces on the boundaries of a mesh
+///
+/// # Examples
+///
+/// ## Two-dimensional
+///
+/// ```
+/// use gemlab::mesh::{Boundary, Cell, Mesh, Point, Shapes};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //          [#] indicates id
+///     //      y   (#) indicates attribute_id
+///     //      ↑
+///     // 1.0  3-----------2-----------5
+///     //      |           |           |
+///     //      |    [0]    |    [1]    |
+///     //      |    (1)    |    (2)    |
+///     //      |           |           |
+///     // 0.0  0-----------1-----------4  → x
+///     //     0.0         1.0         2.0
+///     #[rustfmt::skip]
+///     let mesh = Mesh {
+///         space_ndim: 2,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0] },
+///             Point { id: 4, coords: vec![2.0, 0.0] },
+///             Point { id: 5, coords: vec![2.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+///         ],
+///     };
+///
+///     let shapes = Shapes::new(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///
+///     let mut points: Vec<_> = boundary.points.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, [0, 1, 2, 3, 4, 5]);
+///
+///     let mut edges: Vec<_> = boundary.edges.keys().copied().collect();
+///     edges.sort();
+///     assert_eq!(edges, [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)]);
+///     Ok(())
+/// }
+/// ```
+///
+/// ## Three-dimensional
+///
+/// ```
+/// use gemlab::mesh::{Boundary, Cell, Mesh, Point, Shapes};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //          .4--------------7
+///     //        ,' |            ,'|
+///     //      ,'              ,'  |
+///     //    ,'     |        ,'    |
+///     //  5'==============6'      |
+///     //  |               |       |
+///     //  |        |      |       |
+///     //  |       ,0- - - | - - - 3
+///     //  |     ,'        |     ,'
+///     //  |   ,'          |   ,'
+///     //  | ,'            | ,'
+///     //  1'--------------2'
+///     #[rustfmt::skip]
+///     let mesh = Mesh {
+///         space_ndim: 3,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0, 0.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0, 0.0] },
+///             Point { id: 4, coords: vec![0.0, 0.0, 1.0] },
+///             Point { id: 5, coords: vec![1.0, 0.0, 1.0] },
+///             Point { id: 6, coords: vec![1.0, 1.0, 1.0] },
+///             Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,1,2,3, 4,5,6,7] },
+///         ],
+///     };
+///
+///     let shapes = Shapes::new(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///
+///     let mut points: Vec<_> = boundary.points.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, (0..8).collect::<Vec<_>>());
+///
+///     let mut edges: Vec<_> = boundary.edges.keys().copied().collect();
+///     edges.sort();
+///     assert_eq!(
+///         edges,
+///         [
+///             (0, 1),
+///             (0, 3),
+///             (0, 4),
+///             (1, 2),
+///             (1, 5),
+///             (2, 3),
+///             (2, 6),
+///             (3, 7),
+///             (4, 5),
+///             (4, 7),
+///             (5, 6),
+///             (6, 7)
+///         ]
+///     );
+///
+///     let mut faces: Vec<_> = boundary.faces.keys().copied().collect();
+///     faces.sort();
+///     assert_eq!(
+///         faces,
+///         [
+///             (0, 1, 2, 3),
+///             (0, 1, 4, 5),
+///             (0, 3, 4, 7),
+///             (1, 2, 5, 6),
+///             (2, 3, 6, 7),
+///             (4, 5, 6, 7),
+///         ]
+///     );
+///     Ok(())
+/// }
+/// ```
 pub struct Boundary {
     /// Set of points on the boundaries
     ///
