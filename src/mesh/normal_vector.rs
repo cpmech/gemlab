@@ -241,7 +241,7 @@ mod tests {
         );
         assert_eq!(
             NormalVector::at_face(&mesh, &boundary, (0, 1, 2, 3)).err(),
-            Some("face_key is not present in boundary")
+            Some("normal at_face works in 3D only")
         );
 
         let boundary = Boundary {
@@ -257,7 +257,24 @@ mod tests {
         );
         assert_eq!(
             NormalVector::at_face(&mesh, &boundary, (0, 1, 2, 3)).err(),
-            Some("(geo_ndim,nnode) combination is invalid")
+            Some("normal at_face works in 3D only")
+        );
+
+        let mesh = Samples::two_cubes_vertical();
+        let boundary = Boundary {
+            points: HashSet::new(),
+            edges: HashMap::new(),
+            faces: HashMap::new(),
+            min: Vec::new(),
+            max: Vec::new(),
+        };
+        assert_eq!(
+            NormalVector::at_edge(&mesh, &boundary, (0, 1)).err(),
+            Some("normal at_edge works in 2D only")
+        );
+        assert_eq!(
+            NormalVector::at_face(&mesh, &boundary, (0, 1, 2, 3)).err(),
+            Some("face_key is not present in boundary")
         );
     }
 
