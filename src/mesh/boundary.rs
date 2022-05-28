@@ -24,7 +24,6 @@ use std::collections::{HashMap, HashSet};
 ///     //      |           |           |
 ///     // 0.0  0-----------1-----------4  → x
 ///     //     0.0         1.0         2.0
-///     #[rustfmt::skip]
 ///     let mesh = Mesh {
 ///         space_ndim: 2,
 ///         points: vec![
@@ -74,7 +73,6 @@ use std::collections::{HashMap, HashSet};
 ///     //  |   ,'          |   ,'
 ///     //  | ,'            | ,'
 ///     //  1'--------------2'
-///     #[rustfmt::skip]
 ///     let mesh = Mesh {
 ///         space_ndim: 3,
 ///         points: vec![
