@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn with_text_works() -> Result<(), StrError> {
-        let mesh = Mesh::from_text(
+        let region = Region::with_text(
             "# 1.0  3-----------2-----------5
              #      |           |           |
              #      |    [0]    |    [1]    |  [*] indicates id
@@ -168,24 +168,23 @@ mod tests {
              #
              # header
              # space_ndim npoint ncell
-                     2      6     2
+                        2      6     2
 
              # points
              # id    x   y
-             0  0.0 0.0
-             1  1.0 0.0
-             2  1.0 1.0
-             3  0.0 1.0
-             4  2.0 0.0
-             5  2.0 1.0
+                0  0.0 0.0
+                1  1.0 0.0
+                2  1.0 1.0
+                3  0.0 1.0
+                4  2.0 0.0
+                5  2.0 1.0
 
              # cells
              # id att geo_ndim nnode  point_ids...
-             0   1        2     4  0 1 2 3
-             1   2        2     4  1 4 5 2
+                0   1        2     4  0 1 2 3
+                1   2        2     4  1 4 5 2
              ",
         )?;
-        let region = Region::with(mesh)?;
         assert_eq!(region.mesh.space_ndim, 2);
         assert_eq!(region.shapes.len(), 2);
         assert_eq!(region.states.len(), 2);
