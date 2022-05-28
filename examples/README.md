@@ -1,6 +1,7 @@
 # Gemlab examples
 
 * `block_2d_qua9` -- Shows how to subdivide a rectangle (Block) into Qua9 cells
+* `find_in_grid_2d` -- Uses GridSearch to assist in finding points in the x-y space
 * `integration_tet4` -- Computes the stiffness matrix of a Tet4 element
 * `integration_tri3` -- Performs numerical integrations with a Tri3 element
 * `isoparametric_qua4` -- Illustrates the isoparametric formula with a Qua4

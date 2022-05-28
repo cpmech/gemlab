@@ -2,21 +2,20 @@ use super::num_divisions;
 use crate::geometry::{point_circle_distance, point_cylinder_distance, point_line_distance, point_point_distance};
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-/// Holds the id and coordinates of an item
-#[derive(Clone, Debug, Deserialize, Serialize)]
-struct Item {
-    id: usize,   // identification number
-    x: Vec<f64>, // (ndim) coordinates
-}
+/// Specifies the index of containers (or bins in the grid)
+type Index = usize;
 
-/// Holds items
-#[derive(Clone, Debug, Deserialize, Serialize)]
-struct Container {
-    items: Vec<Item>,
+/// Specifies the identification number of items
+type ID = usize;
+
+/// Holds the id and coordinates of an item
+#[derive(Clone, Debug)]
+struct Item {
+    id: ID,      // identification number
+    x: Vec<f64>, // (ndim) coordinates
 }
 
 /// Default GridSearch number of divisions for all directions
@@ -75,7 +74,25 @@ pub enum GsTol {
 /// * Durand, Farias, and Pedroso (2015) Computing intersections between
 ///   non-compatible curves and finite elements, Computational Mechanics;
 ///   DOI=10.1007/s00466-015-1181-y
-#[derive(Clone, Debug, Deserialize, Serialize)]
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::util::{GridSearch, GsNdiv, GsTol, SQRT_2};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     let min = &[0.0, 0.0];
+///     let max = &[10.0, 10.0];
+///     let mut grid = GridSearch::new(min, max, GsNdiv::Spec(2,2,2), GsTol::Default)?;
+///     grid.insert(123, &[5.5, SQRT_2])?;
+///     grid.plot()?.set_equal_axes(true).save("/tmp/gemlab/doc_grid_search.svg")?;
+///     assert_eq!(grid.find(&[5.5, SQRT_2])?, Some(123));
+///     assert_eq!(grid.find(&[5.501, SQRT_2])?, None);
+///     Ok(())
+/// }
+/// ```
+#[derive(Clone, Debug)]
 pub struct GridSearch {
     // constants
     ndim: usize,      // space dimension
@@ -92,8 +109,8 @@ pub struct GridSearch {
     ncorner: usize,      // number of halo corners 4 in 2D or 8 in 3D
 
     // holds non-empty containers. maps container.index to container.data
-    // a point may be located in more than one container (e.g., when at boundaries)
-    containers: HashMap<usize, Container>,
+    // a point may be located in more than one container (e.g., when at internal boundaries)
+    containers: HashMap<Index, HashMap<ID, Item>>,
 
     // constants
     radius: f64,     // radius of the circumscribed circle of containers
@@ -203,27 +220,21 @@ impl GridSearch {
         }
 
         // add point to container
-        let index = self.container_index(x);
+        let index = match self.container_index(x) {
+            Some(i) => i,
+            None => return Err("cannot insert point outside the grid"),
+        };
         self.update_or_insert(index, id, x);
 
         // add point to containers touched by halo corners
         self.set_halo(x);
         let mut tmp = vec![0.0; self.ndim];
         for c in 0..self.ncorner {
-            let mut outside = false;
-            for i in 0..self.ndim {
-                if self.halo[c][i] < self.min[i] || self.halo[c][i] > self.max[i] {
-                    outside = true;
-                    break;
-                }
-            }
-            if outside {
-                continue; // no need to add HALO points outside the grid
-            }
             tmp.copy_from_slice(&self.halo[c][0..self.ndim]);
-            let index_corner = self.container_index(&tmp);
-            if index_corner != index {
-                self.update_or_insert(index_corner, id, x); // make sure to use original `x`
+            if let Some(index_corner) = self.container_index(&tmp) {
+                if index_corner != index {
+                    self.update_or_insert(index_corner, id, x); // make sure to use original `x`
+                }
             }
         }
         Ok(())
@@ -245,7 +256,10 @@ impl GridSearch {
         }
 
         // find index of container where x should be
-        let index = self.container_index(x);
+        let index = match self.container_index(x) {
+            Some(i) => i,
+            None => return Err("cannot find point with coordinates outside the grid"),
+        };
 
         // find container that should have a point close to `x`
         let container = match self.containers.get(&index) {
@@ -254,7 +268,7 @@ impl GridSearch {
         };
 
         // find closest point to `x` in the container
-        for item in &container.items {
+        for item in container.values() {
             let distance = point_point_distance(&item.x, x)?;
             if distance <= self.radius_tol {
                 return Ok(Some(item.id));
@@ -289,7 +303,7 @@ impl GridSearch {
         let mut ids = HashSet::new();
         for index in nearest_containers {
             let container = self.containers.get(&index).unwrap();
-            for item in &container.items {
+            for item in container.values() {
                 let distance = point_line_distance(a, b, &item.x)?;
                 if distance <= self.radius_tol {
                     ids.insert(item.id.clone());
@@ -329,7 +343,7 @@ impl GridSearch {
         let mut ids = HashSet::new();
         for index in nearest_containers {
             let container = self.containers.get(&index).unwrap();
-            for item in &container.items {
+            for item in container.values() {
                 let distance = point_circle_distance(center, radius, &item.x)?;
                 if f64::abs(distance) <= self.radius_tol {
                     ids.insert(item.id.clone());
@@ -373,7 +387,7 @@ impl GridSearch {
         let mut ids = HashSet::new();
         for index in nearest_containers {
             let container = self.containers.get(&index).unwrap();
-            for item in &container.items {
+            for item in container.values() {
                 let distance = point_cylinder_distance(a, b, radius, &item.x)?;
                 if f64::abs(distance) <= self.radius_tol {
                     ids.insert(item.id.clone());
@@ -409,7 +423,7 @@ impl GridSearch {
         let mut ids = HashSet::new();
         for index in nearest_containers {
             let container = self.containers.get(&index).unwrap();
-            for item in &container.items {
+            for item in container.values() {
                 let distance = f64::abs(item.x[2] - z);
                 if f64::abs(distance) <= self.radius_tol {
                     ids.insert(item.id.clone());
@@ -445,7 +459,7 @@ impl GridSearch {
         let mut ids = HashSet::new();
         for index in nearest_containers {
             let container = self.containers.get(&index).unwrap();
-            for item in &container.items {
+            for item in container.values() {
                 let distance = f64::abs(item.x[0] - x);
                 if f64::abs(distance) <= self.radius_tol {
                     ids.insert(item.id.clone());
@@ -481,7 +495,7 @@ impl GridSearch {
         let mut ids = HashSet::new();
         for index in nearest_containers {
             let container = self.containers.get(&index).unwrap();
-            for item in &container.items {
+            for item in container.values() {
                 let distance = f64::abs(item.x[1] - y);
                 if f64::abs(distance) <= self.radius_tol {
                     ids.insert(item.id.clone());
@@ -545,7 +559,7 @@ impl GridSearch {
             .set_marker_line_width(0.5);
         text.set_color("#cd0000");
         for container in self.containers.values() {
-            for item in &container.items {
+            for item in container.values() {
                 let txt = format!("{}", item.id);
                 if self.ndim == 2 {
                     curve.draw(&[item.x[0]], &[item.x[1]]);
@@ -565,28 +579,25 @@ impl GridSearch {
 
     /// Calculates the container index where the point x should be located
     ///
-    /// **Note:** If the coordinate is outside the grid (min,max), this function
-    /// will return the index of the container to the {left,right,bottom,top,behind,front}
-    /// closest to the coordinate.
+    /// # Output
+    ///
+    /// * returns the index of the container or None if the point is out-of-range
     #[inline]
-    fn container_index(&self, x: &[f64]) -> usize {
+    fn container_index(&self, x: &[f64]) -> Option<usize> {
         let mut ratio = vec![0; self.ndim]; // (ndim) ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
         let mut index = 0;
         for i in 0..self.ndim {
-            if x[i] < self.min[i] {
-                ratio[i] = 0;
-            } else if x[i] > self.max[i] {
-                ratio[i] = self.ndiv[i];
-            } else {
-                ratio[i] = ((x[i] - self.min[i]) / self.size[i]) as usize;
+            if x[i] < self.min[i] || x[i] > self.max[i] {
+                return None;
             }
+            ratio[i] = ((x[i] - self.min[i]) / self.size[i]) as usize;
             if ratio[i] == self.ndiv[i] {
                 // the point is exactly on the max edge, thus select inner container
                 ratio[i] -= 1; // move to the inside
             }
             index += ratio[i] * self.cf[i];
         }
-        index
+        Some(index)
     }
 
     /// Computes the i,j,k indices of the lower-left-bottom corner of the container
@@ -680,16 +691,11 @@ impl GridSearch {
         nearest_containers
     }
 
-    /// Update container or insert point in container
+    /// Updates container or inserts point in an existing container
     #[inline]
-    fn update_or_insert(&mut self, index: usize, id: usize, x: &[f64]) {
-        let item = Item { id, x: Vec::from(x) };
-        if self.containers.contains_key(&index) {
-            let container = self.containers.get_mut(&index).unwrap();
-            container.items.push(item);
-        } else {
-            self.containers.insert(index, Container { items: vec![item] });
-        }
+    fn update_or_insert(&mut self, index: Index, id: ID, x: &[f64]) {
+        let container = self.containers.entry(index).or_insert(HashMap::new());
+        container.insert(id, Item { id, x: x.to_vec() });
     }
 
     /// Sets square/cubic halo around point
@@ -752,7 +758,7 @@ impl fmt::Display for GridSearch {
         indices.sort();
         for index in indices {
             let container = self.containers.get(index).unwrap();
-            let mut ids: Vec<_> = container.items.iter().map(|item| item.id).collect();
+            let mut ids: Vec<_> = container.values().map(|item| item.id).collect();
             ids.sort();
             write!(f, "{}: {:?}\n", index, ids).unwrap();
             for id in ids {
@@ -779,7 +785,6 @@ mod tests {
     use crate::StrError;
     use plotpy::{Curve, Shapes, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
-    use serde::{Deserialize, Serialize};
 
     struct TestData<'a> {
         id: usize,
@@ -1119,37 +1124,37 @@ mod tests {
         let g2d = get_test_grid_2d()?;
         for data in get_test_data_2d() {
             let index = g2d.container_index(data.x);
-            assert_eq!(index, data.container);
+            assert_eq!(index, Some(data.container));
         }
         // outside, to the left
-        assert_eq!(g2d.container_index(&[-10.0, 0.0]), 0);
+        assert_eq!(g2d.container_index(&[-10.0, 0.0]), None);
         // outside, to the right
-        assert_eq!(g2d.container_index(&[0.80001, 0.0]), 4);
+        assert_eq!(g2d.container_index(&[0.80001, 0.0]), None);
         // outside, to the bottom
-        assert_eq!(g2d.container_index(&[0.0, -1.0]), 1);
+        assert_eq!(g2d.container_index(&[0.0, -1.0]), None);
         // outside, to the top
-        assert_eq!(g2d.container_index(&[0.0, 2.0]), 21);
+        assert_eq!(g2d.container_index(&[0.0, 2.0]), None);
         // outside, to the bottom-left
-        assert_eq!(g2d.container_index(&[-100.0, -100.0]), 0);
+        assert_eq!(g2d.container_index(&[-100.0, -100.0]), None);
         // outside, to the top-right
-        assert_eq!(g2d.container_index(&[100.0, 100.0]), 24);
+        assert_eq!(g2d.container_index(&[100.0, 100.0]), None);
 
         let g3d = get_test_grid_3d()?;
         for data in get_test_data_3d() {
             let index = g3d.container_index(data.x);
-            assert_eq!(index, data.container);
+            assert_eq!(index, Some(data.container));
         }
-        assert_eq!(g3d.container_index(&[1.00001, 0.0, 0.0]), 14);
-        assert_eq!(g3d.container_index(&[0.0, 1.00001, 0.0]), 16);
-        assert_eq!(g3d.container_index(&[0.0, 0.0, 1.00001]), 22);
-        assert_eq!(g3d.container_index(&[-10.0, -10.0, -10.0]), 0);
-        assert_eq!(g3d.container_index(&[10.0, -10.0, -10.0]), 2);
-        assert_eq!(g3d.container_index(&[-10.0, 10.0, -10.0]), 6);
-        assert_eq!(g3d.container_index(&[10.0, 10.0, -10.0]), 8);
-        assert_eq!(g3d.container_index(&[-10.0, -10.0, 10.0]), 18);
-        assert_eq!(g3d.container_index(&[10.0, -10.0, 10.0]), 20);
-        assert_eq!(g3d.container_index(&[-10.0, 10.0, 10.0]), 24);
-        assert_eq!(g3d.container_index(&[10.0, 10.0, 10.0]), 26);
+        assert_eq!(g3d.container_index(&[1.00001, 0.0, 0.0]), None);
+        assert_eq!(g3d.container_index(&[0.0, 1.00001, 0.0]), None);
+        assert_eq!(g3d.container_index(&[0.0, 0.0, 1.00001]), None);
+        assert_eq!(g3d.container_index(&[-10.0, -10.0, -10.0]), None);
+        assert_eq!(g3d.container_index(&[10.0, -10.0, -10.0]), None);
+        assert_eq!(g3d.container_index(&[-10.0, 10.0, -10.0]), None);
+        assert_eq!(g3d.container_index(&[10.0, 10.0, -10.0]), None);
+        assert_eq!(g3d.container_index(&[-10.0, -10.0, 10.0]), None);
+        assert_eq!(g3d.container_index(&[10.0, -10.0, 10.0]), None);
+        assert_eq!(g3d.container_index(&[-10.0, 10.0, 10.0]), None);
+        assert_eq!(g3d.container_index(&[10.0, 10.0, 10.0]), None);
         Ok(())
     }
 
@@ -1165,10 +1170,10 @@ mod tests {
         // plot.set_equal_axes(true)
         //     .set_figure_size_points(800.0, 800.0)
         //     .save("/tmp/gemlab/container_index_handles_imprecision.svg")?;
-        assert_eq!(grid.container_index(&[0.0, 0.0]), 0);
-        assert_eq!(grid.container_index(&[2.0, 0.0]), 19);
-        assert_eq!(grid.container_index(&[2.0, 2.0]), 379);
-        assert_eq!(grid.container_index(&[0.0, 2.0]), 360);
+        assert_eq!(grid.container_index(&[0.0, 0.0]), None);
+        assert_eq!(grid.container_index(&[2.0, 0.0]), Some(19));
+        assert_eq!(grid.container_index(&[2.0, 2.0]), Some(379));
+        assert_eq!(grid.container_index(&[0.0, 2.0]), None);
         Ok(())
     }
 
@@ -1236,10 +1241,14 @@ mod tests {
         let mut g2d = get_test_grid_2d()?;
         let res = g2d.insert(0, &[0.0, 0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g2d.insert(1000, &[0.80001, 0.0]);
+        assert_eq!(res, Err("cannot insert point outside the grid"));
 
         let mut g3d = get_test_grid_3d()?;
         let res = g3d.insert(0, &[0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g3d.insert(1000, &[1.00001, 0.0, 0.0]);
+        assert_eq!(res, Err("cannot insert point outside the grid"));
         Ok(())
     }
 
@@ -1250,16 +1259,15 @@ mod tests {
             grid.insert(data.id, data.x)?;
             for index in data.containers {
                 let container = grid.containers.get(index).unwrap();
-                container.items.iter().find(|item| item.id == data.id).unwrap();
+                container.values().find(|item| item.id == data.id).unwrap();
             }
         }
-        grid.insert(1000, &[0.80001, 0.0])?;
         assert_eq!(
             format!("{}", grid),
             "0: [100]\n\
              1: [100]\n\
-             3: [600, 600]\n\
-             4: [600, 1000]\n\
+             3: [600]\n\
+             4: [600]\n\
              5: [100]\n\
              6: [100, 200]\n\
              7: [200]\n\
@@ -1273,8 +1281,8 @@ mod tests {
              21: [102, 103]\n\
              23: [400]\n\
              24: [400, 500]\n\
-             ids = [100, 101, 102, 103, 200, 300, 400, 500, 600, 1000]\n\
-             nitem = 10\n\
+             ids = [100, 101, 102, 103, 200, 300, 400, 500, 600]\n\
+             nitem = 9\n\
              ncontainer = 17\n\
              ndiv = [5, 5]\n"
         );
@@ -1312,26 +1320,25 @@ mod tests {
             grid.insert(data.id, data.x)?;
             for index in data.containers {
                 let container = grid.containers.get(index).unwrap();
-                container.items.iter().find(|item| item.id == data.id).unwrap();
+                container.values().find(|item| item.id == data.id).unwrap();
             }
         }
-        grid.insert(1000, &[1.00001, 0.0, 0.0])?;
         assert_eq!(
             format!("{}", grid),
             "0: [100]\n\
-             1: [400, 400, 400, 400]\n\
+             1: [400]\n\
              2: [101, 102, 103, 400, 500]\n\
              8: [104, 105, 106]\n\
              13: [200, 300]\n\
-             14: [300, 1000]\n\
+             14: [300]\n\
              16: [300]\n\
              17: [300]\n\
              22: [300]\n\
              23: [300]\n\
              25: [300]\n\
              26: [300]\n\
-             ids = [100, 101, 102, 103, 104, 105, 106, 200, 300, 400, 500, 1000]\n\
-             nitem = 12\n\
+             ids = [100, 101, 102, 103, 104, 105, 106, 200, 300, 400, 500]\n\
+             nitem = 11\n\
              ncontainer = 12\n\
              ndiv = [3, 3, 3]\n"
         );
@@ -1346,10 +1353,14 @@ mod tests {
         let g2d = get_test_grid_2d()?;
         let res = g2d.find(&[0.0, 0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g2d.find(&[0.80001, 0.0]);
+        assert_eq!(res, Err("cannot find point with coordinates outside the grid"));
 
         let g3d = get_test_grid_3d()?;
         let res = g3d.find(&[0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g3d.find(&[1.00001, 0.0, 0.0]);
+        assert_eq!(res, Err("cannot find point with coordinates outside the grid"));
         Ok(())
     }
 
@@ -1361,11 +1372,8 @@ mod tests {
             let id = g2d.find(data.x)?;
             assert_eq!(id, Some(data.id));
         }
-        g2d.insert(1000, &[0.80001, 0.0])?;
         let id = g2d.find(&[0.5, 0.5])?;
         assert_eq!(id, None);
-        assert_eq!(g2d.find(&[0.80001, 0.0])?, Some(1000));
-        assert_eq!(g2d.find(&[10.0, 0.0])?, None);
 
         let mut g3d = get_test_grid_3d()?;
         for data in get_test_data_3d() {
@@ -1373,11 +1381,8 @@ mod tests {
             let id = g3d.find(data.x)?;
             assert_eq!(id, Some(data.id));
         }
-        g3d.insert(1000, &[1.00001, 0.0, 0.0])?;
         let id = g3d.find(&[0.5, 0.5, 0.5])?;
         assert_eq!(id, None);
-        assert_eq!(g3d.find(&[1.00001, 0.0, 0.0])?, Some(1000));
-        assert_eq!(g3d.find(&[10.0, 0.0, 0.0])?, None);
         Ok(())
     }
 
@@ -1687,21 +1692,11 @@ mod tests {
         let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], GsNdiv::Spec(1, 1, 0), GsTol::Default)?;
         // debug
         grid.insert(0, &[0.5, 0.5])?;
-        let correct = "GridSearch { ndim: 2, ndiv: [1, 1], min: [0.0, 0.0], max: [1.0, 1.0], delta: [1.0, 1.0], size: [1.0, 1.0], cf: [1, 1, 1], tol: [0.0001, 0.0001], halo: [[0.4999, 0.4999], [0.5001, 0.4999], [0.5001, 0.5001], [0.4999, 0.5001]], ncorner: 4, containers: {0: Container { items: [Item { id: 0, x: [0.5, 0.5] }] }}, radius: 0.7071067811865476, radius_tol: 0.0001414213562373095 }";
+        let correct = "GridSearch { ndim: 2, ndiv: [1, 1], min: [0.0, 0.0], max: [1.0, 1.0], delta: [1.0, 1.0], size: [1.0, 1.0], cf: [1, 1, 1], tol: [0.0001, 0.0001], halo: [[0.4999, 0.4999], [0.5001, 0.4999], [0.5001, 0.5001], [0.4999, 0.5001]], ncorner: 4, containers: {0: {0: Item { id: 0, x: [0.5, 0.5] }}}, radius: 0.7071067811865476, radius_tol: 0.0001414213562373095 }";
         assert_eq!(format!("{:?}", grid), correct);
         // clone
         let cloned = grid.clone();
         assert_eq!(format!("{:?}", cloned), correct);
-        // serialize
-        let mut serialized = Vec::new();
-        let mut serializer = rmp_serde::Serializer::new(&mut serialized);
-        grid.serialize(&mut serializer).map_err(|_| "grid serialize failed")?;
-        assert!(serialized.len() > 0);
-        // deserialize
-        let mut deserializer = rmp_serde::Deserializer::new(&serialized[..]);
-        let grid_read: GridSearch =
-            Deserialize::deserialize(&mut deserializer).map_err(|_| "cannot deserialize grid data")?;
-        assert_eq!(format!("{:?}", grid_read), correct);
         Ok(())
     }
 }
