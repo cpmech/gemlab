@@ -203,27 +203,21 @@ impl GridSearch {
         }
 
         // add point to container
-        let index = self.container_index(x);
+        let index = match self.container_index(x) {
+            Some(i) => i,
+            None => return Err("point is outside the grid"),
+        };
         self.update_or_insert(index, id, x);
 
         // add point to containers touched by halo corners
         self.set_halo(x);
         let mut tmp = vec![0.0; self.ndim];
         for c in 0..self.ncorner {
-            let mut outside = false;
-            for i in 0..self.ndim {
-                if self.halo[c][i] < self.min[i] || self.halo[c][i] > self.max[i] {
-                    outside = true;
-                    break;
-                }
-            }
-            if outside {
-                continue; // no need to add HALO points outside the grid
-            }
             tmp.copy_from_slice(&self.halo[c][0..self.ndim]);
-            let index_corner = self.container_index(&tmp);
-            if index_corner != index {
-                self.update_or_insert(index_corner, id, x); // make sure to use original `x`
+            if let Some(index_corner) = self.container_index(&tmp) {
+                if index_corner != index {
+                    self.update_or_insert(index_corner, id, x); // make sure to use original `x`
+                }
             }
         }
         Ok(())
@@ -245,7 +239,10 @@ impl GridSearch {
         }
 
         // find index of container where x should be
-        let index = self.container_index(x);
+        let index = match self.container_index(x) {
+            Some(i) => i,
+            None => return Err("point is outside the grid"),
+        };
 
         // find container that should have a point close to `x`
         let container = match self.containers.get(&index) {
@@ -565,28 +562,25 @@ impl GridSearch {
 
     /// Calculates the container index where the point x should be located
     ///
-    /// **Note:** If the coordinate is outside the grid (min,max), this function
-    /// will return the index of the container to the {left,right,bottom,top,behind,front}
-    /// closest to the coordinate.
+    /// # Output
+    ///
+    /// * returns the index of the container or None if the point is out-of-range
     #[inline]
-    fn container_index(&self, x: &[f64]) -> usize {
+    fn container_index(&self, x: &[f64]) -> Option<usize> {
         let mut ratio = vec![0; self.ndim]; // (ndim) ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
         let mut index = 0;
         for i in 0..self.ndim {
-            if x[i] < self.min[i] {
-                ratio[i] = 0;
-            } else if x[i] > self.max[i] {
-                ratio[i] = self.ndiv[i];
-            } else {
-                ratio[i] = ((x[i] - self.min[i]) / self.size[i]) as usize;
+            if x[i] < self.min[i] || x[i] > self.max[i] {
+                return None;
             }
+            ratio[i] = ((x[i] - self.min[i]) / self.size[i]) as usize;
             if ratio[i] == self.ndiv[i] {
                 // the point is exactly on the max edge, thus select inner container
                 ratio[i] -= 1; // move to the inside
             }
             index += ratio[i] * self.cf[i];
         }
-        index
+        Some(index)
     }
 
     /// Computes the i,j,k indices of the lower-left-bottom corner of the container
@@ -1119,37 +1113,37 @@ mod tests {
         let g2d = get_test_grid_2d()?;
         for data in get_test_data_2d() {
             let index = g2d.container_index(data.x);
-            assert_eq!(index, data.container);
+            assert_eq!(index, Some(data.container));
         }
         // outside, to the left
-        assert_eq!(g2d.container_index(&[-10.0, 0.0]), 0);
+        assert_eq!(g2d.container_index(&[-10.0, 0.0]), None);
         // outside, to the right
-        assert_eq!(g2d.container_index(&[0.80001, 0.0]), 4);
+        assert_eq!(g2d.container_index(&[0.80001, 0.0]), None);
         // outside, to the bottom
-        assert_eq!(g2d.container_index(&[0.0, -1.0]), 1);
+        assert_eq!(g2d.container_index(&[0.0, -1.0]), None);
         // outside, to the top
-        assert_eq!(g2d.container_index(&[0.0, 2.0]), 21);
+        assert_eq!(g2d.container_index(&[0.0, 2.0]), None);
         // outside, to the bottom-left
-        assert_eq!(g2d.container_index(&[-100.0, -100.0]), 0);
+        assert_eq!(g2d.container_index(&[-100.0, -100.0]), None);
         // outside, to the top-right
-        assert_eq!(g2d.container_index(&[100.0, 100.0]), 24);
+        assert_eq!(g2d.container_index(&[100.0, 100.0]), None);
 
         let g3d = get_test_grid_3d()?;
         for data in get_test_data_3d() {
             let index = g3d.container_index(data.x);
-            assert_eq!(index, data.container);
+            assert_eq!(index, Some(data.container));
         }
-        assert_eq!(g3d.container_index(&[1.00001, 0.0, 0.0]), 14);
-        assert_eq!(g3d.container_index(&[0.0, 1.00001, 0.0]), 16);
-        assert_eq!(g3d.container_index(&[0.0, 0.0, 1.00001]), 22);
-        assert_eq!(g3d.container_index(&[-10.0, -10.0, -10.0]), 0);
-        assert_eq!(g3d.container_index(&[10.0, -10.0, -10.0]), 2);
-        assert_eq!(g3d.container_index(&[-10.0, 10.0, -10.0]), 6);
-        assert_eq!(g3d.container_index(&[10.0, 10.0, -10.0]), 8);
-        assert_eq!(g3d.container_index(&[-10.0, -10.0, 10.0]), 18);
-        assert_eq!(g3d.container_index(&[10.0, -10.0, 10.0]), 20);
-        assert_eq!(g3d.container_index(&[-10.0, 10.0, 10.0]), 24);
-        assert_eq!(g3d.container_index(&[10.0, 10.0, 10.0]), 26);
+        assert_eq!(g3d.container_index(&[1.00001, 0.0, 0.0]), None);
+        assert_eq!(g3d.container_index(&[0.0, 1.00001, 0.0]), None);
+        assert_eq!(g3d.container_index(&[0.0, 0.0, 1.00001]), None);
+        assert_eq!(g3d.container_index(&[-10.0, -10.0, -10.0]), None);
+        assert_eq!(g3d.container_index(&[10.0, -10.0, -10.0]), None);
+        assert_eq!(g3d.container_index(&[-10.0, 10.0, -10.0]), None);
+        assert_eq!(g3d.container_index(&[10.0, 10.0, -10.0]), None);
+        assert_eq!(g3d.container_index(&[-10.0, -10.0, 10.0]), None);
+        assert_eq!(g3d.container_index(&[10.0, -10.0, 10.0]), None);
+        assert_eq!(g3d.container_index(&[-10.0, 10.0, 10.0]), None);
+        assert_eq!(g3d.container_index(&[10.0, 10.0, 10.0]), None);
         Ok(())
     }
 
@@ -1165,10 +1159,10 @@ mod tests {
         // plot.set_equal_axes(true)
         //     .set_figure_size_points(800.0, 800.0)
         //     .save("/tmp/gemlab/container_index_handles_imprecision.svg")?;
-        assert_eq!(grid.container_index(&[0.0, 0.0]), 0);
-        assert_eq!(grid.container_index(&[2.0, 0.0]), 19);
-        assert_eq!(grid.container_index(&[2.0, 2.0]), 379);
-        assert_eq!(grid.container_index(&[0.0, 2.0]), 360);
+        assert_eq!(grid.container_index(&[0.0, 0.0]), None);
+        assert_eq!(grid.container_index(&[2.0, 0.0]), Some(19));
+        assert_eq!(grid.container_index(&[2.0, 2.0]), Some(379));
+        assert_eq!(grid.container_index(&[0.0, 2.0]), None);
         Ok(())
     }
 
@@ -1236,10 +1230,14 @@ mod tests {
         let mut g2d = get_test_grid_2d()?;
         let res = g2d.insert(0, &[0.0, 0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g2d.insert(1000, &[0.80001, 0.0]);
+        assert_eq!(res, Err("point is outside the grid"));
 
         let mut g3d = get_test_grid_3d()?;
         let res = g3d.insert(0, &[0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g3d.insert(1000, &[1.00001, 0.0, 0.0]);
+        assert_eq!(res, Err("point is outside the grid"));
         Ok(())
     }
 
@@ -1253,13 +1251,12 @@ mod tests {
                 container.items.iter().find(|item| item.id == data.id).unwrap();
             }
         }
-        grid.insert(1000, &[0.80001, 0.0])?;
         assert_eq!(
             format!("{}", grid),
             "0: [100]\n\
              1: [100]\n\
              3: [600, 600]\n\
-             4: [600, 1000]\n\
+             4: [600]\n\
              5: [100]\n\
              6: [100, 200]\n\
              7: [200]\n\
@@ -1273,8 +1270,8 @@ mod tests {
              21: [102, 103]\n\
              23: [400]\n\
              24: [400, 500]\n\
-             ids = [100, 101, 102, 103, 200, 300, 400, 500, 600, 1000]\n\
-             nitem = 10\n\
+             ids = [100, 101, 102, 103, 200, 300, 400, 500, 600]\n\
+             nitem = 9\n\
              ncontainer = 17\n\
              ndiv = [5, 5]\n"
         );
@@ -1315,7 +1312,6 @@ mod tests {
                 container.items.iter().find(|item| item.id == data.id).unwrap();
             }
         }
-        grid.insert(1000, &[1.00001, 0.0, 0.0])?;
         assert_eq!(
             format!("{}", grid),
             "0: [100]\n\
@@ -1323,15 +1319,15 @@ mod tests {
              2: [101, 102, 103, 400, 500]\n\
              8: [104, 105, 106]\n\
              13: [200, 300]\n\
-             14: [300, 1000]\n\
+             14: [300]\n\
              16: [300]\n\
              17: [300]\n\
              22: [300]\n\
              23: [300]\n\
              25: [300]\n\
              26: [300]\n\
-             ids = [100, 101, 102, 103, 104, 105, 106, 200, 300, 400, 500, 1000]\n\
-             nitem = 12\n\
+             ids = [100, 101, 102, 103, 104, 105, 106, 200, 300, 400, 500]\n\
+             nitem = 11\n\
              ncontainer = 12\n\
              ndiv = [3, 3, 3]\n"
         );
@@ -1346,10 +1342,14 @@ mod tests {
         let g2d = get_test_grid_2d()?;
         let res = g2d.find(&[0.0, 0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g2d.find(&[0.80001, 0.0]);
+        assert_eq!(res, Err("point is outside the grid"));
 
         let g3d = get_test_grid_3d()?;
         let res = g3d.find(&[0.0, 0.0]);
         assert_eq!(res, Err("x.len() must equal ndim"));
+        let res = g3d.find(&[1.00001, 0.0, 0.0]);
+        assert_eq!(res, Err("point is outside the grid"));
         Ok(())
     }
 
@@ -1361,11 +1361,8 @@ mod tests {
             let id = g2d.find(data.x)?;
             assert_eq!(id, Some(data.id));
         }
-        g2d.insert(1000, &[0.80001, 0.0])?;
         let id = g2d.find(&[0.5, 0.5])?;
         assert_eq!(id, None);
-        assert_eq!(g2d.find(&[0.80001, 0.0])?, Some(1000));
-        assert_eq!(g2d.find(&[10.0, 0.0])?, None);
 
         let mut g3d = get_test_grid_3d()?;
         for data in get_test_data_3d() {
@@ -1373,11 +1370,8 @@ mod tests {
             let id = g3d.find(data.x)?;
             assert_eq!(id, Some(data.id));
         }
-        g3d.insert(1000, &[1.00001, 0.0, 0.0])?;
         let id = g3d.find(&[0.5, 0.5, 0.5])?;
         assert_eq!(id, None);
-        assert_eq!(g3d.find(&[1.00001, 0.0, 0.0])?, Some(1000));
-        assert_eq!(g3d.find(&[10.0, 0.0, 0.0])?, None);
         Ok(())
     }
 
