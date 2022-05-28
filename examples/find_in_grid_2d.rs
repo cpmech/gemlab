@@ -73,7 +73,7 @@ fn main() -> Result<(), StrError> {
     let mut plot = grid.plot()?;
     plot.set_equal_axes(true)
         .set_figure_size_points(600.0, 600.0)
-        .save("/tmp/gemlab/find_in_grid_2d.svg")?;
+        .save("/tmp/gemlab/example_find_in_grid_2d.svg")?;
 
     // find points on circles
     let mut start_id = 0;
