@@ -74,6 +74,24 @@ pub enum GsTol {
 /// * Durand, Farias, and Pedroso (2015) Computing intersections between
 ///   non-compatible curves and finite elements, Computational Mechanics;
 ///   DOI=10.1007/s00466-015-1181-y
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::util::{GridSearch, GsNdiv, GsTol, SQRT_2};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     let min = &[0.0, 0.0];
+///     let max = &[10.0, 10.0];
+///     let mut grid = GridSearch::new(min, max, GsNdiv::Spec(2,2,2), GsTol::Default)?;
+///     grid.insert(123, &[5.5, SQRT_2])?;
+///     grid.plot()?.set_equal_axes(true).save("/tmp/gemlab/doc_grid_search.svg")?;
+///     assert_eq!(grid.find(&[5.5, SQRT_2])?, Some(123));
+///     assert_eq!(grid.find(&[5.501, SQRT_2])?, None);
+///     Ok(())
+/// }
+/// ```
 #[derive(Clone, Debug)]
 pub struct GridSearch {
     // constants
