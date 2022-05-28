@@ -2,49 +2,39 @@ use super::Mesh;
 use crate::shapes::{Shape, StateOfShape};
 use crate::StrError;
 
-/// Assists in allocating all shapes corresponding to all cells in a mesh
-pub struct Shapes;
-
-/// Assists in allocating all states corresponding to all shapes in a mesh
-pub struct States;
-
-impl Shapes {
-    /// Allocates a new instance
-    #[inline]
-    pub fn new(mesh: &Mesh) -> Result<Vec<Shape>, StrError> {
-        mesh.cells
-            .iter()
-            .map(|cell| Shape::new(mesh.space_ndim, cell.geo_ndim, cell.points.len()))
-            .collect()
-    }
+/// Allocates all shapes corresponding to all cells in a mesh
+#[inline]
+pub fn allocate_shapes(mesh: &Mesh) -> Result<Vec<Shape>, StrError> {
+    mesh.cells
+        .iter()
+        .map(|cell| Shape::new(mesh.space_ndim, cell.geo_ndim, cell.points.len()))
+        .collect()
 }
 
-impl States {
-    /// Allocate a new instance
-    #[inline]
-    pub fn new(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<Vec<StateOfShape>, StrError> {
-        mesh.cells
-            .iter()
-            .zip(shapes)
-            .map(|(cell, shape)| {
-                StateOfShape::new(
-                    shape.geo_ndim,
-                    &cell
-                        .points
-                        .iter()
-                        .map(|id| mesh.points[*id].coords.clone())
-                        .collect::<Vec<_>>(),
-                )
-            })
-            .collect()
-    }
+/// Allocates all states corresponding to all shapes in a mesh
+#[inline]
+pub fn allocate_states(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<Vec<StateOfShape>, StrError> {
+    mesh.cells
+        .iter()
+        .zip(shapes)
+        .map(|(cell, shape)| {
+            StateOfShape::new(
+                shape.geo_ndim,
+                &cell
+                    .points
+                    .iter()
+                    .map(|id| mesh.points[*id].coords.clone())
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .collect()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{Shapes, States};
+    use super::{allocate_shapes, allocate_states};
     use crate::mesh::Samples;
     use crate::shapes::GeoKind;
     use crate::StrError;
@@ -52,7 +42,7 @@ mod tests {
     #[test]
     fn shapes_new_works_2d() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         assert_eq!(shapes.len(), 2);
         assert_eq!(shapes[0].kind, GeoKind::Qua4);
         assert_eq!(shapes[1].kind, GeoKind::Qua4);
@@ -64,7 +54,7 @@ mod tests {
     #[test]
     fn shapes_new_works_3d() -> Result<(), StrError> {
         let mesh = Samples::two_cubes_vertical();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         assert_eq!(shapes.len(), 2);
         assert_eq!(shapes[0].kind, GeoKind::Hex8);
         assert_eq!(shapes[1].kind, GeoKind::Hex8);
@@ -81,8 +71,8 @@ mod tests {
         //  |        |        |
         //  0--------1--------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
-        let states = States::new(&mesh, &shapes)?;
+        let shapes = allocate_shapes(&mesh)?;
+        let states = allocate_states(&mesh, &shapes)?;
         assert_eq!(states.len(), 2);
         assert_eq!(
             format!("{}", states[0].coords_transp),
@@ -124,8 +114,8 @@ mod tests {
         //  |/             |/
         //  1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = Shapes::new(&mesh)?;
-        let states = States::new(&mesh, &shapes)?;
+        let shapes = allocate_shapes(&mesh)?;
+        let states = allocate_states(&mesh, &shapes)?;
         assert_eq!(states.len(), 2);
         assert_eq!(
             format!("{}", states[0].coords_transp),

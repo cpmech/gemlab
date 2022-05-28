@@ -10,7 +10,7 @@ use russell_lab::Vector;
 /// ## Two-dimensional
 ///
 /// ```
-/// use gemlab::mesh::{Boundary, Cell, Mesh, NormalVector, Point, Shapes};
+/// use gemlab::mesh::{allocate_shapes, Boundary, Cell, Mesh, NormalVector, Point};
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -35,7 +35,7 @@ use russell_lab::Vector;
 ///         ],
 ///     };
 ///
-///     let shapes = Shapes::new(&mesh)?;
+///     let shapes = allocate_shapes(&mesh)?;
 ///     let boundary = Boundary::new(&mesh, &shapes)?;
 ///
 ///     // the magnitude of the normal vector is equal to
@@ -64,7 +64,7 @@ use russell_lab::Vector;
 /// ## Three-dimensional
 ///
 /// ```
-/// use gemlab::mesh::{Boundary, Cell, Mesh, NormalVector, Point, Shapes};
+/// use gemlab::mesh::{allocate_shapes, Boundary, Cell, Mesh, NormalVector, Point};
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -97,7 +97,7 @@ use russell_lab::Vector;
 ///         ],
 ///     };
 ///
-///     let shapes = Shapes::new(&mesh)?;
+///     let shapes = allocate_shapes(&mesh)?;
 ///     let boundary = Boundary::new(&mesh, &shapes)?;
 ///
 ///     // the magnitude of the normal vector is equal to
@@ -220,7 +220,7 @@ impl NormalVector {
 #[cfg(test)]
 mod tests {
     use super::NormalVector;
-    use crate::mesh::{Boundary, Edge, Face, Samples, Shapes};
+    use crate::mesh::{allocate_shapes, Boundary, Edge, Face, Samples};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use std::collections::{HashMap, HashSet};
@@ -286,7 +286,7 @@ mod tests {
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
 
         // the magnitude (l) of the normal vector should be equal to
@@ -333,7 +333,7 @@ mod tests {
         //  |               |               |
         //  0-------4-------1------10-------8
         let mesh = Samples::block_2d_four_qua8();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
 
         // the magnitude (l) of the normal vector should be equal to
@@ -380,7 +380,7 @@ mod tests {
         //  |               |               |
         //  0-------4-------1------11-------9
         let mesh = Samples::block_2d_four_qua9();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
 
         // the magnitude (l) of the normal vector should be equal to
@@ -427,7 +427,7 @@ mod tests {
         //  |               |               |
         //  0----4-----8----1---14---17----12
         let mesh = Samples::block_2d_four_qua12();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
 
         // the magnitude (l) of the normal vector should be equal to
@@ -474,7 +474,7 @@ mod tests {
         //  |               |               |
         //  0----4-----8----1---18---21----16
         let mesh = Samples::block_2d_four_qua16();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
 
         // the magnitude (l) of the normal vector should be equal to
@@ -525,7 +525,7 @@ mod tests {
         //  |                   |                   |
         //  0----4----8---12----1---19---22---25---17
         let mesh = Samples::block_2d_four_qua17();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
 
         // the magnitude (l) of the normal vector should be equal to
@@ -579,7 +579,7 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
 
         // the magnitude (l) of the normal vector should be equal to
@@ -659,7 +659,7 @@ mod tests {
         //   |/                  |/                  |/
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
 
         // the magnitude (l) of the normal vector should be equal to
@@ -687,7 +687,7 @@ mod tests {
     #[test]
     fn derive_works() {
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh).unwrap();
+        let shapes = allocate_shapes(&mesh).unwrap();
         let boundary = Boundary::new(&mesh, &shapes).unwrap();
         let n01 = NormalVector::at_edge(&mesh, &boundary, (0, 1)).unwrap();
         let n01_clone = n01.clone();

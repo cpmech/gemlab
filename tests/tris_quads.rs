@@ -1,5 +1,5 @@
 use gemlab::integ::default_integ_points;
-use gemlab::mesh::{At, Boundary, Find, Mesh, NormalVector, Shapes, States};
+use gemlab::mesh::{allocate_shapes, allocate_states, At, Boundary, Find, Mesh, NormalVector};
 use gemlab::shapes::{Shape, StateOfShape};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
@@ -34,7 +34,7 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
     assert_eq!(mesh.cells[6].points, &[5, 11, 12, 6]);
 
     // boundary
-    let shapes = Shapes::new(&mesh)?;
+    let shapes = allocate_shapes(&mesh)?;
     let boundary = Boundary::new(&mesh, &shapes)?;
 
     // check edges
@@ -105,7 +105,7 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
 fn rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
-    let shapes = Shapes::new(&mesh)?;
+    let shapes = allocate_shapes(&mesh)?;
     let boundary = Boundary::new(&mesh, &shapes)?;
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
@@ -161,7 +161,7 @@ fn rectangle_tris_quads() -> Result<(), StrError> {
     assert_approx_eq!(length_numerical, SQRT_2, 1e-14);
 
     // states
-    let mut states = States::new(&mesh, &shapes)?;
+    let mut states = allocate_states(&mesh, &shapes)?;
 
     // cell 5
     let shape_cell_5 = Shape::new(2, 2, 4)?;
