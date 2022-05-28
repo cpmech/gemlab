@@ -110,7 +110,7 @@ use russell_lab::{Matrix, Vector};
 pub struct Tet10 {}
 
 impl Tet10 {
-    pub const NDIM: usize = 3;
+    pub const GEO_NDIM: usize = 3;
     pub const NNODE: usize = 10;
     pub const NEDGE: usize = 6;
     pub const NFACE: usize = 4;
@@ -145,7 +145,7 @@ impl Tet10 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Tet10::NDIM]; Tet10::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tet10::GEO_NDIM]; Tet10::NNODE] = [
         [0.0, 0.0, 0.0], // 0
         [1.0, 0.0, 0.0], // 1
         [0.0, 1.0, 0.0], // 2

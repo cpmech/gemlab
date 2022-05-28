@@ -39,7 +39,7 @@ use russell_lab::{Matrix, Vector};
 pub struct Tri6 {}
 
 impl Tri6 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 6;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
@@ -55,7 +55,7 @@ impl Tri6 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Tri6::NDIM]; Tri6::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri6::GEO_NDIM]; Tri6::NNODE] = [
         [0.0, 0.0],
         [1.0, 0.0],
         [0.0, 1.0],

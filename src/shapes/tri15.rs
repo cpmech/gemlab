@@ -41,7 +41,7 @@ use russell_lab::{Matrix, Vector};
 pub struct Tri15 {}
 
 impl Tri15 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 15;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
@@ -57,7 +57,7 @@ impl Tri15 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Tri15::NDIM]; Tri15::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri15::GEO_NDIM]; Tri15::NNODE] = [
         [0.0  , 0.0 ], //  0
         [1.0  , 0.0 ], //  1
         [0.0  , 1.0 ], //  2

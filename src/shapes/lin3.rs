@@ -14,7 +14,7 @@ use russell_lab::{Matrix, Vector};
 pub struct Lin3 {}
 
 impl Lin3 {
-    pub const NDIM: usize = 1;
+    pub const GEO_NDIM: usize = 1;
     pub const NNODE: usize = 3;
     pub const NEDGE: usize = 0;
     pub const NFACE: usize = 0;
@@ -23,7 +23,7 @@ impl Lin3 {
     pub const FACE_NEDGE: usize = 0;
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Lin3::NDIM]; Lin3::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Lin3::GEO_NDIM]; Lin3::NNODE] = [
         [-1.0],
         [ 1.0],
         [ 0.0],

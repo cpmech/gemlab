@@ -37,7 +37,7 @@ use russell_lab::{Matrix, Vector};
 pub struct Qua4 {}
 
 impl Qua4 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 4;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
@@ -54,7 +54,7 @@ impl Qua4 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Qua4::NDIM]; Qua4::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua4::GEO_NDIM]; Qua4::NNODE] = [
         [-1.0, -1.0],
         [ 1.0, -1.0],
         [ 1.0,  1.0],

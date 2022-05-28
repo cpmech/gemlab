@@ -70,7 +70,7 @@ use russell_lab::{Matrix, Vector};
 pub struct Hex8 {}
 
 impl Hex8 {
-    pub const NDIM: usize = 3;
+    pub const GEO_NDIM: usize = 3;
     pub const NNODE: usize = 8;
     pub const NEDGE: usize = 12;
     pub const NFACE: usize = 6;
@@ -115,7 +115,7 @@ impl Hex8 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Hex8::NDIM]; Hex8::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Hex8::GEO_NDIM]; Hex8::NNODE] = [
         [-1.0, -1.0, -1.0],
         [ 1.0, -1.0, -1.0],
         [ 1.0,  1.0, -1.0],

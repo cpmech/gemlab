@@ -71,7 +71,7 @@ use russell_lab::{Matrix, Vector};
 pub struct Hex20 {}
 
 impl Hex20 {
-    pub const NDIM: usize = 3;
+    pub const GEO_NDIM: usize = 3;
     pub const NNODE: usize = 20;
     pub const NEDGE: usize = 12;
     pub const NFACE: usize = 6;
@@ -116,7 +116,7 @@ impl Hex20 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Hex20::NDIM]; Hex20::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Hex20::GEO_NDIM]; Hex20::NNODE] = [
         [-1.0, -1.0, -1.0],
         [ 1.0, -1.0, -1.0],
         [ 1.0,  1.0, -1.0],

@@ -43,7 +43,7 @@ use russell_lab::{Matrix, Vector};
 pub struct Qua12 {}
 
 impl Qua12 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 12;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
@@ -60,7 +60,7 @@ impl Qua12 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Qua12::NDIM]; Qua12::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua12::GEO_NDIM]; Qua12::NNODE] = [
         [-1.0       , -1.0       ],
         [ 1.0       , -1.0       ],
         [ 1.0       ,  1.0       ],

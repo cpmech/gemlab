@@ -38,7 +38,7 @@ use russell_lab::{Matrix, Vector};
 pub struct Tri10 {}
 
 impl Tri10 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 10;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
@@ -54,7 +54,7 @@ impl Tri10 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Tri10::NDIM]; Tri10::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri10::GEO_NDIM]; Tri10::NNODE] = [
         [0.0       , 0.0      ], // 0
         [1.0       , 0.0      ], // 1
         [0.0       , 1.0      ], // 2
