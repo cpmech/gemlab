@@ -168,9 +168,9 @@ fn rectangle_tris_quads() -> Result<(), StrError> {
     let state_cell_5 = &mut states[5];
     let ips = default_integ_points(shape_cell_5.kind);
     let mut area_numerical = 0.0;
-    for index in 0..ips.len() {
-        let iota = &ips[index];
-        let weight = ips[index][3];
+    for p in 0..ips.len() {
+        let iota = &ips[p];
+        let weight = ips[p][3];
         let det_jac = shape_cell_5.calc_jacobian(state_cell_5, iota)?;
         area_numerical += weight * det_jac;
     }
