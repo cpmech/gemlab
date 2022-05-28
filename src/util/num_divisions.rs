@@ -20,6 +20,25 @@ use crate::StrError;
 /// # Output
 ///
 /// * `ndiv` -- the number of divisions along each direction (ndim)
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::util::num_divisions;
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     let min = &[0.0, 0.0];
+///     let max = &[1.0, 1.0];
+///     let ndiv = num_divisions(2, 5, min, max)?;
+///     assert_eq!(ndiv, &[5, 5]);
+///
+///     let max = &[1.0, 10.0];
+///     let ndiv = num_divisions(2, 5, min, max)?;
+///     assert_eq!(ndiv, &[2, 5]);
+///     Ok(())
+/// }
+/// ```
 pub fn num_divisions(ndiv_min: usize, ndiv_long: usize, min: &[f64], max: &[f64]) -> Result<Vec<usize>, StrError> {
     if ndiv_min < 2 {
         return Err("ndiv_min must be ≥ 2");
