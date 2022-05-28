@@ -4,6 +4,107 @@ use crate::StrError;
 use std::collections::{HashMap, HashSet};
 
 /// Implements functions to find points, edges, and faces on the boundary of a mesh
+///
+/// # Examples
+///
+/// ## Two-dimensional
+///
+/// ```
+/// use gemlab::mesh::{At, Boundary, Cell, Find, Mesh, Point, Shapes};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3-----------2-----------5
+///     //  |           |           |
+///     //  |    [0]    |    [1]    |
+///     //  |    (1)    |    (2)    |
+///     //  |           |           |
+///     //  0-----------1-----------4
+///     let mesh = Mesh {
+///         space_ndim: 2,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0] },
+///             Point { id: 4, coords: vec![2.0, 0.0] },
+///             Point { id: 5, coords: vec![2.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+///         ],
+///     };
+///
+///     let shapes = Shapes::new(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///     let find = Find::new(&mesh, &boundary)?;
+///
+///     let mut points: Vec<_> = find.points(At::X(2.0))?.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, &[4, 5]);
+///
+///     let mut edges: Vec<_> = find.edges(At::Y(1.0))?.iter().copied().collect();
+///     edges.sort();
+///     assert_eq!(edges, &[(2, 3), (2, 5)]);
+///     Ok(())
+/// }
+/// ```
+///
+/// ## Three-dimensional
+///
+/// ```
+/// use gemlab::mesh::{At, Boundary, Cell, Find, Mesh, Point, Shapes};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //          .4--------------7
+///     //        ,' |            ,'|
+///     //      ,'              ,'  |
+///     //    ,'     |        ,'    |
+///     //  5'==============6'      |
+///     //  |               |       |
+///     //  |        |      |       |
+///     //  |       ,0- - - | - - - 3
+///     //  |     ,'        |     ,'
+///     //  |   ,'          |   ,'
+///     //  | ,'            | ,'
+///     //  1'--------------2'
+///     let mesh = Mesh {
+///         space_ndim: 3,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0, 0.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0, 0.0] },
+///             Point { id: 4, coords: vec![0.0, 0.0, 1.0] },
+///             Point { id: 5, coords: vec![1.0, 0.0, 1.0] },
+///             Point { id: 6, coords: vec![1.0, 1.0, 1.0] },
+///             Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,1,2,3, 4,5,6,7] },
+///         ],
+///     };
+///
+///     let shapes = Shapes::new(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///     let find = Find::new(&mesh, &boundary)?;
+///
+///     let mut points: Vec<_> = find.points(At::XY(1.0, 1.0))?.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, &[2, 6]);
+///
+///     let mut edges: Vec<_> = find.edges(At::YZ(1.0, 1.0))?.iter().copied().collect();
+///     edges.sort();
+///     assert_eq!(edges, &[(6, 7)]);
+///
+///     let mut faces: Vec<_> = find.faces(At::Y(1.0))?.iter().copied().collect();
+///     faces.sort();
+///     assert_eq!(faces, &[(2, 3, 6, 7)]);
+///     Ok(())
+/// }
+/// ```
 pub struct Find {
     /// Space number of dimension
     space_ndim: usize,
