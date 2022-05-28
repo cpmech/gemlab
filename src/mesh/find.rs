@@ -28,8 +28,17 @@ impl Find {
     ///
     /// If the `boundary` does not correspond to `mesh`, a panic will occur.
     pub fn new(mesh: &Mesh, boundary: &Boundary) -> Result<Self, StrError> {
+        // expand limits a little bit to accommodate imprecisions on the (min,max) values
+        const PCT: f64 = 1.0 / 100.0; // 1% is enough
+        let (mut min, mut max) = (vec![0.0; mesh.space_ndim], vec![0.0; mesh.space_ndim]);
+        for i in 0..mesh.space_ndim {
+            let del = boundary.max[i] - boundary.min[i];
+            min[i] = boundary.min[i] - PCT * del;
+            max[i] = boundary.max[i] + PCT * del;
+        }
+
         // add point ids to grid
-        let mut grid = GridSearch::new(&boundary.min, &boundary.max, GsNdiv::Default, GsTol::Default)?;
+        let mut grid = GridSearch::new(&min, &max, GsNdiv::Default, GsTol::Default)?;
         for point_id in &boundary.points {
             grid.insert(*point_id, &mesh.points[*point_id].coords)?;
         }
@@ -353,7 +362,10 @@ mod tests {
         let find = Find::new(&mesh, &boundary)?;
         check(&find.points(At::XY(0.0, 0.0))?, &[0]);
         check(&find.points(At::XY(2.0, 1.0))?, &[5]);
-        check(&find.points(At::XY(10.0, 0.0))?, &[]);
+        assert_eq!(
+            find.points(At::XY(10.0, 0.0)).err(),
+            Some("cannot find point with coordinates outside the grid")
+        );
         check(&find.points(At::Circle(0.0, 0.0, 1.0))?, &[1, 3]);
         check(&find.points(At::Circle(0.0, 0.0, SQRT_2))?, &[2]);
         check(&find.points(At::Circle(0.0, 0.0, 10.0))?, &[]);
@@ -405,7 +417,10 @@ mod tests {
         check(&find.points(At::XZ(1.0, 2.0))?, &[9, 10]);
         check(&find.points(At::XYZ(0.0, 0.0, 0.0))?, &[0]);
         check(&find.points(At::XYZ(1.0, 1.0, 2.0))?, &[10]);
-        check(&find.points(At::XYZ(10.0, 0.0, 0.0))?, &[]);
+        assert_eq!(
+            find.points(At::XYZ(10.0, 0.0, 0.0)).err(),
+            Some("cannot find point with coordinates outside the grid")
+        );
         check(
             &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
             &[1, 3, 5, 7, 9, 11],
@@ -494,7 +509,10 @@ mod tests {
         check(&find.edges(At::XZ(1.0, 2.0))?, &[(9, 10)]);
         check(&find.edges(At::XZ(10.0, 10.0))?, &[]);
         check(&find.edges(At::XYZ(0.0, 0.0, 0.0))?, &[]);
-        check(&find.edges(At::XYZ(10.0, 0.0, 0.0))?, &[]);
+        assert_eq!(
+            find.edges(At::XYZ(10.0, 0.0, 0.0)).err(),
+            Some("cannot find point with coordinates outside the grid")
+        );
         check(
             &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
             &[(1, 5), (3, 7), (5, 9), (7, 11)],
@@ -566,7 +584,10 @@ mod tests {
         check(&find.faces(At::XZ(1.0, 2.0))?, &[]);
         check(&find.faces(At::XZ(10.0, 10.0))?, &[]);
         check(&find.faces(At::XYZ(0.0, 0.0, 0.0))?, &[]);
-        check(&find.faces(At::XYZ(10.0, 0.0, 0.0))?, &[]);
+        assert_eq!(
+            find.faces(At::XYZ(10.0, 0.0, 0.0)).err(),
+            Some("cannot find point with coordinates outside the grid")
+        );
         check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?, &[]);
         check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?, &[]);
         check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
