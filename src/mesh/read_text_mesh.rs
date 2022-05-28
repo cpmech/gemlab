@@ -163,6 +163,10 @@ impl DataForReadTextMesh {
 
 impl Mesh {
     /// Allocates a new Mesh by reading raw mesh data from a text file
+    ///
+    /// # Input
+    ///
+    /// * `full_path` -- may be a String, &str, or Path
     pub fn from_text_file<P>(full_path: &P) -> Result<Self, StrError>
     where
         P: AsRef<OsStr> + ?Sized,

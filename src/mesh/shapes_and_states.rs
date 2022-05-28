@@ -3,6 +3,8 @@ use crate::shapes::{Shape, StateOfShape};
 use crate::StrError;
 
 /// Allocates all shapes corresponding to all cells in a mesh
+///
+/// Returns a vector with len = number of cells.
 #[inline]
 pub fn allocate_shapes(mesh: &Mesh) -> Result<Vec<Shape>, StrError> {
     mesh.cells
@@ -12,6 +14,8 @@ pub fn allocate_shapes(mesh: &Mesh) -> Result<Vec<Shape>, StrError> {
 }
 
 /// Allocates all states corresponding to all shapes in a mesh
+///
+/// Returns a vector with len = number of cells.
 #[inline]
 pub fn allocate_states(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<Vec<StateOfShape>, StrError> {
     mesh.cells
