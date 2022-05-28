@@ -6,3 +6,7 @@
 * `integration_tri3` -- Performs numerical integrations with a Tri3 element
 * `isoparametric_qua4` -- Illustrates the isoparametric formula with a Qua4
 * `mesh_2d_tri3_qua4` -- Converts a string into a Mesh of Tri3 and Qua4
+
+## find_in_grid_2d
+
+![find_in_grid_2d](https://github.com/cpmech/gemlab/raw/main/data/figures/example_find_in_grid_2d.svg)
