@@ -1,9 +1,9 @@
-use super::{allocate_shapes, allocate_states, Boundary, Find, Mesh};
-use crate::shapes::{Shape, StateOfShape};
+use super::{allocate_shapes, Boundary, Find, Mesh};
+use crate::shapes::Shape;
 use crate::StrError;
 use std::ffi::OsStr;
 
-/// Holds all data related to a mesh including element shapes, states, boundaries, and functions to find entities
+/// Holds all (immutable) data related to a mesh including element shapes, boundaries, and functions to find entities
 ///
 /// This struct is a (high-level) convenience that calls the necessary functions to generate all derived data from a mesh struct.
 ///
@@ -11,7 +11,6 @@ use std::ffi::OsStr;
 ///
 /// ```text
 /// let shapes = allocate_shapes(&mesh)?;
-/// let states = allocate_states(&mesh, &shapes)?;
 /// let boundary = Boundary::new(&mesh, &shapes)?;
 /// let find = Find::new(&mesh, &boundary)?;
 /// ```
@@ -21,9 +20,6 @@ pub struct Region {
 
     /// Holds all shapes of all cells (len = **number of cells**)
     pub shapes: Vec<Shape>,
-
-    /// Holds all states of shapes of all cells (len = **number of cells**)
-    pub states: Vec<StateOfShape>,
 
     /// Holds the boundary data such as points, edges, and faces on boundary
     pub boundary: Boundary,
@@ -66,7 +62,6 @@ impl Region {
     ///     let region = Region::with(mesh)?;
     ///     assert_eq!(region.mesh.space_ndim, 2);
     ///     assert_eq!(region.shapes.len(), 2);
-    ///     assert_eq!(region.states.len(), 2);
     ///     assert_eq!(region.shapes[0].kind, GeoKind::Qua4);
     ///     assert_eq!(region.boundary.points.len(), 6);
     ///     assert_eq!(region.boundary.edges.len(), 6);
@@ -79,13 +74,11 @@ impl Region {
     /// ```
     pub fn with(mesh: Mesh) -> Result<Self, StrError> {
         let shapes = allocate_shapes(&mesh)?;
-        let states = allocate_states(&mesh, &shapes)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         Ok(Region {
             mesh,
             shapes,
-            states,
             boundary,
             find,
         })
@@ -147,7 +140,6 @@ mod tests {
         // println!("{:?}", mesh); // WRONG: mesh has been moved into region
         assert_eq!(region.mesh.space_ndim, 2);
         assert_eq!(region.shapes.len(), 2);
-        assert_eq!(region.states.len(), 2);
         assert_eq!(region.boundary.points.len(), 6);
         assert_eq!(region.boundary.edges.len(), 6);
         assert_eq!(region.boundary.faces.len(), 0);
@@ -187,7 +179,6 @@ mod tests {
         )?;
         assert_eq!(region.mesh.space_ndim, 2);
         assert_eq!(region.shapes.len(), 2);
-        assert_eq!(region.states.len(), 2);
         assert_eq!(region.boundary.points.len(), 6);
         assert_eq!(region.boundary.edges.len(), 6);
         assert_eq!(region.boundary.faces.len(), 0);
@@ -206,7 +197,6 @@ mod tests {
         let region = Region::with(mesh)?;
         assert_eq!(region.mesh.space_ndim, 2);
         assert_eq!(region.shapes.len(), 2);
-        assert_eq!(region.states.len(), 2);
         assert_eq!(region.boundary.points.len(), 6);
         assert_eq!(region.boundary.edges.len(), 6);
         assert_eq!(region.boundary.faces.len(), 0);
@@ -227,7 +217,6 @@ mod tests {
         let region = Region::with_binary_file(full_path)?;
         assert_eq!(region.mesh.space_ndim, 2);
         assert_eq!(region.shapes.len(), 2);
-        assert_eq!(region.states.len(), 2);
         assert_eq!(region.boundary.points.len(), 6);
         assert_eq!(region.boundary.edges.len(), 6);
         assert_eq!(region.boundary.faces.len(), 0);
