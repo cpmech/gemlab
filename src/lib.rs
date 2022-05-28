@@ -8,3 +8,15 @@ pub mod integ;
 pub mod mesh;
 pub mod shapes;
 pub mod util;
+
+// run code from README file
+#[cfg(doctest)]
+mod test_readme {
+    macro_rules! external_doc_test {
+        ($x:expr) => {
+            #[doc = $x]
+            extern "C" {}
+        };
+    }
+    external_doc_test!(include_str!("../README.md"));
+}

@@ -4,6 +4,130 @@ use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
 /// Holds points, edges and faces on the boundaries of a mesh
+///
+/// # Examples
+///
+/// ## Two-dimensional
+///
+/// ```
+/// use gemlab::mesh::{allocate_shapes, Boundary, Cell, Mesh, Point};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3---------2---------5
+///     //  |         |         |
+///     //  |   [0]   |   [1]   |
+///     //  |         |         |
+///     //  0---------1---------4
+///     let mesh = Mesh {
+///         space_ndim: 2,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0] },
+///             Point { id: 4, coords: vec![2.0, 0.0] },
+///             Point { id: 5, coords: vec![2.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+///         ],
+///     };
+///
+///     let shapes = allocate_shapes(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///
+///     let mut points: Vec<_> = boundary.points.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, [0, 1, 2, 3, 4, 5]);
+///
+///     let mut edges: Vec<_> = boundary.edges.keys().copied().collect();
+///     edges.sort();
+///     assert_eq!(edges, [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)]);
+///     Ok(())
+/// }
+/// ```
+///
+/// ## Three-dimensional
+///
+/// ```
+/// use gemlab::mesh::{allocate_shapes, Boundary, Cell, Mesh, Point};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //          .4--------------7
+///     //        ,' |            ,'|
+///     //      ,'              ,'  |
+///     //    ,'     |        ,'    |
+///     //  5'==============6'      |
+///     //  |               |       |
+///     //  |        |      |       |
+///     //  |       ,0- - - | - - - 3
+///     //  |     ,'        |     ,'
+///     //  |   ,'          |   ,'
+///     //  | ,'            | ,'
+///     //  1'--------------2'
+///     let mesh = Mesh {
+///         space_ndim: 3,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0, 0.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0, 0.0] },
+///             Point { id: 4, coords: vec![0.0, 0.0, 1.0] },
+///             Point { id: 5, coords: vec![1.0, 0.0, 1.0] },
+///             Point { id: 6, coords: vec![1.0, 1.0, 1.0] },
+///             Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,1,2,3, 4,5,6,7] },
+///         ],
+///     };
+///
+///     let shapes = allocate_shapes(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///
+///     let mut points: Vec<_> = boundary.points.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, (0..8).collect::<Vec<_>>());
+///
+///     let mut edges: Vec<_> = boundary.edges.keys().copied().collect();
+///     edges.sort();
+///     assert_eq!(
+///         edges,
+///         [
+///             (0, 1),
+///             (0, 3),
+///             (0, 4),
+///             (1, 2),
+///             (1, 5),
+///             (2, 3),
+///             (2, 6),
+///             (3, 7),
+///             (4, 5),
+///             (4, 7),
+///             (5, 6),
+///             (6, 7)
+///         ]
+///     );
+///
+///     let mut faces: Vec<_> = boundary.faces.keys().copied().collect();
+///     faces.sort();
+///     assert_eq!(
+///         faces,
+///         [
+///             (0, 1, 2, 3),
+///             (0, 1, 4, 5),
+///             (0, 3, 4, 7),
+///             (1, 2, 5, 6),
+///             (2, 3, 6, 7),
+///             (4, 5, 6, 7),
+///         ]
+///     );
+///     Ok(())
+/// }
+/// ```
 pub struct Boundary {
     /// Set of points on the boundaries
     ///
@@ -211,7 +335,7 @@ impl Boundary {
 #[cfg(test)]
 mod tests {
     use super::Boundary;
-    use crate::mesh::{EdgeKey, FaceKey, Mesh, PointId, Samples, Shapes};
+    use crate::mesh::{allocate_shapes, EdgeKey, FaceKey, Mesh, PointId, Samples};
     use crate::util::AsArray2D;
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -267,7 +391,7 @@ mod tests {
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_keys = [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [4, 1], [3, 2], [2, 5], [5, 4]];
@@ -288,7 +412,7 @@ mod tests {
         //           |         |
         //  0--------1---------2--------5
         let mesh = Samples::mixed_shapes_2d();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_keys = [(1, 2), (1, 4), (2, 3), (3, 4)];
         let correct_points = [[2, 1], [1, 4], [3, 2], [4, 3]];
@@ -317,7 +441,7 @@ mod tests {
         //  |               |               |
         //  0----4-----8----1---18---21----16
         let mesh = Samples::block_2d_four_qua16();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_keys = [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)];
         let correct_points = [
@@ -362,7 +486,7 @@ mod tests {
         //
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_keys = [
             (0, 1),
@@ -427,7 +551,7 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_edge_keys = [
             (0, 1),
@@ -524,7 +648,7 @@ mod tests {
         //  12-----11-------1------------2------------8
         //
         let mesh = Samples::mixed_shapes_3d();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_edge_keys = [
             (0, 1),
@@ -642,7 +766,7 @@ mod tests {
         //   |/                  |/                  |/
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let correct_edge_keys = [
             (0, 1),

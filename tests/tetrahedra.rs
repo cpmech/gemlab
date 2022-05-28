@@ -1,4 +1,4 @@
-use gemlab::mesh::{At, Boundary, Find, Mesh, NormalVector, Shapes};
+use gemlab::mesh::{allocate_shapes, At, Boundary, Find, Mesh, NormalVector};
 use gemlab::StrError;
 use russell_chk::assert_vec_approx_eq;
 use std::collections::HashSet;
@@ -28,7 +28,7 @@ fn five_tets_within_cube() -> Result<(), StrError> {
     assert_eq!(mesh.cells[4].points, &[0, 2, 7, 5]);
 
     // boundary
-    let shapes = Shapes::new(&mesh)?;
+    let shapes = allocate_shapes(&mesh)?;
     let boundary = Boundary::new(&mesh, &shapes)?;
 
     // x-min

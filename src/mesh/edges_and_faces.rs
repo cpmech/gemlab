@@ -117,7 +117,7 @@ pub fn all_faces_3d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<HashMap<FaceKey,
 #[cfg(test)]
 mod tests {
     use super::{all_edges_2d, all_faces_3d, Edge, Face};
-    use crate::mesh::{Mesh, Samples, Shapes};
+    use crate::mesh::{allocate_shapes, Mesh, Samples};
     use crate::StrError;
 
     #[test]
@@ -145,7 +145,7 @@ mod tests {
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let edges = all_edges_2d(&mesh, &shapes)?;
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
@@ -168,7 +168,7 @@ mod tests {
         //           |         |
         //  0--------1---------2
         let mesh = Samples::mixed_shapes_2d();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let edges = all_edges_2d(&mesh, &shapes)?;
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
@@ -203,7 +203,7 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let faces = all_faces_3d(&mesh, &shapes)?;
         let mut keys: Vec<_> = faces.keys().collect();
         keys.sort();
@@ -254,7 +254,7 @@ mod tests {
         //  12-----11-------1------------2------------8
         //
         let mesh = Samples::mixed_shapes_3d();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let faces = all_faces_3d(&mesh, &shapes)?;
         let mut keys: Vec<_> = faces.keys().collect();
         keys.sort();

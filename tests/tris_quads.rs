@@ -1,5 +1,5 @@
 use gemlab::integ::default_integ_points;
-use gemlab::mesh::{At, Boundary, Find, Mesh, NormalVector, Shapes, States};
+use gemlab::mesh::{allocate_shapes, allocate_states, At, Boundary, Find, Mesh, NormalVector};
 use gemlab::shapes::{Shape, StateOfShape};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
@@ -34,7 +34,7 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
     assert_eq!(mesh.cells[6].points, &[5, 11, 12, 6]);
 
     // boundary
-    let shapes = Shapes::new(&mesh)?;
+    let shapes = allocate_shapes(&mesh)?;
     let boundary = Boundary::new(&mesh, &shapes)?;
 
     // check edges
@@ -105,7 +105,7 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
 fn rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
-    let shapes = Shapes::new(&mesh)?;
+    let shapes = allocate_shapes(&mesh)?;
     let boundary = Boundary::new(&mesh, &shapes)?;
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
@@ -161,16 +161,16 @@ fn rectangle_tris_quads() -> Result<(), StrError> {
     assert_approx_eq!(length_numerical, SQRT_2, 1e-14);
 
     // states
-    let mut states = States::new(&mesh, &shapes)?;
+    let mut states = allocate_states(&mesh)?;
 
     // cell 5
     let shape_cell_5 = Shape::new(2, 2, 4)?;
     let state_cell_5 = &mut states[5];
     let ips = default_integ_points(shape_cell_5.kind);
     let mut area_numerical = 0.0;
-    for index in 0..ips.len() {
-        let iota = &ips[index];
-        let weight = ips[index][3];
+    for p in 0..ips.len() {
+        let iota = &ips[p];
+        let weight = ips[p][3];
         let det_jac = shape_cell_5.calc_jacobian(state_cell_5, iota)?;
         area_numerical += weight * det_jac;
     }

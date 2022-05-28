@@ -4,6 +4,106 @@ use crate::StrError;
 use std::collections::{HashMap, HashSet};
 
 /// Implements functions to find points, edges, and faces on the boundary of a mesh
+///
+/// # Examples
+///
+/// ## Two-dimensional
+///
+/// ```
+/// use gemlab::mesh::{allocate_shapes, At, Boundary, Cell, Find, Mesh, Point};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3---------2---------5
+///     //  |         |         |
+///     //  |   [0]   |   [1]   |
+///     //  |         |         |
+///     //  0---------1---------4
+///     let mesh = Mesh {
+///         space_ndim: 2,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0] },
+///             Point { id: 4, coords: vec![2.0, 0.0] },
+///             Point { id: 5, coords: vec![2.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+///         ],
+///     };
+///
+///     let shapes = allocate_shapes(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///     let find = Find::new(&mesh, &boundary)?;
+///
+///     let mut points: Vec<_> = find.points(At::X(2.0))?.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, &[4, 5]);
+///
+///     let mut edges: Vec<_> = find.edges(At::Y(1.0))?.iter().copied().collect();
+///     edges.sort();
+///     assert_eq!(edges, &[(2, 3), (2, 5)]);
+///     Ok(())
+/// }
+/// ```
+///
+/// ## Three-dimensional
+///
+/// ```
+/// use gemlab::mesh::{allocate_shapes, At, Boundary, Cell, Find, Mesh, Point};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //          .4--------------7
+///     //        ,' |            ,'|
+///     //      ,'              ,'  |
+///     //    ,'     |        ,'    |
+///     //  5'==============6'      |
+///     //  |               |       |
+///     //  |        |      |       |
+///     //  |       ,0- - - | - - - 3
+///     //  |     ,'        |     ,'
+///     //  |   ,'          |   ,'
+///     //  | ,'            | ,'
+///     //  1'--------------2'
+///     let mesh = Mesh {
+///         space_ndim: 3,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0, 0.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0, 0.0] },
+///             Point { id: 4, coords: vec![0.0, 0.0, 1.0] },
+///             Point { id: 5, coords: vec![1.0, 0.0, 1.0] },
+///             Point { id: 6, coords: vec![1.0, 1.0, 1.0] },
+///             Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,1,2,3, 4,5,6,7] },
+///         ],
+///     };
+///
+///     let shapes = allocate_shapes(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///     let find = Find::new(&mesh, &boundary)?;
+///
+///     let mut points: Vec<_> = find.points(At::XY(1.0, 1.0))?.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, &[2, 6]);
+///
+///     let mut edges: Vec<_> = find.edges(At::YZ(1.0, 1.0))?.iter().copied().collect();
+///     edges.sort();
+///     assert_eq!(edges, &[(6, 7)]);
+///
+///     let mut faces: Vec<_> = find.faces(At::Y(1.0))?.iter().copied().collect();
+///     faces.sort();
+///     assert_eq!(faces, &[(2, 3, 6, 7)]);
+///     Ok(())
+/// }
+/// ```
 pub struct Find {
     /// Space number of dimension
     space_ndim: usize,
@@ -263,7 +363,7 @@ impl Find {
 #[cfg(test)]
 mod tests {
     use super::Find;
-    use crate::mesh::{At, Boundary, Samples, Shapes};
+    use crate::mesh::{allocate_shapes, At, Boundary, Samples};
     use crate::util::SQRT_2;
     use crate::StrError;
     use std::collections::HashSet;
@@ -285,7 +385,7 @@ mod tests {
     #[test]
     fn new_works() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         // plot_grid_two_quads_horizontal(&find)?;
@@ -311,7 +411,7 @@ mod tests {
     fn find_points_fails_on_wrong_input() -> Result<(), StrError> {
         // 2d
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         assert_eq!(find.points(At::Z(0.0)).err(), Some("At::Z works in 3D only"));
@@ -328,7 +428,7 @@ mod tests {
 
         // 3d
         let mesh = Samples::two_cubes_vertical();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         assert_eq!(
@@ -357,7 +457,7 @@ mod tests {
         //   0--------1--------4
         //           circle
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         check(&find.points(At::XY(0.0, 0.0))?, &[0]);
@@ -393,7 +493,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         // plot_grid_two_cubes_vertical(&find)?;
@@ -441,7 +541,7 @@ mod tests {
         // |        |        |
         // 0--------1--------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         check(&find.edges(At::Y(0.0))?, &[(0, 1), (1, 4)]);
@@ -474,7 +574,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         check(
@@ -533,7 +633,7 @@ mod tests {
         // |        |        |
         // 0--------1--------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         assert_eq!(find.faces(At::X(0.0))?.len(), 0);
@@ -561,7 +661,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         check(&find.faces(At::X(0.0))?, &[(0, 3, 4, 7), (4, 7, 8, 11)]);
@@ -614,7 +714,7 @@ mod tests {
         //
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let shapes = Shapes::new(&mesh)?;
+        let shapes = allocate_shapes(&mesh)?;
         let boundary = Boundary::new(&mesh, &shapes)?;
         let find = Find::new(&mesh, &boundary)?;
         let (r, rr) = (1.0, 2.0);
