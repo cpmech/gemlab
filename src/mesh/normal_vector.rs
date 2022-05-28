@@ -4,6 +4,132 @@ use crate::StrError;
 use russell_lab::Vector;
 
 /// Holds data to evaluate normal vectors at edge or face
+///
+/// # Examples
+///
+/// ## Two-dimensional
+///
+/// ```
+/// use gemlab::mesh::{Boundary, Cell, Mesh, NormalVector, Point, Shapes};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3---------2---------5
+///     //  |         |         |
+///     //  |   [0]   |   [1]   |
+///     //  |         |         |
+///     //  0---------1---------4
+///     let mesh = Mesh {
+///         space_ndim: 2,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0] },
+///             Point { id: 4, coords: vec![2.0, 0.0] },
+///             Point { id: 5, coords: vec![2.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+///         ],
+///     };
+///
+///     let shapes = Shapes::new(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///
+///     // the magnitude of the normal vector is equal to
+///     // 0.5 = edge_length / 2.0 where 2.0 corresponds to
+///     // the edge_length in the reference system
+///
+///     let mut normal = NormalVector::at_edge(&mesh, &boundary, (0, 1))?;
+///     normal.evaluate(&[0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[0.0, -0.5]);
+///
+///     let mut normal = NormalVector::at_edge(&mesh, &boundary, (4, 5))?;
+///     normal.evaluate(&[0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[0.5, 0.0]);
+///
+///     let mut normal = NormalVector::at_edge(&mesh, &boundary, (2, 5))?;
+///     normal.evaluate(&[0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[0.0, 0.5]);
+///
+///     let mut normal = NormalVector::at_edge(&mesh, &boundary, (0, 3))?;
+///     normal.evaluate(&[0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[-0.5, 0.0]);
+///     Ok(())
+/// }
+/// ```
+///
+/// ## Three-dimensional
+///
+/// ```
+/// use gemlab::mesh::{Boundary, Cell, Mesh, NormalVector, Point, Shapes};
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //          .4--------------7
+///     //        ,' |            ,'|
+///     //      ,'              ,'  |
+///     //    ,'     |        ,'    |
+///     //  5'==============6'      |
+///     //  |               |       |
+///     //  |        |      |       |
+///     //  |       ,0- - - | - - - 3
+///     //  |     ,'        |     ,'
+///     //  |   ,'          |   ,'
+///     //  | ,'            | ,'
+///     //  1'--------------2'
+///     let mesh = Mesh {
+///         space_ndim: 3,
+///         points: vec![
+///             Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
+///             Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
+///             Point { id: 2, coords: vec![1.0, 1.0, 0.0] },
+///             Point { id: 3, coords: vec![0.0, 1.0, 0.0] },
+///             Point { id: 4, coords: vec![0.0, 0.0, 1.0] },
+///             Point { id: 5, coords: vec![1.0, 0.0, 1.0] },
+///             Point { id: 6, coords: vec![1.0, 1.0, 1.0] },
+///             Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,1,2,3, 4,5,6,7] },
+///         ],
+///     };
+///
+///     let shapes = Shapes::new(&mesh)?;
+///     let boundary = Boundary::new(&mesh, &shapes)?;
+///
+///     // the magnitude of the normal vector is equal to
+///     // 0.25 = face_area / 4.0 where 4.0 corresponds to
+///     // the face_area in the reference system
+///
+///     let mut normal = NormalVector::at_face(&mesh, &boundary, (0, 3, 4, 7))?;
+///     normal.evaluate(&[0.0, 0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[-0.25, 0.0, 0.0]);
+///
+///     let mut normal = NormalVector::at_face(&mesh, &boundary, (1, 2, 5, 6))?;
+///     normal.evaluate(&[0.0, 0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[0.25, 0.0, 0.0]);
+///
+///     let mut normal = NormalVector::at_face(&mesh, &boundary, (0, 1, 4, 5))?;
+///     normal.evaluate(&[0.0, 0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[0.0, -0.25, 0.0]);
+///
+///     let mut normal = NormalVector::at_face(&mesh, &boundary, (2, 3, 6, 7))?;
+///     normal.evaluate(&[0.0, 0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[0.0, 0.25, 0.0]);
+///
+///     let mut normal = NormalVector::at_face(&mesh, &boundary, (0, 1, 2, 3))?;
+///     normal.evaluate(&[0.0, 0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[0.0, 0.0, -0.25]);
+///
+///     let mut normal = NormalVector::at_face(&mesh, &boundary, (4, 5, 6, 7))?;
+///     normal.evaluate(&[0.0, 0.0, 0.0])?;
+///     assert_eq!(normal.value.as_data(), &[0.0, 0.0, 0.25]);
+///     Ok(())
+/// }
+/// ```
 #[derive(Clone, Debug)]
 pub struct NormalVector {
     /// Holds the Shape data for a given boundary edge or face
@@ -18,7 +144,14 @@ pub struct NormalVector {
 
 impl NormalVector {
     /// Allocates data to compute normal vector at edge
+    ///
+    /// **Important:** You must call [NormalVector::evaluate] to compute the actual values.
+    ///
+    /// **Note:** This function works in 2D only
     pub fn at_edge(mesh: &Mesh, boundary: &Boundary, edge_key: EdgeKey) -> Result<Self, StrError> {
+        if mesh.space_ndim != 2 {
+            return Err("normal at_edge works in 2D only");
+        }
         const GEO_NDIM: usize = 1;
         let edge = match boundary.edges.get(&edge_key) {
             Some(e) => e,
@@ -41,7 +174,14 @@ impl NormalVector {
     }
 
     /// Allocates data to compute normal vector at face
+    ///
+    /// **Important:** You must call [NormalVector::evaluate] to compute the actual values.
+    ///
+    /// **Note:** This function works in 3D only
     pub fn at_face(mesh: &Mesh, boundary: &Boundary, face_key: FaceKey) -> Result<Self, StrError> {
+        if mesh.space_ndim != 3 {
+            return Err("normal at_face works in 3D only");
+        }
         const GEO_NDIM: usize = 2;
         let face = match boundary.faces.get(&face_key) {
             Some(e) => e,
