@@ -90,6 +90,67 @@ impl Samples {
         }
     }
 
+    /// Returns four cubes making a vertical wall
+    ///
+    /// ```text
+    ///           [#] indicates id
+    ///           (#) indicates attribute_id
+    ///
+    ///       8-------------11-------------17  2.0
+    ///      /.             /.             /|
+    ///     / .            / .            / |
+    ///    /  .           /  .           /  |
+    ///   /   .          /   .          /   |
+    ///  9=============10=============16    |
+    ///  |    .         |    .         |    |
+    ///  |    4---------|----7---------|---15  1.0
+    ///  |   /. [1]     |   /. [3]     |   /|
+    ///  |  / . (2)     |  / . (2)     |  / |
+    ///  | /  .         | /  .         | /  |
+    ///  |/   .         |/   .         |/   |
+    ///  5--------------6-------------14    |          z
+    ///  |    .         |    .         |    |          ↑
+    ///  |    0---------|----3---------|---13  0.0     o → y
+    ///  |   /  [0]     |   /  [2]     |   /          ↙
+    ///  |  /   (1)     |  /   (1)     |  /          x
+    ///  | /            | /            | /
+    ///  |/             |/             |/
+    ///  1--------------2-------------12   1.0
+    /// 0.0            1.0            2.0
+    /// ```
+    #[rustfmt::skip]
+    pub fn four_cubes_wall() -> Mesh {
+        Mesh {
+            space_ndim: 3,
+            points: vec![
+                Point { id:  0, coords: vec![0.0, 0.0, 0.0] },
+                Point { id:  1, coords: vec![1.0, 0.0, 0.0] },
+                Point { id:  2, coords: vec![1.0, 1.0, 0.0] },
+                Point { id:  3, coords: vec![0.0, 1.0, 0.0] },
+                Point { id:  4, coords: vec![0.0, 0.0, 1.0] },
+                Point { id:  5, coords: vec![1.0, 0.0, 1.0] },
+                Point { id:  6, coords: vec![1.0, 1.0, 1.0] },
+                Point { id:  7, coords: vec![0.0, 1.0, 1.0] },
+                Point { id:  8, coords: vec![0.0, 0.0, 2.0] },
+                Point { id:  9, coords: vec![1.0, 0.0, 2.0] },
+                Point { id: 10, coords: vec![1.0, 1.0, 2.0] },
+                Point { id: 11, coords: vec![0.0, 1.0, 2.0] },
+                Point { id: 12, coords: vec![1.0, 2.0, 0.0] },
+                Point { id: 13, coords: vec![0.0, 2.0, 0.0] },
+                Point { id: 14, coords: vec![1.0, 2.0, 1.0] },
+                Point { id: 15, coords: vec![0.0, 2.0, 1.0] },
+                Point { id: 16, coords: vec![1.0, 2.0, 2.0] },
+                Point { id: 17, coords: vec![0.0, 2.0, 2.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,1, 2, 3,  4, 5, 6, 7] },
+                Cell { id: 1, attribute_id: 2, geo_ndim: 3, points: vec![4,5, 6, 7,  8, 9,10,11] },
+                Cell { id: 2, attribute_id: 1, geo_ndim: 3, points: vec![3,2,12,13,  7, 6,14,15] },
+                Cell { id: 3, attribute_id: 2, geo_ndim: 3, points: vec![7,6,14,15, 11,10,16,17] },
+            ],
+        }
+    }
+
     /// Returns a mesh with mixed shapes in 2D
     ///
     /// ```text
@@ -924,6 +985,26 @@ impl Samples {
 #[cfg(test)]
 mod tests {
     use super::Samples;
+    use crate::mesh::{allocate_shapes, allocate_states, Mesh};
+
+    fn check_ids(mesh: &Mesh) {
+        for i in 0..mesh.points.len() {
+            assert_eq!(mesh.points[i].id, i);
+        }
+        for i in 0..mesh.cells.len() {
+            assert_eq!(mesh.cells[i].id, i);
+        }
+    }
+
+    fn check_jacobian(mesh: &Mesh) {
+        let shapes = allocate_shapes(mesh).unwrap();
+        let mut states = allocate_states(mesh).unwrap();
+        let ksi = [0.0, 0.0, 0.0];
+        for i in 0..mesh.cells.len() {
+            let det_jac = shapes[i].calc_jacobian(&mut states[i], &ksi).unwrap();
+            assert!(det_jac >= 0.0);
+        }
+    }
 
     #[test]
     fn samples_work() {
@@ -931,143 +1012,98 @@ mod tests {
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 2);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::two_cubes_vertical();
         assert_eq!(mesh.space_ndim, 3);
         assert_eq!(mesh.points.len(), 12);
         assert_eq!(mesh.cells.len(), 2);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
+
+        let mesh = Samples::four_cubes_wall();
+        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.points.len(), 18);
+        assert_eq!(mesh.cells.len(), 4);
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::mixed_shapes_2d();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 3);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::mixed_shapes_3d();
         assert_eq!(mesh.space_ndim, 3);
         assert_eq!(mesh.points.len(), 13);
         assert_eq!(mesh.cells.len(), 5);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::block_2d_four_qua4();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::block_2d_four_qua8();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 21);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::block_2d_four_qua9();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::block_2d_four_qua12();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::block_2d_four_qua16();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::block_2d_four_qua17();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::block_3d_eight_hex8();
         assert_eq!(mesh.space_ndim, 3);
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::block_3d_eight_hex20();
         assert_eq!(mesh.space_ndim, 3);
         assert_eq!(mesh.points.len(), 81);
         assert_eq!(mesh.cells.len(), 8);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
 
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         assert_eq!(mesh.space_ndim, 2);
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 8);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_ids(&mesh);
+        check_jacobian(&mesh);
     }
 }
