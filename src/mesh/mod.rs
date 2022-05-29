@@ -2,9 +2,11 @@
 
 mod block;
 mod boundary;
+mod check;
 mod edges_and_faces;
 mod enums;
 mod find;
+mod join_meshes;
 mod mesh;
 mod normal_vector;
 mod read_text_mesh;
@@ -13,9 +15,11 @@ mod samples;
 mod shapes_and_states;
 pub use crate::mesh::block::*;
 pub use crate::mesh::boundary::*;
+pub use crate::mesh::check::*;
 pub use crate::mesh::edges_and_faces::*;
 pub use crate::mesh::enums::*;
 pub use crate::mesh::find::*;
+pub use crate::mesh::join_meshes::*;
 pub use crate::mesh::mesh::*;
 pub use crate::mesh::normal_vector::*;
 pub use crate::mesh::region::*;
