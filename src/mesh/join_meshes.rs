@@ -5,6 +5,9 @@ use crate::StrError;
 /// Joins two meshes by comparing the coordinates on the boundary of the first mesh
 ///
 /// **Note:** The meshes must have the same space_ndim.
+///
+/// **Important:** This function does not guarantee the "mesh compatibility" requirements
+/// for finite element analyses.
 pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     // check
     if a.space_ndim != b.space_ndim {
