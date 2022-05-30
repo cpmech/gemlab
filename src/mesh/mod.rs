@@ -1,10 +1,10 @@
 //! Mesh definitions, read/write, boundary, find, and generators for FEA
 
 mod block;
-mod boundary;
 mod check;
 mod edges_and_faces;
 mod enums;
+mod extracted_features;
 mod find;
 mod join_meshes;
 mod mesh;
@@ -15,10 +15,10 @@ mod region;
 mod samples;
 mod shapes_and_states;
 pub use crate::mesh::block::*;
-pub use crate::mesh::boundary::*;
 pub use crate::mesh::check::*;
 pub use crate::mesh::edges_and_faces::*;
 pub use crate::mesh::enums::*;
+pub use crate::mesh::extracted_features::*;
 pub use crate::mesh::find::*;
 pub use crate::mesh::join_meshes::*;
 pub use crate::mesh::mesh::*;
