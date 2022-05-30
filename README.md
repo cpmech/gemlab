@@ -29,7 +29,7 @@ gemlab = "0.2"
 
 ```rust
 use gemlab::integ::default_integ_points;
-use gemlab::mesh::{allocate_state, At, Region};
+use gemlab::mesh::{allocate_state, At, Extract, Region};
 use gemlab::shapes::GeoKind;
 use gemlab::StrError;
 use std::collections::HashSet;
@@ -50,7 +50,7 @@ fn main() -> Result<(), StrError> {
     //      | [0]`.   .'[1] |
     // 0.0  0------`1'------2
     //     0.0     0.5     1.0
-    let region = Region::with_text_file("./data/meshes/four_tri3_one_qua4.msh", false)?;
+    let region = Region::with_text_file("./data/meshes/four_tri3_one_qua4.msh", Extract::Boundary)?;
 
     // 2. Check the mesh, shapes, and boundary
     assert_eq!(region.mesh.points.len(), 8);
