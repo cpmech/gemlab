@@ -35,6 +35,12 @@ pub struct Face {
     pub points: Vec<PointId>,
 }
 
+/// Maps edges to cells sharing the edge in (2D only)
+pub type EdgesCellsMap2D = HashMap<EdgeKey, Vec<(CellId, usize)>>;
+
+/// Maps faces to cells sharing the face (3D only)
+pub type FacesCellsMap3D = HashMap<FaceKey, Vec<(CellId, usize)>>;
+
 /// Extracts all edges (internal and boundary) in 2D
 ///
 /// # Input
@@ -47,11 +53,11 @@ pub struct Face {
 /// * Returns a map relating edge keys to `Vec<(cell_id, e)>` where:
 ///     - `cell_id` -- the id of the cell sharing the edge
 ///     - `e` -- is the cell's local edge index
-pub fn all_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<HashMap<EdgeKey, Vec<(CellId, usize)>>, StrError> {
+pub fn all_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<EdgesCellsMap2D, StrError> {
     if mesh.space_ndim != 2 {
         return Err("this function works in 2D only");
     }
-    let mut edges: HashMap<EdgeKey, Vec<(CellId, usize)>> = HashMap::new();
+    let mut edges: EdgesCellsMap2D = HashMap::new();
     mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
         if shape.geo_ndim == 2 {
             for e in 0..shape.nedge {
@@ -80,11 +86,11 @@ pub fn all_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<HashMap<EdgeKey,
 /// * Returns a map relating face keys to `Vec<(cell_id, f)>` where:
 ///     - `cell_id` -- the id of the cell sharing the face
 ///     - `f` -- is the cell's local face index
-pub fn all_faces_3d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<HashMap<FaceKey, Vec<(CellId, usize)>>, StrError> {
+pub fn all_faces_3d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<FacesCellsMap3D, StrError> {
     if mesh.space_ndim != 3 {
         return Err("this function works in 3D only");
     }
-    let mut faces: HashMap<FaceKey, Vec<(CellId, usize)>> = HashMap::new();
+    let mut faces: FacesCellsMap3D = HashMap::new();
     mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
         if shape.geo_ndim == 3 {
             for f in 0..shape.nface {
