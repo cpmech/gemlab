@@ -50,7 +50,7 @@ fn main() -> Result<(), StrError> {
     //      | [0]`.   .'[1] |
     // 0.0  0------`1'------2
     //     0.0     0.5     1.0
-    let region = Region::with_text_file("./data/meshes/four_tri3_one_qua4.msh")?;
+    let region = Region::with_text_file("./data/meshes/four_tri3_one_qua4.msh", false)?;
 
     // 2. Check the mesh, shapes, and boundary
     assert_eq!(region.mesh.points.len(), 8);

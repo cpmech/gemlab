@@ -11,7 +11,7 @@ use std::ffi::OsStr;
 ///
 /// ```text
 /// let shapes = allocate_shapes(&mesh)?;
-/// let boundary = Boundary::new(&mesh, &shapes)?;
+/// let boundary = Boundary::new(&mesh, &shapes, with_internal)?;
 /// let find = Find::new(&mesh, &boundary)?;
 /// ```
 pub struct Region {
@@ -30,6 +30,11 @@ pub struct Region {
 
 impl Region {
     /// Allocates and prepares a new region with a given mesh
+    ///
+    /// # Input
+    ///
+    /// * `mesh` -- the mesh
+    /// * `with_internal` -- saves also the internal points, edges and faces in `boundary`
     ///
     /// # Examples
     ///
@@ -59,7 +64,7 @@ impl Region {
     ///             Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
     ///         ],
     ///     };
-    ///     let region = Region::with(mesh)?;
+    ///     let region = Region::with(mesh, false)?;
     ///     assert_eq!(region.mesh.space_ndim, 2);
     ///     assert_eq!(region.shapes.len(), 2);
     ///     assert_eq!(region.shapes[0].kind, GeoKind::Qua4);
@@ -72,9 +77,9 @@ impl Region {
     ///     Ok(())
     /// }
     /// ```
-    pub fn with(mesh: Mesh) -> Result<Self, StrError> {
+    pub fn with(mesh: Mesh, with_internal: bool) -> Result<Self, StrError> {
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes)?;
+        let boundary = Boundary::new(&mesh, &shapes, with_internal)?;
         let find = Find::new(&mesh, &boundary)?;
         Ok(Region {
             mesh,
@@ -85,10 +90,15 @@ impl Region {
     }
 
     /// Allocates and prepares a new region with a mesh defined in a text string
+    ///
+    /// # Input
+    ///
+    /// * `mesh_text` -- text representing the mesh
+    /// * `with_internal` -- saves also the internal points, edges and faces in `boundary`
     #[inline]
-    pub fn with_text(mesh_text: &str) -> Result<Self, StrError> {
+    pub fn with_text(mesh_text: &str, with_internal: bool) -> Result<Self, StrError> {
         let mesh = Mesh::from_text(mesh_text)?;
-        Region::with(mesh)
+        Region::with(mesh, with_internal)
     }
 
     /// Allocates and prepares a new region with a mesh read from a text file
@@ -96,13 +106,14 @@ impl Region {
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
+    /// * `with_internal` -- saves also the internal points, edges and faces in `boundary`
     #[inline]
-    pub fn with_text_file<P>(full_path: &P) -> Result<Self, StrError>
+    pub fn with_text_file<P>(full_path: &P, with_internal: bool) -> Result<Self, StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
         let mesh = Mesh::from_text_file(full_path)?;
-        Region::with(mesh)
+        Region::with(mesh, with_internal)
     }
 
     /// Allocates and prepares a new region with a mesh read from a binary file
@@ -110,13 +121,14 @@ impl Region {
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
+    /// * `with_internal` -- saves also the internal points, edges and faces in `boundary`
     #[inline]
-    pub fn with_binary_file<P>(full_path: &P) -> Result<Self, StrError>
+    pub fn with_binary_file<P>(full_path: &P, with_internal: bool) -> Result<Self, StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
         let mesh = Mesh::read(full_path)?;
-        Region::with(mesh)
+        Region::with(mesh, with_internal)
     }
 }
 
@@ -136,7 +148,7 @@ mod tests {
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let region = Region::with(mesh)?;
+        let region = Region::with(mesh, false)?;
         // println!("{:?}", mesh); // WRONG: mesh has been moved into region
         assert_eq!(region.mesh.space_ndim, 2);
         assert_eq!(region.shapes.len(), 2);
@@ -176,6 +188,7 @@ mod tests {
                 0   1        2     4  0 1 2 3
                 1   2        2     4  1 4 5 2
              ",
+            false,
         )?;
         assert_eq!(region.mesh.space_ndim, 2);
         assert_eq!(region.shapes.len(), 2);
@@ -194,7 +207,7 @@ mod tests {
         //  |         |         |
         //  0---------1---------4
         let mesh = Mesh::from_text_file("./data/meshes/two_quads_horizontal.msh")?;
-        let region = Region::with(mesh)?;
+        let region = Region::with(mesh, false)?;
         assert_eq!(region.mesh.space_ndim, 2);
         assert_eq!(region.shapes.len(), 2);
         assert_eq!(region.boundary.points.len(), 6);
@@ -214,7 +227,7 @@ mod tests {
         let full_path = "/tmp/gemlab/test_region_two_quads_horizontal.dat";
         let mesh = Samples::two_quads_horizontal();
         mesh.write(full_path)?;
-        let region = Region::with_binary_file(full_path)?;
+        let region = Region::with_binary_file(full_path, false)?;
         assert_eq!(region.mesh.space_ndim, 2);
         assert_eq!(region.shapes.len(), 2);
         assert_eq!(region.boundary.points.len(), 6);

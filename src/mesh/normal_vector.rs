@@ -36,7 +36,7 @@ use russell_lab::Vector;
 ///     };
 ///
 ///     let shapes = allocate_shapes(&mesh)?;
-///     let boundary = Boundary::new(&mesh, &shapes)?;
+///     let boundary = Boundary::new(&mesh, &shapes, false)?;
 ///
 ///     // the magnitude of the normal vector is equal to
 ///     // 0.5 = edge_length / 2.0 where 2.0 corresponds to
@@ -98,7 +98,7 @@ use russell_lab::Vector;
 ///     };
 ///
 ///     let shapes = allocate_shapes(&mesh)?;
-///     let boundary = Boundary::new(&mesh, &shapes)?;
+///     let boundary = Boundary::new(&mesh, &shapes, false)?;
 ///
 ///     // the magnitude of the normal vector is equal to
 ///     // 0.25 = face_area / 4.0 where 4.0 corresponds to
@@ -287,7 +287,7 @@ mod tests {
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes)?;
+        let boundary = Boundary::new(&mesh, &shapes, false)?;
 
         // the magnitude (l) of the normal vector should be equal to
         // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -334,7 +334,7 @@ mod tests {
         //  0-------4-------1------10-------8
         let mesh = Samples::block_2d_four_qua8();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes)?;
+        let boundary = Boundary::new(&mesh, &shapes, false)?;
 
         // the magnitude (l) of the normal vector should be equal to
         // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -381,7 +381,7 @@ mod tests {
         //  0-------4-------1------11-------9
         let mesh = Samples::block_2d_four_qua9();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes)?;
+        let boundary = Boundary::new(&mesh, &shapes, false)?;
 
         // the magnitude (l) of the normal vector should be equal to
         // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -428,7 +428,7 @@ mod tests {
         //  0----4-----8----1---14---17----12
         let mesh = Samples::block_2d_four_qua12();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes)?;
+        let boundary = Boundary::new(&mesh, &shapes, false)?;
 
         // the magnitude (l) of the normal vector should be equal to
         // 0.75 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -475,7 +475,7 @@ mod tests {
         //  0----4-----8----1---18---21----16
         let mesh = Samples::block_2d_four_qua16();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes)?;
+        let boundary = Boundary::new(&mesh, &shapes, false)?;
 
         // the magnitude (l) of the normal vector should be equal to
         // 0.75 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -526,7 +526,7 @@ mod tests {
         //  0----4----8---12----1---19---22---25---17
         let mesh = Samples::block_2d_four_qua17();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes)?;
+        let boundary = Boundary::new(&mesh, &shapes, false)?;
 
         // the magnitude (l) of the normal vector should be equal to
         // 1.0 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -580,7 +580,7 @@ mod tests {
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes)?;
+        let boundary = Boundary::new(&mesh, &shapes, false)?;
 
         // the magnitude (l) of the normal vector should be equal to
         // 0.25 = face_area / 4.0 where 4.0 corresponds to the face_area in the reference system
@@ -660,7 +660,7 @@ mod tests {
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes)?;
+        let boundary = Boundary::new(&mesh, &shapes, false)?;
 
         // the magnitude (l) of the normal vector should be equal to
         // face_area / 4.0 where 4.0 corresponds to the face_area in the reference system
@@ -688,7 +688,7 @@ mod tests {
     fn derive_works() {
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh).unwrap();
-        let boundary = Boundary::new(&mesh, &shapes).unwrap();
+        let boundary = Boundary::new(&mesh, &shapes, false).unwrap();
         let n01 = NormalVector::at_edge(&mesh, &boundary, (0, 1)).unwrap();
         let n01_clone = n01.clone();
         assert_eq!(format!("{:?}", n01), "NormalVector { shape: Shape { class: Lin, kind: Lin2, space_ndim: 2, geo_ndim: 1, nnode: 2, nedge: 0, nface: 0, edge_nnode: 0, face_nnode: 0, face_nedge: 0, fn_interp: FnInterp, fn_deriv: FnDeriv }, state: StateOfShape { coords_transp: NumMatrix { nrow: 2, ncol: 2, data: [1.0, 0.0, 0.0, 0.0] }, coords_min: [0.0, 0.0], coords_max: [1.0, 0.0], interp: NumVector { data: [0.0, 0.0] }, deriv: NumMatrix { nrow: 2, ncol: 1, data: [0.0, 0.0] }, jacobian: NumMatrix { nrow: 2, ncol: 1, data: [0.0, 0.0] }, inv_jacobian: NumMatrix { nrow: 0, ncol: 0, data: [] }, gradient: NumMatrix { nrow: 0, ncol: 0, data: [] } }, value: NumVector { data: [0.0, 0.0] } }");

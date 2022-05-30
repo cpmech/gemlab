@@ -35,7 +35,7 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
 
     // boundary
     let shapes = allocate_shapes(&mesh)?;
-    let boundary = Boundary::new(&mesh, &shapes)?;
+    let boundary = Boundary::new(&mesh, &shapes, false)?;
 
     // check edges
     let edge = boundary.edges.get(&(0, 1)).unwrap();
@@ -106,7 +106,7 @@ fn rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
     let shapes = allocate_shapes(&mesh)?;
-    let boundary = Boundary::new(&mesh, &shapes)?;
+    let boundary = Boundary::new(&mesh, &shapes, false)?;
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
     // for both tris or quas where 2.0 corresponds to the edge_length in the reference system

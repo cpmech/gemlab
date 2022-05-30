@@ -29,7 +29,7 @@ fn five_tets_within_cube() -> Result<(), StrError> {
 
     // boundary
     let shapes = allocate_shapes(&mesh)?;
-    let boundary = Boundary::new(&mesh, &shapes)?;
+    let boundary = Boundary::new(&mesh, &shapes, false)?;
 
     // x-min
     let face = boundary.faces.get(&(0, 3, 7, npoint)).unwrap();
