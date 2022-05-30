@@ -1,4 +1,4 @@
-use super::{all_edges_2d, allocate_shapes, Extract, ExtractedFeatures, Find, Mesh};
+use super::{all_edges_2d, allocate_shapes, Extract, Features, Find, Mesh};
 use crate::shapes::Shape;
 use crate::StrError;
 use std::ffi::OsStr;
@@ -11,7 +11,7 @@ use std::ffi::OsStr;
 ///
 /// ```text
 /// let shapes = allocate_shapes(&mesh)?;
-/// let boundary = ExtractedFeatures::new(&mesh, &shapes, with_internal)?;
+/// let boundary = Features::new(&mesh, &shapes, with_internal)?;
 /// let find = Find::new(&mesh, &boundary)?;
 /// ```
 pub struct Region {
@@ -22,7 +22,7 @@ pub struct Region {
     pub shapes: Vec<Shape>,
 
     /// Holds the boundary data such as points, edges, and faces on boundary
-    pub boundary: ExtractedFeatures,
+    pub boundary: Features,
 
     /// Allows finding points, edges, and faces on the boundary by giving coordinates or keys
     pub find: Find,
@@ -80,7 +80,7 @@ impl Region {
     pub fn with(mesh: Mesh, extract: Extract) -> Result<Self, StrError> {
         let shapes = allocate_shapes(&mesh)?;
         let edges = all_edges_2d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, extract)?;
+        let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, extract)?;
         let find = Find::new(&mesh, &boundary)?;
         Ok(Region {
             mesh,

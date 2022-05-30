@@ -1,7 +1,5 @@
 use gemlab::integ::default_integ_points;
-use gemlab::mesh::{
-    all_edges_2d, allocate_shapes, allocate_states, At, Extract, ExtractedFeatures, Find, Mesh, NormalVector,
-};
+use gemlab::mesh::{all_edges_2d, allocate_shapes, allocate_states, At, Extract, Features, Find, Mesh, NormalVector};
 use gemlab::shapes::{Shape, StateOfShape};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
@@ -38,7 +36,7 @@ fn column_distorted_tris_quads() -> Result<(), StrError> {
     // boundary
     let shapes = allocate_shapes(&mesh)?;
     let edges = all_edges_2d(&mesh, &shapes)?;
-    let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
+    let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
 
     // check edges
     let edge = boundary.edges.get(&(0, 1)).unwrap();
@@ -110,7 +108,7 @@ fn rectangle_tris_quads() -> Result<(), StrError> {
     let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
     let shapes = allocate_shapes(&mesh)?;
     let edges = all_edges_2d(&mesh, &shapes)?;
-    let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
+    let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
     // for both tris or quas where 2.0 corresponds to the edge_length in the reference system

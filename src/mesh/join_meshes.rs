@@ -1,4 +1,4 @@
-use super::{allocate_shapes, Cell, ExtractedFeatures, Mesh, Point};
+use super::{allocate_shapes, Cell, Features, Mesh, Point};
 use crate::mesh::{all_edges_2d, all_faces_3d, Extract};
 use crate::util::{GridSearch, GsNdiv, GsTol};
 use crate::StrError;
@@ -20,10 +20,10 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     // let faces = all_faces_3d(&mesh, &shapes)?;
     let boundary_a = if a.space_ndim == 2 {
         let edges = all_edges_2d(&a, &shapes_a)?;
-        ExtractedFeatures::extract(&a, &shapes_a, Some(&edges), None, Extract::Boundary)?
+        Features::extract(&a, &shapes_a, Some(&edges), None, Extract::Boundary)?
     } else {
         let faces = all_faces_3d(&a, &shapes_a)?;
-        ExtractedFeatures::extract(&a, &shapes_a, None, Some(&faces), Extract::All)?
+        Features::extract(&a, &shapes_a, None, Some(&faces), Extract::All)?
     };
 
     // allocate and prepare a GridSearch for mesh A

@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 /// ## Two-dimensional
 ///
 /// ```
-/// use gemlab::mesh::{all_edges_2d, allocate_shapes, Cell, Extract, ExtractedFeatures, Mesh, Point};
+/// use gemlab::mesh::{all_edges_2d, allocate_shapes, Cell, Extract, Features, Mesh, Point};
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -38,7 +38,7 @@ use std::collections::{HashMap, HashSet};
 ///     let shapes = allocate_shapes(&mesh)?;
 ///     let with_internal = false;
 ///     let edges = all_edges_2d(&mesh, &shapes)?;
-///     let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
+///     let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
 ///
 ///     let mut points: Vec<_> = boundary.points.iter().copied().collect();
 ///     points.sort();
@@ -54,7 +54,7 @@ use std::collections::{HashMap, HashSet};
 /// ## Three-dimensional
 ///
 /// ```
-/// use gemlab::mesh::{all_faces_3d, allocate_shapes, Cell, Extract, ExtractedFeatures, Mesh, Point};
+/// use gemlab::mesh::{all_faces_3d, allocate_shapes, Cell, Extract, Features, Mesh, Point};
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -89,7 +89,7 @@ use std::collections::{HashMap, HashSet};
 ///
 ///     let shapes = allocate_shapes(&mesh)?;
 ///     let faces = all_faces_3d(&mesh, &shapes)?;
-///     let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
+///     let boundary = Features::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
 ///
 ///     let mut points: Vec<_> = boundary.points.iter().copied().collect();
 ///     points.sort();
@@ -131,7 +131,7 @@ use std::collections::{HashMap, HashSet};
 ///     Ok(())
 /// }
 /// ```
-pub struct ExtractedFeatures {
+pub struct Features {
     /// Set of points on the boundary edges/faces or on interior edges/faces
     ///
     /// **Notes:**
@@ -175,7 +175,7 @@ pub enum Extract {
     Interior,
 }
 
-impl ExtractedFeatures {
+impl Features {
     /// Extracts features (points, edges, faces)
     ///
     /// **Note:** The points of rods/shells-in-3D are only extracted with All or Boundary.
@@ -216,7 +216,7 @@ impl ExtractedFeatures {
 
 /// Extracts points of rods (2D or 3D) or shells (3D)
 #[inline]
-fn extract_points_of_rods_or_shells(mesh: &Mesh, features: &mut ExtractedFeatures) {
+fn extract_points_of_rods_or_shells(mesh: &Mesh, features: &mut Features) {
     mesh.cells.iter().for_each(|cell| {
         if cell.geo_ndim == 1 || (cell.geo_ndim == 2 && mesh.space_ndim == 3) {
             cell.points.iter().for_each(|id| {
@@ -235,16 +235,11 @@ fn extract_points_of_rods_or_shells(mesh: &Mesh, features: &mut ExtractedFeature
 }
 
 /// Extracts mesh features in 2D
-fn extract_features_2d(
-    mesh: &Mesh,
-    shapes: &Vec<Shape>,
-    edges: &EdgesCellsMap2D,
-    extract: &Extract,
-) -> ExtractedFeatures {
+fn extract_features_2d(mesh: &Mesh, shapes: &Vec<Shape>, edges: &EdgesCellsMap2D, extract: &Extract) -> Features {
     assert_eq!(mesh.space_ndim, 2);
 
     // output
-    let mut features = ExtractedFeatures {
+    let mut features = Features {
         points: HashSet::new(),
         edges: HashMap::new(),
         faces: HashMap::new(),
@@ -289,16 +284,11 @@ fn extract_features_2d(
 }
 
 /// Extracts mesh features in 3D
-fn extract_features_3d(
-    mesh: &Mesh,
-    shapes: &Vec<Shape>,
-    faces: &FacesCellsMap3D,
-    extract: &Extract,
-) -> ExtractedFeatures {
+fn extract_features_3d(mesh: &Mesh, shapes: &Vec<Shape>, faces: &FacesCellsMap3D, extract: &Extract) -> Features {
     assert_eq!(mesh.space_ndim, 3);
 
     // output
-    let mut features = ExtractedFeatures {
+    let mut features = Features {
         points: HashSet::new(),
         edges: HashMap::new(),
         faces: HashMap::new(),
@@ -377,7 +367,7 @@ fn extract_features_3d(
 
 #[cfg(test)]
 mod tests {
-    use super::{Extract, ExtractedFeatures};
+    use super::{Extract, Features};
     use crate::mesh::{all_edges_2d, all_faces_3d, allocate_shapes, EdgeKey, FaceKey, Mesh, PointId, Samples};
     use crate::util::AsArray2D;
     use crate::StrError;
@@ -391,13 +381,13 @@ mod tests {
             cells: Vec::new(),
         };
         assert_eq!(
-            ExtractedFeatures::extract(&mesh, &Vec::new(), None, None, Extract::All).err(),
+            Features::extract(&mesh, &Vec::new(), None, None, Extract::All).err(),
             Some("space_ndim must be 2 or 3")
         );
     }
 
     fn validate_edges<'a, T>(
-        boundary: &ExtractedFeatures,
+        boundary: &Features,
         correct_keys: &[EdgeKey], // sorted
         correct_points: &'a T,
     ) where
@@ -412,7 +402,7 @@ mod tests {
     }
 
     fn validate_faces<'a, T>(
-        boundary: &ExtractedFeatures,
+        boundary: &Features,
         correct_keys: &[FaceKey], // sorted
         correct_points: &'a T,
     ) where
@@ -436,7 +426,7 @@ mod tests {
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
         let edges = all_edges_2d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
+        let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
         let correct_keys = [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [4, 1], [3, 2], [2, 5], [5, 4]];
         validate_edges(&boundary, &correct_keys, &correct_points);
@@ -458,7 +448,7 @@ mod tests {
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
         let edges = all_edges_2d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::All)?;
+        let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, Extract::All)?;
         let correct_keys = [(0, 1), (0, 3), (1, 2), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [2, 1], [4, 1], [3, 2], [2, 5], [5, 4]];
         validate_edges(&boundary, &correct_keys, &correct_points);
@@ -480,7 +470,7 @@ mod tests {
         let mesh = Samples::mixed_shapes_2d();
         let shapes = allocate_shapes(&mesh)?;
         let edges = all_edges_2d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
+        let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
         let correct_keys = [(1, 2), (1, 4), (2, 3), (3, 4)];
         let correct_points = [[2, 1], [1, 4], [3, 2], [4, 3]];
         validate_edges(&boundary, &correct_keys, &correct_points);
@@ -510,7 +500,7 @@ mod tests {
         let mesh = Samples::block_2d_four_qua16();
         let shapes = allocate_shapes(&mesh)?;
         let edges = all_edges_2d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
+        let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
         let correct_keys = [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)];
         let correct_points = [
             [1, 0, 8, 4],
@@ -552,7 +542,7 @@ mod tests {
         let mesh = Samples::block_2d_four_qua16();
         let shapes = allocate_shapes(&mesh)?;
         let edges = all_edges_2d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::All)?;
+        let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, Extract::All)?;
         let correct_keys = [
             (0, 1),
             (0, 3),
@@ -618,7 +608,7 @@ mod tests {
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let shapes = allocate_shapes(&mesh)?;
         let edges = all_edges_2d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
+        let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
         let correct_keys = [
             (0, 1),
             (0, 3),
@@ -684,7 +674,7 @@ mod tests {
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
         let faces = all_faces_3d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
+        let boundary = Features::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -788,7 +778,7 @@ mod tests {
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
         let faces = all_faces_3d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::All)?;
+        let boundary = Features::extract(&mesh, &shapes, None, Some(&faces), Extract::All)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -888,7 +878,7 @@ mod tests {
         let mesh = Samples::mixed_shapes_3d();
         let shapes = allocate_shapes(&mesh)?;
         let faces = all_faces_3d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
+        let boundary = Features::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -1007,7 +997,7 @@ mod tests {
         let mesh = Samples::block_3d_eight_hex20();
         let shapes = allocate_shapes(&mesh)?;
         let faces = all_faces_3d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
+        let boundary = Features::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -1225,7 +1215,7 @@ mod tests {
         let mesh = Samples::block_3d_eight_hex20();
         let shapes = allocate_shapes(&mesh)?;
         let faces = all_faces_3d(&mesh, &shapes)?;
-        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::All)?;
+        let boundary = Features::extract(&mesh, &shapes, None, Some(&faces), Extract::All)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
