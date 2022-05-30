@@ -1,16 +1,16 @@
-use super::{all_edges_2d, all_faces_3d, CellId, Edge, EdgeKey, Face, FaceKey, Mesh, PointId};
+use super::{Edge, EdgeKey, EdgesCellsMap2D, Face, FaceKey, FacesCellsMap3D, Mesh, PointId};
 use crate::{shapes::Shape, StrError};
 use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
-/// Holds points, edges and faces on the boundary (and possibly interior) of a mesh
+/// Holds extracted mesh features such as points, edges and faces on the mesh boundary or interior
 ///
 /// # Examples
 ///
 /// ## Two-dimensional
 ///
 /// ```
-/// use gemlab::mesh::{allocate_shapes, Cell, ExtractedFeatures, Mesh, Point};
+/// use gemlab::mesh::{all_edges_2d, allocate_shapes, Cell, Extract, ExtractedFeatures, Mesh, Point};
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -37,7 +37,8 @@ use std::collections::{HashMap, HashSet};
 ///
 ///     let shapes = allocate_shapes(&mesh)?;
 ///     let with_internal = false;
-///     let boundary = ExtractedFeatures::new(&mesh, &shapes, with_internal)?;
+///     let edges = all_edges_2d(&mesh, &shapes)?;
+///     let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
 ///
 ///     let mut points: Vec<_> = boundary.points.iter().copied().collect();
 ///     points.sort();
@@ -53,7 +54,7 @@ use std::collections::{HashMap, HashSet};
 /// ## Three-dimensional
 ///
 /// ```
-/// use gemlab::mesh::{allocate_shapes, Cell, ExtractedFeatures, Mesh, Point};
+/// use gemlab::mesh::{all_faces_3d, allocate_shapes, Cell, Extract, ExtractedFeatures, Mesh, Point};
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -87,7 +88,8 @@ use std::collections::{HashMap, HashSet};
 ///     };
 ///
 ///     let shapes = allocate_shapes(&mesh)?;
-///     let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
+///     let faces = all_faces_3d(&mesh, &shapes)?;
+///     let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
 ///
 ///     let mut points: Vec<_> = boundary.points.iter().copied().collect();
 ///     points.sort();
@@ -130,17 +132,16 @@ use std::collections::{HashMap, HashSet};
 /// }
 /// ```
 pub struct ExtractedFeatures {
-    /// Set of points on the boundaries (and some internal points when using the with_internal flag)
+    /// Set of points on the boundary edges/faces or on interior edges/faces
     ///
     /// **Notes:**
     ///
     /// 1. A boundary point belongs to a boundary edge or a boundary face
-    /// 2. When using the `with_internal` flag, the points on internal edges/faces will
-    ///    be saved here too. However, points inside the cells (e.g. in a Qua9) will
-    ///    not be accounted for.
+    /// 2. The interior case means that the points on interior edges/faces are stored;
+    ///    not all interior points are stored though (e.g. the middle nodes of a Qua9)
     pub points: HashSet<PointId>,
 
-    /// Set of edges on the boundaries (and internal edges when using the with_internal flag)
+    /// Set of edges on the mesh boundary or interior
     ///
     /// **Notes:**
     ///
@@ -148,224 +149,236 @@ pub struct ExtractedFeatures {
     /// 2. In 3D, a boundary edge belongs to a boundary face
     pub edges: HashMap<EdgeKey, Edge>,
 
-    /// Set of faces on the boundaries (and internal faces when using the with_internal flag)
+    /// Set of faces on the mesh boundary or interior
     ///
     /// **Notes:**
     ///
     /// 1. A boundary face is such that it is shared by one 3D cell only (2D cells are ignored)
     pub faces: HashMap<FaceKey, Face>,
 
-    /// The minimum coordinates; len = space_ndim
+    /// The minimum coordinates of the features collected here (len = space_ndim)
     pub min: Vec<f64>,
 
-    /// The maximum coordinates; len = space_ndim
+    /// The maximum coordinates of the features collected here (len = space_ndim)
     pub max: Vec<f64>,
 }
 
-impl ExtractedFeatures {
-    /// Allocates a new instance
-    ///
-    /// # Input
-    ///
-    /// * `mesh` -- the mesh
-    /// * `shapes` -- all shapes corresponding to all cells (must be compatible with `mesh`)
-    /// * `with_internal` -- saves also the internal points, edges and faces
-    pub fn new(mesh: &Mesh, shapes: &Vec<Shape>, with_internal: bool) -> Result<Self, StrError> {
-        let mut boundary = match mesh.space_ndim {
-            2 => {
-                let edges = all_edges_2d(mesh, shapes).unwrap(); // should not fail
-                ExtractedFeatures::two_dim(mesh, shapes, &edges, with_internal)
-            }
-            3 => {
-                let faces = all_faces_3d(mesh, shapes).unwrap(); // should not fail
-                ExtractedFeatures::three_dim(mesh, shapes, &faces, with_internal)
-            }
-            _ => return Err("space_ndim must be 2 or 3"),
-        };
-        // handle points of (rods in 2D or 3D) or (shells in 3D)
-        mesh.cells.iter().for_each(|cell| {
-            if cell.geo_ndim == 1 || (cell.geo_ndim == 2 && mesh.space_ndim == 3) {
-                cell.points.iter().for_each(|id| {
-                    boundary.points.insert(*id);
-                    for j in 0..mesh.space_ndim {
-                        if mesh.points[*id].coords[j] < boundary.min[j] {
-                            boundary.min[j] = mesh.points[*id].coords[j];
-                        }
-                        if mesh.points[*id].coords[j] > boundary.max[j] {
-                            boundary.max[j] = mesh.points[*id].coords[j];
-                        }
-                    }
-                });
-            }
-        });
-        Ok(boundary)
-    }
+/// Defines what features are to be extracted
+pub enum Extract {
+    /// Extracts boundary and interior features
+    All,
 
-    /// Finds boundary entities in 2D
+    /// Extracts boundary features only
+    Boundary,
+
+    /// Extracts interior features only
+    Interior,
+}
+
+impl ExtractedFeatures {
+    /// Extracts features (points, edges, faces)
     ///
-    /// **Note:** Call this function after `all_edges_2d`.
+    /// **Note:** The points of rods/shells-in-3D are only extracted with All or Boundary.
     ///
     /// # Input
     ///
     /// * `mesh` -- the Mesh
-    /// * `shapes` -- the shapes of cells (len == cells.len())
-    /// * `edges` -- all edges (internal and boundary)
-    /// * `with_internal` -- saves also the internal points, edges and faces
-    fn two_dim(
+    /// * `shapes` -- all shapes of cells (len == cells.len())
+    /// * `edges` -- 2D only: all edges (boundary and interior)
+    /// * `faces` -- 3D only: all edges (boundary and interior)
+    /// * `extract` -- option regarding what to extract (All and Boundary will extract points of rods and shells)
+    pub fn extract(
         mesh: &Mesh,
         shapes: &Vec<Shape>,
-        edges: &HashMap<EdgeKey, Vec<(CellId, usize)>>,
-        with_internal: bool,
-    ) -> ExtractedFeatures {
-        assert_eq!(mesh.space_ndim, 2);
+        edges: Option<&EdgesCellsMap2D>,
+        faces: Option<&FacesCellsMap3D>,
+        extract: Extract,
+    ) -> Result<Self, StrError> {
+        let mut features = match mesh.space_ndim {
+            2 => match edges {
+                Some(edges) => extract_features_2d(mesh, shapes, &edges, &extract),
+                None => return Err("edges map must be given in 2D"),
+            },
+            3 => match faces {
+                Some(faces) => extract_features_3d(mesh, shapes, &faces, &extract),
+                None => return Err("faces map must be given in 3D"),
+            },
+            _ => return Err("space_ndim must be 2 or 3"),
+        };
+        match extract {
+            Extract::All => extract_points_of_rods_or_shells(mesh, &mut features),
+            Extract::Boundary => extract_points_of_rods_or_shells(mesh, &mut features),
+            Extract::Interior => (),
+        }
+        Ok(features)
+    }
+}
 
-        // output
-        let mut boundary = ExtractedFeatures {
-            points: HashSet::new(),
-            edges: HashMap::new(),
-            faces: HashMap::new(),
-            min: vec![f64::MAX; mesh.space_ndim],
-            max: vec![f64::MIN; mesh.space_ndim],
+/// Extracts points of rods (2D or 3D) or shells (3D)
+#[inline]
+fn extract_points_of_rods_or_shells(mesh: &Mesh, features: &mut ExtractedFeatures) {
+    mesh.cells.iter().for_each(|cell| {
+        if cell.geo_ndim == 1 || (cell.geo_ndim == 2 && mesh.space_ndim == 3) {
+            cell.points.iter().for_each(|id| {
+                features.points.insert(*id);
+                for j in 0..mesh.space_ndim {
+                    if mesh.points[*id].coords[j] < features.min[j] {
+                        features.min[j] = mesh.points[*id].coords[j];
+                    }
+                    if mesh.points[*id].coords[j] > features.max[j] {
+                        features.max[j] = mesh.points[*id].coords[j];
+                    }
+                }
+            });
+        }
+    });
+}
+
+/// Extracts mesh features in 2D
+fn extract_features_2d(
+    mesh: &Mesh,
+    shapes: &Vec<Shape>,
+    edges: &EdgesCellsMap2D,
+    extract: &Extract,
+) -> ExtractedFeatures {
+    assert_eq!(mesh.space_ndim, 2);
+
+    // output
+    let mut features = ExtractedFeatures {
+        points: HashSet::new(),
+        edges: HashMap::new(),
+        faces: HashMap::new(),
+        min: vec![f64::MAX; mesh.space_ndim],
+        max: vec![f64::MIN; mesh.space_ndim],
+    };
+
+    // loop over all edges
+    for (edge_key, shared_by) in edges {
+        // accept feature?
+        let accept = match extract {
+            Extract::All => true,
+            Extract::Boundary => shared_by.len() == 1, // boundary edge; with only one shared cell
+            Extract::Interior => shared_by.len() != 1, // interior edge; shared by multiple cells
+        };
+        if !accept {
+            continue;
+        }
+
+        // cell and edge
+        let (cell_id, e) = shared_by[0];
+        let cell = &mesh.cells[cell_id];
+        let shape = &shapes[cell_id];
+        let mut edge = Edge {
+            points: vec![0; shape.edge_nnode],
         };
 
-        // loop over all edges
-        for (edge_key, shared_by) in edges {
-            if !with_internal {
-                // skip internal edges (those shared by multiple cells)
-                if shared_by.len() != 1 {
-                    continue;
-                }
+        // process points on edge
+        for i in 0..shape.edge_nnode {
+            edge.points[i] = cell.points[shape.edge_node_id(e, i)];
+            features.points.insert(edge.points[i]);
+            for j in 0..mesh.space_ndim {
+                features.min[j] = f64::min(features.min[j], mesh.points[edge.points[i]].coords[j]);
+                features.max[j] = f64::max(features.max[j], mesh.points[edge.points[i]].coords[j]);
             }
+        }
 
-            // cell and edge
-            let (cell_id, e) = shared_by[0];
-            let cell = &mesh.cells[cell_id];
-            let shape = &shapes[cell_id];
-            let mut edge = Edge {
-                points: vec![0; shape.edge_nnode],
-            };
+        // new edge
+        features.edges.insert(*edge_key, edge);
+    }
+    features
+}
 
-            // process points on edge
-            for i in 0..shape.edge_nnode {
-                edge.points[i] = cell.points[shape.edge_node_id(e, i)];
-                boundary.points.insert(edge.points[i]);
-                for j in 0..mesh.space_ndim {
-                    if mesh.points[edge.points[i]].coords[j] < boundary.min[j] {
-                        boundary.min[j] = mesh.points[edge.points[i]].coords[j];
-                    }
-                    if mesh.points[edge.points[i]].coords[j] > boundary.max[j] {
-                        boundary.max[j] = mesh.points[edge.points[i]].coords[j];
-                    }
-                }
+/// Extracts mesh features in 3D
+fn extract_features_3d(
+    mesh: &Mesh,
+    shapes: &Vec<Shape>,
+    faces: &FacesCellsMap3D,
+    extract: &Extract,
+) -> ExtractedFeatures {
+    assert_eq!(mesh.space_ndim, 3);
+
+    // output
+    let mut features = ExtractedFeatures {
+        points: HashSet::new(),
+        edges: HashMap::new(),
+        faces: HashMap::new(),
+        min: vec![f64::MAX; mesh.space_ndim],
+        max: vec![f64::MIN; mesh.space_ndim],
+    };
+
+    // sort face keys just so the next loop is deterministic
+    let mut face_keys: Vec<_> = faces.keys().collect();
+    face_keys.sort();
+
+    // loop over all faces
+    for face_key in face_keys {
+        let shared_by = faces.get(face_key).unwrap();
+
+        // accept feature?
+        let accept = match extract {
+            Extract::All => true,
+            Extract::Boundary => shared_by.len() == 1, // boundary face; with only one shared cell
+            Extract::Interior => shared_by.len() != 1, // interior face; shared by multiple cells
+        };
+        if !accept {
+            continue;
+        }
+
+        // cell and face
+        let (cell_id, f) = shared_by[0];
+        let cell = &mesh.cells[cell_id];
+        let shape = &shapes[cell_id];
+        let mut face = Face {
+            points: vec![0; shape.face_nnode],
+        };
+
+        // process points on face
+        for i in 0..shape.face_nnode {
+            face.points[i] = cell.points[shape.face_node_id(f, i)];
+            features.points.insert(face.points[i]);
+            for j in 0..mesh.space_ndim {
+                features.min[j] = f64::min(features.min[j], mesh.points[face.points[i]].coords[j]);
+                features.max[j] = f64::max(features.max[j], mesh.points[face.points[i]].coords[j]);
+            }
+        }
+
+        // loop over all edges on face
+        let face_shape = Shape::new(mesh.space_ndim, 2, shape.face_nnode).unwrap(); // should not fail
+        for e in 0..face_shape.nedge {
+            // define edge key (sorted point ids)
+            let mut edge_key: EdgeKey = (
+                face.points[face_shape.edge_node_id(e, 0)],
+                face.points[face_shape.edge_node_id(e, 1)],
+            );
+            sort2(&mut edge_key);
+
+            // skip already handled edge
+            if features.edges.contains_key(&edge_key) {
+                continue;
             }
 
             // new edge
-            boundary.edges.insert(*edge_key, edge);
-        }
-        boundary
-    }
-
-    /// Finds boundary entities in 3D
-    ///
-    /// **Note:** Call this function after `all_faces_3d`.
-    ///
-    /// # Input
-    ///
-    /// * `mesh` -- the Mesh
-    /// * `shapes` -- the shapes of cells (len == cells.len())
-    /// * `faces` -- all faces (internal and boundary)
-    /// * `with_internal` -- saves also the internal points, edges and faces
-    fn three_dim(
-        mesh: &Mesh,
-        shapes: &Vec<Shape>,
-        faces: &HashMap<FaceKey, Vec<(CellId, usize)>>,
-        with_internal: bool,
-    ) -> ExtractedFeatures {
-        assert_eq!(mesh.space_ndim, 3);
-
-        // output
-        let mut boundary = ExtractedFeatures {
-            points: HashSet::new(),
-            edges: HashMap::new(),
-            faces: HashMap::new(),
-            min: vec![f64::MAX; mesh.space_ndim],
-            max: vec![f64::MIN; mesh.space_ndim],
-        };
-
-        // sort face keys just so the next loop is deterministic
-        let mut face_keys: Vec<_> = faces.keys().collect();
-        face_keys.sort();
-
-        // loop over all faces
-        for face_key in face_keys {
-            let shared_by = faces.get(face_key).unwrap();
-            if !with_internal {
-                // skip internal faces (those shared by multiple cells)
-                if shared_by.len() != 1 {
-                    continue;
-                }
-            }
-
-            // cell and face
-            let (cell_id, f) = shared_by[0];
-            let cell = &mesh.cells[cell_id];
-            let shape = &shapes[cell_id];
-            let mut face = Face {
-                points: vec![0; shape.face_nnode],
+            let mut edge = Edge {
+                points: vec![0; face_shape.edge_nnode],
             };
-
-            // process points on face
-            for i in 0..shape.face_nnode {
-                face.points[i] = cell.points[shape.face_node_id(f, i)];
-                boundary.points.insert(face.points[i]);
-                for j in 0..mesh.space_ndim {
-                    if mesh.points[face.points[i]].coords[j] < boundary.min[j] {
-                        boundary.min[j] = mesh.points[face.points[i]].coords[j];
-                    }
-                    if mesh.points[face.points[i]].coords[j] > boundary.max[j] {
-                        boundary.max[j] = mesh.points[face.points[i]].coords[j];
-                    }
-                }
+            for i in 0..face_shape.edge_nnode {
+                edge.points[i] = face.points[face_shape.edge_node_id(e, i)];
             }
-
-            // loop over all edges on face
-            let face_shape = Shape::new(mesh.space_ndim, 2, shape.face_nnode).unwrap(); // should not fail
-            for e in 0..face_shape.nedge {
-                // define edge key (sorted point ids)
-                let mut edge_key: EdgeKey = (
-                    face.points[face_shape.edge_node_id(e, 0)],
-                    face.points[face_shape.edge_node_id(e, 1)],
-                );
-                sort2(&mut edge_key);
-
-                // skip already handled edge
-                if boundary.edges.contains_key(&edge_key) {
-                    continue;
-                }
-
-                // new edge
-                let mut edge = Edge {
-                    points: vec![0; face_shape.edge_nnode],
-                };
-                for i in 0..face_shape.edge_nnode {
-                    edge.points[i] = face.points[face_shape.edge_node_id(e, i)];
-                }
-                boundary.edges.insert(edge_key, edge);
-            }
-
-            // new face
-            boundary.faces.insert(*face_key, face);
+            features.edges.insert(edge_key, edge);
         }
-        boundary
+
+        // new face
+        features.faces.insert(*face_key, face);
     }
+    features
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::ExtractedFeatures;
-    use crate::mesh::{allocate_shapes, EdgeKey, FaceKey, Mesh, PointId, Samples};
+    use super::{Extract, ExtractedFeatures};
+    use crate::mesh::{all_edges_2d, all_faces_3d, allocate_shapes, EdgeKey, FaceKey, Mesh, PointId, Samples};
     use crate::util::AsArray2D;
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -378,7 +391,7 @@ mod tests {
             cells: Vec::new(),
         };
         assert_eq!(
-            ExtractedFeatures::new(&mesh, &Vec::new(), false).err(),
+            ExtractedFeatures::extract(&mesh, &Vec::new(), None, None, Extract::All).err(),
             Some("space_ndim must be 2 or 3")
         );
     }
@@ -422,7 +435,8 @@ mod tests {
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
+        let edges = all_edges_2d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
         let correct_keys = [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [4, 1], [3, 2], [2, 5], [5, 4]];
         validate_edges(&boundary, &correct_keys, &correct_points);
@@ -435,7 +449,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_2d_with_internal_works() -> Result<(), StrError> {
+    fn boundary_2d_all_works() -> Result<(), StrError> {
         //  3---------2---------5
         //  |         |         |
         //  |   [0]   |   [1]   |
@@ -443,7 +457,8 @@ mod tests {
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, true)?;
+        let edges = all_edges_2d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::All)?;
         let correct_keys = [(0, 1), (0, 3), (1, 2), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [2, 1], [4, 1], [3, 2], [2, 5], [5, 4]];
         validate_edges(&boundary, &correct_keys, &correct_points);
@@ -464,7 +479,8 @@ mod tests {
         //  0--------1---------2--------5
         let mesh = Samples::mixed_shapes_2d();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
+        let edges = all_edges_2d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
         let correct_keys = [(1, 2), (1, 4), (2, 3), (3, 4)];
         let correct_points = [[2, 1], [1, 4], [3, 2], [4, 3]];
         validate_edges(&boundary, &correct_keys, &correct_points);
@@ -493,7 +509,8 @@ mod tests {
         //  0----4-----8----1---18---21----16
         let mesh = Samples::block_2d_four_qua16();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
+        let edges = all_edges_2d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
         let correct_keys = [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)];
         let correct_points = [
             [1, 0, 8, 4],
@@ -518,7 +535,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_2d_with_internal_block_works() -> Result<(), StrError> {
+    fn boundary_2d_all_block_works() -> Result<(), StrError> {
         // 29---34----31---28---44---42----40
         //  |               |               |
         // 32   39    38   33   48   47    43
@@ -534,7 +551,8 @@ mod tests {
         //  0----4-----8----1---18---21----16
         let mesh = Samples::block_2d_four_qua16();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, true)?;
+        let edges = all_edges_2d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::All)?;
         let correct_keys = [
             (0, 1),
             (0, 3),
@@ -599,7 +617,8 @@ mod tests {
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
+        let edges = all_edges_2d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, Some(&edges), None, Extract::Boundary)?;
         let correct_keys = [
             (0, 1),
             (0, 3),
@@ -664,7 +683,8 @@ mod tests {
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
+        let faces = all_faces_3d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -744,7 +764,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_3d_with_internal_works() -> Result<(), StrError> {
+    fn boundary_3d_all_works() -> Result<(), StrError> {
         //      8-------------11
         //     /.             /|
         //    / .            / |
@@ -767,7 +787,8 @@ mod tests {
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, true)?;
+        let faces = all_faces_3d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::All)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -866,7 +887,8 @@ mod tests {
         //
         let mesh = Samples::mixed_shapes_3d();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
+        let faces = all_faces_3d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -984,7 +1006,8 @@ mod tests {
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
+        let faces = all_faces_3d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::Boundary)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -1155,7 +1178,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_3d_with_internal_block_works() -> Result<(), StrError> {
+    fn boundary_3d_all_block_works() -> Result<(), StrError> {
         //              51--------58--------54--------74--------71
         //              /.                  /.                  /|
         //             / .                 / .                 / |
@@ -1201,7 +1224,8 @@ mod tests {
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = ExtractedFeatures::new(&mesh, &shapes, true)?;
+        let faces = all_faces_3d(&mesh, &shapes)?;
+        let boundary = ExtractedFeatures::extract(&mesh, &shapes, None, Some(&faces), Extract::All)?;
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -1210,7 +1234,7 @@ mod tests {
             (1, 5),
             (1, 20),
             (2, 3),
-            (2, 6), // internal
+            (2, 6), // interior
             (2, 21),
             (2, 32),
             (3, 7),
@@ -1218,13 +1242,13 @@ mod tests {
             (4, 5),
             (4, 7),
             (4, 51),
-            (5, 6), // internal
+            (5, 6), // interior
             (5, 22),
             (5, 52),
-            (6, 7),  // internal
-            (6, 23), // internal
-            (6, 34), // internal
-            (6, 53), // internal
+            (6, 7),  // interior
+            (6, 23), // interior
+            (6, 34), // interior
+            (6, 53), // interior
             (7, 35),
             (7, 54),
             (20, 21),
@@ -1266,7 +1290,7 @@ mod tests {
             [5, 1, 17],
             [1, 20, 24],
             [2, 3, 10],
-            [6, 2, 18], // internal
+            [6, 2, 18], // interior
             [21, 2, 26],
             [2, 32, 36],
             [3, 7, 19],
@@ -1274,13 +1298,13 @@ mod tests {
             [4, 5, 12],
             [7, 4, 15],
             [4, 51, 59],
-            [5, 6, 13], // internal
+            [5, 6, 13], // interior
             [5, 22, 27],
             [52, 5, 60],
-            [6, 7, 14],  // internal
-            [23, 6, 29], // internal
-            [6, 34, 39], // internal
-            [53, 6, 61], // internal
+            [6, 7, 14],  // interior
+            [23, 6, 29], // interior
+            [6, 34, 39], // interior
+            [53, 6, 61], // interior
             [35, 7, 41],
             [7, 54, 62],
             [20, 21, 25],
@@ -1319,26 +1343,26 @@ mod tests {
             (0, 1, 2, 3),
             (0, 1, 4, 5),
             (0, 3, 4, 7),
-            (1, 2, 5, 6), // internal
+            (1, 2, 5, 6), // interior
             (1, 2, 20, 21),
             (1, 5, 20, 22),
-            (2, 3, 6, 7), // internal
+            (2, 3, 6, 7), // interior
             (2, 3, 32, 33),
-            (2, 6, 21, 23), // internal
-            (2, 6, 32, 34), // internal
+            (2, 6, 21, 23), // interior
+            (2, 6, 32, 34), // interior
             (2, 21, 32, 44),
             (3, 7, 33, 35),
-            (4, 5, 6, 7), // internal
+            (4, 5, 6, 7), // interior
             (4, 5, 51, 52),
             (4, 7, 51, 54),
-            (5, 6, 22, 23), // internal
-            (5, 6, 52, 53), // internal
+            (5, 6, 22, 23), // interior
+            (5, 6, 52, 53), // interior
             (5, 22, 52, 63),
-            (6, 7, 34, 35),  // internal
-            (6, 7, 53, 54),  // internal
-            (6, 23, 34, 45), // internal
-            (6, 23, 53, 64), // internal
-            (6, 34, 53, 70), // internal
+            (6, 7, 34, 35),  // interior
+            (6, 7, 53, 54),  // interior
+            (6, 23, 34, 45), // interior
+            (6, 23, 53, 64), // interior
+            (6, 34, 53, 70), // interior
             (7, 35, 54, 71),
             (20, 21, 22, 23),
             (21, 23, 44, 45),
@@ -1357,26 +1381,26 @@ mod tests {
             [0, 3, 2, 1, 11, 10, 9, 8],
             [0, 1, 5, 4, 8, 17, 12, 16],
             [0, 4, 7, 3, 16, 15, 19, 11],
-            [1, 2, 6, 5, 9, 18, 13, 17], // internal
+            [1, 2, 6, 5, 9, 18, 13, 17], // interior
             [1, 2, 21, 20, 9, 26, 25, 24],
             [1, 20, 22, 5, 24, 30, 27, 17],
-            [2, 3, 7, 6, 10, 19, 14, 18], // internal
+            [2, 3, 7, 6, 10, 19, 14, 18], // interior
             [3, 33, 32, 2, 38, 37, 36, 10],
-            [21, 2, 6, 23, 26, 18, 29, 31], // internal
-            [2, 32, 34, 6, 36, 42, 39, 18], // internal
+            [21, 2, 6, 23, 26, 18, 29, 31], // interior
+            [2, 32, 34, 6, 36, 42, 39, 18], // interior
             [2, 32, 44, 21, 36, 47, 46, 26],
             [3, 7, 35, 33, 19, 41, 43, 38],
-            [4, 5, 6, 7, 12, 13, 14, 15], // internal
+            [4, 5, 6, 7, 12, 13, 14, 15], // interior
             [4, 5, 52, 51, 12, 60, 55, 59],
             [4, 51, 54, 7, 59, 58, 62, 15],
-            [5, 22, 23, 6, 27, 28, 29, 13], // internal
-            [5, 6, 53, 52, 13, 61, 56, 60], // internal
+            [5, 22, 23, 6, 27, 28, 29, 13], // interior
+            [5, 6, 53, 52, 13, 61, 56, 60], // interior
             [5, 22, 63, 52, 27, 68, 65, 60],
-            [7, 6, 34, 35, 14, 39, 40, 41],  // internal
-            [6, 7, 54, 53, 14, 62, 57, 61],  // internal
-            [6, 23, 45, 34, 29, 48, 49, 39], // internal
-            [23, 6, 53, 64, 29, 61, 67, 69], // internal
-            [6, 34, 70, 53, 39, 75, 72, 61], // internal
+            [7, 6, 34, 35, 14, 39, 40, 41],  // interior
+            [6, 7, 54, 53, 14, 62, 57, 61],  // interior
+            [6, 23, 45, 34, 29, 48, 49, 39], // interior
+            [23, 6, 53, 64, 29, 61, 67, 69], // interior
+            [6, 34, 70, 53, 39, 75, 72, 61], // interior
             [7, 54, 71, 35, 62, 74, 76, 41],
             [20, 21, 23, 22, 25, 31, 28, 30],
             [21, 44, 45, 23, 46, 50, 48, 31],
