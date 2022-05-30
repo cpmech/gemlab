@@ -1,4 +1,4 @@
-use super::{allocate_shapes, Boundary, Cell, Mesh, Point};
+use super::{allocate_shapes, Cell, ExtractedFeatures, Mesh, Point};
 use crate::util::{GridSearch, GsNdiv, GsTol};
 use crate::StrError;
 
@@ -16,7 +16,7 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
 
     // find the boundary of mesh A
     let shapes_a = allocate_shapes(&a)?;
-    let boundary_a = Boundary::new(&a, &shapes_a, false)?;
+    let boundary_a = ExtractedFeatures::new(&a, &shapes_a, false)?;
 
     // allocate and prepare a GridSearch for mesh A
     let mut min_a = boundary_a.min.clone();

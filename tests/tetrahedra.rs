@@ -1,4 +1,4 @@
-use gemlab::mesh::{allocate_shapes, At, Boundary, Find, Mesh, NormalVector};
+use gemlab::mesh::{allocate_shapes, At, ExtractedFeatures, Find, Mesh, NormalVector};
 use gemlab::StrError;
 use russell_chk::assert_vec_approx_eq;
 use std::collections::HashSet;
@@ -29,7 +29,7 @@ fn five_tets_within_cube() -> Result<(), StrError> {
 
     // boundary
     let shapes = allocate_shapes(&mesh)?;
-    let boundary = Boundary::new(&mesh, &shapes, false)?;
+    let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
 
     // x-min
     let face = boundary.faces.get(&(0, 3, 7, npoint)).unwrap();

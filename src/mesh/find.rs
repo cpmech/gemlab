@@ -1,4 +1,4 @@
-use super::{At, Boundary, EdgeKey, FaceKey, Mesh, PointId};
+use super::{At, EdgeKey, ExtractedFeatures, FaceKey, Mesh, PointId};
 use crate::util::{GridSearch, GsNdiv, GsTol};
 use crate::StrError;
 use std::collections::{HashMap, HashSet};
@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 /// ## Two-dimensional
 ///
 /// ```
-/// use gemlab::mesh::{allocate_shapes, At, Boundary, Cell, Find, Mesh, Point};
+/// use gemlab::mesh::{allocate_shapes, At, Cell, ExtractedFeatures, Find, Mesh, Point};
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -36,7 +36,7 @@ use std::collections::{HashMap, HashSet};
 ///     };
 ///
 ///     let shapes = allocate_shapes(&mesh)?;
-///     let boundary = Boundary::new(&mesh, &shapes, false)?;
+///     let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
 ///     let find = Find::new(&mesh, &boundary)?;
 ///
 ///     let mut points: Vec<_> = find.points(At::X(2.0))?.iter().copied().collect();
@@ -53,7 +53,7 @@ use std::collections::{HashMap, HashSet};
 /// ## Three-dimensional
 ///
 /// ```
-/// use gemlab::mesh::{allocate_shapes, At, Boundary, Cell, Find, Mesh, Point};
+/// use gemlab::mesh::{allocate_shapes, At, Cell, ExtractedFeatures, Find, Mesh, Point};
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -87,7 +87,7 @@ use std::collections::{HashMap, HashSet};
 ///     };
 ///
 ///     let shapes = allocate_shapes(&mesh)?;
-///     let boundary = Boundary::new(&mesh, &shapes, false)?;
+///     let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
 ///     let find = Find::new(&mesh, &boundary)?;
 ///
 ///     let mut points: Vec<_> = find.points(At::XY(1.0, 1.0))?.iter().copied().collect();
@@ -127,7 +127,7 @@ impl Find {
     /// # Panics
     ///
     /// If the `boundary` does not correspond to `mesh`, a panic will occur.
-    pub fn new(mesh: &Mesh, boundary: &Boundary) -> Result<Self, StrError> {
+    pub fn new(mesh: &Mesh, boundary: &ExtractedFeatures) -> Result<Self, StrError> {
         // expand limits a little bit to accommodate imprecisions on the (min,max) values
         const PCT: f64 = 1.0 / 100.0; // 1% is enough
         let (mut min, mut max) = (vec![0.0; mesh.space_ndim], vec![0.0; mesh.space_ndim]);
@@ -363,7 +363,7 @@ impl Find {
 #[cfg(test)]
 mod tests {
     use super::Find;
-    use crate::mesh::{allocate_shapes, At, Boundary, Samples};
+    use crate::mesh::{allocate_shapes, At, ExtractedFeatures, Samples};
     use crate::util::SQRT_2;
     use crate::StrError;
     use std::collections::HashSet;
@@ -386,7 +386,7 @@ mod tests {
     fn new_works() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         // plot_grid_two_quads_horizontal(&find)?;
         assert_eq!(
@@ -412,7 +412,7 @@ mod tests {
         // 2d
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         assert_eq!(find.points(At::Z(0.0)).err(), Some("At::Z works in 3D only"));
         assert_eq!(find.points(At::YZ(0.0, 0.0)).err(), Some("At::YZ works in 3D only"));
@@ -429,7 +429,7 @@ mod tests {
         // 3d
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         assert_eq!(
             find.points(At::Circle(0.0, 0.0, 0.0)).err(),
@@ -458,7 +458,7 @@ mod tests {
         //           circle
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         check(&find.points(At::XY(0.0, 0.0))?, &[0]);
         check(&find.points(At::XY(2.0, 1.0))?, &[5]);
@@ -494,7 +494,7 @@ mod tests {
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         // plot_grid_two_cubes_vertical(&find)?;
         check(&find.points(At::X(0.0))?, &[0, 3, 4, 7, 8, 11]);
@@ -542,7 +542,7 @@ mod tests {
         // 0--------1--------4
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         check(&find.edges(At::Y(0.0))?, &[(0, 1), (1, 4)]);
         check(&find.edges(At::X(2.0))?, &[(4, 5)]);
@@ -575,7 +575,7 @@ mod tests {
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         check(
             &find.edges(At::X(0.0))?,
@@ -634,7 +634,7 @@ mod tests {
         // 0--------1--------4
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         assert_eq!(find.faces(At::X(0.0))?.len(), 0);
         Ok(())
@@ -662,7 +662,7 @@ mod tests {
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         check(&find.faces(At::X(0.0))?, &[(0, 3, 4, 7), (4, 7, 8, 11)]);
         check(&find.faces(At::X(1.0))?, &[(1, 2, 5, 6), (5, 6, 9, 10)]);
@@ -715,7 +715,7 @@ mod tests {
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let shapes = allocate_shapes(&mesh)?;
-        let boundary = Boundary::new(&mesh, &shapes, false)?;
+        let boundary = ExtractedFeatures::new(&mesh, &shapes, false)?;
         let find = Find::new(&mesh, &boundary)?;
         let (r, rr) = (1.0, 2.0);
         check(&find.points(At::XY(1.00, 0.00))?, &[0]);
