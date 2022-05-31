@@ -22,12 +22,12 @@ impl NormalVector {
     /// **Important:** You must call [NormalVector::evaluate] to compute the actual values.
     ///
     /// **Note:** This function works in 2D only
-    pub fn at_edge(mesh: &Mesh, boundary: &Features, edge_key: EdgeKey) -> Result<Self, StrError> {
+    pub fn at_edge(mesh: &Mesh, features: &Features, edge_key: EdgeKey) -> Result<Self, StrError> {
         if mesh.space_ndim != 2 {
             return Err("normal at_edge works in 2D only");
         }
         const GEO_NDIM: usize = 1;
-        let edge = match boundary.edges.get(&edge_key) {
+        let edge = match features.edges.get(&edge_key) {
             Some(e) => e,
             None => return Err("edge_key is not present in boundary"),
         };
@@ -52,12 +52,12 @@ impl NormalVector {
     /// **Important:** You must call [NormalVector::evaluate] to compute the actual values.
     ///
     /// **Note:** This function works in 3D only
-    pub fn at_face(mesh: &Mesh, boundary: &Features, face_key: FaceKey) -> Result<Self, StrError> {
+    pub fn at_face(mesh: &Mesh, features: &Features, face_key: FaceKey) -> Result<Self, StrError> {
         if mesh.space_ndim != 3 {
             return Err("normal at_face works in 3D only");
         }
         const GEO_NDIM: usize = 2;
-        let face = match boundary.faces.get(&face_key) {
+        let face = match features.faces.get(&face_key) {
             Some(e) => e,
             None => return Err("face_key is not present in boundary"),
         };

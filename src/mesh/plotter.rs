@@ -2,14 +2,17 @@
 #![allow(unused_mut)]
 #![allow(unused_variables)]
 
-use super::{allocate_shapes, allocate_states, Mesh};
+use super::{allocate_shapes, allocate_state, allocate_states, EdgeKey, Mesh, NormalVector, Region};
+use crate::shapes::{Shape, StateOfShape};
 use crate::StrError;
 use plotpy::{Curve, Plot, Shapes, Text};
+use std::collections::HashMap;
 
 pub struct Plotter {}
 
 impl Plotter {
-    pub fn with(mesh: &Mesh) -> Result<Plot, StrError> {
+    pub fn with(region: &Region) -> Result<Plot, StrError> {
+        /*
         let shapes = allocate_shapes(mesh)?;
         let mut states = allocate_states(mesh)?;
         let mut canvas = Shapes::new();
@@ -22,6 +25,17 @@ impl Plotter {
             }
             let points = canvas.draw_polyline(&[[0.0, 0.0]], true);
         }
+        */
+
+        let space_ndim = region.mesh.space_ndim;
+        let mut normals: HashMap<EdgeKey, NormalVector> = HashMap::new();
+        for (edge_key, edge) in &region.features.edges {
+            let normal =
+                normals
+                    .entry(*edge_key)
+                    .or_insert(NormalVector::at_edge(&region.mesh, &region.features, *edge_key)?);
+        }
+
         let mut plot = Plot::new();
         Ok(plot)
     }
