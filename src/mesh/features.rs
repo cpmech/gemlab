@@ -31,11 +31,21 @@ pub struct Face {
     pub points: Vec<PointId>,
 }
 
-/// Maps edges to cells sharing the edge in (2D only)
-pub type EdgesCellsMap2D = HashMap<EdgeKey, Vec<(CellId, usize)>>;
+/// Maps edges to cells sharing the edge (2D only)
+///
+/// Relates edge keys to `Vec<(cell_id, e)>` where:
+///
+/// * `cell_id` -- is he id of the cell sharing the edge
+/// * `e` -- is the cell's local edge index
+pub type MapEdge2dToCells = HashMap<EdgeKey, Vec<(CellId, usize)>>;
 
 /// Maps faces to cells sharing the face (3D only)
-pub type FacesCellsMap3D = HashMap<FaceKey, Vec<(CellId, usize)>>;
+///
+/// Relates face keys to `Vec<(cell_id, f)>` where:
+///
+/// * `cell_id` -- is the id of the cell sharing the face
+/// * `f` -- is the cell's local face index
+pub type MapFaceToCells = HashMap<FaceKey, Vec<(CellId, usize)>>;
 
 /// Holds points, edges and faces on the mesh boundary or interior
 pub struct Features {
@@ -96,7 +106,7 @@ impl Features {
         mesh: &Mesh,
         shapes: &Vec<Shape>,
         extract: Extract,
-    ) -> Result<(Option<EdgesCellsMap2D>, Option<FacesCellsMap3D>, Features), StrError> {
+    ) -> Result<(Option<MapEdge2dToCells>, Option<MapFaceToCells>, Features), StrError> {
         let do_rods_and_shells = match extract {
             Extract::All => true,
             Extract::Boundary => true,

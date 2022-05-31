@@ -1,4 +1,4 @@
-use super::{allocate_shapes, EdgesCellsMap2D, Extract, FacesCellsMap3D, Features, Find, Mesh};
+use super::{allocate_shapes, Extract, Features, Find, MapEdge2dToCells, MapFaceToCells, Mesh};
 use crate::shapes::Shape;
 use crate::StrError;
 use std::ffi::OsStr;
@@ -12,10 +12,10 @@ pub struct Region {
     pub shapes: Vec<Shape>,
 
     /// Maps all edge keys to cells sharing the edge (2D only)
-    pub all_2d_edges: Option<EdgesCellsMap2D>,
+    pub all_2d_edges: Option<MapEdge2dToCells>,
 
     /// Maps all face keys to cells sharing the face (3D only)
-    pub all_faces: Option<FacesCellsMap3D>,
+    pub all_faces: Option<MapFaceToCells>,
 
     /// Holds points, edges and faces on the mesh boundary, interior, or both
     ///

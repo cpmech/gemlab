@@ -1,4 +1,4 @@
-use crate::mesh::{Edge, EdgesCellsMap2D, Extract, Features, Mesh};
+use crate::mesh::{Edge, Extract, Features, MapEdge2dToCells, Mesh};
 use crate::shapes::Shape;
 use std::collections::{HashMap, HashSet};
 
@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 pub(crate) fn extract_features_2d(
     mesh: &Mesh,
     shapes: &Vec<Shape>,
-    edges: &EdgesCellsMap2D,
+    edges: &MapEdge2dToCells,
     extract: Extract,
 ) -> Features {
     assert_eq!(mesh.space_ndim, 2);

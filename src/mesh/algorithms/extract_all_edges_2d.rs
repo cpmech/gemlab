@@ -1,4 +1,4 @@
-use crate::mesh::{EdgeKey, EdgesCellsMap2D, Mesh};
+use crate::mesh::{EdgeKey, MapEdge2dToCells, Mesh};
 use crate::shapes::Shape;
 use crate::StrError;
 use russell_lab::sort2;
@@ -17,11 +17,11 @@ use std::collections::HashMap;
 ///     - `cell_id` -- the id of the cell sharing the edge
 ///     - `e` -- is the cell's local edge index
 #[inline]
-pub(crate) fn extract_all_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<EdgesCellsMap2D, StrError> {
+pub(crate) fn extract_all_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<MapEdge2dToCells, StrError> {
     if mesh.space_ndim != 2 {
         return Err("this function works in 2D only");
     }
-    let mut edges: EdgesCellsMap2D = HashMap::new();
+    let mut edges: MapEdge2dToCells = HashMap::new();
     mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
         if shape.geo_ndim == 2 {
             for e in 0..shape.nedge {

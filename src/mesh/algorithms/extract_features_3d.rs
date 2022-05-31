@@ -1,4 +1,4 @@
-use crate::mesh::{Edge, EdgeKey, Extract, Face, FacesCellsMap3D, Features, Mesh};
+use crate::mesh::{Edge, EdgeKey, Extract, Face, Features, MapFaceToCells, Mesh};
 use crate::shapes::Shape;
 use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 pub(crate) fn extract_features_3d(
     mesh: &Mesh,
     shapes: &Vec<Shape>,
-    faces: &FacesCellsMap3D,
+    faces: &MapFaceToCells,
     extract: Extract,
 ) -> Features {
     assert_eq!(mesh.space_ndim, 3);

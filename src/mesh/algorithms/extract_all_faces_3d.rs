@@ -1,4 +1,4 @@
-use crate::mesh::{FaceKey, FacesCellsMap3D, Mesh};
+use crate::mesh::{FaceKey, MapFaceToCells, Mesh};
 use crate::shapes::Shape;
 use crate::StrError;
 use russell_lab::sort4;
@@ -16,11 +16,11 @@ use std::collections::HashMap;
 /// * Returns a map relating face keys to `Vec<(cell_id, f)>` where:
 ///     - `cell_id` -- the id of the cell sharing the face
 ///     - `f` -- is the cell's local face index
-pub(crate) fn extract_all_faces_3d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<FacesCellsMap3D, StrError> {
+pub(crate) fn extract_all_faces_3d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<MapFaceToCells, StrError> {
     if mesh.space_ndim != 3 {
         return Err("this function works in 3D only");
     }
-    let mut faces: FacesCellsMap3D = HashMap::new();
+    let mut faces: MapFaceToCells = HashMap::new();
     mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
         if shape.geo_ndim == 3 {
             for f in 0..shape.nface {
