@@ -3,6 +3,20 @@ use crate::shapes::Shape;
 use std::collections::{HashMap, HashSet};
 
 /// Extracts mesh features in 2D
+///
+/// # Input
+///
+/// * `mesh` -- the Mesh
+/// * `shapes` -- the shapes of cells (len == cells.len())
+///
+/// # Output
+///
+/// * Returns [Features]
+///
+/// # Panics
+///
+/// 1. It panics if `shapes.len() != mesh.cells.len()` (i.e., the shapes vector and the mesh must be compatible)
+/// 2. It panics if `mesh.space_ndim != 2` (i.e., this function works in 2D only)
 pub(crate) fn extract_features_2d(
     mesh: &Mesh,
     shapes: &Vec<Shape>,
