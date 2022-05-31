@@ -3,7 +3,6 @@
 mod algorithms;
 mod block;
 mod check;
-mod enums;
 mod features;
 mod find;
 mod join_meshes;
@@ -16,7 +15,6 @@ mod samples;
 mod shapes_and_states;
 pub use crate::mesh::block::*;
 pub use crate::mesh::check::*;
-pub use crate::mesh::enums::*;
 pub use crate::mesh::features::*;
 pub use crate::mesh::find::*;
 pub use crate::mesh::join_meshes::*;

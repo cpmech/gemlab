@@ -1,9 +1,19 @@
-use super::{Cell, Constraint, Mesh, Point};
+use super::{Cell, Mesh, Point};
+use crate::geometry::Circle;
 use crate::shapes::{Shape, StateOfShape};
 use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol};
 use crate::StrError;
 use russell_lab::Vector;
 use std::collections::HashSet;
+
+#[derive(Clone, Debug)]
+pub enum Constraint {
+    /// Arc
+    Arc(Circle),
+
+    /// Arc surface extruded along X
+    ArcX(Circle),
+}
 
 /// Defines a polygon on polyhedron that can be split into smaller shapes
 ///
@@ -434,9 +444,9 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
-    use super::{Block, StrError};
+    use super::{Block, Constraint, StrError};
     use crate::geometry::Circle;
-    use crate::mesh::{Constraint, Samples};
+    use crate::mesh::Samples;
     use russell_chk::assert_vec_approx_eq;
 
     #[test]
@@ -925,5 +935,17 @@ mod tests {
         let correct = Samples::block_3d_eight_hex20();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         Ok(())
+    }
+
+    #[test]
+    fn derive_works() {
+        let constraint = Constraint::Arc(Circle {
+            center: [2.0, 3.0],
+            radius: 1.0,
+        });
+        let clone = constraint.clone();
+        let correct = "Arc(Circle { center: [2.0, 3.0], radius: 1.0 })";
+        assert_eq!(format!("{:?}", constraint), correct);
+        assert_eq!(format!("{:?}", clone), correct);
     }
 }
