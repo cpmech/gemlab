@@ -17,7 +17,7 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
 
     // find the boundary of mesh A
     let shapes_a = allocate_shapes(&a)?;
-    let (_, _, boundary_a) = Features::new(a, &shapes_a, Extract::Boundary)?;
+    let (_, _, boundary_a) = Features::new(a, &shapes_a, Extract::Boundary);
 
     // allocate and prepare a GridSearch for mesh A
     let mut min_a = boundary_a.min.clone();

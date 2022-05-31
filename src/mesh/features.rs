@@ -1,6 +1,6 @@
 use super::algorithms;
 use super::{CellId, Mesh, PointId};
-use crate::{shapes::Shape, StrError};
+use crate::shapes::Shape;
 use std::collections::{HashMap, HashSet};
 
 /// Aliases (usize,usize) as the key of edges
@@ -102,33 +102,36 @@ impl Features {
     /// **Note:** This function is to be used by [Region] and not by the end-user.
     ///
     /// **Note:** The points of rods or shells are only extracted with the All or Boundary options.
+    ///
+    /// # Panics
+    ///
+    /// 1. This function panics if `shapes.len() != mesh.cells.len()` (i.e., the shapes vector and the mesh must be compatible)
+    /// 2. This function works in 2D or 3D only; otherwise, it will panic.
     pub(crate) fn new(
         mesh: &Mesh,
         shapes: &Vec<Shape>,
         extract: Extract,
-    ) -> Result<(Option<MapEdge2dToCells>, Option<MapFaceToCells>, Features), StrError> {
+    ) -> (Option<MapEdge2dToCells>, Option<MapFaceToCells>, Features) {
+        assert!(mesh.space_ndim >= 2 && mesh.space_ndim <= 3);
+        let two_dim = if mesh.space_ndim == 2 { true } else { false };
         let do_rods_and_shells = match extract {
             Extract::All => true,
             Extract::Boundary => true,
             Extract::Interior => false,
         };
-        let (edges, faces, mut features) = match mesh.space_ndim {
-            2 => {
-                let edges = algorithms::extract_all_edges_2d(mesh, shapes)?;
-                let features = algorithms::extract_features_2d(mesh, shapes, &edges, extract);
-                (Some(edges), None, features)
-            }
-            3 => {
-                let faces = algorithms::extract_all_faces_3d(mesh, shapes)?;
-                let features = algorithms::extract_features_3d(mesh, shapes, &faces, extract);
-                (None, Some(faces), features)
-            }
-            _ => return Err("space_ndim must be 2 or 3 to extract features"),
+        let (edges, faces, mut features) = if two_dim {
+            let edges = algorithms::extract_all_2d_edges(mesh, shapes);
+            let features = algorithms::extract_features_2d(mesh, shapes, &edges, extract);
+            (Some(edges), None, features)
+        } else {
+            let faces = algorithms::extract_all_faces(mesh, shapes);
+            let features = algorithms::extract_features_3d(mesh, shapes, &faces, extract);
+            (None, Some(faces), features)
         };
         if do_rods_and_shells {
             algorithms::extract_rods_and_shells(mesh, &mut features);
         }
-        Ok((edges, faces, features))
+        (edges, faces, features)
     }
 }
 

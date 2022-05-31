@@ -37,7 +37,7 @@ impl Region {
     /// * `extract` -- which features to extract?
     pub fn with(mesh: Mesh, extract: Extract) -> Result<Self, StrError> {
         let shapes = allocate_shapes(&mesh)?;
-        let (all_2d_edges, all_faces, features) = Features::new(&mesh, &shapes, extract)?;
+        let (all_2d_edges, all_faces, features) = Features::new(&mesh, &shapes, extract);
         let find = Find::new(&mesh, &features)?;
         Ok(Region {
             mesh,

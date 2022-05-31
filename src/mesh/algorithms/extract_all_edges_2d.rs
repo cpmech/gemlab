@@ -1,10 +1,9 @@
 use crate::mesh::{EdgeKey, MapEdge2dToCells, Mesh};
 use crate::shapes::Shape;
-use crate::StrError;
 use russell_lab::sort2;
 use std::collections::HashMap;
 
-/// Extracts all edges (internal and boundary) in 2D
+/// Extracts all 2d edges (internal and boundary)
 ///
 /// # Input
 ///
@@ -14,13 +13,16 @@ use std::collections::HashMap;
 /// # Output
 ///
 /// * Returns a map relating edge keys to `Vec<(cell_id, e)>` where:
-///     - `cell_id` -- the id of the cell sharing the edge
+///     - `cell_id` -- is the id of the cell sharing the edge
 ///     - `e` -- is the cell's local edge index
+///
+/// # Panics
+///
+/// 1. It panics if `shapes.len() != mesh.cells.len()` (i.e., the shapes vector and the mesh must be compatible)
+/// 2. It panics if `mesh.space_ndim != 2` (i.e., this function works in 2D only)
 #[inline]
-pub(crate) fn extract_all_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<MapEdge2dToCells, StrError> {
-    if mesh.space_ndim != 2 {
-        return Err("this function works in 2D only");
-    }
+pub(crate) fn extract_all_2d_edges(mesh: &Mesh, shapes: &Vec<Shape>) -> MapEdge2dToCells {
+    assert_eq!(mesh.space_ndim, 2);
     let mut edges: MapEdge2dToCells = HashMap::new();
     mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
         if shape.geo_ndim == 2 {
@@ -35,40 +37,26 @@ pub(crate) fn extract_all_edges_2d(mesh: &Mesh, shapes: &Vec<Shape>) -> Result<M
             }
         }
     });
-    Ok(edges)
+    edges
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::extract_all_edges_2d;
-    use crate::mesh::{allocate_shapes, Mesh, Samples};
-    use crate::StrError;
+    use super::extract_all_2d_edges;
+    use crate::mesh::{allocate_shapes, Samples};
 
     #[test]
-    fn capture_some_wrong_input() {
-        let mesh = Mesh {
-            space_ndim: 1,
-            points: Vec::new(),
-            cells: Vec::new(),
-        };
-        assert_eq!(
-            extract_all_edges_2d(&mesh, &Vec::new()).err(),
-            Some("this function works in 2D only")
-        );
-    }
-
-    #[test]
-    fn extract_all_edges_2d_works() -> Result<(), StrError> {
+    fn extract_all_2d_edges_works() {
         //  3---------2---------5
         //  |         |         |
         //  |   [0]   |   [1]   |
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_shapes(&mesh)?;
-        let edges = extract_all_edges_2d(&mesh, &shapes)?;
+        let shapes = allocate_shapes(&mesh).unwrap();
+        let edges = extract_all_2d_edges(&mesh, &shapes);
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
         assert_eq!(keys, [&(0, 1), &(0, 3), &(1, 2), &(1, 4), &(2, 3), &(2, 5), &(4, 5)]);
@@ -79,19 +67,18 @@ mod tests {
         assert_eq!(edges.get(&(2, 3)).unwrap(), &[(0, 2)]);
         assert_eq!(edges.get(&(2, 5)).unwrap(), &[(1, 2)]);
         assert_eq!(edges.get(&(4, 5)).unwrap(), &[(1, 1)]);
-        Ok(())
     }
 
     #[test]
-    fn extract_all_edges_2d_mixed_works() -> Result<(), StrError> {
+    fn extract_all_2d_edges_mixed_works() {
         //           4---------3
         //           |         |
         //           |   [1]   |
         //           |         |
         //  0--------1---------2
         let mesh = Samples::mixed_shapes_2d();
-        let shapes = allocate_shapes(&mesh)?;
-        let edges = extract_all_edges_2d(&mesh, &shapes)?;
+        let shapes = allocate_shapes(&mesh).unwrap();
+        let edges = extract_all_2d_edges(&mesh, &shapes);
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
         assert_eq!(keys, [&(1, 2), &(1, 4), &(2, 3), &(3, 4)]);
@@ -99,6 +86,5 @@ mod tests {
         assert_eq!(edges.get(&(1, 4)).unwrap(), &[(1, 3)]);
         assert_eq!(edges.get(&(2, 3)).unwrap(), &[(1, 1)]);
         assert_eq!(edges.get(&(3, 4)).unwrap(), &[(1, 2)]);
-        Ok(())
     }
 }
