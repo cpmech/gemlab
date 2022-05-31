@@ -36,10 +36,6 @@ pub enum At {
 }
 
 /// Implements functions to find mesh features (points, edges, faces)
-///
-/// # Warning
-///
-/// All public members are **read-only**.
 pub struct Find {
     /// Space number of dimension (needed for the find functions)
     space_ndim: usize,
@@ -51,10 +47,10 @@ pub struct Find {
     grid: GridSearch,
 
     /// Maps a point id to edges sharing the point
-    pub point_to_edges: HashMap<PointId, HashSet<EdgeKey>>,
+    point_to_edges: HashMap<PointId, HashSet<EdgeKey>>,
 
     /// Maps a point id to faces sharing the point
-    pub point_to_faces: HashMap<PointId, HashSet<FaceKey>>,
+    point_to_faces: HashMap<PointId, HashSet<FaceKey>>,
 }
 
 impl Find {
