@@ -27,7 +27,7 @@ pub fn check_jacobian(mesh: &Mesh) -> Result<(), StrError> {
     let ksi = [0.0, 0.0, 0.0];
     for cell in &mesh.cells {
         let shape = Shape::new(mesh.space_ndim, cell.geo_ndim, cell.points.len())?;
-        let mut state = allocate_state(mesh, cell.id)?;
+        let mut state = allocate_state(mesh, cell.geo_ndim, &cell.points)?;
         let det_jac = shape.calc_jacobian(&mut state, &ksi)?;
         if det_jac < 0.0 {
             return Err("negative determinant of Jacobian found");

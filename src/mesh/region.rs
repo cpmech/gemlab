@@ -1,4 +1,4 @@
-use super::{allocate_shapes, Extract, Features, Find, MapEdge2dToCells, MapFaceToCells, Mesh};
+use super::{allocate_cell_shapes, Extract, Features, Find, MapEdge2dToCells, MapFaceToCells, Mesh};
 use crate::shapes::Shape;
 use crate::StrError;
 use std::ffi::OsStr;
@@ -36,7 +36,7 @@ impl Region {
     /// * `mesh` -- the mesh (will move to Region)
     /// * `extract` -- which features to extract?
     pub fn with(mesh: Mesh, extract: Extract) -> Result<Self, StrError> {
-        let shapes = allocate_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh)?;
         let (all_2d_edges, all_faces, features) = Features::new(&mesh, &shapes, extract);
         let find = Find::new(&mesh, &features)?;
         Ok(Region {

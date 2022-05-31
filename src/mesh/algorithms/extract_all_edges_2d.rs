@@ -45,7 +45,7 @@ pub(crate) fn extract_all_2d_edges(mesh: &Mesh, shapes: &Vec<Shape>) -> MapEdge2
 #[cfg(test)]
 mod tests {
     use super::extract_all_2d_edges;
-    use crate::mesh::{allocate_shapes, Samples};
+    use crate::mesh::{allocate_cell_shapes, Samples};
 
     #[test]
     fn extract_all_2d_edges_works() {
@@ -55,7 +55,7 @@ mod tests {
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_shapes(&mesh).unwrap();
+        let shapes = allocate_cell_shapes(&mesh).unwrap();
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
@@ -77,7 +77,7 @@ mod tests {
         //           |         |
         //  0--------1---------2
         let mesh = Samples::mixed_shapes_2d();
-        let shapes = allocate_shapes(&mesh).unwrap();
+        let shapes = allocate_cell_shapes(&mesh).unwrap();
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();

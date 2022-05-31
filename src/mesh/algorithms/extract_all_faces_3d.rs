@@ -55,7 +55,7 @@ pub(crate) fn extract_all_faces(mesh: &Mesh, shapes: &Vec<Shape>) -> MapFaceToCe
 #[cfg(test)]
 mod tests {
     use super::extract_all_faces;
-    use crate::mesh::{allocate_shapes, Samples};
+    use crate::mesh::{allocate_cell_shapes, Samples};
 
     #[test]
     fn extract_all_faces_works() {
@@ -80,7 +80,7 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_shapes(&mesh).unwrap();
+        let shapes = allocate_cell_shapes(&mesh).unwrap();
         let faces = extract_all_faces(&mesh, &shapes);
         let mut keys: Vec<_> = faces.keys().collect();
         keys.sort();
@@ -130,7 +130,7 @@ mod tests {
         //  12-----11-------1------------2------------8
         //
         let mesh = Samples::mixed_shapes_3d();
-        let shapes = allocate_shapes(&mesh).unwrap();
+        let shapes = allocate_cell_shapes(&mesh).unwrap();
         let faces = extract_all_faces(&mesh, &shapes);
         let mut keys: Vec<_> = faces.keys().collect();
         keys.sort();
