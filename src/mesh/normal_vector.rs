@@ -13,7 +13,7 @@ pub struct NormalVector {
     pub state: StateOfShape,
 
     /// Holds the normal vector output from the evaluate function
-    pub value: Vector,
+    pub normal: Vector,
 }
 
 impl NormalVector {
@@ -43,7 +43,7 @@ impl NormalVector {
         Ok(NormalVector {
             shape,
             state,
-            value: Vector::new(mesh.space_ndim),
+            normal: Vector::new(mesh.space_ndim),
         })
     }
 
@@ -73,7 +73,7 @@ impl NormalVector {
         Ok(NormalVector {
             shape,
             state,
-            value: Vector::new(mesh.space_ndim),
+            normal: Vector::new(mesh.space_ndim),
         })
     }
 
@@ -85,7 +85,7 @@ impl NormalVector {
     ///            while lengths greater than geo_ndim are allowed (and ignored). In this way,
     ///            we can pass a slice with integration point data such as `[f64; 4]`.
     pub fn evaluate(&mut self, ksi: &[f64]) -> Result<(), StrError> {
-        self.shape.calc_boundary_normal(&mut self.value, &mut self.state, ksi)
+        self.shape.calc_boundary_normal(&mut self.normal, &mut self.state, ksi)
     }
 }
 
