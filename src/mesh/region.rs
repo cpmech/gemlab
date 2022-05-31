@@ -1,19 +1,9 @@
-use super::{all_edges_2d, allocate_shapes, Extract, Features, Find, Mesh};
+use super::{allocate_shapes, EdgesCellsMap2D, Extract, FacesCellsMap3D, Features, Find, Mesh};
 use crate::shapes::Shape;
 use crate::StrError;
 use std::ffi::OsStr;
 
-/// Holds all (immutable) data related to a mesh including element shapes, boundaries, and functions to find entities
-///
-/// This struct is a (high-level) convenience that calls the necessary functions to generate all derived data from a mesh struct.
-///
-/// The Region basically calls the following functions:
-///
-/// ```text
-/// let shapes = allocate_shapes(&mesh)?;
-/// let boundary = Features::new(&mesh, &shapes, with_internal)?;
-/// let find = Find::new(&mesh, &boundary)?;
-/// ```
+/// Holds all (immutable) data related to a mesh including element shapes, boundary, interior, and functions to find features
 pub struct Region {
     /// Holds the raw mesh data
     pub mesh: Mesh,
@@ -21,10 +11,20 @@ pub struct Region {
     /// Holds all shapes of all cells (len = **number of cells**)
     pub shapes: Vec<Shape>,
 
-    /// Holds the boundary data such as points, edges, and faces on boundary
-    pub boundary: Features,
+    /// Maps all edge keys to cells sharing the edge (2D only)
+    pub all_2d_edges: Option<EdgesCellsMap2D>,
 
-    /// Allows finding points, edges, and faces on the boundary by giving coordinates or keys
+    /// Maps all face keys to cells sharing the face (3D only)
+    pub all_faces: Option<FacesCellsMap3D>,
+
+    /// Holds points, edges and faces on the mesh boundary, interior, or both
+    ///
+    /// Depends on the Extract option.
+    pub features: Features,
+
+    /// Finds features on the boundary, interior, or both
+    ///
+    /// Depends on the Extract option and corresponds to `features`.
     pub find: Find,
 }
 
@@ -33,59 +33,18 @@ impl Region {
     ///
     /// # Input
     ///
-    /// * `mesh` -- the mesh
-    /// * `with_internal` -- saves also the internal points, edges and faces in `boundary`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gemlab::mesh::{At, Cell, Extract, Mesh, Point, Region};
-    /// use gemlab::shapes::GeoKind;
-    /// use gemlab::StrError;
-    ///
-    /// fn main() -> Result<(), StrError> {
-    ///     //  3---------2---------5
-    ///     //  |         |         |
-    ///     //  |   [0]   |   [1]   |
-    ///     //  |         |         |
-    ///     //  0---------1---------4
-    ///     let mesh = Mesh {
-    ///         space_ndim: 2,
-    ///         points: vec![
-    ///             Point { id: 0, coords: vec![0.0, 0.0] },
-    ///             Point { id: 1, coords: vec![1.0, 0.0] },
-    ///             Point { id: 2, coords: vec![1.0, 1.0] },
-    ///             Point { id: 3, coords: vec![0.0, 1.0] },
-    ///             Point { id: 4, coords: vec![2.0, 0.0] },
-    ///             Point { id: 5, coords: vec![2.0, 1.0] },
-    ///         ],
-    ///         cells: vec![
-    ///             Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
-    ///             Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
-    ///         ],
-    ///     };
-    ///     let region = Region::with(mesh, Extract::Boundary)?;
-    ///     assert_eq!(region.mesh.space_ndim, 2);
-    ///     assert_eq!(region.shapes.len(), 2);
-    ///     assert_eq!(region.shapes[0].kind, GeoKind::Qua4);
-    ///     assert_eq!(region.boundary.points.len(), 6);
-    ///     assert_eq!(region.boundary.edges.len(), 6);
-    ///     assert_eq!(region.boundary.faces.len(), 0);
-    ///     assert_eq!(region.boundary.min, &[0.0, 0.0]);
-    ///     assert_eq!(region.boundary.max, &[2.0, 1.0]);
-    ///     assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
-    ///     Ok(())
-    /// }
-    /// ```
+    /// * `mesh` -- the mesh (will move to Region)
+    /// * `extract` -- which features to extract?
     pub fn with(mesh: Mesh, extract: Extract) -> Result<Self, StrError> {
         let shapes = allocate_shapes(&mesh)?;
-        let edges = all_edges_2d(&mesh, &shapes)?;
-        let boundary = Features::extract(&mesh, &shapes, Some(&edges), None, extract)?;
-        let find = Find::new(&mesh, &boundary)?;
+        let (all_2d_edges, all_faces, features) = Features::new(&mesh, &shapes, extract)?;
+        let find = Find::new(&mesh, &features)?;
         Ok(Region {
             mesh,
             shapes,
-            boundary,
+            all_2d_edges,
+            all_faces,
+            features,
             find,
         })
     }
@@ -95,7 +54,7 @@ impl Region {
     /// # Input
     ///
     /// * `mesh_text` -- text representing the mesh
-    /// * `with_internal` -- saves also the internal points, edges and faces in `boundary`
+    /// * `extract` -- which features to extract?
     #[inline]
     pub fn with_text(mesh_text: &str, extract: Extract) -> Result<Self, StrError> {
         let mesh = Mesh::from_text(mesh_text)?;
@@ -107,7 +66,7 @@ impl Region {
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
-    /// * `with_internal` -- saves also the internal points, edges and faces in `boundary`
+    /// * `extract` -- which features to extract?
     #[inline]
     pub fn with_text_file<P>(full_path: &P, extract: Extract) -> Result<Self, StrError>
     where
@@ -122,7 +81,7 @@ impl Region {
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
-    /// * `with_internal` -- saves also the internal points, edges and faces in `boundary`
+    /// * `extract` -- which features to extract?
     #[inline]
     pub fn with_binary_file<P>(full_path: &P, extract: Extract) -> Result<Self, StrError>
     where
@@ -136,105 +95,4 @@ impl Region {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
-mod tests {
-    use super::{Mesh, Region};
-    use crate::mesh::{At, Extract, Samples};
-    use crate::StrError;
-
-    #[test]
-    fn with_works() -> Result<(), StrError> {
-        //  3---------2---------5
-        //  |         |         |
-        //  |   [0]   |   [1]   |
-        //  |         |         |
-        //  0---------1---------4
-        let mesh = Samples::two_quads_horizontal();
-        let region = Region::with(mesh, Extract::Boundary)?;
-        // println!("{:?}", mesh); // WRONG: mesh has been moved into region
-        assert_eq!(region.mesh.space_ndim, 2);
-        assert_eq!(region.shapes.len(), 2);
-        assert_eq!(region.boundary.points.len(), 6);
-        assert_eq!(region.boundary.edges.len(), 6);
-        assert_eq!(region.boundary.faces.len(), 0);
-        assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
-        Ok(())
-    }
-
-    #[test]
-    fn with_text_works() -> Result<(), StrError> {
-        let region = Region::with_text(
-            "# 1.0  3-----------2-----------5
-             #      |           |           |
-             #      |    [0]    |    [1]    |  [*] indicates id
-             #      |    (1)    |    (2)    |  (*) indicates attribute_id
-             #      |           |           |
-             # 0.0  0-----------1-----------4
-             #     0.0         1.0         2.0
-             #
-             # header
-             # space_ndim npoint ncell
-                        2      6     2
-
-             # points
-             # id    x   y
-                0  0.0 0.0
-                1  1.0 0.0
-                2  1.0 1.0
-                3  0.0 1.0
-                4  2.0 0.0
-                5  2.0 1.0
-
-             # cells
-             # id att geo_ndim nnode  point_ids...
-                0   1        2     4  0 1 2 3
-                1   2        2     4  1 4 5 2
-             ",
-            Extract::Boundary,
-        )?;
-        assert_eq!(region.mesh.space_ndim, 2);
-        assert_eq!(region.shapes.len(), 2);
-        assert_eq!(region.boundary.points.len(), 6);
-        assert_eq!(region.boundary.edges.len(), 6);
-        assert_eq!(region.boundary.faces.len(), 0);
-        assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
-        Ok(())
-    }
-
-    #[test]
-    fn with_text_file_works() -> Result<(), StrError> {
-        //  3---------2---------5
-        //  |         |         |
-        //  |   [0]   |   [1]   |
-        //  |         |         |
-        //  0---------1---------4
-        let mesh = Mesh::from_text_file("./data/meshes/two_quads_horizontal.msh")?;
-        let region = Region::with(mesh, Extract::Boundary)?;
-        assert_eq!(region.mesh.space_ndim, 2);
-        assert_eq!(region.shapes.len(), 2);
-        assert_eq!(region.boundary.points.len(), 6);
-        assert_eq!(region.boundary.edges.len(), 6);
-        assert_eq!(region.boundary.faces.len(), 0);
-        assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
-        Ok(())
-    }
-
-    #[test]
-    fn with_binary_file_works() -> Result<(), StrError> {
-        //  3---------2---------5
-        //  |         |         |
-        //  |   [0]   |   [1]   |
-        //  |         |         |
-        //  0---------1---------4
-        let full_path = "/tmp/gemlab/test_region_two_quads_horizontal.dat";
-        let mesh = Samples::two_quads_horizontal();
-        mesh.write(full_path)?;
-        let region = Region::with_binary_file(full_path, Extract::Boundary)?;
-        assert_eq!(region.mesh.space_ndim, 2);
-        assert_eq!(region.shapes.len(), 2);
-        assert_eq!(region.boundary.points.len(), 6);
-        assert_eq!(region.boundary.edges.len(), 6);
-        assert_eq!(region.boundary.faces.len(), 0);
-        assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
-        Ok(())
-    }
-}
+mod tests {}
