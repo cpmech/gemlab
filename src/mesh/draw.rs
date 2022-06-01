@@ -26,68 +26,97 @@ pub struct Draw {
     /// Canvas to draw edges
     pub canvas_edges: Canvas,
 
-    /// Canvas to draw nodes (markers)
-    pub canvas_nodes: Curve,
+    /// Canvas to draw points (markers)
+    pub canvas_points: Curve,
 
-    /// Canvas to draw labels of nodes
-    pub canvas_nodes_labels: Text,
+    /// Canvas to draw point ids
+    pub canvas_point_ids: Text,
 
-    /// Canvas to draw labels of cells
-    pub canvas_cells_labels: Text,
-
-    /// With drawing of nodes (markers); not available if with_labels = true
-    pub with_nodes: bool,
-
-    /// With drawing of labels of nodes; will turn off with_nodes
-    pub with_labels_nodes: bool,
-
-    /// Will set the coordinates range (min/max)
-    pub with_set_range: bool,
+    /// Canvas to draw cell ids
+    pub canvas_cell_ids: Text,
 }
 
 impl Draw {
     /// Allocates a new instance
     pub fn new() -> Self {
         let mut canvas_edges = Canvas::new();
-        let mut canvas_nodes = Curve::new();
-        let mut canvas_nodes_labels = Text::new();
-        let mut canvas_cells_labels = Text::new();
+        let mut canvas_points = Curve::new();
+        let mut canvas_point_ids = Text::new();
+        let mut canvas_cell_ids = Text::new();
         canvas_edges
             .set_stop_clip(true)
             .set_face_color("None")
             .set_line_width(2.0)
             .set_edge_color("#2440cd");
-        canvas_nodes
+        canvas_points
             .set_stop_clip(true)
             .set_marker_color("black")
             .set_marker_line_color("white")
             .set_marker_style("o")
             .set_line_style("None");
-        canvas_nodes_labels
+        canvas_point_ids
             .set_color("red")
             .set_fontsize(8.0)
             .set_align_horizontal("center")
             .set_align_vertical("center")
             .set_bbox(true)
             .set_bbox_facecolor("white")
-            .set_bbox_edgecolor("None");
-        canvas_cells_labels
+            .set_bbox_edgecolor("None")
+            .set_bbox_style("circle,pad=0.15");
+        canvas_cell_ids
             .set_color("#22971f")
             .set_fontsize(9.0)
             .set_align_horizontal("center")
             .set_align_vertical("center")
             .set_bbox(true)
             .set_bbox_facecolor("white")
-            .set_bbox_edgecolor("#b7b7b7");
+            .set_bbox_edgecolor("#b7b7b7")
+            .set_bbox_style("square,pad=0.15");
         Draw {
             canvas_edges,
-            canvas_nodes,
-            canvas_nodes_labels,
-            canvas_cells_labels,
-            with_nodes: true,
-            with_labels_nodes: false,
-            with_set_range: true,
+            canvas_points,
+            canvas_point_ids,
+            canvas_cell_ids,
         }
+    }
+
+    /// Draws all points (markers)
+    pub fn points(&mut self, plot: &mut Plot, mesh: &Mesh) {
+        if mesh.space_ndim == 2 {
+            self.canvas_points.points_begin();
+            mesh.points.iter().for_each(|point| {
+                self.canvas_points.points_add(point.coords[0], point.coords[1]);
+            });
+            self.canvas_points.points_end();
+        } else {
+            self.canvas_points.points_3d_begin();
+            mesh.points.iter().for_each(|point| {
+                self.canvas_points
+                    .points_3d_add(point.coords[0], point.coords[1], point.coords[2]);
+            });
+            self.canvas_points.points_3d_end();
+        }
+        plot.add(&self.canvas_points);
+    }
+
+    /// Draws all point ids (labels)
+    pub fn point_ids(&mut self, plot: &mut Plot, mesh: &Mesh) {
+        if mesh.space_ndim == 2 {
+            mesh.points.iter().for_each(|point| {
+                self.canvas_point_ids
+                    .draw(point.coords[0], point.coords[1], format!("{}", point.id).as_str());
+            });
+        } else {
+            mesh.points.iter().for_each(|point| {
+                self.canvas_point_ids.draw_3d(
+                    point.coords[0],
+                    point.coords[1],
+                    point.coords[2],
+                    format!("{}", point.id).as_str(),
+                );
+            });
+        }
+        plot.add(&self.canvas_point_ids);
     }
 
     /// Draws ids and attributes of cells
@@ -126,40 +155,32 @@ impl Draw {
             };
             shape.calc_coords(&mut x, &mut state, ksi)?;
 
-            if cell.id == 4 {
-                println!("{}: {:?} => {:?}", cell.id, ksi, x.as_data());
-            }
-
             // add label
             if space_ndim == 2 {
-                self.canvas_cells_labels
+                self.canvas_cell_ids
                     .draw(x[0], x[1], format!("{}({})", cell.id, cell.attribute_id).as_str());
             } else {
-                self.canvas_cells_labels.draw_3d(
-                    x[0],
-                    x[1],
-                    x[2],
-                    format!("{}({})", cell.id, cell.attribute_id).as_str(),
-                );
+                self.canvas_cell_ids
+                    .draw_3d(x[0], x[1], x[2], format!("{}({})", cell.id, cell.attribute_id).as_str());
             }
         }
 
         // add to plot
-        plot.add(&self.canvas_cells_labels);
+        plot.add(&self.canvas_cell_ids);
         Ok(())
     }
 
     /// Draws edges
-    pub fn edges(&mut self, plot: &mut Plot, region: &Region) -> Result<(), StrError> {
+    pub fn edges(&mut self, plot: &mut Plot, region: &Region, set_range: bool) -> Result<(), StrError> {
         if region.mesh.space_ndim == 2 {
-            self.edges_2d(plot, &region.mesh, &region.features)
+            self.edges_2d(plot, &region.mesh, &region.features, set_range)
         } else {
-            self.edges_3d(plot, &region.mesh, &region.features)
+            self.edges_3d(plot, &region.mesh, &region.features, set_range)
         }
     }
 
     /// Draws 2D edges
-    fn edges_2d(&mut self, plot: &mut Plot, mesh: &Mesh, features: &Features) -> Result<(), StrError> {
+    fn edges_2d(&mut self, plot: &mut Plot, mesh: &Mesh, features: &Features, set_range: bool) -> Result<(), StrError> {
         // space dimension
         let space_ndim = mesh.space_ndim;
         assert_eq!(space_ndim, 2);
@@ -242,37 +263,14 @@ impl Draw {
         // end polycurve and add to plot
         self.canvas_edges.polycurve_end(false);
         plot.add(&self.canvas_edges);
-        if self.with_set_range {
+        if set_range {
             plot.set_range(features.min[0], features.max[0], features.min[1], features.max[1]);
-        }
-
-        // add nodes
-        if self.with_nodes && !self.with_labels_nodes {
-            self.canvas_nodes.points_begin();
-            for p in &features.points {
-                self.canvas_nodes
-                    .points_add(mesh.points[*p].coords[0], mesh.points[*p].coords[1]);
-            }
-            self.canvas_nodes.points_end();
-            plot.add(&self.canvas_nodes);
-        }
-
-        // add nodes labels
-        if self.with_labels_nodes {
-            for p in &features.points {
-                self.canvas_nodes_labels.draw(
-                    mesh.points[*p].coords[0],
-                    mesh.points[*p].coords[1],
-                    format!("{}", *p).as_str(),
-                );
-            }
-            plot.add(&self.canvas_nodes_labels);
         }
         Ok(())
     }
 
     /// Draws 3D edges
-    fn edges_3d(&mut self, plot: &mut Plot, mesh: &Mesh, features: &Features) -> Result<(), StrError> {
+    fn edges_3d(&mut self, plot: &mut Plot, mesh: &Mesh, features: &Features, set_range: bool) -> Result<(), StrError> {
         // space dimension
         let space_ndim = mesh.space_ndim;
         assert_eq!(space_ndim, 3);
@@ -362,7 +360,7 @@ impl Draw {
 
         // add to plot
         plot.add(&self.canvas_edges);
-        if self.with_set_range {
+        if set_range {
             plot.set_range_3d(
                 features.min[0],
                 features.max[0],
@@ -371,33 +369,6 @@ impl Draw {
                 features.min[2],
                 features.max[2],
             );
-        }
-
-        // add nodes
-        if self.with_nodes && !self.with_labels_nodes {
-            self.canvas_nodes.points_3d_begin();
-            for p in &features.points {
-                self.canvas_nodes.points_3d_add(
-                    mesh.points[*p].coords[0],
-                    mesh.points[*p].coords[1],
-                    mesh.points[*p].coords[2],
-                );
-            }
-            self.canvas_nodes.points_3d_end();
-            plot.add(&self.canvas_nodes);
-        }
-
-        // add nodes labels
-        if self.with_labels_nodes {
-            for p in &features.points {
-                self.canvas_nodes_labels.draw_3d(
-                    mesh.points[*p].coords[0],
-                    mesh.points[*p].coords[1],
-                    mesh.points[*p].coords[2],
-                    format!("{}", *p).as_str(),
-                );
-            }
-            plot.add(&self.canvas_nodes_labels);
         }
         Ok(())
     }
@@ -413,7 +384,7 @@ mod tests {
     use plotpy::{Canvas, Plot};
 
     #[test]
-    fn draw_works_2d() -> Result<(), StrError> {
+    fn draw_works_2d_ring() -> Result<(), StrError> {
         // draw reference circles
         let mut plot = Plot::new();
         let mut circle_in = Canvas::new();
@@ -442,77 +413,130 @@ mod tests {
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
-        draw.with_labels_nodes = true;
-        draw.edges(&mut plot, &region)?;
+        draw.edges(&mut plot, &region, false)?;
+
+        // draw points and point ids
+        draw.canvas_point_ids
+            .set_align_horizontal("left")
+            .set_align_vertical("bottom")
+            .set_color("black")
+            .set_bbox_facecolor("gold")
+            .set_bbox_alpha(0.5);
+        draw.points(&mut plot, &region.mesh);
+        draw.point_ids(&mut plot, &region.mesh);
 
         // draw cell ids
         draw.cell_ids(&mut plot, &region)?;
 
         // save figure
-        plot.set_figure_size_points(800.0, 800.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_2d.svg")?;
+        // plot.set_figure_size_points(400.0, 400.0)
+        //     .set_equal_axes(true)
+        //     .set_range(-0.2, 2.2, -0.2, 2.2)
+        //     .save("/tmp/gemlab/draw_works_2d_ring.svg")?;
+        Ok(())
+    }
+
+    #[test]
+    fn draw_works_2d_qua12() -> Result<(), StrError> {
+        let mut plot = Plot::new();
+        let mesh = Samples::block_2d_four_qua12();
+        let region = Region::with(mesh, Extract::All)?;
+        let mut draw = Draw::new();
+        draw.edges(&mut plot, &region, true)?;
+        draw.point_ids(&mut plot, &region.mesh);
+        draw.cell_ids(&mut plot, &region)?;
+        // plot.set_figure_size_points(400.0, 400.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/draw_works_2d_qua12.svg")?;
+        Ok(())
+    }
+
+    #[test]
+    fn draw_works_2d_qua16() -> Result<(), StrError> {
+        let mut plot = Plot::new();
+        let mesh = Samples::block_2d_four_qua16();
+        let region = Region::with(mesh, Extract::All)?;
+        let mut draw = Draw::new();
+        draw.edges(&mut plot, &region, true)?;
+        draw.point_ids(&mut plot, &region.mesh);
+        draw.cell_ids(&mut plot, &region)?;
+        // plot.set_figure_size_points(400.0, 400.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/draw_works_2d_qua16.svg")?;
+        Ok(())
+    }
+
+    #[test]
+    fn draw_works_2d_qua17() -> Result<(), StrError> {
+        let mut plot = Plot::new();
+        let mesh = Samples::block_2d_four_qua17();
+        let region = Region::with(mesh, Extract::All)?;
+        let mut draw = Draw::new();
+        draw.edges(&mut plot, &region, true)?;
+        draw.point_ids(&mut plot, &region.mesh);
+        // plot.set_figure_size_points(400.0, 400.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/draw_works_2d_qua17.svg")?;
+        Ok(())
+    }
+
+    #[test]
+    fn draw_works_2d_mixed() -> Result<(), StrError> {
+        let mut plot = Plot::new();
+        let mesh = Samples::mixed_shapes_2d();
+        let region = Region::with(mesh, Extract::All)?;
+        let mut draw = Draw::new();
+        draw.edges(&mut plot, &region, true)?;
+        draw.point_ids(&mut plot, &region.mesh);
+        draw.cell_ids(&mut plot, &region)?;
+        // plot.set_figure_size_points(400.0, 400.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/draw_works_2d_mixed.svg")?;
         Ok(())
     }
 
     #[test]
     fn draw_works_3d() -> Result<(), StrError> {
-        // draw edges
         let mut plot = Plot::new();
         let mesh = Samples::two_cubes_vertical();
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
-        draw.with_labels_nodes = true;
-        draw.edges(&mut plot, &region)?;
-
-        // draw cell ids
+        draw.edges(&mut plot, &region, true)?;
+        draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region)?;
-
-        // save figure
-        plot.set_figure_size_points(800.0, 800.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_2d.svg")?;
+        // plot.set_figure_size_points(500.0, 500.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/draw_works_3d.svg")?;
         Ok(())
     }
 
     #[test]
-    fn draw_works_3d_wall() -> Result<(), StrError> {
-        // draw edges
+    fn draw_works_3d_eight_hex20() -> Result<(), StrError> {
         let mut plot = Plot::new();
-        let mesh = Samples::four_cubes_wall();
+        let mesh = Samples::block_3d_eight_hex20();
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
-        draw.with_labels_nodes = true;
-        draw.edges(&mut plot, &region)?;
-
-        // draw cell ids
+        draw.edges(&mut plot, &region, true)?;
+        draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region)?;
-
-        // save figure
-        plot.set_figure_size_points(800.0, 800.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_3d_wall.svg")?;
+        // plot.set_figure_size_points(800.0, 800.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/draw_works_3d_eight_hex20.svg")?;
         Ok(())
     }
 
     #[test]
     fn draw_works_3d_mixed() -> Result<(), StrError> {
-        // draw edges
         let mut plot = Plot::new();
         let mesh = Samples::mixed_shapes_3d();
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
-        draw.with_labels_nodes = true;
-        draw.edges(&mut plot, &region)?;
-
-        // draw cell ids
+        draw.edges(&mut plot, &region, true)?;
+        draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region)?;
-
-        // save figure
-        plot.set_figure_size_points(800.0, 800.0)
-            .set_equal_axes(true)
-            // .save_and_show("/tmp/gemlab/draw_works_3d_mixed.svg")?;
-            .save("/tmp/gemlab/draw_works_3d_mixed.svg")?;
+        // plot.set_figure_size_points(800.0, 800.0)
+        //     .set_equal_axes(true)
+        //     .save("/tmp/gemlab/draw_works_3d_mixed.svg")?;
         Ok(())
     }
 }
