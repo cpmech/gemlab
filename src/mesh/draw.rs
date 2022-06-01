@@ -502,6 +502,13 @@ mod tests {
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
+        draw.canvas_point_ids
+            .set_align_horizontal("left")
+            .set_align_vertical("bottom")
+            .set_color("black")
+            .set_bbox_facecolor("gold")
+            .set_bbox_alpha(0.5);
+        draw.points(&mut plot, &region.mesh);
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region)?;
         // plot.set_figure_size_points(500.0, 500.0)
