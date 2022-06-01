@@ -1,6 +1,7 @@
 use super::{Features, Mesh, Region};
 use crate::mesh::allocate_state;
-use crate::shapes::{geo_class_and_kind, GeoKind, Shape, StateOfShape};
+use crate::shapes::{geo_class_and_kind, GeoClass, GeoKind, Shape, StateOfShape};
+use crate::util::ONE_BY_3;
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
 use russell_lab::Vector;
@@ -31,6 +32,9 @@ pub struct Draw {
     /// Canvas to draw labels of nodes
     pub canvas_nodes_labels: Text,
 
+    /// Canvas to draw labels of cells
+    pub canvas_cells_labels: Text,
+
     /// With drawing of nodes (markers); not available if with_labels = true
     pub with_nodes: bool,
 
@@ -47,6 +51,7 @@ impl Draw {
         let mut canvas_edges = Canvas::new();
         let mut canvas_nodes = Curve::new();
         let mut canvas_nodes_labels = Text::new();
+        let mut canvas_cells_labels = Text::new();
         canvas_edges
             .set_stop_clip(true)
             .set_face_color("None")
@@ -66,14 +71,82 @@ impl Draw {
             .set_bbox(true)
             .set_bbox_facecolor("white")
             .set_bbox_edgecolor("None");
+        canvas_cells_labels
+            .set_color("#22971f")
+            .set_fontsize(9.0)
+            .set_align_horizontal("center")
+            .set_align_vertical("center")
+            .set_bbox(true)
+            .set_bbox_facecolor("white")
+            .set_bbox_edgecolor("#b7b7b7");
         Draw {
             canvas_edges,
             canvas_nodes,
             canvas_nodes_labels,
+            canvas_cells_labels,
             with_nodes: true,
             with_labels_nodes: false,
             with_set_range: true,
         }
+    }
+
+    /// Draws ids and attributes of cells
+    pub fn cell_ids(&mut self, plot: &mut Plot, region: &Region) -> Result<(), StrError> {
+        // auxiliary
+        let mesh = &region.mesh;
+        let space_ndim = mesh.space_ndim;
+        let mut states_memo: HashMap<GeoKind, StateOfShape> = HashMap::new();
+        let ksi_hex = &[0.0, 0.0, 0.0];
+        let ksi_tet = &[ONE_BY_3, ONE_BY_3, ONE_BY_3];
+        let mut x = Vector::new(space_ndim);
+
+        // loop over all cells
+        for cell_id in 0..mesh.cells.len() {
+            // shape and state
+            let (cell, shape) = (&mesh.cells[cell_id], &region.shapes[cell_id]);
+            let (_, kind) = geo_class_and_kind(cell.geo_ndim, cell.points.len())?;
+            let mut state = states_memo
+                .entry(kind)
+                .or_insert(allocate_state(&mesh, shape.geo_ndim, &cell.points)?);
+
+            // set coordinates
+            for m in 0..cell.points.len() {
+                for i in 0..space_ndim {
+                    state.coords_transp[i][m] = mesh.points[cell.points[m]].coords[i];
+                }
+            }
+
+            // calc center of cell by using center of the reference space
+            let ksi = match shape.class {
+                GeoClass::Lin => ksi_hex,
+                GeoClass::Tri => ksi_tet,
+                GeoClass::Qua => ksi_hex,
+                GeoClass::Tet => ksi_tet,
+                GeoClass::Hex => ksi_hex,
+            };
+            shape.calc_coords(&mut x, &mut state, ksi)?;
+
+            if cell.id == 4 {
+                println!("{}: {:?} => {:?}", cell.id, ksi, x.as_data());
+            }
+
+            // add label
+            if space_ndim == 2 {
+                self.canvas_cells_labels
+                    .draw(x[0], x[1], format!("{}({})", cell.id, cell.attribute_id).as_str());
+            } else {
+                self.canvas_cells_labels.draw_3d(
+                    x[0],
+                    x[1],
+                    x[2],
+                    format!("{}({})", cell.id, cell.attribute_id).as_str(),
+                );
+            }
+        }
+
+        // add to plot
+        plot.add(&self.canvas_cells_labels);
+        Ok(())
     }
 
     /// Draws edges
@@ -124,7 +197,7 @@ impl Draw {
                 .entry(kind)
                 .or_insert(allocate_state(&mesh, EDGE_GEO_NDIM, &edge.points)?);
 
-            // set coordinates of GeoKind::Lin
+            // set coordinates
             for m in 0..nnode {
                 for i in 0..space_ndim {
                     state.coords_transp[i][m] = mesh.points[edge.points[m]].coords[i];
@@ -340,7 +413,7 @@ mod tests {
     use plotpy::{Canvas, Plot};
 
     #[test]
-    fn draw_edges_works() -> Result<(), StrError> {
+    fn draw_works_2d() -> Result<(), StrError> {
         // draw reference circles
         let mut plot = Plot::new();
         let mut circle_in = Canvas::new();
@@ -372,15 +445,18 @@ mod tests {
         draw.with_labels_nodes = true;
         draw.edges(&mut plot, &region)?;
 
+        // draw cell ids
+        draw.cell_ids(&mut plot, &region)?;
+
         // save figure
         plot.set_figure_size_points(800.0, 800.0)
             .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_edges_works.svg")?;
+            .save("/tmp/gemlab/draw_works_2d.svg")?;
         Ok(())
     }
 
     #[test]
-    fn draw_edges_3d_works() -> Result<(), StrError> {
+    fn draw_works_3d() -> Result<(), StrError> {
         // draw edges
         let mut plot = Plot::new();
         let mesh = Samples::two_cubes_vertical();
@@ -389,10 +465,54 @@ mod tests {
         draw.with_labels_nodes = true;
         draw.edges(&mut plot, &region)?;
 
+        // draw cell ids
+        draw.cell_ids(&mut plot, &region)?;
+
         // save figure
         plot.set_figure_size_points(800.0, 800.0)
             .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_edges_3d_works.svg")?;
+            .save("/tmp/gemlab/draw_works_2d.svg")?;
+        Ok(())
+    }
+
+    #[test]
+    fn draw_works_3d_wall() -> Result<(), StrError> {
+        // draw edges
+        let mut plot = Plot::new();
+        let mesh = Samples::four_cubes_wall();
+        let region = Region::with(mesh, Extract::All)?;
+        let mut draw = Draw::new();
+        draw.with_labels_nodes = true;
+        draw.edges(&mut plot, &region)?;
+
+        // draw cell ids
+        draw.cell_ids(&mut plot, &region)?;
+
+        // save figure
+        plot.set_figure_size_points(800.0, 800.0)
+            .set_equal_axes(true)
+            .save("/tmp/gemlab/draw_works_3d_wall.svg")?;
+        Ok(())
+    }
+
+    #[test]
+    fn draw_works_3d_mixed() -> Result<(), StrError> {
+        // draw edges
+        let mut plot = Plot::new();
+        let mesh = Samples::mixed_shapes_3d();
+        let region = Region::with(mesh, Extract::All)?;
+        let mut draw = Draw::new();
+        draw.with_labels_nodes = true;
+        draw.edges(&mut plot, &region)?;
+
+        // draw cell ids
+        draw.cell_ids(&mut plot, &region)?;
+
+        // save figure
+        plot.set_figure_size_points(800.0, 800.0)
+            .set_equal_axes(true)
+            // .save_and_show("/tmp/gemlab/draw_works_3d_mixed.svg")?;
+            .save("/tmp/gemlab/draw_works_3d_mixed.svg")?;
         Ok(())
     }
 }
