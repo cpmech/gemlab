@@ -1,7 +1,7 @@
 use super::num_divisions;
 use crate::geometry::{point_circle_distance, point_cylinder_distance, point_line_distance, point_point_distance};
 use crate::StrError;
-use plotpy::{Curve, Plot, Shapes, Text};
+use plotpy::{Canvas, Curve, Plot, Text};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -547,11 +547,11 @@ impl GridSearch {
             xmax[i] = self.max[i];
             ndiv[i] = self.ndiv[i];
         }
-        let mut shapes = Shapes::new();
-        shapes
+        let mut canvas = Canvas::new();
+        canvas
             .set_alt_text_color("#5d5d5d")
             .draw_grid(&xmin, &xmax, &ndiv, false, true)?;
-        plot.add(&shapes);
+        plot.add(&canvas);
 
         // draw items
         let mut curve = Curve::new();
@@ -787,7 +787,7 @@ mod tests {
     use super::{GridSearch, GsNdiv, GsTol};
     use crate::util::SQRT_2;
     use crate::StrError;
-    use plotpy::{Curve, Shapes, Surface};
+    use plotpy::{Canvas, Curve, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     struct TestData<'a> {
@@ -1649,20 +1649,20 @@ mod tests {
             g2d.insert(data.id, data.x)?;
         }
         let mut plot = g2d.plot()?;
-        let mut shapes = Shapes::new();
-        shapes.set_face_color("None").set_edge_color("magenta");
-        shapes.draw_circle(0.5, 0.8, g2d.radius);
-        shapes.draw_circle(0.1, 0.4, g2d.radius);
-        shapes.draw_circle(0.5, 0.0, g2d.radius);
-        shapes.draw_circle(0.1, 1.6, g2d.radius);
-        shapes.set_edge_color("#fab32f").set_line_width(1.5);
-        shapes.draw_polyline(&vec![vec![0.6, -0.2], vec![0.6, 1.8]], false);
-        shapes.draw_polyline(&vec![vec![-0.2, 1.8], vec![0.8, 1.8]], false);
-        shapes.draw_polyline(&vec![vec![0.2, -0.2], vec![0.8, 0.1]], false);
-        shapes.draw_polyline(&vec![vec![0.1 + g2d.radius, -0.2], vec![0.1 + g2d.radius, 1.8]], false);
-        shapes.set_edge_color("green").set_line_width(0.5);
-        shapes.draw_circle(-0.2, 1.8, 0.3);
-        plot.add(&shapes);
+        let mut canvas = Canvas::new();
+        canvas.set_face_color("None").set_edge_color("magenta");
+        canvas.draw_circle(0.5, 0.8, g2d.radius);
+        canvas.draw_circle(0.1, 0.4, g2d.radius);
+        canvas.draw_circle(0.5, 0.0, g2d.radius);
+        canvas.draw_circle(0.1, 1.6, g2d.radius);
+        canvas.set_edge_color("#fab32f").set_line_width(1.5);
+        canvas.draw_polyline(&vec![vec![0.6, -0.2], vec![0.6, 1.8]], false);
+        canvas.draw_polyline(&vec![vec![-0.2, 1.8], vec![0.8, 1.8]], false);
+        canvas.draw_polyline(&vec![vec![0.2, -0.2], vec![0.8, 0.1]], false);
+        canvas.draw_polyline(&vec![vec![0.1 + g2d.radius, -0.2], vec![0.1 + g2d.radius, 1.8]], false);
+        canvas.set_edge_color("green").set_line_width(0.5);
+        canvas.draw_circle(-0.2, 1.8, 0.3);
+        plot.add(&canvas);
         plot.set_equal_axes(true)
             .set_range(-0.4, 1.0, -0.4, 2.0)
             .set_ticks_x(0.1, 0.0, "")
