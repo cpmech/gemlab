@@ -229,7 +229,7 @@ impl Samples {
                 Cell { id: 1, attribute_id: 2, geo_ndim: 3, points: vec![2,8,3,6] },
                 Cell { id: 2, attribute_id: 2, geo_ndim: 2, points: vec![3,9,10,7] },
                 Cell { id: 3, attribute_id: 2, geo_ndim: 2, points: vec![8,9,3] },
-                Cell { id: 4, attribute_id: 3, geo_ndim: 1, points: vec![1,11,12] },
+                Cell { id: 4, attribute_id: 3, geo_ndim: 1, points: vec![1,12,11] },
             ],
         }
     }
