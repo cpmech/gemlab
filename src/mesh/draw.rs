@@ -153,13 +153,13 @@ impl Draw {
 
         // add nodes
         if self.nodes {
-            // plt.nodes.begin();
-            // for p in &region.features.points {
-            //     plt.nodes
-            //         .add(region.mesh.points[*p].coords[0], region.mesh.points[*p].coords[1])
-            // }
-            // plt.nodes.end();
-            // plot.add(&plt.nodes);
+            self.canvas_nodes.points_begin();
+            for p in &features.points {
+                self.canvas_nodes
+                    .points_add(mesh.points[*p].coords[0], mesh.points[*p].coords[1]);
+            }
+            self.canvas_nodes.points_end();
+            plot.add(&self.canvas_nodes);
         }
         Ok(())
     }
