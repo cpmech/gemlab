@@ -22,12 +22,23 @@ macro_rules! pb {
 
 /// Implements functions to draw edges and faces
 pub struct Draw {
+    /// Canvas to draw edges
     pub canvas_edges: Canvas,
+
+    /// Canvas to draw nodes (markers)
     pub canvas_nodes: Curve,
+
+    /// Canvas to draw labels of nodes
     pub canvas_nodes_labels: Text,
-    pub nodes: bool,
-    pub nodes_labels: bool,
-    pub set_range: bool,
+
+    /// With drawing of nodes (markers); not available if with_labels = true
+    pub with_nodes: bool,
+
+    /// With drawing of labels of nodes; will turn off with_nodes
+    pub with_labels_nodes: bool,
+
+    /// Will set the coordinates range (min/max)
+    pub with_set_range: bool,
 }
 
 impl Draw {
@@ -47,14 +58,21 @@ impl Draw {
             .set_marker_line_color("white")
             .set_marker_style("o")
             .set_line_style("None");
-        canvas_nodes_labels.set_color("red").set_fontsize(8.0);
+        canvas_nodes_labels
+            .set_color("red")
+            .set_fontsize(8.0)
+            .set_align_horizontal("center")
+            .set_align_vertical("center")
+            .set_bbox(true)
+            .set_bbox_facecolor("white")
+            .set_bbox_edgecolor("None");
         Draw {
             canvas_edges,
             canvas_nodes,
             canvas_nodes_labels,
-            nodes: true,
-            nodes_labels: false,
-            set_range: true,
+            with_nodes: true,
+            with_labels_nodes: false,
+            with_set_range: true,
         }
     }
 
@@ -151,12 +169,12 @@ impl Draw {
         // end polycurve and add to plot
         self.canvas_edges.polycurve_end(false);
         plot.add(&self.canvas_edges);
-        if self.set_range {
+        if self.with_set_range {
             plot.set_range(features.min[0], features.max[0], features.min[1], features.max[1]);
         }
 
         // add nodes
-        if self.nodes {
+        if self.with_nodes && !self.with_labels_nodes {
             self.canvas_nodes.points_begin();
             for p in &features.points {
                 self.canvas_nodes
@@ -167,7 +185,7 @@ impl Draw {
         }
 
         // add nodes labels
-        if self.nodes_labels {
+        if self.with_labels_nodes {
             for p in &features.points {
                 self.canvas_nodes_labels.draw(
                     mesh.points[*p].coords[0],
@@ -271,7 +289,7 @@ impl Draw {
 
         // add to plot
         plot.add(&self.canvas_edges);
-        if self.set_range {
+        if self.with_set_range {
             plot.set_range_3d(
                 features.min[0],
                 features.max[0],
@@ -283,7 +301,7 @@ impl Draw {
         }
 
         // add nodes
-        if self.nodes {
+        if self.with_nodes && !self.with_labels_nodes {
             self.canvas_nodes.points_3d_begin();
             for p in &features.points {
                 self.canvas_nodes.points_3d_add(
@@ -297,7 +315,7 @@ impl Draw {
         }
 
         // add nodes labels
-        if self.nodes_labels {
+        if self.with_labels_nodes {
             for p in &features.points {
                 self.canvas_nodes_labels.draw_3d(
                     mesh.points[*p].coords[0],
@@ -351,7 +369,7 @@ mod tests {
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
-        draw.nodes_labels = true;
+        draw.with_labels_nodes = true;
         draw.edges(&mut plot, &region)?;
 
         // save figure
@@ -368,7 +386,7 @@ mod tests {
         let mesh = Samples::two_cubes_vertical();
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
-        draw.nodes_labels = true;
+        draw.with_labels_nodes = true;
         draw.edges(&mut plot, &region)?;
 
         // save figure
