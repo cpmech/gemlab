@@ -138,4 +138,22 @@ impl Features {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::{Edge, Face};
+
+    #[test]
+    fn derive_works() {
+        let edge = Edge {
+            points: vec![10, 20, 33],
+        };
+        let face = Face {
+            points: vec![1, 2, 3, 4],
+        };
+        let edge_clone = edge.clone();
+        let face_clone = face.clone();
+        assert_eq!(format!("{:?}", edge), "Edge { points: [10, 20, 33] }");
+        assert_eq!(format!("{:?}", face), "Face { points: [1, 2, 3, 4] }");
+        assert_eq!(edge_clone.points.len(), 3);
+        assert_eq!(face_clone.points.len(), 4);
+    }
+}

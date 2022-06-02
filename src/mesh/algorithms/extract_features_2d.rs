@@ -74,13 +74,12 @@ pub(crate) fn extract_features_2d(
 
 #[cfg(test)]
 mod tests {
-    use russell_chk::assert_vec_approx_eq;
-
     use super::extract_features_2d;
     use crate::mesh::algorithms::extract_all_2d_edges;
     use crate::mesh::{allocate_cell_shapes, EdgeKey, Extract, Features, PointId, Samples};
     use crate::util::AsArray2D;
     use crate::StrError;
+    use russell_chk::assert_vec_approx_eq;
 
     fn validate_edges<'a, T>(
         boundary: &Features,
@@ -98,7 +97,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_2d_works() -> Result<(), StrError> {
+    fn extract_features_2d_works() -> Result<(), StrError> {
         //  3---------2---------5
         //  |         |         |
         //  |   [0]   |   [1]   |
@@ -120,7 +119,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_2d_all_works() -> Result<(), StrError> {
+    fn extract_features_2d_all_works() -> Result<(), StrError> {
         //  3---------2---------5
         //  |         |         |
         //  |   [0]   |   [1]   |
@@ -142,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_2d_mixed_works() -> Result<(), StrError> {
+    fn extract_features_2d_mixed_works() -> Result<(), StrError> {
         //           4---------3
         //           |         |
         //           |   [1]   |
@@ -164,7 +163,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_2d_block_works() -> Result<(), StrError> {
+    fn extract_features_2d_block_works() -> Result<(), StrError> {
         // 29---34----31---28---44---42----40
         //  |               |               |
         // 32   39    38   33   48   47    43
@@ -206,7 +205,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_2d_all_block_works() -> Result<(), StrError> {
+    fn extract_features_2d_all_block_works() -> Result<(), StrError> {
         // 29---34----31---28---44---42----40
         //  |               |               |
         // 32   39    38   33   48   47    43
@@ -268,7 +267,7 @@ mod tests {
     }
 
     #[test]
-    fn boundary_2d_ring_works() -> Result<(), StrError> {
+    fn extract_features_2d_ring_works() -> Result<(), StrError> {
         // 2.0   14---36--,__11
         //        |          `,-..33
         // 1.75  24   [7]   22     `-,
