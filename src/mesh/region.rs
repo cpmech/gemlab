@@ -95,4 +95,105 @@ impl Region {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::{Mesh, Region};
+    use crate::mesh::{At, Extract, Samples};
+    use crate::StrError;
+
+    #[test]
+    fn with_works() -> Result<(), StrError> {
+        //  3---------2---------5
+        //  |         |         |
+        //  |   [0]   |   [1]   |
+        //  |         |         |
+        //  0---------1---------4
+        let mesh = Samples::two_quads_horizontal();
+        let region = Region::with(mesh, Extract::Boundary)?;
+        // println!("{:?}", mesh); // WRONG: mesh has been moved into region
+        assert_eq!(region.mesh.space_ndim, 2);
+        assert_eq!(region.shapes.len(), 2);
+        assert_eq!(region.features.points.len(), 6);
+        assert_eq!(region.features.edges.len(), 6);
+        assert_eq!(region.features.faces.len(), 0);
+        assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn with_text_works() -> Result<(), StrError> {
+        let region = Region::with_text(
+            "# 1.0  3-----------2-----------5
+             #      |           |           |
+             #      |    [0]    |    [1]    |  [*] indicates id
+             #      |    (1)    |    (2)    |  (*) indicates attribute_id
+             #      |           |           |
+             # 0.0  0-----------1-----------4
+             #     0.0         1.0         2.0
+             #
+             # header
+             # space_ndim npoint ncell
+                        2      6     2
+
+             # points
+             # id    x   y
+                0  0.0 0.0
+                1  1.0 0.0
+                2  1.0 1.0
+                3  0.0 1.0
+                4  2.0 0.0
+                5  2.0 1.0
+
+             # cells
+             # id att geo_ndim nnode  point_ids...
+                0   1        2     4  0 1 2 3
+                1   2        2     4  1 4 5 2
+             ",
+            Extract::Boundary,
+        )?;
+        assert_eq!(region.mesh.space_ndim, 2);
+        assert_eq!(region.shapes.len(), 2);
+        assert_eq!(region.features.points.len(), 6);
+        assert_eq!(region.features.edges.len(), 6);
+        assert_eq!(region.features.faces.len(), 0);
+        assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn with_text_file_works() -> Result<(), StrError> {
+        //  3---------2---------5
+        //  |         |         |
+        //  |   [0]   |   [1]   |
+        //  |         |         |
+        //  0---------1---------4
+        let mesh = Mesh::from_text_file("./data/meshes/two_quads_horizontal.msh")?;
+        let region = Region::with(mesh, Extract::Boundary)?;
+        assert_eq!(region.mesh.space_ndim, 2);
+        assert_eq!(region.shapes.len(), 2);
+        assert_eq!(region.features.points.len(), 6);
+        assert_eq!(region.features.edges.len(), 6);
+        assert_eq!(region.features.faces.len(), 0);
+        assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn with_binary_file_works() -> Result<(), StrError> {
+        //  3---------2---------5
+        //  |         |         |
+        //  |   [0]   |   [1]   |
+        //  |         |         |
+        //  0---------1---------4
+        let full_path = "/tmp/gemlab/test_region_two_quads_horizontal.dat";
+        let mesh = Samples::two_quads_horizontal();
+        mesh.write(full_path)?;
+        let region = Region::with_binary_file(full_path, Extract::Boundary)?;
+        assert_eq!(region.mesh.space_ndim, 2);
+        assert_eq!(region.shapes.len(), 2);
+        assert_eq!(region.features.points.len(), 6);
+        assert_eq!(region.features.edges.len(), 6);
+        assert_eq!(region.features.faces.len(), 0);
+        assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
+        Ok(())
+    }
+}
