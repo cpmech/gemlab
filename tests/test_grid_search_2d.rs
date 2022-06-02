@@ -3,7 +3,7 @@ use gemlab::util::{GridSearch, GsNdiv, GsTol, PI};
 use gemlab::StrError;
 
 #[test]
-fn grid_search_2d() -> Result<(), StrError> {
+fn test_grid_search_2d() -> Result<(), StrError> {
     let min = &[0.0, 0.0];
     let max = &[1.0, 2.0];
     let mut grid = GridSearch::new(min, max, GsNdiv::Default, GsTol::Default)?;
