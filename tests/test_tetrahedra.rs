@@ -12,7 +12,7 @@ where
 }
 
 #[test]
-fn five_tets_within_cube() -> Result<(), StrError> {
+fn test_tetrahedra() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/five_tets_within_cube.msh")?;
     let region = Region::with(mesh, Extract::Boundary)?;
