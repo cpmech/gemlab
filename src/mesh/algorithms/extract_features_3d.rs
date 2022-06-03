@@ -353,6 +353,46 @@ mod tests {
     }
 
     #[test]
+    fn extract_features_3d_interior_works() -> Result<(), StrError> {
+        //      8-------------11
+        //     /.             /|
+        //    / .            / |
+        //   /  .           /  |
+        //  /   .          /   |       id = 1
+        // 9-------------10    |       attribute_id = 2
+        // |    .         |    |
+        // |    4---------|----7
+        // |   /.         |   /|
+        // |  / .         |  / |
+        // | /  .         | /  |
+        // |/   .         |/   |
+        // 5--------------6    |       id = 0
+        // |    .         |    |       attribute_id = 1
+        // |    0---------|----3
+        // |   /          |   /
+        // |  /           |  /
+        // | /            | /
+        // |/             |/
+        // 1--------------2
+        let mesh = Samples::two_cubes_vertical();
+        let shapes = allocate_cell_shapes(&mesh)?;
+        let faces = extract_all_faces(&mesh, &shapes);
+        let features = extract_features_3d(&mesh, &shapes, &faces, Extract::Interior);
+        let correct_edge_keys = [(4, 5), (4, 7), (5, 6), (6, 7)];
+        let correct_edge_points = [[5, 4], [4, 7], [6, 5], [7, 6]];
+        validate_edges(&features, &correct_edge_keys, &correct_edge_points);
+        let correct_face_keys = [(4, 5, 6, 7)];
+        let correct_face_points = [[4, 5, 6, 7]];
+        validate_faces(&features, &correct_face_keys, &correct_face_points);
+        assert_eq!(features.min, &[0.0, 0.0, 1.0]);
+        assert_eq!(features.max, &[1.0, 1.0, 1.0]);
+        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
+        points.sort();
+        assert_eq!(points, &[4, 5, 6, 7]);
+        Ok(())
+    }
+
+    #[test]
     fn extract_features_3d_mixed_works() -> Result<(), StrError> {
         //                       4------------7-----------10
         //                      /.           /|            |
