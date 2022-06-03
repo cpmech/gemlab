@@ -177,7 +177,7 @@ impl Hex8 {
         deriv[7][2] = (1.0 - r + s - r * s) / 8.0;
     }
 
-    pub(super) fn mathematica_calc_interp(interp: &mut Vector, ksi: &[f64]) {
+    pub(super) fn _mathematica_calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
         interp[0] = ((1.0 - r) * (1.0 - s) * (1.0 - t)) / 8.0;
@@ -190,7 +190,7 @@ impl Hex8 {
         interp[7] = ((1.0 - r) * (1.0 + s) * (1.0 + t)) / 8.0;
     }
 
-    pub(super) fn mathematica_calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
+    pub(super) fn _mathematica_calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
         // w.r.t r
@@ -230,22 +230,30 @@ impl Hex8 {
 #[cfg(test)]
 mod tests {
     use super::Hex8;
+    use russell_chk::assert_approx_eq;
     use russell_lab::{Matrix, Vector};
+
+    const KSI_SAMPLES: [[f64; 3]; 9] = [
+        [-0.5773502691896257, -0.5773502691896257, -0.5773502691896257],
+        [0.5773502691896257, -0.5773502691896257, -0.5773502691896257],
+        [-0.5773502691896257, 0.5773502691896257, -0.5773502691896257],
+        [0.5773502691896257, 0.5773502691896257, -0.5773502691896257],
+        [-0.5773502691896257, -0.5773502691896257, 0.5773502691896257],
+        [0.5773502691896257, -0.5773502691896257, 0.5773502691896257],
+        [-0.5773502691896257, 0.5773502691896257, 0.5773502691896257],
+        [0.5773502691896257, 0.5773502691896257, 0.5773502691896257],
+        [0.0, 0.0, 0.0],
+    ];
 
     #[test]
     fn interp_matches_mathematica_code() {
         let mut interp = Vector::new(Hex8::NNODE);
         let mut interp_math = Vector::new(Hex8::NNODE);
-        for m in 0..Hex8::NNODE {
-            let ksi = &Hex8::NODE_REFERENCE_COORDS[m];
+        for ksi in &KSI_SAMPLES {
             Hex8::calc_interp(&mut interp, ksi);
-            Hex8::mathematica_calc_interp(&mut interp_math, ksi);
-            assert_eq!(interp[m], 1.0);
-            assert_eq!(interp[m], interp_math[m]);
-            for n in 0..Hex8::NNODE {
-                if n != m {
-                    assert_eq!(interp[n], 0.0);
-                }
+            Hex8::_mathematica_calc_interp(&mut interp_math, ksi);
+            for m in 0..Hex8::NNODE {
+                assert_approx_eq!(interp[m], interp_math[m], 1e-15);
             }
         }
     }
@@ -254,13 +262,14 @@ mod tests {
     fn deriv_matches_mathematica_code() {
         let mut deriv = Matrix::new(Hex8::NNODE, 3);
         let mut deriv_math = Matrix::new(Hex8::NNODE, 3);
-        for m in 0..Hex8::NNODE {
-            let ksi = &Hex8::NODE_REFERENCE_COORDS[m];
+        for ksi in &KSI_SAMPLES {
             Hex8::calc_deriv(&mut deriv, ksi);
-            Hex8::mathematica_calc_deriv(&mut deriv_math, ksi);
-            assert_eq!(deriv[m][0], deriv_math[m][0]);
-            assert_eq!(deriv[m][1], deriv_math[m][1]);
-            assert_eq!(deriv[m][2], deriv_math[m][2]);
+            Hex8::_mathematica_calc_deriv(&mut deriv_math, ksi);
+            for m in 0..Hex8::NNODE {
+                assert_approx_eq!(deriv[m][0], deriv_math[m][0], 1e-15);
+                assert_approx_eq!(deriv[m][1], deriv_math[m][1], 1e-15);
+                assert_approx_eq!(deriv[m][2], deriv_math[m][2], 1e-15);
+            }
         }
     }
 }
