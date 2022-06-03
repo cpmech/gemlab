@@ -1,6 +1,7 @@
 use super::{geo_class_and_kind, ref_domain_limits, GeoClass, GeoKind, StateOfShape};
 use super::{
-    Hex20, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet10, Tet4, Tri10, Tri15, Tri3, Tri6,
+    Hex20, Hex32, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet10, Tet4, Tri10, Tri15, Tri3,
+    Tri6,
 };
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, vector_norm, Matrix, NormVec, Vector};
@@ -298,6 +299,15 @@ impl Shape {
                 Hex20::FACE_NEDGE,
                 Hex20::calc_interp,
                 Hex20::calc_deriv,
+            ),
+            GeoKind::Hex32 => (
+                Hex32::NEDGE,
+                Hex32::NFACE,
+                Hex32::EDGE_NNODE,
+                Hex32::FACE_NNODE,
+                Hex32::FACE_NEDGE,
+                Hex32::calc_interp,
+                Hex32::calc_deriv,
             ),
         };
 
@@ -1112,6 +1122,7 @@ impl Shape {
             GeoKind::Tet10 => Tet10::EDGE_NODE_IDS[e][i],
             GeoKind::Hex8 => Hex8::EDGE_NODE_IDS[e][i],
             GeoKind::Hex20 => Hex20::EDGE_NODE_IDS[e][i],
+            GeoKind::Hex32 => Hex32::EDGE_NODE_IDS[e][i],
         }
     }
 
@@ -1188,6 +1199,7 @@ impl Shape {
             GeoKind::Tet10 => Tet10::FACE_NODE_IDS[f][i],
             GeoKind::Hex8 => Hex8::FACE_NODE_IDS[f][i],
             GeoKind::Hex20 => Hex20::FACE_NODE_IDS[f][i],
+            GeoKind::Hex32 => Hex32::FACE_NODE_IDS[f][i],
         }
     }
 
@@ -1265,6 +1277,7 @@ impl Shape {
             GeoKind::Tet10 => Tet10::FACE_EDGE_NODE_IDS[f][k][i],
             GeoKind::Hex8 => Hex8::FACE_EDGE_NODE_IDS[f][k][i],
             GeoKind::Hex20 => Hex20::FACE_EDGE_NODE_IDS[f][k][i],
+            GeoKind::Hex32 => Hex32::FACE_EDGE_NODE_IDS[f][k][i],
         }
     }
 
@@ -1321,6 +1334,7 @@ impl Shape {
             GeoKind::Tet10 => &Tet10::NODE_REFERENCE_COORDS[m],
             GeoKind::Hex8 => &Hex8::NODE_REFERENCE_COORDS[m],
             GeoKind::Hex20 => &Hex20::NODE_REFERENCE_COORDS[m],
+            GeoKind::Hex32 => &Hex32::NODE_REFERENCE_COORDS[m],
         }
     }
 }
@@ -1640,6 +1654,7 @@ mod tests {
         tols.insert(GeoKind::Tet10, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
+        tols.insert(GeoKind::Hex32, 1e-15);
 
         // loop over shapes
         for (geo_ndim, nnode) in GeoKind::PAIRS {
@@ -1717,6 +1732,7 @@ mod tests {
         tols.insert(GeoKind::Tet4, 1e-12);
         tols.insert(GeoKind::Tet10, 1e-12);
         tols.insert(GeoKind::Hex20, 1e-12);
+        tols.insert(GeoKind::Hex32, 1e-10);
 
         // loop over shapes
         for (geo_ndim, nnode) in GeoKind::PAIRS {
@@ -1887,6 +1903,7 @@ mod tests {
         tols.insert(GeoKind::Qua17, 1e-10);
         tols.insert(GeoKind::Hex8, 1e-11);
         tols.insert(GeoKind::Hex20, 1e-11);
+        tols.insert(GeoKind::Hex32, 1e-10);
         tols.insert(GeoKind::Tet4, 1e-12);
         tols.insert(GeoKind::Tet10, 1e-12);
 

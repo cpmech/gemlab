@@ -75,6 +75,9 @@ pub enum GeoKind {
 
     /// Hexahedron with 20 nodes (quadratic faces)
     Hex20,
+
+    /// Hexahedron with 32 nodes (cubic faces)
+    Hex32,
 }
 
 /// GeoNdim is the (local) space dimension of the geometric feature
@@ -85,7 +88,7 @@ pub type GeoNnode = usize;
 
 impl GeoKind {
     /// Holds all (geo_ndim,nnode) pairs
-    pub const PAIRS: [(usize, usize); 18] = [
+    pub const PAIRS: [(usize, usize); 19] = [
         // Lin
         (1, 2),
         (1, 3),
@@ -109,10 +112,11 @@ impl GeoKind {
         // Hex
         (3, 8),
         (3, 20),
+        (3, 32),
     ];
 
     /// Holds all enum values
-    pub const VALUES: [Self; 18] = [
+    pub const VALUES: [Self; 19] = [
         // Lin
         Self::Lin2,
         Self::Lin3,
@@ -136,6 +140,7 @@ impl GeoKind {
         // Hex
         Self::Hex8,
         Self::Hex20,
+        Self::Hex32,
     ];
 }
 
@@ -184,6 +189,7 @@ pub fn geo_class_and_kind(geo_ndim: usize, nnode: usize) -> Result<(GeoClass, Ge
         // Hex
         (3, 8) => Ok((GeoClass::Hex, GeoKind::Hex8)),
         (3, 20) => Ok((GeoClass::Hex, GeoKind::Hex20)),
+        (3, 32) => Ok((GeoClass::Hex, GeoKind::Hex32)),
         _ => Err("(geo_ndim,nnode) combination is invalid"),
     }
 }
@@ -316,6 +322,9 @@ mod tests {
                 }
                 GeoKind::Hex20 => {
                     assert_eq!(geo_class_and_kind(3, 20)?, (GeoClass::Hex, kind));
+                }
+                GeoKind::Hex32 => {
+                    assert_eq!(geo_class_and_kind(3, 32)?, (GeoClass::Hex, kind));
                 }
             }
         }

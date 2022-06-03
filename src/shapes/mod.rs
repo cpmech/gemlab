@@ -248,6 +248,7 @@
 
 mod enums;
 mod hex20;
+mod hex32;
 mod hex8;
 mod lin2;
 mod lin3;
@@ -269,6 +270,7 @@ mod tri3;
 mod tri6;
 pub use crate::shapes::enums::*;
 pub use crate::shapes::hex20::*;
+pub use crate::shapes::hex32::*;
 pub use crate::shapes::hex8::*;
 pub use crate::shapes::lin2::*;
 pub use crate::shapes::lin3::*;

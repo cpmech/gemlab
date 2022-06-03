@@ -52,6 +52,7 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
         // Hex
         GeoKind::Hex8 => &IP_HEX_LEGENDRE_8,
         GeoKind::Hex20 => &IP_HEX_LEGENDRE_27,
+        GeoKind::Hex32 => &IP_HEX_LEGENDRE_27, // TODO: Implement higher order points for Hex32
     }
 }
 
