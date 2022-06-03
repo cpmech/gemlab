@@ -82,17 +82,17 @@ mod tests {
     use russell_chk::assert_vec_approx_eq;
 
     fn validate_edges<'a, T>(
-        boundary: &Features,
+        features: &Features,
         correct_keys: &[EdgeKey], // sorted
         correct_points: &'a T,
     ) where
         T: AsArray2D<'a, PointId>,
     {
-        let mut keys: Vec<_> = boundary.edges.keys().map(|k| *k).collect();
+        let mut keys: Vec<_> = features.edges.keys().map(|k| *k).collect();
         keys.sort();
         assert_eq!(keys, correct_keys);
         for i in 0..keys.len() {
-            assert_eq!(boundary.edges.get(&keys[i]).unwrap().points, correct_points.row(i));
+            assert_eq!(features.edges.get(&keys[i]).unwrap().points, correct_points.row(i));
         }
     }
 
@@ -106,13 +106,13 @@ mod tests {
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_cell_shapes(&mesh)?;
         let edges = extract_all_2d_edges(&mesh, &shapes);
-        let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
+        let features = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let correct_keys = [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [4, 1], [3, 2], [2, 5], [5, 4]];
-        validate_edges(&boundary, &correct_keys, &correct_points);
-        assert_eq!(boundary.min, &[0.0, 0.0]);
-        assert_eq!(boundary.max, &[2.0, 1.0]);
-        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        validate_edges(&features, &correct_keys, &correct_points);
+        assert_eq!(features.min, &[0.0, 0.0]);
+        assert_eq!(features.max, &[2.0, 1.0]);
+        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5]);
         Ok(())
@@ -128,15 +128,37 @@ mod tests {
         let mesh = Samples::two_quads_horizontal();
         let shapes = allocate_cell_shapes(&mesh)?;
         let edges = extract_all_2d_edges(&mesh, &shapes);
-        let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::All);
+        let features = extract_features_2d(&mesh, &shapes, &edges, Extract::All);
         let correct_keys = [(0, 1), (0, 3), (1, 2), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [2, 1], [4, 1], [3, 2], [2, 5], [5, 4]];
-        validate_edges(&boundary, &correct_keys, &correct_points);
-        assert_eq!(boundary.min, &[0.0, 0.0]);
-        assert_eq!(boundary.max, &[2.0, 1.0]);
-        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        validate_edges(&features, &correct_keys, &correct_points);
+        assert_eq!(features.min, &[0.0, 0.0]);
+        assert_eq!(features.max, &[2.0, 1.0]);
+        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5]);
+        Ok(())
+    }
+
+    #[test]
+    fn extract_features_2d_works_interior() -> Result<(), StrError> {
+        //  3---------2---------5
+        //  |         |         |
+        //  |   [0]   |   [1]   |
+        //  |         |         |
+        //  0---------1---------4
+        let mesh = Samples::two_quads_horizontal();
+        let shapes = allocate_cell_shapes(&mesh)?;
+        let edges = extract_all_2d_edges(&mesh, &shapes);
+        let features = extract_features_2d(&mesh, &shapes, &edges, Extract::Interior);
+        let correct_keys = [(1, 2)];
+        let correct_points = [[2, 1]];
+        validate_edges(&features, &correct_keys, &correct_points);
+        assert_eq!(features.min, &[1.0, 0.0]);
+        assert_eq!(features.max, &[1.0, 1.0]);
+        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
+        points.sort();
+        assert_eq!(points, &[1, 2]);
         Ok(())
     }
 
@@ -150,13 +172,13 @@ mod tests {
         let mesh = Samples::mixed_shapes_2d();
         let shapes = allocate_cell_shapes(&mesh)?;
         let edges = extract_all_2d_edges(&mesh, &shapes);
-        let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
+        let features = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let correct_keys = [(1, 2), (1, 4), (2, 3), (3, 4)];
         let correct_points = [[2, 1], [1, 4], [3, 2], [4, 3]];
-        validate_edges(&boundary, &correct_keys, &correct_points);
-        assert_eq!(boundary.min, &[1.0, 0.0]); // note that Lin is ignored
-        assert_eq!(boundary.max, &[2.0, 1.0]); // note that Lin is ignored
-        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        validate_edges(&features, &correct_keys, &correct_points);
+        assert_eq!(features.min, &[1.0, 0.0]); // note that Lin is ignored
+        assert_eq!(features.max, &[2.0, 1.0]); // note that Lin is ignored
+        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[1, 2, 3, 4,]); // note that Lin is ignored
         Ok(())
@@ -180,7 +202,7 @@ mod tests {
         let mesh = Samples::block_2d_four_qua16();
         let shapes = allocate_cell_shapes(&mesh)?;
         let edges = extract_all_2d_edges(&mesh, &shapes);
-        let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
+        let features = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let correct_keys = [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)];
         let correct_points = [
             [1, 0, 8, 4],
@@ -192,10 +214,10 @@ mod tests {
             [29, 28, 34, 31],
             [28, 40, 44, 42],
         ];
-        validate_edges(&boundary, &correct_keys, &correct_points);
-        assert_eq!(boundary.min, &[0.0, 0.0]);
-        assert_eq!(boundary.max, &[3.0, 3.0]);
-        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        validate_edges(&features, &correct_keys, &correct_points);
+        assert_eq!(features.min, &[0.0, 0.0]);
+        assert_eq!(features.max, &[3.0, 3.0]);
+        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(
             points,
@@ -222,7 +244,7 @@ mod tests {
         let mesh = Samples::block_2d_four_qua16();
         let shapes = allocate_cell_shapes(&mesh)?;
         let edges = extract_all_2d_edges(&mesh, &shapes);
-        let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::All);
+        let features = extract_features_2d(&mesh, &shapes, &edges, Extract::All);
         let correct_keys = [
             (0, 1),
             (0, 3),
@@ -251,10 +273,10 @@ mod tests {
             [29, 28, 34, 31],
             [28, 40, 44, 42],
         ];
-        validate_edges(&boundary, &correct_keys, &correct_points);
-        assert_eq!(boundary.min, &[0.0, 0.0]);
-        assert_eq!(boundary.max, &[3.0, 3.0]);
-        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        validate_edges(&features, &correct_keys, &correct_points);
+        assert_eq!(features.min, &[0.0, 0.0]);
+        assert_eq!(features.max, &[3.0, 3.0]);
+        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(
             points,
@@ -288,7 +310,7 @@ mod tests {
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let shapes = allocate_cell_shapes(&mesh)?;
         let edges = extract_all_2d_edges(&mesh, &shapes);
-        let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
+        let features = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let correct_keys = [
             (0, 1),
             (0, 3),
@@ -317,14 +339,71 @@ mod tests {
             [12, 13, 23],
             [13, 14, 24],
         ];
-        validate_edges(&boundary, &correct_keys, &correct_points);
-        assert_vec_approx_eq!(boundary.min, &[0.0, 0.0], 1e-15);
-        assert_vec_approx_eq!(boundary.max, &[2.0, 2.0], 1e-15);
-        let mut points: Vec<_> = boundary.points.iter().map(|id| *id).collect();
+        validate_edges(&features, &correct_keys, &correct_points);
+        assert_vec_approx_eq!(features.min, &[0.0, 0.0], 1e-15);
+        assert_vec_approx_eq!(features.max, &[2.0, 2.0], 1e-15);
+        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(
             points,
             &[0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 13, 14, 15, 16, 23, 24, 25, 27, 28, 30, 31, 33, 34, 36,]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn extract_features_2d_ring_interior_works() -> Result<(), StrError> {
+        // 2.0   14---36--,__11
+        //        |          `,-..33
+        // 1.75  24   [7]   22     `-,
+        //        |         ,  [5]    ,8.
+        // 1.5   13--35--10/        20   `*
+        //        |       ,`*32    ,'      30
+        // 1.25  23 [6] 21     *.7     [3]   *
+        //        |     ,  [4]  , *.          5
+        // 1.0   12-34-9      19    29     18' *
+        //              `31. ,' [2]   *  _,     *
+        //                  6.       _.4'        *
+        //                   28  _.17   *   [1]  27
+        //                     3'  [0]  26        *
+        //                     25        *        *
+        //        +             0---15---1---16---2
+        //
+        //                     1.0 1.25  1.5 1.75  2.0
+        let mesh = Samples::ring_eight_qua8_rad1_thick1();
+        let shapes = allocate_cell_shapes(&mesh)?;
+        let edges = extract_all_2d_edges(&mesh, &shapes);
+        let features = extract_features_2d(&mesh, &shapes, &edges, Extract::Interior);
+        let correct_keys = [
+            (1, 4),
+            (3, 4),
+            (4, 5),
+            (4, 7),
+            (6, 7),
+            (7, 8),
+            (7, 10),
+            (9, 10),
+            (10, 11),
+            (10, 13),
+        ];
+        let correct_points = [
+            [4, 1, 26],
+            [3, 4, 17],
+            [4, 5, 18],
+            [7, 4, 29],
+            [6, 7, 19],
+            [7, 8, 20],
+            [10, 7, 32],
+            [9, 10, 21],
+            [10, 11, 22],
+            [13, 10, 35],
+        ];
+        validate_edges(&features, &correct_keys, &correct_points);
+        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
+        points.sort();
+        assert_eq!(
+            points,
+            &[1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 17, 18, 19, 20, 21, 22, 26, 29, 32, 35]
         );
         Ok(())
     }
