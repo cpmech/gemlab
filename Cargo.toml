@@ -12,8 +12,8 @@ categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
 
 [dependencies]
-# plotpy = "0.3"
-plotpy = { path = "../plotpy", version = "0.3" }
+plotpy = "0.3.1"
+# plotpy = { path = "../plotpy", version = "0.3" }
 russell_chk = "0.2"
 russell_lab = "0.3"
 russell_sparse = "0.3"
