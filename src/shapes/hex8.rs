@@ -183,10 +183,10 @@ impl Hex8 {
         deriv[1][2] = -rp * sm / 8.0;
         deriv[2][2] = -rp * sp / 8.0;
         deriv[3][2] = -rm * sp / 8.0;
-        deriv[4][2] = (rm * sm) / 8.0;
-        deriv[5][2] = (rp * sm) / 8.0;
-        deriv[6][2] = (rp * sp) / 8.0;
-        deriv[7][2] = (rm * sp) / 8.0;
+        deriv[4][2] = rm * sm / 8.0;
+        deriv[5][2] = rp * sm / 8.0;
+        deriv[6][2] = rp * sp / 8.0;
+        deriv[7][2] = rm * sp / 8.0;
     }
 
     /// Computes the interpolation functions
