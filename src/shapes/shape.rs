@@ -1,7 +1,7 @@
 use super::{geo_class_and_kind, ref_domain_limits, GeoClass, GeoKind, StateOfShape};
 use super::{
-    Hex20, Hex32, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet10, Tet4, Tri10, Tri15, Tri3,
-    Tri6,
+    Hex20, Hex32, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet10, Tet20, Tet4, Tri10,
+    Tri15, Tri3, Tri6,
 };
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul, mat_vec_mul, vector_norm, Matrix, NormVec, Vector};
@@ -279,6 +279,15 @@ impl Shape {
                 Tet10::FACE_NEDGE,
                 Tet10::calc_interp,
                 Tet10::calc_deriv,
+            ),
+            GeoKind::Tet20 => (
+                Tet20::NEDGE,
+                Tet20::NFACE,
+                Tet20::EDGE_NNODE,
+                Tet20::FACE_NNODE,
+                Tet20::FACE_NEDGE,
+                Tet20::calc_interp,
+                Tet20::calc_deriv,
             ),
 
             // Hex
@@ -1120,6 +1129,7 @@ impl Shape {
             GeoKind::Qua17 => Qua17::EDGE_NODE_IDS[e][i],
             GeoKind::Tet4 => Tet4::EDGE_NODE_IDS[e][i],
             GeoKind::Tet10 => Tet10::EDGE_NODE_IDS[e][i],
+            GeoKind::Tet20 => Tet20::EDGE_NODE_IDS[e][i],
             GeoKind::Hex8 => Hex8::EDGE_NODE_IDS[e][i],
             GeoKind::Hex20 => Hex20::EDGE_NODE_IDS[e][i],
             GeoKind::Hex32 => Hex32::EDGE_NODE_IDS[e][i],
@@ -1197,6 +1207,7 @@ impl Shape {
             GeoKind::Qua17 => 0,
             GeoKind::Tet4 => Tet4::FACE_NODE_IDS[f][i],
             GeoKind::Tet10 => Tet10::FACE_NODE_IDS[f][i],
+            GeoKind::Tet20 => Tet20::FACE_NODE_IDS[f][i],
             GeoKind::Hex8 => Hex8::FACE_NODE_IDS[f][i],
             GeoKind::Hex20 => Hex20::FACE_NODE_IDS[f][i],
             GeoKind::Hex32 => Hex32::FACE_NODE_IDS[f][i],
@@ -1275,6 +1286,7 @@ impl Shape {
             GeoKind::Qua17 => 0,
             GeoKind::Tet4 => Tet4::FACE_EDGE_NODE_IDS[f][k][i],
             GeoKind::Tet10 => Tet10::FACE_EDGE_NODE_IDS[f][k][i],
+            GeoKind::Tet20 => Tet20::FACE_EDGE_NODE_IDS[f][k][i],
             GeoKind::Hex8 => Hex8::FACE_EDGE_NODE_IDS[f][k][i],
             GeoKind::Hex20 => Hex20::FACE_EDGE_NODE_IDS[f][k][i],
             GeoKind::Hex32 => Hex32::FACE_EDGE_NODE_IDS[f][k][i],
@@ -1332,6 +1344,7 @@ impl Shape {
             GeoKind::Qua17 => &Qua17::NODE_REFERENCE_COORDS[m],
             GeoKind::Tet4 => &Tet4::NODE_REFERENCE_COORDS[m],
             GeoKind::Tet10 => &Tet10::NODE_REFERENCE_COORDS[m],
+            GeoKind::Tet20 => &Tet20::NODE_REFERENCE_COORDS[m],
             GeoKind::Hex8 => &Hex8::NODE_REFERENCE_COORDS[m],
             GeoKind::Hex20 => &Hex20::NODE_REFERENCE_COORDS[m],
             GeoKind::Hex32 => &Hex32::NODE_REFERENCE_COORDS[m],
@@ -1652,6 +1665,7 @@ mod tests {
         tols.insert(GeoKind::Qua17, 1e-15);
         tols.insert(GeoKind::Tet4, 1e-15);
         tols.insert(GeoKind::Tet10, 1e-15);
+        tols.insert(GeoKind::Tet20, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
         tols.insert(GeoKind::Hex32, 1e-15);
@@ -1731,6 +1745,7 @@ mod tests {
         tols.insert(GeoKind::Hex8, 1e-13);
         tols.insert(GeoKind::Tet4, 1e-12);
         tols.insert(GeoKind::Tet10, 1e-12);
+        tols.insert(GeoKind::Tet20, 1e-12);
         tols.insert(GeoKind::Hex20, 1e-12);
         tols.insert(GeoKind::Hex32, 1e-10);
 
@@ -1807,6 +1822,7 @@ mod tests {
         tols.insert(GeoKind::Hex8, 1e-15);
         tols.insert(GeoKind::Tet4, 1e-15);
         tols.insert(GeoKind::Tet10, 1e-15);
+        tols.insert(GeoKind::Tet20, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
 
         // define tolerances for node in the reference domain
@@ -1820,6 +1836,7 @@ mod tests {
         tols_in.insert(GeoKind::Qua17, 1e-14);
         tols_in.insert(GeoKind::Tet4, 0.45); // linear tetrahedron is also inaccurate here
         tols_in.insert(GeoKind::Tet10, 0.02); // quadratic tetrahedron is also inaccurate here
+        tols_in.insert(GeoKind::Tet20, 1e-14); // cubic tetrahedron
         tols_in.insert(GeoKind::Hex8, 0.14); // bi-linear maps are inaccurate for the circular wedge
         tols_in.insert(GeoKind::Hex20, 1e-14);
 
@@ -1906,6 +1923,7 @@ mod tests {
         tols.insert(GeoKind::Hex32, 1e-10);
         tols.insert(GeoKind::Tet4, 1e-12);
         tols.insert(GeoKind::Tet10, 1e-12);
+        tols.insert(GeoKind::Tet20, 1e-15);
 
         // loop over shapes
         for (geo_ndim, nnode) in GeoKind::PAIRS {
@@ -2213,6 +2231,7 @@ mod tests {
         tols.insert(GeoKind::Qua8, 1e-15);
         tols.insert(GeoKind::Tet4, 1e-15);
         tols.insert(GeoKind::Tet10, 1e-15);
+        tols.insert(GeoKind::Tet20, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-15);
         tols.insert(GeoKind::Hex20, 1e-15);
 
@@ -2356,6 +2375,7 @@ mod tests {
         tols.insert(GeoKind::Qua4, 1e-11);
         tols.insert(GeoKind::Qua8, 1e-10);
         tols.insert(GeoKind::Tet10, 1e-9);
+        tols.insert(GeoKind::Tet20, 1e-15);
         tols.insert(GeoKind::Hex8, 1e-11);
         tols.insert(GeoKind::Hex20, 1e-10);
 

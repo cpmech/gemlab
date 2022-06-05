@@ -70,6 +70,9 @@ pub enum GeoKind {
     /// Tetrahedron with 10 nodes (quadratic faces)
     Tet10,
 
+    /// Tetrahedron with 20 nodes (cubic faces)
+    Tet20,
+
     /// Hexahedron with 8 nodes (bilinear faces)
     Hex8,
 
@@ -88,7 +91,7 @@ pub type GeoNnode = usize;
 
 impl GeoKind {
     /// Holds all (geo_ndim,nnode) pairs
-    pub const PAIRS: [(usize, usize); 19] = [
+    pub const PAIRS: [(usize, usize); 20] = [
         // Lin
         (1, 2),
         (1, 3),
@@ -109,6 +112,7 @@ impl GeoKind {
         // Tet
         (3, 4),
         (3, 10),
+        (3, 20),
         // Hex
         (3, 8),
         (3, 20),
@@ -116,7 +120,7 @@ impl GeoKind {
     ];
 
     /// Holds all enum values
-    pub const VALUES: [Self; 19] = [
+    pub const VALUES: [Self; 20] = [
         // Lin
         Self::Lin2,
         Self::Lin3,
@@ -137,6 +141,7 @@ impl GeoKind {
         // Tet
         Self::Tet4,
         Self::Tet10,
+        Self::Tet20,
         // Hex
         Self::Hex8,
         Self::Hex20,
@@ -185,10 +190,11 @@ pub fn geo_class_and_kind(geo_ndim: usize, nnode: usize) -> Result<(GeoClass, Ge
         // Tet
         (3, 4) => Ok((GeoClass::Tet, GeoKind::Tet4)),
         (3, 10) => Ok((GeoClass::Tet, GeoKind::Tet10)),
+        (3, 20) => Ok((GeoClass::Tet, GeoKind::Tet20)),
 
         // Hex
         (3, 8) => Ok((GeoClass::Hex, GeoKind::Hex8)),
-        (3, 20) => Ok((GeoClass::Hex, GeoKind::Hex20)),
+        // (3, 20) => Ok((GeoClass::Hex, GeoKind::Hex20)), // TODO: FIXME
         (3, 32) => Ok((GeoClass::Hex, GeoKind::Hex32)),
         _ => Err("(geo_ndim,nnode) combination is invalid"),
     }
@@ -314,6 +320,9 @@ mod tests {
                 }
                 GeoKind::Tet10 => {
                     assert_eq!(geo_class_and_kind(3, 10)?, (GeoClass::Tet, kind));
+                }
+                GeoKind::Tet20 => {
+                    assert_eq!(geo_class_and_kind(3, 20)?, (GeoClass::Tet, kind));
                 }
 
                 // Hex

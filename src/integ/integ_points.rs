@@ -49,6 +49,7 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
         // Tet
         GeoKind::Tet4 => &IP_TET_INTERNAL_1,
         GeoKind::Tet10 => &IP_TET_FELIPPA_14,
+        GeoKind::Tet20 => &IP_TET_FELIPPA_14,
         // Hex
         GeoKind::Hex8 => &IP_HEX_LEGENDRE_8,
         GeoKind::Hex20 => &IP_HEX_LEGENDRE_27,
