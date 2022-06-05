@@ -44,6 +44,8 @@ use russell_lab::{Matrix, Vector};
 ///           1
 /// ```
 ///
+/// * The order of edge nodes corresponds to **Lin2** nodes.
+///
 /// # Local IDs of faces
 ///
 /// ```text
@@ -62,8 +64,6 @@ use russell_lab::{Matrix, Vector};
 /// | ,'        ~~~  | ,'
 /// 1----------------2'
 /// ```
-///
-/// # Note about face nodes
 ///
 /// * The order of face nodes is such that the normals are outward
 /// * The order of face nodes corresponds to **Qua4** nodes

@@ -37,8 +37,6 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Local IDs of edges
 ///
-/// The order of edge nodes corresponds to Lin2 nodes.
-///
 /// ```text
 ///               t                    p0  p1
 ///               |                e:0 [0, 1]
@@ -69,6 +67,8 @@ use russell_lab::{Matrix, Vector};
 ///  /
 /// r
 /// ```
+///
+/// * The order of edge nodes corresponds to *Lin2* nodes.
 ///
 /// # Local IDs of faces
 ///
@@ -102,8 +102,6 @@ use russell_lab::{Matrix, Vector};
 ///  /
 /// r
 /// ```
-///
-/// # Note about face nodes
 ///
 /// * The order of face nodes is such that the normals are outward
 /// * The order of face nodes corresponds to **Tri3** nodes

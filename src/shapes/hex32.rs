@@ -55,6 +55,8 @@ use russell_lab::{Matrix, Vector};
 ///           1
 /// ```
 ///
+/// * The order of edge nodes corresponds to **Lin4** nodes.
+///
 /// # Local IDs of faces
 ///
 /// ```text
@@ -74,10 +76,8 @@ use russell_lab::{Matrix, Vector};
 /// 1----10----11----2'
 /// ```
 ///
-/// # Note about face nodes
-///
 /// * The order of face nodes is such that the normals are outward
-/// * The order of face nodes corresponds to **Qua8** nodes
+/// * The order of face nodes corresponds to **Qua12** nodes
 pub struct Hex32 {}
 
 impl Hex32 {
