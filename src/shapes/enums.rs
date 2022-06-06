@@ -3,6 +3,7 @@ use super::{
     Tri15, Tri3, Tri6,
 };
 use crate::StrError;
+use russell_lab::{Matrix, Vector};
 use serde::{Deserialize, Serialize};
 
 /// Defines the class of geometric shape
@@ -813,6 +814,38 @@ impl GeoKind {
             GeoKind::Hex8 => (-1.0, 1.0, 2.0),
             GeoKind::Hex20 => (-1.0, 1.0, 2.0),
             GeoKind::Hex32 => (-1.0, 1.0, 2.0),
+        }
+    }
+
+    /// Returns the functions to evaluate the interpolation functions
+    /// and the derivatives of the interpolation functions
+    pub fn functions(&self) -> (fn(&mut Vector, &[f64]), fn(&mut Matrix, &[f64])) {
+        match self {
+            // Lin
+            Self::Lin2 => (Lin2::calc_interp, Lin2::calc_deriv),
+            Self::Lin3 => (Lin3::calc_interp, Lin3::calc_deriv),
+            Self::Lin4 => (Lin4::calc_interp, Lin4::calc_deriv),
+            Self::Lin5 => (Lin5::calc_interp, Lin5::calc_deriv),
+            // Tri
+            Self::Tri3 => (Tri3::calc_interp, Tri3::calc_deriv),
+            Self::Tri6 => (Tri6::calc_interp, Tri6::calc_deriv),
+            Self::Tri10 => (Tri10::calc_interp, Tri10::calc_deriv),
+            Self::Tri15 => (Tri15::calc_interp, Tri15::calc_deriv),
+            // Qua
+            Self::Qua4 => (Qua4::calc_interp, Qua4::calc_deriv),
+            Self::Qua8 => (Qua8::calc_interp, Qua8::calc_deriv),
+            Self::Qua9 => (Qua9::calc_interp, Qua9::calc_deriv),
+            Self::Qua12 => (Qua12::calc_interp, Qua12::calc_deriv),
+            Self::Qua16 => (Qua16::calc_interp, Qua16::calc_deriv),
+            Self::Qua17 => (Qua17::calc_interp, Qua17::calc_deriv),
+            // Tet
+            Self::Tet4 => (Tet4::calc_interp, Tet4::calc_deriv),
+            Self::Tet10 => (Tet10::calc_interp, Tet10::calc_deriv),
+            Self::Tet20 => (Tet20::calc_interp, Tet20::calc_deriv),
+            // Hex
+            Self::Hex8 => (Hex8::calc_interp, Hex8::calc_deriv),
+            Self::Hex20 => (Hex20::calc_interp, Hex20::calc_deriv),
+            Self::Hex32 => (Hex32::calc_interp, Hex32::calc_deriv),
         }
     }
 
