@@ -1,4 +1,9 @@
-use super::{allocate_state, Features, Mesh, Region};
+#![allow(unused_imports)]
+#![allow(unused_macros)]
+#![allow(unused_mut)]
+#![allow(unused_variables)]
+
+use super::{Features, Mesh, Region};
 use crate::shapes::{GeoKind, Shape, StateOfShape};
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
@@ -189,51 +194,52 @@ impl Draw {
             let shape = shapes_memo.entry(edge.kind).or_insert(Shape::new(edge.kind));
 
             // retrieve state or allocate new
-            let mut state = states_memo
-                .entry(edge.kind)
-                .or_insert(allocate_state(&mesh, edge.kind, &edge.points)?);
+            // let mut state = states_memo
+            //     .entry(edge.kind)
+            //     .or_insert(allocate_state(&mesh, edge.kind, &edge.points)?);
 
             // set coordinates
             let nnode = edge.points.len();
-            for m in 0..nnode {
-                for i in 0..space_ndim {
-                    state.coords_transp[i][m] = mesh.points[edge.points[m]].coords[i];
-                }
-            }
+            // TODO: re-implement this
+            // for m in 0..nnode {
+            //     for i in 0..space_ndim {
+            //         state.coords_transp[i][m] = mesh.points[edge.points[m]].coords[i];
+            //     }
+            // }
 
             // add poly-curve points (or control points for quadratic/cubic Bezier)
-            match nnode {
-                2 => {
-                    self.canvas_edges
-                        .polycurve_add(pa!(state, 0), pa!(state, 1), PolyCode::MoveTo)
-                        .polycurve_add(pb!(state, 0), pb!(state, 1), PolyCode::LineTo);
-                }
-                3 => {
-                    ksi[0] = 0.0; // middle
-                    shape.calc_coords(&mut pc, &mut state, &ksi)?;
-                    qc[0] = (-pa!(state, 0) - pb!(state, 0) + 4.0 * pc[0]) / 2.0;
-                    qc[1] = (-pa!(state, 1) - pb!(state, 1) + 4.0 * pc[1]) / 2.0;
-                    self.canvas_edges
-                        .polycurve_add(pa!(state, 0), pa!(state, 1), PolyCode::MoveTo)
-                        .polycurve_add(/*   */ qc[0], /*   */ qc[1], PolyCode::Curve3)
-                        .polycurve_add(pb!(state, 0), pb!(state, 1), PolyCode::Curve3);
-                }
-                _ => {
-                    ksi[0] = -1.0 / 3.0; // => t=⅓(ξ=-⅓)
-                    shape.calc_coords(&mut pc, &mut state, &ksi)?;
-                    ksi[0] = 1.0 / 3.0; // => t=⅔(ξ=+⅓)
-                    shape.calc_coords(&mut pd, &mut state, &ksi)?;
-                    qc[0] = (-5.0 * pa!(state, 0) + 2.0 * pb!(state, 0) + 18.0 * pc[0] - 9.0 * pd[0]) / 6.0;
-                    qc[1] = (-5.0 * pa!(state, 1) + 2.0 * pb!(state, 1) + 18.0 * pc[1] - 9.0 * pd[1]) / 6.0;
-                    qd[0] = (2.0 * pa!(state, 0) - 5.0 * pb!(state, 0) - 9.0 * pc[0] + 18.0 * pd[0]) / 6.0;
-                    qd[1] = (2.0 * pa!(state, 1) - 5.0 * pb!(state, 1) - 9.0 * pc[1] + 18.0 * pd[1]) / 6.0;
-                    self.canvas_edges
-                        .polycurve_add(pa!(state, 0), pa!(state, 1), PolyCode::MoveTo)
-                        .polycurve_add(/*   */ qc[0], /*   */ qc[1], PolyCode::Curve4)
-                        .polycurve_add(/*   */ qd[0], /*   */ qd[1], PolyCode::Curve4)
-                        .polycurve_add(pb!(state, 0), pb!(state, 1), PolyCode::Curve4);
-                }
-            }
+            // match nnode {
+            //     2 => {
+            //         self.canvas_edges
+            //             .polycurve_add(pa!(state, 0), pa!(state, 1), PolyCode::MoveTo)
+            //             .polycurve_add(pb!(state, 0), pb!(state, 1), PolyCode::LineTo);
+            //     }
+            //     3 => {
+            //         ksi[0] = 0.0; // middle
+            //         shape.calc_coords(&mut pc, &mut state, &ksi)?;
+            //         qc[0] = (-pa!(state, 0) - pb!(state, 0) + 4.0 * pc[0]) / 2.0;
+            //         qc[1] = (-pa!(state, 1) - pb!(state, 1) + 4.0 * pc[1]) / 2.0;
+            //         self.canvas_edges
+            //             .polycurve_add(pa!(state, 0), pa!(state, 1), PolyCode::MoveTo)
+            //             .polycurve_add(/*   */ qc[0], /*   */ qc[1], PolyCode::Curve3)
+            //             .polycurve_add(pb!(state, 0), pb!(state, 1), PolyCode::Curve3);
+            //     }
+            //     _ => {
+            //         ksi[0] = -1.0 / 3.0; // => t=⅓(ξ=-⅓)
+            //         shape.calc_coords(&mut pc, &mut state, &ksi)?;
+            //         ksi[0] = 1.0 / 3.0; // => t=⅔(ξ=+⅓)
+            //         shape.calc_coords(&mut pd, &mut state, &ksi)?;
+            //         qc[0] = (-5.0 * pa!(state, 0) + 2.0 * pb!(state, 0) + 18.0 * pc[0] - 9.0 * pd[0]) / 6.0;
+            //         qc[1] = (-5.0 * pa!(state, 1) + 2.0 * pb!(state, 1) + 18.0 * pc[1] - 9.0 * pd[1]) / 6.0;
+            //         qd[0] = (2.0 * pa!(state, 0) - 5.0 * pb!(state, 0) - 9.0 * pc[0] + 18.0 * pd[0]) / 6.0;
+            //         qd[1] = (2.0 * pa!(state, 1) - 5.0 * pb!(state, 1) - 9.0 * pc[1] + 18.0 * pd[1]) / 6.0;
+            //         self.canvas_edges
+            //             .polycurve_add(pa!(state, 0), pa!(state, 1), PolyCode::MoveTo)
+            //             .polycurve_add(/*   */ qc[0], /*   */ qc[1], PolyCode::Curve4)
+            //             .polycurve_add(/*   */ qd[0], /*   */ qd[1], PolyCode::Curve4)
+            //             .polycurve_add(pb!(state, 0), pb!(state, 1), PolyCode::Curve4);
+            //     }
+            // }
         }
 
         // end polycurve and add to plot
@@ -269,60 +275,61 @@ impl Draw {
             let shape = shapes_memo.entry(edge.kind).or_insert(Shape::new(edge.kind));
 
             // retrieve state or allocate new
-            let mut state = states_memo
-                .entry(edge.kind)
-                .or_insert(allocate_state(&mesh, edge.kind, &edge.points)?);
+            // TODO: re-implement this
+            // let mut state = states_memo
+            //     .entry(edge.kind)
+            //     .or_insert(allocate_state(&mesh, edge.kind, &edge.points)?);
 
             // set coordinates of GeoKind::Lin
             let nnode = edge.points.len();
-            for m in 0..nnode {
-                for i in 0..space_ndim {
-                    state.coords_transp[i][m] = mesh.points[edge.points[m]].coords[i];
-                }
-            }
+            // for m in 0..nnode {
+            //     for i in 0..space_ndim {
+            //         state.coords_transp[i][m] = mesh.points[edge.points[m]].coords[i];
+            //     }
+            // }
 
             // add poly-line points
-            self.canvas_edges.polyline_3d_begin();
-            match nnode {
-                2 => {
-                    self.canvas_edges
-                        .polyline_3d_add(pa!(state, 0), pa!(state, 1), pa!(state, 2))
-                        .polyline_3d_add(pb!(state, 0), pb!(state, 1), pb!(state, 2));
-                }
-                3 => {
-                    ksi[0] = 0.0; // middle
-                    shape.calc_coords(&mut pc, &mut state, &ksi)?;
-                    self.canvas_edges
-                        .polyline_3d_add(pa!(state, 0), pa!(state, 1), pa!(state, 2))
-                        .polyline_3d_add(/*   */ pc[0], /*   */ pc[1], /*   */ pc[2])
-                        .polyline_3d_add(pb!(state, 0), pb!(state, 1), pb!(state, 2));
-                }
-                4 => {
-                    ksi[0] = -1.0 / 3.0; // middle-left
-                    shape.calc_coords(&mut pc, &mut state, &ksi)?;
-                    ksi[0] = 1.0 / 3.0; // middle-right
-                    shape.calc_coords(&mut pd, &mut state, &ksi)?;
-                    self.canvas_edges
-                        .polyline_3d_add(pa!(state, 0), pa!(state, 1), pa!(state, 2))
-                        .polyline_3d_add(/*   */ pc[0], /*   */ pc[1], /*   */ pc[2])
-                        .polyline_3d_add(/*   */ pd[0], /*   */ pd[1], /*   */ pd[2])
-                        .polyline_3d_add(pb!(state, 0), pb!(state, 1), pb!(state, 2));
-                }
-                _ => {
-                    ksi[0] = -0.5; // middle-left
-                    shape.calc_coords(&mut pc, &mut state, &ksi)?;
-                    ksi[0] = 0.0; // middle
-                    shape.calc_coords(&mut pd, &mut state, &ksi)?;
-                    ksi[0] = 0.5; // middle-right
-                    shape.calc_coords(&mut pe, &mut state, &ksi)?;
-                    self.canvas_edges
-                        .polyline_3d_add(pa!(state, 0), pa!(state, 1), pa!(state, 2))
-                        .polyline_3d_add(/*   */ pc[0], /*   */ pc[1], /*   */ pc[2])
-                        .polyline_3d_add(/*   */ pd[0], /*   */ pd[1], /*   */ pd[2])
-                        .polyline_3d_add(/*   */ pe[0], /*   */ pe[1], /*   */ pe[2])
-                        .polyline_3d_add(pb!(state, 0), pb!(state, 1), pb!(state, 2));
-                }
-            }
+            // self.canvas_edges.polyline_3d_begin();
+            // match nnode {
+            //     2 => {
+            //         self.canvas_edges
+            //             .polyline_3d_add(pa!(state, 0), pa!(state, 1), pa!(state, 2))
+            //             .polyline_3d_add(pb!(state, 0), pb!(state, 1), pb!(state, 2));
+            //     }
+            //     3 => {
+            //         ksi[0] = 0.0; // middle
+            //         shape.calc_coords(&mut pc, &mut state, &ksi)?;
+            //         self.canvas_edges
+            //             .polyline_3d_add(pa!(state, 0), pa!(state, 1), pa!(state, 2))
+            //             .polyline_3d_add(/*   */ pc[0], /*   */ pc[1], /*   */ pc[2])
+            //             .polyline_3d_add(pb!(state, 0), pb!(state, 1), pb!(state, 2));
+            //     }
+            //     4 => {
+            //         ksi[0] = -1.0 / 3.0; // middle-left
+            //         shape.calc_coords(&mut pc, &mut state, &ksi)?;
+            //         ksi[0] = 1.0 / 3.0; // middle-right
+            //         shape.calc_coords(&mut pd, &mut state, &ksi)?;
+            //         self.canvas_edges
+            //             .polyline_3d_add(pa!(state, 0), pa!(state, 1), pa!(state, 2))
+            //             .polyline_3d_add(/*   */ pc[0], /*   */ pc[1], /*   */ pc[2])
+            //             .polyline_3d_add(/*   */ pd[0], /*   */ pd[1], /*   */ pd[2])
+            //             .polyline_3d_add(pb!(state, 0), pb!(state, 1), pb!(state, 2));
+            //     }
+            //     _ => {
+            //         ksi[0] = -0.5; // middle-left
+            //         shape.calc_coords(&mut pc, &mut state, &ksi)?;
+            //         ksi[0] = 0.0; // middle
+            //         shape.calc_coords(&mut pd, &mut state, &ksi)?;
+            //         ksi[0] = 0.5; // middle-right
+            //         shape.calc_coords(&mut pe, &mut state, &ksi)?;
+            //         self.canvas_edges
+            //             .polyline_3d_add(pa!(state, 0), pa!(state, 1), pa!(state, 2))
+            //             .polyline_3d_add(/*   */ pc[0], /*   */ pc[1], /*   */ pc[2])
+            //             .polyline_3d_add(/*   */ pd[0], /*   */ pd[1], /*   */ pd[2])
+            //             .polyline_3d_add(/*   */ pe[0], /*   */ pe[1], /*   */ pe[2])
+            //             .polyline_3d_add(pb!(state, 0), pb!(state, 1), pb!(state, 2));
+            //     }
+            // }
             self.canvas_edges.polyline_3d_end();
         }
 
