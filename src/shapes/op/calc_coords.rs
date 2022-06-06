@@ -3,8 +3,24 @@ use russell_lab::{mat_vec_mul, Matrix, Vector};
 
 /// Calculates the real coordinates x from reference coordinates ξ
 ///
+/// This function uses the isoparametric formula to calculate x given ξ:
+///
+/// ```text
+/// → →         →  →
+/// x(ξ) = Σ Nᵐ(ξ) xᵐ
+///        m
+///
+/// x := Xᵀ ⋅ N
+/// ```
+///
+/// # Output
+///
+/// * `x` -- real coordinates (space_ndim)
+/// * `pad.interp` -- (nnode) interpolation functions @ ξ
+///
 /// # Input
 ///
+/// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
 /// * `xxt` -- is the transposed coordinates matrix `Xᵀ` shown below (space_ndim,nnode)
 ///
 /// The transposed coordinates matrix (real space) is such that:
