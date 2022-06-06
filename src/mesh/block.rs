@@ -1,10 +1,9 @@
 use super::{Cell, Mesh, Point};
 use crate::geometry::Circle;
-use crate::shapes::{GeoKind, Shape, StateOfShape};
+use crate::shapes::{op, GeoKind, Scratchpad};
 use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol};
 use crate::StrError;
-use russell_lab::Vector;
-use std::collections::HashSet;
+use russell_lab::{Matrix, Vector};
 
 #[derive(Clone, Debug)]
 pub enum Constraint {
@@ -108,25 +107,51 @@ pub enum Constraint {
 /// }
 /// ```
 pub struct Block {
-    attribute_id: usize,      // attribute ID of all elements in this block
-    ndim: usize,              // space dimension
-    ndiv: Vec<usize>,         // number of divisions along each dim (ndim)
-    delta_ksi: Vec<Vec<f64>>, // delta ksi along each dim (ndim, {ndiv[0],ndiv[1],ndiv[2]})
+    /// Attribute ID of all elements in this block
+    attribute_id: usize,
 
-    edge_constraints: Vec<Option<Constraint>>, // constraints (nedge)
-    face_constraints: Vec<Option<Constraint>>, // constraints (nface)
+    /// Space dimension
+    ndim: usize,
 
-    // shape and state
-    shape: Shape,
-    state: StateOfShape,
+    /// number of divisions along each dim (ndim)
+    ndiv: Vec<usize>,
 
-    // grid to search reference coordinates
+    /// Delta ksi along each dim (ndim, {ndiv[0],ndiv[1],ndiv[2]})
+    delta_ksi: Vec<Vec<f64>>,
+
+    /// Constraints on edges (nedge)
+    edge_constraints: Vec<Option<Constraint>>,
+
+    /// Constraints on faces (nface)
+    face_constraints: Vec<Option<Constraint>>,
+
+    /// Grid to search reference coordinates
     grid_ksi: GridSearch,
+
+    /// GeoKid of the block (2D: Qua8, 3D: Hex20)
+    kind: GeoKind,
+
+    /// Transposed matrix of coordinates of the block
+    ///
+    /// ```text
+    ///      ┌                              ┐  superscript = node
+    ///      | x⁰₀  x¹₀  x²₀  x³₀       xᴹ₀ |  subscript = dimension
+    /// Xᵀ = | x⁰₁  x¹₁  x²₁  x³₁  ...  xᴹ₁ |
+    ///      | x⁰₂  x¹₂  x²₂  x³₂       xᴹ₂ |
+    ///      └                              ┘_(space_ndim,nnode)
+    /// ```
+    xxt: Matrix,
 }
 
 impl Block {
-    // constants
-    const NAT_LENGTH: f64 = 2.0; // length of shape along each direction in reference coords space
+    /// Length of shape along each direction in reference coords space
+    const NAT_LENGTH: f64 = 2.0;
+
+    /// Default number of divisions
+    const NDIV: usize = 2;
+
+    /// Default attribute ID
+    const ATTRIBUTE_ID: usize = 1;
 
     /// Allocate a new instance
     ///
@@ -156,84 +181,83 @@ impl Block {
             }
         }
 
-        // shape
-        let shape = if ndim == 2 {
-            Shape::new(GeoKind::Qua8)
-        } else {
-            Shape::new(GeoKind::Hex20)
-        };
+        // internally, we save the block as a Qua8 or a Hex20
+        let kind = if ndim == 2 { GeoKind::Qua8 } else { GeoKind::Hex20 };
+        let (nnode, nedge, nface) = (kind.nnode(), kind.nedge(), kind.nface());
 
-        // state
-        let nnode = shape.kind.nnode();
-        let state = if ndim == 2 {
+        // transposed matrix of coordinates of the block
+        let mut xxt = Matrix::new(ndim, nnode);
+        if ndim == 2 {
             if nrow == 8 {
                 // all vertices given, ok
-                StateOfShape::new(shape.kind, coords).unwrap() // should not fail here
+                for m in 0..nnode {
+                    for j in 0..ndim {
+                        xxt[j][m] = coords.at(m, j);
+                    }
+                }
             } else {
                 // copy "corner" vertices
-                let mut xx = vec![vec![0.0; ndim]; nnode];
                 for m in 0..nrow {
                     for j in 0..ndim {
-                        xx[m][j] = coords.at(m, j);
+                        xxt[j][m] = coords.at(m, j);
                     }
                 }
                 // generate mid vertices
                 for j in 0..ndim {
-                    xx[4][j] = (coords.at(0, j) + coords.at(1, j)) / 2.0;
-                    xx[5][j] = (coords.at(1, j) + coords.at(2, j)) / 2.0;
-                    xx[6][j] = (coords.at(2, j) + coords.at(3, j)) / 2.0;
-                    xx[7][j] = (coords.at(3, j) + coords.at(0, j)) / 2.0;
+                    xxt[j][4] = (coords.at(0, j) + coords.at(1, j)) / 2.0;
+                    xxt[j][5] = (coords.at(1, j) + coords.at(2, j)) / 2.0;
+                    xxt[j][6] = (coords.at(2, j) + coords.at(3, j)) / 2.0;
+                    xxt[j][7] = (coords.at(3, j) + coords.at(0, j)) / 2.0;
                 }
-                StateOfShape::new(shape.kind, &xx).unwrap() // should not fail here
             }
         } else {
             if nrow == 20 {
                 // all vertices given, ok
-                StateOfShape::new(shape.kind, coords).unwrap() // should not fail here
+                for m in 0..nnode {
+                    for j in 0..ndim {
+                        xxt[j][m] = coords.at(m, j);
+                    }
+                }
             } else {
                 // copy "corner" vertices
-                let mut xx = vec![vec![0.0; ndim]; nnode];
                 for m in 0..nrow {
                     for j in 0..ndim {
-                        xx[m][j] = coords.at(m, j);
+                        xxt[j][m] = coords.at(m, j);
                     }
                 }
                 // generate mid vertices
                 for j in 0..ndim {
-                    xx[8][j] = (coords.at(0, j) + coords.at(1, j)) / 2.0;
-                    xx[9][j] = (coords.at(1, j) + coords.at(2, j)) / 2.0;
-                    xx[10][j] = (coords.at(2, j) + coords.at(3, j)) / 2.0;
-                    xx[11][j] = (coords.at(3, j) + coords.at(0, j)) / 2.0;
+                    xxt[j][8] = (coords.at(0, j) + coords.at(1, j)) / 2.0;
+                    xxt[j][9] = (coords.at(1, j) + coords.at(2, j)) / 2.0;
+                    xxt[j][10] = (coords.at(2, j) + coords.at(3, j)) / 2.0;
+                    xxt[j][11] = (coords.at(3, j) + coords.at(0, j)) / 2.0;
 
-                    xx[12][j] = (coords.at(4, j) + coords.at(5, j)) / 2.0;
-                    xx[13][j] = (coords.at(5, j) + coords.at(6, j)) / 2.0;
-                    xx[14][j] = (coords.at(6, j) + coords.at(7, j)) / 2.0;
-                    xx[15][j] = (coords.at(7, j) + coords.at(4, j)) / 2.0;
+                    xxt[j][12] = (coords.at(4, j) + coords.at(5, j)) / 2.0;
+                    xxt[j][13] = (coords.at(5, j) + coords.at(6, j)) / 2.0;
+                    xxt[j][14] = (coords.at(6, j) + coords.at(7, j)) / 2.0;
+                    xxt[j][15] = (coords.at(7, j) + coords.at(4, j)) / 2.0;
 
-                    xx[16][j] = (coords.at(0, j) + coords.at(4, j)) / 2.0;
-                    xx[17][j] = (coords.at(1, j) + coords.at(5, j)) / 2.0;
-                    xx[18][j] = (coords.at(2, j) + coords.at(6, j)) / 2.0;
-                    xx[19][j] = (coords.at(3, j) + coords.at(7, j)) / 2.0;
+                    xxt[j][16] = (coords.at(0, j) + coords.at(4, j)) / 2.0;
+                    xxt[j][17] = (coords.at(1, j) + coords.at(5, j)) / 2.0;
+                    xxt[j][18] = (coords.at(2, j) + coords.at(6, j)) / 2.0;
+                    xxt[j][19] = (coords.at(3, j) + coords.at(7, j)) / 2.0;
                 }
-                StateOfShape::new(shape.kind, &xx).unwrap() // should not fail here
             }
         };
 
         // grid search
         let grid_ksi = GridSearch::new(&vec![-1.0; ndim], &vec![1.0; ndim], GsNdiv::Default, GsTol::Default).unwrap(); // should not fail here
 
-        // done
-        const NDIV: usize = 2;
         Ok(Block {
-            attribute_id: 1,
+            attribute_id: Block::ATTRIBUTE_ID,
             ndim,
-            ndiv: vec![NDIV; ndim],
-            delta_ksi: vec![vec![1.0; NDIV]; ndim],
-            edge_constraints: vec![None; shape.nedge],
-            face_constraints: vec![None; shape.nface],
-            shape,
-            state,
+            ndiv: vec![Block::NDIV; ndim],
+            delta_ksi: vec![vec![1.0; Block::NDIV]; ndim],
+            edge_constraints: vec![None; nedge],
+            face_constraints: vec![None; nface],
             grid_ksi,
+            kind,
+            xxt,
         })
     }
 
@@ -295,7 +319,8 @@ impl Block {
     ///               If 3D, a hexahedron as defined in [GeoKind::HEXS].
     pub fn subdivide(&mut self, target: GeoKind) -> Result<Mesh, StrError> {
         // check
-        if self.ndim == 2 {
+        let ndim = self.ndim;
+        if ndim == 2 {
             if !GeoKind::QUAS.contains(&target) {
                 return Err("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...");
             }
@@ -307,15 +332,24 @@ impl Block {
 
         // resulting mesh
         let mut mesh = Mesh {
-            ndim: self.ndim,
+            ndim,
             points: Vec::new(),
             cells: Vec::new(),
         };
 
-        // shape object corresponding to the new (output) cells
-        let shape_out = Shape::new(target);
+        // constants
+        let out_nnode = target.nnode();
+        let fn_interp = self.kind.functions().0;
+        let mut pad = Scratchpad::new(ndim, self.kind)?;
 
-        //          BLOCK                      OUTPUT CELL
+        // The idea here is to map the TARGET CELL (shown on the right)
+        // to the BLOCK's reference (natural) space. (right-to-left mapping)
+        // We keep track of the points already added in the natural space of
+        // the block to avoid duplicates (using the GridSearch tool).
+        // Then we use the isoparametric formula to convert the reference
+        // coordinates in the block space to the real space (that's why
+        // fn_interp and pad are defined for the self.kind of the block).
+        //          BLOCK                      TARGET CELL
         // (-1,+1)-----------(+1,+1)    (-1,+1)-----------(+1,+1)
         //    |                 |   _.~'   |                 |
         //    |                 _.~'       |                 |
@@ -327,30 +361,26 @@ impl Block {
         // (-1,-1)-----------(+1,-1)    (-1,-1)-----------(+1,-1)
 
         // center of new cell in reference space (natural coordinates)
-        let mut center = vec![0.0; self.ndim];
+        let mut center = vec![0.0; ndim];
 
         // size ratios between new cell and block in natural coordinates
-        let mut scale = vec![0.0; self.ndim];
+        let mut scale = vec![0.0; ndim];
 
         // natural coordinates of new points
-        let mut ksi = vec![0.0; self.ndim];
+        let mut ksi = vec![0.0; ndim];
 
         // real coordinates of new points
-        let mut x = Vector::new(self.ndim);
+        let mut x = Vector::new(ndim);
 
         // number of divisions along each direction
-        let (nx, ny, nz) = (
-            self.ndiv[0],
-            self.ndiv[1],
-            if self.ndim == 2 { 1 } else { self.ndiv[2] },
-        );
+        let (nx, ny, nz) = (self.ndiv[0], self.ndiv[1], if ndim == 2 { 1 } else { self.ndiv[2] });
 
         // for each z-division
-        if self.ndim == 3 {
+        if ndim == 3 {
             center[2] = -1.0 + self.delta_ksi[2][0] / 2.0;
         }
         for k in 0..nz {
-            if self.ndim == 3 {
+            if ndim == 3 {
                 scale[2] = self.delta_ksi[2][k] / Block::NAT_LENGTH;
             }
 
@@ -367,19 +397,21 @@ impl Block {
                     // new cell id
                     let cell_id = mesh.cells.len();
 
-                    // for each node of the new (output) cell
+                    // for each node of the new (target) cell
                     // (there may be more nodes than the block; e.g., internal nodes)
-                    let mut points = vec![0; shape_out.nnode];
-                    for m in 0..shape_out.nnode {
+                    let mut points = vec![0; out_nnode];
+                    for m in 0..out_nnode {
                         // reference natural coordinates of the new cell nodes
-                        let ksi_ref = shape_out.kind.reference_coords(m);
+                        let ksi_ref = target.reference_coords(m);
 
                         // scale and translate the reference coordinates
-                        for a in 0..self.ndim {
+                        // to the space of the block
+                        for a in 0..ndim {
                             ksi[a] = center[a] + scale[a] * ksi_ref[a];
                         }
 
-                        // get existent point id or create new point
+                        // look up existent point in the reference space of the block
+                        // or create new point
                         let point_id = match self.grid_ksi.find(&ksi)? {
                             Some(point_id) => point_id,
                             None => {
@@ -387,12 +419,11 @@ impl Block {
                                 let point_id = mesh.points.len();
                                 self.grid_ksi.insert(point_id, &ksi)?;
 
-                                // compute real coordinates of point
-                                self.shape.calc_coords(&mut x, &mut self.state, &ksi)?;
+                                // compute real coordinates of point using the block's
+                                // reference coordinates, already scaled and translated
+                                op::calc_coords(&mut x, &mut pad, &ksi, &self.xxt, fn_interp);
 
                                 // add new point to mesh
-                                let mut shared_by_cells = HashSet::new();
-                                shared_by_cells.insert(cell_id);
                                 mesh.points.push(Point {
                                     id: point_id,
                                     coords: x.as_data().clone(),
@@ -421,12 +452,10 @@ impl Block {
             }
 
             // next z-center
-            if self.ndim == 3 {
+            if ndim == 3 {
                 center[2] += self.delta_ksi[2][k];
             }
         }
-
-        // done
         Ok(mesh)
     }
 }
@@ -456,16 +485,15 @@ mod tests {
         let b2d = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
         assert_eq!(b2d.attribute_id, 1);
         assert_eq!(b2d.ndim, 2);
+        assert_eq!(b2d.ndiv, &[2, 2]);
+        assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(
-            format!("{}", b2d.state.coords_transp),
+            format!("{}", b2d.xxt),
             "┌                 ┐\n\
              │ 0 2 2 0 1 2 1 0 │\n\
              │ 0 0 2 2 0 1 2 1 │\n\
              └                 ┘"
         );
-        assert_eq!(b2d.ndiv, &[2, 2]);
-        assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(b2d.shape.nnode, 8);
 
         let b2d = Block::new(&[
             [0.0, 0.0],
@@ -478,7 +506,7 @@ mod tests {
             [0.0, 1.0],
         ])?;
         assert_eq!(
-            format!("{}", b2d.state.coords_transp),
+            format!("{}", b2d.xxt),
             "┌                 ┐\n\
              │ 0 2 2 0 1 2 1 0 │\n\
              │ 0 0 2 2 0 1 2 1 │\n\
@@ -498,7 +526,7 @@ mod tests {
         assert_eq!(b3d.attribute_id, 1);
         assert_eq!(b3d.ndim, 3);
         assert_eq!(
-            format!("{}", b3d.state.coords_transp),
+            format!("{}", b3d.xxt),
             "┌                                         ┐\n\
              │ 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 0 │\n\
              │ 0 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 │\n\
@@ -507,7 +535,6 @@ mod tests {
         );
         assert_eq!(b3d.ndiv, &[2, 2, 2]);
         assert_eq!(format!("{:?}", b3d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]");
-        assert_eq!(b3d.shape.nnode, 20);
 
         let b3d = Block::new(&[
             [0.0, 0.0, 0.0],
@@ -532,7 +559,7 @@ mod tests {
             [0.0, 2.0, 1.0],
         ])?;
         assert_eq!(
-            format!("{}", b3d.state.coords_transp),
+            format!("{}", b3d.xxt),
             "┌                                         ┐\n\
              │ 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 0 │\n\
              │ 0 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 │\n\

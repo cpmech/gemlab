@@ -2,25 +2,10 @@ use super::GeoKind;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// The Matrix of coordinates is:
+/// Holds mutable data used by the functions in the sub-module named op
 ///
-/// ```text
-///     ┌               ┐
-///     | x⁰₀  x⁰₁  x⁰₂ |  
-///     | x¹₀  x¹₁  x¹₂ |  superscript = node
-/// X = | x²₀  x²₁  x²₂ |  subscript = dimension
-///     | x³₀  x³₁  x³₂ |
-///     |      ...      |
-///     | xᴹ₀  xᴹ₁  xᴹ₂ |
-///     └               ┘_(nnode,space_ndim)
-/// ```
-///
-/// where `M = nnode - 1`
-///
-/// # Warnings
-///
-/// 1. All public members here are supposed to be **readonly**.
-/// 2. The Scratchpad must be initialized by setting the coordinates matrix `X` first.
+/// Basically, this struct holds the variables calculated by the interpolation
+/// and derivative functions, including the Jacobian, inverse Jacobian, and gradients.
 #[derive(Clone, Debug)]
 pub struct Scratchpad {
     /// Array N: (nnode) interpolation functions at reference coordinate ksi
@@ -41,22 +26,6 @@ pub struct Scratchpad {
     ///
     /// Only available if `geo_ndim == space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
     pub gradient: Matrix,
-
-    /// Matrix Xᵀ: (space_ndim,nnode) transposed coordinates matrix (real space)
-    ///
-    /// ```text
-    ///      ┌                              ┐  superscript = node
-    ///      | x⁰₀  x¹₀  x²₀  x³₀       xᴹ₀ |  subscript = dimension
-    /// Xᵀ = | x⁰₁  x¹₁  x²₁  x³₁  ...  xᴹ₁ |
-    ///      | x⁰₂  x¹₂  x²₂  x³₂       xᴹ₂ |
-    ///      └                              ┘_(space_ndim,nnode)
-    /// ```
-    ///
-    /// where `M = nnode - 1`
-    xx_transp: Matrix,
-
-    /// Indicates that all coordinates in the X matrix have been set (at least once)
-    initialized: bool,
 }
 
 impl Scratchpad {
@@ -90,47 +59,7 @@ impl Scratchpad {
             } else {
                 Matrix::new(0, 0)
             },
-            xx_transp: Matrix::new(space_ndim, nnode),
-            initialized: false,
         })
-    }
-
-    /// Returns whether the matrix of coordinates has been fully initialized or not (at least once)
-    pub fn initialized(&self) -> bool {
-        self.initialized
-    }
-
-    /// Sets the m-node's coordinate j
-    ///
-    /// # Input
-    ///
-    /// * `m` -- (local) node index
-    /// * `j` -- index of space dimension
-    ///
-    /// # Panics
-    ///
-    /// This function will panic if the values m or j are out of bounds
-    pub fn set_xx(&mut self, m: usize, j: usize, value: f64) {
-        self.initialized = false;
-        self.xx_transp[j][m] = value;
-        let (space_ndim, nnode) = self.xx_transp.dims();
-        if m == nnode - 1 && j == space_ndim - 1 {
-            self.initialized = true;
-        }
-    }
-
-    /// Returns the m-node's coordinate j
-    ///
-    /// # Input
-    ///
-    /// * `m` -- (local) node index
-    /// * `j` -- index of space dimension
-    ///
-    /// # Panics
-    ///
-    /// This function will panic if the values m or j are out of bounds
-    pub fn xx(&self, m: usize, j: usize) -> f64 {
-        self.xx_transp[j][m]
     }
 }
 

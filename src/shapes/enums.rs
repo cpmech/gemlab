@@ -6,6 +6,36 @@ use crate::StrError;
 use russell_lab::{Matrix, Vector};
 use serde::{Deserialize, Serialize};
 
+/// Defines a function to calculate interpolation functions
+///
+/// # Input
+///
+/// * `interp` -- The first argument is the vector with the resulting interpolation
+///   functions with a length equal to `nnode`
+/// * `ksi` -- The second argument is a set of coordinates in the reference space.
+///   Its length must be greater than or equal to `geo_ndim`
+///
+/// # Panics
+///
+/// None of the dimensions are checked, thus a panic my occur if the
+/// arguments have dimensions incompatible with the related [GeoKind].
+pub type FnInterp = fn(interp: &mut Vector, ksi: &[f64]);
+
+/// Defines a function to calculate the derivatives of interpolation functions
+///
+/// # Input
+///
+/// * `deriv` -- The first argument is the resulting set of derivatives of interpolation functions
+///   with size equal to `(nnode,geo_ndim)`
+/// * `ksi` -- The second argument is a set of coordinates in the reference space.
+///   Its length must be greater than or equal to `geo_ndim`
+///
+/// # Panics
+///
+/// None of the dimensions are checked, thus a panic my occur if the
+/// arguments have dimensions incompatible with the related [GeoKind].
+pub type FnDeriv = fn(deriv: &mut Matrix, ksi: &[f64]);
+
 /// Defines the class of geometric shape
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GeoClass {
@@ -819,7 +849,7 @@ impl GeoKind {
 
     /// Returns the functions to evaluate the interpolation functions
     /// and the derivatives of the interpolation functions
-    pub fn functions(&self) -> (fn(&mut Vector, &[f64]), fn(&mut Matrix, &[f64])) {
+    pub fn functions(&self) -> (FnInterp, FnDeriv) {
         match self {
             // Lin
             Self::Lin2 => (Lin2::calc_interp, Lin2::calc_deriv),

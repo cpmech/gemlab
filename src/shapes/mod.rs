@@ -254,6 +254,7 @@ mod lin2;
 mod lin3;
 mod lin4;
 mod lin5;
+pub mod op;
 mod qua12;
 mod qua16;
 mod qua17;
