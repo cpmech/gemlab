@@ -65,23 +65,18 @@ use russell_tensor::Tensor4;
 ///
 /// ```
 /// use gemlab::integ;
-/// use gemlab::shapes::{Shape, StateOfShape};
+/// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
 /// use gemlab::StrError;
-/// use russell_tensor::LinElasticity;
 /// use russell_lab::{copy_matrix, Matrix};
+/// use russell_tensor::LinElasticity;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     // shape and state
 ///     let space_ndim = 3;
-///     let geo_ndim = 3;
-///     let nnode = 4;
-///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+///     let shape = Shape::new(GeoKind::Tet4);
 ///     let mut state = StateOfShape::new(
-///         shape.geo_ndim,
-///         &[[2.0, 3.0, 4.0],
-///           [6.0, 3.0, 2.0],
-///           [2.0, 5.0, 1.0],
-///           [4.0, 3.0, 6.0]],
+///         shape.kind,
+///         &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
 ///     )?;
 ///
 ///     // constants
@@ -92,7 +87,7 @@ use russell_tensor::Tensor4;
 ///     let model = LinElasticity::new(young, poisson, two_dim, plane_stress);
 ///
 ///     // stiffness
-///     let nrow = shape.nnode * shape.space_ndim;
+///     let nrow = shape.nnode * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let ips = integ::default_integ_points(shape.kind);
 ///     integ::mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
@@ -132,13 +127,14 @@ where
     F: Fn(&mut Tensor4, usize) -> Result<(), StrError>,
 {
     // check
+    let space_ndim = state.coords_min.len();
     let (nrow_kk, ncol_kk) = kk.dims();
-    if nrow_kk != ncol_kk || nrow_kk != shape.nnode * shape.space_ndim {
+    if nrow_kk != ncol_kk || nrow_kk != shape.nnode * space_ndim {
         return Err("K.dims() must be equal to (nnode*space_ndim,nnode*space_ndim)");
     }
 
     // allocate auxiliary tensor
-    let mut dd = Tensor4::new(true, shape.space_ndim == 2);
+    let mut dd = Tensor4::new(true, space_ndim == 2);
 
     // clear output matrix
     if erase_kk {
@@ -171,7 +167,8 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, shape: &Shape, s
     let s = SQRT_2;
     let g = &state.gradient;
     let d = &dd.mat;
-    if shape.space_ndim == 2 {
+    let space_ndim = state.coords_min.len();
+    if space_ndim == 2 {
         for m in 0..shape.nnode {
             for n in 0..shape.nnode {
                 kk[0+m*2][0+n*2] += c * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
@@ -203,7 +200,7 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, shape: &Shape, s
 mod tests {
     use super::mat_gdg_stiffness;
     use crate::integ::{select_integ_points, AnalyticalTet4, AnalyticalTri3};
-    use crate::shapes::{GeoClass, Shape, StateOfShape};
+    use crate::shapes::{GeoKind, Shape, StateOfShape};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::{copy_matrix, Matrix};
@@ -211,8 +208,8 @@ mod tests {
 
     #[test]
     fn capture_some_errors() {
-        let shape = Shape::new(2, 1, 2).unwrap();
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Lin2);
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
             mat_gdg_stiffness(&mut kk, &mut state, &shape, &[], 1.0, false, |_, _| Ok(())).err(),
@@ -239,8 +236,8 @@ mod tests {
         //           and Applications, Wiley, 700p.
 
         // shape and state
-        let shape = Shape::new(2, 2, 3)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [2.0, 0.0], [2.0, 1.5]])?;
+        let shape = Shape::new(GeoKind::Tri3);
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0], [2.0, 0.0], [2.0, 1.5]])?;
 
         // constants
         let young = 10_000.0;
@@ -250,9 +247,10 @@ mod tests {
         let model = LinElasticity::new(young, poisson, true, plane_stress);
 
         // stiffness
-        let nrow = shape.nnode * shape.space_ndim;
+        let space_ndim = state.coords_min.len();
+        let nrow = shape.nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
-        let ips = select_integ_points(GeoClass::Tri, 1)?;
+        let ips = select_integ_points(shape.kind.class(), 1)?;
         mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, th, true, |dd, _| {
             copy_matrix(&mut dd.mat, &model.get_modulus().mat)
         })?;
@@ -277,7 +275,7 @@ mod tests {
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-11, 1e-12];
         let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
@@ -293,9 +291,9 @@ mod tests {
     #[test]
     fn mat_gdg_stiffness_works_tet4() -> Result<(), StrError> {
         // shape and state
-        let shape = Shape::new(3, 3, 4)?;
+        let shape = Shape::new(GeoKind::Tet4);
         let mut state = StateOfShape::new(
-            shape.geo_ndim,
+            shape.kind,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
 
@@ -309,12 +307,13 @@ mod tests {
         let kk_correct = ana.integ_stiffness(young, poisson)?;
 
         // check
-        let nrow = shape.nnode * shape.space_ndim;
+        let space_ndim = state.coords_min.len();
+        let nrow = shape.nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-12];
         let selection: Vec<_> = [1, 4, 5, 8, 14]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);

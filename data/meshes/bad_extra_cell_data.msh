@@ -1,6 +1,6 @@
 # header
-# space_ndim npoint ncell
-           2      6     2
+# ndim npoint ncell
+     2      6     2
 
 # points
 # id   x   y
@@ -12,6 +12,6 @@
    5 2.0 1.0
 
 # cells
-# id att geo_ndim nnode  point_ids... wrong
-   0   1        2     4  0 1 2 3      123
-   1   0        2     4  1 4 5 2      123
+# id att kind  point_ids... wrong
+   0   1 qua4  0 1 2 3      123
+   1   0 qua4  1 4 5 2      123

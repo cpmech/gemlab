@@ -1,5 +1,5 @@
 use gemlab::integ;
-use gemlab::shapes::{Shape, StateOfShape};
+use gemlab::shapes::{GeoKind, Shape, StateOfShape};
 use gemlab::StrError;
 use russell_chk::assert_vec_approx_eq;
 use russell_lab::Vector;
@@ -15,10 +15,8 @@ fn main() -> Result<(), StrError> {
 
     // shape and state
     let space_ndim = 2;
-    let geo_ndim = 2;
-    let nnode = 3;
-    let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-    let mut state = StateOfShape::new(shape.geo_ndim, &coords)?;
+    let shape = Shape::new(GeoKind::Tri3);
+    let mut state = StateOfShape::new(shape.kind, &coords)?;
 
     // analytical solutions
     let ana = integ::AnalyticalTri3::new(&shape, &state);
@@ -67,7 +65,7 @@ fn main() -> Result<(), StrError> {
     //          │ 1 │   │ 24 │
     //          └   ┘   └    ┘
     // ```
-    let mut b = Vector::filled(shape.nnode * shape.space_ndim, 0.0);
+    let mut b = Vector::filled(shape.nnode * space_ndim, 0.0);
     integ::vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
         v[0] = 12.0;
         v[1] = 12.0;
@@ -127,7 +125,7 @@ fn main() -> Result<(), StrError> {
     //     │   6 │
     //     └     ┘
     let (s00, s11, s01) = (6.0, 4.0, 2.0);
-    let mut d = Vector::filled(shape.nnode * shape.space_ndim, 0.0);
+    let mut d = Vector::filled(shape.nnode * space_ndim, 0.0);
     integ::vec_d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
         sig.sym_set(0, 0, s00);
         sig.sym_set(1, 1, s11);

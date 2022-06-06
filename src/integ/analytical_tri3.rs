@@ -199,7 +199,7 @@ impl AnalyticalTri3 {
 #[cfg(test)]
 mod tests {
     use super::AnalyticalTri3;
-    use crate::shapes::{Shape, StateOfShape};
+    use crate::shapes::{GeoKind, Shape, StateOfShape};
     use crate::StrError;
     use russell_chk::assert_approx_eq;
 
@@ -210,8 +210,8 @@ mod tests {
         // [@bhatti] Bhatti, M.A. (2005) Fundamental Finite Element Analysis
         //          and Applications, Wiley, 700p.
         //
-        let shape = Shape::new(2, 2, 3)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [0.2, 0.0], [0.1, 0.1]])?;
+        let shape = Shape::new(GeoKind::Tri3);
+        let mut state = StateOfShape::new(GeoKind::Tri3, &[[0.0, 0.0], [0.2, 0.0], [0.1, 0.1]])?;
         let ana = AnalyticalTri3::new(&shape, &mut state);
         assert_approx_eq!(ana.area, 0.01, 1e-15);
         // a = [-0.1, 0.1, 0.0]

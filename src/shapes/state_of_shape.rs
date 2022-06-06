@@ -1,4 +1,4 @@
-use super::geo_class_and_kind;
+use super::GeoKind;
 use crate::util::AsArray2D;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
@@ -66,7 +66,7 @@ impl StateOfShape {
     ///          | xᴹ₀  xᴹ₁  xᴹ₂ |
     ///          └               ┘_(nnode,space_ndim)
     /// ```
-    pub fn new<'a, T>(geo_ndim: usize, coords: &'a T) -> Result<Self, StrError>
+    pub fn new<'a, T>(kind: GeoKind, coords: &'a T) -> Result<Self, StrError>
     where
         T: AsArray2D<'a, f64>,
     {
@@ -74,7 +74,7 @@ impl StateOfShape {
         if space_ndim < 2 || space_ndim > 3 {
             return Err("space_ndim must be 2 or 3");
         }
-        geo_class_and_kind(geo_ndim, nnode)?; // just to check combination
+        let geo_ndim = kind.ndim();
         let mut state = StateOfShape {
             coords_transp: Matrix::new(space_ndim, nnode),
             coords_min: vec![f64::MAX; space_ndim],
@@ -113,32 +113,29 @@ impl StateOfShape {
 
 #[cfg(test)]
 mod tests {
-    use crate::shapes::StateOfShape;
+    use super::StateOfShape;
+    use crate::shapes::GeoKind;
     use crate::StrError;
 
     #[test]
     fn new_fails_on_wrong_input() {
         assert_eq!(
-            StateOfShape::new(100, &[[1.0, 1.0], [2.0, 2.0]]).err(),
-            Some("(geo_ndim,nnode) combination is invalid")
-        );
-        assert_eq!(StateOfShape::new(1, &[[], []]).err(), Some("space_ndim must be 2 or 3"));
-        assert_eq!(
-            StateOfShape::new(1, &[[0.0], [0.0]]).err(),
+            StateOfShape::new(GeoKind::Lin2, &[[], []]).err(),
             Some("space_ndim must be 2 or 3")
         );
         assert_eq!(
-            StateOfShape::new(1, &[[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]]).err(),
+            StateOfShape::new(GeoKind::Lin2, &[[0.0], [0.0]]).err(),
+            Some("space_ndim must be 2 or 3")
+        );
+        assert_eq!(
+            StateOfShape::new(GeoKind::Lin2, &[[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]]).err(),
             Some("space_ndim must be 2 or 3")
         );
     }
 
     #[test]
     fn new_works() -> Result<(), StrError> {
-        let space_ndim = 2;
-        let geo_ndim = 1;
-        let nnode = 2;
-        let state = StateOfShape::new(geo_ndim, &[[-1.23, 1.23], [-4.56, 4.56]])?;
+        let state = StateOfShape::new(GeoKind::Lin2, &[[-1.23, 1.23], [-4.56, 4.56]])?;
         assert_eq!(
             format!("{}", state.coords_transp),
             "┌             ┐\n\
@@ -146,6 +143,9 @@ mod tests {
              │  1.23  4.56 │\n\
              └             ┘"
         );
+        let space_ndim = 2;
+        let geo_ndim = 1;
+        let nnode = 2;
         assert_eq!(state.coords_min, &[-4.56, 1.23]);
         assert_eq!(state.coords_max, &[-1.23, 4.56]);
         assert_eq!(state.interp.dim(), nnode);
@@ -154,10 +154,7 @@ mod tests {
         assert_eq!(state.inv_jacobian.dims(), (0, 0));
         assert_eq!(state.gradient.dims(), (0, 0));
 
-        let space_ndim = 2;
-        let geo_ndim = 2;
-        let nnode = 3;
-        let state = StateOfShape::new(geo_ndim, &[[-1.23, 1.23], [-4.56, 4.56], [-7.89, 7.89]])?;
+        let state = StateOfShape::new(GeoKind::Tri3, &[[-1.23, 1.23], [-4.56, 4.56], [-7.89, 7.89]])?;
         assert_eq!(
             format!("{}", state.coords_transp),
             "┌                   ┐\n\
@@ -165,6 +162,9 @@ mod tests {
              │  1.23  4.56  7.89 │\n\
              └                   ┘"
         );
+        let space_ndim = 2;
+        let geo_ndim = 2;
+        let nnode = 3;
         assert_eq!(state.coords_min, &[-7.89, 1.23]);
         assert_eq!(state.coords_max, &[-1.23, 7.89]);
         assert_eq!(state.interp.dim(), nnode);
@@ -173,13 +173,13 @@ mod tests {
         assert_eq!(state.inv_jacobian.dims(), (space_ndim, space_ndim));
         assert_eq!(state.gradient.dims(), (nnode, space_ndim));
 
+        let state = StateOfShape::new(
+            GeoKind::Tet4,
+            &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        )?;
         let space_ndim = 3;
         let geo_ndim = 3;
         let nnode = 4;
-        let state = StateOfShape::new(
-            geo_ndim,
-            &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-        )?;
         assert_eq!(
             format!("{}", state.coords_transp),
             "┌         ┐\n\
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn derive_works() {
-        let state = StateOfShape::new(2, &[[-1.23, 1.23], [-4.56, 4.56], [-7.89, 7.89]]).unwrap();
+        let state = StateOfShape::new(GeoKind::Tri3, &[[-1.23, 1.23], [-4.56, 4.56], [-7.89, 7.89]]).unwrap();
         let state_clone = state.clone();
         assert_eq!(format!("{:?}", state), "StateOfShape { coords_transp: NumMatrix { nrow: 2, ncol: 3, data: [-1.23, -4.56, -7.89, 1.23, 4.56, 7.89] }, coords_min: [-7.89, 1.23], coords_max: [-1.23, 7.89], interp: NumVector { data: [0.0, 0.0, 0.0] }, deriv: NumMatrix { nrow: 3, ncol: 2, data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] }, jacobian: NumMatrix { nrow: 2, ncol: 2, data: [0.0, 0.0, 0.0, 0.0] }, inv_jacobian: NumMatrix { nrow: 2, ncol: 2, data: [0.0, 0.0, 0.0, 0.0] }, gradient: NumMatrix { nrow: 3, ncol: 2, data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] } }");
         assert_eq!(state_clone.coords_min, &[-7.89, 1.23]);

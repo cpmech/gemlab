@@ -64,8 +64,8 @@ impl Find {
     pub(crate) fn new(mesh: &Mesh, features: &Features) -> Result<Self, StrError> {
         // expand limits a little bit to accommodate imprecisions on the (min,max) values
         const PCT: f64 = 1.0 / 100.0; // 1% is enough
-        let (mut min, mut max) = (vec![0.0; mesh.space_ndim], vec![0.0; mesh.space_ndim]);
-        for i in 0..mesh.space_ndim {
+        let (mut min, mut max) = (vec![0.0; mesh.ndim], vec![0.0; mesh.ndim]);
+        for i in 0..mesh.ndim {
             let del = features.max[i] - features.min[i];
             min[i] = features.min[i] - PCT * del;
             max[i] = features.max[i] + PCT * del;
@@ -101,7 +101,7 @@ impl Find {
 
         // done
         Ok(Find {
-            space_ndim: mesh.space_ndim,
+            space_ndim: mesh.ndim,
             num_points: mesh.points.len(),
             grid,
             point_to_edges,
@@ -323,7 +323,7 @@ mod tests {
     #[test]
     fn new_works() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -350,7 +350,7 @@ mod tests {
     fn find_points_fails_on_wrong_input() -> Result<(), StrError> {
         // 2d
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -368,7 +368,7 @@ mod tests {
 
         // 3d
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let boundary = extract_features_3d(&mesh, &shapes, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -398,7 +398,7 @@ mod tests {
         //   0--------1--------4
         //           circle
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -435,7 +435,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let boundary = extract_features_3d(&mesh, &shapes, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -484,7 +484,7 @@ mod tests {
         // |        |        |
         // 0--------1--------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -518,7 +518,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let boundary = extract_features_3d(&mesh, &shapes, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -578,7 +578,7 @@ mod tests {
         // |        |        |
         // 0--------1--------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -607,7 +607,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let boundary = extract_features_3d(&mesh, &shapes, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -661,7 +661,7 @@ mod tests {
         //
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let boundary = extract_features_2d(&mesh, &shapes, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;

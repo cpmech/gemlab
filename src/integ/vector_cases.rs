@@ -67,22 +67,14 @@ use russell_tensor::Tensor2;
 ///
 /// ```
 /// use gemlab::integ::{default_integ_points, vec_a_shape_times_scalar};
-/// use gemlab::shapes::{Shape, StateOfShape};
+/// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
 /// use gemlab::StrError;
 /// use russell_chk::assert_vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
-///     let space_ndim = 2;
-///     let geo_ndim = 2;
-///     let nnode = 3;
-///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-///     let mut state = StateOfShape::new(
-///         shape.geo_ndim,
-///         &[[2.0, 3.0],
-///           [6.0, 3.0],
-///           [2.0, 6.0]],
-///     )?;
+///     let shape = Shape::new(GeoKind::Tri3);
+///     let mut state = StateOfShape::new(shape.kind, &[[2.0, 3.0], [6.0, 3.0], [2.0, 6.0]])?;
 ///     let ips = default_integ_points(shape.kind);
 ///     let mut a = Vector::filled(shape.nnode, 0.0);
 ///     vec_a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(5.0))?;
@@ -196,24 +188,17 @@ where
 ///
 /// ```
 /// use gemlab::integ::{default_integ_points, vec_b_shape_times_vector};
-/// use gemlab::shapes::{Shape, StateOfShape};
+/// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
 /// use gemlab::StrError;
 /// use russell_chk::assert_vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let space_ndim = 2;
-///     let geo_ndim = 2;
-///     let nnode = 3;
-///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-///     let mut state = StateOfShape::new(
-///         shape.geo_ndim,
-///         &[[2.0, 3.0],
-///           [6.0, 3.0],
-///           [2.0, 6.0]],
-///     )?;
+///     let shape = Shape::new(GeoKind::Tri3);
+///     let mut state = StateOfShape::new(shape.kind, &[[2.0, 3.0], [6.0, 3.0], [2.0, 6.0]])?;
 ///     let ips = default_integ_points(shape.kind);
-///     let mut b = Vector::filled(shape.nnode * shape.space_ndim, 0.0);
+///     let mut b = Vector::filled(shape.nnode * space_ndim, 0.0);
 ///     vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
@@ -239,12 +224,13 @@ where
     F: Fn(&mut Vector, usize) -> Result<(), StrError>,
 {
     // check
-    if b.dim() != shape.nnode * shape.space_ndim {
+    let space_ndim = state.coords_min.len();
+    if b.dim() != shape.nnode * space_ndim {
         return Err("b.len() must be equal to nnode * space_ndim");
     }
 
     // allocate auxiliary vector
-    let mut v = Vector::new(shape.space_ndim);
+    let mut v = Vector::new(space_ndim);
 
     // clear output vector
     if erase_b {
@@ -267,7 +253,7 @@ where
         // add contribution to b vector
         let coef = th * det_jac * weight;
         let nn = &state.interp;
-        if shape.space_ndim == 2 {
+        if space_ndim == 2 {
             for m in 0..shape.nnode {
                 b[0 + m * 2] += coef * nn[m] * v[0];
                 b[1 + m * 2] += coef * nn[m] * v[1];
@@ -337,22 +323,14 @@ where
 ///
 /// ```
 /// use gemlab::integ::{default_integ_points, vec_c_vector_dot_gradient};
-/// use gemlab::shapes::{Shape, StateOfShape};
+/// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
 /// use gemlab::StrError;
 /// use russell_chk::assert_vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
-///     let space_ndim = 2;
-///     let geo_ndim = 2;
-///     let nnode = 3;
-///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-///     let mut state = StateOfShape::new(
-///         shape.geo_ndim,
-///         &[[2.0, 3.0],
-///           [6.0, 3.0],
-///           [2.0, 6.0]],
-///     )?;
+///     let shape = Shape::new(GeoKind::Tri3);
+///     let mut state = StateOfShape::new(shape.kind, &[[2.0, 3.0], [6.0, 3.0], [2.0, 6.0]])?;
 ///     let ips = default_integ_points(shape.kind);
 ///     let mut c = Vector::filled(shape.nnode, 0.0);
 ///     vec_c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
@@ -389,7 +367,8 @@ where
     }
 
     // allocate auxiliary vector
-    let mut w = Vector::new(shape.space_ndim);
+    let space_ndim = state.coords_min.len();
+    let mut w = Vector::new(space_ndim);
 
     // clear output vector
     if erase_c {
@@ -411,7 +390,7 @@ where
         // add contribution to c vector
         let coef = th * det_jac * weight;
         let g = &state.gradient;
-        if shape.space_ndim == 2 {
+        if space_ndim == 2 {
             for m in 0..shape.nnode {
                 c[m] += coef * (w[0] * g[m][0] + w[1] * g[m][1]);
             }
@@ -483,24 +462,17 @@ where
 ///
 /// ```
 /// use gemlab::integ::{default_integ_points, vec_d_tensor_dot_gradient};
-/// use gemlab::shapes::{Shape, StateOfShape};
+/// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
 /// use gemlab::StrError;
 /// use russell_chk::assert_vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let space_ndim = 2;
-///     let geo_ndim = 2;
-///     let nnode = 3;
-///     let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-///     let mut state = StateOfShape::new(
-///         shape.geo_ndim,
-///         &[[2.0, 3.0],
-///           [6.0, 3.0],
-///           [2.0, 6.0]],
-///     )?;
+///     let shape = Shape::new(GeoKind::Tri3);
+///     let mut state = StateOfShape::new(shape.kind, &[[2.0, 3.0], [6.0, 3.0], [2.0, 6.0]])?;
 ///     let ips = default_integ_points(shape.kind);
-///     let mut d = Vector::filled(shape.nnode * shape.space_ndim, 0.0);
+///     let mut d = Vector::filled(shape.nnode * space_ndim, 0.0);
 ///     vec_d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
@@ -532,12 +504,13 @@ where
     F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
 {
     // check
-    if d.dim() != shape.nnode * shape.space_ndim {
+    let space_ndim = state.coords_min.len();
+    if d.dim() != shape.nnode * space_ndim {
         return Err("d.len() must be equal to nnode * space_ndim");
     }
 
     // allocate auxiliary tensor
-    let mut sig = Tensor2::new(true, shape.space_ndim == 2);
+    let mut sig = Tensor2::new(true, space_ndim == 2);
 
     // clear output vector
     if erase_d {
@@ -561,7 +534,7 @@ where
         let coef = th * det_jac * weight;
         let g = &state.gradient;
         let t = &sig.vec;
-        if shape.space_ndim == 2 {
+        if space_ndim == 2 {
             for m in 0..shape.nnode {
                 d[0 + m * 2] += coef * (t[0] * g[m][0] + t[3] * g[m][1] / s);
                 d[1 + m * 2] += coef * (t[3] * g[m][0] / s + t[1] * g[m][1]);
@@ -585,7 +558,7 @@ mod tests {
         vec_a_shape_times_scalar, vec_b_shape_times_vector, vec_c_vector_dot_gradient, vec_d_tensor_dot_gradient,
     };
     use crate::integ::{select_integ_points, AnalyticalTet4, AnalyticalTri3};
-    use crate::shapes::{GeoClass, Shape, StateOfShape};
+    use crate::shapes::{GeoKind, Shape, StateOfShape};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
@@ -595,8 +568,8 @@ mod tests {
 
     #[test]
     fn capture_some_errors() {
-        let shape = Shape::new(2, 1, 2).unwrap();
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Lin2);
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0], [1.0, 0.0]]).unwrap();
         let mut a = Vector::new(3);
         assert_eq!(
             vec_a_shape_times_scalar(&mut a, &mut state, &shape, &[], 1.0, false, |_| Ok(0.0)).err(),
@@ -633,8 +606,8 @@ mod tests {
         //     6 │ xa + 2 xb │
         //       └           ┘
         const L: f64 = 6.0;
-        let shape = Shape::new(2, 1, 2).unwrap();
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [3.0 + L, 4.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Lin2);
+        let mut state = StateOfShape::new(shape.kind, &[[3.0, 4.0], [3.0 + L, 4.0]]).unwrap();
         let cf = L / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
@@ -642,7 +615,7 @@ mod tests {
         let tolerances = [1e-15, 1e-14, 1e-15, 1e-15];
         let selection: Vec<_> = [2, 3, 4, 5]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Lin, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
         let mut a = Vector::filled(shape.nnode, NOISE);
@@ -659,15 +632,15 @@ mod tests {
     fn vec_a_shape_times_scalar_works_tri3_constant() -> Result<(), StrError> {
         // tri3 with a constant source term s(x) = cₛ
         const CS: f64 = 3.0;
-        let shape = Shape::new(2, 2, 3).unwrap();
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Tri3);
+        let mut state = StateOfShape::new(shape.kind, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
         let ana = AnalyticalTri3::new(&shape, &state);
         let a_correct = ana.integ_vec_a_constant(CS);
         // integration points
         let tolerances = [1e-14, 1e-14, 1e-15, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
         let mut a = Vector::filled(shape.nnode, NOISE);
@@ -682,9 +655,9 @@ mod tests {
     #[test]
     fn vec_a_shape_times_scalar_works_tet4_linear() -> Result<(), StrError> {
         // tet 4 with a linear source term s(x) = z = x₂
-        let shape = Shape::new(3, 3, 4)?;
+        let shape = Shape::new(GeoKind::Tet4);
         let mut state = StateOfShape::new(
-            shape.geo_ndim,
+            shape.kind,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
         let ana = AnalyticalTet4::new(&shape, &state);
@@ -695,7 +668,7 @@ mod tests {
         let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15];
         let selection: Vec<_> = [1, 4, 5, 8, 14]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
         let mut a = Vector::filled(shape.nnode, NOISE);
@@ -712,8 +685,8 @@ mod tests {
     fn vec_b_shape_times_vector_works_lin2_linear() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with lin2
         const L: f64 = 6.0;
-        let shape = Shape::new(2, 1, 2).unwrap();
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [3.0 + L, 4.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Lin2);
+        let mut state = StateOfShape::new(shape.kind, &[[3.0, 4.0], [3.0 + L, 4.0]]).unwrap();
         let cf = L / 6.0;
         let (xa, xb) = (state.coords_transp[0][0], state.coords_transp[0][1]);
         let b_correct = &[
@@ -726,10 +699,11 @@ mod tests {
         let tolerances = [1e-15, 1e-15];
         let selection: Vec<_> = [2, 3]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Lin, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
-        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        let space_ndim = state.coords_min.len();
+        let mut b = Vector::filled(shape.nnode * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = shape.calc_integ_points_coords(&mut state, ips).unwrap();
@@ -750,18 +724,19 @@ mod tests {
         // So, each component of `b` equals `Fₛ`
         const V0: f64 = -3.0;
         const V1: f64 = 8.0;
-        let shape = Shape::new(2, 2, 3).unwrap();
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Tri3);
+        let mut state = StateOfShape::new(shape.kind, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
         let ana = AnalyticalTri3::new(&shape, &state);
         let b_correct = ana.integ_vec_b_constant(V0, V1);
         // integration points
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [1, 3]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
-        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        let space_ndim = state.coords_min.len();
+        let mut b = Vector::filled(shape.nnode * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
@@ -781,9 +756,9 @@ mod tests {
         const V0: f64 = 2.0;
         const V1: f64 = 3.0;
         const V2: f64 = 4.0;
-        let shape = Shape::new(3, 3, 4)?;
+        let shape = Shape::new(GeoKind::Tet4);
         let mut state = StateOfShape::new(
-            shape.geo_ndim,
+            shape.kind,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
         let ana = AnalyticalTet4::new(&shape, &state);
@@ -792,10 +767,11 @@ mod tests {
         let tolerances = [1e-15, 1e-15];
         let selection: Vec<_> = [1, 4]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
-        let mut b = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        let space_ndim = state.coords_min.len();
+        let mut b = Vector::filled(shape.nnode * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
@@ -815,15 +791,15 @@ mod tests {
         // constant vector function: w(x) = {w₀, w₁}
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
-        let shape = Shape::new(2, 2, 3).unwrap();
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Tri3);
+        let mut state = StateOfShape::new(shape.kind, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
         let ana = AnalyticalTri3::new(&shape, &state);
         let c_correct = ana.integ_vec_c_constant(W0, W1);
         // integration points
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [1, 3]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
         let mut c = Vector::filled(shape.nnode, NOISE);
@@ -843,15 +819,15 @@ mod tests {
     #[test]
     fn vec_c_vector_dot_gradient_works_tri3_bilinear() -> Result<(), StrError> {
         // bilinear vector function: w(x) = {x, y}
-        let shape = Shape::new(2, 2, 3).unwrap();
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Tri3);
+        let mut state = StateOfShape::new(shape.kind, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
         let ana = AnalyticalTri3::new(&shape, &state);
         let c_correct = ana.integ_vec_c_bilinear(&state);
         // integration points
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [1, 3]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
         let mut c = Vector::filled(shape.nnode, NOISE);
@@ -875,9 +851,9 @@ mod tests {
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
         const W2: f64 = 4.0;
-        let shape = Shape::new(3, 3, 4)?;
+        let shape = Shape::new(GeoKind::Tet4);
         let mut state = StateOfShape::new(
-            shape.geo_ndim,
+            shape.kind,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
         let ana = AnalyticalTet4::new(&shape, &state);
@@ -886,7 +862,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         let selection: Vec<_> = [1, 4, 5, 8, 14]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
         let mut c = Vector::filled(shape.nnode, NOISE);
@@ -914,18 +890,19 @@ mod tests {
         const S11: f64 = 3.0;
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
-        let shape = Shape::new(2, 2, 3).unwrap();
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Tri3);
+        let mut state = StateOfShape::new(shape.kind, &[[3.0, 4.0], [8.0, 4.0], [5.0, 9.0]]).unwrap();
         let ana = AnalyticalTri3::new(&shape, &state);
         let d_correct = ana.integ_vec_d_constant(S00, S11, S01);
         // integration points
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tri, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
-        let mut d = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        let space_ndim = state.coords_min.len();
+        let mut d = Vector::filled(shape.nnode * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             vec_d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
@@ -944,9 +921,9 @@ mod tests {
     #[test]
     fn vec_d_tensor_dot_gradient_tet4_works_constant() -> Result<(), StrError> {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
-        let shape = Shape::new(3, 3, 4)?;
+        let shape = Shape::new(GeoKind::Tet4);
         let mut state = StateOfShape::new(
-            shape.geo_ndim,
+            shape.kind,
             &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
         )?;
         const S00: f64 = 2.0;
@@ -961,10 +938,11 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-13, 1e-14, 1e-14];
         let selection: Vec<_> = [1, 4, 5, 8, 14]
             .iter()
-            .map(|n| select_integ_points(GeoClass::Tet, *n).unwrap())
+            .map(|n| select_integ_points(shape.kind.class(), *n).unwrap())
             .collect();
         // check
-        let mut d = Vector::filled(shape.nnode * shape.space_ndim, NOISE);
+        let space_ndim = state.coords_min.len();
+        let mut d = Vector::filled(shape.nnode * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             vec_d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {

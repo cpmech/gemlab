@@ -10,15 +10,18 @@ use std::collections::HashMap;
 ///
 /// * the index of a point in the points vector matches the id of the point
 /// * the index of a cell in the cells vector matches the id of the cell
-pub fn check_ids(mesh: &Mesh) -> Result<(), StrError> {
+pub fn check_ids_and_kind(mesh: &Mesh) -> Result<(), StrError> {
     for i in 0..mesh.points.len() {
         if mesh.points[i].id != i {
-            return Err("invalid point id found; ids must be sequential");
+            return Err("incorrect point id found; ids must be sequential");
         }
     }
     for i in 0..mesh.cells.len() {
         if mesh.cells[i].id != i {
-            return Err("invalid cell id found; ids must be sequential");
+            return Err("incorrect cell id found; ids must be sequential");
+        }
+        if mesh.cells[i].points.len() != mesh.cells[i].kind.nnode() {
+            return Err("number of cell points does not correspond to kind.nnode()");
         }
     }
     Ok(())
@@ -28,8 +31,8 @@ pub fn check_ids(mesh: &Mesh) -> Result<(), StrError> {
 pub fn check_jacobian(mesh: &Mesh) -> Result<(), StrError> {
     let ksi = [0.0, 0.0, 0.0];
     for cell in &mesh.cells {
-        let shape = Shape::new(mesh.space_ndim, cell.geo_ndim, cell.points.len())?;
-        let mut state = allocate_state(mesh, cell.geo_ndim, &cell.points)?;
+        let shape = Shape::new(cell.kind);
+        let mut state = allocate_state(mesh, cell.kind, &cell.points)?;
         let det_jac = shape.calc_jacobian(&mut state, &ksi)?;
         if det_jac < 0.0 {
             return Err("negative determinant of Jacobian found");
@@ -45,15 +48,14 @@ pub fn check_2d_edge_normals(
     solutions: &HashMap<EdgeKey, [f64; 2]>,
     tolerance: f64,
 ) -> Result<(), StrError> {
-    const GEO_NDIM: usize = 1;
     let ksi = &[0.0, 0.0];
-    let mut normal = Vector::new(mesh.space_ndim);
+    let mut normal = Vector::new(mesh.ndim);
     for (edge_key, solution) in solutions {
         let edge = edges.get(edge_key).ok_or("cannot find edge_key in edges map")?;
-        let shape = Shape::new(mesh.space_ndim, GEO_NDIM, edge.points.len())?;
-        let mut state = allocate_state(mesh, GEO_NDIM, &edge.points)?;
+        let shape = Shape::new(edge.kind);
+        let mut state = allocate_state(mesh, shape.kind, &edge.points)?;
         shape.calc_boundary_normal(&mut normal, &mut state, ksi)?;
-        for i in 0..mesh.space_ndim {
+        for i in 0..mesh.ndim {
             if f64::abs(normal[i] - solution[i]) > tolerance {
                 return Err("wrong normal vector found");
             }
@@ -69,15 +71,14 @@ pub fn check_face_normals(
     solutions: &HashMap<FaceKey, [f64; 3]>,
     tolerance: f64,
 ) -> Result<(), StrError> {
-    const GEO_NDIM: usize = 2;
     let ksi = &[0.0, 0.0, 0.0];
-    let mut normal = Vector::new(mesh.space_ndim);
+    let mut normal = Vector::new(mesh.ndim);
     for (face_key, solution) in solutions {
         let face = faces.get(face_key).ok_or("cannot find face_key in faces map")?;
-        let shape = Shape::new(mesh.space_ndim, GEO_NDIM, face.points.len())?;
-        let mut state = allocate_state(mesh, GEO_NDIM, &face.points)?;
+        let shape = Shape::new(face.kind);
+        let mut state = allocate_state(mesh, face.kind, &face.points)?;
         shape.calc_boundary_normal(&mut normal, &mut state, ksi)?;
-        for i in 0..mesh.space_ndim {
+        for i in 0..mesh.ndim {
             if f64::abs(normal[i] - solution[i]) > tolerance {
                 return Err("wrong normal vector found");
             }
@@ -90,8 +91,9 @@ pub fn check_face_normals(
 
 #[cfg(test)]
 mod tests {
-    use super::{check_2d_edge_normals, check_ids, check_jacobian};
+    use super::{check_2d_edge_normals, check_ids_and_kind, check_jacobian};
     use crate::mesh::{check_face_normals, Cell, Edge, EdgeKey, Face, FaceKey, Mesh, Point};
+    use crate::shapes::GeoKind;
     use std::collections::HashMap;
 
     #[test]
@@ -104,7 +106,7 @@ mod tests {
         //  0-----------1-----------4
         #[rustfmt::skip]
         let mut mesh = Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id: 0, coords: vec![0.0, 0.0] },
                 Point { id: 1, coords: vec![1.0, 0.0] },
@@ -114,25 +116,25 @@ mod tests {
                 Point { id: 5, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         };
-        assert_eq!(check_ids(&mesh).expect("should not fail"), ());
+        assert_eq!(check_ids_and_kind(&mesh).expect("should not fail"), ());
 
         mesh.points[0].id = 6;
         assert_eq!(
-            check_ids(&mesh).err(),
-            Some("invalid point id found; ids must be sequential")
+            check_ids_and_kind(&mesh).err(),
+            Some("incorrect point id found; ids must be sequential")
         );
         mesh.points[0].id = 0;
 
-        assert_eq!(check_ids(&mesh).expect("should not fail"), ());
+        assert_eq!(check_ids_and_kind(&mesh).expect("should not fail"), ());
 
         mesh.cells[0].id = 2;
         assert_eq!(
-            check_ids(&mesh).err(),
-            Some("invalid cell id found; ids must be sequential")
+            check_ids_and_kind(&mesh).err(),
+            Some("incorrect cell id found; ids must be sequential")
         );
         mesh.cells[0].id = 0;
     }
@@ -147,7 +149,7 @@ mod tests {
         //  0-----------1-----------4
         #[rustfmt::skip]
         let mut mesh = Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id: 0, coords: vec![0.0, 0.0] },
                 Point { id: 1, coords: vec![1.0, 0.0] },
@@ -157,8 +159,8 @@ mod tests {
                 Point { id: 5, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         };
         assert_eq!(check_jacobian(&mesh).expect("should not fail"), ());
@@ -194,7 +196,7 @@ mod tests {
         //
         #[rustfmt::skip]
         let mesh = Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id: 0, coords: vec![0.0, 0.0] },
                 Point { id: 1, coords: vec![1.0, 0.0] },
@@ -204,8 +206,8 @@ mod tests {
                 Point { id: 5, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         };
 
@@ -213,13 +215,14 @@ mod tests {
         // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
         let l = 0.5; // magnitude of normal vector
 
+        #[rustfmt::skip]
         let mut edges: HashMap<EdgeKey, Edge> = HashMap::from([
-            ((0, 3), Edge { points: vec![0, 3] }),
-            ((2, 3), Edge { points: vec![3, 2] }),
-            ((2, 5), Edge { points: vec![2, 5] }),
-            ((4, 5), Edge { points: vec![5, 4] }),
-            ((1, 4), Edge { points: vec![4, 1] }),
-            ((0, 1), Edge { points: vec![1, 0] }),
+            ((0, 3), Edge { kind: GeoKind::Lin2, points: vec![0, 3] }),
+            ((2, 3), Edge { kind: GeoKind::Lin2, points: vec![3, 2] }),
+            ((2, 5), Edge { kind: GeoKind::Lin2, points: vec![2, 5] }),
+            ((4, 5), Edge { kind: GeoKind::Lin2, points: vec![5, 4] }),
+            ((1, 4), Edge { kind: GeoKind::Lin2, points: vec![4, 1] }),
+            ((0, 1), Edge { kind: GeoKind::Lin2, points: vec![1, 0] }),
         ]);
         let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
             ((0, 3), [-l, 0.0]),
@@ -264,7 +267,7 @@ mod tests {
         // 0.0            1.0
         #[rustfmt::skip]
         let mesh = Mesh {
-            space_ndim: 3,
+            ndim: 3,
             points: vec![
                 Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
                 Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
@@ -276,7 +279,7 @@ mod tests {
                 Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,1,2,3, 4,5,6,7] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
         };
 
@@ -286,12 +289,12 @@ mod tests {
 
         #[rustfmt::skip]
         let mut faces: HashMap<FaceKey, Face> = HashMap::from([
-            ((0, 3, 4, 7), Face { points: vec![0, 4, 7, 3] }),
-            ((1, 2, 5, 6), Face { points: vec![1, 2, 6, 5] }),
-            ((0, 1, 4, 5), Face { points: vec![0, 1, 5, 4] }),
-            ((2, 3, 6, 7), Face { points: vec![2, 3, 7, 6] }),
-            ((0, 1, 2, 3), Face { points: vec![0, 3, 2, 1] }),
-            ((4, 5, 6, 7), Face { points: vec![4, 5, 6, 7] }),
+            ((0, 3, 4, 7), Face { kind: GeoKind::Qua4, points: vec![0, 4, 7, 3] }),
+            ((1, 2, 5, 6), Face { kind: GeoKind::Qua4, points: vec![1, 2, 6, 5] }),
+            ((0, 1, 4, 5), Face { kind: GeoKind::Qua4, points: vec![0, 1, 5, 4] }),
+            ((2, 3, 6, 7), Face { kind: GeoKind::Qua4, points: vec![2, 3, 7, 6] }),
+            ((0, 1, 2, 3), Face { kind: GeoKind::Qua4, points: vec![0, 3, 2, 1] }),
+            ((4, 5, 6, 7), Face { kind: GeoKind::Qua4, points: vec![4, 5, 6, 7] }),
         ]);
         let solutions: HashMap<FaceKey, [f64; 3]> = HashMap::from([
             ((0, 3, 4, 7), [-l, 0.0, 0.0]),

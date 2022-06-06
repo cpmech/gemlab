@@ -1,4 +1,4 @@
-use gemlab::shapes::{Shape, StateOfShape};
+use gemlab::shapes::{GeoKind, Shape, StateOfShape};
 use gemlab::StrError;
 use russell_chk::assert_vec_approx_eq;
 use russell_lab::Vector;
@@ -27,8 +27,8 @@ fn main() -> Result<(), StrError> {
     ];
 
     // shape and state
-    let shape = Shape::new(2, 2, 4)?;
-    let mut state = StateOfShape::new(2, coords)?;
+    let shape = Shape::new(GeoKind::Qua4);
+    let mut state = StateOfShape::new(shape.kind, coords)?;
 
     // perform interpolation
     //
@@ -47,9 +47,10 @@ fn main() -> Result<(), StrError> {
     shape.calc_interp(&mut state, ksi_middle)?;
 
     // perform summation
-    let mut x_interpolated = Vector::new(shape.space_ndim);
+    let space_ndim = 2;
+    let mut x_interpolated = Vector::new(space_ndim);
     for m in 0..shape.nnode {
-        for i in 0..shape.space_ndim {
+        for i in 0..space_ndim {
             x_interpolated[i] += state.interp[m] * state.coords_transp[i][m];
         }
     }

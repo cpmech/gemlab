@@ -1,4 +1,4 @@
-use super::{geo_class_and_kind, ref_domain_limits, GeoClass, GeoKind, StateOfShape};
+use super::{GeoKind, StateOfShape};
 use super::{
     Hex20, Hex32, Hex8, Lin2, Lin3, Lin4, Lin5, Qua12, Qua16, Qua17, Qua4, Qua8, Qua9, Tet10, Tet20, Tet4, Tri10,
     Tri15, Tri3, Tri6,
@@ -35,14 +35,8 @@ impl fmt::Debug for FnDeriv {
 /// All public properties here are **readonly** and must **not** be modified externally.
 #[derive(Clone, Debug)]
 pub struct Shape {
-    /// Geometry class
-    pub class: GeoClass,
-
     /// Geometry kind
     pub kind: GeoKind,
-
-    /// Space ndim
-    pub space_ndim: usize,
 
     /// Geometry ndim
     pub geo_ndim: usize,
@@ -75,19 +69,13 @@ pub struct Shape {
 impl Shape {
     /// Creates a new geometric shape
     ///
-    /// # Input
-    ///
-    /// * `space_ndim` -- the space dimension (2 or 3)
-    /// * `geo_ndim` -- the dimension of the shape; e.g. a 1D line in a 3D space or a 2D triangle in a 3D space
-    /// * `nnode` -- the number of points defining the shape (number of nodes)
-    ///
     /// # Examples
     ///
     /// ```
     /// use gemlab::shapes::{GeoClass, GeoKind, Shape};
     /// use gemlab::StrError;
     ///
-    /// fn main() -> Result<(), StrError> {
+    /// fn main() {
     ///     //          .4--------------7
     ///     //        ,' |            ,'|         ξ₀   ξ₁   ξ₂
     ///     //      ,'              ,'  |  node    r    s    t
@@ -100,10 +88,8 @@ impl Shape {
     ///     //  |   ,'          |   ,'        6  1.0  1.0  1.0
     ///     //  | ,'            | ,'          7 -1.0  1.0  1.0
     ///     //  1'--------------2'
-    ///     let shape = Shape::new(3, 3, 8)?;
-    ///     assert_eq!(shape.class, GeoClass::Hex);
+    ///     let shape = Shape::new(GeoKind::Hex8);
     ///     assert_eq!(shape.kind, GeoKind::Hex8);
-    ///     assert_eq!(shape.space_ndim, 3);
     ///     assert_eq!(shape.geo_ndim, 3);
     ///     assert_eq!(shape.nnode, 8);
     ///     assert_eq!(shape.nedge, 12);
@@ -111,16 +97,13 @@ impl Shape {
     ///     assert_eq!(shape.edge_nnode, 2);
     ///     assert_eq!(shape.face_nnode, 4);
     ///     assert_eq!(shape.face_nedge, 4);
-    ///     Ok(())
     /// }
     /// ```
-    pub fn new(space_ndim: usize, geo_ndim: usize, nnode: usize) -> Result<Self, StrError> {
-        if space_ndim < 2 || space_ndim > 3 {
-            return Err("space_ndim must be 2 or 3");
-        }
+    pub fn new(kind: GeoKind) -> Self {
         // collect geometry data
-        let (class, kind) = geo_class_and_kind(geo_ndim, nnode)?;
-        let (nedge, nface, edge_nnode, face_nnode, face_nedge, fn_interp, fn_deriv): (
+        let (geo_ndim, nnode, nedge, nface, edge_nnode, face_nnode, face_nedge, fn_interp, fn_deriv): (
+            usize,
+            usize,
             usize,
             usize,
             usize,
@@ -131,6 +114,8 @@ impl Shape {
         ) = match kind {
             // Lin
             GeoKind::Lin2 => (
+                Lin2::GEO_NDIM,
+                Lin2::NNODE,
                 Lin2::NEDGE,
                 Lin2::NFACE,
                 Lin2::EDGE_NNODE,
@@ -140,6 +125,8 @@ impl Shape {
                 Lin2::calc_deriv,
             ),
             GeoKind::Lin3 => (
+                Lin3::GEO_NDIM,
+                Lin3::NNODE,
                 Lin3::NEDGE,
                 Lin3::NFACE,
                 Lin3::EDGE_NNODE,
@@ -149,6 +136,8 @@ impl Shape {
                 Lin3::calc_deriv,
             ),
             GeoKind::Lin4 => (
+                Lin4::GEO_NDIM,
+                Lin4::NNODE,
                 Lin4::NEDGE,
                 Lin4::NFACE,
                 Lin4::EDGE_NNODE,
@@ -158,6 +147,8 @@ impl Shape {
                 Lin4::calc_deriv,
             ),
             GeoKind::Lin5 => (
+                Lin5::GEO_NDIM,
+                Lin5::NNODE,
                 Lin5::NEDGE,
                 Lin5::NFACE,
                 Lin5::EDGE_NNODE,
@@ -169,6 +160,8 @@ impl Shape {
 
             // Tri
             GeoKind::Tri3 => (
+                Tri3::GEO_NDIM,
+                Tri3::NNODE,
                 Tri3::NEDGE,
                 Tri3::NFACE,
                 Tri3::EDGE_NNODE,
@@ -178,6 +171,8 @@ impl Shape {
                 Tri3::calc_deriv,
             ),
             GeoKind::Tri6 => (
+                Tri6::GEO_NDIM,
+                Tri6::NNODE,
                 Tri6::NEDGE,
                 Tri6::NFACE,
                 Tri6::EDGE_NNODE,
@@ -187,6 +182,8 @@ impl Shape {
                 Tri6::calc_deriv,
             ),
             GeoKind::Tri10 => (
+                Tri10::GEO_NDIM,
+                Tri10::NNODE,
                 Tri10::NEDGE,
                 Tri10::NFACE,
                 Tri10::EDGE_NNODE,
@@ -196,6 +193,8 @@ impl Shape {
                 Tri10::calc_deriv,
             ),
             GeoKind::Tri15 => (
+                Tri15::GEO_NDIM,
+                Tri15::NNODE,
                 Tri15::NEDGE,
                 Tri15::NFACE,
                 Tri15::EDGE_NNODE,
@@ -207,6 +206,8 @@ impl Shape {
 
             // Qua
             GeoKind::Qua4 => (
+                Qua4::GEO_NDIM,
+                Qua4::NNODE,
                 Qua4::NEDGE,
                 Qua4::NFACE,
                 Qua4::EDGE_NNODE,
@@ -216,6 +217,8 @@ impl Shape {
                 Qua4::calc_deriv,
             ),
             GeoKind::Qua8 => (
+                Qua8::GEO_NDIM,
+                Qua8::NNODE,
                 Qua8::NEDGE,
                 Qua8::NFACE,
                 Qua8::EDGE_NNODE,
@@ -225,6 +228,8 @@ impl Shape {
                 Qua8::calc_deriv,
             ),
             GeoKind::Qua9 => (
+                Qua9::GEO_NDIM,
+                Qua9::NNODE,
                 Qua9::NEDGE,
                 Qua9::NFACE,
                 Qua9::EDGE_NNODE,
@@ -234,6 +239,8 @@ impl Shape {
                 Qua9::calc_deriv,
             ),
             GeoKind::Qua12 => (
+                Qua12::GEO_NDIM,
+                Qua12::NNODE,
                 Qua12::NEDGE,
                 Qua12::NFACE,
                 Qua12::EDGE_NNODE,
@@ -243,6 +250,8 @@ impl Shape {
                 Qua12::calc_deriv,
             ),
             GeoKind::Qua16 => (
+                Qua16::GEO_NDIM,
+                Qua16::NNODE,
                 Qua16::NEDGE,
                 Qua16::NFACE,
                 Qua16::EDGE_NNODE,
@@ -252,6 +261,8 @@ impl Shape {
                 Qua16::calc_deriv,
             ),
             GeoKind::Qua17 => (
+                Qua17::GEO_NDIM,
+                Qua17::NNODE,
                 Qua17::NEDGE,
                 Qua17::NFACE,
                 Qua17::EDGE_NNODE,
@@ -263,6 +274,8 @@ impl Shape {
 
             // Tet
             GeoKind::Tet4 => (
+                Tet4::GEO_NDIM,
+                Tet4::NNODE,
                 Tet4::NEDGE,
                 Tet4::NFACE,
                 Tet4::EDGE_NNODE,
@@ -272,6 +285,8 @@ impl Shape {
                 Tet4::calc_deriv,
             ),
             GeoKind::Tet10 => (
+                Tet10::GEO_NDIM,
+                Tet10::NNODE,
                 Tet10::NEDGE,
                 Tet10::NFACE,
                 Tet10::EDGE_NNODE,
@@ -281,6 +296,8 @@ impl Shape {
                 Tet10::calc_deriv,
             ),
             GeoKind::Tet20 => (
+                Tet20::GEO_NDIM,
+                Tet20::NNODE,
                 Tet20::NEDGE,
                 Tet20::NFACE,
                 Tet20::EDGE_NNODE,
@@ -292,6 +309,8 @@ impl Shape {
 
             // Hex
             GeoKind::Hex8 => (
+                Hex8::GEO_NDIM,
+                Hex8::NNODE,
                 Hex8::NEDGE,
                 Hex8::NFACE,
                 Hex8::EDGE_NNODE,
@@ -301,6 +320,8 @@ impl Shape {
                 Hex8::calc_deriv,
             ),
             GeoKind::Hex20 => (
+                Hex20::GEO_NDIM,
+                Hex20::NNODE,
                 Hex20::NEDGE,
                 Hex20::NFACE,
                 Hex20::EDGE_NNODE,
@@ -310,6 +331,8 @@ impl Shape {
                 Hex20::calc_deriv,
             ),
             GeoKind::Hex32 => (
+                Hex32::GEO_NDIM,
+                Hex32::NNODE,
                 Hex32::NEDGE,
                 Hex32::NFACE,
                 Hex32::EDGE_NNODE,
@@ -321,10 +344,8 @@ impl Shape {
         };
 
         // return new Shape
-        Ok(Shape {
-            class,
+        Shape {
             kind,
-            space_ndim,
             geo_ndim,
             nnode,
             nedge,
@@ -334,7 +355,7 @@ impl Shape {
             face_nedge,
             fn_interp: FnInterp(fn_interp),
             fn_deriv: FnDeriv(fn_deriv),
-        })
+        }
     }
 
     /// Calculates the interpolation functions
@@ -365,7 +386,7 @@ impl Shape {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
     /// use gemlab::StrError;
     ///
     /// fn main() -> Result<(), StrError> {
@@ -382,8 +403,8 @@ impl Shape {
     ///         [1.0, 1.0],
     ///         [0.0, 1.0],
     ///     ];
-    ///     let shape = Shape::new(2, 2, 4)?;
-    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let shape = Shape::new(GeoKind::Qua4);
+    ///     let mut state = StateOfShape::new(shape.kind, coords)?;
     ///
     ///     shape.calc_interp(&mut state, &[-1.0, -1.0])?;
     ///     assert_eq!(state.interp.as_data(), &[1.0, 0.0, 0.0, 0.0]);
@@ -441,7 +462,7 @@ impl Shape {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
     /// use gemlab::StrError;
     ///
     /// fn main() -> Result<(), StrError> {
@@ -453,8 +474,8 @@ impl Shape {
     ///     //  |             |     3 -1.0  1.0
     ///     //  0-------------1
     ///     let coords = &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
-    ///     let shape = Shape::new(2, 2, 4)?;
-    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let shape = Shape::new(GeoKind::Qua4);
+    ///     let mut state = StateOfShape::new(shape.kind, coords)?;
     ///
     ///     shape.calc_deriv(&mut state, &[-1.0, -1.0])?;
     ///     assert_eq!(
@@ -520,7 +541,7 @@ impl Shape {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
     /// use gemlab::StrError;
     /// use russell_chk::assert_vec_approx_eq;
     /// use russell_lab::Vector;
@@ -541,17 +562,17 @@ impl Shape {
     ///         [20.0, 10.0],
     ///         [10.0, 10.0],
     ///     ];
-    ///     let shape = Shape::new(2, 2, 4)?;
-    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let shape = Shape::new(GeoKind::Qua4);
+    ///     let mut state = StateOfShape::new(shape.kind, coords)?;
     ///
-    ///     let mut x = Vector::new(shape.space_ndim);
+    ///     let mut x = Vector::new(2);
     ///     shape.calc_coords(&mut x, &mut state, &[0.0, 0.0])?;
     ///     assert_vec_approx_eq!(x.as_data(), &[15.0, 7.5], 1e-15);
     ///     Ok(())
     /// }
     /// ```
     pub fn calc_coords(&self, x: &mut Vector, state: &mut StateOfShape, ksi: &[f64]) -> Result<(), StrError> {
-        if x.dim() != self.space_ndim {
+        if x.dim() != state.coords_min.len() {
             return Err("x.dim() must equal space_ndim");
         }
         self.calc_interp(state, ksi)?;
@@ -613,7 +634,7 @@ impl Shape {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
     /// use gemlab::StrError;
     /// use russell_chk::assert_approx_eq;
     ///
@@ -627,8 +648,8 @@ impl Shape {
     ///     //  0-------------1
     ///     let a = 3.0;
     ///     let coords = &[[0.0, 0.0], [2.0 * a, 0.0], [2.0 * a, a], [0.0, a]];
-    ///     let shape = Shape::new(2, 2, 4)?;
-    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let shape = Shape::new(GeoKind::Qua4);
+    ///     let mut state = StateOfShape::new(shape.kind, coords)?;
     ///
     ///     let det_jj = shape.calc_jacobian(&mut state, &[0.0, 0.0])?;
     ///     assert_approx_eq!(det_jj, a * a / 2.0, 1e-15);
@@ -651,12 +672,13 @@ impl Shape {
     pub fn calc_jacobian(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<f64, StrError> {
         self.calc_deriv(state, ksi)?;
         mat_mat_mul(&mut state.jacobian, 1.0, &state.coords_transp, &state.deriv)?;
-        if self.geo_ndim == self.space_ndim {
+        let space_ndim = state.coords_min.len();
+        if self.geo_ndim == space_ndim {
             inverse(&mut state.inv_jacobian, &state.jacobian)
         } else {
             if self.geo_ndim == 1 {
                 let mut norm_jac = 0.0;
-                for i in 0..self.space_ndim {
+                for i in 0..space_ndim {
                     norm_jac += state.jacobian[i][0] * state.jacobian[i][0];
                 }
                 return Ok(f64::sqrt(norm_jac));
@@ -696,7 +718,7 @@ impl Shape {
     /// ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
     ///
     /// ```
-    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
     /// use gemlab::StrError;
     /// use russell_lab::Vector;
     ///
@@ -708,8 +730,8 @@ impl Shape {
     ///     //  0----+----2----+----1
     ///     const L: f64 = 5.0;
     ///     let coords = &[[0.0, 0.0], [L, 0.0], [L / 2.0, 0.0]];
-    ///     let shape = Shape::new(2, 1, 3)?;
-    ///     let mut state = StateOfShape::new(1, coords)?;
+    ///     let shape = Shape::new(GeoKind::Lin3);
+    ///     let mut state = StateOfShape::new(shape.kind, coords)?;
     ///     let mut normal = Vector::new(2);
     ///     shape.calc_boundary_normal(&mut normal, &mut state, &[0.5, 0.0])?;
     ///     assert_eq!(normal.as_data(), &[0.0, L / 2.0]);
@@ -720,7 +742,7 @@ impl Shape {
     /// ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
     ///
     /// ```
-    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
     /// use gemlab::StrError;
     /// use russell_lab::Vector;
     ///
@@ -743,8 +765,8 @@ impl Shape {
     ///         [0.0, 1.0, 1.0],
     ///         [1.0, 1.0, 1.0],
     ///     ];
-    ///     let shape = Shape::new(3, 2, 4)?;
-    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let shape = Shape::new(GeoKind::Qua4);
+    ///     let mut state = StateOfShape::new(shape.kind, coords)?;
     ///     let mut normal = Vector::new(3);
     ///     shape.calc_boundary_normal(&mut normal, &mut state, &[0.0, 0.0, 0.0])?;
     ///     const A: f64 = 1.0;
@@ -759,10 +781,11 @@ impl Shape {
         ksi: &[f64],
     ) -> Result<(), StrError> {
         // check
-        if self.geo_ndim >= self.space_ndim {
+        let space_ndim = state.coords_min.len();
+        if self.geo_ndim >= space_ndim {
             return Err("geo_ndim must be smaller than space_ndim");
         }
-        if normal.dim() != self.space_ndim {
+        if normal.dim() != space_ndim {
             return Err("normal.dim() must equal space_ndim");
         }
 
@@ -771,7 +794,7 @@ impl Shape {
         mat_mat_mul(&mut state.jacobian, 1.0, &state.coords_transp, &state.deriv)?;
 
         // line in 2D (geo_ndim = 1 and self.space_ndim = 2)
-        if self.space_ndim == 2 {
+        if space_ndim == 2 {
             normal[0] = -state.jacobian[1][0];
             normal[1] = state.jacobian[0][0];
             return Ok(());
@@ -817,7 +840,7 @@ impl Shape {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
     /// use gemlab::StrError;
     /// use russell_chk::assert_vec_approx_eq;
     /// use russell_lab::Vector;
@@ -837,14 +860,14 @@ impl Shape {
     ///         [6.0, 5.0],
     ///         [4.0, 7.0],
     ///     ];
-    ///     let shape = Shape::new(2, 2, 3)?;
-    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let shape = Shape::new(GeoKind::Tri3);
+    ///     let mut state = StateOfShape::new(shape.kind, coords)?;
     ///
     ///     // x @ middle of edge (0,2)
     ///     let x = Vector::from(&[3.5, 6.0]);
     ///
     ///     // find ξ corresponding to x @ middle of edge (0,2)
-    ///     let mut ksi = vec![0.0; shape.space_ndim];
+    ///     let mut ksi = vec![0.0; 2];
     ///     shape.approximate_ksi(&mut ksi, &mut state, &x, 10, 1e-8)?;
     ///     assert_vec_approx_eq!(ksi, &[0.0, 0.5], 1e-8);
     ///     Ok(())
@@ -859,10 +882,11 @@ impl Shape {
         tol: f64,
     ) -> Result<usize, StrError> {
         // check
-        if self.geo_ndim != self.space_ndim {
+        let space_ndim = state.coords_min.len();
+        if self.geo_ndim != space_ndim {
             return Err("geo_ndim must equal space_ndim");
         }
-        if x.dim() != self.space_ndim {
+        if x.dim() != space_ndim {
             return Err("x.dim() must equal space_ndim");
         }
         if ksi.len() != self.geo_ndim {
@@ -870,18 +894,18 @@ impl Shape {
         }
 
         // use linear scale to guess ksi
-        let (min_ksi, _, del_ksi) = ref_domain_limits(self.class);
+        let (min_ksi, _, del_ksi) = self.kind.reference_limits();
         for j in 0..self.geo_ndim {
             ksi[j] = (x[j] - state.coords_min[j]) / (state.coords_max[j] - state.coords_min[j]) * del_ksi + min_ksi;
         }
 
         // perform iterations
-        let mut residual = Vector::new(self.space_ndim);
-        let mut x_at_ksi = Vector::new(self.space_ndim);
+        let mut residual = Vector::new(space_ndim);
+        let mut x_at_ksi = Vector::new(space_ndim);
         let mut delta_ksi = Vector::new(self.geo_ndim);
         for it in 0..nit_max {
             self.calc_coords(&mut x_at_ksi, state, &ksi)?;
-            for i in 0..self.space_ndim {
+            for i in 0..space_ndim {
                 residual[i] = x[i] - x_at_ksi[i];
             }
             if vector_norm(&residual, NormVec::Euc) <= tol {
@@ -940,7 +964,7 @@ impl Shape {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
     /// use gemlab::StrError;
     /// use russell_chk::assert_vec_approx_eq;
     /// use russell_lab::Matrix;
@@ -955,8 +979,8 @@ impl Shape {
     ///     //  0-------------1
     ///     let a = 3.0;
     ///     let coords = &[[0.0, 0.0], [2.0 * a, 0.0], [2.0 * a, a], [0.0, a]];
-    ///     let shape = Shape::new(2, 2, 4)?;
-    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let shape = Shape::new(GeoKind::Qua4);
+    ///     let mut state = StateOfShape::new(shape.kind, coords)?;
     ///
     ///     shape.calc_gradient(&mut state, &[0.0, 0.0])?;
     ///
@@ -971,7 +995,8 @@ impl Shape {
     /// }
     /// ```
     pub fn calc_gradient(&self, state: &mut StateOfShape, ksi: &[f64]) -> Result<f64, StrError> {
-        if self.geo_ndim != self.space_ndim {
+        let space_ndim = state.coords_min.len();
+        if self.geo_ndim != space_ndim {
             return Err("geo_ndim must equal space_ndim");
         }
         let det_jac = self.calc_jacobian(state, ksi)?;
@@ -1011,7 +1036,7 @@ impl Shape {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::shapes::{Shape, StateOfShape};
+    /// use gemlab::shapes::{GeoKind, Shape, StateOfShape};
     /// use gemlab::StrError;
     ///
     /// fn main() -> Result<(), StrError> {
@@ -1029,8 +1054,8 @@ impl Shape {
     ///         [6.0, 0.0],
     ///         [0.0, 6.0],
     ///     ];
-    ///     let shape = Shape::new(2, 2, 3)?;
-    ///     let mut state = StateOfShape::new(2, coords)?;
+    ///     let shape = Shape::new(GeoKind::Tri3);
+    ///     let mut state = StateOfShape::new(shape.kind, coords)?;
     ///
     ///     const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
     ///         [1.0/6.0, 1.0/6.0, 0.0, 1.0/6.0], // last column
@@ -1050,305 +1075,14 @@ impl Shape {
         state: &mut StateOfShape,
         integ_points: &[[f64; 4]],
     ) -> Result<Vec<Vector>, StrError> {
+        let space_ndim = state.coords_min.len();
         let mut all_coords = Vec::new();
         for iota in integ_points {
-            let mut x = Vector::new(self.space_ndim);
+            let mut x = Vector::new(space_ndim);
             self.calc_coords(&mut x, state, iota)?;
             all_coords.push(x);
         }
         Ok(all_coords)
-    }
-
-    // --- getters ------------------------------------------------------------------------------
-
-    /// Returns the local id of node on edge
-    ///
-    /// # Input
-    ///
-    /// * `e` -- index of edge in [0, nedge-1]
-    /// * `i` -- index of local node [0, edge_nnode-1]
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gemlab::shapes::Shape;
-    /// use gemlab::StrError;
-    ///
-    /// fn main() -> Result<(), StrError> {
-    ///     //          .4-----[7]------7
-    ///     //        ,' |            ,'|
-    ///     //      [4] [8]         [6] |  [#] indicates local
-    ///     //    ,'     |        ,'    |      edge number "e"
-    ///     //  5'========[5]===6'     [11]
-    ///     //  |               |       |
-    ///     //  |        |      |       |
-    ///     // [9]      ,0-[3]- | - - - 3
-    ///     //  |     ,'       [10]  [2]
-    ///     //  |   [0]         |   ,'
-    ///     //  | ,'            | ,'
-    ///     //  1'-----[1]------2'
-    ///     let shape = Shape::new(3, 3, 8)?;
-    ///     let edges: Vec<_> = (0..shape.nedge)
-    ///         .map(|e| (shape.edge_node_id(e, 0), shape.edge_node_id(e, 1)))
-    ///         .collect();
-    ///     assert_eq!(
-    ///         edges,
-    ///         &[
-    ///             (0, 1),
-    ///             (1, 2),
-    ///             (2, 3),
-    ///             (3, 0),
-    ///             (4, 5),
-    ///             (5, 6),
-    ///             (6, 7),
-    ///             (7, 4),
-    ///             (0, 4),
-    ///             (1, 5),
-    ///             (2, 6),
-    ///             (3, 7)
-    ///         ]
-    ///     );
-    ///     Ok(())
-    /// }
-    /// ```
-    pub fn edge_node_id(&self, e: usize, i: usize) -> usize {
-        match self.kind {
-            GeoKind::Lin2 => 0,
-            GeoKind::Lin3 => 0,
-            GeoKind::Lin4 => 0,
-            GeoKind::Lin5 => 0,
-            GeoKind::Tri3 => Tri3::EDGE_NODE_IDS[e][i],
-            GeoKind::Tri6 => Tri6::EDGE_NODE_IDS[e][i],
-            GeoKind::Tri10 => Tri10::EDGE_NODE_IDS[e][i],
-            GeoKind::Tri15 => Tri15::EDGE_NODE_IDS[e][i],
-            GeoKind::Qua4 => Qua4::EDGE_NODE_IDS[e][i],
-            GeoKind::Qua8 => Qua8::EDGE_NODE_IDS[e][i],
-            GeoKind::Qua9 => Qua9::EDGE_NODE_IDS[e][i],
-            GeoKind::Qua12 => Qua12::EDGE_NODE_IDS[e][i],
-            GeoKind::Qua16 => Qua16::EDGE_NODE_IDS[e][i],
-            GeoKind::Qua17 => Qua17::EDGE_NODE_IDS[e][i],
-            GeoKind::Tet4 => Tet4::EDGE_NODE_IDS[e][i],
-            GeoKind::Tet10 => Tet10::EDGE_NODE_IDS[e][i],
-            GeoKind::Tet20 => Tet20::EDGE_NODE_IDS[e][i],
-            GeoKind::Hex8 => Hex8::EDGE_NODE_IDS[e][i],
-            GeoKind::Hex20 => Hex20::EDGE_NODE_IDS[e][i],
-            GeoKind::Hex32 => Hex32::EDGE_NODE_IDS[e][i],
-        }
-    }
-
-    /// Returns the local id of node on face
-    ///
-    /// # Input
-    ///
-    /// * `f` -- index of face in [0, nface-1]
-    /// * `i` -- index of local node [0, face_nnode-1]
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gemlab::shapes::Shape;
-    /// use gemlab::StrError;
-    ///
-    /// fn main() -> Result<(), StrError> {
-    ///     //           4----------------7
-    ///     //         ,'|              ,'|
-    ///     //       ,'  |  ___       ,'  |
-    ///     //     ,'    |,'5,'  [0],'    |
-    ///     //   ,'      |~~~     ,'      |
-    ///     // 5'===============6'  ,'|   |
-    ///     // |   ,'|   |      |   |3|   |
-    ///     // |   |2|   |      |   |,'   |
-    ///     // |   |,'   0- - - | +- - - -3
-    ///     // |       ,'       |       ,'
-    ///     // |     ,' [1]  ___|     ,'
-    ///     // |   ,'      ,'4,'|   ,'
-    ///     // | ,'        ~~~  | ,'
-    ///     // 1----------------2'
-    ///     let shape = Shape::new(3, 3, 8)?;
-    ///     let faces: Vec<_> = (0..shape.nface)
-    ///         .map(|f| {
-    ///             (
-    ///                 shape.face_node_id(f, 0),
-    ///                 shape.face_node_id(f, 1),
-    ///                 shape.face_node_id(f, 2),
-    ///                 shape.face_node_id(f, 3),
-    ///             )
-    ///         })
-    ///         .collect();
-    ///     assert_eq!(
-    ///         faces,
-    ///         &[
-    ///             (0, 4, 7, 3),
-    ///             (1, 2, 6, 5),
-    ///             (0, 1, 5, 4),
-    ///             (2, 3, 7, 6),
-    ///             (0, 3, 2, 1),
-    ///             (4, 5, 6, 7),
-    ///         ]
-    ///     );
-    ///     Ok(())
-    /// }
-    /// ```
-    pub fn face_node_id(&self, f: usize, i: usize) -> usize {
-        match self.kind {
-            GeoKind::Lin2 => 0,
-            GeoKind::Lin3 => 0,
-            GeoKind::Lin4 => 0,
-            GeoKind::Lin5 => 0,
-            GeoKind::Tri3 => 0,
-            GeoKind::Tri6 => 0,
-            GeoKind::Tri10 => 0,
-            GeoKind::Tri15 => 0,
-            GeoKind::Qua4 => 0,
-            GeoKind::Qua8 => 0,
-            GeoKind::Qua9 => 0,
-            GeoKind::Qua12 => 0,
-            GeoKind::Qua16 => 0,
-            GeoKind::Qua17 => 0,
-            GeoKind::Tet4 => Tet4::FACE_NODE_IDS[f][i],
-            GeoKind::Tet10 => Tet10::FACE_NODE_IDS[f][i],
-            GeoKind::Tet20 => Tet20::FACE_NODE_IDS[f][i],
-            GeoKind::Hex8 => Hex8::FACE_NODE_IDS[f][i],
-            GeoKind::Hex20 => Hex20::FACE_NODE_IDS[f][i],
-            GeoKind::Hex32 => Hex32::FACE_NODE_IDS[f][i],
-        }
-    }
-
-    /// Returns the local node id on an edge on the face
-    ///
-    /// # Input
-    ///
-    /// * `f` -- index of face in [0, nface-1]
-    /// * `k` -- index of face's edge (not the index of cell's edge) in [0, face_nedge-1]
-    /// * `i` -- index of local node [0, edge_nnode-1]
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gemlab::shapes::Shape;
-    /// use gemlab::StrError;
-    ///
-    /// fn main() -> Result<(), StrError> {
-    ///     //           4----------------7
-    ///     //         ,'|              ,'|
-    ///     //       ,'  |  ___       ,'  |
-    ///     //     ,'    |,'5,'  [0],'    |
-    ///     //   ,'      |~~~     ,'      |
-    ///     // 5'===============6'  ,'|   |
-    ///     // |   ,'|   |      |   |3|   |
-    ///     // |   |2|   |      |   |,'   |
-    ///     // |   |,'   0- - - | +- - - -3
-    ///     // |       ,'       |       ,'
-    ///     // |     ,' [1]  ___|     ,'
-    ///     // |   ,'      ,'4,'|   ,'
-    ///     // | ,'        ~~~  | ,'
-    ///     // 1----------------2'
-    ///     let shape = Shape::new(3, 3, 8)?;
-    ///     let data: Vec<Vec<_>> = (0..shape.nface)
-    ///         .map(|f| {
-    ///             (0..shape.face_nedge)
-    ///                 .map(|k|
-    ///                     (shape.face_edge_node_id(f, k, 0),
-    ///                      shape.face_edge_node_id(f, k, 1))
-    ///                 ).collect()
-    ///         })
-    ///         .collect();
-    ///     println!("{:?}", data);
-    ///     assert_eq!(
-    ///         data,
-    ///         &[
-    ///             [(0, 4), (4, 7), (7, 3), (3, 0)], // face 0
-    ///             [(1, 2), (2, 6), (6, 5), (5, 1)], // face 1
-    ///             [(0, 1), (1, 5), (5, 4), (4, 0)], // face 2
-    ///             [(2, 3), (3, 7), (7, 6), (6, 2)], // face 3
-    ///             [(0, 3), (3, 2), (2, 1), (1, 0)], // face 4
-    ///             [(4, 5), (5, 6), (6, 7), (7, 4)], // face 5
-    ///         ]
-    ///     );
-    ///     Ok(())
-    /// }
-    /// ```
-    pub fn face_edge_node_id(&self, f: usize, k: usize, i: usize) -> usize {
-        match self.kind {
-            GeoKind::Lin2 => 0,
-            GeoKind::Lin3 => 0,
-            GeoKind::Lin4 => 0,
-            GeoKind::Lin5 => 0,
-            GeoKind::Tri3 => 0,
-            GeoKind::Tri6 => 0,
-            GeoKind::Tri10 => 0,
-            GeoKind::Tri15 => 0,
-            GeoKind::Qua4 => 0,
-            GeoKind::Qua8 => 0,
-            GeoKind::Qua9 => 0,
-            GeoKind::Qua12 => 0,
-            GeoKind::Qua16 => 0,
-            GeoKind::Qua17 => 0,
-            GeoKind::Tet4 => Tet4::FACE_EDGE_NODE_IDS[f][k][i],
-            GeoKind::Tet10 => Tet10::FACE_EDGE_NODE_IDS[f][k][i],
-            GeoKind::Tet20 => Tet20::FACE_EDGE_NODE_IDS[f][k][i],
-            GeoKind::Hex8 => Hex8::FACE_EDGE_NODE_IDS[f][k][i],
-            GeoKind::Hex20 => Hex20::FACE_EDGE_NODE_IDS[f][k][i],
-            GeoKind::Hex32 => Hex32::FACE_EDGE_NODE_IDS[f][k][i],
-        }
-    }
-
-    /// Returns the reference coordinates at node m
-    ///
-    /// # Output
-    ///
-    /// * `ksi` -- (geo_ndim) reference coordinates `ξᵐ` at node m
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gemlab::shapes::Shape;
-    /// use gemlab::StrError;
-    ///
-    /// fn main() -> Result<(), StrError> {
-    ///     //  3-------------2         ξ₀   ξ₁
-    ///     //  |      ξ₁     |  node    r    s
-    ///     //  |      |      |     0 -1.0 -1.0
-    ///     //  |      +--ξ₀  |     1  1.0 -1.0
-    ///     //  |             |     2  1.0  1.0
-    ///     //  |             |     3 -1.0  1.0
-    ///     //  0-------------1
-    ///     let shape = Shape::new(2, 2, 4)?;
-    ///     let ref_coords: Vec<_> = (0..shape.nnode)
-    ///         .map(|m| shape.reference_coords(m))
-    ///         .collect();
-    ///     assert_eq!(ref_coords, &[
-    ///         [-1.0, -1.0],
-    ///         [ 1.0, -1.0],
-    ///         [ 1.0,  1.0],
-    ///         [-1.0,  1.0],
-    ///     ]);
-    ///     Ok(())
-    /// }
-    /// ```
-    pub fn reference_coords(&self, m: usize) -> &'static [f64] {
-        match self.kind {
-            GeoKind::Lin2 => &Lin2::NODE_REFERENCE_COORDS[m],
-            GeoKind::Lin3 => &Lin3::NODE_REFERENCE_COORDS[m],
-            GeoKind::Lin4 => &Lin4::NODE_REFERENCE_COORDS[m],
-            GeoKind::Lin5 => &Lin5::NODE_REFERENCE_COORDS[m],
-            GeoKind::Tri3 => &Tri3::NODE_REFERENCE_COORDS[m],
-            GeoKind::Tri6 => &Tri6::NODE_REFERENCE_COORDS[m],
-            GeoKind::Tri10 => &Tri10::NODE_REFERENCE_COORDS[m],
-            GeoKind::Tri15 => &Tri15::NODE_REFERENCE_COORDS[m],
-            GeoKind::Qua4 => &Qua4::NODE_REFERENCE_COORDS[m],
-            GeoKind::Qua8 => &Qua8::NODE_REFERENCE_COORDS[m],
-            GeoKind::Qua9 => &Qua9::NODE_REFERENCE_COORDS[m],
-            GeoKind::Qua12 => &Qua12::NODE_REFERENCE_COORDS[m],
-            GeoKind::Qua16 => &Qua16::NODE_REFERENCE_COORDS[m],
-            GeoKind::Qua17 => &Qua17::NODE_REFERENCE_COORDS[m],
-            GeoKind::Tet4 => &Tet4::NODE_REFERENCE_COORDS[m],
-            GeoKind::Tet10 => &Tet10::NODE_REFERENCE_COORDS[m],
-            GeoKind::Tet20 => &Tet20::NODE_REFERENCE_COORDS[m],
-            GeoKind::Hex8 => &Hex8::NODE_REFERENCE_COORDS[m],
-            GeoKind::Hex20 => &Hex20::NODE_REFERENCE_COORDS[m],
-            GeoKind::Hex32 => &Hex32::NODE_REFERENCE_COORDS[m],
-        }
     }
 }
 
@@ -1356,8 +1090,8 @@ impl Shape {
 
 #[cfg(test)]
 mod tests {
-    use super::{GeoClass, GeoKind, Shape};
-    use crate::shapes::{ref_domain_limits, StateOfShape};
+    use super::Shape;
+    use crate::shapes::{GeoKind, StateOfShape};
     use crate::util::{PI, SQRT_3};
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq, assert_vec_approx_eq};
@@ -1366,14 +1100,36 @@ mod tests {
 
     #[test]
     fn derive_works() {
-        let shape = Shape::new(2, 1, 2).unwrap();
+        let shape = Shape::new(GeoKind::Lin2);
         let shape_clone = shape.clone();
-        assert_eq!(format!("{:?}", shape), "Shape { class: Lin, kind: Lin2, space_ndim: 2, geo_ndim: 1, nnode: 2, nedge: 0, nface: 0, edge_nnode: 0, face_nnode: 0, face_nedge: 0, fn_interp: FnInterp, fn_deriv: FnDeriv }");
-        assert_eq!(shape_clone.class, shape.class);
+        assert_eq!(format!("{:?}", shape), "Shape { kind: Lin2, geo_ndim: 1, nnode: 2, nedge: 0, nface: 0, edge_nnode: 0, face_nnode: 0, face_nedge: 0, fn_interp: FnInterp, fn_deriv: FnDeriv }");
         assert_eq!(shape_clone.kind, shape.kind);
-        assert_eq!(shape_clone.space_ndim, shape.space_ndim);
         assert_eq!(shape_clone.geo_ndim, shape.geo_ndim);
         assert_eq!(shape_clone.nnode, shape.nnode);
+    }
+
+    #[test]
+    fn new_works() -> Result<(), StrError> {
+        let nnode = [
+            2, 3, 4, 5, // Lin
+            3, 6, 10, 15, // Tri
+            4, 8, 9, 12, 16, 17, // Qua
+            4, 10, 20, // Tet
+            8, 20, 32, // Hex
+        ];
+        let geo_ndim = [
+            1, 1, 1, 1, // Lin
+            2, 2, 2, 2, // Tri
+            2, 2, 2, 2, 2, 2, // Qua
+            3, 3, 3, // Tet
+            3, 3, 3, // Hex
+        ];
+        for i in 0..GeoKind::VALUES.len() {
+            let shape = Shape::new(GeoKind::VALUES[i]);
+            assert_eq!(shape.nnode, nnode[i]);
+            assert_eq!(shape.geo_ndim, geo_ndim[i]);
+        }
+        Ok(())
     }
 
     const RMIN: f64 = 1.0;
@@ -1416,9 +1172,9 @@ mod tests {
     /// x₀ := r * cos(α)
     /// x₁ := r * sin(α)
     /// x₂ := z
-    fn gen_coords(x: &mut Vector, ksi: &[f64], class: GeoClass) {
+    fn gen_coords(x: &mut Vector, ksi: &[f64], kind: GeoKind) {
         assert_eq!(x.dim(), ksi.len());
-        let (min_ksi, _, del_ksi) = ref_domain_limits(class);
+        let (min_ksi, _, del_ksi) = kind.reference_limits();
         let r = RMIN + (ksi[0] - min_ksi) * (RMAX - RMIN) / del_ksi;
         let a = AMIN + (ksi[1] - min_ksi) * (AMAX - AMIN) / del_ksi;
         x[0] = r * f64::cos(a);
@@ -1429,27 +1185,27 @@ mod tests {
     }
 
     // Generates state with a pre-set matrix of coordinates
-    fn gen_state_with_coords_matrix(shape: &Shape) -> Result<StateOfShape, StrError> {
-        let mut x = Vector::new(shape.space_ndim);
-        let mut ksi_aux = vec![0.0; shape.space_ndim];
+    fn gen_state_with_coords_matrix(space_ndim: usize, shape: &Shape) -> Result<StateOfShape, StrError> {
+        let mut x = Vector::new(space_ndim);
+        let mut ksi_aux = vec![0.0; space_ndim];
         let mut coords: Vec<Vec<f64>> = Vec::new();
         for m in 0..shape.nnode {
-            let ksi = shape.reference_coords(m);
-            if shape.geo_ndim == shape.space_ndim {
-                gen_coords(&mut x, ksi, shape.class);
-            } else if shape.geo_ndim == 1 && shape.space_ndim == 2 {
+            let ksi = shape.kind.reference_coords(m);
+            if shape.geo_ndim == space_ndim {
+                gen_coords(&mut x, ksi, shape.kind);
+            } else if shape.geo_ndim == 1 && space_ndim == 2 {
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = 1.0;
-                gen_coords(&mut x, &ksi_aux, shape.class);
+                gen_coords(&mut x, &ksi_aux, shape.kind);
             } else {
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = ksi[1];
                 ksi_aux[2] = 1.0;
-                gen_coords(&mut x, &ksi_aux, shape.class);
+                gen_coords(&mut x, &ksi_aux, shape.kind);
             }
             coords.push(x.as_data().clone());
         }
-        StateOfShape::new(shape.geo_ndim, &coords)
+        StateOfShape::new(shape.kind, &coords)
     }
 
     // Generates state with a pre-set matrix of coordinates such that the
@@ -1459,30 +1215,20 @@ mod tests {
     // * Tri and Tet will be scaled using the natural coordinates
     // * All edges parallel to the x,y,z axes will have lengths equal to 2.0
     fn gen_state_with_coords_matrix_parallel(shape: &Shape) -> Result<StateOfShape, StrError> {
-        let mut scale = 1.0;
-        if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
-            scale = 2.0;
-        }
+        let scale = if shape.kind.is_tri_or_tet() { 2.0 } else { 1.0 };
         let mut coords: Vec<Vec<f64>> = Vec::new();
         for m in 0..shape.nnode {
-            let ksi = shape.reference_coords(m);
+            let ksi = shape.kind.reference_coords(m);
             coords.push(ksi.iter().map(|value| scale * value).collect());
         }
-        StateOfShape::new(shape.geo_ndim, &coords)
+        StateOfShape::new(shape.kind, &coords)
     }
 
     #[test]
-    fn capture_some_wrong_input() -> Result<(), StrError> {
-        // new
-        assert_eq!(Shape::new(1, 1, 1).err(), Some("space_ndim must be 2 or 3"));
-        assert_eq!(
-            Shape::new(2, 1, 1).err(),
-            Some("(geo_ndim,nnode) combination is invalid")
-        );
-
+    fn capture_some_wrong_input() {
         // shape and state
-        let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 1.0]])?;
+        let shape = Shape::new(GeoKind::Lin2);
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0], [1.0, 1.0]]).unwrap();
 
         // calc_interp
         assert_eq!(
@@ -1521,16 +1267,16 @@ mod tests {
         );
 
         // calc_boundary_normal
-        let shape = Shape::new(2, 3, 4)?;
+        let shape = Shape::new(GeoKind::Tet4);
         let mut normal = Vector::new(2);
         let ksi = &[0.0, 0.0, 0.0];
         assert_eq!(
             shape.calc_boundary_normal(&mut normal, &mut state, ksi).err(),
             Some("geo_ndim must be smaller than space_ndim")
         );
-        let shape = Shape::new(2, 1, 2)?;
+        let shape = Shape::new(GeoKind::Lin2);
         let mut normal = Vector::new(1);
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 1.0]])?;
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0], [1.0, 1.0]]).unwrap();
         assert_eq!(
             shape.calc_boundary_normal(&mut normal, &mut state, &[0.0]).err(),
             Some("normal.dim() must equal space_ndim")
@@ -1548,16 +1294,16 @@ mod tests {
         );
 
         // approximate_ksi
-        let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 1.0]])?;
+        let shape = Shape::new(GeoKind::Lin2);
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0], [1.0, 1.0]]).unwrap();
         let mut ksi = vec![0.0; 1];
         let x = Vector::new(2);
         assert_eq!(
             shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
             Some("geo_ndim must equal space_ndim")
         );
-        let shape = Shape::new(2, 2, 3)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]])?;
+        let shape = Shape::new(GeoKind::Tri3);
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]]).unwrap();
         let x = Vector::new(1);
         assert_eq!(
             shape.approximate_ksi(&mut ksi, &mut state, &x, 2, 1e-5).err(),
@@ -1597,8 +1343,8 @@ mod tests {
             shape.calc_gradient(&mut bug_for_calc_jacobian, &[0.0, 0.0]).err(),
             Some("matrices are incompatible")
         );
-        let shape = Shape::new(2, 1, 2)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [1.0, 1.0]])?;
+        let shape = Shape::new(GeoKind::Lin2);
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0], [1.0, 1.0]]).unwrap();
         assert_eq!(
             shape.calc_gradient(&mut state, &[0.0]).err(),
             Some("geo_ndim must equal space_ndim")
@@ -1611,75 +1357,42 @@ mod tests {
                 .err(),
             Some("matrix and vectors are incompatible")
         );
-
-        Ok(())
-    }
-
-    #[test]
-    fn getters_work() -> Result<(), StrError> {
-        for (geo_ndim, nnode) in GeoKind::PAIRS {
-            let space_ndim = usize::max(2, geo_ndim);
-            let shape = &mut Shape::new(space_ndim, geo_ndim, nnode)?;
-            match shape.class {
-                GeoClass::Lin => assert_eq!(shape.edge_node_id(0, 0), 0),
-                GeoClass::Tri => assert_eq!(shape.edge_node_id(0, 0), 1),
-                GeoClass::Qua => assert_eq!(shape.edge_node_id(0, 0), 1),
-                GeoClass::Tet => assert_eq!(shape.edge_node_id(0, 0), 0),
-                GeoClass::Hex => assert_eq!(shape.edge_node_id(0, 0), 0),
-            }
-            match shape.class {
-                GeoClass::Lin => assert_eq!(shape.face_node_id(0, 0), 0),
-                GeoClass::Tri => assert_eq!(shape.face_node_id(0, 0), 0),
-                GeoClass::Qua => assert_eq!(shape.face_node_id(0, 0), 0),
-                GeoClass::Tet => assert_eq!(shape.face_node_id(0, 0), 0),
-                GeoClass::Hex => assert_eq!(shape.face_node_id(0, 0), 0),
-            }
-            match shape.class {
-                GeoClass::Lin => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
-                GeoClass::Tri => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
-                GeoClass::Qua => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
-                GeoClass::Tet => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
-                GeoClass::Hex => assert_eq!(shape.face_edge_node_id(0, 0, 0), 0),
-            }
-        }
-        Ok(())
     }
 
     #[test]
     fn calc_interp_works() -> Result<(), StrError> {
         // define tolerances
-        let mut tols = HashMap::new();
-        tols.insert(GeoKind::Lin2, 1e-15);
-        tols.insert(GeoKind::Lin3, 1e-15);
-        tols.insert(GeoKind::Lin4, 1e-15);
-        tols.insert(GeoKind::Lin5, 1e-15);
-        tols.insert(GeoKind::Tri3, 1e-15);
-        tols.insert(GeoKind::Tri6, 1e-15);
-        tols.insert(GeoKind::Tri10, 1e-15);
-        tols.insert(GeoKind::Tri15, 1e-15);
-        tols.insert(GeoKind::Qua4, 1e-15);
-        tols.insert(GeoKind::Qua8, 1e-15);
-        tols.insert(GeoKind::Qua9, 1e-15);
-        tols.insert(GeoKind::Qua12, 1e-15);
-        tols.insert(GeoKind::Qua16, 1e-15);
-        tols.insert(GeoKind::Qua17, 1e-15);
-        tols.insert(GeoKind::Tet4, 1e-15);
-        tols.insert(GeoKind::Tet10, 1e-15);
-        tols.insert(GeoKind::Tet20, 1e-15);
-        tols.insert(GeoKind::Hex8, 1e-15);
-        tols.insert(GeoKind::Hex20, 1e-15);
-        tols.insert(GeoKind::Hex32, 1e-15);
+        let tols = HashMap::from([
+            (GeoKind::Lin2, 1e-15),
+            (GeoKind::Lin3, 1e-15),
+            (GeoKind::Lin4, 1e-15),
+            (GeoKind::Lin5, 1e-15),
+            (GeoKind::Tri3, 1e-15),
+            (GeoKind::Tri6, 1e-15),
+            (GeoKind::Tri10, 1e-15),
+            (GeoKind::Tri15, 1e-15),
+            (GeoKind::Qua4, 1e-15),
+            (GeoKind::Qua8, 1e-15),
+            (GeoKind::Qua9, 1e-15),
+            (GeoKind::Qua12, 1e-15),
+            (GeoKind::Qua16, 1e-15),
+            (GeoKind::Qua17, 1e-15),
+            (GeoKind::Tet4, 1e-15),
+            (GeoKind::Tet10, 1e-15),
+            (GeoKind::Tet20, 1e-15),
+            (GeoKind::Hex8, 1e-15),
+            (GeoKind::Hex20, 1e-15),
+            (GeoKind::Hex32, 1e-15),
+        ]);
 
         // loop over shapes
-        for (geo_ndim, nnode) in GeoKind::PAIRS {
+        for kind in GeoKind::VALUES {
             // allocate shape and state
-            let space_ndim = usize::max(2, geo_ndim);
-            let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+            let shape = Shape::new(kind);
+            let space_ndim = usize::max(2, shape.geo_ndim);
             let mut state = StateOfShape::new(
-                shape.geo_ndim,
-                &(0..shape.nnode)
-                    .map(|_| vec![0.0; shape.space_ndim])
-                    .collect::<Vec<_>>(),
+                shape.kind,
+                &(0..shape.nnode).map(|_| vec![0.0; space_ndim]).collect::<Vec<_>>(),
             )?;
 
             // set tolerance
@@ -1688,7 +1401,7 @@ mod tests {
             // loop over nodes of shape
             for m in 0..shape.nnode {
                 // get ξᵐ corresponding to node m
-                let ksi = shape.reference_coords(m);
+                let ksi = shape.kind.reference_coords(m);
 
                 // compute interpolation function Nⁿ(ξᵐ)
                 shape.calc_interp(&mut state, ksi)?;
@@ -1727,38 +1440,37 @@ mod tests {
     #[test]
     fn calc_deriv_works() -> Result<(), StrError> {
         // define tolerances
-        let mut tols = HashMap::new();
-        tols.insert(GeoKind::Lin2, 1e-13);
-        tols.insert(GeoKind::Lin3, 1e-13);
-        tols.insert(GeoKind::Lin4, 1e-10);
-        tols.insert(GeoKind::Lin5, 1e-10);
-        tols.insert(GeoKind::Tri3, 1e-12);
-        tols.insert(GeoKind::Tri6, 1e-12);
-        tols.insert(GeoKind::Tri10, 1e-10);
-        tols.insert(GeoKind::Tri15, 1e-9);
-        tols.insert(GeoKind::Qua4, 1e-13);
-        tols.insert(GeoKind::Qua8, 1e-12);
-        tols.insert(GeoKind::Qua9, 1e-13);
-        tols.insert(GeoKind::Qua12, 1e-10);
-        tols.insert(GeoKind::Qua16, 1e-10);
-        tols.insert(GeoKind::Qua17, 1e-10);
-        tols.insert(GeoKind::Hex8, 1e-13);
-        tols.insert(GeoKind::Tet4, 1e-12);
-        tols.insert(GeoKind::Tet10, 1e-12);
-        tols.insert(GeoKind::Tet20, 1e-12);
-        tols.insert(GeoKind::Hex20, 1e-12);
-        tols.insert(GeoKind::Hex32, 1e-10);
+        let tols = HashMap::from([
+            (GeoKind::Lin2, 1e-13),
+            (GeoKind::Lin3, 1e-13),
+            (GeoKind::Lin4, 1e-10),
+            (GeoKind::Lin5, 1e-10),
+            (GeoKind::Tri3, 1e-12),
+            (GeoKind::Tri6, 1e-12),
+            (GeoKind::Tri10, 1e-10),
+            (GeoKind::Tri15, 1e-9),
+            (GeoKind::Qua4, 1e-13),
+            (GeoKind::Qua8, 1e-12),
+            (GeoKind::Qua9, 1e-13),
+            (GeoKind::Qua12, 1e-10),
+            (GeoKind::Qua16, 1e-10),
+            (GeoKind::Qua17, 1e-10),
+            (GeoKind::Hex8, 1e-13),
+            (GeoKind::Tet4, 1e-12),
+            (GeoKind::Tet10, 1e-12),
+            (GeoKind::Tet20, 1e-10),
+            (GeoKind::Hex20, 1e-12),
+            (GeoKind::Hex32, 1e-10),
+        ]);
 
         // loop over shapes
-        for (geo_ndim, nnode) in GeoKind::PAIRS {
+        for kind in GeoKind::VALUES {
             // allocate shape and state
-            let space_ndim = usize::max(2, geo_ndim);
-            let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+            let shape = Shape::new(kind);
+            let space_ndim = usize::max(2, shape.geo_ndim);
             let mut state = StateOfShape::new(
-                shape.geo_ndim,
-                &(0..shape.nnode)
-                    .map(|_| vec![0.0; shape.space_ndim])
-                    .collect::<Vec<_>>(),
+                shape.kind,
+                &(0..shape.nnode).map(|_| vec![0.0; space_ndim]).collect::<Vec<_>>(),
             )?;
 
             // set tolerance
@@ -1795,87 +1507,93 @@ mod tests {
 
     #[test]
     fn calc_coords_works() -> Result<(), StrError> {
-        // define dims and number of nodes
-        let pairs = vec![
-            (2, 3),
-            (2, 6),
-            (2, 10),
-            (2, 15),
-            (2, 4),
-            (2, 8),
-            (2, 17),
-            (3, 4),
-            (3, 10),
-            (3, 8),
-            (3, 20),
+        // define kinds
+        let kinds = vec![
+            GeoKind::Tri3,
+            GeoKind::Tri6,
+            GeoKind::Tri10,
+            GeoKind::Tri15,
+            GeoKind::Qua4,
+            GeoKind::Qua8,
+            GeoKind::Qua17,
+            GeoKind::Tet4,
+            GeoKind::Tet10,
+            GeoKind::Tet20,
+            GeoKind::Hex8,
+            GeoKind::Hex20,
+            GeoKind::Hex32,
         ];
 
         // define tolerances
-        let mut tols = HashMap::new();
-        tols.insert(GeoKind::Qua4, 1e-15);
-        tols.insert(GeoKind::Tri3, 1e-15);
-        tols.insert(GeoKind::Tri6, 1e-15);
-        tols.insert(GeoKind::Tri10, 1e-14);
-        tols.insert(GeoKind::Tri15, 1e-15);
-        tols.insert(GeoKind::Qua8, 1e-15);
-        tols.insert(GeoKind::Qua17, 1e-15);
-        tols.insert(GeoKind::Hex8, 1e-15);
-        tols.insert(GeoKind::Tet4, 1e-15);
-        tols.insert(GeoKind::Tet10, 1e-15);
-        tols.insert(GeoKind::Tet20, 1e-15);
-        tols.insert(GeoKind::Hex20, 1e-15);
+        let tols = HashMap::from([
+            (GeoKind::Qua4, 1e-15),
+            (GeoKind::Tri3, 1e-15),
+            (GeoKind::Tri6, 1e-15),
+            (GeoKind::Tri10, 1e-14),
+            (GeoKind::Tri15, 1e-15),
+            (GeoKind::Qua8, 1e-15),
+            (GeoKind::Qua17, 1e-15),
+            (GeoKind::Hex8, 1e-15),
+            (GeoKind::Tet4, 1e-15),
+            (GeoKind::Tet10, 1e-15),
+            (GeoKind::Tet20, 1e-14),
+            (GeoKind::Hex20, 1e-15),
+            (GeoKind::Hex32, 1e-15),
+        ]);
 
         // define tolerances for node in the reference domain
-        let mut tols_in = HashMap::new();
-        tols_in.insert(GeoKind::Tri3, 0.45); // linear maps are inaccurate for the circular wedge
-        tols_in.insert(GeoKind::Tri6, 0.02); // << quadratic mapping is inaccurate as well
-        tols_in.insert(GeoKind::Tri10, 1e-14);
-        tols_in.insert(GeoKind::Tri15, 1e-4); // << this triangle is inaccurate as well here
-        tols_in.insert(GeoKind::Qua4, 0.14); // linear maps are inaccurate for the circular wedge
-        tols_in.insert(GeoKind::Qua8, 1e-14);
-        tols_in.insert(GeoKind::Qua17, 1e-14);
-        tols_in.insert(GeoKind::Tet4, 0.45); // linear tetrahedron is also inaccurate here
-        tols_in.insert(GeoKind::Tet10, 0.02); // quadratic tetrahedron is also inaccurate here
-        tols_in.insert(GeoKind::Tet20, 1e-14); // cubic tetrahedron
-        tols_in.insert(GeoKind::Hex8, 0.14); // bi-linear maps are inaccurate for the circular wedge
-        tols_in.insert(GeoKind::Hex20, 1e-14);
+        let tols_in = HashMap::from([
+            (GeoKind::Tri3, 0.45), // linear maps are inaccurate for the circular wedge
+            (GeoKind::Tri6, 0.02), // << quadratic mapping is inaccurate as well
+            (GeoKind::Tri10, 1e-14),
+            (GeoKind::Tri15, 1e-4), // << this triangle is inaccurate as well here
+            (GeoKind::Qua4, 0.14),  // linear maps are inaccurate for the circular wedge
+            (GeoKind::Qua8, 1e-14),
+            (GeoKind::Qua17, 1e-14),
+            (GeoKind::Tet4, 0.45),   // linear tetrahedron is also inaccurate here
+            (GeoKind::Tet10, 0.02),  // quadratic tetrahedron is also inaccurate here
+            (GeoKind::Tet20, 1e-14), // cubic tetrahedron
+            (GeoKind::Hex8, 0.14),   // bi-linear maps are inaccurate for the circular wedge
+            (GeoKind::Hex20, 1e-14),
+            (GeoKind::Hex32, 1e-4), // TODO: check why this tolerance is high
+        ]);
 
         // loop over shapes
-        for (geo_ndim, nnode) in pairs {
+        for kind in kinds {
             // allocate shape
-            let space_ndim = usize::max(2, geo_ndim);
-            let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+            let shape = Shape::new(kind);
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
             let tol_in = *tols_in.get(&shape.kind).unwrap();
 
             // generate state with coordinates matrix
-            let mut state = gen_state_with_coords_matrix(&shape)?;
+            let space_ndim = usize::max(2, shape.geo_ndim);
+            let mut state = gen_state_with_coords_matrix(space_ndim, &shape)?;
 
             // loop over nodes of shape
-            let mut x = Vector::new(shape.space_ndim);
-            let mut x_correct = Vector::new(shape.space_ndim);
+            let mut x = Vector::new(space_ndim);
+            let mut x_correct = Vector::new(space_ndim);
             for m in 0..shape.nnode {
                 // get ξᵐ corresponding to node m
-                let ksi = shape.reference_coords(m);
+                let ksi = shape.kind.reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
                 shape.calc_coords(&mut x, &mut state, ksi)?;
 
                 // compare xᵐ with generated coordinates
-                gen_coords(&mut x_correct, ksi, shape.class);
+                gen_coords(&mut x_correct, ksi, shape.kind);
                 assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol);
             }
 
             // test again inside the reference domain
-            let ksi_in = if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
+            let ksi_in = if shape.kind.is_tri_or_tet() {
                 vec![1.0 / 3.0; shape.geo_ndim]
             } else {
                 vec![0.0; shape.geo_ndim]
             };
             shape.calc_coords(&mut x, &mut state, &ksi_in)?;
-            gen_coords(&mut x_correct, &ksi_in, shape.class);
+            gen_coords(&mut x_correct, &ksi_in, shape.kind);
             assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_in);
         }
         Ok(())
@@ -1903,39 +1621,40 @@ mod tests {
     #[test]
     fn calc_jacobian_works() -> Result<(), StrError> {
         // define tolerances
-        let mut tols = HashMap::new();
-        tols.insert(GeoKind::Lin2, 1e-11);
-        tols.insert(GeoKind::Lin3, 1e-11);
-        tols.insert(GeoKind::Lin4, 1e-11);
-        tols.insert(GeoKind::Lin5, 1e-11);
-        tols.insert(GeoKind::Tri3, 1e-11);
-        tols.insert(GeoKind::Tri6, 1e-11);
-        tols.insert(GeoKind::Tri10, 1e-11);
-        tols.insert(GeoKind::Tri15, 1e-10);
-        tols.insert(GeoKind::Qua4, 1e-11);
-        tols.insert(GeoKind::Qua8, 1e-11);
-        tols.insert(GeoKind::Qua9, 1e-11);
-        tols.insert(GeoKind::Qua12, 1e-10);
-        tols.insert(GeoKind::Qua16, 1e-10);
-        tols.insert(GeoKind::Qua17, 1e-10);
-        tols.insert(GeoKind::Hex8, 1e-11);
-        tols.insert(GeoKind::Hex20, 1e-11);
-        tols.insert(GeoKind::Hex32, 1e-10);
-        tols.insert(GeoKind::Tet4, 1e-12);
-        tols.insert(GeoKind::Tet10, 1e-12);
-        tols.insert(GeoKind::Tet20, 1e-15);
+        let tols = HashMap::from([
+            (GeoKind::Lin2, 1e-11),
+            (GeoKind::Lin3, 1e-11),
+            (GeoKind::Lin4, 1e-11),
+            (GeoKind::Lin5, 1e-11),
+            (GeoKind::Tri3, 1e-11),
+            (GeoKind::Tri6, 1e-11),
+            (GeoKind::Tri10, 1e-11),
+            (GeoKind::Tri15, 1e-10),
+            (GeoKind::Qua4, 1e-11),
+            (GeoKind::Qua8, 1e-11),
+            (GeoKind::Qua9, 1e-11),
+            (GeoKind::Qua12, 1e-10),
+            (GeoKind::Qua16, 1e-10),
+            (GeoKind::Qua17, 1e-10),
+            (GeoKind::Hex8, 1e-11),
+            (GeoKind::Hex20, 1e-11),
+            (GeoKind::Hex32, 1e-10),
+            (GeoKind::Tet4, 1e-12),
+            (GeoKind::Tet10, 1e-12),
+            (GeoKind::Tet20, 1e-10),
+        ]);
 
         // loop over shapes
-        for (geo_ndim, nnode) in GeoKind::PAIRS {
+        for kind in GeoKind::VALUES {
             // allocate shape
-            let space_ndim = usize::max(2, geo_ndim);
-            let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+            let shape = Shape::new(kind);
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
 
             // generate state with coordinates matrix
-            let mut state = gen_state_with_coords_matrix(&shape)?;
+            let space_ndim = usize::max(2, shape.geo_ndim);
+            let mut state = gen_state_with_coords_matrix(space_ndim, &shape)?;
 
             // set ξ within reference space
             let at_ksi = vec![0.25; shape.geo_ndim];
@@ -1950,13 +1669,13 @@ mod tests {
                 state: state.clone(),
                 at_ksi,
                 ksi: vec![0.0; shape.geo_ndim],
-                x: Vector::new(shape.space_ndim),
+                x: Vector::new(space_ndim),
                 i: 0,
                 j: 0,
             };
 
             // check J(ξ) = dx(ξ)/dξ
-            for i in 0..shape.space_ndim {
+            for i in 0..space_ndim {
                 args.i = i;
                 for j in 0..shape.geo_ndim {
                     args.j = j;
@@ -1970,14 +1689,14 @@ mod tests {
 
     #[test]
     fn calc_jacobian_special_cases_work() -> Result<(), StrError> {
-        let shape = Shape::new(2, 1, 2)?;
+        let shape = Shape::new(GeoKind::Lin2);
         let l = 3.5;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0], [l, 0.0]])?;
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0], [l, 0.0]])?;
         let norm_jac_vec = shape.calc_jacobian(&mut state, &[0.0])?;
         assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
 
-        let shape = Shape::new(3, 2, 3)?;
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 1.0, 1.0]])?;
+        let shape = Shape::new(GeoKind::Tri3);
+        let mut state = StateOfShape::new(shape.kind, &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 1.0, 1.0]])?;
         let norm_jac_vec = shape.calc_jacobian(&mut state, &[0.0, 0.0])?;
         assert_eq!(norm_jac_vec, 0.0);
         Ok(())
@@ -1986,14 +1705,15 @@ mod tests {
     #[test]
     fn calc_boundary_normal_works() -> Result<(), StrError> {
         // allocate surface shape and state
-        let shape = Shape::new(3, 2, 17)?;
+        let shape = Shape::new(GeoKind::Qua17);
 
         // generate state with coordinates matrix
-        let mut state = gen_state_with_coords_matrix(&shape)?;
+        let space_ndim = 3;
+        let mut state = gen_state_with_coords_matrix(space_ndim, &shape)?;
 
         // compute boundary normal vector
         let at_ksi = vec![0.0; shape.geo_ndim];
-        let mut normal = Vector::new(shape.space_ndim);
+        let mut normal = Vector::new(space_ndim);
         shape.calc_boundary_normal(&mut normal, &mut state, &at_ksi)?;
 
         // check magnitude of normal vector
@@ -2029,14 +1749,15 @@ mod tests {
         //             rmin       rmax
 
         // allocate boundary edge
-        let shape = Shape::new(2, 1, 5)?;
+        let shape = Shape::new(GeoKind::Lin5);
 
         // generate state with coordinates matrix
-        let mut state = gen_state_with_coords_matrix(&shape)?;
+        let space_ndim = 2;
+        let mut state = gen_state_with_coords_matrix(space_ndim, &shape)?;
 
         // compute boundary normal vector
         let at_ksi = vec![0.0; shape.geo_ndim];
-        let mut normal = Vector::new(shape.space_ndim);
+        let mut normal = Vector::new(space_ndim);
         shape.calc_boundary_normal(&mut normal, &mut state, &at_ksi)?;
 
         // check magnitude of normal vector
@@ -2055,20 +1776,20 @@ mod tests {
 
     #[test]
     fn normals_are_outward_2d() -> Result<(), StrError> {
-        // define dims and number of nodes
-        let pairs = vec![
+        // select Tri and Qua
+        let kinds = vec![
             // Tri
-            (2, 3),
-            (2, 6),
-            (2, 10),
-            (2, 15),
+            GeoKind::Tri3,
+            GeoKind::Tri6,
+            GeoKind::Tri10,
+            GeoKind::Tri15,
             // Qua
-            (2, 4),
-            (2, 8),
-            (2, 9),
-            (2, 12),
-            (2, 16),
-            (2, 17),
+            GeoKind::Qua4,
+            GeoKind::Qua8,
+            GeoKind::Qua9,
+            GeoKind::Qua12,
+            GeoKind::Qua16,
+            GeoKind::Qua17,
         ];
 
         // solution
@@ -2096,30 +1817,30 @@ mod tests {
         let ksi = &[0.0, 0.0, 0.0];
 
         // loop over shapes
-        for (geo_ndim, nnode) in pairs {
+        let space_ndim = 2;
+        for kind in kinds {
             // allocate shape
-            let space_ndim = geo_ndim;
-            let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+            let shape = Shape::new(kind);
 
             // generate state with coordinates matrix
             let state = gen_state_with_coords_matrix_parallel(&shape)?;
 
             // loop over edges
             for e in 0..shape.nedge {
-                let edge_shape = Shape::new(space_ndim, 1, shape.edge_nnode)?;
+                let edge_shape = Shape::new(shape.kind.edge_kind().unwrap());
                 let mut edge_state = StateOfShape::new(
-                    edge_shape.geo_ndim,
+                    edge_shape.kind,
                     &(0..edge_shape.nnode)
                         .map(|i| {
-                            let m = shape.edge_node_id(e, i);
-                            (0..shape.space_ndim).map(|j| state.coords_transp[j][m]).collect()
+                            let m = shape.kind.edge_node_id(e, i);
+                            (0..space_ndim).map(|j| state.coords_transp[j][m]).collect()
                         })
                         .collect::<Vec<_>>(),
                 )?;
 
                 // calc normal vector
                 edge_shape.calc_boundary_normal(&mut normal, &mut edge_state, ksi)?;
-                if shape.class == GeoClass::Tri {
+                if shape.kind.is_tri_or_tet() {
                     // check triangle
                     assert_vec_approx_eq!(normal.as_data(), tri_correct[e], 1e-15);
                 } else {
@@ -2133,15 +1854,27 @@ mod tests {
 
     #[test]
     fn normals_are_outward_3d() -> Result<(), StrError> {
-        // define dims and number of nodes
-        let pairs = vec![
+        // select Tet and Hex
+        let kinds = vec![
             // Tet
-            (3, 4),
-            (3, 10),
+            GeoKind::Tet4,
+            GeoKind::Tet10,
+            GeoKind::Tet20,
             // Hex
-            (3, 8),
-            (3, 20),
+            GeoKind::Hex8,
+            GeoKind::Hex20,
+            GeoKind::Hex32,
         ];
+
+        // define tolerances
+        let tols = HashMap::from([
+            (GeoKind::Tet4, 1e-15),
+            (GeoKind::Tet10, 1e-15),
+            (GeoKind::Tet20, 1e-14),
+            (GeoKind::Hex8, 1e-15),
+            (GeoKind::Hex20, 1e-15),
+            (GeoKind::Hex32, 1e-15),
+        ]);
 
         // solution
         // Hex with sides equal to h=2:
@@ -2183,35 +1916,38 @@ mod tests {
         let ksi = &[0.0, 0.0, 0.0];
 
         // loop over shapes
-        for (geo_ndim, nnode) in pairs {
+        let space_ndim = 3;
+        for kind in kinds {
             // allocate shape
-            let space_ndim = geo_ndim;
-            let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+            let shape = Shape::new(kind);
+
+            // set tolerance
+            let tol = *tols.get(&shape.kind).unwrap();
 
             // generate state with coordinates matrix
             let state = gen_state_with_coords_matrix_parallel(&shape)?;
 
             // loop over faces
             for f in 0..shape.nface {
-                let face_shape = Shape::new(space_ndim, 2, shape.face_nnode)?;
+                let face_shape = Shape::new(shape.kind.face_kind().unwrap());
                 let mut face_state = StateOfShape::new(
-                    face_shape.geo_ndim,
+                    face_shape.kind,
                     &(0..face_shape.nnode)
                         .map(|i| {
-                            let m = shape.face_node_id(f, i);
-                            (0..shape.space_ndim).map(|j| state.coords_transp[j][m]).collect()
+                            let m = shape.kind.face_node_id(f, i);
+                            (0..space_ndim).map(|j| state.coords_transp[j][m]).collect()
                         })
                         .collect::<Vec<_>>(),
                 )?;
 
                 // calc normal vector
                 face_shape.calc_boundary_normal(&mut normal, &mut face_state, ksi)?;
-                if shape.class == GeoClass::Tet {
+                if shape.kind.is_tri_or_tet() {
                     // check tetrahedron
-                    assert_vec_approx_eq!(normal.as_data(), tet_correct[f], 1e-15);
+                    assert_vec_approx_eq!(normal.as_data(), tet_correct[f], tol);
                 } else {
                     // check hexahedron
-                    assert_vec_approx_eq!(normal.as_data(), hex_correct[f], 1e-15);
+                    assert_vec_approx_eq!(normal.as_data(), hex_correct[f], tol);
                 }
             }
         }
@@ -2220,39 +1956,72 @@ mod tests {
 
     #[test]
     fn approximate_ksi_works() -> Result<(), StrError> {
-        // define dims and number of nodes
-        let pairs = vec![(2, 3), (2, 6), (2, 4), (2, 8), (3, 4), (3, 10), (3, 8), (3, 20)];
+        // select all kinds, except Lin
+        let kinds = vec![
+            // Tri
+            GeoKind::Tri3,
+            GeoKind::Tri6,
+            GeoKind::Tri10,
+            GeoKind::Tri15,
+            // Qua
+            GeoKind::Qua4,
+            GeoKind::Qua8,
+            GeoKind::Qua9,
+            GeoKind::Qua12,
+            GeoKind::Qua16,
+            GeoKind::Qua17,
+            // Tet
+            GeoKind::Tet4,
+            GeoKind::Tet10,
+            GeoKind::Tet20,
+            // Hex
+            GeoKind::Hex8,
+            GeoKind::Hex20,
+            GeoKind::Hex32,
+        ];
 
         // define tolerances
-        let mut tols = HashMap::new();
-        tols.insert(GeoKind::Tri3, 1e-14);
-        tols.insert(GeoKind::Tri6, 1e-15);
-        tols.insert(GeoKind::Qua4, 1e-15);
-        tols.insert(GeoKind::Qua8, 1e-15);
-        tols.insert(GeoKind::Tet4, 1e-15);
-        tols.insert(GeoKind::Tet10, 1e-15);
-        tols.insert(GeoKind::Tet20, 1e-15);
-        tols.insert(GeoKind::Hex8, 1e-15);
-        tols.insert(GeoKind::Hex20, 1e-15);
+        let tols = HashMap::from([
+            // Tri
+            (GeoKind::Tri3, 1e-14),
+            (GeoKind::Tri6, 1e-15),
+            (GeoKind::Tri10, 1e-15),
+            (GeoKind::Tri15, 1e-14),
+            // Qua
+            (GeoKind::Qua4, 1e-15),
+            (GeoKind::Qua8, 1e-15),
+            (GeoKind::Qua9, 1e-15),
+            (GeoKind::Qua12, 1e-15),
+            (GeoKind::Qua16, 1e-15),
+            (GeoKind::Qua17, 1e-13),
+            // Tet
+            (GeoKind::Tet4, 1e-15),
+            (GeoKind::Tet10, 1e-15),
+            (GeoKind::Tet20, 1e-15),
+            // Hex
+            (GeoKind::Hex8, 1e-15),
+            (GeoKind::Hex20, 1e-15),
+            (GeoKind::Hex32, 1e-14),
+        ]);
 
         // loop over shapes
-        for (geo_ndim, nnode) in pairs {
+        for kind in kinds {
             // allocate shape
-            let space_ndim = geo_ndim;
-            let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+            let shape = Shape::new(kind);
 
             // generate state with coordinates matrix
-            let mut state = gen_state_with_coords_matrix(&shape)?;
+            let space_ndim = shape.geo_ndim;
+            let mut state = gen_state_with_coords_matrix(space_ndim, &shape)?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
 
             // loop over nodes of shape
-            let mut x = Vector::new(shape.space_ndim);
+            let mut x = Vector::new(space_ndim);
             let mut ksi = vec![0.0; shape.geo_ndim];
             for m in 0..shape.nnode {
                 // get ξᵐ corresponding to node m
-                let ksi_ref = shape.reference_coords(m);
+                let ksi_ref = shape.kind.reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
                 shape.calc_coords(&mut x, &mut state, ksi_ref)?;
@@ -2268,7 +2037,7 @@ mod tests {
             }
 
             // test again inside the reference domain
-            let ksi_in = if shape.class == GeoClass::Tri || shape.class == GeoClass::Tet {
+            let ksi_in = if shape.kind.is_tri_or_tet() {
                 vec![1.0 / 3.0; shape.geo_ndim]
             } else {
                 vec![0.0; shape.geo_ndim]
@@ -2307,9 +2076,9 @@ mod tests {
         let (x3, y3) = (x0 + s, y0);
         let (x4, y4) = (x0 + 1.5 * s, y0 + 0.5 * h);
         let (x5, y5) = (x0 + 0.5 * s, y0 + 0.5 * h);
-        let shape = Shape::new(2, 2, 6).unwrap();
+        let shape = Shape::new(GeoKind::Tri6);
         let mut state = StateOfShape::new(
-            shape.geo_ndim,
+            shape.kind,
             &[[x0, y0], [x1, y1], [x2, y2], [x3, y3], [x4, y4], [x5, y5]],
         )
         .unwrap();
@@ -2366,27 +2135,62 @@ mod tests {
 
     #[test]
     fn fn_gradient_works() -> Result<(), StrError> {
-        // define dims and number of nodes
-        let pairs = vec![(2, 6), (2, 4), (2, 8), (3, 10), (3, 8), (3, 20)];
+        // select all kinds, except Lin
+        let kinds = vec![
+            // Tri
+            GeoKind::Tri3,
+            GeoKind::Tri6,
+            GeoKind::Tri10,
+            GeoKind::Tri15,
+            // Qua
+            GeoKind::Qua4,
+            GeoKind::Qua8,
+            GeoKind::Qua9,
+            GeoKind::Qua12,
+            GeoKind::Qua16,
+            GeoKind::Qua17,
+            // Tet
+            GeoKind::Tet4,
+            GeoKind::Tet10,
+            GeoKind::Tet20,
+            // Hex
+            GeoKind::Hex8,
+            GeoKind::Hex20,
+            GeoKind::Hex32,
+        ];
 
         // define tolerances
-        let mut tols = HashMap::new();
-        tols.insert(GeoKind::Tri6, 1e-9);
-        tols.insert(GeoKind::Qua4, 1e-11);
-        tols.insert(GeoKind::Qua8, 1e-10);
-        tols.insert(GeoKind::Tet10, 1e-9);
-        tols.insert(GeoKind::Tet20, 1e-15);
-        tols.insert(GeoKind::Hex8, 1e-11);
-        tols.insert(GeoKind::Hex20, 1e-10);
+        let tols = HashMap::from([
+            // Tri
+            (GeoKind::Tri3, 1e-11),
+            (GeoKind::Tri6, 1e-10),
+            (GeoKind::Tri10, 1e-10),
+            (GeoKind::Tri15, 1e-9),
+            // Qua
+            (GeoKind::Qua4, 1e-11),
+            (GeoKind::Qua8, 1e-10),
+            (GeoKind::Qua9, 1e-10),
+            (GeoKind::Qua12, 1e-10),
+            (GeoKind::Qua16, 1e-9),
+            (GeoKind::Qua17, 1e-10),
+            // Tet
+            (GeoKind::Tet4, 1e-11),
+            (GeoKind::Tet10, 1e-10),
+            (GeoKind::Tet20, 1e-9),
+            // Hex
+            (GeoKind::Hex8, 1e-11),
+            (GeoKind::Hex20, 1e-10),
+            (GeoKind::Hex32, 1e-10),
+        ]);
 
         // loop over shapes
-        for (geo_ndim, nnode) in pairs {
+        for kind in kinds {
             // allocate shape
-            let space_ndim = usize::max(2, geo_ndim);
-            let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
+            let shape = Shape::new(kind);
 
             // generate state with coordinates matrix
-            let mut state = gen_state_with_coords_matrix(&shape)?;
+            let space_ndim = usize::max(2, shape.geo_ndim);
+            let mut state = gen_state_with_coords_matrix(space_ndim, &shape)?;
 
             // set tolerance
             let tol = *tols.get(&shape.kind).unwrap();
@@ -2395,7 +2199,7 @@ mod tests {
             let at_ksi = vec![0.25; shape.geo_ndim];
 
             // compute x corresponding to ξ using the isoparametric formula
-            let mut at_x = Vector::new(shape.space_ndim);
+            let mut at_x = Vector::new(space_ndim);
             shape.calc_coords(&mut at_x, &mut state, &at_ksi)?;
 
             // compute gradient
@@ -2407,7 +2211,7 @@ mod tests {
                 shape: &shape,
                 state: state.clone(),
                 at_x,
-                x: Vector::new(shape.space_ndim),
+                x: Vector::new(space_ndim),
                 ksi: vec![0.0; shape.geo_ndim],
                 m: 0,
                 j: 0,
@@ -2428,9 +2232,9 @@ mod tests {
 
     #[test]
     fn calc_integ_points_coords() -> Result<(), StrError> {
-        let shape = Shape::new(2, 1, 2)?;
+        let shape = Shape::new(GeoKind::Lin2);
         let (xa, xb) = (2.0, 5.0);
-        let mut state = StateOfShape::new(shape.geo_ndim, &[[xa, 8.0], [xb, 8.0]])?;
+        let mut state = StateOfShape::new(shape.kind, &[[xa, 8.0], [xb, 8.0]])?;
         let ip_lin_legendre_2: [[f64; 4]; 2] = [
             [-0.5773502691896257, 0.0, 0.0, 1.0],
             [0.5773502691896257, 0.0, 0.0, 1.0],

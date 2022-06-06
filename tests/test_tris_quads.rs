@@ -1,6 +1,6 @@
 use gemlab::integ::default_integ_points;
 use gemlab::mesh::{allocate_state, check_2d_edge_normals, At, EdgeKey, Extract, Mesh, Region};
-use gemlab::shapes::{Shape, StateOfShape};
+use gemlab::shapes::{GeoKind, Shape, StateOfShape};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
 use russell_chk::assert_approx_eq;
@@ -120,9 +120,9 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     check(&edges, &[(2, 6), (6, 9), (9, 13)]);
 
     // edge (7,11)
-    let shape_edge_7_11 = Shape::new(2, 1, 2)?;
+    let shape_edge_7_11 = Shape::new(GeoKind::Lin2);
     let mut state_edge_7_11 = StateOfShape::new(
-        1,
+        GeoKind::Lin2,
         &[
             [region.mesh.points[7].coords[0], region.mesh.points[7].coords[1]],
             [region.mesh.points[11].coords[0], region.mesh.points[11].coords[1]],
@@ -141,7 +141,7 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     // cell 5
     let cell = &region.mesh.cells[5];
     let shape_cell_5 = &region.shapes[5];
-    let mut state_cell_5 = allocate_state(&region.mesh, cell.geo_ndim, &cell.points)?;
+    let mut state_cell_5 = allocate_state(&region.mesh, cell.kind, &cell.points)?;
     let ips = default_integ_points(shape_cell_5.kind);
     let mut area_numerical = 0.0;
     for p in 0..ips.len() {

@@ -244,7 +244,7 @@ impl AnalyticalTet4 {
 #[cfg(test)]
 mod tests {
     use super::AnalyticalTet4;
-    use crate::shapes::{Shape, StateOfShape};
+    use crate::shapes::{GeoKind, Shape, StateOfShape};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
@@ -252,9 +252,12 @@ mod tests {
     #[test]
     fn analytical_tet4_works() -> Result<(), StrError> {
         // unit tet4
-        let shape = Shape::new(3, 3, 4).unwrap();
-        let mut state =
-            StateOfShape::new(3, &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]).unwrap();
+        let shape = Shape::new(GeoKind::Tet4);
+        let mut state = StateOfShape::new(
+            GeoKind::Tet4,
+            &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        )
+        .unwrap();
         let mut tet = AnalyticalTet4::new(&shape, &mut state);
         shape.calc_gradient(&mut state, &[0.1, 0.1, 0.1])?;
         assert_eq!(tet.volume, 1.0 / 6.0);
@@ -287,8 +290,11 @@ mod tests {
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // random tet4
-        let mut state =
-            StateOfShape::new(3, &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]]).unwrap();
+        let mut state = StateOfShape::new(
+            GeoKind::Tet4,
+            &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]],
+        )
+        .unwrap();
         let mut tet = AnalyticalTet4::new(&shape, &mut state);
         shape.calc_gradient(&mut state, &[0.1, 0.2, 0.3])?;
         assert_eq!(tet.volume, 4.0);

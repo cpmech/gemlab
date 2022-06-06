@@ -11,19 +11,19 @@ use crate::StrError;
 /// for finite element analyses.
 pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     // check
-    if a.space_ndim != b.space_ndim {
+    if a.ndim != b.ndim {
         return Err("meshes must have the same space_ndim");
     }
 
     // find the boundary of mesh A
-    let shapes_a = allocate_cell_shapes(&a)?;
+    let shapes_a = allocate_cell_shapes(&a);
     let (_, _, boundary_a) = Features::new(a, &shapes_a, Extract::Boundary);
 
     // allocate and prepare a GridSearch for mesh A
     let mut min_a = boundary_a.min.clone();
     let mut max_a = boundary_a.max.clone();
     const PCT: f64 = 1.0 / 100.0;
-    for i in 0..a.space_ndim {
+    for i in 0..a.ndim {
         let del = max_a[i] - min_a[i];
         min_a[i] -= PCT * del;
         max_a[i] += PCT * del;
@@ -42,7 +42,7 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     for m in 0..b.points.len() {
         let x = &b.points[m].coords;
         let mut in_grid_a = true;
-        for i in 0..a.space_ndim {
+        for i in 0..a.ndim {
             if x[i] < min_a[i] || x[i] > max_a[i] {
                 in_grid_a = false;
                 break;
@@ -69,7 +69,7 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
         mesh.cells.push(Cell {
             id: new_cell_id,
             attribute_id: cell.attribute_id,
-            geo_ndim: cell.geo_ndim,
+            kind: cell.kind,
             points: cell.points.iter().map(|id| map_old_to_new_point_id_b[*id]).collect(),
         });
         new_cell_id += 1;
@@ -82,7 +82,7 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
 #[cfg(test)]
 mod tests {
     use super::join_meshes;
-    use crate::mesh::{check_ids, check_jacobian, Samples};
+    use crate::mesh::{check_ids_and_kind, check_jacobian, Samples};
     use crate::StrError;
 
     #[test]
@@ -129,7 +129,7 @@ mod tests {
         // 0.0  0-----------1-----------4  → x
         //     0.0         1.0         2.0
         let mesh = join_meshes(&a, &b)?;
-        check_ids(&mesh)?;
+        check_ids_and_kind(&mesh)?;
         check_jacobian(&mesh)?;
         assert_eq!(mesh.points[0].coords, &[0.0, 0.0]);
         assert_eq!(mesh.points[1].coords, &[1.0, 0.0]);
@@ -203,10 +203,10 @@ mod tests {
         //  1--------------2-------------12   1.0
         // 0.0            1.0            2.0
         let mesh = join_meshes(&a, &b)?;
-        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids(&mesh)?;
+        check_ids_and_kind(&mesh)?;
         check_jacobian(&mesh)?;
 
         let sample = Samples::four_cubes_wall();

@@ -1,3 +1,4 @@
+use crate::shapes::GeoKind;
 use crate::StrError;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
@@ -34,11 +35,8 @@ pub struct Cell {
     /// Attribute identification number
     pub attribute_id: CellAttributeId,
 
-    /// Space dimension of this cell
-    ///
-    /// The cell's ndim may be different than the space dimension of the mesh.
-    /// For example, a 1D line in the 2D or 3D space or a 2D triangle in the 3D space.
-    pub geo_ndim: usize,
+    /// The kind of cell
+    pub kind: GeoKind,
 
     /// List of points defining this cell (nodes); in the right order (unsorted)
     ///
@@ -52,6 +50,7 @@ pub struct Cell {
 ///
 /// ```
 /// use gemlab::mesh::{Cell, Mesh, Point};
+/// use gemlab::shapes::GeoKind;
 ///
 /// //          [#] indicates id
 /// //      y   (#) indicates attribute_id
@@ -65,7 +64,7 @@ pub struct Cell {
 /// //     0.0         1.0         2.0
 ///
 /// let mesh = Mesh {
-///     space_ndim: 2,
+///     ndim: 2,
 ///     points: vec![
 ///         Point { id: 0, coords: vec![0.0, 0.0] },
 ///         Point { id: 1, coords: vec![1.0, 0.0] },
@@ -75,8 +74,8 @@ pub struct Cell {
 ///         Point { id: 5, coords: vec![2.0, 1.0] },
 ///     ],
 ///     cells: vec![
-///         Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
-///         Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+///         Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+///         Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
 ///     ],
 /// };
 /// ```
@@ -88,7 +87,7 @@ pub struct Mesh {
     ///
     /// The mesh's ndim may be different that an cell's ndim.
     /// For example, a 3D mesh may contain 1D lines or 2D triangles.
-    pub space_ndim: usize,
+    pub ndim: usize,
 
     /// All points in the mesh
     pub points: Vec<Point>,
@@ -143,12 +142,12 @@ impl fmt::Display for Mesh {
     /// Returns a text representation of the Mesh (can be used with [Mesh::from_text])
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "# header\n").unwrap();
-        write!(f, "# space_ndim npoint ncell\n").unwrap();
-        write!(f, "{} {} {}\n", self.space_ndim, self.points.len(), self.cells.len()).unwrap();
+        write!(f, "# ndim npoint ncell\n").unwrap();
+        write!(f, "{} {} {}\n", self.ndim, self.points.len(), self.cells.len()).unwrap();
         write!(f, "\n# points\n").unwrap();
         write!(f, "# id x y {{z}}\n").unwrap();
         self.points.iter().for_each(|point| {
-            if self.space_ndim == 2 {
+            if self.ndim == 2 {
                 write!(f, "{} {} {}\n", point.id, point.coords[0], point.coords[1]).unwrap();
             } else {
                 write!(
@@ -160,15 +159,14 @@ impl fmt::Display for Mesh {
             }
         });
         write!(f, "\n# cells\n").unwrap();
-        write!(f, "# id attribute_id geo_ndim nnode  points\n").unwrap();
+        write!(f, "# id att kind  points\n").unwrap();
         self.cells.iter().for_each(|cell| {
             write!(
                 f,
-                "{} {} {} {} {}\n",
+                "{} {} {} {}\n",
                 cell.id,
                 cell.attribute_id,
-                cell.geo_ndim,
-                cell.points.len(),
+                cell.kind.to_string(),
                 cell.points.iter().fold(&mut String::new(), |acc, cur| {
                     write!(acc, " {}", cur).unwrap();
                     acc
@@ -196,7 +194,7 @@ mod tests {
             Some("deserialize failed")
         );
         let mesh = Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: Vec::new(),
             cells: Vec::new(),
         };
@@ -215,8 +213,8 @@ mod tests {
         //
         let mesh = Mesh::from_text(
             r"# header
-            # space_ndim npoint ncell
-                       2      6     2
+            # ndim npoint ncell
+                 2      6     2
             
             # points
             # id   x   y
@@ -228,9 +226,9 @@ mod tests {
                5 2.0 1.0
             
             # cells
-            # id att geo_ndim nnode  point_ids...
-               0   1        2     4  0 1 2 3
-               1   0        2     4  1 4 5 2",
+            # id att kind point_ids...
+               0   1 qua4 0 1 2 3
+               1   0 qua4 1 4 5 2",
         )?;
         mesh.write("/tmp/gemlab/test.msh")?;
         let mesh_read = Mesh::read("/tmp/gemlab/test.msh")?;
@@ -242,9 +240,9 @@ mod tests {
     fn derive_works() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
         let mesh_clone = mesh.clone();
-        let correct ="Mesh { space_ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: [0, 1, 2, 3] }, Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: [1, 4, 5, 2] }] }";
+        let correct ="Mesh { ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute_id: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute_id: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
         assert_eq!(format!("{:?}", mesh), correct);
-        assert_eq!(mesh_clone.space_ndim, mesh.space_ndim);
+        assert_eq!(mesh_clone.ndim, mesh.ndim);
         assert_eq!(mesh_clone.points.len(), mesh.points.len());
         assert_eq!(mesh_clone.cells.len(), mesh.cells.len());
         // serialize
@@ -262,7 +260,7 @@ mod tests {
         assert_eq!(
             text,
             "# header\n\
-             # space_ndim npoint ncell\n\
+             # ndim npoint ncell\n\
              2 6 2\n\
              \n\
              # points\n\
@@ -275,9 +273,9 @@ mod tests {
              5 2 1\n\
              \n\
              # cells\n\
-             # id attribute_id geo_ndim nnode  points\n\
-             0 1 2 4  0 1 2 3\n\
-             1 2 2 4  1 4 5 2\n"
+             # id att kind  points\n\
+             0 1 qua4  0 1 2 3\n\
+             1 2 qua4  1 4 5 2\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);
@@ -290,7 +288,7 @@ mod tests {
         assert_eq!(
             text,
             "# header\n\
-             # space_ndim npoint ncell\n\
+             # ndim npoint ncell\n\
              3 12 2\n\
              \n\
              # points\n\
@@ -309,9 +307,9 @@ mod tests {
              11 0 1 2\n\
              \n\
              # cells\n\
-             # id attribute_id geo_ndim nnode  points\n\
-             0 1 3 8  0 1 2 3 4 5 6 7\n\
-             1 2 3 8  4 5 6 7 8 9 10 11\n"
+             # id att kind  points\n\
+             0 1 hex8  0 1 2 3 4 5 6 7\n\
+             1 2 hex8  4 5 6 7 8 9 10 11\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);

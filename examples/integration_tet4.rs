@@ -1,5 +1,5 @@
 use gemlab::integ::{default_integ_points, mat_gdg_stiffness};
-use gemlab::shapes::{Shape, StateOfShape};
+use gemlab::shapes::{GeoKind, Shape, StateOfShape};
 use gemlab::StrError;
 use russell_lab::{copy_matrix, Matrix};
 use russell_tensor::LinElasticity;
@@ -16,10 +16,8 @@ fn main() -> Result<(), StrError> {
 
     // shape and state
     let space_ndim = 3;
-    let geo_ndim = 3;
-    let nnode = 4;
-    let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-    let mut state = StateOfShape::new(shape.geo_ndim, &coords)?;
+    let shape = Shape::new(GeoKind::Tet4);
+    let mut state = StateOfShape::new(shape.kind, &coords)?;
 
     // constants
     let young = 96.0;
@@ -29,7 +27,7 @@ fn main() -> Result<(), StrError> {
     let model = LinElasticity::new(young, poisson, two_dim, plane_stress);
 
     // stiffness
-    let nrow = shape.nnode * shape.space_ndim;
+    let nrow = shape.nnode * space_ndim;
     let mut kk = Matrix::new(nrow, nrow);
     let ips = default_integ_points(shape.kind);
     mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {

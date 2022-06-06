@@ -1,6 +1,6 @@
 use super::{Cell, Mesh, Point};
 use crate::geometry::Circle;
-use crate::shapes::{Shape, StateOfShape};
+use crate::shapes::{GeoKind, Shape, StateOfShape};
 use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol};
 use crate::StrError;
 use russell_lab::Vector;
@@ -82,6 +82,7 @@ pub enum Constraint {
 ///
 /// ```
 /// use gemlab::mesh::Block;
+/// use gemlab::shapes::GeoKind;
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -91,7 +92,7 @@ pub enum Constraint {
 ///         [2.0, 2.0],
 ///         [0.0, 2.0],
 ///     ])?;
-///     let mesh = block.subdivide(4)?;
+///     let mesh = block.subdivide(GeoKind::Qua4)?;
 ///     // 7---------6---------8
 ///     // |         |         |
 ///     // |   [2]   |   [3]   |
@@ -108,7 +109,7 @@ pub enum Constraint {
 /// ```
 pub struct Block {
     attribute_id: usize,      // attribute ID of all elements in this block
-    space_ndim: usize,        // space dimension
+    ndim: usize,              // space dimension
     ndiv: Vec<usize>,         // number of divisions along each dim (ndim)
     delta_ksi: Vec<Vec<f64>>, // delta ksi along each dim (ndim, {ndiv[0],ndiv[1],ndiv[2]})
 
@@ -127,29 +128,25 @@ impl Block {
     // constants
     const NAT_LENGTH: f64 = 2.0; // length of shape along each direction in reference coords space
 
-    // valid output npoint
-    const VALID_OUTPUT_NPOINT_2D: [usize; 6] = [4, 8, 9, 12, 16, 17];
-    const VALID_OUTPUT_NPOINT_3D: [usize; 2] = [8, 20];
-
     /// Allocate a new instance
     ///
     /// # Input (2D)
     ///
-    /// * `coords` -- (nrow = 4 or 8, ncol = space_ndim = 2) matrix with all coordinates
+    /// * `coords` -- (nrow = 4 or 8, ncol = ndim = 2) matrix with all coordinates
     ///
     /// # Input (3D)
     ///
-    /// * `coords` -- (nrow = 8 or 20, ncol = space_ndim = 3) matrix with all coordinates
+    /// * `coords` -- (nrow = 8 or 20, ncol = ndim = 3) matrix with all coordinates
     pub fn new<'a, T>(coords: &'a T) -> Result<Self, StrError>
     where
         T: AsArray2D<'a, f64>,
     {
         // check
-        let (nrow, space_ndim) = coords.size();
-        if space_ndim < 2 || space_ndim > 3 {
-            return Err("ncol = space_ndim must be 2 or 3");
+        let (nrow, ndim) = coords.size();
+        if ndim < 2 || ndim > 3 {
+            return Err("ncol = ndim must be 2 or 3");
         }
-        if space_ndim == 2 {
+        if ndim == 2 {
             if nrow != 4 && nrow != 8 {
                 return Err("in 2D, nrow must be 4 or 8");
             }
@@ -160,46 +157,49 @@ impl Block {
         }
 
         // shape
-        let geo_ndim = space_ndim;
-        let nnode = if geo_ndim == 2 { 8 } else { 20 }; // Qua8 or Hex20
-        let shape = Shape::new(space_ndim, geo_ndim, nnode).unwrap(); // should not fail here
+        let shape = if ndim == 2 {
+            Shape::new(GeoKind::Qua8)
+        } else {
+            Shape::new(GeoKind::Hex20)
+        };
 
         // state
-        let state = if space_ndim == 2 {
+        let nnode = shape.kind.nnode();
+        let state = if ndim == 2 {
             if nrow == 8 {
                 // all vertices given, ok
-                StateOfShape::new(geo_ndim, coords).unwrap() // should not fail here
+                StateOfShape::new(shape.kind, coords).unwrap() // should not fail here
             } else {
                 // copy "corner" vertices
-                let mut xx = vec![vec![0.0; space_ndim]; nnode];
+                let mut xx = vec![vec![0.0; ndim]; nnode];
                 for m in 0..nrow {
-                    for j in 0..space_ndim {
+                    for j in 0..ndim {
                         xx[m][j] = coords.at(m, j);
                     }
                 }
                 // generate mid vertices
-                for j in 0..space_ndim {
+                for j in 0..ndim {
                     xx[4][j] = (coords.at(0, j) + coords.at(1, j)) / 2.0;
                     xx[5][j] = (coords.at(1, j) + coords.at(2, j)) / 2.0;
                     xx[6][j] = (coords.at(2, j) + coords.at(3, j)) / 2.0;
                     xx[7][j] = (coords.at(3, j) + coords.at(0, j)) / 2.0;
                 }
-                StateOfShape::new(geo_ndim, &xx).unwrap() // should not fail here
+                StateOfShape::new(shape.kind, &xx).unwrap() // should not fail here
             }
         } else {
             if nrow == 20 {
                 // all vertices given, ok
-                StateOfShape::new(geo_ndim, coords).unwrap() // should not fail here
+                StateOfShape::new(shape.kind, coords).unwrap() // should not fail here
             } else {
                 // copy "corner" vertices
-                let mut xx = vec![vec![0.0; space_ndim]; nnode];
+                let mut xx = vec![vec![0.0; ndim]; nnode];
                 for m in 0..nrow {
-                    for j in 0..space_ndim {
+                    for j in 0..ndim {
                         xx[m][j] = coords.at(m, j);
                     }
                 }
                 // generate mid vertices
-                for j in 0..space_ndim {
+                for j in 0..ndim {
                     xx[8][j] = (coords.at(0, j) + coords.at(1, j)) / 2.0;
                     xx[9][j] = (coords.at(1, j) + coords.at(2, j)) / 2.0;
                     xx[10][j] = (coords.at(2, j) + coords.at(3, j)) / 2.0;
@@ -215,26 +215,20 @@ impl Block {
                     xx[18][j] = (coords.at(2, j) + coords.at(6, j)) / 2.0;
                     xx[19][j] = (coords.at(3, j) + coords.at(7, j)) / 2.0;
                 }
-                StateOfShape::new(geo_ndim, &xx).unwrap() // should not fail here
+                StateOfShape::new(shape.kind, &xx).unwrap() // should not fail here
             }
         };
 
         // grid search
-        let grid_ksi = GridSearch::new(
-            &vec![-1.0; space_ndim],
-            &vec![1.0; space_ndim],
-            GsNdiv::Default,
-            GsTol::Default,
-        )
-        .unwrap(); // should not fail here
+        let grid_ksi = GridSearch::new(&vec![-1.0; ndim], &vec![1.0; ndim], GsNdiv::Default, GsTol::Default).unwrap(); // should not fail here
 
         // done
         const NDIV: usize = 2;
         Ok(Block {
             attribute_id: 1,
-            space_ndim,
-            ndiv: vec![NDIV; space_ndim],
-            delta_ksi: vec![vec![1.0; NDIV]; space_ndim],
+            ndim,
+            ndiv: vec![NDIV; ndim],
+            delta_ksi: vec![vec![1.0; NDIV]; ndim],
             edge_constraints: vec![None; shape.nedge],
             face_constraints: vec![None; shape.nface],
             shape,
@@ -260,8 +254,8 @@ impl Block {
     /// where `L=2` is the edge-length (in reference coordinates) and `wᵐ` are
     /// the weights for each division `m`.
     pub fn set_ndiv(&mut self, ndiv: &[usize]) -> &mut Self {
-        assert_eq!(ndiv.len(), self.space_ndim);
-        for i in 0..self.space_ndim {
+        assert_eq!(ndiv.len(), self.ndim);
+        for i in 0..self.ndim {
             assert!(ndiv[i] > 0);
             self.ndiv[i] = ndiv[i];
             let w = 1.0;
@@ -297,32 +291,29 @@ impl Block {
     ///
     /// # Input
     ///
-    /// Valid output_npoint:
-    ///
-    /// * 2D: [4, 8, 9, 12, 16, 17]
-    /// * 3D: [8, 20]
-    pub fn subdivide(&mut self, output_npoint: usize) -> Result<Mesh, StrError> {
+    /// * `target` -- If 2D, a quadrilateral as defined in [GeoKind::QUAS];
+    ///               If 3D, a hexahedron as defined in [GeoKind::HEXS].
+    pub fn subdivide(&mut self, target: GeoKind) -> Result<Mesh, StrError> {
         // check
-        let space_ndim = self.space_ndim;
-        if space_ndim == 2 {
-            if !Block::VALID_OUTPUT_NPOINT_2D.contains(&output_npoint) {
-                return Err("output_npoint is invalid");
+        if self.ndim == 2 {
+            if !GeoKind::QUAS.contains(&target) {
+                return Err("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...");
             }
         } else {
-            if !Block::VALID_OUTPUT_NPOINT_3D.contains(&output_npoint) {
-                return Err("output_npoint is invalid");
+            if !GeoKind::HEXS.contains(&target) {
+                return Err("in 3D, 'target' must be a Hex8, Hex20, Hex32, ...");
             }
         }
 
         // resulting mesh
         let mut mesh = Mesh {
-            space_ndim,
+            ndim: self.ndim,
             points: Vec::new(),
             cells: Vec::new(),
         };
 
         // shape object corresponding to the new (output) cells
-        let shape_out = Shape::new(space_ndim, space_ndim, output_npoint)?;
+        let shape_out = Shape::new(target);
 
         //          BLOCK                      OUTPUT CELL
         // (-1,+1)-----------(+1,+1)    (-1,+1)-----------(+1,+1)
@@ -336,30 +327,30 @@ impl Block {
         // (-1,-1)-----------(+1,-1)    (-1,-1)-----------(+1,-1)
 
         // center of new cell in reference space (natural coordinates)
-        let mut center = vec![0.0; space_ndim];
+        let mut center = vec![0.0; self.ndim];
 
         // size ratios between new cell and block in natural coordinates
-        let mut scale = vec![0.0; space_ndim];
+        let mut scale = vec![0.0; self.ndim];
 
         // natural coordinates of new points
-        let mut ksi = vec![0.0; space_ndim];
+        let mut ksi = vec![0.0; self.ndim];
 
         // real coordinates of new points
-        let mut x = Vector::new(space_ndim);
+        let mut x = Vector::new(self.ndim);
 
         // number of divisions along each direction
         let (nx, ny, nz) = (
             self.ndiv[0],
             self.ndiv[1],
-            if space_ndim == 2 { 1 } else { self.ndiv[2] },
+            if self.ndim == 2 { 1 } else { self.ndiv[2] },
         );
 
         // for each z-division
-        if space_ndim == 3 {
+        if self.ndim == 3 {
             center[2] = -1.0 + self.delta_ksi[2][0] / 2.0;
         }
         for k in 0..nz {
-            if space_ndim == 3 {
+            if self.ndim == 3 {
                 scale[2] = self.delta_ksi[2][k] / Block::NAT_LENGTH;
             }
 
@@ -381,10 +372,10 @@ impl Block {
                     let mut points = vec![0; shape_out.nnode];
                     for m in 0..shape_out.nnode {
                         // reference natural coordinates of the new cell nodes
-                        let ksi_ref = shape_out.reference_coords(m);
+                        let ksi_ref = shape_out.kind.reference_coords(m);
 
                         // scale and translate the reference coordinates
-                        for a in 0..space_ndim {
+                        for a in 0..self.ndim {
                             ksi[a] = center[a] + scale[a] * ksi_ref[a];
                         }
 
@@ -416,7 +407,7 @@ impl Block {
                     let cell = Cell {
                         id: cell_id,
                         attribute_id: self.attribute_id,
-                        geo_ndim: shape_out.geo_ndim,
+                        kind: target,
                         points,
                     };
                     mesh.cells.push(cell);
@@ -430,7 +421,7 @@ impl Block {
             }
 
             // next z-center
-            if space_ndim == 3 {
+            if self.ndim == 3 {
                 center[2] += self.delta_ksi[2][k];
             }
         }
@@ -447,11 +438,12 @@ mod tests {
     use super::{Block, Constraint, StrError};
     use crate::geometry::Circle;
     use crate::mesh::Samples;
+    use crate::shapes::GeoKind;
     use russell_chk::assert_vec_approx_eq;
 
     #[test]
     fn new_fails_on_wrong_input() {
-        assert_eq!(Block::new(&[[]]).err(), Some("ncol = space_ndim must be 2 or 3"));
+        assert_eq!(Block::new(&[[]]).err(), Some("ncol = ndim must be 2 or 3"));
         assert_eq!(Block::new(&[[0.0, 0.0]]).err(), Some("in 2D, nrow must be 4 or 8"));
         assert_eq!(
             Block::new(&[[0.0, 0.0, 0.0]]).err(),
@@ -463,7 +455,7 @@ mod tests {
     fn new_works() -> Result<(), StrError> {
         let b2d = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
         assert_eq!(b2d.attribute_id, 1);
-        assert_eq!(b2d.space_ndim, 2);
+        assert_eq!(b2d.ndim, 2);
         assert_eq!(
             format!("{}", b2d.state.coords_transp),
             "┌                 ┐\n\
@@ -504,7 +496,7 @@ mod tests {
             [0.0, 2.0, 2.0],
         ])?;
         assert_eq!(b3d.attribute_id, 1);
-        assert_eq!(b3d.space_ndim, 3);
+        assert_eq!(b3d.ndim, 3);
         assert_eq!(
             format!("{}", b3d.state.coords_transp),
             "┌                                         ┐\n\
@@ -611,7 +603,10 @@ mod tests {
     #[test]
     fn subdivide_fails_on_wrong_input() -> Result<(), StrError> {
         let mut b2d = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
-        assert_eq!(b2d.subdivide(1).err(), Some("output_npoint is invalid"));
+        assert_eq!(
+            b2d.subdivide(GeoKind::Tri3).err(),
+            Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
+        );
         let mut b3d = Block::new(&[
             [0.0, 0.0, 0.0],
             [2.0, 0.0, 0.0],
@@ -622,7 +617,10 @@ mod tests {
             [2.0, 2.0, 2.0],
             [0.0, 2.0, 2.0],
         ])?;
-        assert_eq!(b3d.subdivide(1).err(), Some("output_npoint is invalid"));
+        assert_eq!(
+            b3d.subdivide(GeoKind::Tet4).err(),
+            Some("in 3D, 'target' must be a Hex8, Hex20, Hex32, ...")
+        );
         Ok(())
     }
 
@@ -648,8 +646,7 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ])?;
-        let mesh = block.subdivide(4)?;
-        //
+        let mesh = block.subdivide(GeoKind::Qua4)?;
         let correct = Samples::block_2d_four_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         Ok(())
@@ -677,7 +674,7 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ])?;
-        let mesh = block.subdivide(8)?;
+        let mesh = block.subdivide(GeoKind::Qua8)?;
         let correct = Samples::block_2d_four_qua8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         Ok(())
@@ -705,7 +702,7 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ])?;
-        let mesh = block.subdivide(9)?;
+        let mesh = block.subdivide(GeoKind::Qua9)?;
         let correct = Samples::block_2d_four_qua9();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         Ok(())
@@ -733,7 +730,7 @@ mod tests {
             [3.0, 3.0],
             [0.0, 3.0],
         ])?;
-        let mesh = block.subdivide(12)?;
+        let mesh = block.subdivide(GeoKind::Qua12)?;
         let correct = Samples::block_2d_four_qua12();
         assert_eq!(mesh.points.len(), correct.points.len());
         assert_eq!(mesh.cells.len(), correct.cells.len());
@@ -768,7 +765,7 @@ mod tests {
             [3.0, 3.0],
             [0.0, 3.0],
         ])?;
-        let mesh = block.subdivide(16)?;
+        let mesh = block.subdivide(GeoKind::Qua16)?;
         let correct = Samples::block_2d_four_qua16();
         assert_eq!(mesh.points.len(), correct.points.len());
         assert_eq!(mesh.cells.len(), correct.cells.len());
@@ -807,7 +804,7 @@ mod tests {
             [4.0, 4.0],
             [0.0, 4.0],
         ])?;
-        let mesh = block.subdivide(17)?;
+        let mesh = block.subdivide(GeoKind::Qua17)?;
         let correct = Samples::block_2d_four_qua17();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         Ok(())
@@ -869,7 +866,7 @@ mod tests {
             [2.0, 2.0, 4.0],
             [0.0, 2.0, 4.0],
         ])?;
-        let mesh = block.subdivide(8)?;
+        let mesh = block.subdivide(GeoKind::Hex8)?;
         let correct = Samples::block_3d_eight_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         Ok(())
@@ -931,7 +928,7 @@ mod tests {
             [2.0, 2.0, 4.0],
             [0.0, 2.0, 4.0],
         ])?;
-        let mesh = block.subdivide(20)?;
+        let mesh = block.subdivide(GeoKind::Hex20)?;
         let correct = Samples::block_3d_eight_hex20();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         Ok(())

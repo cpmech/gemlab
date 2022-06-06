@@ -10,10 +10,6 @@ use std::collections::{HashMap, HashSet};
 /// * `mesh` -- the Mesh
 /// * `shapes` -- the shapes of cells (len == cells.len())
 ///
-/// # Output
-///
-/// * Returns [Features]
-///
 /// # Panics
 ///
 /// 1. It panics if `shapes.len() != mesh.cells.len()` (i.e., the shapes vector and the mesh must be compatible)
@@ -24,15 +20,15 @@ pub(crate) fn extract_features_3d(
     faces: &MapFaceToCells,
     extract: Extract,
 ) -> Features {
-    assert_eq!(mesh.space_ndim, 3);
+    assert_eq!(mesh.ndim, 3);
 
     // output
     let mut features = Features {
         points: HashSet::new(),
         edges: HashMap::new(),
         faces: HashMap::new(),
-        min: vec![f64::MAX; mesh.space_ndim],
-        max: vec![f64::MIN; mesh.space_ndim],
+        min: vec![f64::MAX; mesh.ndim],
+        max: vec![f64::MIN; mesh.ndim],
     };
 
     // sort face keys just so the next loop is deterministic
@@ -58,26 +54,27 @@ pub(crate) fn extract_features_3d(
         let cell = &mesh.cells[cell_id];
         let shape = &shapes[cell_id];
         let mut face = Face {
+            kind: shape.kind.face_kind().unwrap(),
             points: vec![0; shape.face_nnode],
         };
 
         // process points on face
         for i in 0..shape.face_nnode {
-            face.points[i] = cell.points[shape.face_node_id(f, i)];
+            face.points[i] = cell.points[cell.kind.face_node_id(f, i)];
             features.points.insert(face.points[i]);
-            for j in 0..mesh.space_ndim {
+            for j in 0..mesh.ndim {
                 features.min[j] = f64::min(features.min[j], mesh.points[face.points[i]].coords[j]);
                 features.max[j] = f64::max(features.max[j], mesh.points[face.points[i]].coords[j]);
             }
         }
 
         // loop over all edges on face
-        let face_shape = Shape::new(mesh.space_ndim, 2, shape.face_nnode).unwrap(); // should not fail
+        let face_shape = Shape::new(shape.kind.face_kind().unwrap());
         for e in 0..face_shape.nedge {
             // define edge key (sorted point ids)
             let mut edge_key: EdgeKey = (
-                face.points[face_shape.edge_node_id(e, 0)],
-                face.points[face_shape.edge_node_id(e, 1)],
+                face.points[face_shape.kind.edge_node_id(e, 0)],
+                face.points[face_shape.kind.edge_node_id(e, 1)],
             );
             sort2(&mut edge_key);
 
@@ -87,11 +84,13 @@ pub(crate) fn extract_features_3d(
             }
 
             // new edge
+            let edge_kind = face_shape.kind.edge_kind().unwrap();
             let mut edge = Edge {
+                kind: edge_kind,
                 points: vec![0; face_shape.edge_nnode],
             };
             for i in 0..face_shape.edge_nnode {
-                edge.points[i] = face.points[face_shape.edge_node_id(e, i)];
+                edge.points[i] = face.points[face_shape.kind.edge_node_id(e, i)];
             }
             features.edges.insert(edge_key, edge);
         }
@@ -165,7 +164,7 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let features = extract_features_3d(&mesh, &shapes, &faces, Extract::Boundary);
         let correct_edge_keys = [
@@ -269,7 +268,7 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let features = extract_features_3d(&mesh, &shapes, &faces, Extract::All);
         let correct_edge_keys = [
@@ -375,7 +374,7 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let features = extract_features_3d(&mesh, &shapes, &faces, Extract::Interior);
         let correct_edge_keys = [(4, 5), (4, 7), (5, 6), (6, 7)];
@@ -409,7 +408,7 @@ mod tests {
         //  12-----11-------1------------2------------8
         //
         let mesh = Samples::mixed_shapes_3d();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let features = extract_features_3d(&mesh, &shapes, &faces, Extract::Boundary);
         let correct_edge_keys = [
@@ -528,7 +527,7 @@ mod tests {
         //   |/                  |/                  |/
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let features = extract_features_3d(&mesh, &shapes, &faces, Extract::Boundary);
         let correct_edge_keys = [
@@ -746,7 +745,7 @@ mod tests {
         //   |/                  |/                  |/
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
-        let shapes = allocate_cell_shapes(&mesh)?;
+        let shapes = allocate_cell_shapes(&mesh);
         let faces = extract_all_faces(&mesh, &shapes);
         let features = extract_features_3d(&mesh, &shapes, &faces, Extract::All);
         let correct_edge_keys = [

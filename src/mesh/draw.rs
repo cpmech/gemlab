@@ -1,6 +1,5 @@
-use super::{Features, Mesh, Region};
-use crate::mesh::allocate_state;
-use crate::shapes::{geo_class_and_kind, GeoClass, GeoKind, Shape, StateOfShape};
+use super::{allocate_state, Features, Mesh, Region};
+use crate::shapes::{GeoKind, Shape, StateOfShape};
 use crate::util::ONE_BY_3;
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
@@ -82,7 +81,7 @@ impl Draw {
 
     /// Draws all points (markers)
     pub fn points(&mut self, plot: &mut Plot, mesh: &Mesh) {
-        if mesh.space_ndim == 2 {
+        if mesh.ndim == 2 {
             self.canvas_points.points_begin();
             mesh.points.iter().for_each(|point| {
                 self.canvas_points.points_add(point.coords[0], point.coords[1]);
@@ -101,7 +100,7 @@ impl Draw {
 
     /// Draws all point ids (labels)
     pub fn point_ids(&mut self, plot: &mut Plot, mesh: &Mesh) {
-        if mesh.space_ndim == 2 {
+        if mesh.ndim == 2 {
             mesh.points.iter().for_each(|point| {
                 self.canvas_point_ids
                     .draw(point.coords[0], point.coords[1], format!("{}", point.id).as_str());
@@ -123,7 +122,7 @@ impl Draw {
     pub fn cell_ids(&mut self, plot: &mut Plot, region: &Region) -> Result<(), StrError> {
         // auxiliary
         let mesh = &region.mesh;
-        let space_ndim = mesh.space_ndim;
+        let space_ndim = mesh.ndim;
         let mut states_memo: HashMap<GeoKind, StateOfShape> = HashMap::new();
         let ksi_hex = &[0.0, 0.0, 0.0];
         let ksi_tet = &[ONE_BY_3, ONE_BY_3, ONE_BY_3];
@@ -133,10 +132,9 @@ impl Draw {
         for cell_id in 0..mesh.cells.len() {
             // shape and state
             let (cell, shape) = (&mesh.cells[cell_id], &region.shapes[cell_id]);
-            let (_, kind) = geo_class_and_kind(cell.geo_ndim, cell.points.len())?;
             let mut state = states_memo
-                .entry(kind)
-                .or_insert(allocate_state(&mesh, shape.geo_ndim, &cell.points)?);
+                .entry(cell.kind)
+                .or_insert(allocate_state(&mesh, shape.kind, &cell.points)?);
 
             // set coordinates
             for m in 0..cell.points.len() {
@@ -146,13 +144,7 @@ impl Draw {
             }
 
             // calc center of cell by using center of the reference space
-            let ksi = match shape.class {
-                GeoClass::Lin => ksi_hex,
-                GeoClass::Tri => ksi_tet,
-                GeoClass::Qua => ksi_hex,
-                GeoClass::Tet => ksi_tet,
-                GeoClass::Hex => ksi_hex,
-            };
+            let ksi = if shape.kind.is_tri_or_tet() { ksi_tet } else { ksi_hex };
             shape.calc_coords(&mut x, &mut state, ksi)?;
 
             // add label
@@ -172,7 +164,7 @@ impl Draw {
 
     /// Draws edges
     pub fn edges(&mut self, plot: &mut Plot, region: &Region, set_range: bool) -> Result<(), StrError> {
-        if region.mesh.space_ndim == 2 {
+        if region.mesh.ndim == 2 {
             self.edges_2d(plot, &region.mesh, &region.features, set_range)
         } else {
             self.edges_3d(plot, &region.mesh, &region.features, set_range)
@@ -182,7 +174,7 @@ impl Draw {
     /// Draws 2D edges
     fn edges_2d(&mut self, plot: &mut Plot, mesh: &Mesh, features: &Features, set_range: bool) -> Result<(), StrError> {
         // space dimension
-        let space_ndim = mesh.space_ndim;
+        let space_ndim = mesh.ndim;
         assert_eq!(space_ndim, 2);
 
         // middle points (p) on Bezier curve and control points (q)
@@ -202,23 +194,17 @@ impl Draw {
         self.canvas_edges.polycurve_begin();
 
         // loop over edges (GeoKind::Lin)
-        const EDGE_GEO_NDIM: usize = 1;
         for (_, edge) in &features.edges {
-            // number of nodes on edge and kind
-            let nnode = edge.points.len();
-            let (_, kind) = geo_class_and_kind(EDGE_GEO_NDIM, nnode)?;
-
             // retrieve shape or allocate new
-            let shape = shapes_memo
-                .entry(kind)
-                .or_insert(Shape::new(space_ndim, EDGE_GEO_NDIM, nnode)?);
+            let shape = shapes_memo.entry(edge.kind).or_insert(Shape::new(edge.kind));
 
             // retrieve state or allocate new
             let mut state = states_memo
-                .entry(kind)
-                .or_insert(allocate_state(&mesh, EDGE_GEO_NDIM, &edge.points)?);
+                .entry(edge.kind)
+                .or_insert(allocate_state(&mesh, edge.kind, &edge.points)?);
 
             // set coordinates
+            let nnode = edge.points.len();
             for m in 0..nnode {
                 for i in 0..space_ndim {
                     state.coords_transp[i][m] = mesh.points[edge.points[m]].coords[i];
@@ -272,7 +258,7 @@ impl Draw {
     /// Draws 3D edges
     fn edges_3d(&mut self, plot: &mut Plot, mesh: &Mesh, features: &Features, set_range: bool) -> Result<(), StrError> {
         // space dimension
-        let space_ndim = mesh.space_ndim;
+        let space_ndim = mesh.ndim;
         assert_eq!(space_ndim, 3);
 
         // middle points (p) on edge
@@ -287,26 +273,18 @@ impl Draw {
         let mut shapes_memo: HashMap<GeoKind, Shape> = HashMap::new();
         let mut states_memo: HashMap<GeoKind, StateOfShape> = HashMap::new();
 
-        // begin poly-line
-
         // loop over edges (GeoKind::Lin)
-        const EDGE_GEO_NDIM: usize = 1;
         for (_, edge) in &features.edges {
-            // number of nodes on edge and kind
-            let nnode = edge.points.len();
-            let (_, kind) = geo_class_and_kind(EDGE_GEO_NDIM, nnode)?;
-
             // retrieve shape or allocate new
-            let shape = shapes_memo
-                .entry(kind)
-                .or_insert(Shape::new(space_ndim, EDGE_GEO_NDIM, nnode)?);
+            let shape = shapes_memo.entry(edge.kind).or_insert(Shape::new(edge.kind));
 
             // retrieve state or allocate new
             let mut state = states_memo
-                .entry(kind)
-                .or_insert(allocate_state(&mesh, EDGE_GEO_NDIM, &edge.points)?);
+                .entry(edge.kind)
+                .or_insert(allocate_state(&mesh, edge.kind, &edge.points)?);
 
             // set coordinates of GeoKind::Lin
+            let nnode = edge.points.len();
             for m in 0..nnode {
                 for i in 0..space_ndim {
                     state.coords_transp[i][m] = mesh.points[edge.points[m]].coords[i];

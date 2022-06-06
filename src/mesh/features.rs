@@ -1,6 +1,6 @@
 use super::algorithms;
 use super::{CellId, Mesh, PointId};
-use crate::shapes::Shape;
+use crate::shapes::{GeoKind, Shape};
 use std::collections::{HashMap, HashSet};
 
 /// Aliases (usize,usize) as the key of edges
@@ -20,6 +20,9 @@ pub type FaceKey = (usize, usize, usize, usize);
 /// Holds the point ids of an edge (an entity belonging to a solid cell in 2D or a face in 3D)
 #[derive(Clone, Debug)]
 pub struct Edge {
+    /// Geometry kind
+    pub kind: GeoKind,
+
     /// List of points defining this edge; in the right order (unsorted)
     pub points: Vec<PointId>,
 }
@@ -27,6 +30,9 @@ pub struct Edge {
 /// Holds the point ids of a face (an entity belonging to a solid cell in 3D)
 #[derive(Clone, Debug)]
 pub struct Face {
+    /// Geometry kind
+    pub kind: GeoKind,
+
     /// List of points defining this face; in the right order (unsorted)
     pub points: Vec<PointId>,
 }
@@ -112,8 +118,8 @@ impl Features {
         shapes: &Vec<Shape>,
         extract: Extract,
     ) -> (Option<MapEdge2dToCells>, Option<MapFaceToCells>, Features) {
-        assert!(mesh.space_ndim >= 2 && mesh.space_ndim <= 3);
-        let two_dim = if mesh.space_ndim == 2 { true } else { false };
+        assert!(mesh.ndim >= 2 && mesh.ndim <= 3);
+        let two_dim = if mesh.ndim == 2 { true } else { false };
         let do_rods_and_shells = match extract {
             Extract::All => true,
             Extract::Boundary => true,
@@ -140,19 +146,22 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::{Edge, Face};
+    use crate::shapes::GeoKind;
 
     #[test]
     fn derive_works() {
         let edge = Edge {
+            kind: GeoKind::Lin3,
             points: vec![10, 20, 33],
         };
         let face = Face {
+            kind: GeoKind::Qua4,
             points: vec![1, 2, 3, 4],
         };
         let edge_clone = edge.clone();
         let face_clone = face.clone();
-        assert_eq!(format!("{:?}", edge), "Edge { points: [10, 20, 33] }");
-        assert_eq!(format!("{:?}", face), "Face { points: [1, 2, 3, 4] }");
+        assert_eq!(format!("{:?}", edge), "Edge { kind: Lin3, points: [10, 20, 33] }");
+        assert_eq!(format!("{:?}", face), "Face { kind: Qua4, points: [1, 2, 3, 4] }");
         assert_eq!(edge_clone.points.len(), 3);
         assert_eq!(face_clone.points.len(), 4);
     }

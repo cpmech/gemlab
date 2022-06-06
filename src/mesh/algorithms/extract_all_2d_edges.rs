@@ -22,14 +22,14 @@ use std::collections::HashMap;
 /// 2. It panics if `mesh.space_ndim != 2` (i.e., this function works in 2D only)
 #[inline]
 pub(crate) fn extract_all_2d_edges(mesh: &Mesh, shapes: &Vec<Shape>) -> MapEdge2dToCells {
-    assert_eq!(mesh.space_ndim, 2);
+    assert_eq!(mesh.ndim, 2);
     let mut edges: MapEdge2dToCells = HashMap::new();
     mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
         if shape.geo_ndim == 2 {
             for e in 0..shape.nedge {
                 let mut edge_key: EdgeKey = (
-                    cell.points[shape.edge_node_id(e, 0)],
-                    cell.points[shape.edge_node_id(e, 1)],
+                    cell.points[cell.kind.edge_node_id(e, 0)],
+                    cell.points[cell.kind.edge_node_id(e, 1)],
                 );
                 sort2(&mut edge_key);
                 let data = edges.entry(edge_key).or_insert(Vec::new());
@@ -55,7 +55,7 @@ mod tests {
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_cell_shapes(&mesh).unwrap();
+        let shapes = allocate_cell_shapes(&mesh);
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
@@ -77,7 +77,7 @@ mod tests {
         //           |         |
         //  0--------1---------2
         let mesh = Samples::mixed_shapes_2d();
-        let shapes = allocate_cell_shapes(&mesh).unwrap();
+        let shapes = allocate_cell_shapes(&mesh);
         let edges = extract_all_2d_edges(&mesh, &shapes);
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
