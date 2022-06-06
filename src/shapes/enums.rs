@@ -10,10 +10,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// # Input
 ///
-/// * `interp` -- The first argument is the vector with the resulting interpolation
-///   functions with a length equal to `nnode`
-/// * `ksi` -- The second argument is a set of coordinates in the reference space.
-///   Its length must be greater than or equal to `geo_ndim`
+/// * `interp` -- vector with the resulting interpolation functions; its length mut be equal to `nnode`
+/// * `ksi` -- set of coordinates in the reference space; its length must be ≥ `geo_ndim`
 ///
 /// # Panics
 ///
@@ -25,10 +23,9 @@ pub type FnInterp = fn(interp: &mut Vector, ksi: &[f64]);
 ///
 /// # Input
 ///
-/// * `deriv` -- The first argument is the resulting set of derivatives of interpolation functions
-///   with size equal to `(nnode,geo_ndim)`
-/// * `ksi` -- The second argument is a set of coordinates in the reference space.
-///   Its length must be greater than or equal to `geo_ndim`
+/// * `deriv` -- matrix with the resulting set of derivatives of interpolation functions
+///   with respect to the reference (natural) coordinates; its dimensions are `(nnode,geo_ndim)`
+/// * `ksi` -- set of coordinates in the reference space; its length must be ≥ `geo_ndim`
 ///
 /// # Panics
 ///
