@@ -1,5 +1,4 @@
-use super::{allocate_cell_shapes, Extract, Features, Find, MapEdge2dToCells, MapFaceToCells, Mesh};
-use crate::shapes::Shape;
+use super::{Extract, Features, Find, MapEdge2dToCells, MapFaceToCells, Mesh};
 use crate::StrError;
 use std::ffi::OsStr;
 
@@ -7,9 +6,6 @@ use std::ffi::OsStr;
 pub struct Region {
     /// Holds the raw mesh data
     pub mesh: Mesh,
-
-    /// Holds all shapes of all cells (len = **number of cells**)
-    pub shapes: Vec<Shape>,
 
     /// Maps all edge keys to cells sharing the edge (2D only)
     pub all_2d_edges: Option<MapEdge2dToCells>,
@@ -36,12 +32,10 @@ impl Region {
     /// * `mesh` -- the mesh (will move to Region)
     /// * `extract` -- which features to extract?
     pub fn with(mesh: Mesh, extract: Extract) -> Result<Self, StrError> {
-        let shapes = allocate_cell_shapes(&mesh);
-        let (all_2d_edges, all_faces, features) = Features::new(&mesh, &shapes, extract);
+        let (all_2d_edges, all_faces, features) = Features::new(&mesh, extract);
         let find = Find::new(&mesh, &features)?;
         Ok(Region {
             mesh,
-            shapes,
             all_2d_edges,
             all_faces,
             features,
@@ -111,7 +105,6 @@ mod tests {
         let region = Region::with(mesh, Extract::Boundary)?;
         // println!("{:?}", mesh); // WRONG: mesh has been moved into region
         assert_eq!(region.mesh.ndim, 2);
-        assert_eq!(region.shapes.len(), 2);
         assert_eq!(region.features.points.len(), 6);
         assert_eq!(region.features.edges.len(), 6);
         assert_eq!(region.features.faces.len(), 0);
@@ -151,7 +144,6 @@ mod tests {
             Extract::Boundary,
         )?;
         assert_eq!(region.mesh.ndim, 2);
-        assert_eq!(region.shapes.len(), 2);
         assert_eq!(region.features.points.len(), 6);
         assert_eq!(region.features.edges.len(), 6);
         assert_eq!(region.features.faces.len(), 0);
@@ -169,7 +161,6 @@ mod tests {
         let mesh = Mesh::from_text_file("./data/meshes/two_quads_horizontal.msh")?;
         let region = Region::with(mesh, Extract::Boundary)?;
         assert_eq!(region.mesh.ndim, 2);
-        assert_eq!(region.shapes.len(), 2);
         assert_eq!(region.features.points.len(), 6);
         assert_eq!(region.features.edges.len(), 6);
         assert_eq!(region.features.faces.len(), 0);
@@ -189,7 +180,6 @@ mod tests {
         mesh.write(full_path)?;
         let region = Region::with_binary_file(full_path, Extract::Boundary)?;
         assert_eq!(region.mesh.ndim, 2);
-        assert_eq!(region.shapes.len(), 2);
         assert_eq!(region.features.points.len(), 6);
         assert_eq!(region.features.edges.len(), 6);
         assert_eq!(region.features.faces.len(), 0);

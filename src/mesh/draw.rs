@@ -1,6 +1,5 @@
 use super::{allocate_state, Features, Mesh, Region};
 use crate::shapes::{GeoKind, Shape, StateOfShape};
-use crate::util::ONE_BY_3;
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
 use russell_lab::Vector;
@@ -122,33 +121,24 @@ impl Draw {
     pub fn cell_ids(&mut self, plot: &mut Plot, region: &Region) -> Result<(), StrError> {
         // auxiliary
         let mesh = &region.mesh;
-        let space_ndim = mesh.ndim;
-        let mut states_memo: HashMap<GeoKind, StateOfShape> = HashMap::new();
-        let ksi_hex = &[0.0, 0.0, 0.0];
-        let ksi_tet = &[ONE_BY_3, ONE_BY_3, ONE_BY_3];
-        let mut x = Vector::new(space_ndim);
+        let mut x = Vector::new(mesh.ndim);
 
         // loop over all cells
         for cell_id in 0..mesh.cells.len() {
-            // shape and state
-            let (cell, shape) = (&mesh.cells[cell_id], &region.shapes[cell_id]);
-            let mut state = states_memo
-                .entry(cell.kind)
-                .or_insert(allocate_state(&mesh, shape.kind, &cell.points)?);
-
-            // set coordinates
+            // compute coordinates at the center of cell
+            let cell = &mesh.cells[cell_id];
+            x.fill(0.0);
             for m in 0..cell.points.len() {
-                for i in 0..space_ndim {
-                    state.coords_transp[i][m] = mesh.points[cell.points[m]].coords[i];
+                for i in 0..mesh.ndim {
+                    x[i] += mesh.points[cell.points[m]].coords[i];
                 }
             }
-
-            // calc center of cell by using center of the reference space
-            let ksi = if shape.kind.is_tri_or_tet() { ksi_tet } else { ksi_hex };
-            shape.calc_coords(&mut x, &mut state, ksi)?;
+            for i in 0..mesh.ndim {
+                x[i] /= cell.points.len() as f64;
+            }
 
             // add label
-            if space_ndim == 2 {
+            if mesh.ndim == 2 {
                 self.canvas_cell_ids
                     .draw(x[0], x[1], format!("{}({})", cell.id, cell.attribute_id).as_str());
             } else {

@@ -1,14 +1,8 @@
 use crate::mesh::{EdgeKey, MapEdge2dToCells, Mesh};
-use crate::shapes::Shape;
 use russell_lab::sort2;
 use std::collections::HashMap;
 
 /// Extracts all 2d edges (internal and boundary)
-///
-/// # Input
-///
-/// * `mesh` -- the Mesh
-/// * `shapes` -- the shapes of cells (len == cells.len())
 ///
 /// # Output
 ///
@@ -19,14 +13,14 @@ use std::collections::HashMap;
 /// # Panics
 ///
 /// 1. It panics if `shapes.len() != mesh.cells.len()` (i.e., the shapes vector and the mesh must be compatible)
-/// 2. It panics if `mesh.space_ndim != 2` (i.e., this function works in 2D only)
+/// 2. It panics if `mesh.ndim != 2` (i.e., this function works in 2D only)
 #[inline]
-pub(crate) fn extract_all_2d_edges(mesh: &Mesh, shapes: &Vec<Shape>) -> MapEdge2dToCells {
+pub(crate) fn extract_all_2d_edges(mesh: &Mesh) -> MapEdge2dToCells {
     assert_eq!(mesh.ndim, 2);
-    let mut edges: MapEdge2dToCells = HashMap::new();
-    mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
-        if shape.geo_ndim == 2 {
-            for e in 0..shape.nedge {
+    let mut edges = HashMap::new();
+    mesh.cells.iter().for_each(|cell| {
+        if cell.kind.ndim() == 2 {
+            for e in 0..cell.kind.nedge() {
                 let mut edge_key: EdgeKey = (
                     cell.points[cell.kind.edge_node_id(e, 0)],
                     cell.points[cell.kind.edge_node_id(e, 1)],
@@ -45,7 +39,7 @@ pub(crate) fn extract_all_2d_edges(mesh: &Mesh, shapes: &Vec<Shape>) -> MapEdge2
 #[cfg(test)]
 mod tests {
     use super::extract_all_2d_edges;
-    use crate::mesh::{allocate_cell_shapes, Samples};
+    use crate::mesh::Samples;
 
     #[test]
     fn extract_all_2d_edges_works() {
@@ -55,8 +49,7 @@ mod tests {
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_quads_horizontal();
-        let shapes = allocate_cell_shapes(&mesh);
-        let edges = extract_all_2d_edges(&mesh, &shapes);
+        let edges = extract_all_2d_edges(&mesh);
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
         assert_eq!(keys, [&(0, 1), &(0, 3), &(1, 2), &(1, 4), &(2, 3), &(2, 5), &(4, 5)]);
@@ -77,8 +70,7 @@ mod tests {
         //           |         |
         //  0--------1---------2
         let mesh = Samples::mixed_shapes_2d();
-        let shapes = allocate_cell_shapes(&mesh);
-        let edges = extract_all_2d_edges(&mesh, &shapes);
+        let edges = extract_all_2d_edges(&mesh);
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
         assert_eq!(keys, [&(1, 2), &(1, 4), &(2, 3), &(3, 4)]);

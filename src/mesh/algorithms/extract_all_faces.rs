@@ -1,14 +1,8 @@
 use crate::mesh::{FaceKey, MapFaceToCells, Mesh};
-use crate::shapes::Shape;
 use russell_lab::sort4;
 use std::collections::HashMap;
 
 /// Extracts all faces (internal and boundary)
-///
-/// # Input
-///
-/// * `mesh` -- the Mesh
-/// * `shapes` -- the shapes of cells (len == cells.len())
 ///
 /// # Output
 ///
@@ -18,15 +12,14 @@ use std::collections::HashMap;
 ///
 /// # Panics
 ///
-/// 1. It panics if `shapes.len() != mesh.cells.len()` (i.e., the shapes vector and the mesh must be compatible)
-/// 2. It panics if `mesh.space_ndim != 3` (i.e., this function works in 3D only)
-pub(crate) fn extract_all_faces(mesh: &Mesh, shapes: &Vec<Shape>) -> MapFaceToCells {
+/// 1. It panics if `mesh.ndim != 3` (i.e., this function works in 3D only)
+pub(crate) fn extract_all_faces(mesh: &Mesh) -> MapFaceToCells {
     assert_eq!(mesh.ndim, 3);
-    let mut faces: MapFaceToCells = HashMap::new();
-    mesh.cells.iter().zip(shapes).for_each(|(cell, shape)| {
-        if shape.geo_ndim == 3 {
-            for f in 0..shape.nface {
-                let mut face_key: FaceKey = if shape.face_nnode > 3 {
+    let mut faces = HashMap::new();
+    mesh.cells.iter().for_each(|cell| {
+        if cell.kind.ndim() == 3 {
+            for f in 0..cell.kind.nface() {
+                let mut face_key: FaceKey = if cell.kind.face_nnode() > 3 {
                     (
                         cell.points[cell.kind.face_node_id(f, 0)],
                         cell.points[cell.kind.face_node_id(f, 1)],
@@ -55,7 +48,7 @@ pub(crate) fn extract_all_faces(mesh: &Mesh, shapes: &Vec<Shape>) -> MapFaceToCe
 #[cfg(test)]
 mod tests {
     use super::extract_all_faces;
-    use crate::mesh::{allocate_cell_shapes, Samples};
+    use crate::mesh::Samples;
 
     #[test]
     fn extract_all_faces_works() {
@@ -80,8 +73,7 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_cubes_vertical();
-        let shapes = allocate_cell_shapes(&mesh);
-        let faces = extract_all_faces(&mesh, &shapes);
+        let faces = extract_all_faces(&mesh);
         let mut keys: Vec<_> = faces.keys().collect();
         keys.sort();
         assert_eq!(
@@ -130,8 +122,7 @@ mod tests {
         //  12-----11-------1------------2------------8
         //
         let mesh = Samples::mixed_shapes_3d();
-        let shapes = allocate_cell_shapes(&mesh);
-        let faces = extract_all_faces(&mesh, &shapes);
+        let faces = extract_all_faces(&mesh);
         let mut keys: Vec<_> = faces.keys().collect();
         keys.sort();
         assert_eq!(
