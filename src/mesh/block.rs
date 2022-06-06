@@ -421,7 +421,7 @@ impl Block {
 
                                 // compute real coordinates of point using the block's
                                 // reference coordinates, already scaled and translated
-                                op::calc_coords(&mut x, &mut pad, &ksi, &self.xxt, fn_interp);
+                                op::calc_coords(&mut x, &mut pad, &ksi, &self.xxt, fn_interp)?;
 
                                 // add new point to mesh
                                 mesh.points.push(Point {

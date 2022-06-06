@@ -1,4 +1,5 @@
 use crate::shapes::{FnInterp, Scratchpad};
+use crate::StrError;
 use russell_lab::{mat_vec_mul, Matrix, Vector};
 
 /// Calculates the real coordinates x from reference coordinates ξ
@@ -40,9 +41,15 @@ use russell_lab::{mat_vec_mul, Matrix, Vector};
 /// This function does not check for the vector/matrix dimensions. Thus a panic may occur
 /// if they are incompatible, including if they are not consistent with `fn_interp`.
 #[inline]
-pub fn calc_coords(x: &mut Vector, pad: &mut Scratchpad, ksi: &[f64], xxt: &Matrix, fn_interp: FnInterp) {
+pub fn calc_coords(
+    x: &mut Vector,
+    pad: &mut Scratchpad,
+    ksi: &[f64],
+    xxt: &Matrix,
+    fn_interp: FnInterp,
+) -> Result<(), StrError> {
     fn_interp(&mut pad.interp, ksi);
-    mat_vec_mul(x, 1.0, &xxt, &pad.interp).unwrap();
+    mat_vec_mul(x, 1.0, xxt, &pad.interp)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -96,7 +103,7 @@ mod tests {
                 let ksi = kind.reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
-                calc_coords(&mut x, &mut pad, ksi, &xxt, fn_interp);
+                calc_coords(&mut x, &mut pad, ksi, &xxt, fn_interp)?;
 
                 // compare xᵐ with generated coordinates
                 aux::map_point_coords(&mut x_correct, ksi, kind);
@@ -109,7 +116,7 @@ mod tests {
             } else {
                 vec![0.0; geo_ndim]
             };
-            calc_coords(&mut x, &mut pad, &ksi_in, &xxt, fn_interp);
+            calc_coords(&mut x, &mut pad, &ksi_in, &xxt, fn_interp)?;
             aux::map_point_coords(&mut x_correct, &ksi_in, kind);
             assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_in);
         }
