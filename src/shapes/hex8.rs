@@ -127,6 +127,14 @@ impl Hex8 {
     ];
 
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
@@ -147,7 +155,16 @@ impl Hex8 {
         interp[7] = rm * sp * tp / 8.0;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
@@ -158,7 +175,7 @@ impl Hex8 {
         let sp = 1.0 + s;
         let tp = 1.0 + t;
 
-        // w.r.t. r
+        // with respect to r
         deriv[0][0] = -sm * tm / 8.0;
         deriv[1][0] = sm * tm / 8.0;
         deriv[2][0] = sp * tm / 8.0;
@@ -168,7 +185,7 @@ impl Hex8 {
         deriv[6][0] = sp * tp / 8.0;
         deriv[7][0] = -sp * tp / 8.0;
 
-        // w.r.t. s
+        // with respect to s
         deriv[0][1] = -rm * tm / 8.0;
         deriv[1][1] = -rp * tm / 8.0;
         deriv[2][1] = rp * tm / 8.0;
@@ -178,7 +195,7 @@ impl Hex8 {
         deriv[6][1] = rp * tp / 8.0;
         deriv[7][1] = rm * tp / 8.0;
 
-        // w.r.t. t
+        // with respect to t
         deriv[0][2] = -rm * sm / 8.0;
         deriv[1][2] = -rp * sm / 8.0;
         deriv[2][2] = -rp * sp / 8.0;

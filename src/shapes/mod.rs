@@ -107,7 +107,7 @@
 //! where `X` is the (nnode,space_ndim) matrix of coordinates and `L` is the (nnode,geo_ndim) matrix.
 //!
 //! Next, we define the gradient of interpolation functions (i.e., derivatives of interpolation
-//! functions w.r.t real coordinates) by means of
+//! functions with respect to real coordinates) by means of
 //!
 //! ```text
 //!             →

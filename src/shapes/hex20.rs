@@ -144,6 +144,14 @@ impl Hex20 {
     ];
 
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
@@ -179,7 +187,16 @@ impl Hex20 {
         interp[19] = rm * sp * tt / 4.0;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
@@ -193,7 +210,7 @@ impl Hex20 {
         let ss = 1.0 - s * s;
         let tt = 1.0 - t * t;
 
-        // w.r.t. r
+        // with respect to r
         deriv[0][0] = -rm * sm * tm / 8.0 - sm * (-2.0 - r - s - t) * tm / 8.0;
         deriv[1][0] = rp * sm * tm / 8.0 + sm * (-2.0 + r - s - t) * tm / 8.0;
         deriv[2][0] = rp * sp * tm / 8.0 + sp * (-2.0 + r + s - t) * tm / 8.0;
@@ -215,7 +232,7 @@ impl Hex20 {
         deriv[18][0] = sp * tt / 4.0;
         deriv[19][0] = -sp * tt / 4.0;
 
-        // w.r.t. s
+        // with respect to s
         deriv[0][1] = -rm * sm * tm / 8.0 - rm * (-2.0 - r - s - t) * tm / 8.0;
         deriv[1][1] = -rp * sm * tm / 8.0 - rp * (-2.0 + r - s - t) * tm / 8.0;
         deriv[2][1] = rp * sp * tm / 8.0 + rp * (-2.0 + r + s - t) * tm / 8.0;
@@ -237,7 +254,7 @@ impl Hex20 {
         deriv[18][1] = rp * tt / 4.0;
         deriv[19][1] = rm * tt / 4.0;
 
-        // w.r.t. s
+        // with respect to s
         deriv[0][2] = -rm * sm * (-2.0 - r - s - t) / 8.0 - rm * sm * tm / 8.0;
         deriv[1][2] = -rp * sm * (-2.0 + r - s - t) / 8.0 - rp * sm * tm / 8.0;
         deriv[2][2] = -rp * sp * (-2.0 + r + s - t) / 8.0 - rp * sp * tm / 8.0;

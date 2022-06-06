@@ -78,6 +78,14 @@ impl Qua16 {
     ];
 
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -111,7 +119,16 @@ impl Qua16 {
         interp[15] = nn_r2 * nn_s3;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -127,13 +144,13 @@ impl Qua16 {
         let nn_s2 = (27.0 * s * s * s - 9.0 * s * s - 27.0 * s + 9.0) / 16.0;
         let nn_s3 = (-27.0 * s * s * s - 9.0 * s * s + 27.0 * s + 9.0) / 16.0;
 
-        // derivs of Lin4 interp w.r.t r
+        // derivatives of Lin4 interp with respect to r
         let dnn_dr0 = (-27.0 * r * r + 18.0 * r + 1.0) / 16.0;
         let dnn_dr1 = (27.0 * r * r + 18.0 * r - 1.0) / 16.0;
         let dnn_dr2 = (81.0 * r * r - 18.0 * r - 27.0) / 16.0;
         let dnn_dr3 = (-81.0 * r * r - 18.0 * r + 27.0) / 16.0;
 
-        // derivs of Lin4 interp w.r.t s
+        // derivatives of Lin4 interp with respect to s
         let dnn_ds0 = (-27.0 * s * s + 18.0 * s + 1.0) / 16.0;
         let dnn_ds1 = (27.0 * s * s + 18.0 * s - 1.0) / 16.0;
         let dnn_ds2 = (81.0 * s * s - 18.0 * s - 27.0) / 16.0;

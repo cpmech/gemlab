@@ -62,7 +62,7 @@ pub struct Shape {
     /// Callback to evaluate interpolation functions
     fn_interp: ToDeleteFnInterp,
 
-    /// Callback to evaluate local derivatives (w.r.t. ksi) of interpolation functions
+    /// Callback to evaluate local derivatives (with respect to ksi) of interpolation functions
     fn_deriv: ToDeleteFnDeriv,
 }
 
@@ -432,7 +432,7 @@ impl Shape {
         Ok(())
     }
 
-    /// Calculates the derivatives of interpolation functions w.r.t reference coordinate
+    /// Calculates the derivatives of interpolation functions with respect to reference coordinate
     ///
     /// Computes Lᵐ from:
     ///
@@ -1419,7 +1419,7 @@ mod tests {
         Ok(())
     }
 
-    // Holds arguments for numerical differentiation of N w.r.t ξ => L (deriv) matrix
+    // Holds arguments for numerical differentiation of N with respect to ξ => L (deriv) matrix
     struct ArgsNumL<'a> {
         shape: &'a Shape,    // shape
         state: StateOfShape, // auxiliary (copy) state
@@ -1479,7 +1479,7 @@ mod tests {
             // set ξ within reference space
             let at_ksi = vec![0.25; shape.geo_ndim];
 
-            // compute all derivatives of interpolation functions w.r.t ξ
+            // compute all derivatives of interpolation functions with respect to ξ
             shape.calc_deriv(&mut state, &at_ksi)?;
 
             // set arguments for numerical integration
@@ -1599,7 +1599,7 @@ mod tests {
         Ok(())
     }
 
-    // Holds arguments for numerical differentiation of x w.r.t ξ => Jacobian
+    // Holds arguments for numerical differentiation of x with respect to ξ => Jacobian
     struct ArgsNumJ<'a> {
         shape: &'a Shape,    // shape
         state: StateOfShape, // auxiliary (copy) state
@@ -2111,7 +2111,7 @@ mod tests {
         Ok(())
     }
 
-    // Holds arguments for numerical differentiation of N w.r.t x => G (gradient) matrix
+    // Holds arguments for numerical differentiation of N with respect to x => G (gradient) matrix
     struct ArgsNumG<'a> {
         shape: &'a Shape,    // shape
         state: StateOfShape, // auxiliary (copy) state

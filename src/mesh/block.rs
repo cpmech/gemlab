@@ -116,7 +116,7 @@ pub struct Block {
     /// number of divisions along each dim (ndim)
     ndiv: Vec<usize>,
 
-    /// Delta ksi along each dim (ndim, {ndiv[0],ndiv[1],ndiv[2]})
+    /// Delta ksi along each dim (ndim, {ndiv0,ndiv1,ndiv2})
     delta_ksi: Vec<Vec<f64>>,
 
     /// Constraints on edges (nedge)

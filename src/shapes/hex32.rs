@@ -166,6 +166,14 @@ impl Hex32 {
     ];
 
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
@@ -222,7 +230,16 @@ impl Hex32 {
         interp[31] = (9.0 * rm * sp * t3p * tt) / 64.0;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
@@ -245,7 +262,7 @@ impl Hex32 {
         let ss9 = 9.0 * s * s;
         let tt9 = 9.0 * t * t;
 
-        // w.r.t. r
+        // with respect to r
         deriv[0][0] = (9.0 * r * rm * sm * tm) / 32.0 - (sm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
         deriv[1][0] = (9.0 * r * rp * sm * tm) / 32.0 + (sm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
         deriv[2][0] = (9.0 * r * rp * sp * tm) / 32.0 + (sp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
@@ -279,7 +296,7 @@ impl Hex32 {
         deriv[30][0] = (-9.0 * sp * t3m * tt) / 64.0;
         deriv[31][0] = (-9.0 * sp * t3p * tt) / 64.0;
 
-        // w.r.t. s
+        // with respect to s
         deriv[0][1] = (9.0 * rm * s * sm * tm) / 32.0 - (rm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
         deriv[1][1] = (9.0 * rp * s * sm * tm) / 32.0 - (rp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
         deriv[2][1] = (9.0 * rp * s * sp * tm) / 32.0 + (rp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
@@ -313,7 +330,7 @@ impl Hex32 {
         deriv[30][1] = (9.0 * rm * t3m * tt) / 64.0;
         deriv[31][1] = (9.0 * rm * t3p * tt) / 64.0;
 
-        // w.r.t. t
+        // with respect to t
         deriv[0][2] = (9.0 * rm * sm * t * tm) / 32.0 - (rm * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
         deriv[1][2] = (9.0 * rp * sm * t * tm) / 32.0 - (rp * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
         deriv[2][2] = (9.0 * rp * sp * t * tm) / 32.0 - (rp * sp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;

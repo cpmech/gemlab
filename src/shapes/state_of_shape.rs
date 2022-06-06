@@ -36,7 +36,7 @@ pub struct StateOfShape {
     /// Array N: (nnode) interpolation functions at reference coordinate ksi
     pub interp: Vector,
 
-    /// Matrix L: (nnode,geo_ndim) derivatives of interpolation functions w.r.t reference coordinate ksi
+    /// Matrix L: (nnode,geo_ndim) derivatives of interpolation functions with respect to reference coordinate ksi
     pub deriv: Matrix,
 
     /// Matrix J: (space_ndim,geo_ndim) Jacobian matrix
