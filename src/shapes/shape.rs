@@ -9,19 +9,19 @@ use std::fmt;
 
 /// Defines an alias for interpolation functions
 #[derive(Clone)]
-struct FnInterp(fn(&mut Vector, &[f64]));
+struct ToDeleteFnInterp(fn(&mut Vector, &[f64]));
 
 /// Defines an alias for derivative of interpolation functions
 #[derive(Clone)]
-struct FnDeriv(fn(&mut Matrix, &[f64]));
+struct ToDeleteFnDeriv(fn(&mut Matrix, &[f64]));
 
-impl fmt::Debug for FnInterp {
+impl fmt::Debug for ToDeleteFnInterp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FnInterp")
     }
 }
 
-impl fmt::Debug for FnDeriv {
+impl fmt::Debug for ToDeleteFnDeriv {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FnDeriv")
     }
@@ -60,10 +60,10 @@ pub struct Shape {
     pub face_nedge: usize,
 
     /// Callback to evaluate interpolation functions
-    fn_interp: FnInterp,
+    fn_interp: ToDeleteFnInterp,
 
     /// Callback to evaluate local derivatives (w.r.t. ksi) of interpolation functions
-    fn_deriv: FnDeriv,
+    fn_deriv: ToDeleteFnDeriv,
 }
 
 impl Shape {
@@ -353,8 +353,8 @@ impl Shape {
             edge_nnode,
             face_nnode,
             face_nedge,
-            fn_interp: FnInterp(fn_interp),
-            fn_deriv: FnDeriv(fn_deriv),
+            fn_interp: ToDeleteFnInterp(fn_interp),
+            fn_deriv: ToDeleteFnDeriv(fn_deriv),
         }
     }
 
