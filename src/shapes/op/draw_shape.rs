@@ -9,7 +9,7 @@ fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad) -> Result<(), StrE
     let (ksi_min, ksi_del) = (-1.0, 2.0); // all Lin shapes go from -1 to +1
     let space_ndim = edge_pad.xmax.len();
     let mut x = Vector::new(space_ndim);
-    canvas.set_face_color("None");
+    canvas.set_face_color("None").set_line_width(3.0);
     if space_ndim == 2 {
         canvas.polycurve_begin();
         for i in 0..N {
@@ -133,7 +133,7 @@ mod tests {
     use crate::StrError;
     use plotpy::Plot;
 
-    // #[test]
+    #[test]
     fn _draw_shape_works() -> Result<(), StrError> {
         // select all kinds
         let kinds = vec![
