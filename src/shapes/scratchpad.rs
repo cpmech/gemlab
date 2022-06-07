@@ -1,31 +1,112 @@
-use super::GeoKind;
+use super::{FnDeriv, FnInterp, GeoKind};
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Holds mutable data used by the functions in the sub-module named op
+/// Holds the variables used by the functions in the sub-module named op
 ///
 /// Basically, this struct holds the variables calculated by the interpolation
 /// and derivative functions, including the Jacobian, inverse Jacobian, and gradients.
-#[derive(Clone, Debug)]
+///
+/// # Sequence of computations for the gradient
+///
+/// ## 1 Derivatives of interpolation functions @ ξ
+///
+/// ```text
+///             →
+/// →  →    dNᵐ(ξ)
+/// Lᵐ(ξ) = ——————
+///            →
+///           dξ
+/// ```
+///
+/// ## 2 Jacobian @ ξ
+///
+/// ```text
+///         →
+///   →    dx     →    →
+/// J(ξ) = —— = Σ xᵐ ⊗ Lᵐ
+///         →   m
+///        dξ
+/// ```
+///
+/// ```text
+///            J         =        Xᵀ        ·       L
+/// (space_ndim,geo_ndim) (space_ndim,nnode) (nnode,geo_ndim)
+/// ```
+///
+/// ## 3 Inverse Jacobian
+///
+/// ## 4 Gradient @ ξ
+///
+/// ```text
+///             →
+/// →  →    dNᵐ(ξ)
+/// Gᵐ(ξ) = ——————
+///            →
+///           dx
+/// ```
+///
+/// ```text
+///        G          =       L        ·           J⁻¹
+/// (nnode,space_ndim) (nnode,geo_ndim) (space_ndim,space_ndim)
+/// ```
+///
+/// # Warning
+///
+/// All members are **readonly** and should not be modified externally. The functions
+/// in the op (operators) sub-module are the only ones allowed to modify the scratchpad.
+#[derive(Clone)]
 pub struct Scratchpad {
-    /// Array N: (nnode) interpolation functions at reference coordinate ksi
+    /// The kind of the shape
+    pub kind: GeoKind,
+
+    /// Array N: (nnode) Nᵐ interpolation functions at reference coordinate ξ (ksi)
     pub interp: Vector,
 
-    /// Matrix L: (nnode,geo_ndim) derivatives of interpolation functions with respect to reference coordinate ksi
+    /// Matrix L: (nnode,geo_ndim) dNᵐ/dξ derivatives of interpolation functions with respect to reference coordinate ξ (ksi)
     pub deriv: Matrix,
 
-    /// Matrix J: (space_ndim,geo_ndim) Jacobian matrix
+    /// Matrix J: (space_ndim,geo_ndim) dx/dξ Jacobian matrix
     pub jacobian: Matrix,
 
-    /// Matrix inv(J): (space_ndim,space_ndim) Inverse Jacobian matrix (only if geo_ndim == space_ndim) at ksi
+    /// Matrix inv(J): (space_ndim,space_ndim) Inverse Jacobian matrix (only if geo_ndim == space_ndim) at ξ (ksi)
     ///
     /// Only available if `geo_ndim == space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
     pub inv_jacobian: Matrix,
 
-    /// Matrix G: (nnode,space_ndim) Gradient of shape functions (only if geo_ndim == space_ndim) at ksi
+    /// Matrix G: (nnode,space_ndim) dNᵐ/dx Gradient of shape functions (only if geo_ndim == space_ndim) at ξ (ksi)
     ///
     /// Only available if `geo_ndim == space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
     pub gradient: Matrix,
+
+    /// Matrix Xᵀ: (space_ndim,nnode) transposed coordinates matrix (real space)
+    ///
+    /// ```text
+    ///      ┌                              ┐  superscript = node
+    ///      | x⁰₀  x¹₀  x²₀  x³₀       xᴹ₀ |  subscript = dimension
+    /// Xᵀ = | x⁰₁  x¹₁  x²₁  x³₁  ...  xᴹ₁ |
+    ///      | x⁰₂  x¹₂  x²₂  x³₂       xᴹ₂ |
+    ///      └                              ┘_(space_ndim,nnode)
+    /// where `M = nnode - 1`
+    /// ```
+    ///
+    /// Must call `set_xx` to set the components, otherwise calculations will be **incorrect.**
+    pub xxt: Matrix,
+
+    /// Minimum coordinates (space_ndim)
+    pub xmin: Vec<f64>,
+
+    /// Maximum coordinates (space_ndim)
+    pub xmax: Vec<f64>,
+
+    /// Indicates that all coordinates in the X matrix have been set and the min,max values computed
+    pub ok_xxt: bool,
+
+    /// Function to calculate interpolation functions
+    pub fn_interp: FnInterp,
+
+    /// Function to calculate derivatives of interpolation functions
+    pub fn_deriv: FnDeriv,
 }
 
 impl Scratchpad {
@@ -45,7 +126,9 @@ impl Scratchpad {
             return Err("space_ndim must be ≥ geo_ndim");
         }
         let nnode = kind.nnode();
+        let (fn_interp, fn_deriv) = kind.functions();
         Ok(Scratchpad {
+            kind,
             interp: Vector::new(nnode),
             deriv: Matrix::new(nnode, geo_ndim),
             jacobian: Matrix::new(space_ndim, geo_ndim),
@@ -59,7 +142,34 @@ impl Scratchpad {
             } else {
                 Matrix::new(0, 0)
             },
+            xxt: Matrix::new(space_ndim, nnode),
+            xmin: vec![f64::MAX; space_ndim],
+            xmax: vec![f64::MIN; space_ndim],
+            ok_xxt: false,
+            fn_interp,
+            fn_deriv,
         })
+    }
+
+    /// Sets the component of the coordinates matrix corresponding to node-m, dimension-j
+    ///
+    /// # Input
+    ///
+    /// * `m` -- (local) node index
+    /// * `j` -- index of space dimension
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if either m or j is out of bounds
+    pub fn set_xx(&mut self, m: usize, j: usize, value: f64) {
+        self.ok_xxt = false;
+        self.xxt[j][m] = value;
+        self.xmin[j] = f64::min(self.xmin[j], self.xxt[j][m]);
+        self.xmax[j] = f64::max(self.xmax[j], self.xxt[j][m]);
+        let (space_ndim, nnode) = self.xxt.dims();
+        if m == nnode - 1 && j == space_ndim - 1 {
+            self.ok_xxt = true;
+        }
     }
 }
 

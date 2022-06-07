@@ -3,7 +3,7 @@ use crate::geometry::Circle;
 use crate::shapes::{op, GeoKind, Scratchpad};
 use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol};
 use crate::StrError;
-use russell_lab::{Matrix, Vector};
+use russell_lab::Vector;
 
 #[derive(Clone, Debug)]
 pub enum Constraint {
@@ -128,19 +128,8 @@ pub struct Block {
     /// Grid to search reference coordinates
     grid_ksi: GridSearch,
 
-    /// GeoKid of the block (2D: Qua8, 3D: Hex20)
-    kind: GeoKind,
-
-    /// Transposed matrix of coordinates of the block
-    ///
-    /// ```text
-    ///      ┌                              ┐  superscript = node
-    ///      | x⁰₀  x¹₀  x²₀  x³₀       xᴹ₀ |  subscript = dimension
-    /// Xᵀ = | x⁰₁  x¹₁  x²₁  x³₁  ...  xᴹ₁ |
-    ///      | x⁰₂  x¹₂  x²₂  x³₂       xᴹ₂ |
-    ///      └                              ┘_(space_ndim,nnode)
-    /// ```
-    xxt: Matrix,
+    /// Scratchpad for the block
+    pad: Scratchpad,
 }
 
 impl Block {
@@ -185,29 +174,29 @@ impl Block {
         let kind = if ndim == 2 { GeoKind::Qua8 } else { GeoKind::Hex20 };
         let (nnode, nedge, nface) = (kind.nnode(), kind.nedge(), kind.nface());
 
-        // transposed matrix of coordinates of the block
-        let mut xxt = Matrix::new(ndim, nnode);
+        // coordinates of the block
+        let mut pad = Scratchpad::new(ndim, kind)?;
         if ndim == 2 {
             if nrow == 8 {
                 // all vertices given, ok
                 for m in 0..nnode {
                     for j in 0..ndim {
-                        xxt[j][m] = coords.at(m, j);
+                        pad.set_xx(m, j, coords.at(m, j));
                     }
                 }
             } else {
                 // copy "corner" vertices
                 for m in 0..nrow {
                     for j in 0..ndim {
-                        xxt[j][m] = coords.at(m, j);
+                        pad.set_xx(m, j, coords.at(m, j));
                     }
                 }
                 // generate mid vertices
                 for j in 0..ndim {
-                    xxt[j][4] = (coords.at(0, j) + coords.at(1, j)) / 2.0;
-                    xxt[j][5] = (coords.at(1, j) + coords.at(2, j)) / 2.0;
-                    xxt[j][6] = (coords.at(2, j) + coords.at(3, j)) / 2.0;
-                    xxt[j][7] = (coords.at(3, j) + coords.at(0, j)) / 2.0;
+                    pad.set_xx(4, j, (coords.at(0, j) + coords.at(1, j)) / 2.0);
+                    pad.set_xx(5, j, (coords.at(1, j) + coords.at(2, j)) / 2.0);
+                    pad.set_xx(6, j, (coords.at(2, j) + coords.at(3, j)) / 2.0);
+                    pad.set_xx(7, j, (coords.at(3, j) + coords.at(0, j)) / 2.0);
                 }
             }
         } else {
@@ -215,32 +204,32 @@ impl Block {
                 // all vertices given, ok
                 for m in 0..nnode {
                     for j in 0..ndim {
-                        xxt[j][m] = coords.at(m, j);
+                        pad.set_xx(m, j, coords.at(m, j));
                     }
                 }
             } else {
                 // copy "corner" vertices
                 for m in 0..nrow {
                     for j in 0..ndim {
-                        xxt[j][m] = coords.at(m, j);
+                        pad.set_xx(m, j, coords.at(m, j));
                     }
                 }
                 // generate mid vertices
                 for j in 0..ndim {
-                    xxt[j][8] = (coords.at(0, j) + coords.at(1, j)) / 2.0;
-                    xxt[j][9] = (coords.at(1, j) + coords.at(2, j)) / 2.0;
-                    xxt[j][10] = (coords.at(2, j) + coords.at(3, j)) / 2.0;
-                    xxt[j][11] = (coords.at(3, j) + coords.at(0, j)) / 2.0;
+                    pad.set_xx(8, j, (coords.at(0, j) + coords.at(1, j)) / 2.0);
+                    pad.set_xx(9, j, (coords.at(1, j) + coords.at(2, j)) / 2.0);
+                    pad.set_xx(10, j, (coords.at(2, j) + coords.at(3, j)) / 2.0);
+                    pad.set_xx(11, j, (coords.at(3, j) + coords.at(0, j)) / 2.0);
 
-                    xxt[j][12] = (coords.at(4, j) + coords.at(5, j)) / 2.0;
-                    xxt[j][13] = (coords.at(5, j) + coords.at(6, j)) / 2.0;
-                    xxt[j][14] = (coords.at(6, j) + coords.at(7, j)) / 2.0;
-                    xxt[j][15] = (coords.at(7, j) + coords.at(4, j)) / 2.0;
+                    pad.set_xx(12, j, (coords.at(4, j) + coords.at(5, j)) / 2.0);
+                    pad.set_xx(13, j, (coords.at(5, j) + coords.at(6, j)) / 2.0);
+                    pad.set_xx(14, j, (coords.at(6, j) + coords.at(7, j)) / 2.0);
+                    pad.set_xx(15, j, (coords.at(7, j) + coords.at(4, j)) / 2.0);
 
-                    xxt[j][16] = (coords.at(0, j) + coords.at(4, j)) / 2.0;
-                    xxt[j][17] = (coords.at(1, j) + coords.at(5, j)) / 2.0;
-                    xxt[j][18] = (coords.at(2, j) + coords.at(6, j)) / 2.0;
-                    xxt[j][19] = (coords.at(3, j) + coords.at(7, j)) / 2.0;
+                    pad.set_xx(16, j, (coords.at(0, j) + coords.at(4, j)) / 2.0);
+                    pad.set_xx(17, j, (coords.at(1, j) + coords.at(5, j)) / 2.0);
+                    pad.set_xx(18, j, (coords.at(2, j) + coords.at(6, j)) / 2.0);
+                    pad.set_xx(19, j, (coords.at(3, j) + coords.at(7, j)) / 2.0);
                 }
             }
         };
@@ -256,8 +245,7 @@ impl Block {
             edge_constraints: vec![None; nedge],
             face_constraints: vec![None; nface],
             grid_ksi,
-            kind,
-            xxt,
+            pad,
         })
     }
 
@@ -339,8 +327,6 @@ impl Block {
 
         // constants
         let out_nnode = target.nnode();
-        let fn_interp = self.kind.functions().0;
-        let mut pad = Scratchpad::new(ndim, self.kind)?;
 
         // The idea here is to map the TARGET CELL (shown on the right)
         // to the BLOCK's reference (natural) space. (right-to-left mapping)
@@ -421,7 +407,7 @@ impl Block {
 
                                 // compute real coordinates of point using the block's
                                 // reference coordinates, already scaled and translated
-                                op::calc_coords(&mut x, &mut pad, &ksi, &self.xxt, fn_interp)?;
+                                op::calc_coords(&mut x, &mut self.pad, &ksi)?;
 
                                 // add new point to mesh
                                 mesh.points.push(Point {
@@ -488,7 +474,7 @@ mod tests {
         assert_eq!(b2d.ndiv, &[2, 2]);
         assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
         assert_eq!(
-            format!("{}", b2d.xxt),
+            format!("{}", b2d.pad.xxt),
             "┌                 ┐\n\
              │ 0 2 2 0 1 2 1 0 │\n\
              │ 0 0 2 2 0 1 2 1 │\n\
@@ -506,7 +492,7 @@ mod tests {
             [0.0, 1.0],
         ])?;
         assert_eq!(
-            format!("{}", b2d.xxt),
+            format!("{}", b2d.pad.xxt),
             "┌                 ┐\n\
              │ 0 2 2 0 1 2 1 0 │\n\
              │ 0 0 2 2 0 1 2 1 │\n\
@@ -526,7 +512,7 @@ mod tests {
         assert_eq!(b3d.attribute_id, 1);
         assert_eq!(b3d.ndim, 3);
         assert_eq!(
-            format!("{}", b3d.xxt),
+            format!("{}", b3d.pad.xxt),
             "┌                                         ┐\n\
              │ 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 0 │\n\
              │ 0 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 │\n\
@@ -559,7 +545,7 @@ mod tests {
             [0.0, 2.0, 1.0],
         ])?;
         assert_eq!(
-            format!("{}", b3d.xxt),
+            format!("{}", b3d.pad.xxt),
             "┌                                         ┐\n\
              │ 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 0 │\n\
              │ 0 0 2 2 0 0 2 2 0 1 2 1 0 1 2 1 0 0 2 2 │\n\
