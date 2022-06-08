@@ -1108,30 +1108,6 @@ mod tests {
         assert_eq!(shape_clone.nnode, shape.nnode);
     }
 
-    #[test]
-    fn new_works() -> Result<(), StrError> {
-        let nnode = [
-            2, 3, 4, 5, // Lin
-            3, 6, 10, 15, // Tri
-            4, 8, 9, 12, 16, 17, // Qua
-            4, 10, 20, // Tet
-            8, 20, 32, // Hex
-        ];
-        let geo_ndim = [
-            1, 1, 1, 1, // Lin
-            2, 2, 2, 2, // Tri
-            2, 2, 2, 2, 2, 2, // Qua
-            3, 3, 3, // Tet
-            3, 3, 3, // Hex
-        ];
-        for i in 0..GeoKind::VALUES.len() {
-            let shape = Shape::new(GeoKind::VALUES[i]);
-            assert_eq!(shape.nnode, nnode[i]);
-            assert_eq!(shape.geo_ndim, geo_ndim[i]);
-        }
-        Ok(())
-    }
-
     const RMIN: f64 = 1.0;
     const RMAX: f64 = 10.0;
     const AMIN: f64 = 30.0 * PI / 180.0;

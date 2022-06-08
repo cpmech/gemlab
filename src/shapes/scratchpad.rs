@@ -67,6 +67,12 @@ pub struct Scratchpad {
     pub deriv: Matrix,
 
     /// Matrix J: (space_ndim,geo_ndim) dx/dξ Jacobian matrix
+    ///
+    /// ```text
+    /// jacobian := J = Xᵀ · L
+    /// jacobian := Jline = Xᵀ · L
+    /// jacobian := Jsurf = Xᵀ · L
+    /// ```
     pub jacobian: Matrix,
 
     /// Matrix inv(J): (space_ndim,space_ndim) Inverse Jacobian matrix (only if geo_ndim == space_ndim) at ξ (ksi)
@@ -77,6 +83,10 @@ pub struct Scratchpad {
     /// Matrix G: (nnode,space_ndim) dNᵐ/dx Gradient of shape functions (only if geo_ndim == space_ndim) at ξ (ksi)
     ///
     /// Only available if `geo_ndim == space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
+    ///
+    /// ```text
+    /// G = L · J⁻¹
+    /// ```
     pub gradient: Matrix,
 
     /// Matrix Xᵀ: (space_ndim,nnode) transposed coordinates matrix (real space)
@@ -178,7 +188,8 @@ impl Scratchpad {
 #[cfg(test)]
 mod tests {
     use super::Scratchpad;
-    use crate::shapes::GeoKind;
+    use crate::shapes::{GeoClass, GeoKind};
+    use crate::StrError;
 
     #[test]
     fn new_fails_on_wrong_input() {
@@ -190,5 +201,45 @@ mod tests {
             Scratchpad::new(2, GeoKind::Hex8).err(),
             Some("space_ndim must be ≥ geo_ndim")
         );
+    }
+
+    #[test]
+    fn new_works() -> Result<(), StrError> {
+        let nnode = [
+            2, 3, 4, 5, // Lin
+            3, 6, 10, 15, // Tri
+            4, 8, 9, 12, 16, 17, // Qua
+            4, 10, 20, // Tet
+            8, 20, 32, // Hex
+        ];
+        let geo_ndim = [
+            1, 1, 1, 1, // Lin
+            2, 2, 2, 2, // Tri
+            2, 2, 2, 2, 2, 2, // Qua
+            3, 3, 3, // Tet
+            3, 3, 3, // Hex
+        ];
+        for i in 0..GeoKind::VALUES.len() {
+            let kind = GeoKind::VALUES[i];
+            let space_ndim = usize::max(2, kind.ndim());
+            let pad = Scratchpad::new(space_ndim, kind)?;
+            assert_eq!(pad.kind, kind);
+            assert_eq!(pad.interp.dim(), nnode[i]);
+            assert_eq!(pad.deriv.dims(), (nnode[i], geo_ndim[i]));
+            assert_eq!(pad.jacobian.dims(), (space_ndim, geo_ndim[i]));
+            println!("{:?}", kind);
+            if kind.class() == GeoClass::Lin {
+                assert_eq!(pad.inv_jacobian.dims(), (0, 0));
+                assert_eq!(pad.gradient.dims(), (0, 0));
+            } else {
+                assert_eq!(pad.inv_jacobian.dims(), (space_ndim, space_ndim));
+                assert_eq!(pad.gradient.dims(), (nnode[i], space_ndim));
+            }
+            assert_eq!(pad.xxt.dims(), (space_ndim, nnode[i]));
+            assert_eq!(pad.xmin.len(), space_ndim);
+            assert_eq!(pad.xmax.len(), space_ndim);
+            assert_eq!(pad.ok_xxt, false);
+        }
+        Ok(())
     }
 }

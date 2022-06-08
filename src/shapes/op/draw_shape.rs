@@ -133,7 +133,7 @@ mod tests {
     use crate::StrError;
     use plotpy::Plot;
 
-    #[test]
+    // #[test]
     fn _draw_shape_works() -> Result<(), StrError> {
         // select all kinds
         let kinds = vec![
