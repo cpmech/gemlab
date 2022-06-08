@@ -1,15 +1,7 @@
 //! Interpolation functions and derivatives for geometric shapes (elements)
 //!
-//! **Note:** The [Shape] struct is the main component of this module whereas the Hex8,
-//! Qua4, Lin2, etc. are secondary components.
-//!
-//! The [Shape] struct, after allocation, should be treated as immutable, although its
-//! members are public (readonly). On the other hand the [StateOfShape] contains the
-//! mutable data required by [Shape] to perform the computations explained below.
-//!
-//! # Examples
-//!
-//! See [Shape].
+//! **Important:** See the submodule [op] for functions to perform the calculations discussed below.
+//! The submodule [op] also offers some examples.
 //!
 //! # Definitions
 //!

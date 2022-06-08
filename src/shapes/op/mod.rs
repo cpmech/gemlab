@@ -1,4 +1,4 @@
-//! Low-level functions (operators) to be used by integration functions and others
+//! Functions (operators) to perform numerical integration and more
 
 mod approximate_ksi;
 mod calc_coords;
