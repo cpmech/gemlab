@@ -22,6 +22,43 @@ use russell_lab::{mat_vec_mul, Vector};
 /// # Input
 ///
 /// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::shapes::{op, GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3-------------2         ξ₀   ξ₁
+///     //  |      ξ₁     |  node    r    s
+///     //  |      |      |     0 -1.0 -1.0
+///     //  |      +--ξ₀  |     1  1.0 -1.0
+///     //  |             |     2  1.0  1.0
+///     //  |             |     3 -1.0  1.0
+///     //  0-------------1
+///
+///     let (x0, y0) = (3.0, 4.0);
+///     let (w, h) = (10.0, 5.0);
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
+///     pad.set_xx(0, 0, x0);
+///     pad.set_xx(0, 1, y0);
+///     pad.set_xx(1, 0, x0 + w);
+///     pad.set_xx(1, 1, y0);
+///     pad.set_xx(2, 0, x0 + w);
+///     pad.set_xx(2, 1, y0 + h);
+///     pad.set_xx(3, 0, x0);
+///     pad.set_xx(3, 1, y0 + h);
+///
+///     let mut x = Vector::new(2);
+///     op::calc_coords(&mut x, &mut pad, &[0.0, 0.0])?;
+///     assert_vec_approx_eq!(x.as_data(), &[x0 + w / 2.0, y0 + h / 2.0], 1e-15);
+///     Ok(())
+/// }
+/// ```
 pub fn calc_coords(x: &mut Vector, pad: &mut Scratchpad, ksi: &[f64]) -> Result<(), StrError> {
     if !pad.ok_xxt {
         return Err("all components of the coordinates matrix must be set first");

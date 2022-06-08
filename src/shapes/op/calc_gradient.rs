@@ -34,6 +34,48 @@ use russell_lab::mat_mat_mul;
 /// # Input
 ///
 /// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
+///
+/// # Example
+///
+/// ```
+/// use gemlab::shapes::{op, GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Matrix;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3-------------2         ξ₀   ξ₁
+///     //  |      ξ₁     |  node    r    s
+///     //  |      |      |     0 -1.0 -1.0
+///     //  |      +--ξ₀  |     1  1.0 -1.0
+///     //  |             |     2  1.0  1.0
+///     //  |             |     3 -1.0  1.0
+///     //  0-------------1
+///
+///     let a = 3.0;
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
+///     pad.set_xx(0, 0, 0.0);
+///     pad.set_xx(0, 1, 0.0);
+///     pad.set_xx(1, 0, 2.0 * a);
+///     pad.set_xx(1, 1, 0.0);
+///     pad.set_xx(2, 0, 2.0 * a);
+///     pad.set_xx(2, 1, a);
+///     pad.set_xx(3, 0, 0.0);
+///     pad.set_xx(3, 1, a);
+///
+///     op::calc_gradient(&mut pad, &[0.0, 0.0])?;
+///
+///     let correct_gg = Matrix::from(&[
+///         [-1.0 / (4.0 * a), -1.0 / (2.0 * a)],
+///         [1.0 / (4.0 * a), -1.0 / (2.0 * a)],
+///         [1.0 / (4.0 * a), 1.0 / (2.0 * a)],
+///         [-1.0 / (4.0 * a), 1.0 / (2.0 * a)],
+///     ]);
+///     assert_vec_approx_eq!(pad.gradient.as_data(), correct_gg.as_data(), 1e-15);
+///     Ok(())
+/// }
+/// ```
 pub fn calc_gradient(pad: &mut Scratchpad, ksi: &[f64]) -> Result<f64, StrError> {
     // check
     let (space_ndim, geo_ndim) = pad.jacobian.dims();

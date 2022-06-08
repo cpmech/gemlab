@@ -44,6 +44,53 @@ use russell_lab::{inverse, mat_mat_mul};
 /// # Input
 ///
 /// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::shapes::{op, GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_chk::assert_approx_eq;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3-------------2         ξ₀   ξ₁
+///     //  |      ξ₁     |  node    r    s
+///     //  |      |      |     0 -1.0 -1.0
+///     //  |      +--ξ₀  |     1  1.0 -1.0
+///     //  |             |     2  1.0  1.0
+///     //  |             |     3 -1.0  1.0
+///     //  0-------------1
+///
+///     let a = 3.0;
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
+///     pad.set_xx(0, 0, 0.0);
+///     pad.set_xx(0, 1, 0.0);
+///     pad.set_xx(1, 0, 2.0 * a);
+///     pad.set_xx(1, 1, 0.0);
+///     pad.set_xx(2, 0, 2.0 * a);
+///     pad.set_xx(2, 1, a);
+///     pad.set_xx(3, 0, 0.0);
+///     pad.set_xx(3, 1, a);
+///
+///     let det_jac = op::calc_jacobian(&mut pad, &[0.0, 0.0])?;
+///     assert_approx_eq!(det_jac, a * a / 2.0, 1e-15);
+///
+///     // the solution is
+///     //  ┌         ┐
+///     //  │  a   0  │
+///     //  │  0  a/2 │
+///     //  └         ┘
+///     assert_eq!(
+///         format!("{}", pad.jacobian),
+///         "┌         ┐\n\
+///          │   3   0 │\n\
+///          │   0 1.5 │\n\
+///          └         ┘"
+///     );
+///     Ok(())
+/// }
+/// ```
 pub fn calc_jacobian(pad: &mut Scratchpad, ksi: &[f64]) -> Result<f64, StrError> {
     // check
     if !pad.ok_xxt {

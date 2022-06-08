@@ -20,6 +20,88 @@ use russell_lab::{mat_mat_mul, Vector};
 /// # Input
 ///
 /// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
+///
+/// # Examples
+///
+/// ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+///
+/// ```
+/// use gemlab::shapes::{op, GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  →  __       1   -----
+///     //  n |.      ,'     / \
+///     //      '.  ,'        |
+///     //        2'          H
+///     //      ,'            |
+///     //    ,'   45°        |
+///     //   0  ____________ \ /
+///
+///     const H: f64 = 5.0;
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin3)?;
+///     pad.set_xx(0, 0, 0.0);
+///     pad.set_xx(0, 1, 0.0);
+///     pad.set_xx(1, 0, H);
+///     pad.set_xx(1, 1, H);
+///     pad.set_xx(2, 0, H / 2.0);
+///     pad.set_xx(2, 1, H / 2.0);
+///
+///     // ||n|| = L/2 (2 is the length in the natural space)
+///     // nx = -(L/2)sin(45) = -(H√2/2) √2/2 = -H/2
+///     // ny = +(L/2)cos(45) = +(H√2/2) √2/2 = +H/2
+///     let mut normal = Vector::new(2);
+///     op::calc_normal_vector(&mut normal, &mut pad, &[0.0, 0.0])?;
+///     assert_eq!(normal.as_data(), &[-H / 2.0, H / 2.0]);
+///     Ok(())
+/// }
+/// ```
+///
+/// ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
+///
+/// ```
+/// use gemlab::shapes::{op, GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     //           .   .  .   . ,.2|
+///     //         ' .           ,,'||
+///     //       '   .         ,,'  ||
+///     //     '     .       .,'    ||  →
+///     //  .  .   . .   .  3'      ||  n
+///     //           z     ||   ==========)
+///     //  .        |     ||       ||
+///     //          ,*---y || .  . ,1
+///     //  .      x       ||    ,,'
+///     //      ,'         ||  ,,'
+///     //  . ,'           ||,,'
+///     //  . . .   .   .  |0'
+///
+///     let space_ndim = 3;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
+///     pad.set_xx(0, 0, 1.0); // node 0
+///     pad.set_xx(0, 1, 1.0);
+///     pad.set_xx(0, 2, 0.0);
+///     pad.set_xx(1, 0, 0.0); // node 1
+///     pad.set_xx(1, 1, 1.0);
+///     pad.set_xx(1, 2, 0.0);
+///     pad.set_xx(2, 0, 0.0); // node 2
+///     pad.set_xx(2, 1, 1.0);
+///     pad.set_xx(2, 2, 1.0);
+///     pad.set_xx(3, 0, 1.0); // node 3
+///     pad.set_xx(3, 1, 1.0);
+///     pad.set_xx(3, 2, 1.0);
+///
+///     let mut normal = Vector::new(3);
+///     op::calc_normal_vector(&mut normal, &mut pad, &[0.0, 0.0, 0.0])?;
+///     const A: f64 = 1.0;
+///     assert_eq!(normal.as_data(), &[0.0, A / 4.0, 0.0]);
+///     Ok(())
+/// }
+/// ```
 pub fn calc_normal_vector(n: &mut Vector, pad: &mut Scratchpad, ksi: &[f64]) -> Result<(), StrError> {
     // check
     let (space_ndim, geo_ndim) = pad.jacobian.dims();

@@ -23,6 +23,44 @@ use russell_lab::{mat_vec_mul, vector_norm, NormVec, Vector};
 /// * `x` -- real coordinates (space_ndim = geo_ndim)
 /// * `nit_max` -- maximum number of iterations (e.g., 10)
 /// * `tol` -- tolerance for the norm of the difference x - x(ξ) (e.g., 1e-14)
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::shapes::{op, GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     // 7.0        2                ξ₀   ξ₁
+///     //           / `.       node    r    s
+///     //          /    `.        0  0.0  0.0
+///     //     (3.5,6.0)   `.      1  1.0  0.0
+///     //        /          `.    2  0.0  1.0
+///     //       /             `.
+///     // 5.0  0-----------------1
+///     //     3.0   4.0   5.0   6.0
+///
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+///     pad.set_xx(0, 0, 3.0);
+///     pad.set_xx(0, 1, 5.0);
+///     pad.set_xx(1, 0, 6.0);
+///     pad.set_xx(1, 1, 5.0);
+///     pad.set_xx(2, 0, 4.0);
+///     pad.set_xx(2, 1, 7.0);
+///
+///     // x @ middle of edge (0,2)
+///     let x = Vector::from(&[3.5, 6.0]);
+///
+///     // find ξ corresponding to x @ middle of edge (0,2)
+///     let mut ksi = vec![0.0; 2];
+///     op::approximate_ksi(&mut ksi, &mut pad, &x, 10, 1e-8)?;
+///     assert_vec_approx_eq!(ksi, &[0.0, 0.5], 1e-8);
+///     Ok(())
+/// }
+/// ```
 pub fn approximate_ksi(
     ksi: &mut [f64],
     pad: &mut Scratchpad,
