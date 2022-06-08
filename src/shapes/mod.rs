@@ -98,7 +98,7 @@
 //! reference coordinate. `Lᵐ` are (geo_ndim) vectors and can be organized in
 //! an (nnode,geo_ndim) matrix `L` of **local** derivatives.
 //!
-//! We can write the Jacobian in matrix notation as follows
+//! We can write the Jacobian in matrix (space_ndim,geo_ndim) notation as follows
 //!
 //! ```text
 //! J = Xᵀ · L
@@ -236,7 +236,7 @@
 //! dA := ||n|| dξ₁ dξ₂
 //! ```
 //!
-//! For flat quadrilateral faces:
+//! For flat quadrilateral faces with sides perpendicular one with another
 //!
 //! ```text
 //!   →
