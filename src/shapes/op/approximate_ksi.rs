@@ -89,7 +89,8 @@ mod tests {
     use crate::shapes::op::calc_coords;
     use crate::shapes::op::testing::aux;
     use crate::shapes::GeoKind;
-    use crate::util::ONE_BY_3;
+    use crate::shapes::Scratchpad;
+    use crate::util::{ONE_BY_3, SQRT_3};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
@@ -157,6 +158,76 @@ mod tests {
             calc_coords(&mut x, &mut pad, &ksi_in)?;
             approximate_ksi(&mut ksi, &mut pad, &x, 10, 1e-14)?;
             assert_vec_approx_eq!(ksi, ksi_in, tol);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn approximate_ksi_works_outside() -> Result<(), StrError> {
+        // Equilateral triangle
+        //
+        //           /
+        //        2   \
+        //       / \   \
+        //      / ↑ \   l
+        //     5  h  4   \
+        //    /   ↓   \   \
+        //   /         \   /
+        //  0-----3-----1
+        //
+        //  |--s--|--s--|
+        //
+        //  |-----l-----|
+        //
+        // area = l * h / 2.0;
+        let l = 5.0;
+        let s = l / 2.0;
+        let h = l * SQRT_3 / 2.0;
+        let (x0, y0) = (3.0, 4.0);
+        let (x1, y1) = (x0 + l, y0);
+        let (x2, y2) = (x0 + s, y0 + h);
+        let (x3, y3) = (x0 + s, y0);
+        let (x4, y4) = (x0 + 1.5 * s, y0 + 0.5 * h);
+        let (x5, y5) = (x0 + 0.5 * s, y0 + 0.5 * h);
+        let space_ndim = 2;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri6)?;
+        pad.set_xx(0, 0, x0);
+        pad.set_xx(0, 1, y0);
+        pad.set_xx(1, 0, x1);
+        pad.set_xx(1, 1, y1);
+        pad.set_xx(2, 0, x2);
+        pad.set_xx(2, 1, y2);
+        pad.set_xx(3, 0, x3);
+        pad.set_xx(3, 1, y3);
+        pad.set_xx(4, 0, x4);
+        pad.set_xx(4, 1, y4);
+        pad.set_xx(5, 0, x5);
+        pad.set_xx(5, 1, y5);
+        assert_eq!(
+            format!("{:.2}", pad.xxt),
+            "┌                               ┐\n\
+             │ 3.00 8.00 5.50 5.50 6.75 4.25 │\n\
+             │ 4.00 4.00 8.33 4.00 6.17 6.17 │\n\
+             └                               ┘"
+        );
+        let mut ksi = vec![0.0; pad.kind.ndim()];
+        for (nit_correct, x_data, tol) in &[
+            (0, [3.0, 4.0], 1e-15),
+            (0, [8.0, 4.0], 1e-15),
+            (1, [5.5, 8.33], 1e-14),
+            (0, [5.5, 4.0], 1e-15),
+            (1, [6.75, 6.17], 1e-14),
+            (1, [4.25, 6.17], 1e-14),
+            (2, [10.0, 10.0], 1e-14),
+            (2, [-10.0, -10.0], 1e-13),
+            (6, [100.0, 100.0], 1e-12),
+        ] {
+            let x = Vector::from(x_data);
+            let nit = approximate_ksi(&mut ksi, &mut pad, &x, 30, *tol)?;
+            let mut x_out = Vector::new(2);
+            calc_coords(&mut x_out, &mut pad, &ksi)?;
+            assert_vec_approx_eq!(x.as_data(), x_out.as_data(), *tol);
+            assert_eq!(nit, *nit_correct);
         }
         Ok(())
     }

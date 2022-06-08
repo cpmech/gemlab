@@ -171,4 +171,32 @@ mod tests {
         }
         Ok(())
     }
+
+    #[test]
+    fn calc_jacobian_special_cases_work() -> Result<(), StrError> {
+        let space_ndim = 2;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin2)?;
+        let l = 3.5;
+        pad.set_xx(0, 0, 0.0); // node 0
+        pad.set_xx(0, 1, 0.0);
+        pad.set_xx(1, 0, l); // node 1
+        pad.set_xx(1, 1, 0.0);
+        let norm_jac_vec = calc_jacobian(&mut pad, &[0.0])?;
+        assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
+
+        let space_ndim = 3;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+        pad.set_xx(0, 0, 0.0); // node 0
+        pad.set_xx(0, 1, 0.0);
+        pad.set_xx(0, 2, 0.0);
+        pad.set_xx(1, 0, 1.0); // node 1
+        pad.set_xx(1, 1, 0.0);
+        pad.set_xx(1, 2, 0.0);
+        pad.set_xx(2, 0, 0.5); // node 2
+        pad.set_xx(2, 1, 1.0);
+        pad.set_xx(2, 2, 1.0);
+        let norm_jac_vec = calc_jacobian(&mut pad, &[0.0, 0.0])?;
+        assert_eq!(norm_jac_vec, 0.0);
+        Ok(())
+    }
 }

@@ -234,7 +234,6 @@ mod tests {
             assert_eq!(pad.interp.dim(), nnode[i]);
             assert_eq!(pad.deriv.dims(), (nnode[i], geo_ndim[i]));
             assert_eq!(pad.jacobian.dims(), (space_ndim, geo_ndim[i]));
-            println!("{:?}", kind);
             if kind.class() == GeoClass::Lin {
                 assert_eq!(pad.inv_jacobian.dims(), (0, 0));
                 assert_eq!(pad.gradient.dims(), (0, 0));

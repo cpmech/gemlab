@@ -218,9 +218,9 @@ pub mod aux {
 mod tests {
     use super::aux::{_draw_point_coords_2d, extract_edge, extract_face, gen_scratchpad_with_coords};
     use crate::shapes::op::testing::aux::{self, gen_scratchpad_with_coords_aligned};
-    use crate::shapes::GeoKind;
+    use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
-    use russell_chk::assert_approx_eq;
+    use russell_chk::{assert_approx_eq, assert_deriv_approx_eq};
 
     // #[test]
     fn _draw_point_coords_2d_works() -> Result<(), StrError> {
@@ -346,6 +346,121 @@ mod tests {
         assert_approx_eq!(pad_face.xxt[0][3], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
         assert_approx_eq!(pad_face.xxt[1][3], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
         assert_approx_eq!(pad_face.xxt[2][3], aux::ZMIN, 1e-15);
+        Ok(())
+    }
+
+    #[test]
+    fn fn_interp_works() -> Result<(), StrError> {
+        // loop over shapes
+        for kind in GeoKind::VALUES {
+            // scratchpad with coordinates
+            let geo_ndim = kind.ndim();
+            let space_ndim = usize::max(2, geo_ndim);
+            let mut pad = gen_scratchpad_with_coords(space_ndim, kind);
+
+            // loop over nodes
+            const TOL: f64 = 1e-15;
+            let nnode = kind.nnode();
+            for m in 0..nnode {
+                // get ξᵐ corresponding to node m
+                let ksi = kind.reference_coords(m);
+
+                // compute interpolation function Nⁿ(ξᵐ)
+                (pad.fn_interp)(&mut pad.interp, ksi);
+
+                // check: Nⁿ(ξᵐ) = 1 if m==n; 0 otherwise
+                for n in 0..nnode {
+                    if m == n {
+                        assert_approx_eq!(pad.interp[n], 1.0, TOL);
+                    } else {
+                        assert_approx_eq!(pad.interp[n], 0.0, TOL);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    // Holds arguments for numerical differentiation of N with respect to ξ => L (deriv) matrix
+    struct ArgsNumDeriv {
+        pad: Scratchpad,  // scratchpad
+        at_ksi: Vec<f64>, // at reference coord value
+        ksi: Vec<f64>,    // temporary reference coord
+        m: usize,         // node index from 0 to nnode
+        j: usize,         // dimension index from 0 to geom_ndim
+    }
+
+    // Computes Nᵐ(ξ) with variable v := ξⱼ
+    fn nn_given_ksi(v: f64, args: &mut ArgsNumDeriv) -> f64 {
+        args.ksi.copy_from_slice(&args.at_ksi);
+        args.ksi[args.j] = v;
+        (args.pad.fn_interp)(&mut args.pad.interp, &args.ksi);
+        args.pad.interp[args.m]
+    }
+
+    #[test]
+    fn calc_deriv_works() -> Result<(), StrError> {
+        // kind and tolerances
+        let problem = vec![
+            // Lin
+            (GeoKind::Lin2, 1e-13),
+            (GeoKind::Lin3, 1e-13),
+            (GeoKind::Lin4, 1e-10),
+            (GeoKind::Lin5, 1e-10),
+            // Tri
+            (GeoKind::Tri3, 1e-12),
+            (GeoKind::Tri6, 1e-12),
+            (GeoKind::Tri10, 1e-10),
+            (GeoKind::Tri15, 1e-9),
+            // Qua
+            (GeoKind::Qua4, 1e-13),
+            (GeoKind::Qua8, 1e-12),
+            (GeoKind::Qua9, 1e-13),
+            (GeoKind::Qua12, 1e-10),
+            (GeoKind::Qua16, 1e-10),
+            (GeoKind::Qua17, 1e-10),
+            // Tet
+            (GeoKind::Tet4, 1e-12),
+            (GeoKind::Tet10, 1e-12),
+            (GeoKind::Tet20, 1e-10),
+            // Hex
+            (GeoKind::Hex8, 1e-13),
+            (GeoKind::Hex20, 1e-12),
+            (GeoKind::Hex32, 1e-10),
+        ];
+
+        // loop over shapes
+        for (kind, tol) in problem {
+            // scratchpad with coordinates
+            let geo_ndim = kind.ndim();
+            let space_ndim = usize::max(2, geo_ndim);
+            let mut pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
+
+            // set ξ within reference space
+            let at_ksi = vec![0.25; geo_ndim];
+
+            // compute all derivatives of interpolation functions with respect to ξ
+            (pad.fn_deriv)(&mut pad.deriv, &at_ksi);
+
+            // set arguments for numerical integration
+            let args = &mut ArgsNumDeriv {
+                pad: pad.clone(),
+                at_ksi,
+                ksi: vec![0.0; geo_ndim],
+                m: 0,
+                j: 0,
+            };
+
+            // check Lᵐ(ξ) = dNᵐ(ξ)/dξ
+            for m in 0..kind.nnode() {
+                args.m = m;
+                for j in 0..geo_ndim {
+                    args.j = j;
+                    // Lᵐⱼ := dNᵐ/dξⱼ
+                    assert_deriv_approx_eq!(pad.deriv[m][j], args.at_ksi[j], nn_given_ksi, args, tol);
+                }
+            }
+        }
         Ok(())
     }
 }
