@@ -127,6 +127,32 @@ impl Scratchpad {
     /// 1. `space_ndim` must be 2 or 3
     /// 2. `space_ndim` must be greater than or equal to `geo_ndim`;
     ///     e.g., you cannot have a 3D shape in a 2D space.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{GeoKind, Scratchpad};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //          .4--------------7
+    ///     //        ,' |            ,'|         ξ₀   ξ₁   ξ₂
+    ///     //      ,'              ,'  |  node    r    s    t
+    ///     //    ,'     |        ,'    |     0 -1.0 -1.0 -1.0
+    ///     //  5'==============6'      |     1  1.0 -1.0 -1.0
+    ///     //  |               |       |     2  1.0  1.0 -1.0
+    ///     //  |        |      |       |     3 -1.0  1.0 -1.0
+    ///     //  |       ,0- - - | - - - 3     4 -1.0 -1.0  1.0
+    ///     //  |     ,'        |     ,'      5  1.0 -1.0  1.0
+    ///     //  |   ,'          |   ,'        6  1.0  1.0  1.0
+    ///     //  | ,'            | ,'          7 -1.0  1.0  1.0
+    ///     //  1'--------------2'
+    ///     let space_ndim = 3;
+    ///     let pad = Scratchpad::new(space_ndim, GeoKind::Hex8)?;
+    ///     assert_eq!(pad.ok_xxt, false);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn new(space_ndim: usize, kind: GeoKind) -> Result<Self, StrError> {
         if space_ndim < 2 || space_ndim > 3 {
             return Err("space_ndim must be 2 or 3");
@@ -171,6 +197,69 @@ impl Scratchpad {
     /// # Panics
     ///
     /// This function will panic if either m or j is out of bounds
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// use gemlab::shapes::{GeoKind, Scratchpad};
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //          .4--------------7
+    ///     //        ,' |            ,'|         ξ₀   ξ₁   ξ₂
+    ///     //      ,'              ,'  |  node    r    s    t
+    ///     //    ,'     |        ,'    |     0 -1.0 -1.0 -1.0
+    ///     //  5'==============6'      |     1  1.0 -1.0 -1.0
+    ///     //  |               |       |     2  1.0  1.0 -1.0
+    ///     //  |        |      |       |     3 -1.0  1.0 -1.0
+    ///     //  |       ,0- - - | - - - 3     4 -1.0 -1.0  1.0
+    ///     //  |     ,'        |     ,'      5  1.0 -1.0  1.0
+    ///     //  |   ,'          |   ,'        6  1.0  1.0  1.0
+    ///     //  | ,'            | ,'          7 -1.0  1.0  1.0
+    ///     //  1'--------------2'
+    ///     let space_ndim = 3;
+    ///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Hex8)?;
+    ///     assert_eq!(pad.ok_xxt, false);
+    ///     // set coordinates of node 0
+    ///     pad.set_xx(0, 0, 0.0);
+    ///     pad.set_xx(0, 1, 0.0);
+    ///     pad.set_xx(0, 2, 0.0);
+    ///     // set coordinates of node 1
+    ///     pad.set_xx(1, 0, 5.0);
+    ///     pad.set_xx(1, 1, 0.0);
+    ///     pad.set_xx(1, 2, 0.0);
+    ///     // set coordinates of node 2
+    ///     pad.set_xx(2, 0, 5.0);
+    ///     pad.set_xx(2, 1, 5.0);
+    ///     pad.set_xx(2, 2, 0.0);
+    ///     // set coordinates of node 3
+    ///     pad.set_xx(3, 0, 0.0);
+    ///     pad.set_xx(3, 1, 5.0);
+    ///     pad.set_xx(3, 2, 0.0);
+    ///     // set coordinates of node 4
+    ///     pad.set_xx(4, 0, 0.0);
+    ///     pad.set_xx(4, 1, 0.0);
+    ///     pad.set_xx(4, 2, 0.0);
+    ///     // set coordinates of node 5
+    ///     pad.set_xx(5, 0, 5.0);
+    ///     pad.set_xx(5, 1, 0.0);
+    ///     pad.set_xx(5, 2, 0.0);
+    ///     // set coordinates of node 6
+    ///     pad.set_xx(6, 0, 5.0);
+    ///     pad.set_xx(6, 1, 5.0);
+    ///     pad.set_xx(6, 2, 0.0);
+    ///     // set coordinates of node 7
+    ///     pad.set_xx(7, 0, 0.0);
+    ///     pad.set_xx(7, 1, 5.0);
+    ///     assert_eq!(pad.ok_xxt, false);
+    ///     pad.set_xx(7, 2, 0.0);
+    ///     assert_eq!(pad.ok_xxt, true);
+    ///     pad.set_xx(0, 0, 0.0);
+    ///     assert_eq!(pad.ok_xxt, false);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn set_xx(&mut self, m: usize, j: usize, value: f64) {
         self.ok_xxt = false;
         self.xxt[j][m] = value;
@@ -247,5 +336,21 @@ mod tests {
             assert_eq!(pad.ok_xxt, false);
         }
         Ok(())
+    }
+
+    #[test]
+    fn set_xx_works() {
+        let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
+        assert_eq!(pad.ok_xxt, false);
+        pad.set_xx(0, 0, 1.0);
+        assert_eq!(pad.ok_xxt, false);
+        pad.set_xx(0, 1, 2.0);
+        assert_eq!(pad.ok_xxt, false);
+        pad.set_xx(1, 0, 3.0);
+        assert_eq!(pad.ok_xxt, false);
+        pad.set_xx(1, 1, 4.0);
+        assert_eq!(pad.ok_xxt, true);
+        pad.set_xx(0, 0, 1.0); // reset
+        assert_eq!(pad.ok_xxt, false);
     }
 }
