@@ -2,16 +2,17 @@
 pub mod aux {
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::PI;
+    use crate::StrError;
     use plotpy::{Canvas, Curve, Plot};
     use russell_lab::generate2d;
     use russell_lab::Vector;
 
-    const RMIN: f64 = 5.0;
-    const RMAX: f64 = 10.0;
-    const AMIN: f64 = 30.0 * PI / 180.0;
-    const AMAX: f64 = 60.0 * PI / 180.0;
-    const ZMIN: f64 = 0.0;
-    const ZMAX: f64 = 4.0;
+    pub const RMIN: f64 = 5.0;
+    pub const RMAX: f64 = 10.0;
+    pub const AMIN: f64 = 30.0 * PI / 180.0;
+    pub const AMAX: f64 = 60.0 * PI / 180.0;
+    pub const ZMIN: f64 = 0.0;
+    pub const ZMAX: f64 = 4.0;
 
     /// Maps point coordinates
     ///
@@ -143,19 +144,208 @@ pub mod aux {
         }
         pad
     }
+
+    /// Returns a new scratchpad with coordinates such that the shape has edges aligned to x-y-z
+    ///
+    /// **Important:** This function works with geo_ndim = 2 or 3 only.
+    ///
+    /// Notes:
+    ///
+    /// * For triangles (tetrahedra), one edge (face) will cut the diagonal of the x-y(-z) space.
+    /// * Qua and Hex will have real coordinates equal to the natural coordinates
+    /// * Tri and Tet will be scaled using the natural coordinates
+    /// * All edges parallel to the x,y,z axes will have lengths equal to 2.0
+    /// * The cell will also be shifted such that the first vertex will be at (0.0,0.0,0.0)
+    pub fn gen_scratchpad_with_coords_aligned(kind: GeoKind) -> Scratchpad {
+        let geo_ndim = kind.ndim();
+        assert!(geo_ndim > 1);
+        let space_ndim = geo_ndim;
+        let mut pad = Scratchpad::new(space_ndim, kind).unwrap();
+        let (shift, scale) = if kind.is_tri_or_tet() { (0.0, 2.0) } else { (1.0, 1.0) };
+        for m in 0..kind.nnode() {
+            let ksi = kind.reference_coords(m);
+            for j in 0..space_ndim {
+                pad.set_xx(m, j, shift + scale * ksi[j])
+            }
+        }
+        pad
+    }
+
+    /// Extracts edge 'e' with coordinates set
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if the shape does not have edges
+    pub fn extract_edge(e: usize, pad: &Scratchpad) -> Result<Scratchpad, StrError> {
+        let (space_ndim, geo_ndim) = pad.jacobian.dims();
+        if geo_ndim == 1 {
+            return Err("geo_ndim must be 2 or 3");
+        }
+        let mut pad_edge = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap())?;
+        for i in 0..pad.kind.edge_nnode() {
+            let m = pad.kind.edge_node_id(e, i);
+            for j in 0..space_ndim {
+                pad_edge.set_xx(i, j, pad.xxt[j][m]);
+            }
+        }
+        Ok(pad_edge)
+    }
+
+    /// Extracts face 'f' with coordinates set
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if the shape does not have faces
+    pub fn extract_face(f: usize, pad: &Scratchpad) -> Result<Scratchpad, StrError> {
+        let (space_ndim, geo_ndim) = pad.jacobian.dims();
+        if geo_ndim != 3 {
+            return Err("geo_ndim must be 3");
+        }
+        let mut pad_face = Scratchpad::new(space_ndim, pad.kind.face_kind().unwrap())?;
+        for i in 0..pad.kind.face_nnode() {
+            let m = pad.kind.face_node_id(f, i);
+            for j in 0..space_ndim {
+                pad_face.set_xx(i, j, pad.xxt[j][m]);
+            }
+        }
+        Ok(pad_face)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::aux::_draw_point_coords_2d;
+    use super::aux::{_draw_point_coords_2d, extract_edge, extract_face, gen_scratchpad_with_coords};
+    use crate::shapes::op::testing::aux::{self, gen_scratchpad_with_coords_aligned};
+    use crate::shapes::GeoKind;
     use crate::StrError;
+    use russell_chk::assert_approx_eq;
 
     // #[test]
     fn _draw_point_coords_2d_works() -> Result<(), StrError> {
         let mut plot = _draw_point_coords_2d(0.0, 1.0);
         plot.set_figure_size_points(1000.0, 600.0)
             .save("/tmp/gemlab/test_draw_point_coords_2d.svg")
+    }
+
+    #[test]
+    fn gen_scratchpad_with_coords_works() {
+        let pad = gen_scratchpad_with_coords(2, GeoKind::Qua4);
+        assert_approx_eq!(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[0][2], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][2], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[0][3], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][3], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+
+        let pad = gen_scratchpad_with_coords(3, GeoKind::Hex8);
+        assert_approx_eq!(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[2][0], aux::ZMIN, 1e-15);
+        assert_approx_eq!(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[2][1], aux::ZMIN, 1e-15);
+        assert_approx_eq!(pad.xxt[0][2], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][2], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[2][2], aux::ZMIN, 1e-15);
+        assert_approx_eq!(pad.xxt[0][3], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][3], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[2][3], aux::ZMIN, 1e-15);
+
+        assert_approx_eq!(pad.xxt[0][4], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[1][4], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[2][4], aux::ZMAX, 1e-15);
+        assert_approx_eq!(pad.xxt[0][5], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[1][5], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[2][5], aux::ZMAX, 1e-15);
+        assert_approx_eq!(pad.xxt[0][6], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][6], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[2][6], aux::ZMAX, 1e-15);
+        assert_approx_eq!(pad.xxt[0][7], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][7], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[2][7], aux::ZMAX, 1e-15);
+    }
+
+    #[test]
+    fn gen_scratchpad_with_coords_aligned_works() {
+        let pad = gen_scratchpad_with_coords_aligned(GeoKind::Tri3);
+        assert_eq!(pad.xxt[0][0], 0.0);
+        assert_eq!(pad.xxt[1][0], 0.0);
+        assert_eq!(pad.xxt[0][1], 2.0);
+        assert_eq!(pad.xxt[1][1], 0.0);
+        assert_eq!(pad.xxt[0][2], 0.0);
+        assert_eq!(pad.xxt[1][2], 2.0);
+
+        let pad = gen_scratchpad_with_coords_aligned(GeoKind::Qua4);
+        assert_eq!(pad.xxt[0][0], 0.0);
+        assert_eq!(pad.xxt[1][0], 0.0);
+        assert_eq!(pad.xxt[0][1], 2.0);
+        assert_eq!(pad.xxt[1][1], 0.0);
+        assert_eq!(pad.xxt[0][2], 2.0);
+        assert_eq!(pad.xxt[1][2], 2.0);
+        assert_eq!(pad.xxt[0][3], 0.0);
+        assert_eq!(pad.xxt[1][3], 2.0);
+
+        let pad = gen_scratchpad_with_coords_aligned(GeoKind::Hex8);
+        assert_eq!(pad.xxt[0][0], 0.0);
+        assert_eq!(pad.xxt[1][0], 0.0);
+        assert_eq!(pad.xxt[2][0], 0.0);
+        assert_eq!(pad.xxt[0][1], 2.0);
+        assert_eq!(pad.xxt[1][1], 0.0);
+        assert_eq!(pad.xxt[2][1], 0.0);
+        assert_eq!(pad.xxt[0][2], 2.0);
+        assert_eq!(pad.xxt[1][2], 2.0);
+        assert_eq!(pad.xxt[2][2], 0.0);
+        assert_eq!(pad.xxt[0][3], 0.0);
+        assert_eq!(pad.xxt[1][3], 2.0);
+        assert_eq!(pad.xxt[2][3], 0.0);
+
+        assert_eq!(pad.xxt[0][4], 0.0);
+        assert_eq!(pad.xxt[1][4], 0.0);
+        assert_eq!(pad.xxt[2][4], 2.0);
+        assert_eq!(pad.xxt[0][5], 2.0);
+        assert_eq!(pad.xxt[1][5], 0.0);
+        assert_eq!(pad.xxt[2][5], 2.0);
+        assert_eq!(pad.xxt[0][6], 2.0);
+        assert_eq!(pad.xxt[1][6], 2.0);
+        assert_eq!(pad.xxt[2][6], 2.0);
+        assert_eq!(pad.xxt[0][7], 0.0);
+        assert_eq!(pad.xxt[1][7], 2.0);
+        assert_eq!(pad.xxt[2][7], 2.0);
+    }
+
+    #[test]
+    fn extract_edge_works() -> Result<(), StrError> {
+        let pad = gen_scratchpad_with_coords(2, GeoKind::Qua4);
+        let pad_edge = extract_edge(0, &pad)?;
+        assert_eq!(pad_edge.kind, GeoKind::Lin2);
+        assert_approx_eq!(pad_edge.xxt[0][0], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad_edge.xxt[1][0], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad_edge.xxt[0][1], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad_edge.xxt[1][1], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        Ok(())
+    }
+
+    #[test]
+    fn extract_face_works() -> Result<(), StrError> {
+        let pad = gen_scratchpad_with_coords(3, GeoKind::Hex8);
+        let pad_face = extract_face(0, &pad)?;
+        assert_eq!(pad_face.kind, GeoKind::Qua4);
+        assert_approx_eq!(pad_face.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad_face.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad_face.xxt[2][0], aux::ZMIN, 1e-15);
+        assert_approx_eq!(pad_face.xxt[0][1], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad_face.xxt[1][1], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad_face.xxt[2][1], aux::ZMAX, 1e-15);
+        assert_approx_eq!(pad_face.xxt[0][2], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad_face.xxt[1][2], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad_face.xxt[2][2], aux::ZMAX, 1e-15);
+        assert_approx_eq!(pad_face.xxt[0][3], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad_face.xxt[1][3], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad_face.xxt[2][3], aux::ZMIN, 1e-15);
+        Ok(())
     }
 }
