@@ -192,6 +192,13 @@ mod tests {
     use crate::StrError;
 
     #[test]
+    fn derive_works() {
+        let pad = Scratchpad::new(2, GeoKind::Qua4).unwrap();
+        let pad_clone = pad.clone();
+        assert_eq!(pad_clone.kind, pad.kind);
+    }
+
+    #[test]
     fn new_fails_on_wrong_input() {
         assert_eq!(
             Scratchpad::new(1, GeoKind::Lin2).err(),
