@@ -1,6 +1,6 @@
 use gemlab::integ::default_integ_points;
 use gemlab::mesh::{check_2d_edge_normals, At, EdgeKey, Extract, Mesh, Region};
-use gemlab::shapes::{GeoKind, Shape, StateOfShape};
+use gemlab::shapes::{op, GeoKind, Scratchpad};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
 use russell_chk::assert_approx_eq;
@@ -120,35 +120,39 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     check(&edges, &[(2, 6), (6, 9), (9, 13)]);
 
     // edge (7,11)
-    let shape_edge_7_11 = Shape::new(GeoKind::Lin2);
-    let mut state_edge_7_11 = StateOfShape::new(
-        GeoKind::Lin2,
-        &[
-            [region.mesh.points[7].coords[0], region.mesh.points[7].coords[1]],
-            [region.mesh.points[11].coords[0], region.mesh.points[11].coords[1]],
-        ],
-    )?;
-    let ips = default_integ_points(shape_edge_7_11.kind);
+    let space_ndim = region.mesh.ndim;
+    let p = &region.mesh.points;
+    let mut pad_edge_7_11 = Scratchpad::new(space_ndim, GeoKind::Lin2)?;
+    pad_edge_7_11.set_xx(0, 0, p[7].coords[0]);
+    pad_edge_7_11.set_xx(0, 1, p[7].coords[1]);
+    pad_edge_7_11.set_xx(1, 0, p[11].coords[0]);
+    pad_edge_7_11.set_xx(1, 1, p[11].coords[1]);
+    let ips = default_integ_points(pad_edge_7_11.kind);
     let mut length_numerical = 0.0;
     for index in 0..ips.len() {
         let iota = &ips[index];
         let weight = ips[index][3];
-        let det_jac = shape_edge_7_11.calc_jacobian(&mut state_edge_7_11, iota)?;
+        let det_jac = op::calc_jacobian(&mut pad_edge_7_11, iota)?;
         length_numerical += weight * det_jac;
     }
     assert_approx_eq!(length_numerical, SQRT_2, 1e-14);
 
     // TODO: numerical area of cell 5
-    // let cell = &region.mesh.cells[5];
-    // let mut state_cell_5 = allocate_state(&region.mesh, cell.kind, &cell.points)?;
-    // let ips = default_integ_points(shape_cell_5.kind);
-    // let mut area_numerical = 0.0;
-    // for p in 0..ips.len() {
-    //     let iota = &ips[p];
-    //     let weight = ips[p][3];
-    //     let det_jac = shape_cell_5.calc_jacobian(&mut state_cell_5, iota)?;
-    //     area_numerical += weight * det_jac;
-    // }
-    // assert_approx_eq!(area_numerical, 2.0, 1e-15);
+    let cell = &region.mesh.cells[5];
+    let mut pad_cell_5 = Scratchpad::new(2, cell.kind)?;
+    for m in 0..cell.points.len() {
+        for j in 0..space_ndim {
+            pad_cell_5.set_xx(m, j, p[cell.points[m]].coords[j]);
+        }
+    }
+    let ips = default_integ_points(pad_cell_5.kind);
+    let mut area_numerical = 0.0;
+    for p in 0..ips.len() {
+        let iota = &ips[p];
+        let weight = ips[p][3];
+        let det_jac = op::calc_jacobian(&mut pad_cell_5, iota)?;
+        area_numerical += weight * det_jac;
+    }
+    assert_approx_eq!(area_numerical, 2.0, 1e-15);
     Ok(())
 }

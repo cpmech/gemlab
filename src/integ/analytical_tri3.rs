@@ -1,4 +1,4 @@
-use crate::shapes::{GeoKind, Shape, StateOfShape};
+use crate::shapes::{GeoKind, Scratchpad};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
@@ -27,13 +27,13 @@ pub struct AnalyticalTri3 {
 }
 
 impl AnalyticalTri3 {
-    pub fn new(shape: &Shape, state: &StateOfShape) -> Self {
-        assert_eq!(shape.kind, GeoKind::Tri3);
+    pub fn new(pad: &Scratchpad) -> Self {
+        assert_eq!(pad.kind, GeoKind::Tri3);
 
         // coefficients
-        let (x0, y0) = (state.coords_transp[0][0], state.coords_transp[1][0]);
-        let (x1, y1) = (state.coords_transp[0][1], state.coords_transp[1][1]);
-        let (x2, y2) = (state.coords_transp[0][2], state.coords_transp[1][2]);
+        let (x0, y0) = (pad.xxt[0][0], pad.xxt[1][0]);
+        let (x1, y1) = (pad.xxt[0][1], pad.xxt[1][1]);
+        let (x2, y2) = (pad.xxt[0][2], pad.xxt[1][2]);
         let (a0, a1, a2) = (y1 - y2, y2 - y0, y0 - y1);
         let (b0, b1, b2) = (x2 - x1, x0 - x2, x1 - x0);
         let (f0, f1, f2) = (x1 * y2 - x2 * y1, x2 * y0 - x0 * y2, x0 * y1 - x1 * y0);
@@ -129,19 +129,11 @@ impl AnalyticalTri3 {
     ///
     /// # Input
     ///
-    /// * `shape` -- The same shape used in `new` because we need the nodal coordinates here
-    ///              Do not change the coordinates, otherwise the values will be wrong.
-    pub fn integ_vec_c_bilinear(&self, state: &StateOfShape) -> Vec<f64> {
-        let (x0, x1, x2) = (
-            state.coords_transp[0][0],
-            state.coords_transp[0][1],
-            state.coords_transp[0][2],
-        );
-        let (y0, y1, y2) = (
-            state.coords_transp[1][0],
-            state.coords_transp[1][1],
-            state.coords_transp[1][2],
-        );
+    /// * `pad` -- The same shape used in `new` because we need the nodal coordinates here
+    ///            Do not change the coordinates, otherwise the values will be wrong.
+    pub fn integ_vec_c_bilinear(&self, pad: &Scratchpad) -> Vec<f64> {
+        let (x0, x1, x2) = (pad.xxt[0][0], pad.xxt[0][1], pad.xxt[0][2]);
+        let (y0, y1, y2) = (pad.xxt[1][0], pad.xxt[1][1], pad.xxt[1][2]);
         vec![
             ((x0 + x1 + x2) * self.gg[0][0] + (y0 + y1 + y2) * self.gg[0][1]) * self.area / 3.0,
             ((x0 + x1 + x2) * self.gg[1][0] + (y0 + y1 + y2) * self.gg[1][1]) * self.area / 3.0,
@@ -199,7 +191,7 @@ impl AnalyticalTri3 {
 #[cfg(test)]
 mod tests {
     use super::AnalyticalTri3;
-    use crate::shapes::{GeoKind, Shape, StateOfShape};
+    use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_approx_eq;
 
@@ -210,9 +202,15 @@ mod tests {
         // [@bhatti] Bhatti, M.A. (2005) Fundamental Finite Element Analysis
         //          and Applications, Wiley, 700p.
         //
-        let shape = Shape::new(GeoKind::Tri3);
-        let mut state = StateOfShape::new(GeoKind::Tri3, &[[0.0, 0.0], [0.2, 0.0], [0.1, 0.1]])?;
-        let ana = AnalyticalTri3::new(&shape, &mut state);
+        let space_ndim = 2;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+        pad.set_xx(0, 0, 0.0);
+        pad.set_xx(0, 1, 0.0);
+        pad.set_xx(1, 0, 0.2);
+        pad.set_xx(1, 1, 0.0);
+        pad.set_xx(2, 0, 0.1);
+        pad.set_xx(2, 1, 0.1);
+        let ana = AnalyticalTri3::new(&pad);
         assert_approx_eq!(ana.area, 0.01, 1e-15);
         // a = [-0.1, 0.1, 0.0]
         // b = [-0.1, -0.1, 0.2]
