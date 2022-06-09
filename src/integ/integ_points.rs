@@ -89,6 +89,7 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
 /// * `4` -- Conventional Legendre integration points and weights
 /// * `5` -- Wilson's integration points and weights. "Corner" version
 /// * `1_005` -- 5 points. Wilson's integration points and weights. "Stable" version version with w0=0.004 and wa=0.999 to mimic 4-point rule
+///              **Warning:** This set performs poorly with functions such as ∫(x²+y²) dx dy
 /// * `8` -- Wilson's integration points and weights.
 /// * `9` -- Conventional Legendre integration points and weights
 /// * `16` -- Conventional Legendre integration points and weights
@@ -335,6 +336,10 @@ pub const IP_QUA_WILSON_CORNER_5: [[f64; 4]; 5] = [
 ];
 
 /// Wilson's integration points and weights. "Stable" version version with w0=0.004 and wa=0.999 to mimic 4-point rule
+/// 
+/// # Warning
+/// 
+/// This set performs poorly with functions such as ∫(x²+y²) dx dy
 #[rustfmt::skip]
 pub const IP_QUA_WILSON_STABLE_5: [[f64; 4]; 5] = [
     [-0.5776391000000000, -0.5776391000000000, 0.0, 0.999],
