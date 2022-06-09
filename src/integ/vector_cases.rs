@@ -716,8 +716,8 @@ mod tests {
         // Note that the tolerance is high for n_integ_point = 1
         // because the numerical integration performs poorly with few IPs
         let class = pad.kind.class();
-        let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15];
-        let selection: Vec<_> = [1, 4, 5, 8, 14]
+        let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15, 1e-15, 1e-15];
+        let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
             .map(|n| select_integ_points(class, *n).unwrap())
             .collect();
@@ -913,8 +913,8 @@ mod tests {
 
         // integration points
         let class = pad.kind.class();
-        let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
-        let selection: Vec<_> = [1, 4, 5, 8, 14]
+        let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
+        let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
             .map(|n| select_integ_points(class, *n).unwrap())
             .collect();
@@ -994,8 +994,8 @@ mod tests {
 
         // integration points
         let class = pad.kind.class();
-        let tolerances = [1e-14, 1e-14, 1e-13, 1e-14, 1e-14];
-        let selection: Vec<_> = [1, 4, 5, 8, 14]
+        let tolerances = [1e-14, 1e-14, 1e-13, 1e-14, 1e-14, 1e-13, 1e-13];
+        let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
             .map(|n| select_integ_points(class, *n).unwrap())
             .collect();

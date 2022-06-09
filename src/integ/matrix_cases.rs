@@ -347,8 +347,8 @@ mod tests {
         let space_ndim = pad.xmax.len();
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
-        let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-12];
-        let selection: Vec<_> = [1, 4, 5, 8, 14]
+        let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12];
+        let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
             .map(|n| select_integ_points(class, *n).unwrap())
             .collect();
