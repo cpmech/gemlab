@@ -5,20 +5,6 @@ use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
 use russell_lab::Vector;
 use std::collections::HashMap;
 
-/// Returns the first point on GeoClass:Lin; Bezier t=0(ξ=-1)
-macro_rules! pa {
-    ($pad:expr,$i:expr) => {
-        $pad.xxt[$i][0]
-    };
-}
-
-/// Returns the last point on GeoClass:Lin; Bezier t=1(ξ=1)
-macro_rules! pb {
-    ($pad:expr,$i:expr) => {
-        $pad.xxt[$i][1]
-    };
-}
-
 /// Implements functions to draw edges and faces
 pub struct Draw {
     /// Canvas to draw edges
@@ -187,9 +173,9 @@ impl Draw {
         let space_ndim = mesh.ndim;
         assert_eq!(space_ndim, 2);
 
-        // middle points (p) on Bezier curve and control points (q)
-        let mut pc = Vector::new(space_ndim); // first middle point on Bezier curve with t=⅓(ξ=-⅓) or t=½(ξ=0)
-        let mut pd = Vector::new(space_ndim); // second middle point on Bezier curve with t=⅔(ξ=+⅓)
+        // middle points (x..) on Bezier curve and control points (q..)
+        let mut xc = Vector::new(space_ndim); // first middle point on Bezier curve with t=⅓(ξ=-⅓) or t=½(ξ=0)
+        let mut xd = Vector::new(space_ndim); // second middle point on Bezier curve with t=⅔(ξ=+⅓)
         let mut qc = Vector::new(space_ndim); // control point corresponding to pc
         let mut qd = Vector::new(space_ndim); // control point corresponding to pd
 
@@ -216,38 +202,41 @@ impl Draw {
                     pad.set_xx(m, j, mesh.points[edge.points[m]].coords[j]);
                 }
             }
+            let (xa, ya) = (pad.xxt[0][0], pad.xxt[1][0]);
+            let (xb, yb) = (pad.xxt[0][1], pad.xxt[1][1]);
 
             // add poly-curve points (or control points for quadratic/cubic Bezier)
+            // (see file bezier-curves-math.pdf under data/derivations)
             match nnode {
                 2 => {
                     self.canvas_edges
-                        .polycurve_add(pa!(pad, 0), pa!(pad, 1), PolyCode::MoveTo)
-                        .polycurve_add(pb!(pad, 0), pb!(pad, 1), PolyCode::LineTo);
+                        .polycurve_add(xa, ya, PolyCode::MoveTo)
+                        .polycurve_add(xb, yb, PolyCode::LineTo);
                 }
                 3 => {
                     ksi[0] = 0.0; // middle
-                    op::calc_coords(&mut pc, &mut pad, &ksi)?;
-                    qc[0] = (-pa!(pad, 0) - pb!(pad, 0) + 4.0 * pc[0]) / 2.0;
-                    qc[1] = (-pa!(pad, 1) - pb!(pad, 1) + 4.0 * pc[1]) / 2.0;
+                    op::calc_coords(&mut xc, &mut pad, &ksi)?;
+                    qc[0] = (-xa - xb + 4.0 * xc[0]) / 2.0;
+                    qc[1] = (-ya - yb + 4.0 * xc[1]) / 2.0;
                     self.canvas_edges
-                        .polycurve_add(pa!(pad, 0), pa!(pad, 1), PolyCode::MoveTo)
-                        .polycurve_add(/*   */ qc[0], /*   */ qc[1], PolyCode::Curve3)
-                        .polycurve_add(pb!(pad, 0), pb!(pad, 1), PolyCode::Curve3);
+                        .polycurve_add(xa, ya, PolyCode::MoveTo)
+                        .polycurve_add(qc[0], qc[1], PolyCode::Curve3)
+                        .polycurve_add(xb, yb, PolyCode::Curve3);
                 }
                 _ => {
                     ksi[0] = -1.0 / 3.0; // => t=⅓(ξ=-⅓)
-                    op::calc_coords(&mut pc, &mut pad, &ksi)?;
+                    op::calc_coords(&mut xc, &mut pad, &ksi)?;
                     ksi[0] = 1.0 / 3.0; // => t=⅔(ξ=+⅓)
-                    op::calc_coords(&mut pd, &mut pad, &ksi)?;
-                    qc[0] = (-5.0 * pa!(pad, 0) + 2.0 * pb!(pad, 0) + 18.0 * pc[0] - 9.0 * pd[0]) / 6.0;
-                    qc[1] = (-5.0 * pa!(pad, 1) + 2.0 * pb!(pad, 1) + 18.0 * pc[1] - 9.0 * pd[1]) / 6.0;
-                    qd[0] = (2.0 * pa!(pad, 0) - 5.0 * pb!(pad, 0) - 9.0 * pc[0] + 18.0 * pd[0]) / 6.0;
-                    qd[1] = (2.0 * pa!(pad, 1) - 5.0 * pb!(pad, 1) - 9.0 * pc[1] + 18.0 * pd[1]) / 6.0;
+                    op::calc_coords(&mut xd, &mut pad, &ksi)?;
+                    qc[0] = (-5.0 * xa + 2.0 * xb + 18.0 * xc[0] - 9.0 * xd[0]) / 6.0;
+                    qc[1] = (-5.0 * ya + 2.0 * yb + 18.0 * xc[1] - 9.0 * xd[1]) / 6.0;
+                    qd[0] = (2.0 * xa - 5.0 * xb - 9.0 * xc[0] + 18.0 * xd[0]) / 6.0;
+                    qd[1] = (2.0 * ya - 5.0 * yb - 9.0 * xc[1] + 18.0 * xd[1]) / 6.0;
                     self.canvas_edges
-                        .polycurve_add(pa!(pad, 0), pa!(pad, 1), PolyCode::MoveTo)
-                        .polycurve_add(/*   */ qc[0], /*   */ qc[1], PolyCode::Curve4)
-                        .polycurve_add(/*   */ qd[0], /*   */ qd[1], PolyCode::Curve4)
-                        .polycurve_add(pb!(pad, 0), pb!(pad, 1), PolyCode::Curve4);
+                        .polycurve_add(xa, ya, PolyCode::MoveTo)
+                        .polycurve_add(qc[0], qc[1], PolyCode::Curve4)
+                        .polycurve_add(qd[0], qd[1], PolyCode::Curve4)
+                        .polycurve_add(xb, yb, PolyCode::Curve4);
                 }
             }
         }
@@ -267,9 +256,9 @@ impl Draw {
         let space_ndim = mesh.ndim;
         assert_eq!(space_ndim, 3);
 
-        // middle points (p) on edge
-        let mut pc = Vector::new(space_ndim);
-        let mut pd = Vector::new(space_ndim);
+        // middle points (x..) on edge
+        let mut xc = Vector::new(space_ndim);
+        let mut xd = Vector::new(space_ndim);
 
         // reference coordinate
         let mut ksi = vec![0.0; space_ndim];
@@ -291,33 +280,35 @@ impl Draw {
                     pad.set_xx(m, j, mesh.points[edge.points[m]].coords[j]);
                 }
             }
+            let (xa, ya, za) = (pad.xxt[0][0], pad.xxt[1][0], pad.xxt[2][0]);
+            let (xb, yb, zb) = (pad.xxt[0][1], pad.xxt[1][1], pad.xxt[2][1]);
 
             // add poly-line points
             self.canvas_edges.polyline_3d_begin();
             match nnode {
                 2 => {
                     self.canvas_edges
-                        .polyline_3d_add(pa!(pad, 0), pa!(pad, 1), pa!(pad, 2))
-                        .polyline_3d_add(pb!(pad, 0), pb!(pad, 1), pb!(pad, 2));
+                        .polyline_3d_add(xa, ya, za)
+                        .polyline_3d_add(xb, yb, zb);
                 }
                 3 => {
                     ksi[0] = 0.0; // middle
-                    op::calc_coords(&mut pc, &mut pad, &ksi)?;
+                    op::calc_coords(&mut xc, &mut pad, &ksi)?;
                     self.canvas_edges
-                        .polyline_3d_add(pa!(pad, 0), pa!(pad, 1), pa!(pad, 2))
-                        .polyline_3d_add(/*   */ pc[0], /*   */ pc[1], /*   */ pc[2])
-                        .polyline_3d_add(pb!(pad, 0), pb!(pad, 1), pb!(pad, 2));
+                        .polyline_3d_add(xa, ya, za)
+                        .polyline_3d_add(xc[0], xc[1], xc[2])
+                        .polyline_3d_add(xb, yb, zb);
                 }
                 4 => {
                     ksi[0] = -1.0 / 3.0; // middle-left
-                    op::calc_coords(&mut pc, &mut pad, &ksi)?;
+                    op::calc_coords(&mut xc, &mut pad, &ksi)?;
                     ksi[0] = 1.0 / 3.0; // middle-right
-                    op::calc_coords(&mut pd, &mut pad, &ksi)?;
+                    op::calc_coords(&mut xd, &mut pad, &ksi)?;
                     self.canvas_edges
-                        .polyline_3d_add(pa!(pad, 0), pa!(pad, 1), pa!(pad, 2))
-                        .polyline_3d_add(/* */ pc[0], /* */ pc[1], /* */ pc[2])
-                        .polyline_3d_add(/* */ pd[0], /* */ pd[1], /* */ pd[2])
-                        .polyline_3d_add(pb!(pad, 0), pb!(pad, 1), pb!(pad, 2));
+                        .polyline_3d_add(xa, ya, za)
+                        .polyline_3d_add(xc[0], xc[1], xc[2])
+                        .polyline_3d_add(xd[0], xd[1], xd[2])
+                        .polyline_3d_add(xb, yb, zb);
                 }
                 _ => return Err("drawing of 3D edge with more than 4 nodes is not available"),
             }
@@ -349,8 +340,8 @@ mod tests {
     use crate::StrError;
     use plotpy::{Canvas, Plot};
 
-    #[test]
-    fn draw_works_2d_ring() -> Result<(), StrError> {
+    // #[test]
+    fn _draw_works_2d_ring() -> Result<(), StrError> {
         // draw reference circles
         let mut plot = Plot::new();
         let mut circle_in = Canvas::new();
@@ -358,17 +349,17 @@ mod tests {
         let mut circle_ou = Canvas::new();
         circle_in
             .set_face_color("None")
-            .set_edge_color("magenta")
+            .set_edge_color("#bfbfbf")
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, 1.0);
         circle_mi
             .set_face_color("None")
-            .set_edge_color("cyan")
+            .set_edge_color("#bfbfbf")
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, 1.5);
         circle_ou
             .set_face_color("None")
-            .set_edge_color("orange")
+            .set_edge_color("#bfbfbf")
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, 2.0);
         plot.add(&circle_in);
@@ -382,12 +373,14 @@ mod tests {
         draw.edges(&mut plot, &region, false)?;
 
         // draw points and point ids
+        draw.canvas_points.set_marker_color("red");
         draw.canvas_point_ids
             .set_align_horizontal("left")
             .set_align_vertical("bottom")
-            .set_color("black")
-            .set_bbox_facecolor("gold")
-            .set_bbox_alpha(0.5);
+            .set_color("gold")
+            .set_fontsize(9.0)
+            .set_bbox_facecolor("black")
+            .set_bbox_alpha(0.6);
         draw.points(&mut plot, &region.mesh);
         draw.point_ids(&mut plot, &region.mesh);
 
@@ -395,15 +388,15 @@ mod tests {
         draw.cell_ids(&mut plot, &region.mesh)?;
 
         // save figure
-        // plot.set_figure_size_points(400.0, 400.0)
-        //     .set_equal_axes(true)
-        //     .set_range(-0.2, 2.2, -0.2, 2.2)
-        //     .save("/tmp/gemlab/draw_works_2d_ring.svg")?;
+        plot.set_figure_size_points(400.0, 400.0)
+            .set_equal_axes(true)
+            .set_range(-0.1, 2.1, -0.1, 2.1)
+            .save("/tmp/gemlab/draw_works_2d_ring.svg")?;
         Ok(())
     }
 
-    #[test]
-    fn draw_works_2d_qua12() -> Result<(), StrError> {
+    // #[test]
+    fn _draw_works_2d_qua12() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua12();
         let region = Region::with(mesh, Extract::All)?;
@@ -411,14 +404,14 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        // plot.set_figure_size_points(400.0, 400.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/draw_works_2d_qua12.svg")?;
+        plot.set_figure_size_points(400.0, 400.0)
+            .set_equal_axes(true)
+            .save("/tmp/gemlab/draw_works_2d_qua12.svg")?;
         Ok(())
     }
 
-    #[test]
-    fn draw_works_2d_qua16() -> Result<(), StrError> {
+    // #[test]
+    fn _draw_works_2d_qua16() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua16();
         let region = Region::with(mesh, Extract::All)?;
@@ -426,28 +419,28 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        // plot.set_figure_size_points(400.0, 400.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/draw_works_2d_qua16.svg")?;
+        plot.set_figure_size_points(400.0, 400.0)
+            .set_equal_axes(true)
+            .save("/tmp/gemlab/draw_works_2d_qua16.svg")?;
         Ok(())
     }
 
-    #[test]
-    fn draw_works_2d_qua17() -> Result<(), StrError> {
+    // #[test]
+    fn _draw_works_2d_qua17() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua17();
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
-        // plot.set_figure_size_points(400.0, 400.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/draw_works_2d_qua17.svg")?;
+        plot.set_figure_size_points(400.0, 400.0)
+            .set_equal_axes(true)
+            .save("/tmp/gemlab/draw_works_2d_qua17.svg")?;
         Ok(())
     }
 
-    #[test]
-    fn draw_works_2d_mixed() -> Result<(), StrError> {
+    // #[test]
+    fn _draw_works_2d_mixed() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::mixed_shapes_2d();
         let region = Region::with(mesh, Extract::All)?;
@@ -455,14 +448,14 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        // plot.set_figure_size_points(400.0, 400.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/draw_works_2d_mixed.svg")?;
+        plot.set_figure_size_points(400.0, 400.0)
+            .set_equal_axes(true)
+            .save("/tmp/gemlab/draw_works_2d_mixed.svg")?;
         Ok(())
     }
 
-    #[test]
-    fn draw_works_3d() -> Result<(), StrError> {
+    // #[test]
+    fn _draw_works_3d() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::two_cubes_vertical();
         let region = Region::with(mesh, Extract::All)?;
@@ -472,19 +465,20 @@ mod tests {
             .set_align_horizontal("left")
             .set_align_vertical("bottom")
             .set_color("black")
+            .set_fontsize(10.0)
             .set_bbox_facecolor("gold")
             .set_bbox_alpha(0.5);
         draw.points(&mut plot, &region.mesh);
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        // plot.set_figure_size_points(500.0, 500.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/draw_works_3d.svg")?;
+        plot.set_figure_size_points(500.0, 500.0)
+            .set_equal_axes(true)
+            .save("/tmp/gemlab/draw_works_3d.svg")?;
         Ok(())
     }
 
-    #[test]
-    fn draw_works_3d_eight_hex20() -> Result<(), StrError> {
+    // #[test]
+    fn _draw_works_3d_eight_hex20() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_3d_eight_hex20();
         let region = Region::with(mesh, Extract::All)?;
@@ -492,14 +486,14 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        // plot.set_figure_size_points(800.0, 800.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/draw_works_3d_eight_hex20.svg")?;
+        plot.set_figure_size_points(800.0, 800.0)
+            .set_equal_axes(true)
+            .save("/tmp/gemlab/draw_works_3d_eight_hex20.svg")?;
         Ok(())
     }
 
-    #[test]
-    fn draw_works_3d_mixed() -> Result<(), StrError> {
+    // #[test]
+    fn _draw_works_3d_mixed() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::mixed_shapes_3d();
         let region = Region::with(mesh, Extract::All)?;
@@ -507,9 +501,9 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        // plot.set_figure_size_points(800.0, 800.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/draw_works_3d_mixed.svg")?;
+        plot.set_figure_size_points(800.0, 800.0)
+            .set_equal_axes(true)
+            .save("/tmp/gemlab/draw_works_3d_mixed.svg")?;
         Ok(())
     }
 }

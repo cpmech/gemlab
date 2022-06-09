@@ -100,7 +100,7 @@ pub struct Scratchpad {
     /// where `M = nnode - 1`
     /// ```
     ///
-    /// Must call `set_xx` to set the components, otherwise calculations will be **incorrect.**
+    /// You must call `set_xx` to set the components, otherwise calculations will be **incorrect.**
     pub xxt: Matrix,
 
     /// Minimum coordinates (space_ndim)
