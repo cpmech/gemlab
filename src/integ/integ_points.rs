@@ -89,7 +89,7 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
 /// * `4` -- Conventional Legendre integration points and weights
 /// * `5` -- Wilson's integration points and weights. "Corner" version
 /// * `1_005` -- 5 points. Wilson's integration points and weights. "Stable" version version with w0=0.004 and wa=0.999 to mimic 4-point rule
-///              **Warning:** This set performs poorly with functions such as ∫(x²+y²) dx dy
+///              **Warning:** This set performs poorly with functions such as ∫∫(x²+y²) dx dy
 /// * `8` -- Wilson's integration points and weights.
 /// * `9` -- Conventional Legendre integration points and weights
 /// * `16` -- Conventional Legendre integration points and weights
@@ -110,6 +110,7 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
 /// * `8` -- Conventional Legendre integration points and weights, degree 3
 /// * `9` -- Wilson's integration points and weights. "Corner" version
 /// * `1_009` -- Wilson's integration points and weights. "Stable" version
+///              **Warning:** This set performs poorly with functions such as ∫∫∫(x²+y²+z²) dx dy dz
 /// * `14` -- Iron's integration points and weights
 /// * `27` -- Conventional Legendre integration points and weights, degree 5
 /// * `64` -- Conventional Legendre integration points and weights, degree 7
@@ -339,7 +340,7 @@ pub const IP_QUA_WILSON_CORNER_5: [[f64; 4]; 5] = [
 /// 
 /// # Warning
 /// 
-/// This set performs poorly with functions such as ∫(x²+y²) dx dy
+/// This set performs poorly with functions such as ∫∫(x²+y²) dx dy
 #[rustfmt::skip]
 pub const IP_QUA_WILSON_STABLE_5: [[f64; 4]; 5] = [
     [-0.5776391000000000, -0.5776391000000000, 0.0, 0.999],
@@ -571,6 +572,10 @@ pub const IP_HEX_WILSON_CORNER_9: [[f64; 4]; 9] = [
 ];
 
 /// Wilson's integration points and weights. "Stable" version, 9 points
+/// 
+/// # Warning
+/// 
+/// This set performs poorly with functions such as ∫∫∫(x²+y²+z²) dx dy dz
 #[rustfmt::skip]
 pub const IP_HEX_WILSON_STABLE_9: [[f64; 4]; 9] = [
     [-0.5776391, -0.5776391, -0.5776391000000000,  0.999],
