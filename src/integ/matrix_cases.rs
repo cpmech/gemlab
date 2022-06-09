@@ -60,6 +60,63 @@ use russell_tensor::Tensor4;
 /// # Examples
 ///
 /// ```
+/// use gemlab::integ::{default_integ_points, mat_gdg_stiffness};
+/// use gemlab::shapes::{GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_lab::{copy_matrix, Matrix};
+/// use russell_tensor::LinElasticity;
+///
+/// fn main() -> Result<(), StrError> {
+///     // shape and state
+///     let space_ndim = 3;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4)?;
+///     pad.set_xx(0, 0, 2.0);
+///     pad.set_xx(0, 1, 3.0);
+///     pad.set_xx(0, 2, 4.0);
+///     pad.set_xx(1, 0, 6.0);
+///     pad.set_xx(1, 1, 3.0);
+///     pad.set_xx(1, 2, 2.0);
+///     pad.set_xx(2, 0, 2.0);
+///     pad.set_xx(2, 1, 5.0);
+///     pad.set_xx(2, 2, 1.0);
+///     pad.set_xx(3, 0, 4.0);
+///     pad.set_xx(3, 1, 3.0);
+///     pad.set_xx(3, 2, 6.0);
+///
+///     // constants
+///     let young = 480.0;
+///     let poisson = 1.0 / 3.0;
+///     let two_dim = false;
+///     let plane_stress = false;
+///     let model = LinElasticity::new(young, poisson, two_dim, plane_stress);
+///
+///     // stiffness
+///     let nrow = pad.kind.nnode() * space_ndim;
+///     let mut kk = Matrix::new(nrow, nrow);
+///     let ips = default_integ_points(pad.kind);
+///     mat_gdg_stiffness(&mut kk, &mut pad, ips, 1.0, true, |dd, _| {
+///         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+///     })?;
+///
+///     // check
+///     let correct =
+///     "┌                                                                         ┐\n\
+///      │   745   540   120    -5    30    60  -270  -240     0  -470  -330  -180 │\n\
+///      │   540  1720   270  -120   520   210  -120 -1080   -60  -300 -1160  -420 │\n\
+///      │   120   270   565     0   150   175     0  -120  -270  -120  -300  -470 │\n\
+///      │    -5  -120     0   145   -90   -60   -90   120     0   -50    90    60 │\n\
+///      │    30   520   150   -90   220    90    60  -360   -60     0  -380  -180 │\n\
+///      │    60   210   175   -60    90   145     0  -120   -90     0  -180  -230 │\n\
+///      │  -270  -120     0   -90    60     0   180     0     0   180    60     0 │\n\
+///      │  -240 -1080  -120   120  -360  -120     0   720     0   120   720   240 │\n\
+///      │     0   -60  -270     0   -60   -90     0     0   180     0   120   180 │\n\
+///      │  -470  -300  -120   -50     0     0   180   120     0   340   180   120 │\n\
+///      │  -330 -1160  -300    90  -380  -180    60   720   120   180   820   360 │\n\
+///      │  -180  -420  -470    60  -180  -230     0   240   180   120   360   520 │\n\
+///      └                                                                         ┘";
+///     assert_eq!(format!("{:.0}", kk), correct);
+///     Ok(())
+/// }
 /// ```
 pub fn mat_gdg_stiffness<F>(
     kk: &mut Matrix,

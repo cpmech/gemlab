@@ -62,6 +62,29 @@ use russell_tensor::Tensor2;
 /// See also the `examples` directory.
 ///
 /// ```
+/// use gemlab::integ::{default_integ_points, vec_a_shape_times_scalar};
+/// use gemlab::shapes::{GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+///     pad.set_xx(0, 0, 2.0);
+///     pad.set_xx(0, 1, 3.0);
+///     pad.set_xx(1, 0, 6.0);
+///     pad.set_xx(1, 1, 3.0);
+///     pad.set_xx(2, 0, 2.0);
+///     pad.set_xx(2, 1, 6.0);
+///     let ips = default_integ_points(pad.kind);
+///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
+///     vec_a_shape_times_scalar(&mut a, &mut pad, ips, 1.0, true, |_| Ok(5.0))?;
+///     // solution (cₛ = 5, A = 6):
+///     // aᵐ = cₛ A / 3 = 10
+///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
+///     Ok(())
+/// }
 /// ```
 pub fn vec_a_shape_times_scalar<F>(
     a: &mut Vector,
@@ -162,6 +185,34 @@ where
 /// See also the `examples` directory.
 ///
 /// ```
+/// use gemlab::integ::{default_integ_points, vec_b_shape_times_vector};
+/// use gemlab::shapes::{GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+///     pad.set_xx(0, 0, 2.0);
+///     pad.set_xx(0, 1, 3.0);
+///     pad.set_xx(1, 0, 6.0);
+///     pad.set_xx(1, 1, 3.0);
+///     pad.set_xx(2, 0, 2.0);
+///     pad.set_xx(2, 1, 6.0);
+///     let ips = default_integ_points(pad.kind);
+///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
+///     vec_b_shape_times_vector(&mut b, &mut pad, ips, 1.0, true, |v, _| {
+///         v[0] = 1.0;
+///         v[1] = 2.0;
+///         Ok(())
+///     })?;
+///     // solution (A = 6):
+///     // bᵐ₀ = v₀ A / 3
+///     // bᵐ₁ = v₁ A / 3
+///     assert_vec_approx_eq!(b.as_data(), &[2.0, 4.0, 2.0, 4.0, 2.0, 4.0], 1e-14);
+///     Ok(())
+/// }
 /// ```
 pub fn vec_b_shape_times_vector<F>(
     b: &mut Vector,
@@ -270,6 +321,38 @@ where
 /// See also the `examples` directory.
 ///
 /// ```
+/// use gemlab::integ::{default_integ_points, vec_c_vector_dot_gradient};
+/// use gemlab::shapes::{GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+///     pad.set_xx(0, 0, 2.0);
+///     pad.set_xx(0, 1, 3.0);
+///     pad.set_xx(1, 0, 6.0);
+///     pad.set_xx(1, 1, 3.0);
+///     pad.set_xx(2, 0, 2.0);
+///     pad.set_xx(2, 1, 6.0);
+///     let ips = default_integ_points(pad.kind);
+///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
+///     vec_c_vector_dot_gradient(&mut c, &mut pad, ips, 1.0, true, |w, _| {
+///         w[0] = 1.0;
+///         w[1] = 2.0;
+///         Ok(())
+///     })?;
+///     // solution (A = 6):
+///     // cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
+///     //     ┌       ┐
+///     //     │ -¼ -⅓ │
+///     // G = │  ¼  0 │
+///     //     │  0  ⅓ │
+///     //     └       ┘
+///     assert_vec_approx_eq!(c.as_data(), &[-5.5, 1.5, 4.0], 1e-14);
+///     Ok(())
+/// }
 /// ```
 pub fn vec_c_vector_dot_gradient<F>(
     c: &mut Vector,
@@ -379,6 +462,40 @@ where
 /// See also the `examples` directory.
 ///
 /// ```
+/// use gemlab::integ::{default_integ_points, vec_d_tensor_dot_gradient};
+/// use gemlab::shapes::{GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_chk::assert_vec_approx_eq;
+/// use russell_lab::Vector;
+///
+/// fn main() -> Result<(), StrError> {
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+///     pad.set_xx(0, 0, 2.0);
+///     pad.set_xx(0, 1, 3.0);
+///     pad.set_xx(1, 0, 6.0);
+///     pad.set_xx(1, 1, 3.0);
+///     pad.set_xx(2, 0, 2.0);
+///     pad.set_xx(2, 1, 6.0);
+///     let ips = default_integ_points(pad.kind);
+///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
+///     vec_d_tensor_dot_gradient(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
+///         sig.sym_set(0, 0, 1.0);
+///         sig.sym_set(1, 1, 2.0);
+///         sig.sym_set(0, 1, 3.0);
+///         Ok(())
+///     })?;
+///     // solution (A = 6):
+///     // dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁) A
+///     // dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁) A
+///     //     ┌       ┐
+///     //     │ -¼ -⅓ │
+///     // G = │  ¼  0 │
+///     //     │  0  ⅓ │
+///     //     └       ┘
+///     assert_vec_approx_eq!(d.as_data(), &[-7.5, -8.5, 1.5, 4.5, 6.0, 4.0], 1e-14);
+///     Ok(())
+/// }
 /// ```
 pub fn vec_d_tensor_dot_gradient<F>(
     d: &mut Vector,
