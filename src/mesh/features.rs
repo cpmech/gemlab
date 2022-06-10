@@ -113,6 +113,8 @@ impl Features {
     /// # Panics
     ///
     /// 1. This function works in 2D or 3D only; otherwise, it will panic.
+    /// 2. This function will panic if the mesh data is invalid,
+    ///    e.g., the cell points array doesn't contain enough points or the indices are incorrect
     pub(crate) fn new(mesh: &Mesh, extract: Extract) -> (Option<MapEdge2dToCells>, Option<MapFaceToCells>, Features) {
         assert!(mesh.ndim >= 2 && mesh.ndim <= 3);
         let two_dim = if mesh.ndim == 2 { true } else { false };
