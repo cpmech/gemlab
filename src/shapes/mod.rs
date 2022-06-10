@@ -41,7 +41,7 @@
 //! ```text
 //! → →         →  →
 //! x(ξ) = Σ Nᵐ(ξ) xᵐ
-//!        m         
+//!        m
 //! ```
 //!
 //! where `x` is the (space_ndim) vector of real coordinates, `ξ` is the (geo_ndim)
@@ -61,12 +61,12 @@
 //!
 //! Here, we consider two cases:
 //!
-//! * General case with geo_ndim == space_ndim; and
+//! * General case with geo_ndim = space_ndim; and
 //! * Line in multi-dimensions with geo_ndim = 1 and space_ndim > 1.
 //!
-//! ## General case with geo_ndim == space_ndim
+//! ## General case with geo_ndim = space_ndim
 //!
-//! If `geo_ndim == space_ndim`, we define the Jacobian tensor as
+//! If `geo_ndim = space_ndim = 2 or 3`, we define the Jacobian tensor as
 //!
 //! ```text
 //!         →
@@ -126,16 +126,17 @@
 //!
 //! where `G` is an (nnode,space_ndim) matrix.
 //!
-//! ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+//! ## Line in multi-dimensions (geo_ndim = 1 and space_ndim = 2 or 3)
 //!
 //! In this case, the Jacobian equals the (space_ndim,1) base vector `g₁` which
 //! is tangent to the line element, i.e.,
 //!
 //! ```text
 //!                          →
-//! →    →     →            dx
-//! J := Jline(ξ) = g₁(ξ) = —— = Xᵀ · L
+//! →    →     →    →  →    dx
+//! J := Jline(ξ) = g₁(ξ) = ——
 //!                         dξ
+//! matrix notation: Jline = Xᵀ · L
 //! ```
 //!
 //! We also consider a parametric coordinate `ℓ` which varies

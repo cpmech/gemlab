@@ -75,14 +75,14 @@ pub struct Scratchpad {
     /// ```
     pub jacobian: Matrix,
 
-    /// Matrix inv(J): (space_ndim,space_ndim) Inverse Jacobian matrix (only if geo_ndim == space_ndim) at ξ (ksi)
+    /// Matrix inv(J): (space_ndim,space_ndim) Inverse Jacobian matrix (only if geo_ndim = space_ndim) at ξ (ksi)
     ///
-    /// Only available if `geo_ndim == space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
+    /// Only available if `geo_ndim = space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
     pub inv_jacobian: Matrix,
 
-    /// Matrix G: (nnode,space_ndim) dNᵐ/dx Gradient of shape functions (only if geo_ndim == space_ndim) at ξ (ksi)
+    /// Matrix G: (nnode,space_ndim) dNᵐ/dx Gradient of shape functions (only if geo_ndim = space_ndim) at ξ (ksi)
     ///
-    /// Only available if `geo_ndim == space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
+    /// Only available if `geo_ndim = space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
     ///
     /// ```text
     /// G = L · J⁻¹
@@ -93,7 +93,7 @@ pub struct Scratchpad {
     ///
     /// ```text
     ///      ┌                              ┐  superscript = node
-    ///      | x⁰₀  x¹₀  x²₀  x³₀       xᴹ₀ |  subscript = dimension
+    ///      | x⁰₀  x¹₀  x²₀  x³₀       xᴹ₀ |  subscript = space dimension
     /// Xᵀ = | x⁰₁  x¹₁  x²₁  x³₁  ...  xᴹ₁ |
     ///      | x⁰₂  x¹₂  x²₂  x³₂       xᴹ₂ |
     ///      └                              ┘_(space_ndim,nnode)
