@@ -5,9 +5,79 @@
 //! * `n_integ_point` -- number of integration (Gauss) points
 //! * `|J|` -- the determinant of the Jacobian dx/dξ
 //! * `||J||` -- the norm of the Jacobian vector for lines in multi-dimensions
+//! * `ξ` -- ksi (or xi) -- coordinates in the reference space
 //! * `ιᵖ := ξᵖ` -- (**iota**-p gets ksi-p (or xi-p)) --
 //!    the coordinate of the integration point on the reference (natural) space
 //! * `wᵖ` -- the weight of the p-th integration point
+//! * Xᵀ -- Transposed matrix of coordinates
+//! * N -- Shape functions
+//! * L -- Derivatives of shape functions
+//! * J -- Jacobian tensor
+//! * J⁻¹ -- Inverse Jacobian matrix (only available if geo_ndim = space_ndim)
+//! * G -- Gradients of shape functions (derivatives w.r.t real coordinates x)
+//! * see also the subsection named **Expressions** below
+//!
+//! # Functionality
+//!
+//! ## Integration of scalar field over a geometric shape
+//!
+//! Function [scalar_field()]
+//!
+//! ```text
+//!     ⌠   → →
+//! I = │ s(x(ξ)) dΩ
+//!     ⌡
+//!     Ωₑ
+//! ```
+//!
+//! ## Integration of some combinations involving N and G resulting in vectors
+//!
+//! Interpolation functions times scalar field [vec_a_shape_times_scalar()]:
+//!
+//! ```text
+//!      ⌠    → →     →
+//! aᵐ = │ Nᵐ(x(ξ)) s(x) tₕ dΩ
+//!      ⌡
+//!      Ωₑ
+//! ```
+//!
+//! Interpolation functions times vector field [vec_b_shape_times_vector()]:
+//!
+//! ```text
+//! →    ⌠    → →   → →
+//! bᵐ = │ Nᵐ(x(ξ)) v(x) tₕ dΩ
+//!      ⌡
+//!      Ωₑ
+//! ```
+//!
+//! Vector dot gradient [vec_c_vector_dot_gradient()]:
+//!
+//! ```text
+//!      ⌠ → →    →  → →
+//! cᵐ = │ w(x) · Gᵐ(x(ξ)) tₕ dΩ
+//!      ⌡
+//!      Ωₑ
+//! ```
+//!
+//! Tensor dot gradient [vec_d_tensor_dot_gradient()]:
+//!
+//! ```text
+//! →    ⌠   →    →  → →
+//! dᵐ = │ σ(x) · Gᵐ(x(ξ)) tₕ dΩ
+//!      ⌡ ▔
+//!      Ωₑ
+//! ```
+//!
+//! ## Integration of some combinations involving N, tensors, and G, resulting in matrices
+//!
+//! Gradient(G) dot 4th-tensor(D) dot gradient(G) integration (stiffness matrix) [mat_gdg_stiffness()]:
+//!
+//! ```text
+//!       ⌠               →    →
+//! Kᵐⁿ = │ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ tₕ dΩ
+//! ▔     ⌡
+//!       Ωₑ
+//! ```
 //!
 //! # Expressions
 //!
@@ -55,7 +125,7 @@
 //! matrix notation: x = Xᵀ ⋅ N
 //! ```
 //!
-//! ## J: Jacobian tensor (geo_ndim = space_ndim = 2 or 3)
+//! ## J: Jacobian tensor (case when geo_ndim = space_ndim = 2 or 3)
 //!
 //! ```text
 //!         →
@@ -67,7 +137,7 @@
 //! J is a (space_ndim,geo_ndim) matrix
 //! ```
 //!
-//! ## J: Jacobian vector (geo_ndim = 1 and space_ndim = 2 or 3)
+//! ## J: Jacobian vector (case when geo_ndim = 1 and space_ndim = 2 or 3)
 //!
 //! ```text
 //!                          →

@@ -1,7 +1,6 @@
+use super::IntegPointData;
 use crate::shapes::{op, Scratchpad};
 use crate::StrError;
-
-use super::IntegPointData;
 
 /// Implements the integration of a scalar field over a geometric shape
 ///
