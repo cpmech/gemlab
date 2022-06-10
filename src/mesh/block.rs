@@ -1235,6 +1235,53 @@ mod tests {
     }
 
     #[test]
+    fn transform_into_ring_works_2d_qua16() -> Result<(), StrError> {
+        let mut block = Block::new_square(1.0);
+        block.set_ndiv(&[2, 2])?;
+        block.set_transform_into_ring(
+            true,
+            Some(ArgsRing {
+                amin: 0.0,
+                amax: PI / 2.0,
+                rmin: 3.0,
+                rmax: 8.0,
+                zmin: 0.0,
+                zmax: 1.0,
+            }),
+        )?;
+        let mesh = block.subdivide(GeoKind::Qua16)?;
+        for point in &mesh.points {
+            let mut radius = 0.0;
+            for i in 0..2 {
+                assert!(point.coords[i] >= 0.0);
+                assert!(point.coords[i] <= block.args_ring.rmax);
+                radius += point.coords[i] * point.coords[i];
+            }
+            radius = f64::sqrt(radius);
+            if [0, 11, 7, 3, 35, 32, 29].contains(&point.id) {
+                assert_approx_eq!(radius, block.args_ring.rmin, 1e-15);
+            }
+            if [1, 5, 9, 2, 30, 33, 28].contains(&point.id) {
+                assert_approx_eq!(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
+            }
+            if [16, 19, 22, 17, 41, 43, 40].contains(&point.id) {
+                assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
+            }
+        }
+        if false {
+            draw_ring(
+                &Region::with(mesh, Extract::All)?,
+                &block.args_ring,
+                true,
+                true,
+                true,
+                "/tmp/gemlab/test_transform_into_ring_2d_qua16.svg",
+            )?;
+        }
+        Ok(())
+    }
+
+    #[test]
     fn transform_into_ring_works_3d() -> Result<(), StrError> {
         let mut block = Block::new_cube(1.0);
         block.set_ndiv(&[2, 2, 2])?;
@@ -1287,6 +1334,46 @@ mod tests {
         }
         if false {
             draw_mesh(mesh, "/tmp/gemlab/test_transform_into_ring_3d.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn transform_into_ring_works_3d_hex32() -> Result<(), StrError> {
+        let mut block = Block::new_cube(1.0);
+        block.set_ndiv(&[2, 2, 2])?;
+        block.set_transform_into_ring(
+            true,
+            Some(ArgsRing {
+                amin: 0.0,
+                amax: PI / 2.0,
+                rmin: 3.0,
+                rmax: 8.0,
+                zmin: 0.0,
+                zmax: 2.0,
+            }),
+        )?;
+        let mesh = block.subdivide(GeoKind::Hex32)?;
+        for point in &mesh.points {
+            let mut radius = 0.0;
+            for i in 0..2 {
+                assert!(point.coords[i] >= 0.0);
+                assert!(point.coords[i] <= block.args_ring.rmax);
+                radius += point.coords[i] * point.coords[i];
+            }
+            radius = f64::sqrt(radius);
+            if [0, 15, 14, 3, 61, 60, 53, 24, 25, 4, 7, 67, 66, 55, 123, 122, 71, 94].contains(&point.id) {
+                assert_approx_eq!(radius, block.args_ring.rmin, 1e-15);
+            }
+            if [90, 91, 118, 62, 56, 63, 57, 119, 5, 27, 1].contains(&point.id) {
+                assert_approx_eq!(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
+            }
+            if [32, 48, 49, 72, 130, 78, 109, 44, 39, 38].contains(&point.id) {
+                assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
+            }
+        }
+        if false {
+            draw_mesh(mesh, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg")?;
         }
         Ok(())
     }
