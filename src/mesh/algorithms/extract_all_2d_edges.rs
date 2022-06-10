@@ -14,7 +14,6 @@ use std::collections::HashMap;
 ///
 /// 1. It panics if `shapes.len() != mesh.cells.len()` (i.e., the shapes vector and the mesh must be compatible)
 /// 2. It panics if `mesh.ndim != 2` (i.e., this function works in 2D only)
-#[inline]
 pub(crate) fn extract_all_2d_edges(mesh: &Mesh) -> MapEdge2dToCells {
     assert_eq!(mesh.ndim, 2);
     let mut edges = HashMap::new();
