@@ -1,18 +1,21 @@
-#![allow(unused_variables)]
-#![allow(unused_mut)]
-
-use super::{Edge, EdgeKey, Face, FaceKey, Mesh};
+use super::{set_xxt_from_points, Edge, EdgeKey, Face, FaceKey, Mesh};
+use crate::shapes::{op, Scratchpad};
+use crate::util::ONE_BY_3;
 use crate::StrError;
+use russell_lab::Vector;
 use std::collections::HashMap;
 
-/// Checks if the IDs of points and cells are sequential
+/// Checks if the IDs of points and cells are sequential and within bounds
 ///
 /// This function checks that:
 ///
-/// * the index of a point in the points vector matches the id of the point
-/// * the index of a cell in the cells vector matches the id of the cell
+/// 1. The position of a point in the points vector matches the id of the point
+/// 2. The position of a cell in the cells vector matches the id of the cell
+/// 3. The number of points of a cell matches the [GeoKind]
+/// 4. The points of a cell are within the range of available points; i.e., 0 and npoint
 pub fn check_ids_and_kind(mesh: &Mesh) -> Result<(), StrError> {
-    for i in 0..mesh.points.len() {
+    let npoint = mesh.points.len();
+    for i in 0..npoint {
         if mesh.points[i].id != i {
             return Err("incorrect point id found; ids must be sequential");
         }
@@ -24,23 +27,35 @@ pub fn check_ids_and_kind(mesh: &Mesh) -> Result<(), StrError> {
         if mesh.cells[i].points.len() != mesh.cells[i].kind.nnode() {
             return Err("number of cell points does not correspond to kind.nnode()");
         }
+        for p in &mesh.cells[i].points {
+            if *p >= npoint {
+                return Err("the id of a point specified in the points list of a cell is out of bounds");
+            }
+        }
     }
     Ok(())
 }
 
-/// Checks if the determinant of the Jacobian of all cells are non-negative
+/// Checks if the determinants of the Jacobian of all cells are non-negative
 pub fn check_jacobian(mesh: &Mesh) -> Result<(), StrError> {
-    // TODO: re-implement this
-    // let ksi = [0.0, 0.0, 0.0];
-    // for cell in &mesh.cells {
-    //     let shape = Shape::new(cell.kind);
-    //     let mut state = allocate_state(mesh, cell.kind, &cell.points)?;
-    //     let det_jac = shape.calc_jacobian(&mut state, &ksi)?;
-    //     if det_jac < 0.0 {
-    //         return Err("negative determinant of Jacobian found");
-    //     }
-    // }
+    let ksi = [ONE_BY_3, ONE_BY_3, ONE_BY_3];
+    for cell in &mesh.cells {
+        let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
+        set_xxt_from_points(&mut pad, &cell.points, mesh);
+        let det_jac = op::calc_jacobian(&mut pad, &ksi)?;
+        if det_jac < 0.0 {
+            return Err("negative determinant of Jacobian found");
+        }
+    }
     Ok(())
+}
+
+/// This is a convenience function that calls check ids and jacobian functions
+///
+/// Calls [check_ids_and_kind()] and [check_jacobian()]
+pub fn check_all(mesh: &Mesh) -> Result<(), StrError> {
+    check_ids_and_kind(mesh)?;
+    check_jacobian(mesh)
 }
 
 /// Checks if normal vectors of some 2D edges are correct
@@ -50,20 +65,20 @@ pub fn check_2d_edge_normals(
     solutions: &HashMap<EdgeKey, [f64; 2]>,
     tolerance: f64,
 ) -> Result<(), StrError> {
-    // TODO: re-implement this
-    // let ksi = &[0.0, 0.0];
-    // let mut normal = Vector::new(mesh.ndim);
-    // for (edge_key, solution) in solutions {
-    //     let edge = edges.get(edge_key).ok_or("cannot find edge_key in edges map")?;
-    //     let shape = Shape::new(edge.kind);
-    //     let mut state = allocate_state(mesh, shape.kind, &edge.points)?;
-    //     shape.calc_boundary_normal(&mut normal, &mut state, ksi)?;
-    //     for i in 0..mesh.ndim {
-    //         if f64::abs(normal[i] - solution[i]) > tolerance {
-    //             return Err("wrong normal vector found");
-    //         }
-    //     }
-    // }
+    let ksi = &[0.0, 0.0];
+    let mut normal = Vector::new(mesh.ndim);
+    for (edge_key, solution) in solutions {
+        let edge = edges.get(edge_key).ok_or("cannot find edge_key in edges map")?;
+        let mut pad = Scratchpad::new(mesh.ndim, edge.kind)?;
+        set_xxt_from_points(&mut pad, &edge.points, mesh);
+        op::calc_normal_vector(&mut normal, &mut pad, ksi)?;
+        // shape.calc_boundary_normal(&mut normal, &mut state, ksi)?;
+        for i in 0..mesh.ndim {
+            if f64::abs(normal[i] - solution[i]) > tolerance {
+                return Err("wrong 2d edge normal vector found");
+            }
+        }
+    }
     Ok(())
 }
 
@@ -74,20 +89,19 @@ pub fn check_face_normals(
     solutions: &HashMap<FaceKey, [f64; 3]>,
     tolerance: f64,
 ) -> Result<(), StrError> {
-    // TODO: re-implement this
-    // let ksi = &[0.0, 0.0, 0.0];
-    // let mut normal = Vector::new(mesh.ndim);
-    // for (face_key, solution) in solutions {
-    //     let face = faces.get(face_key).ok_or("cannot find face_key in faces map")?;
-    //     let shape = Shape::new(face.kind);
-    //     let mut state = allocate_state(mesh, face.kind, &face.points)?;
-    //     shape.calc_boundary_normal(&mut normal, &mut state, ksi)?;
-    //     for i in 0..mesh.ndim {
-    //         if f64::abs(normal[i] - solution[i]) > tolerance {
-    //             return Err("wrong normal vector found");
-    //         }
-    //     }
-    // }
+    let ksi = &[0.0, 0.0, 0.0];
+    let mut normal = Vector::new(mesh.ndim);
+    for (face_key, solution) in solutions {
+        let face = faces.get(face_key).ok_or("cannot find face_key in faces map")?;
+        let mut pad = Scratchpad::new(mesh.ndim, face.kind)?;
+        set_xxt_from_points(&mut pad, &face.points, mesh);
+        op::calc_normal_vector(&mut normal, &mut pad, ksi)?;
+        for i in 0..mesh.ndim {
+            if f64::abs(normal[i] - solution[i]) > tolerance {
+                return Err("wrong face normal vector found");
+            }
+        }
+    }
     Ok(())
 }
 
@@ -124,24 +138,29 @@ mod tests {
                 Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         };
+        check_ids_and_kind(&mesh).expect("should not fail");
+
+        mesh.points[0].id = 6;
+        assert_eq!(
+            check_ids_and_kind(&mesh).err(),
+            Some("incorrect point id found; ids must be sequential")
+        );
+        mesh.points[0].id = 0;
+
         assert_eq!(check_ids_and_kind(&mesh).expect("should not fail"), ());
 
-        // TODO: re-implement this
-        // mesh.points[0].id = 6;
-        // assert_eq!(
-        //     check_ids_and_kind(&mesh).err(),
-        //     Some("incorrect point id found; ids must be sequential")
-        // );
-        // mesh.points[0].id = 0;
+        mesh.cells[0].id = 2;
+        assert_eq!(
+            check_ids_and_kind(&mesh).err(),
+            Some("incorrect cell id found; ids must be sequential")
+        );
+        mesh.cells[0].id = 0;
 
-        // assert_eq!(check_ids_and_kind(&mesh).expect("should not fail"), ());
-
-        // mesh.cells[0].id = 2;
-        // assert_eq!(
-        //     check_ids_and_kind(&mesh).err(),
-        //     Some("incorrect cell id found; ids must be sequential")
-        // );
-        // mesh.cells[0].id = 0;
+        mesh.cells[0].points[0] = 8;
+        assert_eq!(
+            check_ids_and_kind(&mesh).err(),
+            Some("the id of a point specified in the points list of a cell is out of bounds")
+        );
     }
 
     #[test]
@@ -168,21 +187,20 @@ mod tests {
                 Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         };
-        assert_eq!(check_jacobian(&mesh).expect("should not fail"), ());
+        check_jacobian(&mesh).expect("should not fail");
 
-        // TODO: re-implement this
-        // mesh.cells[0].points[2] = 3;
-        // mesh.cells[0].points[3] = 2;
-        // assert_eq!(
-        //     check_jacobian(&mesh).err(),
-        //     Some("cannot compute inverse due to zero determinant")
-        // );
+        mesh.cells[0].points[1] = 3;
+        mesh.cells[0].points[2] = 3;
+        assert_eq!(
+            check_jacobian(&mesh).err(),
+            Some("cannot compute inverse due to zero determinant")
+        );
 
-        // mesh.cells[0].points = vec![0, 3, 2, 1];
-        // assert_eq!(
-        //     check_jacobian(&mesh).err(),
-        //     Some("negative determinant of Jacobian found")
-        // );
+        mesh.cells[0].points = vec![0, 3, 2, 1];
+        assert_eq!(
+            check_jacobian(&mesh).err(),
+            Some("negative determinant of Jacobian found")
+        );
     }
 
     #[test]
@@ -240,20 +258,19 @@ mod tests {
         ]);
         assert_eq!(check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).expect("ok"), ());
 
-        // TODO: re-implement this
-        // let points = &mut edges.get_mut(&(0, 3)).unwrap().points;
-        // points[0] = 3;
-        // points[1] = 0;
-        // assert_eq!(
-        //     check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).err(),
-        //     Some("wrong normal vector found")
-        // );
+        let points = &mut edges.get_mut(&(0, 3)).unwrap().points;
+        points[0] = 3;
+        points[1] = 0;
+        assert_eq!(
+            check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).err(),
+            Some("wrong 2d edge normal vector found")
+        );
 
-        // let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([((10, 20), [0.0, l])]);
-        // assert_eq!(
-        //     check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).err(),
-        //     Some("cannot find edge_key in edges map")
-        // );
+        let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([((10, 20), [0.0, l])]);
+        assert_eq!(
+            check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).err(),
+            Some("cannot find edge_key in edges map")
+        );
     }
 
     #[test]
@@ -313,19 +330,18 @@ mod tests {
         ]);
         assert_eq!(check_face_normals(&mesh, &faces, &solutions, 1e-15).expect("ok"), ());
 
-        // TODO: re-implement this
-        // let points = &mut faces.get_mut(&(0, 3, 4, 7)).unwrap().points;
-        // points[0] = 4;
-        // points[1] = 0;
-        // assert_eq!(
-        //     check_face_normals(&mesh, &faces, &solutions, 1e-15).err(),
-        //     Some("wrong normal vector found")
-        // );
+        let points = &mut faces.get_mut(&(0, 3, 4, 7)).unwrap().points;
+        points[0] = 4;
+        points[1] = 0;
+        assert_eq!(
+            check_face_normals(&mesh, &faces, &solutions, 1e-15).err(),
+            Some("wrong face normal vector found")
+        );
 
-        // let solutions: HashMap<FaceKey, [f64; 3]> = HashMap::from([((10, 20, 30, 40), [0.0, 0.0, l])]);
-        // assert_eq!(
-        //     check_face_normals(&mesh, &faces, &solutions, 1e-15).err(),
-        //     Some("cannot find face_key in faces map")
-        // );
+        let solutions: HashMap<FaceKey, [f64; 3]> = HashMap::from([((10, 20, 30, 40), [0.0, 0.0, l])]);
+        assert_eq!(
+            check_face_normals(&mesh, &faces, &solutions, 1e-15).err(),
+            Some("cannot find face_key in faces map")
+        );
     }
 }
