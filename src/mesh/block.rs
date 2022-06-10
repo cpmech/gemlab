@@ -1,5 +1,4 @@
 use super::{Cell, Mesh, Point};
-use crate::geometry::Circle;
 use crate::shapes::{op, GeoKind, Scratchpad};
 use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol, PI};
 use crate::StrError;
@@ -34,13 +33,14 @@ pub struct ArgsRing {
     pub zmax: f64,
 }
 
+/// Defines constraints for a side of a block
 #[derive(Clone, Debug)]
 pub enum Constraint {
-    /// Arc
-    Arc(Circle),
+    /// Circumference specified by (xc,yc,radius)
+    Circle(f64, f64, f64),
 
-    /// Arc surface extruded along X
-    ArcX(Circle),
+    /// Surface of a cylinder parallel to z specified by (xc,yc,radius)
+    CylinderZ(f64, f64, f64),
 }
 
 /// Defines a polygon on polyhedron that can be split into smaller shapes
@@ -616,7 +616,6 @@ impl Block {
 #[cfg(test)]
 mod tests {
     use super::{ArgsRing, Block, Constraint, StrError};
-    use crate::geometry::Circle;
     use crate::mesh::{draw_mesh, Draw, Extract, Region, Samples};
     use crate::shapes::GeoKind;
     use crate::util::PI;
@@ -742,10 +741,7 @@ mod tests {
     #[test]
     fn set_edge_constraint_works() -> Result<(), StrError> {
         let mut block = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
-        let constraint = Constraint::Arc(Circle {
-            center: [-1.0, -1.0],
-            radius: 2.0,
-        });
+        let constraint = Constraint::Circle(-1.0, -1.0, 2.0);
         block.set_edge_constraint(0, constraint);
         let ok = match block.edge_constraints[0] {
             Some(..) => true,
@@ -767,10 +763,7 @@ mod tests {
             [2.0, 2.0, 2.0],
             [0.0, 2.0, 2.0],
         ])?;
-        let constraint = Constraint::ArcX(Circle {
-            center: [-1.0, -1.0],
-            radius: 2.0,
-        });
+        let constraint = Constraint::CylinderZ(-1.0, -1.0, 2.0);
         block.set_face_constraint(0, constraint);
         let ok = match block.face_constraints[0] {
             Some(..) => true,
@@ -1116,12 +1109,9 @@ mod tests {
 
     #[test]
     fn derive_works() {
-        let constraint = Constraint::Arc(Circle {
-            center: [2.0, 3.0],
-            radius: 1.0,
-        });
+        let constraint = Constraint::Circle(2.0, 3.0, 1.0);
         let clone = constraint.clone();
-        let correct = "Arc(Circle { center: [2.0, 3.0], radius: 1.0 })";
+        let correct = "Circle(2.0, 3.0, 1.0)";
         assert_eq!(format!("{:?}", constraint), correct);
         assert_eq!(format!("{:?}", clone), correct);
     }
