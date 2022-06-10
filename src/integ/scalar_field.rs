@@ -22,7 +22,7 @@ use super::IntegPointData;
 ///
 /// # Input
 ///
-/// * `pad` -- [modified] Scratchpad
+/// * `pad` -- **modified** Scratchpad
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_s` -- Function `f(p)` corresponding to `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///

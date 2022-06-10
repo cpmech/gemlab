@@ -51,7 +51,7 @@ use russell_tensor::Tensor2;
 ///
 /// # Input
 ///
-/// * `pad` -- [modified] Scratchpad
+/// * `pad` -- **modified** Scratchpad
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
@@ -173,7 +173,7 @@ where
 ///
 /// # Input
 ///
-/// * `pad` -- [modified] Scratchpad
+/// * `pad` -- **modified** Scratchpad
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
@@ -309,7 +309,7 @@ where
 ///
 /// # Input
 ///
-/// * `pad` -- [modified] Scratchpad
+/// * `pad` -- **modified** Scratchpad
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
@@ -451,7 +451,7 @@ where
 ///
 /// # Input
 ///
-/// * `pad` -- [modified] Scratchpad
+/// * `pad` -- **modified** Scratchpad
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_d` -- Fills `d` vector with zeros, otherwise accumulate values into `d`

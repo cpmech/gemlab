@@ -51,7 +51,7 @@ use russell_tensor::Tensor4;
 ///
 /// # Input
 ///
-/// * `pad` -- [modified] Scratchpad
+/// * `pad` -- **modified** Scratchpad
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
