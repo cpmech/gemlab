@@ -344,8 +344,10 @@ impl Block {
     ///
     /// where `L=2` is the edge-length (in reference coordinates) and `wᵐ` are
     /// the weights for each division `m`.
-    pub fn set_ndiv(&mut self, ndiv: &[usize]) -> &mut Self {
-        assert_eq!(ndiv.len(), self.ndim);
+    pub fn set_ndiv(&mut self, ndiv: &[usize]) -> Result<&mut Self, StrError> {
+        if ndiv.len() != self.ndim {
+            return Err("ndiv.len() must be equal to ndim");
+        }
         for i in 0..self.ndim {
             assert!(ndiv[i] > 0);
             self.ndiv[i] = ndiv[i];
@@ -353,7 +355,7 @@ impl Block {
             let sum_w = ndiv[i] as f64;
             self.delta_ksi[i] = vec![w * Block::NAT_LENGTH / sum_w; ndiv[i]];
         }
-        self
+        Ok(self)
     }
 
     /// Sets constraint to an edge of this block
@@ -615,7 +617,7 @@ impl Block {
 mod tests {
     use super::{ArgsRing, Block, Constraint, StrError};
     use crate::geometry::Circle;
-    use crate::mesh::{Draw, Extract, Region, Samples};
+    use crate::mesh::{draw_mesh, Draw, Extract, Region, Samples};
     use crate::shapes::GeoKind;
     use crate::util::PI;
     use plotpy::{Canvas, Plot};
@@ -731,7 +733,7 @@ mod tests {
     #[test]
     fn set_ndiv_works() -> Result<(), StrError> {
         let mut block = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
-        block.set_ndiv(&[2, 4]);
+        block.set_ndiv(&[2, 4])?;
         assert_eq!(block.ndiv, &[2, 4]);
         assert_eq!(format!("{:?}", block.delta_ksi), "[[1.0, 1.0], [0.5, 0.5, 0.5, 0.5]]");
         Ok(())
@@ -1182,7 +1184,7 @@ mod tests {
     #[test]
     fn transform_into_ring_works_2d() -> Result<(), StrError> {
         let mut block = Block::new_square(1.0);
-        block.set_ndiv(&[2, 2]);
+        block.set_ndiv(&[2, 2])?;
         block.set_transform_into_ring(
             true,
             Some(ArgsRing {
@@ -1203,7 +1205,7 @@ mod tests {
         assert_eq!(mesh.cells[3].points, &[2, 5, 8, 6]);
         for point in &mesh.points {
             let mut radius = 0.0;
-            for i in 0..mesh.ndim {
+            for i in 0..2 {
                 assert!(point.coords[i] >= 0.0);
                 assert!(point.coords[i] <= block.args_ring.rmax);
                 radius += point.coords[i] * point.coords[i];
@@ -1228,6 +1230,63 @@ mod tests {
                 true,
                 "/tmp/gemlab/test_transform_into_ring_2d.svg",
             )?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn transform_into_ring_works_3d() -> Result<(), StrError> {
+        let mut block = Block::new_cube(1.0);
+        block.set_ndiv(&[2, 2, 2])?;
+        block.set_transform_into_ring(
+            true,
+            Some(ArgsRing {
+                amin: 0.0,
+                amax: PI / 2.0,
+                rmin: 3.0,
+                rmax: 8.0,
+                zmin: 0.0,
+                zmax: 2.0,
+            }),
+        )?;
+        let mesh = block.subdivide(GeoKind::Hex8)?;
+        assert_eq!(mesh.points.len(), 27);
+        assert_eq!(mesh.cells.len(), 8);
+        assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(mesh.cells[7].points, &[6, 11, 17, 14, 20, 23, 26, 24]);
+        for point in &mesh.points {
+            let mut radius = 0.0;
+            for i in 0..2 {
+                assert!(point.coords[i] >= 0.0);
+                assert!(point.coords[i] <= block.args_ring.rmax);
+                radius += point.coords[i] * point.coords[i];
+            }
+            radius = f64::sqrt(radius);
+            if [0, 3, 4, 7, 13, 15, 18, 21, 25].contains(&point.id) {
+                assert_approx_eq!(radius, block.args_ring.rmin, 1e-15);
+            }
+            if [1, 2, 5, 6, 12, 14, 19, 20, 24].contains(&point.id) {
+                assert_approx_eq!(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
+            }
+            if [8, 9, 10, 11, 16, 17, 22, 23, 26].contains(&point.id) {
+                assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
+            }
+            if [0, 1, 2, 3, 8, 9, 12, 13, 16].contains(&point.id) {
+                assert_approx_eq!(point.coords[2], block.args_ring.zmin, 1e-15);
+            }
+            if [4, 5, 6, 7, 10, 11, 14, 15, 17].contains(&point.id) {
+                assert_approx_eq!(
+                    point.coords[2],
+                    (block.args_ring.zmin + block.args_ring.zmax) / 2.0,
+                    1e-15
+                );
+            }
+            if [18, 19, 20, 21, 22, 23, 24, 25, 26].contains(&point.id) {
+                assert_approx_eq!(point.coords[2], block.args_ring.zmax, 1e-15);
+            }
+        }
+        if false {
+            draw_mesh(mesh, "/tmp/gemlab/test_transform_into_ring_3d.svg")?;
         }
         Ok(())
     }

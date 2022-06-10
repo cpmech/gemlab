@@ -1,4 +1,4 @@
-use super::{Features, Mesh, Region};
+use super::{Extract, Features, Mesh, Region};
 use crate::shapes::{op, GeoKind, Scratchpad};
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
@@ -340,6 +340,18 @@ impl Draw {
         }
         Ok(())
     }
+}
+
+/// Draws mesh
+///
+/// **Note:** This is a high-level function calling Draw and others
+pub fn draw_mesh(mesh: Mesh, filename: &str) -> Result<(), StrError> {
+    let region = Region::with(mesh, Extract::All)?;
+    let mut plot = Plot::new();
+    Draw::with(&mut plot, &region, true)?;
+    plot.set_equal_axes(true)
+        .set_figure_size_points(600.0, 600.0)
+        .save(filename)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
