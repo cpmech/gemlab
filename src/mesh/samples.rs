@@ -986,7 +986,7 @@ impl Samples {
 #[cfg(test)]
 mod tests {
     use super::Samples;
-    use crate::mesh::{check_ids_and_kind, check_jacobian};
+    use crate::mesh::check_all;
     use crate::StrError;
 
     #[test]
@@ -995,99 +995,85 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 2);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::two_cubes_vertical();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 12);
         assert_eq!(mesh.cells.len(), 2);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::four_cubes_wall();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::mixed_shapes_2d();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 3);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::mixed_shapes_3d();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 13);
         assert_eq!(mesh.cells.len(), 5);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua4();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua8();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 21);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua9();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua12();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua16();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua17();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::block_3d_eight_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::block_3d_eight_hex20();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 81);
         assert_eq!(mesh.cells.len(), 8);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
 
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 8);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_all(&mesh)?;
         Ok(())
     }
 }
