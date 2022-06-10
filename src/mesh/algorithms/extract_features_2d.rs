@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 /// # Panics
 ///
 /// 1. It panics if `mesh.ndim != 2` (i.e., this function works in 2D only)
+/// 2. It panics if the mesh data is invalid, e.g., the cell points array doesn't contain enough points
 pub(crate) fn extract_features_2d(mesh: &Mesh, edges: &MapEdge2dToCells, extract: Extract) -> Features {
     assert_eq!(mesh.ndim, 2);
 

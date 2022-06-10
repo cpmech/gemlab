@@ -6,7 +6,8 @@ use std::collections::{HashMap, HashSet};
 ///
 /// # Panics
 ///
-/// 2. It panics if `mesh.space != 3` (i.e., this function works in 3D only)
+/// 1. It panics if `mesh.space != 3` (i.e., this function works in 3D only)
+/// 2. It panics if the mesh data is invalid, e.g., the cell points array doesn't contain enough points
 pub(crate) fn extract_features_3d(mesh: &Mesh, faces: &MapFaceToCells, extract: Extract) -> Features {
     assert_eq!(mesh.ndim, 3);
 
