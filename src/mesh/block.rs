@@ -1,9 +1,38 @@
 use super::{Cell, Mesh, Point};
 use crate::geometry::Circle;
 use crate::shapes::{op, GeoKind, Scratchpad};
-use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol};
+use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol, PI};
 use crate::StrError;
 use russell_lab::Vector;
+
+/// Arguments to transform the Block generated mesh into a ring
+///
+/// ```text
+///   |            /
+///   |           / αmax
+///   ***=---__  /
+///   |         / _
+///   |        / ? *._          ,
+///   |       / ????? *.     ,-'
+///   ***=-_ / ???????? *.,-' αmin
+///   |     / - ?????? ,-'*
+///   |    /    *.? ,-'    *
+///   |   /      ,*'        *
+///   |  /    ,-'  *         *
+///   | /  ,-'      *         *
+///   |/.-'         #         #
+///   o ----------- # ------- # --> r
+///               rmin       rmax
+/// ```
+#[derive(Clone, Debug)]
+pub struct ArgsRing {
+    pub amin: f64,
+    pub amax: f64,
+    pub rmin: f64,
+    pub rmax: f64,
+    pub zmin: f64,
+    pub zmax: f64,
+}
 
 #[derive(Clone, Debug)]
 pub enum Constraint {
@@ -130,6 +159,12 @@ pub struct Block {
 
     /// Scratchpad for the block
     pad: Scratchpad,
+
+    /// Transform the generated mesh into a ring
+    transform_into_ring: bool,
+
+    /// Arguments to transform the generated mesh into a ring
+    args_ring: ArgsRing,
 }
 
 impl Block {
@@ -237,6 +272,7 @@ impl Block {
         // grid search
         let grid_ksi = GridSearch::new(&vec![-1.0; ndim], &vec![1.0; ndim], GsNdiv::Default, GsTol::Default).unwrap(); // should not fail here
 
+        // block
         Ok(Block {
             attribute_id: Block::ATTRIBUTE_ID,
             ndim,
@@ -246,7 +282,50 @@ impl Block {
             face_constraints: vec![None; nface],
             grid_ksi,
             pad,
+            transform_into_ring: false,
+            args_ring: ArgsRing {
+                amin: 30.0 * PI / 180.0,
+                amax: 60.0 * PI / 180.0,
+                rmin: 5.0,
+                rmax: 10.0,
+                zmin: 0.0,
+                zmax: 1.0,
+            },
         })
+    }
+
+    /// Allocates a new square block
+    ///
+    /// # Input
+    ///
+    /// * `l` -- the edge length
+    #[rustfmt::skip]
+    pub fn new_square(l: f64) -> Self {
+        Block::new(&[
+            [0.0, 0.0],
+            [  l, 0.0],
+            [  l,   l],
+            [0.0,   l],
+        ]).unwrap()
+    }
+
+    /// Allocates a new cubic block
+    ///
+    /// # Input
+    ///
+    /// * `l` -- the edge length
+    #[rustfmt::skip]
+    pub fn new_cube(l: f64) -> Self {
+        Block::new(&[
+            [0.0, 0.0, 0.0],
+            [  l, 0.0, 0.0],
+            [  l,   l, 0.0],
+            [0.0,   l, 0.0],
+            [0.0, 0.0,   l],
+            [  l, 0.0,   l],
+            [  l,   l,   l],
+            [0.0,   l,   l],
+        ]).unwrap()
     }
 
     /// Sets group
@@ -297,6 +376,68 @@ impl Block {
     pub fn set_face_constraint(&mut self, f: usize, constraint: Constraint) -> &mut Self {
         self.face_constraints[f] = Some(constraint);
         self
+    }
+
+    /// Sets flag to transform the generated mesh into a ring
+    ///
+    /// The resulting domain will be the area indicated with "?".
+    /// In 3D, an extrusion is applied along the out-of-plane direction.
+    ///
+    /// ```text
+    ///   |            /
+    ///   |           / αmax
+    ///   ***=---__  /
+    ///   |         / _
+    ///   |        / ? *._          ,
+    ///   |       / ????? *.     ,-'
+    ///   ***=-_ / ???????? *.,-' αmin
+    ///   |     / - ?????? ,-'*
+    ///   |    /    *.? ,-'    *
+    ///   |   /      ,*'        *
+    ///   |  /    ,-'  *         *
+    ///   | /  ,-'      *         *
+    ///   |/.-'         #         #
+    ///   o ----------- # ------- # --> r
+    ///               rmin       rmax
+    /// ```
+    ///
+    /// Intermediary mapping:
+    ///
+    /// r(ξ₀,ξ₁,ξ₂) = rmin + (ξ₀ - ξ₀min) · Δr / Δξ₀
+    /// α(ξ₀,ξ₁,ξ₂) = αmin + (ξ₁ - ξ₁min) · Δα / Δξ₁
+    /// z(ξ₀,ξ₁,ξ₂) = ξ₂
+    ///
+    /// Cylindrical coordinates:
+    ///
+    /// x₀ := r · cos(α)
+    /// x₁ := r · sin(α)
+    /// x₂ := z
+    ///
+    /// # Input
+    ///
+    /// * `flag` -- whether or not to transform mesh into a quarter of ring
+    /// * `args` -- the parameters shown in the figure above with the **angles in radians**
+    pub fn set_transform_into_ring(&mut self, flag: bool, args: Option<ArgsRing>) -> Result<&mut Self, StrError> {
+        self.transform_into_ring = flag;
+        if let Some(a) = args {
+            if a.amax <= a.amin {
+                return Err("amax must be greater than amin");
+            }
+            if a.rmax <= a.rmin {
+                return Err("rmax must be greater than rmin");
+            }
+            if a.zmax <= a.zmin {
+                return Err("zmax must be greater than zmin");
+            }
+            if a.amin < 0.0 || a.amin > PI / 2.0 {
+                return Err("amin must be given in radians and must be ≥ 0 and ≤ π/2");
+            }
+            if a.amax < 0.0 || a.amax > PI / 2.0 {
+                return Err("amax must be given in radians and must be ≥ 0 and ≤ π/2");
+            }
+            self.args_ring = a;
+        }
+        Ok(self)
     }
 
     /// Subdivide block into vertices and cells (mesh)
@@ -405,9 +546,13 @@ impl Block {
                                 let point_id = mesh.points.len();
                                 self.grid_ksi.insert(point_id, &ksi)?;
 
-                                // compute real coordinates of point using the block's
-                                // reference coordinates, already scaled and translated
-                                op::calc_coords(&mut x, &mut self.pad, &ksi)?;
+                                // reference coordinates are now scaled and translated
+                                if self.transform_into_ring {
+                                    self.map_coords_cylindrical(&mut x, &ksi);
+                                } else {
+                                    // compute real coordinates of point using the block's
+                                    op::calc_coords(&mut x, &mut self.pad, &ksi)?;
+                                }
 
                                 // add new point to mesh
                                 mesh.points.push(Point {
@@ -444,17 +589,37 @@ impl Block {
         }
         Ok(mesh)
     }
+
+    /// Maps reference coordinates to real coordinates on a cylinder
+    #[inline]
+    fn map_coords_cylindrical(&self, x: &mut Vector, ksi: &[f64]) {
+        assert_eq!(x.dim(), ksi.len());
+        const KSI_MIN: f64 = -1.0;
+        const KSI_DEL: f64 = 2.0;
+        let (amin, amax) = (self.args_ring.amin, self.args_ring.amax);
+        let (rmin, rmax) = (self.args_ring.rmin, self.args_ring.rmax);
+        let r = rmin + (ksi[0] - KSI_MIN) * (rmax - rmin) / KSI_DEL;
+        let a = amin + (ksi[1] - KSI_MIN) * (amax - amin) / KSI_DEL;
+        x[0] = r * f64::cos(a);
+        x[1] = r * f64::sin(a);
+        if x.dim() == 3 {
+            let (zmin, zmax) = (self.args_ring.zmin, self.args_ring.zmax);
+            x[2] = zmin + (ksi[2] - KSI_MIN) * (zmax - zmin) / KSI_DEL;
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{Block, Constraint, StrError};
+    use super::{ArgsRing, Block, Constraint, StrError};
     use crate::geometry::Circle;
-    use crate::mesh::Samples;
+    use crate::mesh::{Draw, Extract, Region, Samples};
     use crate::shapes::GeoKind;
-    use russell_chk::assert_vec_approx_eq;
+    use crate::util::PI;
+    use plotpy::{Canvas, Plot};
+    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     #[test]
     fn new_fails_on_wrong_input() {
@@ -957,5 +1122,113 @@ mod tests {
         let correct = "Arc(Circle { center: [2.0, 3.0], radius: 1.0 })";
         assert_eq!(format!("{:?}", constraint), correct);
         assert_eq!(format!("{:?}", clone), correct);
+    }
+
+    fn draw_ring(
+        region: &Region,
+        args: &ArgsRing,
+        with_ids: bool,
+        with_points: bool,
+        with_circle_mid: bool,
+        filename: &str,
+    ) -> Result<(), StrError> {
+        // draw reference circles
+        let mut plot = Plot::new();
+        let mut circle_in = Canvas::new();
+        let mut circle_mid = Canvas::new();
+        let mut circle_out = Canvas::new();
+        circle_in
+            .set_face_color("None")
+            .set_edge_color("#bfbfbf")
+            .set_line_width(7.0)
+            .draw_circle(0.0, 0.0, args.rmin);
+        if with_circle_mid {
+            circle_mid
+                .set_face_color("None")
+                .set_edge_color("#bfbfbf")
+                .set_line_width(7.0)
+                .draw_circle(0.0, 0.0, (args.rmax + args.rmin) / 2.0);
+        }
+        circle_out
+            .set_face_color("None")
+            .set_edge_color("#bfbfbf")
+            .set_line_width(7.0)
+            .draw_circle(0.0, 0.0, args.rmax);
+        plot.add(&circle_in);
+        plot.add(&circle_mid);
+        plot.add(&circle_out);
+        // draw mesh
+        let mut draw = Draw::new();
+        draw.canvas_point_ids
+            .set_bbox(false)
+            .set_align_horizontal("left")
+            .set_align_vertical("bottom");
+        draw.edges(&mut plot, region, false)?;
+        if with_ids {
+            draw.cell_ids(&mut plot, &region.mesh)?;
+            draw.point_ids(&mut plot, &region.mesh);
+        }
+        if with_points {
+            draw.points(&mut plot, &region.mesh);
+        }
+        let d = args.rmax * 0.05;
+        plot.set_equal_axes(true)
+            .set_figure_size_points(600.0, 600.0)
+            .set_range(-d, args.rmax + d, -d, args.rmax + d)
+            .save(filename)?;
+        Ok(())
+    }
+
+    #[test]
+    fn transform_into_ring_works_2d() -> Result<(), StrError> {
+        let mut block = Block::new_square(1.0);
+        block.set_ndiv(&[2, 2]);
+        block.set_transform_into_ring(
+            true,
+            Some(ArgsRing {
+                amin: 0.0,
+                amax: PI / 2.0,
+                rmin: 3.0,
+                rmax: 8.0,
+                zmin: 0.0,
+                zmax: 1.0,
+            }),
+        )?;
+        let mesh = block.subdivide(GeoKind::Qua4)?;
+        assert_eq!(mesh.points.len(), 9);
+        assert_eq!(mesh.cells.len(), 4);
+        assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3]);
+        assert_eq!(mesh.cells[1].points, &[1, 4, 5, 2]);
+        assert_eq!(mesh.cells[2].points, &[3, 2, 6, 7]);
+        assert_eq!(mesh.cells[3].points, &[2, 5, 8, 6]);
+        for point in &mesh.points {
+            let mut radius = 0.0;
+            for i in 0..mesh.ndim {
+                assert!(point.coords[i] >= 0.0);
+                assert!(point.coords[i] <= block.args_ring.rmax);
+                radius += point.coords[i] * point.coords[i];
+            }
+            radius = f64::sqrt(radius);
+            if [0, 3, 7].contains(&point.id) {
+                assert_approx_eq!(radius, block.args_ring.rmin, 1e-15);
+            }
+            if [1, 2, 6].contains(&point.id) {
+                assert_approx_eq!(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
+            }
+            if [4, 5, 8].contains(&point.id) {
+                assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
+            }
+        }
+        if false {
+            draw_ring(
+                &Region::with(mesh, Extract::All)?,
+                &block.args_ring,
+                true,
+                true,
+                true,
+                "/tmp/gemlab/test_transform_into_ring_2d.svg",
+            )?;
+        }
+        Ok(())
     }
 }
