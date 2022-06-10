@@ -64,6 +64,17 @@ impl Draw {
         }
     }
 
+    /// Draws mesh with given Region
+    pub fn with(plot: &mut Plot, region: &Region, with_ids: bool) -> Result<Self, StrError> {
+        let mut draw = Draw::new();
+        draw.edges(plot, region, true)?;
+        if with_ids {
+            draw.cell_ids(plot, &region.mesh)?;
+            draw.point_ids(plot, &region.mesh);
+        }
+        Ok(draw)
+    }
+
     /// Draws all points (markers)
     ///
     /// # Input
