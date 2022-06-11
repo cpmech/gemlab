@@ -36,14 +36,15 @@ fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad) -> Result<(), StrE
 /// # Input
 ///
 /// * `pad` -- the scratchpad with coordinates set already
-pub fn draw_shape(plot: &mut Plot, pad: &mut Scratchpad) -> Result<(), StrError> {
+pub fn draw_shape(plot: &mut Plot, pad: &Scratchpad) -> Result<(), StrError> {
     if !pad.ok_xxt {
         return Err("all components of the coordinates matrix must be set first");
     }
     let space_ndim = pad.xmin.len();
     let mut canvas = Canvas::new();
     if pad.kind.ndim() == 1 {
-        _draw_edge(&mut canvas, pad)?;
+        let mut lin_pad = pad.clone();
+        _draw_edge(&mut canvas, &mut lin_pad)?;
     } else {
         let mut edge_pad = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap())?;
         for e in 0..pad.kind.nedge() {
@@ -165,14 +166,14 @@ mod tests {
         ];
         for kind in kinds {
             let space_ndim = usize::max(2, kind.ndim());
-            let mut pad = gen_scratchpad_with_coords(space_ndim, kind);
+            let pad = gen_scratchpad_with_coords(space_ndim, kind);
             let mut plot = Plot::new();
             if space_ndim == 2 {
                 let canvas = _gen_canvas_mapping();
                 plot.add(&canvas);
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
-            draw_shape(&mut plot, &mut pad)?;
+            draw_shape(&mut plot, &pad)?;
             if space_ndim == 2 {
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
