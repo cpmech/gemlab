@@ -1,8 +1,11 @@
 use super::{Cell, Mesh, Point};
+use crate::shapes::op::draw_shape;
 use crate::shapes::{op, GeoKind, Scratchpad};
 use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol, PI};
 use crate::StrError;
+use plotpy::{Canvas, Plot};
 use russell_lab::Vector;
+use std::collections::HashMap;
 
 /// Arguments to transform the Block generated mesh into a ring
 ///
@@ -149,13 +152,13 @@ pub struct Block {
     delta_ksi: Vec<Vec<f64>>,
 
     /// Constraints on edges (nedge)
-    edge_constraints: Vec<Option<Constraint>>,
+    edge_constraints: HashMap<usize, Constraint>,
 
     /// Constraints on faces (nface)
     face_constraints: Vec<Option<Constraint>>,
 
-    /// Grid to search reference coordinates
-    grid_ksi: GridSearch,
+    /// Has constraints?
+    has_constraints: bool,
 
     /// Scratchpad for the block
     pad: Scratchpad,
@@ -207,7 +210,7 @@ impl Block {
 
         // internally, we save the block as a Qua8 or a Hex20
         let kind = if ndim == 2 { GeoKind::Qua8 } else { GeoKind::Hex20 };
-        let (nnode, nedge, nface) = (kind.nnode(), kind.nedge(), kind.nface());
+        let (nnode, nface) = (kind.nnode(), kind.nface());
 
         // coordinates of the block
         let mut pad = Scratchpad::new(ndim, kind)?;
@@ -269,18 +272,15 @@ impl Block {
             }
         };
 
-        // grid search
-        let grid_ksi = GridSearch::new(&vec![-1.0; ndim], &vec![1.0; ndim], GsNdiv::Default, GsTol::Default).unwrap(); // should not fail here
-
         // block
         Ok(Block {
             attribute_id: Block::ATTRIBUTE_ID,
             ndim,
             ndiv: vec![Block::NDIV; ndim],
             delta_ksi: vec![vec![1.0; Block::NDIV]; ndim],
-            edge_constraints: vec![None; nedge],
+            edge_constraints: HashMap::new(),
             face_constraints: vec![None; nface],
-            grid_ksi,
+            has_constraints: false,
             pad,
             transform_into_ring: false,
             args_ring: ArgsRing {
@@ -328,6 +328,27 @@ impl Block {
         ]).unwrap()
     }
 
+    /// Draws this block
+    pub fn draw(&self, plot: &mut Plot) -> Result<(), StrError> {
+        if self.ndim == 2 && self.has_constraints {
+            for ct in self.edge_constraints.values() {
+                match ct {
+                    Constraint::Circle(xc, yc, r) => {
+                        let mut circle = Canvas::new();
+                        circle
+                            .set_face_color("None")
+                            .set_edge_color("#bfbfbf")
+                            .set_line_width(7.0)
+                            .draw_circle(xc, yc, r);
+                        plot.add(&circle);
+                    }
+                    _ => (),
+                }
+            }
+        }
+        draw_shape(plot, &self.pad, false, "#046002")
+    }
+
     /// Sets group
     pub fn set_attribute_id(&mut self, attribute_id: usize) -> &mut Self {
         self.attribute_id = attribute_id;
@@ -358,31 +379,45 @@ impl Block {
         Ok(self)
     }
 
-    /// Sets constraint to an edge of this block
+    /// Sets (or removes) a constraint to an edge of this block
     ///
     /// # Input
     ///
-    /// * `e` -- index of edge in [0, nedge-1]
+    /// * `e` -- index of edge; must be < 4 (nedge)
     /// * `constraint` -- the constraint
-    pub fn set_edge_constraint(&mut self, e: usize, constraint: Constraint) -> Result<&mut Self, StrError> {
+    pub fn set_edge_constraint(&mut self, e: usize, value: Option<Constraint>) -> Result<&mut Self, StrError> {
         if self.ndim != 2 {
             return Err("set_edge_constraint requires ndim = 2");
         }
-        self.edge_constraints[e] = Some(constraint);
+        if e > 3 {
+            return Err("edge index must be < 4 (nedge)");
+        }
+        match value {
+            Some(v) => {
+                self.edge_constraints.insert(e, v);
+            }
+            None => {
+                self.edge_constraints.remove(&e);
+            }
+        }
+        self.has_constraints = self.edge_constraints.len() > 0;
         Ok(self)
     }
 
-    /// Sets constraint to a face of this block
+    /// Sets (or removes) a constraint to a face of this block
     ///
     /// # Input
     ///
-    /// * `f` -- index of face in [0, nface-1]
+    /// * `f` -- index of face; must be < 6 (nface)
     /// * `constraint` -- the constraint
-    pub fn set_face_constraint(&mut self, f: usize, constraint: Constraint) -> Result<&mut Self, StrError> {
+    pub fn set_face_constraint(&mut self, f: usize, value: Option<Constraint>) -> Result<&mut Self, StrError> {
         if self.ndim != 3 {
             return Err("set_face_constraint requires ndim = 3");
         }
-        self.face_constraints[f] = Some(constraint);
+        if f > 5 {
+            return Err("face index must be < 6 (nface)");
+        }
+        self.face_constraints[f] = value;
         Ok(self)
     }
 
@@ -467,6 +502,9 @@ impl Block {
             }
         }
 
+        // grid to search reference coordinates
+        let mut grid_ksi = GridSearch::new(&vec![-1.0; ndim], &vec![1.0; ndim], GsNdiv::Default, GsTol::Default)?;
+
         // resulting mesh
         let mut mesh = Mesh {
             ndim,
@@ -547,12 +585,12 @@ impl Block {
 
                         // look up existent point in the reference space of the block
                         // or create new point
-                        let point_id = match self.grid_ksi.find(&ksi)? {
+                        let point_id = match grid_ksi.find(&ksi)? {
                             Some(point_id) => point_id,
                             None => {
                                 // insert point id in grid-search
                                 let point_id = mesh.points.len();
-                                self.grid_ksi.insert(point_id, &ksi)?;
+                                grid_ksi.insert(point_id, &ksi)?;
 
                                 // reference coordinates are now scaled and translated
                                 if self.transform_into_ring {
@@ -560,6 +598,9 @@ impl Block {
                                 } else {
                                     // compute real coordinates of point using the block's
                                     op::calc_coords(&mut x, &mut self.pad, &ksi)?;
+                                    if self.has_constraints {
+                                        self.handle_constraints(&mut x, &ksi)?;
+                                    }
                                 }
 
                                 // add new point to mesh
@@ -615,6 +656,57 @@ impl Block {
             x[2] = zmin + (ksi[2] - KSI_MIN) * (zmax - zmin) / KSI_DEL;
         }
     }
+
+    /// Handles constraints
+    fn handle_constraints(&self, x: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
+        if self.ndim == 2 {
+            if ksi[1] == -1.0 {
+                // bottom => e = 0
+                if let Some(ct) = self.edge_constraints.get(&0) {
+                    self.apply_constraint(x, ct)?;
+                }
+            } else if ksi[0] == 1.0 {
+                // right => e = 1
+                if let Some(ct) = self.edge_constraints.get(&1) {
+                    self.apply_constraint(x, ct)?;
+                }
+            } else if ksi[1] == 1.0 {
+                // top => e = 2
+                if let Some(ct) = self.edge_constraints.get(&2) {
+                    self.apply_constraint(x, ct)?;
+                }
+            } else if ksi[0] == -1.0 {
+                // left => e = 3
+                if let Some(ct) = self.edge_constraints.get(&3) {
+                    self.apply_constraint(x, ct)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn apply_constraint(&self, x: &mut Vector, ct: &Constraint) -> Result<(), StrError> {
+        match ct {
+            Constraint::Circle(xc, yc, r) => {
+                let dx = x[0] - xc;
+                let dy = x[1] - yc;
+                let d = f64::sqrt(dx * dx + dy * dy);
+                if f64::abs(d) <= 1e-8 {
+                    return Err("cannot apply constraint because a point is at the center of the circle");
+                }
+                let gap = r - d;
+                let move_x = gap * dx / d;
+                let move_y = gap * dy / d;
+                x[0] += move_x;
+                x[1] += move_y;
+            }
+            Constraint::CylinderZ(xc, yc, r) => {
+                println!("cylinder: {},{},{}", xc, yc, r);
+            }
+        }
+        Ok(())
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -622,7 +714,7 @@ impl Block {
 #[cfg(test)]
 mod tests {
     use super::{ArgsRing, Block, Constraint, StrError};
-    use crate::mesh::{draw_mesh, Draw, Extract, Region, Samples};
+    use crate::mesh::{draw_mesh, Draw, Extract, Mesh, Region, Samples};
     use crate::shapes::GeoKind;
     use crate::util::PI;
     use plotpy::{Canvas, Plot};
@@ -747,13 +839,15 @@ mod tests {
     #[test]
     fn set_edge_constraint_works() -> Result<(), StrError> {
         let mut block = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
-        let constraint = Constraint::Circle(-1.0, -1.0, 2.0);
-        block.set_edge_constraint(0, constraint)?;
-        let ok = match block.edge_constraints[0] {
-            Some(..) => true,
-            None => false,
-        };
-        assert_eq!(ok, true);
+        let ct = Constraint::Circle(-1.0, -1.0, 2.0);
+        assert_eq!(format!("{:?}", block.edge_constraints), "{}");
+        assert_eq!(block.has_constraints, false);
+        block.set_edge_constraint(0, Some(ct))?;
+        assert_eq!(format!("{:?}", block.edge_constraints), "{0: Circle(-1.0, -1.0, 2.0)}");
+        assert_eq!(block.has_constraints, true);
+        block.set_edge_constraint(0, None)?;
+        assert_eq!(format!("{:?}", block.edge_constraints), "{}");
+        assert_eq!(block.has_constraints, false);
         Ok(())
     }
 
@@ -770,7 +864,7 @@ mod tests {
             [0.0, 2.0, 2.0],
         ])?;
         let constraint = Constraint::CylinderZ(-1.0, -1.0, 2.0);
-        block.set_face_constraint(0, constraint)?;
+        block.set_face_constraint(0, Some(constraint))?;
         let ok = match block.face_constraints[0] {
             Some(..) => true,
             None => false,
@@ -827,6 +921,23 @@ mod tests {
         ])?;
         let mesh = block.subdivide(GeoKind::Qua4)?;
         let correct = Samples::block_2d_four_qua4();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
+        Ok(())
+    }
+
+    #[test]
+    fn subdivide_works_on_the_same_block_twice() -> Result<(), StrError> {
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [0.0, 0.0],
+            [2.0, 0.0],
+            [2.0, 2.0],
+            [0.0, 2.0],
+        ])?;
+        let mesh = block.subdivide(GeoKind::Qua4)?;
+        let correct = Samples::block_2d_four_qua4();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
+        let mesh = block.subdivide(GeoKind::Qua4)?;
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         Ok(())
     }
@@ -1122,7 +1233,7 @@ mod tests {
         assert_eq!(format!("{:?}", clone), correct);
     }
 
-    fn draw_ring(
+    fn draw_ring_and_mesh(
         region: &Region,
         args: &ArgsRing,
         with_ids: bool,
@@ -1218,7 +1329,7 @@ mod tests {
             }
         }
         if false {
-            draw_ring(
+            draw_ring_and_mesh(
                 &Region::with(mesh, Extract::All)?,
                 &block.args_ring,
                 true,
@@ -1265,7 +1376,7 @@ mod tests {
             }
         }
         if false {
-            draw_ring(
+            draw_ring_and_mesh(
                 &Region::with(mesh, Extract::All)?,
                 &block.args_ring,
                 true,
@@ -1370,6 +1481,75 @@ mod tests {
         }
         if false {
             draw_mesh(mesh, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_2d_handles_errors() -> Result<(), StrError> {
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [0.0, 0.0],
+            [2.0, 0.0],
+            [2.0, 2.0],
+            [0.0, 2.0],
+        ])?;
+        block.set_edge_constraint(0, Some(Constraint::Circle(0.0, 0.0, 1.0)))?;
+        assert_eq!(
+            block.subdivide(GeoKind::Qua4).err(),
+            Some("cannot apply constraint because a point is at the center of the circle")
+        );
+        Ok(())
+    }
+
+    fn draw_mesh_and_block(mesh: Mesh, block: &Block, filename: &str) -> Result<(), StrError> {
+        let region = Region::with(mesh, Extract::All)?;
+        let mut plot = Plot::new();
+        let mut draw = Draw::new();
+        block.draw(&mut plot)?;
+        draw.canvas_point_ids
+            .set_bbox(false)
+            .set_align_horizontal("left")
+            .set_align_vertical("bottom");
+        draw.edges(&mut plot, &region, true)?;
+        draw.cell_ids(&mut plot, &region.mesh)?;
+        draw.point_ids(&mut plot, &region.mesh);
+        draw.points(&mut plot, &region.mesh);
+        plot.set_equal_axes(true)
+            .set_figure_size_points(600.0, 600.0)
+            .save(filename)?;
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_2d_qua4_works() -> Result<(), StrError> {
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [1.2, 0.0],
+            [2.0, 0.0],
+            [0.0, 2.0],
+            [0.0, 1.2],
+        ])?;
+        block.set_ndiv(&[2, 2])?;
+
+        // circle pushes point
+        let ct = Constraint::Circle(0.0, 0.0, 1.0);
+        block.set_edge_constraint(3, Some(ct))?;
+        let mesh = block.subdivide(GeoKind::Qua4)?;
+        let radius = f64::sqrt(f64::powf(mesh.points[3].coords[0], 2.0) + f64::powf(mesh.points[3].coords[0], 2.0));
+        assert_approx_eq!(radius, 1.0, 1e-15);
+        if false {
+            draw_mesh_and_block(mesh, &block, "/tmp/gemlab/test_constraints_2d_qua4_1.svg")?;
+        }
+
+        // circle pulls point
+        let ct = Constraint::Circle(0.0, 0.0, 0.5);
+        block.set_edge_constraint(3, Some(ct))?;
+        let mesh = block.subdivide(GeoKind::Qua4)?;
+        let radius = f64::sqrt(f64::powf(mesh.points[3].coords[0], 2.0) + f64::powf(mesh.points[3].coords[0], 2.0));
+        assert_approx_eq!(radius, 0.5, 1e-15);
+        if false {
+            draw_mesh_and_block(mesh, &block, "/tmp/gemlab/test_constraints_2d_qua4_2.svg")?;
         }
         Ok(())
     }
