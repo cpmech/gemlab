@@ -4,12 +4,15 @@ use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
 use russell_lab::Vector;
 
-fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad) -> Result<(), StrError> {
+fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -> Result<(), StrError> {
     const N: usize = 11; // number of points along edge (to handle nonlinear edges)
     let (ksi_min, ksi_del) = (-1.0, 2.0); // all Lin shapes go from -1 to +1
     let space_ndim = edge_pad.xmax.len();
     let mut x = Vector::new(space_ndim);
     canvas.set_face_color("None").set_line_width(3.0);
+    if edge_color != "" {
+        canvas.set_edge_color(edge_color);
+    }
     if space_ndim == 2 {
         canvas.polycurve_begin();
         for i in 0..N {
@@ -36,7 +39,9 @@ fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad) -> Result<(), StrE
 /// # Input
 ///
 /// * `pad` -- the scratchpad with coordinates set already
-pub fn draw_shape(plot: &mut Plot, pad: &Scratchpad) -> Result<(), StrError> {
+/// * `with_ids` -- draw IDs of nodes
+/// * `edge_color` -- color to draw edges; an empty string "" means use default color
+pub fn draw_shape(plot: &mut Plot, pad: &Scratchpad, with_ids: bool, edge_color: &str) -> Result<(), StrError> {
     if !pad.ok_xxt {
         return Err("all components of the coordinates matrix must be set first");
     }
@@ -44,7 +49,7 @@ pub fn draw_shape(plot: &mut Plot, pad: &Scratchpad) -> Result<(), StrError> {
     let mut canvas = Canvas::new();
     if pad.kind.ndim() == 1 {
         let mut lin_pad = pad.clone();
-        _draw_edge(&mut canvas, &mut lin_pad)?;
+        _draw_edge(&mut canvas, &mut lin_pad, edge_color)?;
     } else {
         let mut edge_pad = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap())?;
         for e in 0..pad.kind.nedge() {
@@ -54,52 +59,54 @@ pub fn draw_shape(plot: &mut Plot, pad: &Scratchpad) -> Result<(), StrError> {
                     edge_pad.set_xx(i, j, pad.xxt[j][m]);
                 }
             }
-            _draw_edge(&mut canvas, &mut edge_pad)?;
+            _draw_edge(&mut canvas, &mut edge_pad, edge_color)?;
         }
     }
-    let mut labels_corner = Text::new();
-    let mut labels_middle = Text::new();
-    labels_corner
-        .set_align_horizontal("center")
-        .set_align_vertical("center")
-        .set_bbox(true)
-        .set_bbox_style("circle,pad=0.3")
-        .set_bbox_facecolor("white")
-        .set_bbox_edgecolor("red");
-    labels_middle
-        .set_align_horizontal("center")
-        .set_align_vertical("center")
-        .set_fontsize(8.0)
-        .set_bbox(true)
-        .set_bbox_style("circle,pad=0.2")
-        .set_bbox_facecolor("white")
-        .set_bbox_edgecolor("gold");
-    if space_ndim == 2 {
-        let m_corner_max = match pad.kind.class() {
-            GeoClass::Lin => 2,
-            GeoClass::Tri => 3,
-            GeoClass::Qua => 4,
-            GeoClass::Tet => 4,
-            GeoClass::Hex => 8,
-        };
-        for m in 0..pad.kind.nnode() {
-            if m < m_corner_max {
-                labels_corner.draw(pad.xxt[0][m], pad.xxt[1][m], format!("{}", m).as_str());
-            } else {
-                labels_middle.draw(pad.xxt[0][m], pad.xxt[1][m], format!("{}", m).as_str());
+    if with_ids {
+        let mut labels_corner = Text::new();
+        let mut labels_middle = Text::new();
+        labels_corner
+            .set_align_horizontal("center")
+            .set_align_vertical("center")
+            .set_bbox(true)
+            .set_bbox_style("circle,pad=0.3")
+            .set_bbox_facecolor("white")
+            .set_bbox_edgecolor("red");
+        labels_middle
+            .set_align_horizontal("center")
+            .set_align_vertical("center")
+            .set_fontsize(8.0)
+            .set_bbox(true)
+            .set_bbox_style("circle,pad=0.2")
+            .set_bbox_facecolor("white")
+            .set_bbox_edgecolor("gold");
+        if space_ndim == 2 {
+            let m_corner_max = match pad.kind.class() {
+                GeoClass::Lin => 2,
+                GeoClass::Tri => 3,
+                GeoClass::Qua => 4,
+                GeoClass::Tet => 4,
+                GeoClass::Hex => 8,
+            };
+            for m in 0..pad.kind.nnode() {
+                if m < m_corner_max {
+                    labels_corner.draw(pad.xxt[0][m], pad.xxt[1][m], format!("{}", m).as_str());
+                } else {
+                    labels_middle.draw(pad.xxt[0][m], pad.xxt[1][m], format!("{}", m).as_str());
+                }
+            }
+        } else {
+            let m_corner_max = if pad.kind.is_tri_or_tet() { 4 } else { 8 };
+            for m in 0..pad.kind.nnode() {
+                if m < m_corner_max {
+                    labels_corner.draw_3d(pad.xxt[0][m], pad.xxt[1][m], pad.xxt[2][m], format!("{}", m).as_str());
+                } else {
+                    labels_middle.draw_3d(pad.xxt[0][m], pad.xxt[1][m], pad.xxt[2][m], format!("{}", m).as_str());
+                }
             }
         }
-    } else {
-        let m_corner_max = if pad.kind.is_tri_or_tet() { 4 } else { 8 };
-        for m in 0..pad.kind.nnode() {
-            if m < m_corner_max {
-                labels_corner.draw_3d(pad.xxt[0][m], pad.xxt[1][m], pad.xxt[2][m], format!("{}", m).as_str());
-            } else {
-                labels_middle.draw_3d(pad.xxt[0][m], pad.xxt[1][m], pad.xxt[2][m], format!("{}", m).as_str());
-            }
-        }
+        plot.add(&canvas).add(&labels_corner).add(&labels_middle);
     }
-    plot.add(&canvas).add(&labels_corner).add(&labels_middle);
     let dx = pad.xmax[0] - pad.xmin[0];
     let dy = pad.xmax[1] - pad.xmin[1];
     const PCT: f64 = 2.0 / 100.0;
@@ -173,7 +180,7 @@ mod tests {
                 plot.add(&canvas);
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
-            draw_shape(&mut plot, &pad)?;
+            draw_shape(&mut plot, &pad, true, "")?;
             if space_ndim == 2 {
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
