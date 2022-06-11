@@ -773,8 +773,6 @@ impl Block {
                     let move_y = gap * dy / d;
                     x[0] += move_x;
                     x[1] += move_y;
-                } else {
-                    println!("skip");
                 }
             }
         }
@@ -1726,6 +1724,62 @@ mod tests {
                 &block,
                 true,
                 "/tmp/gemlab/test_constraints_2d_qua8.svg",
+            )?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_2d_multiple_works() -> Result<(), StrError> {
+        let half_l = 2.0;
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [-half_l, -half_l],
+            [half_l, -half_l],
+            [half_l, half_l],
+            [-half_l, half_l],
+        ])?;
+        block.set_ndiv(&[2, 2])?;
+        let r = 8.0;
+        let theta = f64::asin(half_l / r);
+        let cen_minus = -half_l - r * f64::cos(theta);
+        let cen_plus = half_l + r * f64::cos(theta);
+        block.set_edge_constraint(0, Some(Constraint2D::Circle(0.0, cen_minus, r)))?;
+        block.set_edge_constraint(1, Some(Constraint2D::Circle(cen_plus, 0.0, r)))?;
+        block.set_edge_constraint(2, Some(Constraint2D::Circle(0.0, cen_plus, r)))?;
+        block.set_edge_constraint(3, Some(Constraint2D::Circle(cen_minus, 0.0, r)))?;
+        let mesh = block.subdivide(GeoKind::Qua8)?;
+        for p in [0, 4, 1, 10, 8] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, cen_minus])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        for p in [8, 11, 9, 19, 18] {
+            let d = point_point_distance(&mesh.points[p].coords, &[cen_plus, 0.0])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        for p in [14, 16, 13, 20, 18] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, cen_plus])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        for p in [0, 7, 3, 17, 14] {
+            let d = point_point_distance(&mesh.points[p].coords, &[cen_minus, 0.0])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        for p in [5, 2, 15] {
+            assert_eq!(mesh.points[p].coords[0], 0.0);
+        }
+        for p in [6, 2, 12] {
+            assert_eq!(mesh.points[p].coords[1], 0.0);
+        }
+        if false {
+            let mut plot = Plot::new();
+            plot.set_range(-4.0, 4.0, -4.0, 4.0);
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                false,
+                "/tmp/gemlab/test_constraints_2d_multiple.svg",
             )?;
         }
         Ok(())
