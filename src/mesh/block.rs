@@ -364,9 +364,12 @@ impl Block {
     ///
     /// * `e` -- index of edge in [0, nedge-1]
     /// * `constraint` -- the constraint
-    pub fn set_edge_constraint(&mut self, e: usize, constraint: Constraint) -> &mut Self {
+    pub fn set_edge_constraint(&mut self, e: usize, constraint: Constraint) -> Result<&mut Self, StrError> {
+        if self.ndim != 2 {
+            return Err("set_edge_constraint requires ndim = 2");
+        }
         self.edge_constraints[e] = Some(constraint);
-        self
+        Ok(self)
     }
 
     /// Sets constraint to a face of this block
@@ -375,9 +378,12 @@ impl Block {
     ///
     /// * `f` -- index of face in [0, nface-1]
     /// * `constraint` -- the constraint
-    pub fn set_face_constraint(&mut self, f: usize, constraint: Constraint) -> &mut Self {
+    pub fn set_face_constraint(&mut self, f: usize, constraint: Constraint) -> Result<&mut Self, StrError> {
+        if self.ndim != 3 {
+            return Err("set_face_constraint requires ndim = 3");
+        }
         self.face_constraints[f] = Some(constraint);
-        self
+        Ok(self)
     }
 
     /// Sets flag to transform the generated mesh into a ring
@@ -742,7 +748,7 @@ mod tests {
     fn set_edge_constraint_works() -> Result<(), StrError> {
         let mut block = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
         let constraint = Constraint::Circle(-1.0, -1.0, 2.0);
-        block.set_edge_constraint(0, constraint);
+        block.set_edge_constraint(0, constraint)?;
         let ok = match block.edge_constraints[0] {
             Some(..) => true,
             None => false,
@@ -764,7 +770,7 @@ mod tests {
             [0.0, 2.0, 2.0],
         ])?;
         let constraint = Constraint::CylinderZ(-1.0, -1.0, 2.0);
-        block.set_face_constraint(0, constraint);
+        block.set_face_constraint(0, constraint)?;
         let ok = match block.face_constraints[0] {
             Some(..) => true,
             None => false,
