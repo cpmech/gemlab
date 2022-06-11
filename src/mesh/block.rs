@@ -397,6 +397,12 @@ impl Block {
     ///
     /// * `e` -- index of edge; must be < 4 (nedge)
     /// * `constraint` -- the constraint
+    ///
+    /// # Warning
+    ///
+    /// Multiple constraints are applied in an unknown order, thus make sure that all
+    /// constraints are compatible, e.g. points at "corners" subject to two constraints
+    /// require that these constraints intersect each other at the corner.
     pub fn set_edge_constraint(&mut self, e: usize, value: Option<Constraint2D>) -> Result<&mut Self, StrError> {
         if self.ndim != 2 {
             return Err("set_edge_constraint requires ndim = 2");
@@ -422,6 +428,12 @@ impl Block {
     ///
     /// * `f` -- index of face; must be < 6 (nface)
     /// * `constraint` -- the constraint
+    ///
+    /// # Warning
+    ///
+    /// Multiple constraints are applied in an unknown order, thus make sure that all
+    /// constraints are compatible, e.g. points at "corners" subject to two constraints
+    /// require that these constraints intersect each other at the corner.
     pub fn set_face_constraint(&mut self, f: usize, value: Option<Constraint3D>) -> Result<&mut Self, StrError> {
         if self.ndim != 3 {
             return Err("set_face_constraint requires ndim = 3");
@@ -685,17 +697,20 @@ impl Block {
                 if let Some(ct) = self.edge_constraints.get(&0) {
                     self.apply_constraint_2d(x, ct)?;
                 }
-            } else if ksi[0] == 1.0 {
+            }
+            if ksi[0] == 1.0 {
                 // right => e = 1
                 if let Some(ct) = self.edge_constraints.get(&1) {
                     self.apply_constraint_2d(x, ct)?;
                 }
-            } else if ksi[1] == 1.0 {
+            }
+            if ksi[1] == 1.0 {
                 // top => e = 2
                 if let Some(ct) = self.edge_constraints.get(&2) {
                     self.apply_constraint_2d(x, ct)?;
                 }
-            } else if ksi[0] == -1.0 {
+            }
+            if ksi[0] == -1.0 {
                 // left => e = 3
                 if let Some(ct) = self.edge_constraints.get(&3) {
                     self.apply_constraint_2d(x, ct)?;
@@ -707,27 +722,32 @@ impl Block {
                 if let Some(ct) = self.face_constraints.get(&0) {
                     self.apply_constraint_3d(x, ct)?;
                 }
-            } else if ksi[0] == 1.0 {
+            }
+            if ksi[0] == 1.0 {
                 // positive x => f = 1
                 if let Some(ct) = self.face_constraints.get(&1) {
                     self.apply_constraint_3d(x, ct)?;
                 }
-            } else if ksi[1] == -1.0 {
+            }
+            if ksi[1] == -1.0 {
                 // negative y => f = 2
                 if let Some(ct) = self.face_constraints.get(&2) {
                     self.apply_constraint_3d(x, ct)?;
                 }
-            } else if ksi[1] == 1.0 {
+            }
+            if ksi[1] == 1.0 {
                 // positive y => f = 3
                 if let Some(ct) = self.face_constraints.get(&3) {
                     self.apply_constraint_3d(x, ct)?;
                 }
-            } else if ksi[2] == -1.0 {
+            }
+            if ksi[2] == -1.0 {
                 // negative z => f = 4
                 if let Some(ct) = self.face_constraints.get(&4) {
                     self.apply_constraint_3d(x, ct)?;
                 }
-            } else if ksi[2] == 1.0 {
+            }
+            if ksi[2] == 1.0 {
                 // positive z => f = 5
                 if let Some(ct) = self.face_constraints.get(&5) {
                     self.apply_constraint_3d(x, ct)?;
@@ -753,6 +773,8 @@ impl Block {
                     let move_y = gap * dy / d;
                     x[0] += move_x;
                     x[1] += move_y;
+                } else {
+                    println!("skip");
                 }
             }
         }
@@ -1619,7 +1641,7 @@ mod tests {
     }
 
     #[test]
-    fn constraints_2d_qua_works() -> Result<(), StrError> {
+    fn constraints_2d_works() -> Result<(), StrError> {
         // block does not touch constraint
         #[rustfmt::skip]
         let mut block = Block::new(&[
@@ -1634,8 +1656,10 @@ mod tests {
         let ct = Constraint2D::Circle(0.0, 0.0, 1.0);
         block.set_edge_constraint(3, Some(ct))?;
         let mesh = block.subdivide(GeoKind::Qua4)?;
-        let radius = f64::sqrt(f64::powf(mesh.points[3].coords[0], 2.0) + f64::powf(mesh.points[3].coords[0], 2.0));
-        assert_approx_eq!(radius, 1.0, 1e-15);
+        for p in [0, 3, 7] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 1.0, 1e-15);
+        }
         if false {
             draw_mesh_and_block(mesh, &block, "/tmp/gemlab/test_constraints_2d_qua4_1.svg")?;
         }
@@ -1644,8 +1668,10 @@ mod tests {
         let ct = Constraint2D::Circle(0.0, 0.0, 0.5);
         block.set_edge_constraint(3, Some(ct))?;
         let mesh = block.subdivide(GeoKind::Qua4)?;
-        let radius = f64::sqrt(f64::powf(mesh.points[3].coords[0], 2.0) + f64::powf(mesh.points[3].coords[0], 2.0));
-        assert_approx_eq!(radius, 0.5, 1e-15);
+        for p in [0, 3, 7] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 0.5, 1e-15);
+        }
         if false {
             draw_mesh_and_block(mesh, &block, "/tmp/gemlab/test_constraints_2d_qua4_2.svg")?;
         }
@@ -1669,7 +1695,7 @@ mod tests {
         let ct = Constraint2D::Circle(xc, xc, r);
         block.set_edge_constraint(3, Some(ct))?;
         let mesh = block.subdivide(GeoKind::Qua8)?;
-        for p in [3, 7, 17] {
+        for p in [0, 3, 7, 14, 17] {
             let d = point_point_distance(&mesh.points[p].coords, &[xc, xc])?;
             assert_approx_eq!(d, r, 1e-15);
         }
