@@ -36,15 +36,28 @@ pub struct ArgsRing {
     pub zmax: f64,
 }
 
-/// Defines constraints for a side of a block
+/// Defines constraints for a side of a block (2D)
 #[derive(Clone, Debug)]
-pub enum Constraint {
+pub enum Constraint2D {
     /// Circumference specified by (xc,yc,radius)
     Circle(f64, f64, f64),
+}
+
+/// Defines constraints for a side of a block (3D)
+#[derive(Clone, Debug)]
+pub enum Constraint3D {
+    /// Surface of a cylinder parallel to x specified by (yc,zc,radius)
+    CylinderX(f64, f64, f64),
+
+    /// Surface of a cylinder parallel to y specified by (xc,zc,radius)
+    CylinderY(f64, f64, f64),
 
     /// Surface of a cylinder parallel to z specified by (xc,yc,radius)
     CylinderZ(f64, f64, f64),
 }
+
+/// Defines a zero distance to consider point coincident with centre or circle/cylinder
+const TOL_DISTANCE: f64 = 1e-8;
 
 /// Defines a polygon on polyhedron that can be split into smaller shapes
 ///
@@ -151,11 +164,11 @@ pub struct Block {
     /// Delta ksi along each dim (ndim, {ndiv0,ndiv1,ndiv2})
     delta_ksi: Vec<Vec<f64>>,
 
-    /// Constraints on edges (nedge)
-    edge_constraints: HashMap<usize, Constraint>,
+    /// Constraints on edges (nedge) (2D only)
+    edge_constraints: HashMap<usize, Constraint2D>,
 
-    /// Constraints on faces (nface)
-    face_constraints: Vec<Option<Constraint>>,
+    /// Constraints on faces (nface) (3D only)
+    face_constraints: HashMap<usize, Constraint3D>,
 
     /// Has constraints?
     has_constraints: bool,
@@ -210,7 +223,7 @@ impl Block {
 
         // internally, we save the block as a Qua8 or a Hex20
         let kind = if ndim == 2 { GeoKind::Qua8 } else { GeoKind::Hex20 };
-        let (nnode, nface) = (kind.nnode(), kind.nface());
+        let nnode = kind.nnode();
 
         // coordinates of the block
         let mut pad = Scratchpad::new(ndim, kind)?;
@@ -279,7 +292,7 @@ impl Block {
             ndiv: vec![Block::NDIV; ndim],
             delta_ksi: vec![vec![1.0; Block::NDIV]; ndim],
             edge_constraints: HashMap::new(),
-            face_constraints: vec![None; nface],
+            face_constraints: HashMap::new(),
             has_constraints: false,
             pad,
             transform_into_ring: false,
@@ -333,7 +346,7 @@ impl Block {
         if self.ndim == 2 && self.has_constraints {
             for ct in self.edge_constraints.values() {
                 match ct {
-                    Constraint::Circle(xc, yc, r) => {
+                    Constraint2D::Circle(xc, yc, r) => {
                         let mut circle = Canvas::new();
                         circle
                             .set_face_color("None")
@@ -342,7 +355,6 @@ impl Block {
                             .draw_circle(xc, yc, r);
                         plot.add(&circle);
                     }
-                    _ => (),
                 }
             }
         }
@@ -385,7 +397,7 @@ impl Block {
     ///
     /// * `e` -- index of edge; must be < 4 (nedge)
     /// * `constraint` -- the constraint
-    pub fn set_edge_constraint(&mut self, e: usize, value: Option<Constraint>) -> Result<&mut Self, StrError> {
+    pub fn set_edge_constraint(&mut self, e: usize, value: Option<Constraint2D>) -> Result<&mut Self, StrError> {
         if self.ndim != 2 {
             return Err("set_edge_constraint requires ndim = 2");
         }
@@ -410,14 +422,22 @@ impl Block {
     ///
     /// * `f` -- index of face; must be < 6 (nface)
     /// * `constraint` -- the constraint
-    pub fn set_face_constraint(&mut self, f: usize, value: Option<Constraint>) -> Result<&mut Self, StrError> {
+    pub fn set_face_constraint(&mut self, f: usize, value: Option<Constraint3D>) -> Result<&mut Self, StrError> {
         if self.ndim != 3 {
             return Err("set_face_constraint requires ndim = 3");
         }
         if f > 5 {
             return Err("face index must be < 6 (nface)");
         }
-        self.face_constraints[f] = value;
+        match value {
+            Some(v) => {
+                self.face_constraints.insert(f, v);
+            }
+            None => {
+                self.face_constraints.remove(&f);
+            }
+        }
+        self.has_constraints = self.face_constraints.len() > 0;
         Ok(self)
     }
 
@@ -663,46 +683,129 @@ impl Block {
             if ksi[1] == -1.0 {
                 // bottom => e = 0
                 if let Some(ct) = self.edge_constraints.get(&0) {
-                    self.apply_constraint(x, ct)?;
+                    self.apply_constraint_2d(x, ct)?;
                 }
             } else if ksi[0] == 1.0 {
                 // right => e = 1
                 if let Some(ct) = self.edge_constraints.get(&1) {
-                    self.apply_constraint(x, ct)?;
+                    self.apply_constraint_2d(x, ct)?;
                 }
             } else if ksi[1] == 1.0 {
                 // top => e = 2
                 if let Some(ct) = self.edge_constraints.get(&2) {
-                    self.apply_constraint(x, ct)?;
+                    self.apply_constraint_2d(x, ct)?;
                 }
             } else if ksi[0] == -1.0 {
                 // left => e = 3
                 if let Some(ct) = self.edge_constraints.get(&3) {
-                    self.apply_constraint(x, ct)?;
+                    self.apply_constraint_2d(x, ct)?;
+                }
+            }
+        } else {
+            if ksi[0] == -1.0 {
+                // negative x => f = 0
+                if let Some(ct) = self.face_constraints.get(&0) {
+                    self.apply_constraint_3d(x, ct)?;
+                }
+            } else if ksi[0] == 1.0 {
+                // positive x => f = 1
+                if let Some(ct) = self.face_constraints.get(&1) {
+                    self.apply_constraint_3d(x, ct)?;
+                }
+            } else if ksi[1] == -1.0 {
+                // negative y => f = 2
+                if let Some(ct) = self.face_constraints.get(&2) {
+                    self.apply_constraint_3d(x, ct)?;
+                }
+            } else if ksi[1] == 1.0 {
+                // positive y => f = 3
+                if let Some(ct) = self.face_constraints.get(&3) {
+                    self.apply_constraint_3d(x, ct)?;
+                }
+            } else if ksi[2] == -1.0 {
+                // negative z => f = 4
+                if let Some(ct) = self.face_constraints.get(&4) {
+                    self.apply_constraint_3d(x, ct)?;
+                }
+            } else if ksi[2] == 1.0 {
+                // positive z => f = 5
+                if let Some(ct) = self.face_constraints.get(&5) {
+                    self.apply_constraint_3d(x, ct)?;
                 }
             }
         }
         Ok(())
     }
 
-    #[inline]
-    fn apply_constraint(&self, x: &mut Vector, ct: &Constraint) -> Result<(), StrError> {
+    /// Applies 2D constraint
+    fn apply_constraint_2d(&self, x: &mut Vector, ct: &Constraint2D) -> Result<(), StrError> {
         match ct {
-            Constraint::Circle(xc, yc, r) => {
+            Constraint2D::Circle(xc, yc, r) => {
                 let dx = x[0] - xc;
                 let dy = x[1] - yc;
                 let d = f64::sqrt(dx * dx + dy * dy);
-                if f64::abs(d) <= 1e-8 {
+                if f64::abs(d) <= TOL_DISTANCE {
                     return Err("cannot apply constraint because a point is at the center of the circle");
                 }
                 let gap = r - d;
-                let move_x = gap * dx / d;
-                let move_y = gap * dy / d;
-                x[0] += move_x;
-                x[1] += move_y;
+                if f64::abs(gap) > 0.0 {
+                    let move_x = gap * dx / d;
+                    let move_y = gap * dy / d;
+                    x[0] += move_x;
+                    x[1] += move_y;
+                }
             }
-            Constraint::CylinderZ(xc, yc, r) => {
-                println!("cylinder: {},{},{}", xc, yc, r);
+        }
+        Ok(())
+    }
+
+    /// Applies 3D constraint
+    fn apply_constraint_3d(&self, x: &mut Vector, ct: &Constraint3D) -> Result<(), StrError> {
+        match ct {
+            Constraint3D::CylinderX(yc, zc, r) => {
+                let dy = x[1] - yc;
+                let dz = x[2] - zc;
+                let d = f64::sqrt(dy * dy + dz * dz);
+                if f64::abs(d) <= TOL_DISTANCE {
+                    return Err("cannot apply constraint because a point is at the center of the cylinder-x");
+                }
+                let gap = r - d;
+                if f64::abs(gap) > 0.0 {
+                    let move_y = gap * dy / d;
+                    let move_z = gap * dz / d;
+                    x[1] += move_y;
+                    x[2] += move_z;
+                }
+            }
+            Constraint3D::CylinderY(xc, zc, r) => {
+                let dx = x[0] - xc;
+                let dz = x[2] - zc;
+                let d = f64::sqrt(dx * dx + dz * dz);
+                if f64::abs(d) <= TOL_DISTANCE {
+                    return Err("cannot apply constraint because a point is at the center of the cylinder-y");
+                }
+                let gap = r - d;
+                if f64::abs(gap) > 0.0 {
+                    let move_x = gap * dx / d;
+                    let move_z = gap * dz / d;
+                    x[0] += move_x;
+                    x[2] += move_z;
+                }
+            }
+            Constraint3D::CylinderZ(xc, yc, r) => {
+                let dx = x[0] - xc;
+                let dy = x[1] - yc;
+                let d = f64::sqrt(dx * dx + dy * dy);
+                if f64::abs(d) <= TOL_DISTANCE {
+                    return Err("cannot apply constraint because a point is at the center of the cylinder-z");
+                }
+                let gap = r - d;
+                if f64::abs(gap) > 0.0 {
+                    let move_x = gap * dx / d;
+                    let move_y = gap * dy / d;
+                    x[0] += move_x;
+                    x[1] += move_y;
+                }
             }
         }
         Ok(())
@@ -713,12 +816,28 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
-    use super::{ArgsRing, Block, Constraint, StrError};
+    use super::{ArgsRing, Block, Constraint2D, Constraint3D, StrError};
+    use crate::geometry::point_point_distance;
     use crate::mesh::{draw_mesh, Draw, Extract, Mesh, Region, Samples};
     use crate::shapes::GeoKind;
-    use crate::util::PI;
+    use crate::util::{PI, SQRT_2};
     use plotpy::{Canvas, Plot};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+
+    #[test]
+    fn derive_works() {
+        let constraint = Constraint2D::Circle(2.0, 3.0, 1.0);
+        let clone = constraint.clone();
+        let correct = "Circle(2.0, 3.0, 1.0)";
+        assert_eq!(format!("{:?}", constraint), correct);
+        assert_eq!(format!("{:?}", clone), correct);
+
+        let constraint = Constraint3D::CylinderZ(2.0, 3.0, 1.0);
+        let clone = constraint.clone();
+        let correct = "CylinderZ(2.0, 3.0, 1.0)";
+        assert_eq!(format!("{:?}", constraint), correct);
+        assert_eq!(format!("{:?}", clone), correct);
+    }
 
     #[test]
     fn new_fails_on_wrong_input() {
@@ -821,7 +940,7 @@ mod tests {
 
     #[test]
     fn set_attribute_id_works() -> Result<(), StrError> {
-        let mut block = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
+        let mut block = Block::new_square(1.0);
         block.set_attribute_id(2);
         assert_eq!(block.attribute_id, 2);
         Ok(())
@@ -829,7 +948,7 @@ mod tests {
 
     #[test]
     fn set_ndiv_works() -> Result<(), StrError> {
-        let mut block = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
+        let mut block = Block::new_square(1.0);
         block.set_ndiv(&[2, 4])?;
         assert_eq!(block.ndiv, &[2, 4]);
         assert_eq!(format!("{:?}", block.delta_ksi), "[[1.0, 1.0], [0.5, 0.5, 0.5, 0.5]]");
@@ -838,8 +957,8 @@ mod tests {
 
     #[test]
     fn set_edge_constraint_works() -> Result<(), StrError> {
-        let mut block = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
-        let ct = Constraint::Circle(-1.0, -1.0, 2.0);
+        let mut block = Block::new_square(1.0);
+        let ct = Constraint2D::Circle(-1.0, -1.0, 2.0);
         assert_eq!(format!("{:?}", block.edge_constraints), "{}");
         assert_eq!(block.has_constraints, false);
         block.set_edge_constraint(0, Some(ct))?;
@@ -853,43 +972,30 @@ mod tests {
 
     #[test]
     fn set_face_constraint_works() -> Result<(), StrError> {
-        let mut block = Block::new(&[
-            [0.0, 0.0, 0.0],
-            [2.0, 0.0, 0.0],
-            [2.0, 2.0, 0.0],
-            [0.0, 2.0, 0.0],
-            [0.0, 0.0, 2.0],
-            [2.0, 0.0, 2.0],
-            [2.0, 2.0, 2.0],
-            [0.0, 2.0, 2.0],
-        ])?;
-        let constraint = Constraint::CylinderZ(-1.0, -1.0, 2.0);
-        block.set_face_constraint(0, Some(constraint))?;
-        let ok = match block.face_constraints[0] {
-            Some(..) => true,
-            None => false,
-        };
-        assert_eq!(ok, true);
+        let mut block = Block::new_cube(1.0);
+        let ct = Constraint3D::CylinderZ(-1.0, -1.0, 2.0);
+        assert_eq!(format!("{:?}", block.face_constraints), "{}");
+        assert_eq!(block.has_constraints, false);
+        block.set_face_constraint(0, Some(ct))?;
+        assert_eq!(
+            format!("{:?}", block.face_constraints),
+            "{0: CylinderZ(-1.0, -1.0, 2.0)}"
+        );
+        assert_eq!(block.has_constraints, true);
+        block.set_face_constraint(0, None)?;
+        assert_eq!(format!("{:?}", block.face_constraints), "{}");
+        assert_eq!(block.has_constraints, false);
         Ok(())
     }
 
     #[test]
     fn subdivide_fails_on_wrong_input() -> Result<(), StrError> {
-        let mut b2d = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])?;
+        let mut b2d = Block::new_square(1.0);
         assert_eq!(
             b2d.subdivide(GeoKind::Tri3).err(),
             Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
         );
-        let mut b3d = Block::new(&[
-            [0.0, 0.0, 0.0],
-            [2.0, 0.0, 0.0],
-            [2.0, 2.0, 0.0],
-            [0.0, 2.0, 0.0],
-            [0.0, 0.0, 2.0],
-            [2.0, 0.0, 2.0],
-            [2.0, 2.0, 2.0],
-            [0.0, 2.0, 2.0],
-        ])?;
+        let mut b3d = Block::new_cube(1.0);
         assert_eq!(
             b3d.subdivide(GeoKind::Tet4).err(),
             Some("in 3D, 'target' must be a Hex8, Hex20, Hex32, ...")
@@ -1224,15 +1330,6 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn derive_works() {
-        let constraint = Constraint::Circle(2.0, 3.0, 1.0);
-        let clone = constraint.clone();
-        let correct = "Circle(2.0, 3.0, 1.0)";
-        assert_eq!(format!("{:?}", constraint), correct);
-        assert_eq!(format!("{:?}", clone), correct);
-    }
-
     fn draw_ring_and_mesh(
         region: &Region,
         args: &ArgsRing,
@@ -1494,7 +1591,7 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ])?;
-        block.set_edge_constraint(0, Some(Constraint::Circle(0.0, 0.0, 1.0)))?;
+        block.set_edge_constraint(0, Some(Constraint2D::Circle(0.0, 0.0, 1.0)))?;
         assert_eq!(
             block.subdivide(GeoKind::Qua4).err(),
             Some("cannot apply constraint because a point is at the center of the circle")
@@ -1522,7 +1619,8 @@ mod tests {
     }
 
     #[test]
-    fn constraints_2d_qua4_works() -> Result<(), StrError> {
+    fn constraints_2d_qua_works() -> Result<(), StrError> {
+        // block does not touch constraint
         #[rustfmt::skip]
         let mut block = Block::new(&[
             [1.2, 0.0],
@@ -1533,7 +1631,7 @@ mod tests {
         block.set_ndiv(&[2, 2])?;
 
         // circle pushes point
-        let ct = Constraint::Circle(0.0, 0.0, 1.0);
+        let ct = Constraint2D::Circle(0.0, 0.0, 1.0);
         block.set_edge_constraint(3, Some(ct))?;
         let mesh = block.subdivide(GeoKind::Qua4)?;
         let radius = f64::sqrt(f64::powf(mesh.points[3].coords[0], 2.0) + f64::powf(mesh.points[3].coords[0], 2.0));
@@ -1543,13 +1641,40 @@ mod tests {
         }
 
         // circle pulls point
-        let ct = Constraint::Circle(0.0, 0.0, 0.5);
+        let ct = Constraint2D::Circle(0.0, 0.0, 0.5);
         block.set_edge_constraint(3, Some(ct))?;
         let mesh = block.subdivide(GeoKind::Qua4)?;
         let radius = f64::sqrt(f64::powf(mesh.points[3].coords[0], 2.0) + f64::powf(mesh.points[3].coords[0], 2.0));
         assert_approx_eq!(radius, 0.5, 1e-15);
         if false {
             draw_mesh_and_block(mesh, &block, "/tmp/gemlab/test_constraints_2d_qua4_2.svg")?;
+        }
+
+        // block touches constraint
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [1.0, 0.0],
+            [2.0, 0.0],
+            [0.0, 2.0],
+            [0.0, 1.0],
+        ])?;
+        block.set_ndiv(&[2, 2])?;
+
+        // define circle at negative space with larger radius
+        // but touching the points (1.0,0.0) and (0.0,1.0)
+        let r = 3.0;
+        let beta = f64::asin(SQRT_2 / (2.0 * r));
+        let theta = PI / 4.0 - beta;
+        let xc = -r * f64::sin(theta);
+        let ct = Constraint2D::Circle(xc, xc, r);
+        block.set_edge_constraint(3, Some(ct))?;
+        let mesh = block.subdivide(GeoKind::Qua8)?;
+        for p in [3, 7, 17] {
+            let d = point_point_distance(&mesh.points[p].coords, &[xc, xc])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        if false {
+            draw_mesh_and_block(mesh, &block, "/tmp/gemlab/test_constraints_2d_qua8.svg")?;
         }
         Ok(())
     }
