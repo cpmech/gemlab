@@ -739,9 +739,11 @@ mod tests {
         // Tet
         assert_eq!(default_integ_points(GeoKind::Tet4).len(), 1);
         assert_eq!(default_integ_points(GeoKind::Tet10).len(), 14);
+        assert_eq!(default_integ_points(GeoKind::Tet20).len(), 24);
         // Hex
         assert_eq!(default_integ_points(GeoKind::Hex8).len(), 8);
         assert_eq!(default_integ_points(GeoKind::Hex20).len(), 27);
+        assert_eq!(default_integ_points(GeoKind::Hex32).len(), 64);
     }
 
     #[test]
