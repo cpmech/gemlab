@@ -1735,9 +1735,9 @@ mod tests {
         #[rustfmt::skip]
         let mut block = Block::new(&[
             [-half_l, -half_l],
-            [half_l, -half_l],
-            [half_l, half_l],
-            [-half_l, half_l],
+            [ half_l, -half_l],
+            [ half_l,  half_l],
+            [-half_l,  half_l],
         ])?;
         block.set_ndiv(&[2, 2])?;
         let r = 8.0;
@@ -1781,6 +1781,71 @@ mod tests {
                 false,
                 "/tmp/gemlab/test_constraints_2d_multiple.svg",
             )?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_3d_works() -> Result<(), StrError> {
+        let half_l = 2.0;
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [-half_l, -half_l, -half_l],
+            [ half_l, -half_l, -half_l],
+            [ half_l,  half_l, -half_l],
+            [-half_l,  half_l, -half_l],
+            [-half_l, -half_l,  half_l],
+            [ half_l, -half_l,  half_l],
+            [ half_l,  half_l,  half_l],
+            [-half_l,  half_l,  half_l],
+        ])?;
+        let r = 5.0;
+        let theta = f64::asin(half_l / r);
+        let cen_minus = -half_l - r * f64::cos(theta);
+        let cen_plus = half_l + r * f64::cos(theta);
+        block.set_face_constraint(0, Some(Constraint3D::CylinderZ(cen_minus, 0.0, r)))?;
+        block.set_face_constraint(1, Some(Constraint3D::CylinderZ(cen_plus, 0.0, r)))?;
+        block.set_face_constraint(2, Some(Constraint3D::CylinderZ(0.0, cen_minus, r)))?;
+        block.set_face_constraint(3, Some(Constraint3D::CylinderZ(0.0, cen_plus, r)))?;
+        block.set_face_constraint(4, Some(Constraint3D::CylinderX(0.0, cen_minus, r)))?;
+        block.set_face_constraint(5, Some(Constraint3D::CylinderY(0.0, cen_plus, r)))?;
+        let mesh = block.subdivide(GeoKind::Hex20)?;
+        for p in [0, 20, 33, 44] {
+            assert_eq!(mesh.points[p].coords[2], -half_l);
+        }
+        for p in [0, 4, 12, 5, 27, 22] {
+            let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
+            let d = point_point_distance(x, &[0.0, cen_minus])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        for p in [22, 28, 23, 48, 45] {
+            let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
+            let d = point_point_distance(x, &[cen_plus, 0.0])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        for p in [45, 49, 34, 40, 35] {
+            let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
+            let d = point_point_distance(x, &[0.0, cen_plus])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        for p in [35, 41, 7, 15, 4] {
+            let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
+            let d = point_point_distance(x, &[cen_minus, 0.0])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        for p in [64, 67, 53, 57, 54] {
+            let x = &[mesh.points[p].coords[0], mesh.points[p].coords[2]];
+            let d = point_point_distance(x, &[0.0, cen_plus])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        for p in [3, 10, 2, 26, 21] {
+            let x = &[mesh.points[p].coords[1], mesh.points[p].coords[2]];
+            let d = point_point_distance(x, &[0.0, cen_minus])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        if false {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(&mut plot, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg")?;
         }
         Ok(())
     }
