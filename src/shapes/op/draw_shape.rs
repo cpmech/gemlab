@@ -38,10 +38,18 @@ fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) 
 ///
 /// # Input
 ///
+/// * `plot` -- plot struct
 /// * `pad` -- the scratchpad with coordinates set already
-/// * `with_ids` -- draw IDs of nodes
 /// * `edge_color` -- color to draw edges; an empty string "" means use default color
-pub fn draw_shape(plot: &mut Plot, pad: &Scratchpad, with_ids: bool, edge_color: &str) -> Result<(), StrError> {
+/// * `with_ids` -- draw IDs of nodes
+/// * `set_range` -- sets axis range
+pub fn draw_shape(
+    plot: &mut Plot,
+    pad: &Scratchpad,
+    edge_color: &str,
+    with_ids: bool,
+    set_range: bool,
+) -> Result<(), StrError> {
     if !pad.ok_xxt {
         return Err("all components of the coordinates matrix must be set first");
     }
@@ -108,26 +116,28 @@ pub fn draw_shape(plot: &mut Plot, pad: &Scratchpad, with_ids: bool, edge_color:
         }
         plot.add(&labels_corner).add(&labels_middle);
     }
-    let dx = pad.xmax[0] - pad.xmin[0];
-    let dy = pad.xmax[1] - pad.xmin[1];
-    const PCT: f64 = 2.0 / 100.0;
-    if space_ndim == 2 {
-        plot.set_range(
-            pad.xmin[0] - dx * PCT,
-            pad.xmax[0] + dx * PCT,
-            pad.xmin[1] - dy * PCT,
-            pad.xmax[1] + dy * PCT,
-        );
-    } else {
-        let dz = pad.xmax[2] - pad.xmin[2];
-        plot.set_range_3d(
-            pad.xmin[0] - dx * PCT,
-            pad.xmax[0] + dx * PCT,
-            pad.xmin[1] - dy * PCT,
-            pad.xmax[1] + dy * PCT,
-            pad.xmin[2] - dz * PCT,
-            pad.xmax[2] + dz * PCT,
-        );
+    if set_range {
+        let dx = pad.xmax[0] - pad.xmin[0];
+        let dy = pad.xmax[1] - pad.xmin[1];
+        const PCT: f64 = 2.0 / 100.0;
+        if space_ndim == 2 {
+            plot.set_range(
+                pad.xmin[0] - dx * PCT,
+                pad.xmax[0] + dx * PCT,
+                pad.xmin[1] - dy * PCT,
+                pad.xmax[1] + dy * PCT,
+            );
+        } else {
+            let dz = pad.xmax[2] - pad.xmin[2];
+            plot.set_range_3d(
+                pad.xmin[0] - dx * PCT,
+                pad.xmax[0] + dx * PCT,
+                pad.xmin[1] - dy * PCT,
+                pad.xmax[1] + dy * PCT,
+                pad.xmin[2] - dz * PCT,
+                pad.xmax[2] + dz * PCT,
+            );
+        }
     }
     Ok(())
 }
@@ -181,7 +191,7 @@ mod tests {
                 plot.add(&canvas);
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
-            draw_shape(&mut plot, &pad, true, "")?;
+            draw_shape(&mut plot, &pad, "", true, true)?;
             if space_ndim == 2 {
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }

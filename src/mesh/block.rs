@@ -342,7 +342,7 @@ impl Block {
     }
 
     /// Draws this block
-    pub fn draw(&self, plot: &mut Plot) -> Result<(), StrError> {
+    pub fn draw(&self, plot: &mut Plot, set_range: bool) -> Result<(), StrError> {
         if self.ndim == 2 && self.has_constraints {
             for ct in self.edge_constraints.values() {
                 match ct {
@@ -358,7 +358,7 @@ impl Block {
                 }
             }
         }
-        draw_shape(plot, &self.pad, false, "#046002")
+        draw_shape(plot, &self.pad, "#046002", false, set_range)
     }
 
     /// Sets group
@@ -1621,19 +1621,24 @@ mod tests {
         Ok(())
     }
 
-    fn draw_mesh_and_block(mesh: Mesh, block: &Block, filename: &str) -> Result<(), StrError> {
+    fn draw_mesh_and_block(
+        plot: &mut Plot,
+        mesh: Mesh,
+        block: &Block,
+        set_range: bool,
+        filename: &str,
+    ) -> Result<(), StrError> {
         let region = Region::with(mesh, Extract::All)?;
-        let mut plot = Plot::new();
         let mut draw = Draw::new();
-        block.draw(&mut plot)?;
+        block.draw(plot, set_range)?;
         draw.canvas_point_ids
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
-        draw.edges(&mut plot, &region, true)?;
-        draw.cell_ids(&mut plot, &region.mesh)?;
-        draw.point_ids(&mut plot, &region.mesh);
-        draw.points(&mut plot, &region.mesh);
+        draw.edges(plot, &region, false)?;
+        draw.cell_ids(plot, &region.mesh)?;
+        draw.point_ids(plot, &region.mesh);
+        draw.points(plot, &region.mesh);
         plot.set_equal_axes(true)
             .set_figure_size_points(600.0, 600.0)
             .save(filename)?;
@@ -1661,7 +1666,14 @@ mod tests {
             assert_approx_eq!(d, 1.0, 1e-15);
         }
         if false {
-            draw_mesh_and_block(mesh, &block, "/tmp/gemlab/test_constraints_2d_qua4_1.svg")?;
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_2d_qua4_1.svg",
+            )?;
         }
 
         // circle pulls point
@@ -1673,7 +1685,14 @@ mod tests {
             assert_approx_eq!(d, 0.5, 1e-15);
         }
         if false {
-            draw_mesh_and_block(mesh, &block, "/tmp/gemlab/test_constraints_2d_qua4_2.svg")?;
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_2d_qua4_2.svg",
+            )?;
         }
 
         // block touches constraint
@@ -1700,7 +1719,14 @@ mod tests {
             assert_approx_eq!(d, r, 1e-15);
         }
         if false {
-            draw_mesh_and_block(mesh, &block, "/tmp/gemlab/test_constraints_2d_qua8.svg")?;
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_2d_qua8.svg",
+            )?;
         }
         Ok(())
     }

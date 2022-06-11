@@ -193,7 +193,7 @@ mod tests {
 
         if false {
             let mut plot = Plot::new();
-            draw_shape(&mut plot, &pad, true, "")?;
+            draw_shape(&mut plot, &pad, "", true, true)?;
             plot.set_equal_axes(true)
                 .set_figure_size_points(400.0, 400.0)
                 .save("/tmp/gemlab/test_scalar_fields_over_slanted_hex8.svg")?;
