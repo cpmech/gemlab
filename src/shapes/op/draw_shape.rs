@@ -62,6 +62,7 @@ pub fn draw_shape(plot: &mut Plot, pad: &Scratchpad, with_ids: bool, edge_color:
             _draw_edge(&mut canvas, &mut edge_pad, edge_color)?;
         }
     }
+    plot.add(&canvas);
     if with_ids {
         let mut labels_corner = Text::new();
         let mut labels_middle = Text::new();
@@ -105,7 +106,7 @@ pub fn draw_shape(plot: &mut Plot, pad: &Scratchpad, with_ids: bool, edge_color:
                 }
             }
         }
-        plot.add(&canvas).add(&labels_corner).add(&labels_middle);
+        plot.add(&labels_corner).add(&labels_middle);
     }
     let dx = pad.xmax[0] - pad.xmin[0];
     let dy = pad.xmax[1] - pad.xmin[1];
