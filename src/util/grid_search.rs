@@ -1047,6 +1047,24 @@ mod tests {
 
     #[test]
     fn new_works() -> Result<(), StrError> {
+        let g2d = GridSearch::new(
+            &[0.0, 0.0],
+            &[10.0, 1.0],
+            GsNdiv::Prop(20),
+            GsTol::Spec(1e-4, 1e-5, 0.0),
+        )?;
+        assert_eq!(g2d.ndiv, [20, 2]);
+        assert_eq!(g2d.tol, [1e-4, 1e-5]);
+
+        let g3d = GridSearch::new(
+            &[0.0, 0.0, 0.0],
+            &[10.0, 1.0, 20.0],
+            GsNdiv::Prop(20),
+            GsTol::Spec(1e-4, 1e-5, 1e-6),
+        )?;
+        assert_eq!(g3d.ndiv, [10, 2, 20]);
+        assert_eq!(g3d.tol, [1e-4, 1e-5, 1e-6]);
+
         let g2d = get_test_grid_2d()?;
         assert_eq!(g2d.ndim, 2);
         assert_eq!(g2d.ndiv, [5, 5]);
