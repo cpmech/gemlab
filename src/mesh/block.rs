@@ -846,6 +846,18 @@ mod tests {
 
     #[test]
     fn derive_works() {
+        let args = ArgsRing {
+            amin: 1.0,
+            amax: 2.0,
+            rmin: 3.0,
+            rmax: 4.0,
+            zmin: 5.0,
+            zmax: 6.0,
+        };
+        let clone = args.clone();
+        let correct = "ArgsRing { amin: 1.0, amax: 2.0, rmin: 3.0, rmax: 4.0, zmin: 5.0, zmax: 6.0 }";
+        assert_eq!(format!("{:?}", clone), correct);
+
         let constraint = Constraint2D::Circle(2.0, 3.0, 1.0);
         let clone = constraint.clone();
         let correct = "Circle(2.0, 3.0, 1.0)";
