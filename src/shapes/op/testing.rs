@@ -131,7 +131,7 @@ pub mod aux {
     pub fn extract_edge(e: usize, pad: &Scratchpad) -> Result<Scratchpad, StrError> {
         let (space_ndim, geo_ndim) = pad.jacobian.dims();
         if geo_ndim == 1 {
-            return Err("geo_ndim must be 2 or 3");
+            return Err("extract_edge requires geo_ndim to be 2 or 3");
         }
         let mut pad_edge = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap())?;
         for i in 0..pad.kind.edge_nnode() {
@@ -151,7 +151,7 @@ pub mod aux {
     pub fn extract_face(f: usize, pad: &Scratchpad) -> Result<Scratchpad, StrError> {
         let (space_ndim, geo_ndim) = pad.jacobian.dims();
         if geo_ndim != 3 {
-            return Err("geo_ndim must be 3");
+            return Err("extract_face requires geo_ndim to be 3");
         }
         let mut pad_face = Scratchpad::new(space_ndim, pad.kind.face_kind().unwrap())?;
         for i in 0..pad.kind.face_nnode() {
@@ -346,6 +346,20 @@ mod tests {
         assert_eq!(pad.xxt[0][7], 0.0);
         assert_eq!(pad.xxt[1][7], 2.0);
         assert_eq!(pad.xxt[2][7], 2.0);
+    }
+
+    #[test]
+    fn capture_some_errors() {
+        let pad = Scratchpad::new(3, GeoKind::Lin2).unwrap();
+        assert_eq!(
+            extract_edge(0, &pad).err(),
+            Some("extract_edge requires geo_ndim to be 2 or 3")
+        );
+        let pad = Scratchpad::new(3, GeoKind::Tri3).unwrap();
+        assert_eq!(
+            extract_face(0, &pad).err(),
+            Some("extract_face requires geo_ndim to be 3")
+        );
     }
 
     #[test]
