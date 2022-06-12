@@ -382,7 +382,9 @@ impl Block {
             return Err("ndiv.len() must be equal to ndim");
         }
         for i in 0..self.ndim {
-            assert!(ndiv[i] > 0);
+            if ndiv[i] < 1 {
+                return Err("ndiv must be ≥ 1");
+            }
             self.ndiv[i] = ndiv[i];
             let w = 1.0;
             let sum_w = ndiv[i] as f64;
@@ -985,6 +987,7 @@ mod tests {
     fn set_ndiv_works() -> Result<(), StrError> {
         let mut block = Block::new_square(1.0);
         assert_eq!(block.set_ndiv(&[1]).err(), Some("ndiv.len() must be equal to ndim"));
+        assert_eq!(block.set_ndiv(&[0, 1]).err(), Some("ndiv must be ≥ 1"));
         block.set_ndiv(&[2, 4])?;
         assert_eq!(block.ndiv, &[2, 4]);
         assert_eq!(format!("{:?}", block.delta_ksi), "[[1.0, 1.0], [0.5, 0.5, 0.5, 0.5]]");
@@ -1647,7 +1650,7 @@ mod tests {
             }
         }
         if false {
-            draw_mesh(mesh, "/tmp/gemlab/test_transform_into_ring_3d.svg")?;
+            draw_mesh(mesh, true, "/tmp/gemlab/test_transform_into_ring_3d.svg")?;
         }
         Ok(())
     }
@@ -1685,7 +1688,7 @@ mod tests {
             }
         }
         if false {
-            draw_mesh(mesh, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg")?;
+            draw_mesh(mesh, true, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg")?;
         }
         Ok(())
     }
