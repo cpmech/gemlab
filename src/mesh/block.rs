@@ -176,11 +176,11 @@ pub struct Block {
     /// Scratchpad for the block
     pad: Scratchpad,
 
-    /// Transform the generated mesh into a ring
-    transform_into_ring: bool,
-
     /// Arguments to transform the generated mesh into a ring
     args_ring: ArgsRing,
+
+    /// Transform the generated mesh into a ring
+    transform_into_ring: bool,
 }
 
 impl Block {
@@ -295,15 +295,15 @@ impl Block {
             face_constraints: HashMap::new(),
             has_constraints: false,
             pad,
-            transform_into_ring: false,
             args_ring: ArgsRing {
-                amin: 30.0 * PI / 180.0,
-                amax: 60.0 * PI / 180.0,
-                rmin: 5.0,
-                rmax: 10.0,
+                amin: 0.0,
+                amax: PI / 2.0,
+                rmin: 1.0,
+                rmax: 2.0,
                 zmin: 0.0,
                 zmax: 1.0,
             },
+            transform_into_ring: false,
         })
     }
 
@@ -490,27 +490,30 @@ impl Block {
     ///
     /// # Input
     ///
-    /// * `flag` -- whether or not to transform mesh into a quarter of ring
     /// * `args` -- the parameters shown in the figure above with the **angles in radians**
-    pub fn set_transform_into_ring(&mut self, flag: bool, args: Option<ArgsRing>) -> Result<&mut Self, StrError> {
-        self.transform_into_ring = flag;
-        if let Some(a) = args {
-            if a.amax <= a.amin {
-                return Err("amax must be greater than amin");
+    ///   If args is None, then transform-into-ring will be disabled
+    pub fn set_transform_into_ring(&mut self, args: Option<ArgsRing>) -> Result<&mut Self, StrError> {
+        match args {
+            Some(a) => {
+                if a.amax <= a.amin {
+                    return Err("amax must be greater than amin");
+                }
+                if a.rmax <= a.rmin {
+                    return Err("rmax must be greater than rmin");
+                }
+                if a.zmax <= a.zmin {
+                    return Err("zmax must be greater than zmin");
+                }
+                if a.amin < 0.0 || a.amin > PI / 2.0 {
+                    return Err("amin must be given in radians and must be ≥ 0 and ≤ PI/2");
+                }
+                if a.amax < 0.0 || a.amax > PI / 2.0 {
+                    return Err("amax must be given in radians and must be ≥ 0 and ≤ PI/2");
+                }
+                self.args_ring = a;
+                self.transform_into_ring = true;
             }
-            if a.rmax <= a.rmin {
-                return Err("rmax must be greater than rmin");
-            }
-            if a.zmax <= a.zmin {
-                return Err("zmax must be greater than zmin");
-            }
-            if a.amin < 0.0 || a.amin > PI / 2.0 {
-                return Err("amin must be given in radians and must be ≥ 0 and ≤ π/2");
-            }
-            if a.amax < 0.0 || a.amax > PI / 2.0 {
-                return Err("amax must be given in radians and must be ≥ 0 and ≤ π/2");
-            }
-            self.args_ring = a;
+            None => self.transform_into_ring = false,
         }
         Ok(self)
     }
@@ -1021,6 +1024,59 @@ mod tests {
     }
 
     #[test]
+    fn set_transform_into_ring_works() -> Result<(), StrError> {
+        let mut block = Block::new_square(1.0);
+        assert_eq!(block.transform_into_ring, false);
+        let mut args = ArgsRing {
+            amin: PI,
+            amax: PI / 2.0,
+            rmin: 3.0,
+            rmax: 4.0,
+            zmin: 5.0,
+            zmax: 6.0,
+        };
+        assert_eq!(
+            block.set_transform_into_ring(Some(args.clone())).err(),
+            Some("amax must be greater than amin")
+        );
+        assert_eq!(block.transform_into_ring, false);
+        args.amin = PI / 3.0;
+        args.rmin = 5.0;
+        assert_eq!(
+            block.set_transform_into_ring(Some(args.clone())).err(),
+            Some("rmax must be greater than rmin")
+        );
+        assert_eq!(block.transform_into_ring, false);
+        args.rmin = 3.0;
+        args.zmin = 7.0;
+        assert_eq!(
+            block.set_transform_into_ring(Some(args.clone())).err(),
+            Some("zmax must be greater than zmin")
+        );
+        assert_eq!(block.transform_into_ring, false);
+        args.zmin = 5.0;
+        args.amin = -PI / 2.0;
+        assert_eq!(
+            block.set_transform_into_ring(Some(args.clone())).err(),
+            Some("amin must be given in radians and must be ≥ 0 and ≤ PI/2")
+        );
+        assert_eq!(block.transform_into_ring, false);
+        args.amin = PI / 3.0;
+        args.amax = 2.0 * PI;
+        assert_eq!(
+            block.set_transform_into_ring(Some(args.clone())).err(),
+            Some("amax must be given in radians and must be ≥ 0 and ≤ PI/2")
+        );
+        assert_eq!(block.transform_into_ring, false);
+        args.amax = PI / 2.0;
+        block.set_transform_into_ring(Some(args))?;
+        assert_eq!(block.transform_into_ring, true);
+        block.set_transform_into_ring(None)?;
+        assert_eq!(block.transform_into_ring, false);
+        Ok(())
+    }
+
+    #[test]
     fn subdivide_fails_on_wrong_input() -> Result<(), StrError> {
         let mut b2d = Block::new_square(1.0);
         assert_eq!(
@@ -1421,17 +1477,14 @@ mod tests {
     fn transform_into_ring_works_2d() -> Result<(), StrError> {
         let mut block = Block::new_square(1.0);
         block.set_ndiv(&[2, 2])?;
-        block.set_transform_into_ring(
-            true,
-            Some(ArgsRing {
-                amin: 0.0,
-                amax: PI / 2.0,
-                rmin: 3.0,
-                rmax: 8.0,
-                zmin: 0.0,
-                zmax: 1.0,
-            }),
-        )?;
+        block.set_transform_into_ring(Some(ArgsRing {
+            amin: 0.0,
+            amax: PI / 2.0,
+            rmin: 3.0,
+            rmax: 8.0,
+            zmin: 0.0,
+            zmax: 1.0,
+        }))?;
         let mesh = block.subdivide(GeoKind::Qua4)?;
         check_all(&mesh)?;
         assert_eq!(mesh.points.len(), 9);
@@ -1475,17 +1528,14 @@ mod tests {
     fn transform_into_ring_works_2d_qua16() -> Result<(), StrError> {
         let mut block = Block::new_square(1.0);
         block.set_ndiv(&[2, 2])?;
-        block.set_transform_into_ring(
-            true,
-            Some(ArgsRing {
-                amin: 0.0,
-                amax: PI / 2.0,
-                rmin: 3.0,
-                rmax: 8.0,
-                zmin: 0.0,
-                zmax: 1.0,
-            }),
-        )?;
+        block.set_transform_into_ring(Some(ArgsRing {
+            amin: 0.0,
+            amax: PI / 2.0,
+            rmin: 3.0,
+            rmax: 8.0,
+            zmin: 0.0,
+            zmax: 1.0,
+        }))?;
         let mesh = block.subdivide(GeoKind::Qua16)?;
         check_all(&mesh)?;
         for point in &mesh.points {
@@ -1523,17 +1573,14 @@ mod tests {
     fn transform_into_ring_works_3d() -> Result<(), StrError> {
         let mut block = Block::new_cube(1.0);
         block.set_ndiv(&[2, 2, 2])?;
-        block.set_transform_into_ring(
-            true,
-            Some(ArgsRing {
-                amin: 0.0,
-                amax: PI / 2.0,
-                rmin: 3.0,
-                rmax: 8.0,
-                zmin: 0.0,
-                zmax: 2.0,
-            }),
-        )?;
+        block.set_transform_into_ring(Some(ArgsRing {
+            amin: 0.0,
+            amax: PI / 2.0,
+            rmin: 3.0,
+            rmax: 8.0,
+            zmin: 0.0,
+            zmax: 2.0,
+        }))?;
         let mesh = block.subdivide(GeoKind::Hex8)?;
         check_all(&mesh)?;
         assert_eq!(mesh.points.len(), 27);
@@ -1581,17 +1628,14 @@ mod tests {
     fn transform_into_ring_works_3d_hex32() -> Result<(), StrError> {
         let mut block = Block::new_cube(1.0);
         block.set_ndiv(&[2, 2, 2])?;
-        block.set_transform_into_ring(
-            true,
-            Some(ArgsRing {
-                amin: 0.0,
-                amax: PI / 2.0,
-                rmin: 3.0,
-                rmax: 8.0,
-                zmin: 0.0,
-                zmax: 2.0,
-            }),
-        )?;
+        block.set_transform_into_ring(Some(ArgsRing {
+            amin: 0.0,
+            amax: PI / 2.0,
+            rmin: 3.0,
+            rmax: 8.0,
+            zmin: 0.0,
+            zmax: 2.0,
+        }))?;
         let mesh = block.subdivide(GeoKind::Hex32)?;
         check_all(&mesh)?;
         for point in &mesh.points {
