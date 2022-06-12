@@ -1,6 +1,6 @@
-use super::{ArgsRing, Block, Mesh};
+use super::{join_meshes, ArgsRing, Block, Constraint2D, Mesh};
 use crate::shapes::GeoKind;
-use crate::util::PI;
+use crate::util::{PI, SQRT_2};
 use crate::StrError;
 
 /// Groups generators of structured meshes (Qua and Hex -- sometimes Tri)
@@ -103,6 +103,51 @@ impl Structured {
         }))?;
         block.subdivide(target)
     }
+
+    /// Generates a mesh representing a quarter of a disk in 2D
+    ///
+    /// ```text
+    /// y ^
+    ///   |
+    ///   ***=---__
+    ///   |        '*._
+    ///   |            *._
+    ///   |               *.
+    ///   |                 *.
+    ///   |                   *
+    ///   |                    *
+    ///   |                     *
+    ///   |                      *
+    ///   |                       *
+    ///   |                       #
+    ///   o --------------------- # --> x
+    ///                        radius
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `radius` -- the radius
+    /// * `ndiv` -- number of divisions (must be > 0)
+    /// * `target` -- Qua shapes only
+    pub fn quarter_disk_2d(radius: f64, ndiv: usize, target: GeoKind) -> Result<Mesh, StrError> {
+        let m = radius / 2.0;
+        let n = radius / SQRT_2;
+        let p = m / SQRT_2;
+        let mut block_1 = Block::new(&[[0.0, 0.0], [m, 0.0], [p, p], [0.0, m]])?;
+        let mut block_2 = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]])?;
+        let mut block_3 = Block::new(&[[0.0, m], [p, p], [n, n], [0.0, radius]])?;
+        block_1.set_ndiv(&[ndiv, ndiv])?;
+        block_2.set_ndiv(&[ndiv, ndiv])?;
+        block_3.set_ndiv(&[ndiv, ndiv])?;
+        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        block_2.set_edge_constraint(1, Some(ct.clone()))?;
+        block_3.set_edge_constraint(2, Some(ct))?;
+        let mesh_1 = block_1.subdivide(target)?;
+        let mesh_2 = block_2.subdivide(target)?;
+        let mesh_3 = block_3.subdivide(target)?;
+        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
+        join_meshes(&mesh_1_2, &mesh_3)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,6 +176,15 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         if false {
             draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_ring_3d.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn quarter_disk_2d_works() -> Result<(), StrError> {
+        let mesh = Structured::quarter_disk_2d(6.0, 2, GeoKind::Qua8)?;
+        if false {
+            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d.svg")?;
         }
         Ok(())
     }
