@@ -16,9 +16,9 @@ pub mod aux {
 
     /// Maps point coordinates
     ///
-    /// The shape is the area indicated with "?" or the edge with "%".
-    /// If class == Tri, the shape is half of the highlighted wedge.
-    /// In 3D, an extrusion is applied along the out-of-plane direction.
+    /// * The shape is the area indicated with "?" or the edge with "%".
+    /// * If class == Tri, the shape is the half (bottom) of the highlighted wedge.
+    /// * In 3D, an extrusion is applied along the out-of-plane direction.
     ///
     /// ```text
     ///   |            /
@@ -60,62 +60,12 @@ pub mod aux {
         }
     }
 
-    /// Generates the Canvas for the mapping used in tests
-    #[cfg_attr(coverage_nightly, no_coverage)]
-    pub fn _gen_canvas_mapping() -> Canvas {
-        let mut canvas = Canvas::new();
-        let color = "#bfbfbf";
-        canvas
-            .set_face_color("None")
-            .set_edge_color(color)
-            .set_line_width(2.0)
-            .draw_circle(0.0, 0.0, RMIN);
-        canvas.draw_circle(0.0, 0.0, RMAX);
-        canvas.set_edge_color(color).set_line_width(2.0);
-        canvas.draw_polyline(&[[0.0, 0.0], [RMAX * f64::cos(AMIN), RMAX * f64::sin(AMIN)]], false);
-        canvas.draw_polyline(&[[0.0, 0.0], [RMAX * f64::cos(AMAX), RMAX * f64::sin(AMAX)]], false);
-        canvas
-    }
-
-    /// Draws the points in the natural (right) and real (left) spaces
-    #[cfg_attr(coverage_nightly, no_coverage)]
-    pub fn _draw_point_coords_2d(ksi_min: f64, ksi_del: f64) -> Plot {
-        const N: usize = 11;
-        let mut natural_space = Curve::new();
-        natural_space.set_line_style("None").set_marker_style("o");
-        let mut real_space = Curve::new();
-        real_space.set_line_style("None").set_marker_style("o");
-        let ksi_max = ksi_min + ksi_del;
-        let (ksi_0, ksi_1) = generate2d(ksi_min, ksi_max, ksi_min, ksi_max, N, N);
-        let mut x = Vector::new(2);
-        natural_space.points_begin();
-        real_space.points_begin();
-        for i in 0..N {
-            for j in 0..N {
-                natural_space.points_add(ksi_0[i][j], ksi_1[i][j]);
-                map_point_coords(&mut x, &[ksi_0[i][j], ksi_1[i][j]], ksi_min, ksi_del);
-                real_space.points_add(x[0], x[1]);
-            }
-        }
-        natural_space.points_end();
-        real_space.points_end();
-        let mut plot = Plot::new();
-        plot.set_subplot(1, 2, 1)
-            .add(&real_space)
-            .add(&_gen_canvas_mapping())
-            .set_equal_axes(true)
-            .set_range(-0.1, RMAX + 0.1, -0.1, RMAX + 0.1)
-            .set_ticks_x(1.0, 0.0, "")
-            .set_ticks_y(1.0, 0.0, "")
-            .grid_and_labels("x", "y");
-        plot.set_subplot(1, 2, 2)
-            .add(&natural_space)
-            .set_equal_axes(true)
-            .set_labels("ξ0", "ξ1");
-        plot
-    }
-
     /// Returns a new scratchpad with coordinates set
+    ///
+    /// Notes:
+    ///
+    /// * For cables, the line will be along AMAX
+    /// * For shells, the surface will be at ZMAX
     pub fn gen_scratchpad_with_coords(space_ndim: usize, kind: GeoKind) -> Scratchpad {
         let geo_ndim = kind.ndim();
         let nnode = kind.nnode();
@@ -149,7 +99,7 @@ pub mod aux {
 
     /// Returns a new scratchpad with coordinates such that the shape has edges aligned to x-y-z
     ///
-    /// **Important:** This function works with geo_ndim = 2 or 3 only.
+    /// **Important:** This function works with geo_ndim = 2 or 3 only (SOLID).
     ///
     /// Notes:
     ///
@@ -212,6 +162,63 @@ pub mod aux {
         }
         Ok(pad_face)
     }
+
+    // ------ internal functions for testing ----------------------------------------------------------
+
+    /// Generates the Canvas for the mapping used in tests
+    #[cfg_attr(coverage_nightly, no_coverage)]
+    pub fn _gen_canvas_mapping() -> Canvas {
+        let mut canvas = Canvas::new();
+        let color = "#bfbfbf";
+        canvas
+            .set_face_color("None")
+            .set_edge_color(color)
+            .set_line_width(2.0)
+            .draw_circle(0.0, 0.0, RMIN);
+        canvas.draw_circle(0.0, 0.0, RMAX);
+        canvas.set_edge_color(color).set_line_width(2.0);
+        canvas.draw_polyline(&[[0.0, 0.0], [RMAX * f64::cos(AMIN), RMAX * f64::sin(AMIN)]], false);
+        canvas.draw_polyline(&[[0.0, 0.0], [RMAX * f64::cos(AMAX), RMAX * f64::sin(AMAX)]], false);
+        canvas
+    }
+
+    /// Draws the points in the natural (right) and real (left) spaces
+    #[cfg_attr(coverage_nightly, no_coverage)]
+    pub fn _draw_point_coords_2d(ksi_min: f64, ksi_del: f64) -> Plot {
+        const N: usize = 11;
+        let mut natural_space = Curve::new();
+        natural_space.set_line_style("None").set_marker_style("o");
+        let mut real_space = Curve::new();
+        real_space.set_line_style("None").set_marker_style("o");
+        let ksi_max = ksi_min + ksi_del;
+        let (ksi_0, ksi_1) = generate2d(ksi_min, ksi_max, ksi_min, ksi_max, N, N);
+        let mut x = Vector::new(2);
+        natural_space.points_begin();
+        real_space.points_begin();
+        for i in 0..N {
+            for j in 0..N {
+                natural_space.points_add(ksi_0[i][j], ksi_1[i][j]);
+                map_point_coords(&mut x, &[ksi_0[i][j], ksi_1[i][j]], ksi_min, ksi_del);
+                real_space.points_add(x[0], x[1]);
+            }
+        }
+        natural_space.points_end();
+        real_space.points_end();
+        let mut plot = Plot::new();
+        plot.set_subplot(1, 2, 1)
+            .add(&real_space)
+            .add(&_gen_canvas_mapping())
+            .set_equal_axes(true)
+            .set_range(-0.1, RMAX + 0.1, -0.1, RMAX + 0.1)
+            .set_ticks_x(1.0, 0.0, "")
+            .set_ticks_y(1.0, 0.0, "")
+            .grid_and_labels("x", "y");
+        plot.set_subplot(1, 2, 2)
+            .add(&natural_space)
+            .set_equal_axes(true)
+            .set_labels("ξ0", "ξ1");
+        plot
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -234,6 +241,7 @@ mod tests {
 
     #[test]
     fn gen_scratchpad_with_coords_works() {
+        // SOLID in 2D
         let pad = gen_scratchpad_with_coords(2, GeoKind::Qua4);
         assert_approx_eq!(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
         assert_approx_eq!(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
@@ -244,6 +252,7 @@ mod tests {
         assert_approx_eq!(pad.xxt[0][3], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
         assert_approx_eq!(pad.xxt[1][3], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
 
+        // SOLID in 3D
         let pad = gen_scratchpad_with_coords(3, GeoKind::Hex8);
         assert_approx_eq!(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
         assert_approx_eq!(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
@@ -270,6 +279,25 @@ mod tests {
         assert_approx_eq!(pad.xxt[0][7], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
         assert_approx_eq!(pad.xxt[1][7], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
         assert_approx_eq!(pad.xxt[2][7], aux::ZMAX, 1e-15);
+
+        // CABLE in 2D
+        let pad = gen_scratchpad_with_coords(2, GeoKind::Lin2);
+        assert_approx_eq!(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+
+        // SHELL in 3D
+        let pad = gen_scratchpad_with_coords(3, GeoKind::Tri3);
+        assert_approx_eq!(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[2][0], aux::ZMAX, 1e-15);
+        assert_approx_eq!(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        assert_approx_eq!(pad.xxt[2][1], aux::ZMAX, 1e-15);
+        assert_approx_eq!(pad.xxt[0][2], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][2], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[2][2], aux::ZMAX, 1e-15);
     }
 
     #[test]
