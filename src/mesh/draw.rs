@@ -335,13 +335,15 @@ impl Draw {
 ///
 /// **Note:** This is a high-level function calling Draw and others
 #[no_coverage]
-pub fn draw_mesh(mesh: Mesh, filename: &str) -> Result<(), StrError> {
+pub fn draw_mesh(mesh: Mesh, with_ids: bool, filename: &str) -> Result<(), StrError> {
     let region = Region::with(mesh, Extract::All)?;
     let mut plot = Plot::new();
     let mut draw = Draw::new();
     draw.edges(&mut plot, &region, true)?;
-    draw.cell_ids(&mut plot, &region.mesh)?;
-    draw.point_ids(&mut plot, &region.mesh);
+    if with_ids {
+        draw.cell_ids(&mut plot, &region.mesh)?;
+        draw.point_ids(&mut plot, &region.mesh);
+    }
     plot.set_equal_axes(true)
         .set_figure_size_points(600.0, 600.0)
         .save(filename)
