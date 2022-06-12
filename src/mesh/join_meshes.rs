@@ -19,15 +19,7 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     let (_, _, boundary_a) = Features::new(a, Extract::Boundary);
 
     // allocate and prepare a GridSearch for mesh A
-    let mut min_a = boundary_a.min.clone();
-    let mut max_a = boundary_a.max.clone();
-    const PCT: f64 = 1.0 / 100.0;
-    for i in 0..a.ndim {
-        let del = max_a[i] - min_a[i];
-        min_a[i] -= PCT * del;
-        max_a[i] += PCT * del;
-    }
-    let mut grid_a = GridSearch::new(&min_a, &max_a, GsNdiv::Default, GsTol::Default)?;
+    let mut grid_a = GridSearch::new(&boundary_a.min, &boundary_a.max, 0.01, GsNdiv::Default, GsTol::Default)?;
     for m in 0..a.points.len() {
         grid_a.insert(a.points[m].id, &a.points[m].coords)?;
     }
@@ -40,14 +32,7 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     let mut map_old_to_new_point_id_b = vec![0; b.points.len()];
     for m in 0..b.points.len() {
         let x = &b.points[m].coords;
-        let mut in_grid_a = true;
-        for i in 0..a.ndim {
-            if x[i] < min_a[i] || x[i] > max_a[i] {
-                in_grid_a = false;
-                break;
-            }
-        }
-        let maybe_point_id_a = if in_grid_a { grid_a.find(x)? } else { None };
+        let maybe_point_id_a = if grid_a.is_outside(x) { None } else { grid_a.find(x)? };
         let id = match maybe_point_id_a {
             Some(point_id_a) => point_id_a,
             None => {

@@ -62,17 +62,8 @@ impl Find {
     ///
     /// If the `features` does not correspond to `mesh`, a panic will occur.
     pub(crate) fn new(mesh: &Mesh, features: &Features) -> Result<Self, StrError> {
-        // expand limits a little bit to accommodate imprecisions on the (min,max) values
-        const PCT: f64 = 1.0 / 100.0; // 1% is enough
-        let (mut min, mut max) = (vec![0.0; mesh.ndim], vec![0.0; mesh.ndim]);
-        for i in 0..mesh.ndim {
-            let del = features.max[i] - features.min[i];
-            min[i] = features.min[i] - PCT * del;
-            max[i] = features.max[i] + PCT * del;
-        }
-
         // add point ids to grid
-        let mut grid = GridSearch::new(&min, &max, GsNdiv::Default, GsTol::Default)?;
+        let mut grid = GridSearch::new(&features.min, &features.max, 0.01, GsNdiv::Default, GsTol::Default)?;
         for point_id in &features.points {
             grid.insert(*point_id, &mesh.points[*point_id].coords)?;
         }

@@ -540,7 +540,13 @@ impl Block {
         }
 
         // grid to search reference coordinates
-        let mut grid_ksi = GridSearch::new(&vec![-1.01; ndim], &vec![1.01; ndim], GsNdiv::Default, GsTol::Default)?;
+        let mut grid_ksi = GridSearch::new(
+            &vec![-1.0; ndim],
+            &vec![1.0; ndim],
+            0.01,
+            GsNdiv::Default,
+            GsTol::Default,
+        )?;
 
         // resulting mesh
         let mut mesh = Mesh {

@@ -84,7 +84,7 @@ pub enum GsTol {
 /// fn main() -> Result<(), StrError> {
 ///     let min = &[0.0, 0.0];
 ///     let max = &[10.0, 10.0];
-///     let mut grid = GridSearch::new(min, max, GsNdiv::Spec(2,2,2), GsTol::Default)?;
+///     let mut grid = GridSearch::new(min, max, 0.01, GsNdiv::Spec(2,2,2), GsTol::Default)?;
 ///     grid.insert(123, &[5.5, SQRT_2])?;
 ///     // grid.draw()?.set_equal_axes(true).save("/tmp/gemlab/doc_grid_search.svg")?;
 ///     assert_eq!(grid.find(&[5.5, SQRT_2])?, Some(123));
@@ -123,7 +123,18 @@ pub struct GridSearch {
 
 impl GridSearch {
     /// Creates a new GridSearch
-    pub fn new(min: &[f64], max: &[f64], ndiv: GsNdiv, tol: GsTol) -> Result<Self, StrError> {
+    ///
+    /// # Input
+    ///
+    /// * `min` -- (ndim) minimum coordinates to define the boundary
+    /// * `max` -- (ndim) maximum coordinates to define the boundary
+    /// * `expansion` -- expansion factor for the bounding box.
+    ///    This constant serves to accommodate eventual imprecision near the boundaries.
+    ///    The value is a multiplier for `delta = max - min`
+    ///    For example, **(recommended) expansion = 0.01** means 1% of delta
+    /// * `ndiv` -- option for the number of division
+    /// * `tol` -- option for the tolerances
+    pub fn new(min: &[f64], max: &[f64], expansion: f64, ndiv: GsNdiv, tol: GsTol) -> Result<Self, StrError> {
         // check input
         let ndim = min.len();
         if ndim < 2 || ndim > 3 {
@@ -158,6 +169,17 @@ impl GridSearch {
             }
         };
 
+        // expanded borders
+        let mut vec_min = min.to_vec();
+        let mut vec_max = max.to_vec();
+        if expansion > 0.0 {
+            for i in 0..ndim {
+                let del = vec_max[i] - vec_min[i];
+                vec_min[i] -= expansion * del;
+                vec_max[i] += expansion * del;
+            }
+        }
+
         // number of halo corners
         let ncorner = usize::pow(2, ndim as u32);
 
@@ -165,9 +187,9 @@ impl GridSearch {
         let mut grid = GridSearch {
             ndim,
             ndiv: vec_ndiv,
-            min: min.to_vec(),
-            max: max.to_vec(),
-            delta: min.iter().zip(max).map(|(a, b)| *b - *a).collect(),
+            min: vec_min,
+            max: vec_max,
+            delta: vec![0.0; ndim],
             size: vec![0.0; ndim],
             cf: vec![0; 3], // << must be 3
             tol: vec_tol,
@@ -191,6 +213,7 @@ impl GridSearch {
             if grid.ndiv[i] < 1 {
                 return Err("ndiv must be ≥ 1");
             }
+            grid.delta[i] = grid.max[i] - grid.min[i];
             if grid.delta[i] <= 0.0 {
                 return Err("max must be greater than min");
             }
@@ -209,6 +232,21 @@ impl GridSearch {
 
         // done
         Ok(grid)
+    }
+
+    /// Returns whether a point is outside the grid or not (thus we cannot use insert or find)
+    ///
+    /// # Panics
+    ///
+    /// This function requires that `x.len() = ndim`, otherwise a panic occurs.
+    pub fn is_outside(&self, x: &[f64]) -> bool {
+        assert_eq!(x.len(), self.ndim);
+        for i in 0..self.ndim {
+            if x[i] < self.min[i] || x[i] > self.max[i] {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// Inserts a new item to the right container in the grid
@@ -792,7 +830,7 @@ mod tests {
 
     #[test]
     fn derive_works() -> Result<(), StrError> {
-        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], GsNdiv::Spec(1, 1, 0), GsTol::Default)?;
+        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], 0.0, GsNdiv::Spec(1, 1, 0), GsTol::Default)?;
         // debug
         grid.insert(0, &[0.5, 0.5])?;
         let correct = "GridSearch { ndim: 2, ndiv: [1, 1], min: [0.0, 0.0], max: [1.0, 1.0], delta: [1.0, 1.0], size: [1.0, 1.0], cf: [1, 1, 1], tol: [0.0001, 0.0001], halo: [[0.4999, 0.4999], [0.5001, 0.4999], [0.5001, 0.5001], [0.4999, 0.5001]], ncorner: 4, containers: {0: {0: Item { id: 0, x: [0.5, 0.5] }}}, radius: 0.7071067811865476, radius_tol: 0.0001414213562373095 }";
@@ -811,13 +849,14 @@ mod tests {
     }
 
     fn get_test_grid_2d() -> Result<GridSearch, StrError> {
-        GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], GsNdiv::Spec(5, 5, 0), GsTol::Default)
+        GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], 0.0, GsNdiv::Spec(5, 5, 0), GsTol::Default)
     }
 
     fn get_test_grid_3d() -> Result<GridSearch, StrError> {
         GridSearch::new(
             &[-1.0, -1.0, -1.0],
             &[1.0, 1.0, 1.0],
+            0.0,
             GsNdiv::Spec(3, 3, 3),
             GsTol::Default,
         )
@@ -965,23 +1004,24 @@ mod tests {
     #[test]
     fn new_fails_on_wrong_input() -> Result<(), StrError> {
         assert_eq!(
-            GridSearch::new(&[0.0], &[1.0, 1.0], GsNdiv::Default, GsTol::Default).err(),
+            GridSearch::new(&[0.0], &[1.0, 1.0], 0.0, GsNdiv::Default, GsTol::Default).err(),
             Some("min.len() = ndim must be 2 or 3")
         );
 
         assert_eq!(
-            GridSearch::new(&[0.0, 0.0], &[1.0], GsNdiv::Default, GsTol::Default).err(),
+            GridSearch::new(&[0.0, 0.0], &[1.0], 0.0, GsNdiv::Default, GsTol::Default).err(),
             Some("max.len() must equal ndim = min.len()")
         );
 
         assert_eq!(
-            GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], GsNdiv::Spec(0, 1, 1), GsTol::Default).err(),
+            GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], 0.0, GsNdiv::Spec(0, 1, 1), GsTol::Default).err(),
             Some("ndiv must be ≥ 1")
         );
         assert_eq!(
             GridSearch::new(
                 &[0.0, 0.0, 0.0],
                 &[1.0, 1.0, 1.0],
+                0.0,
                 GsNdiv::Spec(1, 0, 1),
                 GsTol::Default
             )
@@ -992,6 +1032,7 @@ mod tests {
             GridSearch::new(
                 &[0.0, 0.0, 0.0],
                 &[1.0, 1.0, 1.0],
+                0.0,
                 GsNdiv::Spec(1, 1, 0),
                 GsTol::Default
             )
@@ -1000,7 +1041,7 @@ mod tests {
         );
 
         assert_eq!(
-            GridSearch::new(&[0.0, 0.0], &[0.0, 1.0], GsNdiv::Spec(10, 10, 10), GsTol::Default).err(),
+            GridSearch::new(&[0.0, 0.0], &[0.0, 1.0], 0.0, GsNdiv::Spec(10, 10, 10), GsTol::Default).err(),
             Some("max must be greater than min")
         );
 
@@ -1008,6 +1049,7 @@ mod tests {
             GridSearch::new(
                 &[0.0, 0.0, 0.0],
                 &[1.0, 0.0, 1.0],
+                0.0,
                 GsNdiv::Spec(10, 10, 10),
                 GsTol::Default
             )
@@ -1018,6 +1060,7 @@ mod tests {
             GridSearch::new(
                 &[0.0, 0.0, 0.0],
                 &[1.0, 1.0, 0.0],
+                0.0,
                 GsNdiv::Spec(10, 10, 10),
                 GsTol::Default
             )
@@ -1029,6 +1072,7 @@ mod tests {
             GridSearch::new(
                 &[0.0, 0.0],
                 &[1.0, 1.0],
+                0.0,
                 GsNdiv::Spec(100, 1, 1),
                 GsTol::Spec(1e-3, 1e-4, 1e-4)
             )
@@ -1039,6 +1083,7 @@ mod tests {
             GridSearch::new(
                 &[0.0, 0.0, 0.0],
                 &[1.0, 1.0, 1.0],
+                0.0,
                 GsNdiv::Spec(1, 100, 1),
                 GsTol::Spec(1e-4, 1e-3, 1e-4)
             )
@@ -1049,6 +1094,7 @@ mod tests {
             GridSearch::new(
                 &[0.0, 0.0, 0.0],
                 &[1.0, 1.0, 1.0],
+                0.0,
                 GsNdiv::Spec(1, 1, 100),
                 GsTol::Spec(1e-4, 1e-4, 1e-3)
             )
@@ -1063,6 +1109,7 @@ mod tests {
         let g2d = GridSearch::new(
             &[0.0, 0.0],
             &[10.0, 1.0],
+            0.0,
             GsNdiv::Prop(20),
             GsTol::Spec(1e-4, 1e-5, 0.0),
         )?;
@@ -1072,6 +1119,7 @@ mod tests {
         let g3d = GridSearch::new(
             &[0.0, 0.0, 0.0],
             &[10.0, 1.0, 20.0],
+            0.0,
             GsNdiv::Prop(20),
             GsTol::Spec(1e-4, 1e-5, 1e-6),
         )?;
@@ -1257,17 +1305,32 @@ mod tests {
         let grid = GridSearch::new(
             &[6.123233995736766e-17, 0.0],
             &[2.0000001, 2.0],
+            0.0,
             GsNdiv::Default,
             GsTol::Default,
         )?;
-        // let mut plot = grid.plot()?;
-        // plot.set_equal_axes(true)
-        //     .set_figure_size_points(800.0, 800.0)
-        //     .save("/tmp/gemlab/container_index_handles_imprecision.svg")?;
+        if false {
+            let mut plot = grid.draw()?;
+            plot.set_equal_axes(true)
+                .set_figure_size_points(800.0, 800.0)
+                .save("/tmp/gemlab/test_container_index_handles_imprecision.svg")?;
+        }
         assert_eq!(grid.container_index(&[0.0, 0.0]), None);
         assert_eq!(grid.container_index(&[2.0, 0.0]), Some(19));
         assert_eq!(grid.container_index(&[2.0, 2.0]), Some(379));
         assert_eq!(grid.container_index(&[0.0, 2.0]), None);
+
+        let grid = GridSearch::new(
+            &[6.123233995736766e-17, 0.0],
+            &[2.0000001, 2.0],
+            0.01,
+            GsNdiv::Default,
+            GsTol::Default,
+        )?;
+        assert_eq!(grid.container_index(&[0.0, 0.0]), Some(0));
+        assert_eq!(grid.container_index(&[2.0, 0.0]), Some(19));
+        assert_eq!(grid.container_index(&[2.0, 2.0]), Some(379));
+        assert_eq!(grid.container_index(&[0.0, 2.0]), Some(360));
         Ok(())
     }
 
@@ -1331,6 +1394,21 @@ mod tests {
     }
 
     #[test]
+    fn is_outside_works() -> Result<(), StrError> {
+        let g2d = get_test_grid_2d()?;
+        assert_eq!(g2d.is_outside(&[-0.3, 0.8]), true);
+        assert_eq!(g2d.is_outside(&[0.3, -0.3]), true);
+        assert_eq!(g2d.is_outside(&[0.3, 0.8]), false);
+
+        let g3d = get_test_grid_3d()?;
+        assert_eq!(g3d.is_outside(&[-1.1, 0.0, 0.0]), true);
+        assert_eq!(g3d.is_outside(&[0.0, -1.1, 0.0]), true);
+        assert_eq!(g3d.is_outside(&[0.0, 0.0, -1.1]), true);
+        assert_eq!(g3d.is_outside(&[0.0, 0.0, 0.0]), false);
+        Ok(())
+    }
+
+    #[test]
     fn insert_fails_on_wrong_input() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d()?;
         let res = g2d.insert(0, &[0.0, 0.0, 0.0]);
@@ -1388,7 +1466,7 @@ mod tests {
 
     #[test]
     fn insert_2d_works_boundaries() -> Result<(), StrError> {
-        let mut grid = GridSearch::new(&[0.0, 0.0], &[2.0, 1.0], GsNdiv::Spec(2, 1, 0), GsTol::Default)?;
+        let mut grid = GridSearch::new(&[0.0, 0.0], &[2.0, 1.0], 0.0, GsNdiv::Spec(2, 1, 0), GsTol::Default)?;
         grid.insert(0, &[0.0, 0.0])?;
         grid.insert(1, &[1.0, 0.0])?;
         grid.insert(2, &[1.0, 1.0])?;
@@ -1722,7 +1800,7 @@ mod tests {
 
     #[test]
     fn maybe_insert_works() -> Result<(), StrError> {
-        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], GsNdiv::Spec(3, 3, 0), GsTol::Default)?;
+        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], 0.0, GsNdiv::Spec(3, 3, 0), GsTol::Default)?;
         let id = grid.maybe_insert(111, &[0.5, 0.5])?;
         assert_eq!(id, 111);
         let id = grid.maybe_insert(222, &[0.75, 0.75])?;
