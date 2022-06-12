@@ -19,11 +19,25 @@ pub fn set_xxt_from_points(pad: &mut Scratchpad, points: &Vec<PointId>, mesh: &M
     }
 }
 
+/// Returns the (min,max) point coordinates in a mesh
+#[inline]
+pub fn get_mesh_limits(mesh: &Mesh) -> (Vec<f64>, Vec<f64>) {
+    let mut min = vec![f64::MAX; mesh.ndim];
+    let mut max = vec![f64::MIN; mesh.ndim];
+    for point in &mesh.points {
+        for i in 0..mesh.ndim {
+            min[i] = f64::min(min[i], point.coords[i]);
+            max[i] = f64::max(max[i], point.coords[i]);
+        }
+    }
+    (min, max)
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::set_xxt_from_points;
+    use super::{get_mesh_limits, set_xxt_from_points};
     use crate::mesh::Samples;
     use crate::shapes::Scratchpad;
     use crate::StrError;
@@ -105,5 +119,18 @@ mod tests {
              └                 ┘"
         );
         Ok(())
+    }
+
+    #[test]
+    fn get_mesh_limits_works() {
+        let mesh = &Samples::two_quads_horizontal();
+        let (min, max) = get_mesh_limits(&mesh);
+        assert_eq!(min, &[0.0, 0.0]);
+        assert_eq!(max, &[2.0, 1.0]);
+
+        let mesh = &Samples::two_cubes_vertical();
+        let (min, max) = get_mesh_limits(&mesh);
+        assert_eq!(min, &[0.0, 0.0, 0.0]);
+        assert_eq!(max, &[1.0, 1.0, 2.0]);
     }
 }
