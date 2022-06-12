@@ -49,12 +49,14 @@ fn test_grid_search_2d() -> Result<(), StrError> {
         id += 1;
     }
 
-    // plot
-    let mut plot = grid.plot()?;
-    plot.set_equal_axes(true)
-        .set_xrange(-0.2, 1.2)
-        .set_figure_size_points(400.0, 800.0)
-        .save("/tmp/gemlab/test_grid_search_2d.svg")?;
+    // draw grid
+    if false {
+        let mut plot = grid.draw()?;
+        plot.set_equal_axes(true)
+            .set_xrange(-0.2, 1.2)
+            .set_figure_size_points(400.0, 800.0)
+            .save("/tmp/gemlab/test_grid_search_2d.svg")?;
+    }
 
     // find points on bot circle
     let res = grid.find_on_circle(&bot.center, bot.radius)?;

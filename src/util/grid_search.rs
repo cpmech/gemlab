@@ -86,7 +86,7 @@ pub enum GsTol {
 ///     let max = &[10.0, 10.0];
 ///     let mut grid = GridSearch::new(min, max, GsNdiv::Spec(2,2,2), GsTol::Default)?;
 ///     grid.insert(123, &[5.5, SQRT_2])?;
-///     grid.plot()?.set_equal_axes(true).save("/tmp/gemlab/doc_grid_search.svg")?;
+///     // grid.draw()?.set_equal_axes(true).save("/tmp/gemlab/doc_grid_search.svg")?;
 ///     assert_eq!(grid.find(&[5.5, SQRT_2])?, Some(123));
 ///     assert_eq!(grid.find(&[5.501, SQRT_2])?, None);
 ///     Ok(())
@@ -533,8 +533,8 @@ impl GridSearch {
         Ok(id)
     }
 
-    /// Returns a drawing of this object
-    pub fn plot(&self) -> Result<Plot, StrError> {
+    /// Draws grid and items
+    pub fn draw(&self) -> Result<Plot, StrError> {
         // create plot
         let mut plot = Plot::new();
 
@@ -789,6 +789,19 @@ mod tests {
     use crate::StrError;
     use plotpy::{Canvas, Curve, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+
+    #[test]
+    fn derive_works() -> Result<(), StrError> {
+        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], GsNdiv::Spec(1, 1, 0), GsTol::Default)?;
+        // debug
+        grid.insert(0, &[0.5, 0.5])?;
+        let correct = "GridSearch { ndim: 2, ndiv: [1, 1], min: [0.0, 0.0], max: [1.0, 1.0], delta: [1.0, 1.0], size: [1.0, 1.0], cf: [1, 1, 1], tol: [0.0001, 0.0001], halo: [[0.4999, 0.4999], [0.5001, 0.4999], [0.5001, 0.5001], [0.4999, 0.5001]], ncorner: 4, containers: {0: {0: Item { id: 0, x: [0.5, 0.5] }}}, radius: 0.7071067811865476, radius_tol: 0.0001414213562373095 }";
+        assert_eq!(format!("{:?}", grid), correct);
+        // clone
+        let cloned = grid.clone();
+        assert_eq!(format!("{:?}", cloned), correct);
+        Ok(())
+    }
 
     struct TestData<'a> {
         id: usize,
@@ -1116,6 +1129,65 @@ mod tests {
              ncontainer = 0\n\
              ndiv = [3, 3, 3]\n"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn draw_works_2d() -> Result<(), StrError> {
+        let mut grid = get_test_grid_2d()?;
+        for data in get_test_data_2d() {
+            grid.insert(data.id, data.x)?;
+        }
+        let mut plot = grid.draw()?;
+        if false {
+            let mut canvas = Canvas::new();
+            canvas.set_face_color("None").set_edge_color("magenta");
+            canvas.draw_circle(0.5, 0.8, grid.radius);
+            canvas.draw_circle(0.1, 0.4, grid.radius);
+            canvas.draw_circle(0.5, 0.0, grid.radius);
+            canvas.draw_circle(0.1, 1.6, grid.radius);
+            canvas.set_edge_color("#fab32f").set_line_width(1.5);
+            canvas.draw_polyline(&vec![vec![0.6, -0.2], vec![0.6, 1.8]], false);
+            canvas.draw_polyline(&vec![vec![-0.2, 1.8], vec![0.8, 1.8]], false);
+            canvas.draw_polyline(&vec![vec![0.2, -0.2], vec![0.8, 0.1]], false);
+            canvas.draw_polyline(
+                &vec![vec![0.1 + grid.radius, -0.2], vec![0.1 + grid.radius, 1.8]],
+                false,
+            );
+            canvas.set_edge_color("green").set_line_width(0.5);
+            canvas.draw_circle(-0.2, 1.8, 0.3);
+            plot.add(&canvas);
+            plot.set_equal_axes(true)
+                .set_range(-0.4, 1.0, -0.4, 2.0)
+                .set_ticks_x(0.1, 0.0, "")
+                .set_num_ticks_y(12)
+                .grid_and_labels("x", "y")
+                .set_figure_size_points(400.0, 800.0);
+            plot.save("/tmp/gemlab/test_plot_grid_search_2d.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn draw_works_3d() -> Result<(), StrError> {
+        let mut grid = get_test_grid_3d()?;
+        for data in get_test_data_3d() {
+            grid.insert(data.id, data.x)?;
+        }
+        let mut plot = grid.draw()?;
+        if false {
+            let mut curve = Curve::new();
+            curve.set_line_color("#fab32f").set_line_width(1.5);
+            curve.draw_3d(&[-1.0, 1.0], &[-1.0, -1.0], &[-1.0, -1.0]);
+            curve.draw_3d(&[-1.0, 1.0], &[-1.0, 1.0], &[-1.0, 1.0]);
+            let mut surface = Surface::new();
+            surface.set_with_surface(false).set_with_wireframe(true);
+            surface.draw_cylinder(&[1.0, -1.0, -1.0], &[1.0, 1.0, -1.0], 0.4, 1, 20)?;
+            plot.add(&curve);
+            plot.add(&surface);
+            plot.set_figure_size_points(600.0, 600.0);
+            plot.save("/tmp/gemlab/test_plot_grid_search_3d.svg")?;
+        }
         Ok(())
     }
 
@@ -1657,68 +1729,6 @@ mod tests {
         assert_eq!(id, 222);
         let id = grid.maybe_insert(333, &[0.5, 0.5])?;
         assert_eq!(id, 111); // existent
-        Ok(())
-    }
-
-    #[test]
-    fn plot_works() -> Result<(), StrError> {
-        let mut g2d = get_test_grid_2d()?;
-        for data in get_test_data_2d() {
-            g2d.insert(data.id, data.x)?;
-        }
-        let mut plot = g2d.plot()?;
-        let mut canvas = Canvas::new();
-        canvas.set_face_color("None").set_edge_color("magenta");
-        canvas.draw_circle(0.5, 0.8, g2d.radius);
-        canvas.draw_circle(0.1, 0.4, g2d.radius);
-        canvas.draw_circle(0.5, 0.0, g2d.radius);
-        canvas.draw_circle(0.1, 1.6, g2d.radius);
-        canvas.set_edge_color("#fab32f").set_line_width(1.5);
-        canvas.draw_polyline(&vec![vec![0.6, -0.2], vec![0.6, 1.8]], false);
-        canvas.draw_polyline(&vec![vec![-0.2, 1.8], vec![0.8, 1.8]], false);
-        canvas.draw_polyline(&vec![vec![0.2, -0.2], vec![0.8, 0.1]], false);
-        canvas.draw_polyline(&vec![vec![0.1 + g2d.radius, -0.2], vec![0.1 + g2d.radius, 1.8]], false);
-        canvas.set_edge_color("green").set_line_width(0.5);
-        canvas.draw_circle(-0.2, 1.8, 0.3);
-        plot.add(&canvas);
-        plot.set_equal_axes(true)
-            .set_range(-0.4, 1.0, -0.4, 2.0)
-            .set_ticks_x(0.1, 0.0, "")
-            .set_num_ticks_y(12)
-            .grid_and_labels("x", "y")
-            .set_figure_size_points(400.0, 800.0);
-        // plot.save("/tmp/gemlab/search_grid_plot_2d_works.svg")?;
-
-        let mut g3d = get_test_grid_3d()?;
-        for data in get_test_data_3d() {
-            g3d.insert(data.id, data.x)?;
-        }
-        let mut plot = g3d.plot()?;
-        let mut curve = Curve::new();
-        curve.set_line_color("#fab32f").set_line_width(1.5);
-        curve.draw_3d(&[-1.0, 1.0], &[-1.0, -1.0], &[-1.0, -1.0]);
-        curve.draw_3d(&[-1.0, 1.0], &[-1.0, 1.0], &[-1.0, 1.0]);
-        let mut surface = Surface::new();
-        surface.set_with_surface(false).set_with_wireframe(true);
-        surface.draw_cylinder(&[1.0, -1.0, -1.0], &[1.0, 1.0, -1.0], 0.4, 1, 20)?;
-        plot.add(&curve);
-        plot.add(&surface);
-        plot.set_figure_size_points(600.0, 600.0);
-        // plot.save("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
-        // plot.save_and_show("/tmp/gemlab/search_grid_plot_3d_works.svg")?;
-        Ok(())
-    }
-
-    #[test]
-    fn derive_works() -> Result<(), StrError> {
-        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], GsNdiv::Spec(1, 1, 0), GsTol::Default)?;
-        // debug
-        grid.insert(0, &[0.5, 0.5])?;
-        let correct = "GridSearch { ndim: 2, ndiv: [1, 1], min: [0.0, 0.0], max: [1.0, 1.0], delta: [1.0, 1.0], size: [1.0, 1.0], cf: [1, 1, 1], tol: [0.0001, 0.0001], halo: [[0.4999, 0.4999], [0.5001, 0.4999], [0.5001, 0.5001], [0.4999, 0.5001]], ncorner: 4, containers: {0: {0: Item { id: 0, x: [0.5, 0.5] }}}, radius: 0.7071067811865476, radius_tol: 0.0001414213562373095 }";
-        assert_eq!(format!("{:?}", grid), correct);
-        // clone
-        let cloned = grid.clone();
-        assert_eq!(format!("{:?}", cloned), correct);
         Ok(())
     }
 }

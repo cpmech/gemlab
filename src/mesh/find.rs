@@ -308,14 +308,14 @@ mod tests {
 
     #[allow(dead_code)]
     fn plot_grid_two_quads_horizontal(find: &Find) -> Result<(), StrError> {
-        let mut plot = find.grid.plot()?;
+        let mut plot = find.grid.draw()?;
         plot.set_equal_axes(true).set_figure_size_points(800.0, 400.0);
         plot.save("/tmp/gemlab/find_with_two_quads_horizontal.svg")
     }
 
     #[allow(dead_code)]
     fn plot_grid_two_cubes_vertical(find: &Find) -> Result<(), StrError> {
-        let mut plot = find.grid.plot()?;
+        let mut plot = find.grid.draw()?;
         plot.set_equal_axes(true).set_figure_size_points(2048.0, 2048.0);
         plot.save("/tmp/gemlab/find_with_two_cubes_vertical.svg")
     }
