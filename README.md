@@ -125,7 +125,7 @@ space-number-of-dimensions (`space_ndim`) are possible. There are three cases:
 ### Coverage tool
 
 The coverage tool cannot properly handle the macros in russell_chk such as assert_approx_eq!
-and assert_vec_approx_eq! We could use the `#[cfg_attr(coverage_nightly, no_coverage)]` decorator on
+and assert_vec_approx_eq! We could use the `#[no_coverage]` decorator on
 the testing function to stop the coverage tool assessing the region coverage within the test function.
 However, we let the coverage tool report incorrect Region Coverage anyway. Sometimes, the coverage
 tool also fails to report line coverage even when all lines have been run.

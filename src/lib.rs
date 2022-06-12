@@ -1,4 +1,4 @@
-#![cfg_attr(coverage_nightly, feature(no_coverage))]
+#![feature(no_coverage)]
 
 //! Gemlab -- Geometry, meshes, and integration for finite element analyses
 

@@ -5,8 +5,7 @@ use plotpy::{Canvas, Plot, PolyCode, Text};
 use russell_lab::Vector;
 
 /// Draws edge
-#[cfg_attr(coverage_nightly, no_coverage)]
-fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -> Result<(), StrError> {
+fn draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -> Result<(), StrError> {
     const N: usize = 11; // number of points along edge (to handle nonlinear edges)
     let (ksi_min, ksi_del) = (-1.0, 2.0); // all Lin shapes go from -1 to +1
     let space_ndim = edge_pad.xmax.len();
@@ -45,7 +44,6 @@ fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) 
 /// * `edge_color` -- color to draw edges; an empty string "" means use default color
 /// * `with_ids` -- draw IDs of nodes
 /// * `set_range` -- sets axis range
-#[cfg_attr(coverage_nightly, no_coverage)]
 pub fn draw_shape(
     plot: &mut Plot,
     pad: &Scratchpad,
@@ -60,7 +58,7 @@ pub fn draw_shape(
     let mut canvas = Canvas::new();
     if pad.kind.ndim() == 1 {
         let mut lin_pad = pad.clone();
-        _draw_edge(&mut canvas, &mut lin_pad, edge_color)?;
+        draw_edge(&mut canvas, &mut lin_pad, edge_color)?;
     } else {
         let mut edge_pad = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap())?;
         for e in 0..pad.kind.nedge() {
@@ -70,7 +68,7 @@ pub fn draw_shape(
                     edge_pad.set_xx(i, j, pad.xxt[j][m]);
                 }
             }
-            _draw_edge(&mut canvas, &mut edge_pad, edge_color)?;
+            draw_edge(&mut canvas, &mut edge_pad, edge_color)?;
         }
     }
     plot.add(&canvas);
@@ -146,7 +144,6 @@ pub fn draw_shape(
 }
 
 /// Draws shape (simple version)
-#[cfg_attr(coverage_nightly, no_coverage)]
 pub fn draw_shape_simple(pad: &Scratchpad, filename: &str) -> Result<(), StrError> {
     let mut plot = Plot::new();
     draw_shape(&mut plot, &pad, "", true, true)?;
@@ -161,14 +158,13 @@ pub fn draw_shape_simple(pad: &Scratchpad, filename: &str) -> Result<(), StrErro
 #[cfg(test)]
 mod tests {
     use super::draw_shape;
-    use crate::shapes::op::testing::aux::{_gen_canvas_mapping, gen_scratchpad_with_coords};
+    use crate::shapes::op::testing::aux::{gen_canvas_mapping, gen_scratchpad_with_coords};
     use crate::shapes::GeoKind;
     use crate::StrError;
     use plotpy::Plot;
 
-    // #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
-    fn _draw_shape_works() -> Result<(), StrError> {
+    #[test]
+    fn draw_shape_works() -> Result<(), StrError> {
         // select all kinds
         let kinds = vec![
             // Lin
@@ -202,7 +198,7 @@ mod tests {
             let pad = gen_scratchpad_with_coords(space_ndim, kind);
             let mut plot = Plot::new();
             if space_ndim == 2 {
-                let canvas = _gen_canvas_mapping();
+                let canvas = gen_canvas_mapping();
                 plot.add(&canvas);
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
@@ -210,9 +206,11 @@ mod tests {
             if space_ndim == 2 {
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
-            plot.set_figure_size_points(600.0, 600.0)
-                .set_equal_axes(true)
-                .save(format!("/tmp/gemlab/test_draw_shape_{}.svg", kind.to_string()).as_str())?;
+            if false {
+                plot.set_figure_size_points(600.0, 600.0)
+                    .set_equal_axes(true)
+                    .save(format!("/tmp/gemlab/test_draw_shape_{}.svg", kind.to_string()).as_str())?;
+            }
         }
         Ok(())
     }

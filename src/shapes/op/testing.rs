@@ -169,8 +169,7 @@ pub mod aux {
     // ------ internal functions for testing ----------------------------------------------------------
 
     /// Generates the Canvas for the mapping used in tests
-    #[cfg_attr(coverage_nightly, no_coverage)]
-    pub fn _gen_canvas_mapping() -> Canvas {
+    pub fn gen_canvas_mapping() -> Canvas {
         let mut canvas = Canvas::new();
         let color = "#bfbfbf";
         canvas
@@ -186,8 +185,7 @@ pub mod aux {
     }
 
     /// Draws the points in the natural (right) and real (left) spaces
-    #[cfg_attr(coverage_nightly, no_coverage)]
-    pub fn _draw_point_coords_2d(ksi_min: f64, ksi_del: f64) -> Plot {
+    pub fn draw_point_coords_2d(ksi_min: f64, ksi_del: f64) -> Plot {
         const N: usize = 11;
         let mut natural_space = Curve::new();
         natural_space.set_line_style("None").set_marker_style("o");
@@ -210,7 +208,7 @@ pub mod aux {
         let mut plot = Plot::new();
         plot.set_subplot(1, 2, 1)
             .add(&real_space)
-            .add(&_gen_canvas_mapping())
+            .add(&gen_canvas_mapping())
             .set_equal_axes(true)
             .set_range(-0.1, RMAX + 0.1, -0.1, RMAX + 0.1)
             .set_ticks_x(1.0, 0.0, "")
@@ -228,18 +226,20 @@ pub mod aux {
 
 #[cfg(test)]
 mod tests {
-    use super::aux::{_draw_point_coords_2d, extract_edge, extract_face, gen_scratchpad_with_coords};
+    use super::aux::{draw_point_coords_2d, extract_edge, extract_face, gen_scratchpad_with_coords};
     use crate::shapes::op::testing::aux::{self, gen_scratchpad_with_coords_aligned};
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq};
 
-    // #[test]
-    #[cfg_attr(coverage_nightly, no_coverage)]
-    fn _draw_point_coords_2d_works() -> Result<(), StrError> {
-        let mut plot = _draw_point_coords_2d(0.0, 1.0);
-        plot.set_figure_size_points(1000.0, 600.0)
-            .save("/tmp/gemlab/test_draw_point_coords_2d.svg")
+    #[test]
+    fn draw_point_coords_2d_works() -> Result<(), StrError> {
+        let mut plot = draw_point_coords_2d(0.0, 1.0);
+        if false {
+            plot.set_figure_size_points(1000.0, 600.0)
+                .save("/tmp/gemlab/test_draw_point_coords_2d.svg")?;
+        }
+        Ok(())
     }
 
     #[test]

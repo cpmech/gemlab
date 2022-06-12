@@ -64,17 +64,6 @@ impl Draw {
         }
     }
 
-    /// Draws mesh with given Region
-    pub fn with(plot: &mut Plot, region: &Region, with_ids: bool) -> Result<Self, StrError> {
-        let mut draw = Draw::new();
-        draw.edges(plot, region, true)?;
-        if with_ids {
-            draw.cell_ids(plot, &region.mesh)?;
-            draw.point_ids(plot, &region.mesh);
-        }
-        Ok(draw)
-    }
-
     /// Draws all points (markers)
     ///
     /// # Input
@@ -345,10 +334,14 @@ impl Draw {
 /// Draws mesh
 ///
 /// **Note:** This is a high-level function calling Draw and others
+#[no_coverage]
 pub fn draw_mesh(mesh: Mesh, filename: &str) -> Result<(), StrError> {
     let region = Region::with(mesh, Extract::All)?;
     let mut plot = Plot::new();
-    Draw::with(&mut plot, &region, true)?;
+    let mut draw = Draw::new();
+    draw.edges(&mut plot, &region, true)?;
+    draw.cell_ids(&mut plot, &region.mesh)?;
+    draw.point_ids(&mut plot, &region.mesh);
     plot.set_equal_axes(true)
         .set_figure_size_points(600.0, 600.0)
         .save(filename)
@@ -363,8 +356,8 @@ mod tests {
     use crate::StrError;
     use plotpy::{Canvas, Plot};
 
-    // #[test]
-    fn _draw_works_2d_ring() -> Result<(), StrError> {
+    #[test]
+    fn draw_works_2d_ring() -> Result<(), StrError> {
         // draw reference circles
         let mut plot = Plot::new();
         let mut circle_in = Canvas::new();
@@ -411,15 +404,17 @@ mod tests {
         draw.cell_ids(&mut plot, &region.mesh)?;
 
         // save figure
-        plot.set_figure_size_points(400.0, 400.0)
-            .set_equal_axes(true)
-            .set_range(-0.1, 2.1, -0.1, 2.1)
-            .save("/tmp/gemlab/draw_works_2d_ring.svg")?;
+        if false {
+            plot.set_figure_size_points(400.0, 400.0)
+                .set_equal_axes(true)
+                .set_range(-0.1, 2.1, -0.1, 2.1)
+                .save("/tmp/gemlab/draw_works_2d_ring.svg")?;
+        }
         Ok(())
     }
 
-    // #[test]
-    fn _draw_works_2d_qua12() -> Result<(), StrError> {
+    #[test]
+    fn draw_works_2d_qua12() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua12();
         let region = Region::with(mesh, Extract::All)?;
@@ -427,14 +422,16 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        plot.set_figure_size_points(400.0, 400.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_2d_qua12.svg")?;
+        if false {
+            plot.set_figure_size_points(400.0, 400.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/draw_works_2d_qua12.svg")?;
+        }
         Ok(())
     }
 
-    // #[test]
-    fn _draw_works_2d_qua16() -> Result<(), StrError> {
+    #[test]
+    fn draw_works_2d_qua16() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua16();
         let region = Region::with(mesh, Extract::All)?;
@@ -442,28 +439,32 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        plot.set_figure_size_points(400.0, 400.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_2d_qua16.svg")?;
+        if false {
+            plot.set_figure_size_points(400.0, 400.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/draw_works_2d_qua16.svg")?;
+        }
         Ok(())
     }
 
-    // #[test]
-    fn _draw_works_2d_qua17() -> Result<(), StrError> {
+    #[test]
+    fn draw_works_2d_qua17() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua17();
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
-        plot.set_figure_size_points(400.0, 400.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_2d_qua17.svg")?;
+        if false {
+            plot.set_figure_size_points(400.0, 400.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/draw_works_2d_qua17.svg")?;
+        }
         Ok(())
     }
 
-    // #[test]
-    fn _draw_works_2d_mixed() -> Result<(), StrError> {
+    #[test]
+    fn draw_works_2d_mixed() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::mixed_shapes_2d();
         let region = Region::with(mesh, Extract::All)?;
@@ -471,14 +472,16 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        plot.set_figure_size_points(400.0, 400.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_2d_mixed.svg")?;
+        if false {
+            plot.set_figure_size_points(400.0, 400.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/draw_works_2d_mixed.svg")?;
+        }
         Ok(())
     }
 
-    // #[test]
-    fn _draw_works_3d() -> Result<(), StrError> {
+    #[test]
+    fn draw_works_3d() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::two_cubes_vertical();
         let region = Region::with(mesh, Extract::All)?;
@@ -494,14 +497,16 @@ mod tests {
         draw.points(&mut plot, &region.mesh);
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        plot.set_figure_size_points(500.0, 500.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_3d.svg")?;
+        if false {
+            plot.set_figure_size_points(500.0, 500.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/draw_works_3d.svg")?;
+        }
         Ok(())
     }
 
-    // #[test]
-    fn _draw_works_3d_eight_hex20() -> Result<(), StrError> {
+    #[test]
+    fn draw_works_3d_eight_hex20() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_3d_eight_hex20();
         let region = Region::with(mesh, Extract::All)?;
@@ -509,14 +514,16 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        plot.set_figure_size_points(800.0, 800.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_3d_eight_hex20.svg")?;
+        if false {
+            plot.set_figure_size_points(800.0, 800.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/draw_works_3d_eight_hex20.svg")?;
+        }
         Ok(())
     }
 
-    // #[test]
-    fn _draw_works_3d_mixed() -> Result<(), StrError> {
+    #[test]
+    fn draw_works_3d_mixed() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::mixed_shapes_3d();
         let region = Region::with(mesh, Extract::All)?;
@@ -524,9 +531,11 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        plot.set_figure_size_points(800.0, 800.0)
-            .set_equal_axes(true)
-            .save("/tmp/gemlab/draw_works_3d_mixed.svg")?;
+        if false {
+            plot.set_figure_size_points(800.0, 800.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/draw_works_3d_mixed.svg")?;
+        }
         Ok(())
     }
 }
