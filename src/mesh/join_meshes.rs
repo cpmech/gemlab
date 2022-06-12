@@ -12,7 +12,7 @@ use crate::StrError;
 pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     // check
     if a.ndim != b.ndim {
-        return Err("meshes must have the same space_ndim");
+        return Err("meshes must have the same ndim");
     }
 
     // find the boundary of mesh A
@@ -68,6 +68,13 @@ mod tests {
     use super::join_meshes;
     use crate::mesh::{check_ids_and_kind, check_jacobian, Samples};
     use crate::StrError;
+
+    #[test]
+    fn join_meshes_handles_errors() {
+        let a = Samples::two_quads_horizontal();
+        let b = Samples::two_cubes_vertical();
+        assert_eq!(join_meshes(&a, &b).err(), Some("meshes must have the same ndim"));
+    }
 
     #[test]
     fn join_meshes_works_2d() -> Result<(), StrError> {
