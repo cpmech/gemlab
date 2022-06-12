@@ -1391,6 +1391,40 @@ mod tests {
                     assert_eq!(kind.face_kind(), Some(GeoKind::Qua12));
                 }
             }
+            match kind.class() {
+                GeoClass::Lin => {
+                    assert_eq!(kind.edge_node_id(0, 0), 0);
+                    assert_eq!(kind.is_lin(), true);
+                    assert_eq!(kind.is_tri_or_tet(), false);
+                    assert_eq!(kind.is_qua_or_hex(), false);
+                }
+                GeoClass::Tri => {
+                    assert_eq!(kind.edge_node_id(0, 0), 1); // it always going to be the next node, after 0
+                    assert_eq!(kind.is_lin(), false);
+                    assert_eq!(kind.is_tri_or_tet(), true);
+                    assert_eq!(kind.is_qua_or_hex(), false);
+                }
+                GeoClass::Qua => {
+                    assert_eq!(kind.edge_node_id(0, 0), 1); // it always going to be the next node, after 0
+                    assert_eq!(kind.is_lin(), false);
+                    assert_eq!(kind.is_tri_or_tet(), false);
+                    assert_eq!(kind.is_qua_or_hex(), true);
+                }
+                GeoClass::Tet => {
+                    assert_eq!(kind.edge_node_id(0, 1), 1); // the next node is equal to 1
+                    assert_eq!(kind.is_lin(), false);
+                    assert_eq!(kind.is_tri_or_tet(), true);
+                    assert_eq!(kind.is_qua_or_hex(), false);
+                }
+                GeoClass::Hex => {
+                    assert_eq!(kind.edge_node_id(0, 1), 1); // the next node is equal to 1
+                    assert_eq!(kind.is_lin(), false);
+                    assert_eq!(kind.is_tri_or_tet(), false);
+                    assert_eq!(kind.is_qua_or_hex(), true);
+                }
+            }
+            assert_eq!(kind.face_node_id(0, 0), 0);
+            assert_eq!(kind.face_edge_node_id(0, 0, 0), 0);
         }
         Ok(())
     }
