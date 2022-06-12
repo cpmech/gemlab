@@ -77,11 +77,27 @@ pub fn calc_coords(x: &mut Vector, pad: &mut Scratchpad, ksi: &[f64]) -> Result<
 mod tests {
     use super::calc_coords;
     use crate::shapes::op::testing::aux;
-    use crate::shapes::GeoKind;
+    use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::ONE_BY_3;
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
+
+    #[test]
+    fn calc_coords_handles_errors() {
+        let mut x = Vector::new(1);
+        let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
+        assert_eq!(
+            calc_coords(&mut x, &mut pad, &[0.0, 0.0]).err(),
+            Some("all components of the coordinates matrix must be set first")
+        );
+        pad.set_xx(2, 1, 0.0); // setting the last component
+                               // (cannot really check that all components have been set)
+        assert_eq!(
+            calc_coords(&mut x, &mut pad, &[0.0, 0.0]).err(),
+            Some("x.dim() must be equal to space_ndim")
+        );
+    }
 
     #[test]
     fn calc_coords_works() -> Result<(), StrError> {

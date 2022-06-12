@@ -71,13 +71,13 @@ pub fn approximate_ksi(
     // check
     let (space_ndim, geo_ndim) = pad.jacobian.dims();
     if geo_ndim != space_ndim {
-        return Err("geo_ndim must equal space_ndim");
+        return Err("approximate_ksi requires that geo_ndim = space_ndim");
     }
     if x.dim() != space_ndim {
-        return Err("x.dim() must equal space_ndim");
+        return Err("x.dim() must be equal to space_ndim");
     }
     if ksi.len() != geo_ndim {
-        return Err("ksi.len() must equal geo_ndim");
+        return Err("ksi.len() must be equal to geo_ndim = space_ndim");
     }
 
     // use linear interpolation to guess ksi
@@ -132,6 +132,32 @@ mod tests {
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
+
+    #[test]
+    fn approximate_ksi_handles_errors() {
+        let mut ksi = vec![0.0; 1];
+        let x = Vector::new(1);
+        let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
+        assert_eq!(
+            approximate_ksi(&mut ksi, &mut pad, &x, 1, 1e-15).err(),
+            Some("approximate_ksi requires that geo_ndim = space_ndim")
+        );
+        let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
+        assert_eq!(
+            approximate_ksi(&mut ksi, &mut pad, &x, 1, 1e-15).err(),
+            Some("x.dim() must be equal to space_ndim")
+        );
+        let x = Vector::new(2);
+        assert_eq!(
+            approximate_ksi(&mut ksi, &mut pad, &x, 1, 1e-15).err(),
+            Some("ksi.len() must be equal to geo_ndim = space_ndim")
+        );
+        let mut ksi = vec![0.0; 2];
+        assert_eq!(
+            approximate_ksi(&mut ksi, &mut pad, &x, 1, 1e-15).err(),
+            Some("all components of the coordinates matrix must be set first")
+        );
+    }
 
     #[test]
     fn approximate_ksi_works() -> Result<(), StrError> {
