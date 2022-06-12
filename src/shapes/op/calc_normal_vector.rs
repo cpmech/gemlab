@@ -6,8 +6,8 @@ use russell_lab::{mat_mat_mul, Vector};
 ///
 /// **Important:** This function only works with:
 ///
-/// * `geo_ndim = 1` and `space_ndim = 2` -- line in 2D, or
-/// * `geo_ndim = 2` and `space_ndim = 3` -- surface in 3D.
+/// * `CABLE` case (geo_ndim = 1 and space_ndim = 2) -- e.g., line in 2D, or
+/// * `SHELL` case (geo_ndim = 2 and space_ndim = 3) -- e.g., surface in 3D.
 ///
 /// i.e., `geo_ndim < space_ndim`.
 ///
@@ -118,7 +118,7 @@ pub fn calc_normal_vector(n: &mut Vector, pad: &mut Scratchpad, ksi: &[f64]) -> 
     // matrix J: dx/dξ
     mat_mat_mul(&mut pad.jacobian, 1.0, &pad.xxt, &pad.deriv)?;
 
-    // line in 2D (geo_ndim = 1 and self.space_ndim = 2)
+    // CABLE: line in 2D (geo_ndim = 1 and self.space_ndim = 2)
     //          →
     //         dx
     // g₁(ξ) = —— = Xᵀ · L = first_column(J)
@@ -132,7 +132,7 @@ pub fn calc_normal_vector(n: &mut Vector, pad: &mut Scratchpad, ksi: &[f64]) -> 
         return Ok(());
     }
 
-    // surface in 3D (geo_ndim = 2 and space_ndim = 3)
+    // SHELL: surface in 3D (geo_ndim = 2 and space_ndim = 3)
     //          →
     // →  →    dx
     // g₁(ξ) = ——— = first_column(J)

@@ -125,7 +125,7 @@
 //! matrix notation: x = Xᵀ ⋅ N
 //! ```
 //!
-//! ## J: Jacobian tensor (case when geo_ndim = space_ndim = 2 or 3)
+//! ## J: Jacobian tensor (SOLID case with geo_ndim = space_ndim = 2 or 3)
 //!
 //! ```text
 //!         →
@@ -137,18 +137,28 @@
 //! J is a (space_ndim,geo_ndim) matrix
 //! ```
 //!
-//! ## J: Jacobian vector (case when geo_ndim = 1 and space_ndim = 2 or 3)
+//! ## J: Jacobian vector (CABLE case with geo_ndim = 1 and space_ndim = 2 or 3)
 //!
 //! ```text
-//!                          →
-//! →    →     →    →  →    dx
-//! J := Jline(ξ) = g₁(ξ) = ——
-//!                         dξ
-//! matrix notation: J = Jline = Xᵀ · L
+//!                           →
+//! →    →      →    →  →    dx
+//! J := Jcable(ξ) = g₁(ξ) = ——
+//!                          dξ
+//! matrix notation: J = Jcable = Xᵀ · L
 //! J is a (space_ndim,1) matrix; i.e., a vector
 //! ```
 //!
-//! ## G: Gradients of shape functions (derivatives w.r.t real coordinates x)
+//! ## J: Jacobian matrix (SHELL case with geo_ndim = 2 and space_ndim = 3)
+//!
+//! ```text
+//!                 dx
+//! J(ξ) = Jshell = ——
+//!                 dξ
+//! matrix notation: J = Jshell = Xᵀ · L
+//! J is a (3,2) matrix
+//! ```
+//!
+//! ## G: Gradients of shape functions (derivatives w.r.t real coordinates x) (only for SOLID case)
 //!
 //! ```text
 //!             →

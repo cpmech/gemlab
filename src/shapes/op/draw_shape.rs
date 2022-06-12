@@ -4,6 +4,8 @@ use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
 use russell_lab::Vector;
 
+/// Draws edge
+#[cfg_attr(coverage_nightly, no_coverage)]
 fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -> Result<(), StrError> {
     const N: usize = 11; // number of points along edge (to handle nonlinear edges)
     let (ksi_min, ksi_del) = (-1.0, 2.0); // all Lin shapes go from -1 to +1
@@ -43,6 +45,7 @@ fn _draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) 
 /// * `edge_color` -- color to draw edges; an empty string "" means use default color
 /// * `with_ids` -- draw IDs of nodes
 /// * `set_range` -- sets axis range
+#[cfg_attr(coverage_nightly, no_coverage)]
 pub fn draw_shape(
     plot: &mut Plot,
     pad: &Scratchpad,
@@ -142,6 +145,17 @@ pub fn draw_shape(
     Ok(())
 }
 
+/// Draws shape (simple version)
+#[cfg_attr(coverage_nightly, no_coverage)]
+pub fn draw_shape_simple(pad: &Scratchpad, filename: &str) -> Result<(), StrError> {
+    let mut plot = Plot::new();
+    draw_shape(&mut plot, &pad, "", true, true)?;
+    plot.set_equal_axes(true)
+        .set_figure_size_points(600.0, 600.0)
+        .save(filename)?;
+    Ok(())
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -153,6 +167,7 @@ mod tests {
     use plotpy::Plot;
 
     // #[test]
+    #[cfg_attr(coverage_nightly, no_coverage)]
     fn _draw_shape_works() -> Result<(), StrError> {
         // select all kinds
         let kinds = vec![

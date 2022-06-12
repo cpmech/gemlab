@@ -33,7 +33,52 @@ pub type FnInterp = fn(interp: &mut Vector, ksi: &[f64]);
 /// arguments have dimensions incompatible with the related [GeoKind].
 pub type FnDeriv = fn(deriv: &mut Matrix, ksi: &[f64]);
 
-/// Defines the class of geometric shape
+/// Defines the geometry case regarding the number of dimensions (geo vs space) (Cable, Shell, Solid)
+///
+/// The following table shows what combinations of geometry-number-of-dimensions (`geo_ndim`) and
+/// space-number-of-dimensions (`space_ndim`) are possible. There are three cases:
+///
+/// 1. Case `CABLE` -- `geo_ndim = 1` and `space_ndim = 2 or 3`; e.g., line in 2D or 3D (cables and rods)
+/// 2. Case `SHELL` -- `geo_ndim = 2` and `space_ndim = 3`; e.g. Tri or Qua in 3D (shells and surfaces)
+/// 3. Case `SOLID` -- `geo_ndim = space_ndim`; e.g., Tri and Qua in 2D or Tet and Hex in 3D
+///
+/// | `geo_ndim` | `space_ndim = 2` | `space_ndim = 3` |
+/// |:----------:|:----------------:|:----------------:|
+/// |     1      |     `CABLE`      |     `CABLE`      |
+/// |     2      |     `SOLID`      |     `SHELL`      |
+/// |     3      |    impossible    |     `SOLID`      |
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum GeoCase {
+    /// Represents cables (rods) in 2D or 3D with geo_ndim = 1 and space_ndim = 2 or 3
+    Cable,
+
+    /// Represents shells (surfaces) in 3D with geo_ndim = 2 and space_ndim = 3
+    Shell,
+
+    /// Represents solids in 2D or 3D with geo_ndim = space_ndim
+    Solid,
+}
+
+/// Returns the geometry case given the geo and space dimensions
+///
+/// # Panics
+///
+/// 1. `space_ndim` must be 2 or 3; otherwise a panic will occur
+/// 2. This function will panic if `geo_ndim > space_ndim` (impossible case)
+#[inline]
+pub fn geo_case(geo_ndim: usize, space_ndim: usize) -> GeoCase {
+    assert!(space_ndim >= 2 && space_ndim <= 3);
+    assert!(geo_ndim <= space_ndim);
+    if geo_ndim == space_ndim {
+        GeoCase::Solid
+    } else if geo_ndim == 1 {
+        GeoCase::Cable
+    } else {
+        GeoCase::Shell
+    }
+}
+
+/// Defines the class of the geometric shape (Lin, Tri, Qua, Tet, Hex)
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GeoClass {
     /// Lines (segments) class
@@ -52,7 +97,7 @@ pub enum GeoClass {
     Hex,
 }
 
-/// Defines the kind of geometric shape
+/// Defines the kind of the geometric shape (Lin2, ... Tri3, ..., Qua4, ... Tet4, ..., Hex8, ...)
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub enum GeoKind {
     /// Line (segment) with 2 nodes (linear functions)

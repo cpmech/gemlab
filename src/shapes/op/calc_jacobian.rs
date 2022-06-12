@@ -2,6 +2,11 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul};
 
+/// Indicates that the determinant of the Jacobian is not available (e.g., Shells)
+///
+/// **Note:** This also indicates that the inverse Jacobian matrix has not been computed
+pub const DET_JAC_NOT_AVAILABLE: f64 = -1.0;
+
 /// Calculates the Jacobian of the mapping from general to reference space
 ///
 /// The components of the Jacobian matrix are
@@ -16,16 +21,16 @@ use russell_lab::{inverse, mat_mat_mul};
 ///
 /// ```text
 /// jacobian := J = Xᵀ · L
-/// jacobian := Jline = Xᵀ · L
-/// jacobian := Jsurf = Xᵀ · L
+/// jacobian := Jcable = Xᵀ · L
+/// jacobian := Jshell = Xᵀ · L
 /// ```
 ///
 /// where:
 ///
-/// * `Jline`` -- Jacobian for line in multi-dimensions (geom_ndim < space_ndim)
-/// * `Jsurf`` -- Jacobian for 3D surfaces (geo_ndim = 2 and space_ndim = 3)
+/// * `Jcable`` -- Jacobian for line in multi-dimensions (geom_ndim < space_ndim)
+/// * `Jshell`` -- Jacobian for 3D surfaces (geo_ndim = 2 and space_ndim = 3)
 ///
-/// If `geo_ndim = space_ndim`, this function also computes the inverse Jacobian:
+/// For the `SOLID` case (`geo_ndim = space_ndim`), this function also computes the inverse Jacobian:
 ///
 /// ```text
 /// inv_jacobian := J⁻¹
@@ -35,11 +40,12 @@ use russell_lab::{inverse, mat_mat_mul};
 ///
 /// * `pad.deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
 /// * `pad.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
-/// * `pad.inv_jacobian` -- If `geo_ndim = space_ndim`: inverse Jacobian matrix (space_ndim,space_ndim)
+/// * `pad.inv_jacobian` -- If `geo_ndim = space_ndim` (`SOLID` case): inverse Jacobian matrix (space_ndim,space_ndim)
 /// * Returns one of the following:
-///     * If `geo_ndim = space_ndim`, returns the determinant of the Jacobian
-///     * If `geo_ndim = 1` and `space_ndim > 1`, returns the norm of the Jacobian vector
-///     * Otherwise, returns zero
+///     * `CABLE`: (geo_ndim = 1 and space_ndim = 2 or 3), returns the norm of the Jacobian vector
+///     * `SHELL`: (geo_ndim = 2 and space_ndim = 3), returns [DET_JAC_NOT_AVAILABLE] indicating that the
+///        determinant of the Jacobian is not available and the inverse Jacobian has not been computed
+///     * `SOLID`: (geo_ndim = space_ndim), returns the determinant of the Jacobian
 ///
 /// # Input
 ///
@@ -103,20 +109,23 @@ pub fn calc_jacobian(pad: &mut Scratchpad, ksi: &[f64]) -> Result<f64, StrError>
     // matrix J: dx/dξ
     mat_mat_mul(&mut pad.jacobian, 1.0, &pad.xxt, &pad.deriv)?;
 
+    // inverse Jacobian and determinant/norm (or not possible)
     let (space_ndim, geo_ndim) = pad.jacobian.dims();
     if geo_ndim == space_ndim {
-        // inverse J
+        // SOLID case: inverse J (returns determinant)
         inverse(&mut pad.inv_jacobian, &pad.jacobian)
     } else {
-        // norm of Jacobian vector
+        // CABLE case: norm of Jacobian vector
         if geo_ndim == 1 {
             let mut norm_jac = 0.0;
             for i in 0..space_ndim {
                 norm_jac += pad.jacobian[i][0] * pad.jacobian[i][0];
             }
-            return Ok(f64::sqrt(norm_jac));
+            Ok(f64::sqrt(norm_jac))
+        } else {
+            // SHELL case
+            Ok(DET_JAC_NOT_AVAILABLE)
         }
-        Ok(0.0)
     }
 }
 
@@ -124,9 +133,9 @@ pub fn calc_jacobian(pad: &mut Scratchpad, ksi: &[f64]) -> Result<f64, StrError>
 
 #[cfg(test)]
 mod tests {
-    use super::calc_jacobian;
-    use crate::shapes::op::calc_coords;
+    use super::{calc_jacobian, DET_JAC_NOT_AVAILABLE};
     use crate::shapes::op::testing::aux;
+    use crate::shapes::op::{calc_coords, draw_shape_simple};
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_deriv_approx_eq;
@@ -221,6 +230,7 @@ mod tests {
 
     #[test]
     fn calc_jacobian_special_cases_work() -> Result<(), StrError> {
+        // CABLE: line in 2d
         let space_ndim = 2;
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin2)?;
         let l = 3.5;
@@ -231,6 +241,7 @@ mod tests {
         let norm_jac_vec = calc_jacobian(&mut pad, &[0.0])?;
         assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
 
+        // SHELL: triangle on a plane diagonal to the y-z plane
         let space_ndim = 3;
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
         pad.set_xx(0, 0, 0.0); // node 0
@@ -243,7 +254,10 @@ mod tests {
         pad.set_xx(2, 1, 1.0);
         pad.set_xx(2, 2, 1.0);
         let norm_jac_vec = calc_jacobian(&mut pad, &[0.0, 0.0])?;
-        assert_eq!(norm_jac_vec, 0.0);
+        assert_eq!(norm_jac_vec, DET_JAC_NOT_AVAILABLE);
+        if false {
+            draw_shape_simple(&pad, "/tmp/gemlab/test_jacobian_tri3_in_3d.svg")?;
+        }
         Ok(())
     }
 }

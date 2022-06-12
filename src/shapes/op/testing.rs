@@ -61,6 +61,7 @@ pub mod aux {
     }
 
     /// Generates the Canvas for the mapping used in tests
+    #[cfg_attr(coverage_nightly, no_coverage)]
     pub fn _gen_canvas_mapping() -> Canvas {
         let mut canvas = Canvas::new();
         let color = "#bfbfbf";
@@ -77,6 +78,7 @@ pub mod aux {
     }
 
     /// Draws the points in the natural (right) and real (left) spaces
+    #[cfg_attr(coverage_nightly, no_coverage)]
     pub fn _draw_point_coords_2d(ksi_min: f64, ksi_del: f64) -> Plot {
         const N: usize = 11;
         let mut natural_space = Curve::new();
@@ -124,15 +126,15 @@ pub mod aux {
         for m in 0..nnode {
             let ksi = kind.reference_coords(m);
             if geo_ndim == space_ndim {
-                // 2D or 3D
+                // SOLID case: 2D or 3D
                 map_point_coords(&mut x, ksi, ksi_min, ksi_del);
             } else if geo_ndim == 1 && space_ndim == 2 {
-                // line in 2D
+                // CABLE case: line in 2D
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = 1.0;
                 map_point_coords(&mut x, &ksi_aux, ksi_min, ksi_del);
             } else {
-                // line or face in 3D
+                // CABLE or SHELL in 3D
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = ksi[1];
                 ksi_aux[2] = 1.0;
@@ -223,6 +225,7 @@ mod tests {
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq};
 
     // #[test]
+    #[cfg_attr(coverage_nightly, no_coverage)]
     fn _draw_point_coords_2d_works() -> Result<(), StrError> {
         let mut plot = _draw_point_coords_2d(0.0, 1.0);
         plot.set_figure_size_points(1000.0, 600.0)

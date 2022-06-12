@@ -35,7 +35,7 @@ impl Region {
     /// # Panics
     ///
     /// 1. This function may panic if the mesh data is inconsistent
-    /// 2. You may want to call [check_all()] to capture (some) errors
+    /// 2. You may want to call [crate::mesh::check_all()] to capture (some) errors
     pub fn with(mesh: Mesh, extract: Extract) -> Result<Self, StrError> {
         let (all_2d_edges, all_faces, features) = Features::new(&mesh, extract);
         let find = Find::new(&mesh, &features)?;

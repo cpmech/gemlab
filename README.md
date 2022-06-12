@@ -103,3 +103,21 @@ where
 - [x] Add tests for the numerical integrations
 - [ ] Implement triangle and tetrahedron generators
 - [ ] Implement drawing functions
+
+
+## Appendix
+
+### Geometry versus space dimensions
+
+The following table shows what combinations of geometry-number-of-dimensions (`geo_ndim`) and
+space-number-of-dimensions (`space_ndim`) are possible. There are three cases:
+
+1. Case `CABLE` -- `geo_ndim = 1` and `space_ndim = 2 or 3`; e.g., line in 2D or 3D (cables and rods)
+2. Case `SHELL` -- `geo_ndim = 2` and `space_ndim = 3`; e.g. Tri or Qua in 3D (shells and surfaces)
+3. Case `SOLID` -- `geo_ndim = space_ndim`; e.g., Tri and Qua in 2D or Tet and Hex in 3D
+
+| `geo_ndim` | `space_ndim = 2` | `space_ndim = 3` |
+|:----------:|:----------------:|:----------------:|
+|     1      |     `CABLE`      |     `CABLE`      |
+|     2      |     `SOLID`      |     `SHELL`      |
+|     3      |    impossible    |     `SOLID`      |

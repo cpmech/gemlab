@@ -6,8 +6,8 @@ use crate::shapes::Scratchpad;
 /// # Panics
 ///
 /// 1. Make sure `pad.kind.nnode() == points.len()`; otherwise a panic will occur
-/// 1. This function does not check for bounds on point indices and dimensions
-/// 2. Use [check_all] to capture (some) errors
+/// 2. This function does not check for bounds on point indices and dimensions
+/// 3. Use [crate::mesh::check_all()] to capture (some) errors
 #[inline]
 pub fn set_xxt_from_points(pad: &mut Scratchpad, points: &Vec<PointId>, mesh: &Mesh) {
     let nnode = pad.kind.nnode();

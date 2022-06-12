@@ -1,5 +1,6 @@
 use super::{set_xxt_from_points, Edge, EdgeKey, Face, FaceKey, Mesh};
-use crate::shapes::{op, Scratchpad};
+use crate::shapes::op::DET_JAC_NOT_AVAILABLE;
+use crate::shapes::{geo_case, op, GeoCase, Scratchpad};
 use crate::util::ONE_BY_3;
 use crate::StrError;
 use russell_lab::Vector;
@@ -11,7 +12,7 @@ use std::collections::HashMap;
 ///
 /// 1. The position of a point in the points vector matches the id of the point
 /// 2. The position of a cell in the cells vector matches the id of the cell
-/// 3. The number of points of a cell matches the [GeoKind]
+/// 3. The number of points of a cell matches the [crate::shapes::GeoKind]
 /// 4. The points of a cell are within the range of available points; i.e., 0 and npoint
 pub fn check_ids_and_kind(mesh: &Mesh) -> Result<(), StrError> {
     let npoint = mesh.points.len();
@@ -43,8 +44,12 @@ pub fn check_jacobian(mesh: &Mesh) -> Result<(), StrError> {
         let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
         set_xxt_from_points(&mut pad, &cell.points, mesh);
         let det_jac = op::calc_jacobian(&mut pad, &ksi)?;
-        if det_jac < 0.0 {
-            return Err("negative determinant of Jacobian found");
+        if geo_case(cell.kind.ndim(), mesh.ndim) == GeoCase::Shell {
+            assert_eq!(det_jac, DET_JAC_NOT_AVAILABLE);
+        } else {
+            if det_jac < 0.0 {
+                return Err("negative determinant of Jacobian found");
+            }
         }
     }
     Ok(())

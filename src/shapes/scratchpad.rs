@@ -70,8 +70,8 @@ pub struct Scratchpad {
     ///
     /// ```text
     /// jacobian := J = Xᵀ · L
-    /// jacobian := Jline = Xᵀ · L
-    /// jacobian := Jsurf = Xᵀ · L
+    /// jacobian := Jcable = Xᵀ · L
+    /// jacobian := Jshell = Xᵀ · L
     /// ```
     pub jacobian: Matrix,
 
