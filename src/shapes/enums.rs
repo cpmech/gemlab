@@ -1105,110 +1105,290 @@ mod tests {
                 GeoKind::Lin2 => {
                     assert_eq!(GeoKind::from("lin2")?, kind);
                     assert_eq!(kind.to_string(), "lin2");
+                    assert_eq!(kind.class(), GeoClass::Lin);
+                    assert_eq!(kind.ndim(), 1);
                     assert_eq!(kind.nnode(), 2);
+                    assert_eq!(kind.nedge(), 0);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 0);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), None);
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Lin3 => {
                     assert_eq!(GeoKind::from("lin3")?, kind);
                     assert_eq!(kind.to_string(), "lin3");
+                    assert_eq!(kind.class(), GeoClass::Lin);
+                    assert_eq!(kind.ndim(), 1);
                     assert_eq!(kind.nnode(), 3);
+                    assert_eq!(kind.nedge(), 0);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 0);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), None);
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Lin4 => {
                     assert_eq!(GeoKind::from("lin4")?, kind);
                     assert_eq!(kind.to_string(), "lin4");
+                    assert_eq!(kind.class(), GeoClass::Lin);
+                    assert_eq!(kind.ndim(), 1);
                     assert_eq!(kind.nnode(), 4);
+                    assert_eq!(kind.nedge(), 0);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 0);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), None);
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Lin5 => {
                     assert_eq!(GeoKind::from("lin5")?, kind);
                     assert_eq!(kind.to_string(), "lin5");
+                    assert_eq!(kind.class(), GeoClass::Lin);
+                    assert_eq!(kind.ndim(), 1);
                     assert_eq!(kind.nnode(), 5);
+                    assert_eq!(kind.nedge(), 0);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 0);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), None);
+                    assert_eq!(kind.face_kind(), None);
                 }
 
                 // Tri
                 GeoKind::Tri3 => {
                     assert_eq!(GeoKind::from("tri3")?, kind);
                     assert_eq!(kind.to_string(), "tri3");
+                    assert_eq!(kind.class(), GeoClass::Tri);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 3);
+                    assert_eq!(kind.nedge(), 3);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 2);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin2));
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Tri6 => {
                     assert_eq!(GeoKind::from("tri6")?, kind);
                     assert_eq!(kind.to_string(), "tri6");
+                    assert_eq!(kind.class(), GeoClass::Tri);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 6);
+                    assert_eq!(kind.nedge(), 3);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 3);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Tri10 => {
                     assert_eq!(GeoKind::from("tri10")?, kind);
                     assert_eq!(kind.to_string(), "tri10");
+                    assert_eq!(kind.class(), GeoClass::Tri);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 10);
+                    assert_eq!(kind.nedge(), 3);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 4);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Tri15 => {
                     assert_eq!(GeoKind::from("tri15")?, kind);
                     assert_eq!(kind.to_string(), "tri15");
+                    assert_eq!(kind.class(), GeoClass::Tri);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 15);
+                    assert_eq!(kind.nedge(), 3);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 5);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin5));
+                    assert_eq!(kind.face_kind(), None);
                 }
 
                 // Qua
                 GeoKind::Qua4 => {
                     assert_eq!(GeoKind::from("qua4")?, kind);
                     assert_eq!(kind.to_string(), "qua4");
+                    assert_eq!(kind.class(), GeoClass::Qua);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 4);
+                    assert_eq!(kind.nedge(), 4);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 2);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin2));
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Qua8 => {
                     assert_eq!(GeoKind::from("qua8")?, kind);
                     assert_eq!(kind.to_string(), "qua8");
+                    assert_eq!(kind.class(), GeoClass::Qua);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 8);
+                    assert_eq!(kind.nedge(), 4);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 3);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Qua9 => {
                     assert_eq!(GeoKind::from("qua9")?, kind);
                     assert_eq!(kind.to_string(), "qua9");
+                    assert_eq!(kind.class(), GeoClass::Qua);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 9);
+                    assert_eq!(kind.nedge(), 4);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 3);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Qua12 => {
                     assert_eq!(GeoKind::from("qua12")?, kind);
                     assert_eq!(kind.to_string(), "qua12");
+                    assert_eq!(kind.class(), GeoClass::Qua);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 12);
+                    assert_eq!(kind.nedge(), 4);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 4);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Qua16 => {
                     assert_eq!(GeoKind::from("qua16")?, kind);
                     assert_eq!(kind.to_string(), "qua16");
+                    assert_eq!(kind.class(), GeoClass::Qua);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 16);
+                    assert_eq!(kind.nedge(), 4);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 4);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
+                    assert_eq!(kind.face_kind(), None);
                 }
                 GeoKind::Qua17 => {
                     assert_eq!(GeoKind::from("qua17")?, kind);
                     assert_eq!(kind.to_string(), "qua17");
+                    assert_eq!(kind.class(), GeoClass::Qua);
+                    assert_eq!(kind.ndim(), 2);
                     assert_eq!(kind.nnode(), 17);
+                    assert_eq!(kind.nedge(), 4);
+                    assert_eq!(kind.nface(), 0);
+                    assert_eq!(kind.edge_nnode(), 5);
+                    assert_eq!(kind.face_nnode(), 0);
+                    assert_eq!(kind.face_nedge(), 0);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin5));
+                    assert_eq!(kind.face_kind(), None);
                 }
 
                 // Tet
                 GeoKind::Tet4 => {
                     assert_eq!(GeoKind::from("tet4")?, kind);
                     assert_eq!(kind.to_string(), "tet4");
+                    assert_eq!(kind.class(), GeoClass::Tet);
+                    assert_eq!(kind.ndim(), 3);
                     assert_eq!(kind.nnode(), 4);
+                    assert_eq!(kind.nedge(), 6);
+                    assert_eq!(kind.nface(), 4);
+                    assert_eq!(kind.edge_nnode(), 2);
+                    assert_eq!(kind.face_nnode(), 3);
+                    assert_eq!(kind.face_nedge(), 3);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin2));
+                    assert_eq!(kind.face_kind(), Some(GeoKind::Tri3));
                 }
                 GeoKind::Tet10 => {
                     assert_eq!(GeoKind::from("tet10")?, kind);
                     assert_eq!(kind.to_string(), "tet10");
+                    assert_eq!(kind.class(), GeoClass::Tet);
+                    assert_eq!(kind.ndim(), 3);
                     assert_eq!(kind.nnode(), 10);
+                    assert_eq!(kind.nedge(), 6);
+                    assert_eq!(kind.nface(), 4);
+                    assert_eq!(kind.edge_nnode(), 3);
+                    assert_eq!(kind.face_nnode(), 6);
+                    assert_eq!(kind.face_nedge(), 3);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
+                    assert_eq!(kind.face_kind(), Some(GeoKind::Tri6));
                 }
                 GeoKind::Tet20 => {
                     assert_eq!(GeoKind::from("tet20")?, kind);
                     assert_eq!(kind.to_string(), "tet20");
+                    assert_eq!(kind.class(), GeoClass::Tet);
+                    assert_eq!(kind.ndim(), 3);
                     assert_eq!(kind.nnode(), 20);
+                    assert_eq!(kind.nedge(), 6);
+                    assert_eq!(kind.nface(), 4);
+                    assert_eq!(kind.edge_nnode(), 4);
+                    assert_eq!(kind.face_nnode(), 10);
+                    assert_eq!(kind.face_nedge(), 3);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
+                    assert_eq!(kind.face_kind(), Some(GeoKind::Tri10));
                 }
 
                 // Hex
                 GeoKind::Hex8 => {
                     assert_eq!(GeoKind::from("hex8")?, kind);
                     assert_eq!(kind.to_string(), "hex8");
+                    assert_eq!(kind.class(), GeoClass::Hex);
+                    assert_eq!(kind.ndim(), 3);
                     assert_eq!(kind.nnode(), 8);
+                    assert_eq!(kind.nedge(), 12);
+                    assert_eq!(kind.nface(), 6);
+                    assert_eq!(kind.edge_nnode(), 2);
+                    assert_eq!(kind.face_nnode(), 4);
+                    assert_eq!(kind.face_nedge(), 4);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin2));
+                    assert_eq!(kind.face_kind(), Some(GeoKind::Qua4));
                 }
                 GeoKind::Hex20 => {
                     assert_eq!(GeoKind::from("hex20")?, kind);
                     assert_eq!(kind.to_string(), "hex20");
+                    assert_eq!(kind.class(), GeoClass::Hex);
+                    assert_eq!(kind.ndim(), 3);
                     assert_eq!(kind.nnode(), 20);
+                    assert_eq!(kind.nedge(), 12);
+                    assert_eq!(kind.nface(), 6);
+                    assert_eq!(kind.edge_nnode(), 3);
+                    assert_eq!(kind.face_nnode(), 8);
+                    assert_eq!(kind.face_nedge(), 4);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
+                    assert_eq!(kind.face_kind(), Some(GeoKind::Qua8));
                 }
                 GeoKind::Hex32 => {
                     assert_eq!(GeoKind::from("hex32")?, kind);
                     assert_eq!(kind.to_string(), "hex32");
+                    assert_eq!(kind.class(), GeoClass::Hex);
+                    assert_eq!(kind.ndim(), 3);
                     assert_eq!(kind.nnode(), 32);
+                    assert_eq!(kind.nedge(), 12);
+                    assert_eq!(kind.nface(), 6);
+                    assert_eq!(kind.edge_nnode(), 4);
+                    assert_eq!(kind.face_nnode(), 12);
+                    assert_eq!(kind.face_nedge(), 4);
+                    assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
+                    assert_eq!(kind.face_kind(), Some(GeoKind::Qua12));
                 }
             }
         }
