@@ -1,7 +1,7 @@
-use super::{set_xxt_from_points, Edge, EdgeKey, Face, FaceKey, Mesh};
+use super::{get_mesh_limits, set_xxt_from_points, Edge, EdgeKey, Face, FaceKey, Mesh};
 use crate::shapes::op::DET_JAC_NOT_AVAILABLE;
 use crate::shapes::{geo_case, op, GeoCase, Scratchpad};
-use crate::util::ONE_BY_3;
+use crate::util::{GridSearch, GsNdiv, GsTol, ONE_BY_3};
 use crate::StrError;
 use russell_lab::Vector;
 use std::collections::HashMap;
@@ -110,17 +110,37 @@ pub fn check_face_normals(
     Ok(())
 }
 
+/// Checks if there are overlapping points
+pub fn check_overlapping_points(mesh: &Mesh, tol: f64) -> Result<(), StrError> {
+    let (min, max) = get_mesh_limits(mesh);
+    let mut grid = GridSearch::new(&min, &max, 0.01, GsNdiv::Default, GsTol::Spec(tol, tol, tol))?;
+    for point in &mesh.points {
+        grid.insert(point.id, &point.coords)?;
+    }
+    for point in &mesh.points {
+        match grid.find(&point.coords)? {
+            Some(id) => {
+                if id != point.id {
+                    return Err("found overlapping point");
+                }
+            }
+            None => (),
+        }
+    }
+    Ok(())
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{check_2d_edge_normals, check_ids_and_kind, check_jacobian};
+    use super::{check_2d_edge_normals, check_ids_and_kind, check_jacobian, check_overlapping_points};
     use crate::mesh::{check_face_normals, Cell, Edge, EdgeKey, Face, FaceKey, Mesh, Point};
     use crate::shapes::GeoKind;
     use std::collections::HashMap;
 
     #[test]
-    fn check_ids_works() {
+    fn check_ids_and_kind_works() {
         //  3-----------2-----------5
         //  |           |           |
         //  |    [0]    |    [1]    |
@@ -165,6 +185,12 @@ mod tests {
         assert_eq!(
             check_ids_and_kind(&mesh).err(),
             Some("the id of a point specified in the points list of a cell is out of bounds")
+        );
+
+        mesh.cells[0].points = vec![0, 1, 2];
+        assert_eq!(
+            check_ids_and_kind(&mesh).err(),
+            Some("number of cell points does not correspond to kind.nnode()")
         );
     }
 
@@ -261,7 +287,7 @@ mod tests {
             ((1, 4), [0.0, -l]),
             ((0, 1), [0.0, -l]),
         ]);
-        assert_eq!(check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).expect("ok"), ());
+        check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).expect("should not fail");
 
         let points = &mut edges.get_mut(&(0, 3)).unwrap().points;
         points[0] = 3;
@@ -333,7 +359,7 @@ mod tests {
             ((0, 1, 2, 3), [0.0, 0.0, -l]),
             ((4, 5, 6, 7), [0.0, 0.0, l]),
         ]);
-        assert_eq!(check_face_normals(&mesh, &faces, &solutions, 1e-15).expect("ok"), ());
+        check_face_normals(&mesh, &faces, &solutions, 1e-15).expect("should not fail");
 
         let points = &mut faces.get_mut(&(0, 3, 4, 7)).unwrap().points;
         points[0] = 4;
@@ -347,6 +373,33 @@ mod tests {
         assert_eq!(
             check_face_normals(&mesh, &faces, &solutions, 1e-15).err(),
             Some("cannot find face_key in faces map")
+        );
+    }
+
+    #[test]
+    fn check_overlapping_points_works() {
+        #[rustfmt::skip]
+        let mut mesh = Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0] },
+                Point { id: 3, coords: vec![0.0, 1.0] },
+                Point { id: 4, coords: vec![2.0, 0.0] },
+                Point { id: 5, coords: vec![2.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+            ],
+        };
+        check_overlapping_points(&mesh, 1e-2).expect("should not fail");
+
+        mesh.points[1].coords[0] = 1e-3;
+        assert_eq!(
+            check_overlapping_points(&mesh, 1e-2).err(),
+            Some("found overlapping point")
         );
     }
 }
