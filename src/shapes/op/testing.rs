@@ -2,7 +2,6 @@
 pub mod aux {
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::PI;
-    use crate::StrError;
     use plotpy::{Canvas, Curve, Plot};
     use russell_lab::generate2d;
     use russell_lab::Vector;
@@ -123,44 +122,48 @@ pub mod aux {
         pad
     }
 
-    /// Extracts edge 'e' with coordinates set
+    /// Extracts edge 'e' with coordinates set from the parent shape
     ///
     /// # Panics
     ///
-    /// A panic will occur if the shape does not have edges
-    pub fn extract_edge(e: usize, pad: &Scratchpad) -> Result<Scratchpad, StrError> {
+    /// This function panics if:
+    ///
+    /// 1. geo_ndim = 1 (shape does not have edges)
+    /// 2. space_ndim is not 2 or 3
+    /// 3. geo_ndim is greater than geo_ndim (impossible situation)
+    pub fn extract_edge(e: usize, pad: &Scratchpad) -> Scratchpad {
         let (space_ndim, geo_ndim) = pad.jacobian.dims();
-        if geo_ndim == 1 {
-            return Err("extract_edge requires geo_ndim to be 2 or 3");
-        }
-        let mut pad_edge = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap())?;
+        assert_ne!(geo_ndim, 1);
+        let mut pad_edge = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap()).unwrap();
         for i in 0..pad.kind.edge_nnode() {
             let m = pad.kind.edge_node_id(e, i);
             for j in 0..space_ndim {
                 pad_edge.set_xx(i, j, pad.xxt[j][m]);
             }
         }
-        Ok(pad_edge)
+        pad_edge
     }
 
-    /// Extracts face 'f' with coordinates set
+    /// Extracts face 'f' with coordinates set from the parent shape
     ///
     /// # Panics
     ///
-    /// A panic will occur if the shape does not have faces
-    pub fn extract_face(f: usize, pad: &Scratchpad) -> Result<Scratchpad, StrError> {
+    /// This function panics if:
+    ///
+    /// 1. geo_ndim = 1 or 2 (shape does not have faces)
+    /// 2. space_ndim is not 2 or 3
+    /// 3. geo_ndim is greater than geo_ndim (impossible situation)
+    pub fn extract_face(f: usize, pad: &Scratchpad) -> Scratchpad {
         let (space_ndim, geo_ndim) = pad.jacobian.dims();
-        if geo_ndim != 3 {
-            return Err("extract_face requires geo_ndim to be 3");
-        }
-        let mut pad_face = Scratchpad::new(space_ndim, pad.kind.face_kind().unwrap())?;
+        assert_eq!(geo_ndim, 3);
+        let mut pad_face = Scratchpad::new(space_ndim, pad.kind.face_kind().unwrap()).unwrap();
         for i in 0..pad.kind.face_nnode() {
             let m = pad.kind.face_node_id(f, i);
             for j in 0..space_ndim {
                 pad_face.set_xx(i, j, pad.xxt[j][m]);
             }
         }
-        Ok(pad_face)
+        pad_face
     }
 
     // ------ internal functions for testing ----------------------------------------------------------
@@ -349,35 +352,20 @@ mod tests {
     }
 
     #[test]
-    fn capture_some_errors() {
-        let pad = Scratchpad::new(3, GeoKind::Lin2).unwrap();
-        assert_eq!(
-            extract_edge(0, &pad).err(),
-            Some("extract_edge requires geo_ndim to be 2 or 3")
-        );
-        let pad = Scratchpad::new(3, GeoKind::Tri3).unwrap();
-        assert_eq!(
-            extract_face(0, &pad).err(),
-            Some("extract_face requires geo_ndim to be 3")
-        );
-    }
-
-    #[test]
-    fn extract_edge_works() -> Result<(), StrError> {
+    fn extract_edge_works() {
         let pad = gen_scratchpad_with_coords(2, GeoKind::Qua4);
-        let pad_edge = extract_edge(0, &pad)?;
+        let pad_edge = extract_edge(0, &pad);
         assert_eq!(pad_edge.kind, GeoKind::Lin2);
         assert_approx_eq!(pad_edge.xxt[0][0], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
         assert_approx_eq!(pad_edge.xxt[1][0], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
         assert_approx_eq!(pad_edge.xxt[0][1], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
         assert_approx_eq!(pad_edge.xxt[1][1], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
-        Ok(())
     }
 
     #[test]
-    fn extract_face_works() -> Result<(), StrError> {
+    fn extract_face_works() {
         let pad = gen_scratchpad_with_coords(3, GeoKind::Hex8);
-        let pad_face = extract_face(0, &pad)?;
+        let pad_face = extract_face(0, &pad);
         assert_eq!(pad_face.kind, GeoKind::Qua4);
         assert_approx_eq!(pad_face.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
         assert_approx_eq!(pad_face.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
@@ -391,7 +379,6 @@ mod tests {
         assert_approx_eq!(pad_face.xxt[0][3], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
         assert_approx_eq!(pad_face.xxt[1][3], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
         assert_approx_eq!(pad_face.xxt[2][3], aux::ZMIN, 1e-15);
-        Ok(())
     }
 
     #[test]

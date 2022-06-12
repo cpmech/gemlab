@@ -233,21 +233,21 @@ mod tests {
             let pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
 
             // face # 0
-            let mut pad_face = extract_face(0, &pad)?;
+            let mut pad_face = extract_face(0, &pad);
             calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
             assert!(normal[0] < 0.0);
             assert!(normal[1] < 0.0);
             assert_approx_eq!(normal[2], 0.0, tol_vec);
 
             // face # 1
-            let mut pad_face = extract_face(1, &pad)?;
+            let mut pad_face = extract_face(1, &pad);
             calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
             assert!(normal[0] > 0.0);
             assert!(normal[1] > 0.0);
             assert_approx_eq!(normal[2], 0.0, tol_vec);
 
             // face # 2
-            let mut pad_face = extract_face(2, &pad)?;
+            let mut pad_face = extract_face(2, &pad);
             calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
             assert_approx_eq!(
                 vector_norm(&normal, NormVec::Euc),
@@ -257,7 +257,7 @@ mod tests {
             assert_vec_approx_eq!(normal.as_data(), &correct_normal_face2, tol_vec);
 
             // face # 3
-            let mut pad_face = extract_face(3, &pad)?;
+            let mut pad_face = extract_face(3, &pad);
             calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
             assert_approx_eq!(
                 vector_norm(&normal, NormVec::Euc),
@@ -267,14 +267,14 @@ mod tests {
             assert_vec_approx_eq!(normal.as_data(), &correct_normal_face3, tol_vec);
 
             // face # 4
-            let mut pad_face = extract_face(4, &pad)?;
+            let mut pad_face = extract_face(4, &pad);
             calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
             assert_approx_eq!(normal[0], 0.0, tol_vec);
             assert_approx_eq!(normal[1], 0.0, tol_vec);
             assert!(normal[2] < 0.0);
 
             // face # 5
-            let mut pad_face = extract_face(5, &pad)?;
+            let mut pad_face = extract_face(5, &pad);
             calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
             assert_approx_eq!(normal[0], 0.0, tol_vec);
             assert_approx_eq!(normal[1], 0.0, tol_vec);
@@ -333,7 +333,7 @@ mod tests {
             // loop over edges
             for e in 0..pad.kind.nedge() {
                 for ksi in ksi_values {
-                    let mut pad_edge = extract_edge(e, &pad)?;
+                    let mut pad_edge = extract_edge(e, &pad);
                     calc_normal_vector(&mut normal, &mut pad_edge, ksi)?;
                     if pad.kind.is_tri_or_tet() {
                         // check triangle
@@ -409,7 +409,7 @@ mod tests {
             // loop over faces
             for f in 0..pad.kind.nface() {
                 for ksi in ksi_values {
-                    let mut pad_face = extract_face(f, &pad)?;
+                    let mut pad_face = extract_face(f, &pad);
                     calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
                     if pad.kind.is_tri_or_tet() {
                         // check tetrahedron
