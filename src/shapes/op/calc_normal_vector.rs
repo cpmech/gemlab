@@ -158,11 +158,26 @@ pub fn calc_normal_vector(n: &mut Vector, pad: &mut Scratchpad, ksi: &[f64]) -> 
 mod tests {
     use super::calc_normal_vector;
     use crate::shapes::op::testing::aux::{self, extract_edge, extract_face};
-    use crate::shapes::GeoKind;
+    use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::ONE_BY_3;
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
     use russell_lab::{vector_norm, NormVec, Vector};
+
+    #[test]
+    fn calc_normal_vector_handles_errors() {
+        let mut n = Vector::new(1);
+        let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
+        assert_eq!(
+            calc_normal_vector(&mut n, &mut pad, &[0.0, 0.0]).err(),
+            Some("geo_ndim must be smaller than space_ndim")
+        );
+        let mut pad = Scratchpad::new(3, GeoKind::Tri3).unwrap();
+        assert_eq!(
+            calc_normal_vector(&mut n, &mut pad, &[0.0, 0.0]).err(),
+            Some("n.dim() must be equal to space_ndim")
+        );
+    }
 
     #[test]
     fn calc_normal_vector_works_line() -> Result<(), StrError> {
