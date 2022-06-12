@@ -80,7 +80,7 @@ pub fn calc_gradient(pad: &mut Scratchpad, ksi: &[f64]) -> Result<f64, StrError>
     // check
     let (space_ndim, geo_ndim) = pad.jacobian.dims();
     if geo_ndim != space_ndim {
-        return Err("geo_ndim must equal space_ndim");
+        return Err("calc_gradient requires that geo_ndim = space_ndim");
     }
 
     // Jacobian matrix J: dx/dξ
@@ -103,6 +103,21 @@ mod tests {
     use crate::StrError;
     use russell_chk::assert_deriv_approx_eq;
     use russell_lab::{copy_vector, Vector};
+
+    #[test]
+    fn calc_gradient_handles_errors() {
+        let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
+        assert_eq!(
+            calc_gradient(&mut pad, &[0.0, 0.0]).err(),
+            Some("calc_gradient requires that geo_ndim = space_ndim")
+        );
+
+        let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
+        assert_eq!(
+            calc_gradient(&mut pad, &[0.0, 0.0]).err(),
+            Some("all components of the coordinates matrix must be set first")
+        );
+    }
 
     // Holds arguments for numerical differentiation of N with respect to x => G (gradient) matrix
     struct ArgsNumGrad {

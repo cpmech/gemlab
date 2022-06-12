@@ -139,7 +139,26 @@ mod tests {
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_deriv_approx_eq;
-    use russell_lab::Vector;
+    use russell_lab::{Matrix, Vector};
+
+    #[test]
+    fn calc_jacobian_handles_errors() {
+        let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
+        assert_eq!(
+            calc_jacobian(&mut pad, &[0.0, 0.0]).err(),
+            Some("all components of the coordinates matrix must be set first")
+        );
+
+        // bugged Jacobian matrix
+        // (this would only happen if the user messes up the properties of Scratchpad directly)
+        pad.set_xx(2, 1, 0.0); // setting the last component
+                               // (cannot really check that all components have been set)
+        pad.jacobian = Matrix::new(0, 0);
+        assert_eq!(
+            calc_jacobian(&mut pad, &[0.0, 0.0]).err(),
+            Some("matrices are incompatible")
+        );
+    }
 
     // Holds arguments for numerical differentiation of x with respect to ξ => Jacobian
     struct ArgsNumJac {

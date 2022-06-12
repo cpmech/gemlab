@@ -106,7 +106,7 @@ pub fn calc_normal_vector(n: &mut Vector, pad: &mut Scratchpad, ksi: &[f64]) -> 
     // check
     let (space_ndim, geo_ndim) = pad.jacobian.dims();
     if geo_ndim >= space_ndim {
-        return Err("geo_ndim must be smaller than space_ndim");
+        return Err("calc_normal_vector requires that geo_ndim must be smaller than space_ndim");
     }
     if n.dim() != space_ndim {
         return Err("n.dim() must be equal to space_ndim");
@@ -170,7 +170,7 @@ mod tests {
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         assert_eq!(
             calc_normal_vector(&mut n, &mut pad, &[0.0, 0.0]).err(),
-            Some("geo_ndim must be smaller than space_ndim")
+            Some("calc_normal_vector requires that geo_ndim must be smaller than space_ndim")
         );
         let mut pad = Scratchpad::new(3, GeoKind::Tri3).unwrap();
         assert_eq!(
