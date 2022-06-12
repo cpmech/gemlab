@@ -984,6 +984,7 @@ mod tests {
     #[test]
     fn set_ndiv_works() -> Result<(), StrError> {
         let mut block = Block::new_square(1.0);
+        assert_eq!(block.set_ndiv(&[1]).err(), Some("ndiv.len() must be equal to ndim"));
         block.set_ndiv(&[2, 4])?;
         assert_eq!(block.ndiv, &[2, 4]);
         assert_eq!(format!("{:?}", block.delta_ksi), "[[1.0, 1.0], [0.5, 0.5, 0.5, 0.5]]");
@@ -1002,6 +1003,15 @@ mod tests {
         block.set_edge_constraint(0, None)?;
         assert_eq!(format!("{:?}", block.edge_constraints), "{}");
         assert_eq!(block.has_constraints, false);
+        assert_eq!(
+            block.set_edge_constraint(4, None).err(),
+            Some("edge index must be < 4 (nedge)")
+        );
+        let mut block_3d = Block::new_cube(1.0);
+        assert_eq!(
+            block_3d.set_edge_constraint(0, None).err(),
+            Some("set_edge_constraint requires ndim = 2")
+        );
         Ok(())
     }
 
@@ -1020,6 +1030,15 @@ mod tests {
         block.set_face_constraint(0, None)?;
         assert_eq!(format!("{:?}", block.face_constraints), "{}");
         assert_eq!(block.has_constraints, false);
+        assert_eq!(
+            block.set_face_constraint(6, None).err(),
+            Some("face index must be < 6 (nface)")
+        );
+        let mut block_2d = Block::new_square(1.0);
+        assert_eq!(
+            block_2d.set_face_constraint(0, None).err(),
+            Some("set_face_constraint requires ndim = 3")
+        );
         Ok(())
     }
 
@@ -1074,6 +1093,14 @@ mod tests {
         block.set_transform_into_ring(None)?;
         assert_eq!(block.transform_into_ring, false);
         Ok(())
+    }
+
+    #[test]
+    fn draw_works() -> Result<(), StrError> {
+        let mut block = Block::new_square(1.0);
+        block.set_edge_constraint(0, Some(Constraint2D::Circle(0.0, 0.0, 0.1)))?;
+        let mut plot = Plot::new();
+        block.draw(&mut plot, true)
     }
 
     #[test]
