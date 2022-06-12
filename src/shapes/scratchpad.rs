@@ -159,7 +159,7 @@ impl Scratchpad {
         }
         let geo_ndim = kind.ndim();
         if geo_ndim > space_ndim {
-            return Err("space_ndim must be ≥ geo_ndim");
+            return Err("geo_ndim cannot be greater than space_ndim");
         }
         let nnode = kind.nnode();
         let (fn_interp, fn_deriv) = kind.functions();
@@ -295,7 +295,7 @@ mod tests {
         );
         assert_eq!(
             Scratchpad::new(2, GeoKind::Hex8).err(),
-            Some("space_ndim must be ≥ geo_ndim")
+            Some("geo_ndim cannot be greater than space_ndim")
         );
     }
 
