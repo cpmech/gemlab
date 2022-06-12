@@ -838,7 +838,7 @@ impl Block {
 mod tests {
     use super::{ArgsRing, Block, Constraint2D, Constraint3D, StrError};
     use crate::geometry::point_point_distance;
-    use crate::mesh::{draw_mesh, Draw, Extract, Mesh, Region, Samples};
+    use crate::mesh::{check_all, draw_mesh, Draw, Extract, Mesh, Region, Samples};
     use crate::shapes::GeoKind;
     use crate::util::{PI, SQRT_2};
     use plotpy::{Canvas, Plot};
@@ -1048,7 +1048,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4)?;
         let correct = Samples::block_2d_four_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        Ok(())
+        check_all(&mesh)
     }
 
     #[test]
@@ -1093,7 +1093,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua8)?;
         let correct = Samples::block_2d_four_qua8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        Ok(())
+        check_all(&mesh)
     }
 
     #[test]
@@ -1121,7 +1121,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua9)?;
         let correct = Samples::block_2d_four_qua9();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        Ok(())
+        check_all(&mesh)
     }
 
     #[test]
@@ -1156,7 +1156,7 @@ mod tests {
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
         }
-        Ok(())
+        check_all(&mesh)
     }
 
     #[test]
@@ -1191,7 +1191,7 @@ mod tests {
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
         }
-        Ok(())
+        check_all(&mesh)
     }
 
     #[test]
@@ -1223,7 +1223,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua17)?;
         let correct = Samples::block_2d_four_qua17();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        Ok(())
+        check_all(&mesh)
     }
 
     #[test]
@@ -1285,7 +1285,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Hex8)?;
         let correct = Samples::block_3d_eight_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        Ok(())
+        check_all(&mesh)
     }
 
     #[test]
@@ -1347,7 +1347,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Hex20)?;
         let correct = Samples::block_3d_eight_hex20();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        Ok(())
+        check_all(&mesh)
     }
 
     fn draw_ring_and_mesh(
@@ -1421,6 +1421,7 @@ mod tests {
             }),
         )?;
         let mesh = block.subdivide(GeoKind::Qua4)?;
+        check_all(&mesh)?;
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
         assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3]);
@@ -1474,6 +1475,7 @@ mod tests {
             }),
         )?;
         let mesh = block.subdivide(GeoKind::Qua16)?;
+        check_all(&mesh)?;
         for point in &mesh.points {
             let mut radius = 0.0;
             for i in 0..2 {
@@ -1521,6 +1523,7 @@ mod tests {
             }),
         )?;
         let mesh = block.subdivide(GeoKind::Hex8)?;
+        check_all(&mesh)?;
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
         assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3, 4, 5, 6, 7]);
@@ -1578,6 +1581,7 @@ mod tests {
             }),
         )?;
         let mesh = block.subdivide(GeoKind::Hex32)?;
+        check_all(&mesh)?;
         for point in &mesh.points {
             let mut radius = 0.0;
             for i in 0..2 {
@@ -1749,6 +1753,7 @@ mod tests {
         block.set_edge_constraint(2, Some(Constraint2D::Circle(0.0, cen_plus, r)))?;
         block.set_edge_constraint(3, Some(Constraint2D::Circle(cen_minus, 0.0, r)))?;
         let mesh = block.subdivide(GeoKind::Qua8)?;
+        check_all(&mesh)?;
         for p in [0, 4, 1, 10, 8] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, cen_minus])?;
             assert_approx_eq!(d, r, 1e-15);
@@ -1810,6 +1815,7 @@ mod tests {
         block.set_face_constraint(4, Some(Constraint3D::CylinderX(0.0, cen_minus, r)))?;
         block.set_face_constraint(5, Some(Constraint3D::CylinderY(0.0, cen_plus, r)))?;
         let mesh = block.subdivide(GeoKind::Hex20)?;
+        check_all(&mesh)?;
         for p in [0, 20, 33, 44] {
             assert_eq!(mesh.points[p].coords[2], -half_l);
         }
