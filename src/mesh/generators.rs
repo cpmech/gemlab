@@ -132,7 +132,7 @@ impl Structured {
     pub fn quarter_disk_2d(radius: f64, ndiv: usize, target: GeoKind) -> Result<Mesh, StrError> {
         let m = radius / 2.0;
         let n = radius / SQRT_2;
-        let p = m / SQRT_2;
+        let p = 1.15 * m / SQRT_2;
         let mut block_1 = Block::new(&[[0.0, 0.0], [m, 0.0], [p, p], [0.0, m]])?;
         let mut block_2 = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]])?;
         let mut block_3 = Block::new(&[[0.0, m], [p, p], [n, n], [0.0, radius]])?;
@@ -155,9 +155,11 @@ impl Structured {
 #[cfg(test)]
 mod tests {
     use super::Structured;
-    use crate::mesh::draw_mesh;
+    use crate::geometry::point_point_distance;
+    use crate::mesh::{check_overlapping_points, draw_mesh};
     use crate::shapes::GeoKind;
     use crate::StrError;
+    use russell_chk::assert_approx_eq;
 
     #[test]
     fn quarter_ring_2d_works() -> Result<(), StrError> {
@@ -182,8 +184,15 @@ mod tests {
 
     #[test]
     fn quarter_disk_2d_works() -> Result<(), StrError> {
-        let mesh = Structured::quarter_disk_2d(6.0, 2, GeoKind::Qua8)?;
-        if false {
+        let mesh = Structured::quarter_disk_2d(6.0, 3, GeoKind::Qua8)?;
+        assert_eq!(mesh.cells.len(), 9 * 3);
+        assert_eq!(mesh.points.len(), 100);
+        for p in [92, 94, 91, 98, 96, 99, 70, 71, 61, 62, 51, 53, 50] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
+        check_overlapping_points(&mesh, 0.02)?;
+        if true {
             draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d.svg")?;
         }
         Ok(())
