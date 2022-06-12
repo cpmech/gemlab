@@ -846,49 +846,6 @@ impl GeoKind {
         }
     }
 
-    /// Returns the (min,max,delta) limits on the reference domain
-    ///
-    /// # Tri and Tet
-    ///
-    /// * `ξ_min` = 0.0
-    /// * `ξ_max` = 1.0
-    /// * `Δξ` = 1.0
-    ///
-    /// # Lin, Qua, Hex
-    ///
-    /// * `ξ_min` = -1.0
-    /// * `ξ_max` = +1.0
-    /// * `Δξ` = 2.0
-    pub fn reference_limits(&self) -> (f64, f64, f64) {
-        match self {
-            // Lin
-            GeoKind::Lin2 => (-1.0, 1.0, 2.0),
-            GeoKind::Lin3 => (-1.0, 1.0, 2.0),
-            GeoKind::Lin4 => (-1.0, 1.0, 2.0),
-            GeoKind::Lin5 => (-1.0, 1.0, 2.0),
-            // Tri
-            GeoKind::Tri3 => (0.0, 1.0, 1.0),
-            GeoKind::Tri6 => (0.0, 1.0, 1.0),
-            GeoKind::Tri10 => (0.0, 1.0, 1.0),
-            GeoKind::Tri15 => (0.0, 1.0, 1.0),
-            // Qua
-            GeoKind::Qua4 => (-1.0, 1.0, 2.0),
-            GeoKind::Qua8 => (-1.0, 1.0, 2.0),
-            GeoKind::Qua9 => (-1.0, 1.0, 2.0),
-            GeoKind::Qua12 => (-1.0, 1.0, 2.0),
-            GeoKind::Qua16 => (-1.0, 1.0, 2.0),
-            GeoKind::Qua17 => (-1.0, 1.0, 2.0),
-            // Tet
-            GeoKind::Tet4 => (0.0, 1.0, 1.0),
-            GeoKind::Tet10 => (0.0, 1.0, 1.0),
-            GeoKind::Tet20 => (0.0, 1.0, 1.0),
-            // Hex
-            GeoKind::Hex8 => (-1.0, 1.0, 2.0),
-            GeoKind::Hex20 => (-1.0, 1.0, 2.0),
-            GeoKind::Hex32 => (-1.0, 1.0, 2.0),
-        }
-    }
-
     /// Returns the (min,delta) values on the reference domain
     ///
     /// # Tri and Tet
@@ -1119,18 +1076,21 @@ impl GeoKind {
 
 #[cfg(test)]
 mod tests {
-    use super::{GeoClass, GeoKind};
+    use super::{GeoCase, GeoClass, GeoKind};
     use crate::StrError;
     use std::collections::HashSet;
 
     #[test]
     fn derive_works() {
+        let case = GeoCase::Cable.clone();
         let class = GeoClass::Tri.clone();
         let kind = GeoKind::Tri6.clone();
         let classes = HashSet::from([GeoClass::Tri, GeoClass::Qua]);
         let kinds = HashSet::from([GeoKind::Tri3, GeoKind::Qua4]);
+        assert_eq!(case, GeoCase::Cable);
         assert_eq!(class, GeoClass::Tri);
         assert_eq!(kind, GeoKind::Tri6);
+        assert_eq!(format!("{:?}", case), "Cable");
         assert_eq!(format!("{:?}", class), "Tri");
         assert_eq!(format!("{:?}", kind), "Tri6");
         assert_eq!(classes.contains(&GeoClass::Tri), true);
