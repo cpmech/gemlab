@@ -1707,6 +1707,7 @@ mod tests {
         Ok(())
     }
 
+    #[no_coverage]
     fn draw_mesh_and_block(
         plot: &mut Plot,
         mesh: Mesh,
