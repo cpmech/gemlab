@@ -702,63 +702,64 @@ impl Block {
 
     /// Handles constraints
     fn handle_constraints(&self, x: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
+        const TOL: f64 = 1e-13;
         if self.ndim == 2 {
-            if ksi[1] == -1.0 {
+            if f64::abs(-1.0 - ksi[1]) < TOL {
                 // bottom => e = 0
                 if let Some(ct) = self.edge_constraints.get(&0) {
                     self.apply_constraint_2d(x, ct)?;
                 }
             }
-            if ksi[0] == 1.0 {
+            if f64::abs(1.0 - ksi[0]) < TOL {
                 // right => e = 1
                 if let Some(ct) = self.edge_constraints.get(&1) {
                     self.apply_constraint_2d(x, ct)?;
                 }
             }
-            if ksi[1] == 1.0 {
+            if f64::abs(1.0 - ksi[1]) < TOL {
                 // top => e = 2
                 if let Some(ct) = self.edge_constraints.get(&2) {
                     self.apply_constraint_2d(x, ct)?;
                 }
             }
-            if ksi[0] == -1.0 {
+            if f64::abs(-1.0 - ksi[0]) < TOL {
                 // left => e = 3
                 if let Some(ct) = self.edge_constraints.get(&3) {
                     self.apply_constraint_2d(x, ct)?;
                 }
             }
         } else {
-            if ksi[0] == -1.0 {
+            if f64::abs(-1.0 - ksi[0]) < TOL {
                 // negative x => f = 0
                 if let Some(ct) = self.face_constraints.get(&0) {
                     self.apply_constraint_3d(x, ct)?;
                 }
             }
-            if ksi[0] == 1.0 {
+            if f64::abs(1.0 - ksi[0]) < TOL {
                 // positive x => f = 1
                 if let Some(ct) = self.face_constraints.get(&1) {
                     self.apply_constraint_3d(x, ct)?;
                 }
             }
-            if ksi[1] == -1.0 {
+            if f64::abs(-1.0 - ksi[1]) < TOL {
                 // negative y => f = 2
                 if let Some(ct) = self.face_constraints.get(&2) {
                     self.apply_constraint_3d(x, ct)?;
                 }
             }
-            if ksi[1] == 1.0 {
+            if f64::abs(1.0 - ksi[1]) < TOL {
                 // positive y => f = 3
                 if let Some(ct) = self.face_constraints.get(&3) {
                     self.apply_constraint_3d(x, ct)?;
                 }
             }
-            if ksi[2] == -1.0 {
+            if f64::abs(-1.0 - ksi[2]) < TOL {
                 // negative z => f = 4
                 if let Some(ct) = self.face_constraints.get(&4) {
                     self.apply_constraint_3d(x, ct)?;
                 }
             }
-            if ksi[2] == 1.0 {
+            if f64::abs(1.0 - ksi[2]) < TOL {
                 // positive z => f = 5
                 if let Some(ct) = self.face_constraints.get(&5) {
                     self.apply_constraint_3d(x, ct)?;
@@ -1946,6 +1947,35 @@ mod tests {
         if false {
             let mut plot = Plot::new();
             draw_mesh_and_block(&mut plot, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_2d_handles_imprecision() -> Result<(), StrError> {
+        let mut block = Block::new_square(6.0);
+        block.set_ndiv(&[3, 3])?;
+        let ct = Constraint2D::Circle(0.0, 0.0, 6.0);
+        block.set_edge_constraint(1, Some(ct.clone()))?;
+        block.set_edge_constraint(2, Some(ct.clone()))?;
+        let mesh = block.subdivide(GeoKind::Qua4)?;
+        for p in [6, 7, 11, 15] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
+        for p in [13, 12, 14] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
+        if false {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_imprecision_2d.svg",
+            )?;
         }
         Ok(())
     }
