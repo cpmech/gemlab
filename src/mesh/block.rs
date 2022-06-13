@@ -1,4 +1,5 @@
 use super::{Cell, Mesh, Point};
+use crate::mesh::{set_xxt_from_points, PointId};
 use crate::shapes::op::draw_shape;
 use crate::shapes::{op, GeoKind, Scratchpad};
 use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol, PI};
@@ -616,6 +617,7 @@ impl Block {
                     // for each node of the new (target) cell
                     // (there may be more nodes than the block; e.g., internal nodes)
                     let mut points = vec![0; out_nnode];
+                    let mut sides_constraint_applied: HashMap<PointId, usize> = HashMap::new();
                     for m in 0..out_nnode {
                         // reference natural coordinates of the new cell nodes
                         let ksi_ref = target.reference_coords(m);
@@ -642,7 +644,10 @@ impl Block {
                                     // compute real coordinates of point using the block's
                                     op::calc_coords(&mut x, &mut self.pad, &ksi)?;
                                     if self.has_constraints {
-                                        self.handle_constraints(&mut x, &ksi)?;
+                                        let side_constraint_applied = self.handle_constraints(&mut x, &ksi)?;
+                                        if let Some(side) = side_constraint_applied {
+                                            sides_constraint_applied.insert(point_id, side);
+                                        }
                                     }
                                 }
 
@@ -655,6 +660,59 @@ impl Block {
                             }
                         };
                         points[m] = point_id;
+                    }
+
+                    // fix middle nodes after corner movement due to constraints
+                    // (only process edges with more than 2 nodes; i.e., those with middle nodes)
+                    if target.edge_nnode() > 2 {
+                        for (point_id, side) in sides_constraint_applied {
+                            for e in 0..target.nedge() {
+                                // (only process a side perpendicular to the side where the
+                                // constraint has been applied; i.e., don't bother with the points
+                                // on the same side as the one where the constraint has been applied)
+                                if e != side {
+                                    // collect the (real) ids of points on the perpendicular edge
+                                    let points_on_orthogonal_edge: Vec<_> = (0..target.edge_nnode())
+                                        .into_iter()
+                                        .map(|idx| points[target.edge_node_id(e, idx)])
+                                        .collect();
+                                    // (only process the orthogonal edge if the constrained point belongs to it)
+                                    if points_on_orthogonal_edge.contains(&point_id) {
+                                        let mut lin2_pad = Scratchpad::new(ndim, GeoKind::Lin2)?;
+                                        set_xxt_from_points(
+                                            &mut lin2_pad,
+                                            &[points_on_orthogonal_edge[0], points_on_orthogonal_edge[1]],
+                                            &mesh,
+                                        );
+                                        // (only compute the new coordinates of the middle nodes: m_edge > 2)
+                                        for m in 2..target.edge_nnode() {
+                                            let ksi_edge = target.edge_kind().unwrap().reference_coords(m);
+                                            op::calc_coords(&mut x, &mut lin2_pad, ksi_edge)?;
+                                            for dim in 0..ndim {
+                                                mesh.points[points_on_orthogonal_edge[m]].coords[dim] = x[dim];
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // now get the serendipity version and use it to calculate the
+                        // interior coordinates of a cell with interior points (e.g. Qua16)
+                        if target.n_interior_nodes() > 0 {
+                            // TODO: handle other cases
+                            if target == GeoKind::Qua16 {
+                                let mut serendipity = Scratchpad::new(ndim, GeoKind::Qua12)?;
+                                set_xxt_from_points(&mut serendipity, &points[0..12], &mesh);
+                                for idx in 0..target.n_interior_nodes() {
+                                    let m = target.interior_node(idx);
+                                    let ksi_interior = target.reference_coords(m);
+                                    op::calc_coords(&mut x, &mut serendipity, ksi_interior)?;
+                                    for dim in 0..ndim {
+                                        mesh.points[points[m]].coords[dim] = x[dim];
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // new cell
@@ -701,76 +759,101 @@ impl Block {
     }
 
     /// Handles constraints
-    fn handle_constraints(&self, x: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
+    ///
+    /// Returns the local index of the edge or face corresponding to the side where the constraint
+    /// has been applied. Returns None if no constraint has been applied.
+    fn handle_constraints(&self, x: &mut Vector, ksi: &[f64]) -> Result<Option<usize>, StrError> {
         const TOL: f64 = 1e-13;
         if self.ndim == 2 {
             if f64::abs(-1.0 - ksi[1]) < TOL {
                 // bottom => e = 0
                 if let Some(ct) = self.edge_constraints.get(&0) {
-                    self.apply_constraint_2d(x, ct)?;
+                    if self.apply_constraint_2d(x, ct)? {
+                        return Ok(Some(0));
+                    }
                 }
             }
             if f64::abs(1.0 - ksi[0]) < TOL {
                 // right => e = 1
                 if let Some(ct) = self.edge_constraints.get(&1) {
-                    self.apply_constraint_2d(x, ct)?;
+                    if self.apply_constraint_2d(x, ct)? {
+                        return Ok(Some(1));
+                    }
                 }
             }
             if f64::abs(1.0 - ksi[1]) < TOL {
                 // top => e = 2
                 if let Some(ct) = self.edge_constraints.get(&2) {
-                    self.apply_constraint_2d(x, ct)?;
+                    if self.apply_constraint_2d(x, ct)? {
+                        return Ok(Some(2));
+                    }
                 }
             }
             if f64::abs(-1.0 - ksi[0]) < TOL {
                 // left => e = 3
                 if let Some(ct) = self.edge_constraints.get(&3) {
-                    self.apply_constraint_2d(x, ct)?;
+                    if self.apply_constraint_2d(x, ct)? {
+                        return Ok(Some(3));
+                    }
                 }
             }
         } else {
             if f64::abs(-1.0 - ksi[0]) < TOL {
                 // negative x => f = 0
                 if let Some(ct) = self.face_constraints.get(&0) {
-                    self.apply_constraint_3d(x, ct)?;
+                    if self.apply_constraint_3d(x, ct)? {
+                        return Ok(Some(0));
+                    }
                 }
             }
             if f64::abs(1.0 - ksi[0]) < TOL {
                 // positive x => f = 1
                 if let Some(ct) = self.face_constraints.get(&1) {
-                    self.apply_constraint_3d(x, ct)?;
+                    if self.apply_constraint_3d(x, ct)? {
+                        return Ok(Some(1));
+                    }
                 }
             }
             if f64::abs(-1.0 - ksi[1]) < TOL {
                 // negative y => f = 2
                 if let Some(ct) = self.face_constraints.get(&2) {
-                    self.apply_constraint_3d(x, ct)?;
+                    if self.apply_constraint_3d(x, ct)? {
+                        return Ok(Some(2));
+                    }
                 }
             }
             if f64::abs(1.0 - ksi[1]) < TOL {
                 // positive y => f = 3
                 if let Some(ct) = self.face_constraints.get(&3) {
-                    self.apply_constraint_3d(x, ct)?;
+                    if self.apply_constraint_3d(x, ct)? {
+                        return Ok(Some(3));
+                    }
                 }
             }
             if f64::abs(-1.0 - ksi[2]) < TOL {
                 // negative z => f = 4
                 if let Some(ct) = self.face_constraints.get(&4) {
-                    self.apply_constraint_3d(x, ct)?;
+                    if self.apply_constraint_3d(x, ct)? {
+                        return Ok(Some(4));
+                    }
                 }
             }
             if f64::abs(1.0 - ksi[2]) < TOL {
                 // positive z => f = 5
                 if let Some(ct) = self.face_constraints.get(&5) {
-                    self.apply_constraint_3d(x, ct)?;
+                    if self.apply_constraint_3d(x, ct)? {
+                        return Ok(Some(5));
+                    }
                 }
             }
         }
-        Ok(())
+        Ok(None) // no constraint applied
     }
 
     /// Applies 2D constraint
-    fn apply_constraint_2d(&self, x: &mut Vector, ct: &Constraint2D) -> Result<(), StrError> {
+    ///
+    /// Returns true if the constraint has been applied; otherwise, returns false
+    fn apply_constraint_2d(&self, x: &mut Vector, ct: &Constraint2D) -> Result<bool, StrError> {
         match ct {
             Constraint2D::Circle(xc, yc, r) => {
                 let dx = x[0] - xc;
@@ -785,14 +868,17 @@ impl Block {
                     let move_y = gap * dy / d;
                     x[0] += move_x;
                     x[1] += move_y;
+                    return Ok(true);
                 }
             }
         }
-        Ok(())
+        Ok(false)
     }
 
     /// Applies 3D constraint
-    fn apply_constraint_3d(&self, x: &mut Vector, ct: &Constraint3D) -> Result<(), StrError> {
+    ///
+    /// Returns true if the constraint has been applied; otherwise, returns false
+    fn apply_constraint_3d(&self, x: &mut Vector, ct: &Constraint3D) -> Result<bool, StrError> {
         match ct {
             Constraint3D::CylinderX(yc, zc, r) => {
                 let dy = x[1] - yc;
@@ -807,6 +893,7 @@ impl Block {
                     let move_z = gap * dz / d;
                     x[1] += move_y;
                     x[2] += move_z;
+                    return Ok(true);
                 }
             }
             Constraint3D::CylinderY(xc, zc, r) => {
@@ -822,6 +909,7 @@ impl Block {
                     let move_z = gap * dz / d;
                     x[0] += move_x;
                     x[2] += move_z;
+                    return Ok(true);
                 }
             }
             Constraint3D::CylinderZ(xc, yc, r) => {
@@ -837,10 +925,11 @@ impl Block {
                     let move_y = gap * dy / d;
                     x[0] += move_x;
                     x[1] += move_y;
+                    return Ok(true);
                 }
             }
         }
-        Ok(())
+        Ok(false)
     }
 }
 
