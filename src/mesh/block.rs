@@ -559,6 +559,22 @@ impl Block {
         // constants
         let target_nnode = target.nnode();
 
+        // constants used only if there are constraints and
+        // the constraint causes some middle edge nodes to move
+        let target_nedge = target.nedge();
+        let target_edge_nnode = target.edge_nnode();
+        let target_n_interior_nodes = target.n_interior_nodes();
+        let mut serendipity = if self.has_constraints {
+            match target {
+                GeoKind::Qua9 => Some(Scratchpad::new(ndim, GeoKind::Qua8)?),
+                GeoKind::Qua16 => Some(Scratchpad::new(ndim, GeoKind::Qua12)?),
+                GeoKind::Qua17 => Some(Scratchpad::new(ndim, GeoKind::Qua8)?), // only option available => need to remap node ids
+                _ => None,
+            }
+        } else {
+            None
+        };
+
         // The idea here is to map the TARGET CELL (shown on the right)
         // to the BLOCK's reference (natural) space. (right-to-left mapping)
         // We keep track of the points already added in the natural space of
@@ -617,7 +633,7 @@ impl Block {
                     // for each node of the new (target) cell
                     // (there may be more nodes than the block; e.g., internal nodes)
                     let mut points = vec![0; target_nnode];
-                    let mut sides_constraint_applied: HashMap<PointId, usize> = HashMap::new();
+                    let mut sides_constraint_applied: HashMap<PointId, usize> = HashMap::new(); // point_id => side
                     for m in 0..target_nnode {
                         // reference natural coordinates of the new cell nodes
                         let ksi_ref = target.reference_coords(m);
@@ -662,32 +678,35 @@ impl Block {
                         points[m] = point_id;
                     }
 
-                    // fix middle nodes after corner movement due to constraints
-                    // (only process edges with more than 2 nodes; i.e., those with middle nodes)
-                    if target.edge_nnode() > 2 {
+                    // fix middle edge nodes after corner movement due to constraints
+                    // (only process edges with more than 2 nodes; i.e., those with middle/interior nodes)
+                    if self.has_constraints && target_edge_nnode > 2 {
                         for (point_id, side) in sides_constraint_applied {
-                            for e in 0..target.nedge() {
+                            for e in 0..target_nedge {
                                 // (only process a side perpendicular to the side where the
                                 // constraint has been applied; i.e., don't bother with the points
                                 // on the same side as the one where the constraint has been applied)
                                 if e != side {
                                     // collect the (real) ids of points on the perpendicular edge
-                                    let points_on_orthogonal_edge: Vec<_> = (0..target.edge_nnode())
+                                    let points_on_orthogonal_edge: Vec<_> = (0..target_edge_nnode)
                                         .into_iter()
                                         .map(|idx| points[target.edge_node_id(e, idx)])
                                         .collect();
                                     // (only process the orthogonal edge if the constrained point belongs to it)
                                     if points_on_orthogonal_edge.contains(&point_id) {
-                                        let mut lin2_pad = Scratchpad::new(ndim, GeoKind::Lin2)?;
+                                        // allocate a Lin2 with the first two (corner) points of target's edge
+                                        let mut pad_lin2 = Scratchpad::new(ndim, GeoKind::Lin2)?;
                                         set_xxt_from_points(
-                                            &mut lin2_pad,
+                                            &mut pad_lin2,
                                             &[points_on_orthogonal_edge[0], points_on_orthogonal_edge[1]],
                                             &mesh,
                                         );
-                                        // (only compute the new coordinates of the middle nodes: m_edge > 2)
-                                        for m in 2..target.edge_nnode() {
+                                        // (only compute the new coordinates of the middle edge nodes: m >= 2)
+                                        for m in 2..target_edge_nnode {
+                                            // use a Lin2 with the natural coords of target to calculate
+                                            // the real position of the interior/middle node
                                             let ksi_edge = target.edge_kind().unwrap().reference_coords(m);
-                                            op::calc_coords(&mut x, &mut lin2_pad, ksi_edge)?;
+                                            op::calc_coords(&mut x, &mut pad_lin2, ksi_edge)?;
                                             for dim in 0..ndim {
                                                 mesh.points[points_on_orthogonal_edge[m]].coords[dim] = x[dim];
                                             }
@@ -696,17 +715,26 @@ impl Block {
                                 }
                             }
                         }
-                        // now get the serendipity version and use it to calculate the
+                        // now get the serendipity version of target and use it to calculate the
                         // interior coordinates of a cell with interior points (e.g. Qua16)
-                        if target.n_interior_nodes() > 0 {
-                            // TODO: handle other cases
-                            if target == GeoKind::Qua16 {
-                                let mut serendipity = Scratchpad::new(ndim, GeoKind::Qua12)?;
-                                set_xxt_from_points(&mut serendipity, &points[0..12], &mesh);
-                                for idx in 0..target.n_interior_nodes() {
+                        // (this is required to maintain the interior nodes "aligned" with the
+                        // just moved middle edge nodes)
+                        if target_n_interior_nodes > 0 {
+                            if let Some(ref mut pad_ser) = serendipity {
+                                let pts = if pad_ser.kind == GeoKind::Qua17 {
+                                    vec![
+                                        points[0], points[1], points[2], points[3], points[8], points[9], points[10],
+                                        points[11],
+                                    ]
+                                } else {
+                                    let nn = pad_ser.interp.dim();
+                                    points[0..nn].to_vec()
+                                };
+                                set_xxt_from_points(pad_ser, &pts, &mesh);
+                                for idx in 0..target_n_interior_nodes {
                                     let m = target.interior_node(idx);
                                     let ksi_interior = target.reference_coords(m);
-                                    op::calc_coords(&mut x, &mut serendipity, ksi_interior)?;
+                                    op::calc_coords(&mut x, pad_ser, ksi_interior)?;
                                     for dim in 0..ndim {
                                         mesh.points[points[m]].coords[dim] = x[dim];
                                     }
