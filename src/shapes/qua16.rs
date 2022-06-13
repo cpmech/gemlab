@@ -48,6 +48,7 @@ impl Qua16 {
     pub const EDGE_NNODE: usize = 4;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 4;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua16::EDGE_NNODE]; Qua16::NEDGE] = [
@@ -76,6 +77,8 @@ impl Qua16 {
         [ 1.0 / 3.0 ,  1.0 / 3.0 ],
         [-1.0 / 3.0 ,  1.0 / 3.0 ],
     ];
+
+    pub const INTERIOR_NODES: [usize; Qua16::N_INTERIOR_NODE] = [12, 13, 14, 15];
 
     /// Computes the interpolation functions
     ///

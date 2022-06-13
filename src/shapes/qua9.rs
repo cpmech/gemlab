@@ -42,6 +42,7 @@ impl Qua9 {
     pub const EDGE_NNODE: usize = 3;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 1;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua9::EDGE_NNODE]; Qua9::NEDGE] = [
@@ -63,6 +64,8 @@ impl Qua9 {
         [-1.0,  0.0],
         [ 0.0,  0.0],
     ];
+
+    pub const INTERIOR_NODES: [usize; Qua9::N_INTERIOR_NODE] = [8];
 
     /// Computes the interpolation functions
     ///

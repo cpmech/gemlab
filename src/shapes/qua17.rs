@@ -50,6 +50,7 @@ impl Qua17 {
     pub const EDGE_NNODE: usize = 5;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 1;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua17::EDGE_NNODE]; Qua17::NEDGE] = [
@@ -79,6 +80,8 @@ impl Qua17 {
         [-1.0, -0.5], // 15
         [ 0.0,  0.0], // 16
     ];
+
+    pub const INTERIOR_NODES: [usize; Qua17::N_INTERIOR_NODE] = [16];
 
     /// Computes the interpolation functions
     ///

@@ -43,6 +43,7 @@ impl Tri10 {
     pub const EDGE_NNODE: usize = 4;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 1;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri10::EDGE_NNODE]; Tri10::NEDGE] = [
@@ -64,6 +65,8 @@ impl Tri10 {
         [0.0       , 1.0 / 3.0], // 8
         [1.0 / 3.0 , 1.0 / 3.0], // 9
     ];
+
+    pub const INTERIOR_NODES: [usize; Tri10::N_INTERIOR_NODE] = [9];
 
     /// Computes the interpolation functions
     ///

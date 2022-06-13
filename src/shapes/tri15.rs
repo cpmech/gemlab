@@ -13,7 +13,7 @@ use russell_lab::{Matrix, Vector};
 /// 10     9,
 ///  |       ',
 ///  |         ',
-///  5   14      4,
+///  5    14     4,
 ///  |             ',
 ///  |               ',
 /// 11    12    13     8,
@@ -46,6 +46,7 @@ impl Tri15 {
     pub const EDGE_NNODE: usize = 5;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 3;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri15::EDGE_NNODE]; Tri15::NEDGE] = [
@@ -72,6 +73,8 @@ impl Tri15 {
         [0.5  , 0.25], // 13
         [0.25 , 0.5 ], // 14
     ];
+
+    pub const INTERIOR_NODES: [usize; Tri15::N_INTERIOR_NODE] = [12, 13, 14];
 
     /// Computes the interpolation functions
     ///

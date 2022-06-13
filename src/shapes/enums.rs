@@ -103,13 +103,13 @@ pub enum GeoKind {
     /// Line (segment) with 2 nodes (linear functions)
     Lin2,
 
-    /// Line (segment) with 3 nodes (quadratic functions)
+    /// Line (segment) with 3 nodes (quadratic functions; with 1 interior/middle node)
     Lin3,
 
-    /// Line (segment) with 4 nodes (cubic functions)
+    /// Line (segment) with 4 nodes (cubic functions; with 2 interior nodes)
     Lin4,
 
-    /// Line (segment) with 5 nodes (quartic functions)
+    /// Line (segment) with 5 nodes (quartic functions; with 3 interior nodes)
     Lin5,
 
     /// Triangle with 3 nodes (linear edges)
@@ -784,6 +784,71 @@ impl GeoKind {
             GeoKind::Hex8 => Hex8::FACE_EDGE_NODE_IDS[f][k][i],
             GeoKind::Hex20 => Hex20::FACE_EDGE_NODE_IDS[f][k][i],
             GeoKind::Hex32 => Hex32::FACE_EDGE_NODE_IDS[f][k][i],
+        }
+    }
+
+    /// Returns the number of interior nodes (Lin{3,4,5}, Tri{10,15}, Qua{9,16,17})
+    pub fn n_interior_nodes(&self) -> usize {
+        match self {
+            // Lin
+            GeoKind::Lin2 => 0,
+            GeoKind::Lin3 => Lin3::N_INTERIOR_NODE,
+            GeoKind::Lin4 => Lin4::N_INTERIOR_NODE,
+            GeoKind::Lin5 => Lin5::N_INTERIOR_NODE,
+            // Tri
+            GeoKind::Tri3 => 0,
+            GeoKind::Tri6 => 0,
+            GeoKind::Tri10 => Tri10::N_INTERIOR_NODE,
+            GeoKind::Tri15 => Tri15::N_INTERIOR_NODE,
+            // Qua
+            GeoKind::Qua4 => 0,
+            GeoKind::Qua8 => 0,
+            GeoKind::Qua9 => Qua9::N_INTERIOR_NODE,
+            GeoKind::Qua12 => 0,
+            GeoKind::Qua16 => Qua16::N_INTERIOR_NODE,
+            GeoKind::Qua17 => Qua17::N_INTERIOR_NODE,
+            // Tet
+            GeoKind::Tet4 => 0,
+            GeoKind::Tet10 => 0,
+            GeoKind::Tet20 => 0,
+            // Hex
+            GeoKind::Hex8 => 0,
+            GeoKind::Hex20 => 0,
+            GeoKind::Hex32 => 0,
+        }
+    }
+
+    /// Returns the index of an interior node (Lin{3,4,5}, Tri{10,15}, Qua{9,16,17})
+    ///
+    /// **Note::** Make sure to call `n_interior_node` first to find out
+    /// how many interior nodes a shape has; otherwise a panic may occur
+    pub fn interior_node(&self, i: usize) -> usize {
+        match self {
+            // Lin
+            GeoKind::Lin2 => 0,
+            GeoKind::Lin3 => Lin3::INTERIOR_NODES[i],
+            GeoKind::Lin4 => Lin4::INTERIOR_NODES[i],
+            GeoKind::Lin5 => Lin5::INTERIOR_NODES[i],
+            // Tri
+            GeoKind::Tri3 => 0,
+            GeoKind::Tri6 => 0,
+            GeoKind::Tri10 => Tri10::INTERIOR_NODES[i],
+            GeoKind::Tri15 => Tri15::INTERIOR_NODES[i],
+            // Qua
+            GeoKind::Qua4 => 0,
+            GeoKind::Qua8 => 0,
+            GeoKind::Qua9 => Qua9::INTERIOR_NODES[i],
+            GeoKind::Qua12 => 0,
+            GeoKind::Qua16 => Qua16::INTERIOR_NODES[i],
+            GeoKind::Qua17 => Qua17::INTERIOR_NODES[i],
+            // Tet
+            GeoKind::Tet4 => 0,
+            GeoKind::Tet10 => 0,
+            GeoKind::Tet20 => 0,
+            // Hex
+            GeoKind::Hex8 => 0,
+            GeoKind::Hex20 => 0,
+            GeoKind::Hex32 => 0,
         }
     }
 

@@ -21,6 +21,7 @@ impl Lin5 {
     pub const EDGE_NNODE: usize = 0;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 3;
 
     #[rustfmt::skip]
     pub const NODE_REFERENCE_COORDS: [[f64; Lin5::GEO_NDIM]; Lin5::NNODE] = [
@@ -30,6 +31,8 @@ impl Lin5 {
         [-0.5],
         [ 0.5],
     ];
+
+    pub const INTERIOR_NODES: [usize; Lin5::N_INTERIOR_NODE] = [2, 3, 4];
 
     /// Computes the interpolation functions
     ///
