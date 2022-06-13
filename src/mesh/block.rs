@@ -557,7 +557,7 @@ impl Block {
         };
 
         // constants
-        let out_nnode = target.nnode();
+        let target_nnode = target.nnode();
 
         // The idea here is to map the TARGET CELL (shown on the right)
         // to the BLOCK's reference (natural) space. (right-to-left mapping)
@@ -616,9 +616,9 @@ impl Block {
 
                     // for each node of the new (target) cell
                     // (there may be more nodes than the block; e.g., internal nodes)
-                    let mut points = vec![0; out_nnode];
+                    let mut points = vec![0; target_nnode];
                     let mut sides_constraint_applied: HashMap<PointId, usize> = HashMap::new();
-                    for m in 0..out_nnode {
+                    for m in 0..target_nnode {
                         // reference natural coordinates of the new cell nodes
                         let ksi_ref = target.reference_coords(m);
 
