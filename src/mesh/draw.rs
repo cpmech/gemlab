@@ -343,8 +343,11 @@ pub fn draw_mesh(mesh: Mesh, with_ids: bool, filename: &str) -> Result<(), StrEr
     if with_ids {
         draw.cell_ids(&mut plot, &region.mesh)?;
         draw.point_ids(&mut plot, &region.mesh);
+    } else {
+        draw.points(&mut plot, &region.mesh);
     }
     plot.set_equal_axes(true)
+        .grid_and_labels("x", "y")
         .set_figure_size_points(600.0, 600.0)
         .save(filename)
 }
