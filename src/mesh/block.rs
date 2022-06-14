@@ -2070,7 +2070,7 @@ mod tests {
         for p in [0, 20, 33, 44] {
             assert_eq!(mesh.points[p].coords[2], -half_l);
         }
-        for p in [51, 53, 77, 71] {
+        for p in [51, 63, 77, 71] {
             assert_eq!(mesh.points[p].coords[2], half_l);
         }
         // face 0
@@ -2161,6 +2161,99 @@ mod tests {
             plot.add(&surf);
             plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
             draw_mesh_and_block(&mut plot, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_3d_works_cylinder_xy() -> Result<(), StrError> {
+        let half_l = 2.0;
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [-half_l, -half_l, -half_l],
+            [ half_l, -half_l, -half_l],
+            [ half_l,  half_l, -half_l],
+            [-half_l,  half_l, -half_l],
+            [-half_l, -half_l,  half_l],
+            [ half_l, -half_l,  half_l],
+            [ half_l,  half_l,  half_l],
+            [-half_l,  half_l,  half_l],
+        ])?;
+        let r = 5.0;
+        let theta = f64::asin(half_l / r);
+        let cen_minus = -half_l - r * f64::cos(theta);
+        let cen_plus = half_l + r * f64::cos(theta);
+        block.set_face_constraint(4, Some(Constraint3D::CylinderX(0.0, cen_minus, r)))?;
+        block.set_face_constraint(5, Some(Constraint3D::CylinderY(0.0, cen_plus, r)))?;
+        let mesh = block.subdivide(GeoKind::Hex20)?;
+        check_all(&mesh)?;
+        // corner points
+        for p in [0, 20, 33, 44] {
+            assert_eq!(mesh.points[p].coords[2], -half_l);
+        }
+        for p in [51, 63, 77, 71] {
+            assert_eq!(mesh.points[p].coords[2], half_l);
+        }
+        // face 4
+        for p in [
+            0, 11, 3, 38, 33, // x-min
+            8, 10, 37, //
+            1, 9, 2, 36, 32, // x-mid
+            24, 26, 47, //
+            20, 25, 21, 46, 44, // x-max
+        ] {
+            let x = &[mesh.points[p].coords[1], mesh.points[p].coords[2]];
+            let d = point_point_distance(x, &[0.0, cen_minus])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        // face 3
+        for p in [
+            51, 55, 52, 65, 63, // y-min
+            58, 56, 66, //
+            54, 57, 53, 67, 64, // y-mid
+            74, 72, 78, //
+            71, 73, 70, 79, 77, // y-max
+        ] {
+            let x = &[mesh.points[p].coords[0], mesh.points[p].coords[2]];
+            let d = point_point_distance(x, &[0.0, cen_plus])?;
+            assert_approx_eq!(d, r, 1e-15);
+        }
+        // vertical line at center
+        for p in [2, 18, 6, 61, 53] {
+            assert_eq!(mesh.points[p].coords[0], 0.0);
+            assert_eq!(mesh.points[p].coords[1], 0.0);
+        }
+        // middle nodes
+        for (a, mid, b) in [
+            (3, 19, 7),
+            (2, 18, 6),
+            (21, 31, 23), // z-min
+            (5, 60, 52),
+            (6, 61, 53),
+            (34, 75, 70), // z-max
+        ] {
+            let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
+            let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
+            let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
+            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+        }
+        if false {
+            let mut plot = Plot::new();
+            let mut surf = Surface::new();
+            const NP: usize = 81;
+            surf.set_solid_color("#ff000020");
+            surf.draw_cylinder(&[-half_l, 0.0, cen_minus], &[half_l, 0.0, cen_minus], r, 5, NP)?;
+            surf.set_solid_color("#00ff0020");
+            surf.draw_cylinder(&[0.0, -half_l, cen_plus], &[0.0, half_l, cen_plus], r, 5, NP)?;
+            plot.add(&surf);
+            plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                false,
+                "/tmp/gemlab/test_constraints_3d_cylinder_xy.svg",
+            )?;
         }
         Ok(())
     }
