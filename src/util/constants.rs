@@ -28,3 +28,32 @@ pub const ONE_BY_3: f64 =
 /// 2/3
 pub const TWO_BY_3: f64 =
     0.66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666f64;
+
+/// 1/sqrt(2) = cos(pi/4) <https://oeis.org/A010503>
+pub const ONE_BY_SQRT_2: f64 =
+    0.707106781186547524400844362104849039284835937688474036588339868995366239231053519425193767163820786367506f64;
+
+// cos(π/8) = cos(22.5°) <https://oeis.org/A144981>
+pub const COS_PI_BY_8: f64 =
+    0.923879532511286756128183189396788286822416625863642486115097731280535007501102358714839934850344596097963f64;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use super::{COS_PI_BY_8, ONE_BY_3, ONE_BY_SQRT_2, PI, SQRT_2, SQRT_2_BY_3, SQRT_3, SQRT_3_BY_2, SQRT_6, TWO_BY_3};
+
+    #[test]
+    fn constants_are_correct() {
+        assert_eq!(PI, std::f64::consts::PI);
+        assert_eq!(SQRT_2, std::f64::consts::SQRT_2);
+        assert_eq!(SQRT_3, f64::sqrt(3.0));
+        assert_eq!(SQRT_6, f64::sqrt(6.0));
+        assert_eq!(SQRT_2_BY_3, f64::sqrt(2.0 / 3.0));
+        assert_eq!(SQRT_3_BY_2, f64::sqrt(3.0 / 2.0));
+        assert_eq!(ONE_BY_3, 1.0 / 3.0);
+        assert_eq!(TWO_BY_3, 2.0 / 3.0);
+        assert_eq!(ONE_BY_SQRT_2, std::f64::consts::FRAC_1_SQRT_2);
+        assert_eq!(COS_PI_BY_8, f64::cos(std::f64::consts::PI / 8.0));
+    }
+}
