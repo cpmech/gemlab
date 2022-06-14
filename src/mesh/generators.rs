@@ -307,6 +307,22 @@ mod tests {
     }
 
     #[test]
+    fn quarter_disk_2d_a_works_qua8_finer() -> Result<(), StrError> {
+        let mesh = Structured::quarter_disk_2d_a(6.0, 3, GeoKind::Qua8)?;
+        check_overlapping_points(&mesh, 0.02)?;
+        assert_eq!(mesh.points.len(), 100);
+        assert_eq!(mesh.cells.len(), 27);
+        for p in [50, 53, 51, 62, 61, 71, 70, 99, 96, 98, 91, 94, 92] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
+        if false {
+            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8_finer.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
     fn quarter_disk_2d_a_works_qua16() -> Result<(), StrError> {
         let mesh = Structured::quarter_disk_2d_a(6.0, 1, GeoKind::Qua16)?;
         check_overlapping_points(&mesh, 0.02)?;
@@ -334,6 +350,22 @@ mod tests {
         }
         if false {
             draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn quarter_disk_2d_b_works_qua8_finer() -> Result<(), StrError> {
+        let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 3, 3, GeoKind::Qua8)?;
+        check_overlapping_points(&mesh, 0.02)?;
+        assert_eq!(mesh.points.len(), 100);
+        assert_eq!(mesh.cells.len(), 27);
+        for p in [50, 53, 51, 62, 61, 71, 70, 99, 96, 98, 91, 94, 92] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
+        if false {
+            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8_finer.svg")?;
         }
         Ok(())
     }
