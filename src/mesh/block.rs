@@ -1,12 +1,12 @@
 use super::{Cell, Mesh, Point};
 use crate::mesh::{set_xxt_from_points, PointId};
 use crate::shapes::op::draw_shape;
-use crate::shapes::{op, GeoKind, Scratchpad};
+use crate::shapes::{op, GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
 use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol, PI};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
 use russell_lab::Vector;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Arguments to transform the Block generated mesh into a ring
 ///
@@ -561,7 +561,9 @@ impl Block {
 
         // constants used only if there are constraints and
         // the constraint causes some middle edge nodes to move
+        let mut pad_lin2 = Scratchpad::new(ndim, GeoKind::Lin2)?;
         let target_nedge = target.nedge();
+        let target_edge_kind = target.edge_kind().unwrap();
         let target_edge_nnode = target.edge_nnode();
         let target_n_interior_nodes = target.n_interior_nodes();
         let mut serendipity = if self.has_constraints {
@@ -574,6 +576,10 @@ impl Block {
         } else {
             None
         };
+
+        // maps the id of a constrained point to the side (edge/face) where
+        // the constrained has been applied (i.e., the point coordinates were modified)
+        let mut constrained_point_to_sides: HashMap<PointId, HashSet<usize>> = HashMap::new(); // point_id => sides
 
         // The idea here is to map the TARGET CELL (shown on the right)
         // to the BLOCK's reference (natural) space. (right-to-left mapping)
@@ -633,7 +639,6 @@ impl Block {
                     // for each node of the new (target) cell
                     // (there may be more nodes than the block; e.g., internal nodes)
                     let mut points = vec![0; target_nnode];
-                    let mut sides_constraint_applied: HashMap<PointId, usize> = HashMap::new(); // point_id => side
                     for m in 0..target_nnode {
                         // reference natural coordinates of the new cell nodes
                         let ksi_ref = target.reference_coords(m);
@@ -660,9 +665,9 @@ impl Block {
                                     // compute real coordinates of point using the block's
                                     op::calc_coords(&mut x, &mut self.pad, &ksi)?;
                                     if self.has_constraints {
-                                        let side_constraint_applied = self.handle_constraints(&mut x, &ksi)?;
-                                        if let Some(side) = side_constraint_applied {
-                                            sides_constraint_applied.insert(point_id, side);
+                                        let applied_on_sides = self.handle_constraints(&mut x, &ksi)?;
+                                        if applied_on_sides.len() > 0 {
+                                            constrained_point_to_sides.insert(point_id, applied_on_sides);
                                         }
                                     }
                                 }
@@ -681,35 +686,48 @@ impl Block {
                     // fix middle edge nodes after corner movement due to constraints
                     // (only process edges with more than 2 nodes; i.e., those with middle/interior nodes)
                     if self.has_constraints && target_edge_nnode > 2 {
-                        for (point_id, side) in sides_constraint_applied {
-                            for e in 0..target_nedge {
-                                // (only process a side perpendicular to the side where the
-                                // constraint has been applied; i.e., don't bother with the points
-                                // on the same side as the one where the constraint has been applied)
-                                if e != side {
-                                    // collect the (real) ids of points on the perpendicular edge
-                                    let points_on_orthogonal_edge: Vec<_> = (0..target_edge_nnode)
-                                        .into_iter()
-                                        .map(|idx| points[target.edge_node_id(e, idx)])
-                                        .collect();
-                                    // (only process the orthogonal edge if the constrained point belongs to it)
-                                    if points_on_orthogonal_edge.contains(&point_id) {
-                                        // allocate a Lin2 with the first two (corner) points of target's edge
-                                        let mut pad_lin2 = Scratchpad::new(ndim, GeoKind::Lin2)?;
-                                        set_xxt_from_points(
-                                            &mut pad_lin2,
-                                            &[points_on_orthogonal_edge[0], points_on_orthogonal_edge[1]],
-                                            &mesh,
-                                        );
-                                        // (only compute the new coordinates of the middle edge nodes: m >= 2)
-                                        for m in 2..target_edge_nnode {
-                                            // use a Lin2 with the natural coords of target to calculate
-                                            // the real position of the interior/middle node
-                                            let ksi_edge = target.edge_kind().unwrap().reference_coords(m);
-                                            op::calc_coords(&mut x, &mut pad_lin2, ksi_edge)?;
-                                            for dim in 0..ndim {
-                                                mesh.points[points_on_orthogonal_edge[m]].coords[dim] = x[dim];
-                                            }
+                        for (point_id, sides) in &constrained_point_to_sides {
+                            for side in sides {
+                                for e in 0..target_nedge {
+                                    // only process an edge that is orthogonal to the constrained side (edge/face)
+                                    if ndim == 2 {
+                                        if e == *side {
+                                            continue; // skip edge that is constrained (nothing should be changed on that edge)
+                                        }
+                                    } else {
+                                        if HEX_EDGE_TO_FACE[e][0] == *side || HEX_EDGE_TO_FACE[e][1] == *side {
+                                            continue; // skip edge that belongs to the constrained side (face) (nothing should be changed on that edge)
+                                        }
+                                    }
+                                    // check if the edge contains the constrained point
+                                    let mut edge_contains_point = false;
+                                    for idx in 0..target_edge_nnode {
+                                        if points[target.edge_node_id(e, idx)] == *point_id {
+                                            edge_contains_point = true;
+                                            break;
+                                        }
+                                    }
+                                    if !edge_contains_point {
+                                        continue; // skip edge that doesn't contain the constrained point
+                                    }
+                                    // set Lin2 with the first two (corner) points of target's edge
+                                    set_xxt_from_points(
+                                        &mut pad_lin2,
+                                        &[points[target.edge_node_id(e, 0)], points[target.edge_node_id(e, 1)]],
+                                        &mesh,
+                                    );
+                                    // only change the coordinates of the middle edge nodes: idx >= 2
+                                    for idx in 2..target_edge_nnode {
+                                        let p = points[target.edge_node_id(e, idx)];
+                                        if constrained_point_to_sides.contains_key(&p) {
+                                            continue; // skip middle point that was already modified by constraint
+                                        }
+                                        // use a Lin2 with the natural coords of target to calculate
+                                        // the real position of the interior/middle node
+                                        let ksi_edge = target_edge_kind.reference_coords(idx);
+                                        op::calc_coords(&mut x, &mut pad_lin2, ksi_edge)?;
+                                        for dim in 0..ndim {
+                                            mesh.points[p].coords[dim] = x[dim];
                                         }
                                     }
                                 }
@@ -788,16 +806,17 @@ impl Block {
 
     /// Handles constraints
     ///
-    /// Returns the local index of the edge or face corresponding to the side where the constraint
-    /// has been applied. Returns None if no constraint has been applied.
-    fn handle_constraints(&self, x: &mut Vector, ksi: &[f64]) -> Result<Option<usize>, StrError> {
+    /// Returns the local indices of the edges or faces corresponding to the sides
+    /// where the constraints haven been applied.
+    fn handle_constraints(&self, x: &mut Vector, ksi: &[f64]) -> Result<HashSet<usize>, StrError> {
         const TOL: f64 = 1e-13;
+        let mut applied_on_sides = HashSet::new();
         if self.ndim == 2 {
             if f64::abs(-1.0 - ksi[1]) < TOL {
                 // bottom => e = 0
                 if let Some(ct) = self.edge_constraints.get(&0) {
                     if self.apply_constraint_2d(x, ct)? {
-                        return Ok(Some(0));
+                        applied_on_sides.insert(0);
                     }
                 }
             }
@@ -805,7 +824,7 @@ impl Block {
                 // right => e = 1
                 if let Some(ct) = self.edge_constraints.get(&1) {
                     if self.apply_constraint_2d(x, ct)? {
-                        return Ok(Some(1));
+                        applied_on_sides.insert(1);
                     }
                 }
             }
@@ -813,7 +832,7 @@ impl Block {
                 // top => e = 2
                 if let Some(ct) = self.edge_constraints.get(&2) {
                     if self.apply_constraint_2d(x, ct)? {
-                        return Ok(Some(2));
+                        applied_on_sides.insert(2);
                     }
                 }
             }
@@ -821,7 +840,7 @@ impl Block {
                 // left => e = 3
                 if let Some(ct) = self.edge_constraints.get(&3) {
                     if self.apply_constraint_2d(x, ct)? {
-                        return Ok(Some(3));
+                        applied_on_sides.insert(3);
                     }
                 }
             }
@@ -830,7 +849,7 @@ impl Block {
                 // negative x => f = 0
                 if let Some(ct) = self.face_constraints.get(&0) {
                     if self.apply_constraint_3d(x, ct)? {
-                        return Ok(Some(0));
+                        applied_on_sides.insert(0);
                     }
                 }
             }
@@ -838,7 +857,7 @@ impl Block {
                 // positive x => f = 1
                 if let Some(ct) = self.face_constraints.get(&1) {
                     if self.apply_constraint_3d(x, ct)? {
-                        return Ok(Some(1));
+                        applied_on_sides.insert(1);
                     }
                 }
             }
@@ -846,7 +865,7 @@ impl Block {
                 // negative y => f = 2
                 if let Some(ct) = self.face_constraints.get(&2) {
                     if self.apply_constraint_3d(x, ct)? {
-                        return Ok(Some(2));
+                        applied_on_sides.insert(2);
                     }
                 }
             }
@@ -854,7 +873,7 @@ impl Block {
                 // positive y => f = 3
                 if let Some(ct) = self.face_constraints.get(&3) {
                     if self.apply_constraint_3d(x, ct)? {
-                        return Ok(Some(3));
+                        applied_on_sides.insert(3);
                     }
                 }
             }
@@ -862,7 +881,7 @@ impl Block {
                 // negative z => f = 4
                 if let Some(ct) = self.face_constraints.get(&4) {
                     if self.apply_constraint_3d(x, ct)? {
-                        return Ok(Some(4));
+                        applied_on_sides.insert(4);
                     }
                 }
             }
@@ -870,12 +889,12 @@ impl Block {
                 // positive z => f = 5
                 if let Some(ct) = self.face_constraints.get(&5) {
                     if self.apply_constraint_3d(x, ct)? {
-                        return Ok(Some(5));
+                        applied_on_sides.insert(5);
                     }
                 }
             }
         }
-        Ok(None) // no constraint applied
+        Ok(applied_on_sides)
     }
 
     /// Applies 2D constraint
@@ -970,7 +989,7 @@ mod tests {
     use crate::mesh::{check_all, draw_mesh, Draw, Extract, Mesh, Region, Samples};
     use crate::shapes::GeoKind;
     use crate::util::{PI, SQRT_2};
-    use plotpy::{Canvas, Plot};
+    use plotpy::{Canvas, Plot, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     #[test]
@@ -2063,6 +2082,22 @@ mod tests {
         }
         if false {
             let mut plot = Plot::new();
+            let mut surf = Surface::new();
+            const NP: usize = 81;
+            surf.set_solid_color("#ff000020");
+            surf.draw_cylinder(&[cen_minus, 0.0, -half_l], &[cen_minus, 0.0, half_l], r, 5, NP)?;
+            surf.set_solid_color("#00ff0020");
+            surf.draw_cylinder(&[cen_plus, 0.0, -half_l], &[cen_plus, 0.0, half_l], r, 5, NP)?;
+            surf.set_solid_color("#0000ff20");
+            surf.draw_cylinder(&[0.0, cen_minus, -half_l], &[0.0, cen_minus, half_l], r, 5, NP)?;
+            surf.set_solid_color("#ff00ff20");
+            surf.draw_cylinder(&[0.0, cen_plus, -half_l], &[0.0, cen_plus, half_l], r, 5, NP)?;
+            surf.set_solid_color("#34343420");
+            surf.draw_cylinder(&[-half_l, 0.0, cen_minus], &[half_l, 0.0, cen_minus], r, 5, NP)?;
+            surf.set_solid_color("#ffff0020");
+            surf.draw_cylinder(&[0.0, -half_l, cen_plus], &[0.0, half_l, cen_plus], r, 5, NP)?;
+            plot.add(&surf);
+            plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
             draw_mesh_and_block(&mut plot, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg")?;
         }
         Ok(())
@@ -2092,6 +2127,153 @@ mod tests {
                 &block,
                 true,
                 "/tmp/gemlab/test_constraints_imprecision_2d.svg",
+            )?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_handles_interior_nodes_qua8() -> Result<(), StrError> {
+        let radius = 6.0;
+        let m = radius / 2.0;
+        let n = radius / SQRT_2;
+        let p = 1.15 * m / SQRT_2;
+        let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]])?;
+        block.set_ndiv(&[3, 3])?;
+        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        block.set_edge_constraint(1, Some(ct))?;
+        let mesh = block.subdivide(GeoKind::Qua8)?;
+        for p in [13, 16, 14, 27, 26, 38, 37] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, radius, 1e-15);
+        }
+        for (a, mid, b) in [(23, 28, 26), (9, 17, 14)] {
+            let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
+            let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
+            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+        }
+        if false {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_qua8.svg",
+            )?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_handles_interior_nodes_qua9() -> Result<(), StrError> {
+        let radius = 6.0;
+        let m = radius / 2.0;
+        let n = radius / SQRT_2;
+        let p = 1.15 * m / SQRT_2;
+        let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]])?;
+        block.set_ndiv(&[3, 3])?;
+        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        block.set_edge_constraint(1, Some(ct))?;
+        let mesh = block.subdivide(GeoKind::Qua9)?;
+        for p in [15, 18, 16, 32, 31, 46, 45] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, radius, 1e-15);
+        }
+        for (a, mid, b) in [(42, 48, 46), (27, 33, 31), (28, 34, 32), (10, 19, 16), (12, 20, 18)] {
+            let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
+            let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
+            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+        }
+        if false {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_qua9.svg",
+            )?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_handles_interior_nodes_qua16() -> Result<(), StrError> {
+        let radius = 6.0;
+        let m = radius / 2.0;
+        let n = radius / SQRT_2;
+        let p = 1.15 * m / SQRT_2;
+        let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]])?;
+        block.set_ndiv(&[3, 3])?;
+        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        block.set_edge_constraint(1, Some(ct))?;
+        let mesh = block.subdivide(GeoKind::Qua16)?;
+        for (a, c, d, b) in [
+            (85, 99, 98, 94),
+            (83, 96, 97, 92),
+            (52, 65, 63, 61),
+            (55, 69, 68, 64),
+            (53, 66, 67, 62),
+            (17, 35, 32, 29),
+            (22, 39, 38, 34),
+            (19, 36, 37, 31),
+        ] {
+            let lx = mesh.points[b].coords[0] - mesh.points[a].coords[0];
+            let ly = mesh.points[b].coords[1] - mesh.points[a].coords[1];
+            let xc = mesh.points[a].coords[0] + lx / 3.0;
+            let yc = mesh.points[a].coords[1] + ly / 3.0;
+            let xd = mesh.points[a].coords[0] + 2.0 * lx / 3.0;
+            let yd = mesh.points[a].coords[1] + 2.0 * ly / 3.0;
+            assert_vec_approx_eq!(mesh.points[c].coords, &[xc, yc], 1e-14);
+            assert_vec_approx_eq!(mesh.points[d].coords, &[xd, yd], 1e-15);
+        }
+        if false {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_qua16.svg",
+            )?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn constraints_handles_interior_nodes_hex20() -> Result<(), StrError> {
+        let radius = 6.0;
+        let m = radius / 2.0;
+        let n = radius / SQRT_2;
+        let p = 1.15 * m / SQRT_2;
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [     m, 0.0, 0.0],
+            [radius, 0.0, 0.0],
+            [     n,   n, 0.0],
+            [     p,   p, 0.0],
+            [     m, 0.0, 1.0],
+            [radius, 0.0, 1.0],
+            [     n,   n, 1.0],
+            [     p,   p, 1.0],
+        ])?;
+        block.set_ndiv(&[2, 2, 1])?;
+        let ct = Constraint3D::CylinderZ(0.0, 0.0, radius);
+        block.set_face_constraint(1, Some(ct))?;
+        let mesh = block.subdivide(GeoKind::Hex20)?;
+        for p in [20, 30, 22, 21, 31, 23, 44, 50, 45, 25, 28] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0, mesh.points[p].coords[2]])?;
+            assert_approx_eq!(d, radius, 1e-15);
+        }
+        if true {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_hex20.svg",
             )?;
         }
         Ok(())
