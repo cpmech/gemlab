@@ -2307,6 +2307,35 @@ mod tests {
     }
 
     #[test]
+    fn constraints_handles_interior_nodes_qua17() -> Result<(), StrError> {
+        let radius = 6.0;
+        let m = radius / 2.0;
+        let n = radius / SQRT_2;
+        let p = 1.15 * m / SQRT_2;
+        let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]])?;
+        block.set_ndiv(&[3, 3])?;
+        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        block.set_edge_constraint(1, Some(ct))?;
+        let mesh = block.subdivide(GeoKind::Qua17)?;
+        for (a, mid, b) in [(84, 96, 92), (56, 68, 64), (23, 40, 35)] {
+            let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
+            let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
+            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 0.0071);
+        }
+        if false {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_qua17.svg",
+            )?;
+        }
+        Ok(())
+    }
+
+    #[test]
     fn constraints_handles_interior_nodes_hex20() -> Result<(), StrError> {
         let radius = 6.0;
         let m = radius / 2.0;
