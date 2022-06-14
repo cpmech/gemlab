@@ -75,8 +75,7 @@ impl Structured {
     ///
     /// * `rmin` -- inner radius
     /// * `rmax` -- outer radius
-    /// * `zmin` -- min z
-    /// * `zmax` -- max z
+    /// * `zmax` -- max z = thickness, since zmin = 0.0
     /// * `nr` -- number of divisions along the radius (must be > 0)
     /// * `na` -- number of divisions along alpha (must be > 0)
     /// * `nz` -- number of divisions along z (must be > 0)
@@ -84,7 +83,6 @@ impl Structured {
     pub fn quarter_ring_3d(
         rmin: f64,
         rmax: f64,
-        zmin: f64,
         zmax: f64,
         nr: usize,
         na: usize,
@@ -98,7 +96,7 @@ impl Structured {
             amax: PI / 2.0,
             rmin,
             rmax,
-            zmin,
+            zmin: 0.0,
             zmax,
         }))?;
         block.subdivide(target)
@@ -191,7 +189,7 @@ mod tests {
 
     #[test]
     fn quarter_ring_3d_works() -> Result<(), StrError> {
-        let mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 4.0, 1, 2, 1, GeoKind::Hex32)?;
+        let mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 1, 2, 1, GeoKind::Hex32)?;
         check_overlapping_points(&mesh, 0.02)?;
         assert_eq!(mesh.points.len(), 52);
         assert_eq!(mesh.cells.len(), 2);
