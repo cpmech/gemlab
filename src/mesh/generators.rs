@@ -1,6 +1,6 @@
 use super::{join_meshes, ArgsRing, Block, Constraint2D, Mesh};
 use crate::shapes::GeoKind;
-use crate::util::{PI, SQRT_2};
+use crate::util::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
 use crate::StrError;
 
 /// Groups generators of structured meshes (Qua and Hex -- sometimes Tri)
@@ -102,7 +102,7 @@ impl Structured {
         block.subdivide(target)
     }
 
-    /// Generates a mesh representing a quarter of a disk in 2D
+    /// Generates a mesh representing a quarter of a disk in 2D (A-version)
     ///
     /// ```text
     /// y ^
@@ -127,7 +127,7 @@ impl Structured {
     /// * `radius` -- the radius
     /// * `ndiv` -- number of divisions (must be > 0)
     /// * `target` -- Qua shapes only
-    pub fn quarter_disk_2d(radius: f64, ndiv: usize, target: GeoKind) -> Result<Mesh, StrError> {
+    pub fn quarter_disk_2d_a(radius: f64, ndiv: usize, target: GeoKind) -> Result<Mesh, StrError> {
         let m = radius / 2.0;
         let n = radius / SQRT_2;
         let p = 1.15 * m / SQRT_2;
@@ -138,6 +138,89 @@ impl Structured {
         block_2.set_ndiv(&[ndiv, ndiv])?;
         block_3.set_ndiv(&[ndiv, ndiv])?;
         let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        block_2.set_edge_constraint(1, Some(ct.clone()))?;
+        block_3.set_edge_constraint(2, Some(ct))?;
+        let mesh_1 = block_1.subdivide(target)?;
+        let mesh_2 = block_2.subdivide(target)?;
+        let mesh_3 = block_3.subdivide(target)?;
+        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
+        join_meshes(&mesh_1_2, &mesh_3)
+    }
+
+    /// Generates a mesh representing a quarter of a disk in 2D (B-version)
+    ///
+    /// ```text
+    /// y ^
+    ///   .
+    ///   #**=---__
+    ///   |        '*._
+    ///   |            *._
+    ///   |               *.
+    ///   |                 *.
+    ///   |                   *
+    ///   |                    *
+    ///   |                     *
+    ///   |                      *
+    ///   |                       *
+    ///   |                       #
+    ///   o-----------------------# --> x
+    ///                        radius
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `radius` -- the radius
+    /// * `ndiv` -- number of divisions (must be > 0)
+    /// * `target` -- Qua shapes only
+    pub fn quarter_disk_2d_b(a: f64, r: f64, ndiv_a: usize, ndiv_b: usize, target: GeoKind) -> Result<Mesh, StrError> {
+        if a >= r {
+            return Err("'a' must be smaller than 'r'");
+        }
+        const COS_PI_BY_4: f64 = ONE_BY_SQRT_2;
+        let b = r - a;
+        let c1 = a * SIN_PI_BY_8;
+        let c2 = a * COS_PI_BY_4;
+        let c3 = a * COS_PI_BY_8;
+        let d1 = r * SIN_PI_BY_8;
+        let d2 = r * COS_PI_BY_4;
+        let d3 = r * COS_PI_BY_8;
+        let m = a / 2.0;
+        let n = a + b / 2.0;
+        let e = n * COS_PI_BY_4;
+        let mut block_1 = Block::new(&[
+            [0.0, 0.0],
+            [a, 0.0],
+            [c2, c2],
+            [0.0, a],
+            [m, 0.0],
+            [c3, c1],
+            [c1, c3],
+            [0.0, m],
+        ])?;
+        let mut block_2 = Block::new(&[
+            [a, 0.0],
+            [r, 0.0],
+            [d2, d2],
+            [c2, c2],
+            [n, 0.0],
+            [d3, d1],
+            [e, e],
+            [c3, c1],
+        ])?;
+        let mut block_3 = Block::new(&[
+            [0.0, a],
+            [c2, c2],
+            [d2, d2],
+            [0.0, r],
+            [c1, c3],
+            [e, e],
+            [d1, d3],
+            [0.0, n],
+        ])?;
+        block_1.set_ndiv(&[ndiv_a, ndiv_a])?;
+        block_2.set_ndiv(&[ndiv_b, ndiv_a])?;
+        block_3.set_ndiv(&[ndiv_a, ndiv_b])?;
+        let ct = Constraint2D::Circle(0.0, 0.0, r);
         block_2.set_edge_constraint(1, Some(ct.clone()))?;
         block_3.set_edge_constraint(2, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -208,8 +291,24 @@ mod tests {
     }
 
     #[test]
-    fn quarter_disk_2d_works() -> Result<(), StrError> {
-        let mesh = Structured::quarter_disk_2d(6.0, 1, GeoKind::Qua16)?;
+    fn quarter_disk_2d_a_works_qua8() -> Result<(), StrError> {
+        let mesh = Structured::quarter_disk_2d_a(6.0, 1, GeoKind::Qua8)?;
+        check_overlapping_points(&mesh, 0.02)?;
+        assert_eq!(mesh.points.len(), 16);
+        assert_eq!(mesh.cells.len(), 3);
+        for p in [8, 11, 9, 14, 13] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
+        if false {
+            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn quarter_disk_2d_a_works_qua16() -> Result<(), StrError> {
+        let mesh = Structured::quarter_disk_2d_a(6.0, 1, GeoKind::Qua16)?;
         check_overlapping_points(&mesh, 0.02)?;
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 3);
@@ -218,7 +317,39 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d.svg")?;
+            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua16.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn quarter_disk_2d_b_works_qua8() -> Result<(), StrError> {
+        let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 1, 1, GeoKind::Qua8)?;
+        check_overlapping_points(&mesh, 0.02)?;
+        assert_eq!(mesh.points.len(), 16);
+        assert_eq!(mesh.cells.len(), 3);
+        for p in [8, 11, 9, 14, 13] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
+        if false {
+            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn quarter_disk_2d_b_works_qua16() -> Result<(), StrError> {
+        let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 1, 1, GeoKind::Qua16)?;
+        check_overlapping_points(&mesh, 0.02)?;
+        assert_eq!(mesh.points.len(), 37);
+        assert_eq!(mesh.cells.len(), 3);
+        for p in [16, 19, 22, 17, 29, 31, 28] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
+        if false {
+            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua16.svg")?;
         }
         Ok(())
     }
