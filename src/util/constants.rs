@@ -37,11 +37,18 @@ pub const ONE_BY_SQRT_2: f64 =
 pub const COS_PI_BY_8: f64 =
     0.923879532511286756128183189396788286822416625863642486115097731280535007501102358714839934850344596097963f64;
 
+// sin(π/8) = sin(22.5°) <https://oeis.org/A182168>
+pub const SIN_PI_BY_8: f64 =
+    0.382683432365089771728459984030398866761344562485627041433800635627546033960089692237013785342283547148424f64;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{COS_PI_BY_8, ONE_BY_3, ONE_BY_SQRT_2, PI, SQRT_2, SQRT_2_BY_3, SQRT_3, SQRT_3_BY_2, SQRT_6, TWO_BY_3};
+    use super::{
+        COS_PI_BY_8, ONE_BY_3, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2, SQRT_2_BY_3, SQRT_3, SQRT_3_BY_2, SQRT_6,
+        TWO_BY_3,
+    };
 
     #[test]
     fn constants_are_correct() {
@@ -55,5 +62,6 @@ mod tests {
         assert_eq!(TWO_BY_3, 2.0 / 3.0);
         assert_eq!(ONE_BY_SQRT_2, std::f64::consts::FRAC_1_SQRT_2);
         assert_eq!(COS_PI_BY_8, f64::cos(std::f64::consts::PI / 8.0));
+        assert_eq!(SIN_PI_BY_8, f64::sin(std::f64::consts::PI / 8.0));
     }
 }
