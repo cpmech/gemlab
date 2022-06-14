@@ -20,11 +20,11 @@ impl Structured {
     ///   |            *._
     ///   |               *.
     ///   ***=-__           *.
-    ///   |      '-.          *
+    ///   .      '-.          *
     ///             *.         *
-    ///   |           *         *
+    ///   .           *         *
     ///                *         *
-    ///   |             *         *
+    ///   .             *         *
     ///                 #         #
     ///   o -   -   -   # ------- # --> x
     ///               rmin       rmax
@@ -36,7 +36,7 @@ impl Structured {
     /// * `rmax` -- outer radius
     /// * `nr` -- number of divisions along the radius (must be > 0)
     /// * `na` -- number of divisions along alpha (must be > 0)
-    /// * `target` -- Qua shapes only
+    /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
     pub fn quarter_ring_2d(rmin: f64, rmax: f64, nr: usize, na: usize, target: GeoKind) -> Result<Mesh, StrError> {
         let mut block = Block::new_square(1.0);
         block.set_ndiv(&[nr, na])?;
@@ -45,13 +45,13 @@ impl Structured {
             amax: PI / 2.0,
             rmin,
             rmax,
-            zmin: 0.0,
-            zmax: 1.0,
+            zmin: 0.0, // ignored
+            zmax: 1.0, // ignored
         }))?;
         block.subdivide(target)
     }
 
-    /// Generates a mesh representing a quarter of a ring in 3D (extruded along the z-direction)
+    /// Generates a mesh representing a quarter of a ring in 3D (extrusion along the z-direction)
     ///
     /// ```text
     /// y ^
@@ -61,11 +61,11 @@ impl Structured {
     ///   |            *._
     ///   |               *.
     ///   ***=-__           *.
-    ///   |      '-.          *
+    ///   .      '-.          *
     ///             *.         *
-    ///   |           *         *
+    ///   .           *         *
     ///                *         *
-    ///   |             *         *
+    ///   .             *         *
     ///                 #         #
     /// z o -   -   -   # ------- # --> x
     ///               rmin       rmax
@@ -75,15 +75,15 @@ impl Structured {
     ///
     /// * `rmin` -- inner radius
     /// * `rmax` -- outer radius
-    /// * `zmax` -- max z = thickness, since zmin = 0.0
+    /// * `z` -- thickness (zmin = 0.0)
     /// * `nr` -- number of divisions along the radius (must be > 0)
     /// * `na` -- number of divisions along alpha (must be > 0)
-    /// * `nz` -- number of divisions along z (must be > 0)
-    /// * `target` -- Qua shapes only
+    /// * `nz` -- number of divisions along z (thickness) (must be > 0)
+    /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
     pub fn quarter_ring_3d(
         rmin: f64,
         rmax: f64,
-        zmax: f64,
+        z: f64,
         nr: usize,
         na: usize,
         nz: usize,
@@ -97,7 +97,7 @@ impl Structured {
             rmin,
             rmax,
             zmin: 0.0,
-            zmax,
+            zmax: z,
         }))?;
         block.subdivide(target)
     }
@@ -107,37 +107,39 @@ impl Structured {
     /// ```text
     /// y ^
     ///   .
-    ///   #**=---__
+    /// r #**=---__
     ///   |        '*._
     ///   |            *._
-    ///   |               *.
-    ///   |                 *.
-    ///   |                   *
-    ///   |                    *
-    ///   |                     *
-    ///   |                      *
-    ///   |                       *
-    ///   |                       #
+    ///   |              .*.
+    ///   |            .'   *.
+    ///   |          .'       *
+    ///   |---------'          *
+    ///   |         |           *
+    ///   |         |            *
+    ///   |         |             *
+    ///   |         |             #
     ///   o-----------------------# --> x
-    ///                        radius
+    ///                           r
+    ///   |<---a--->|<-----b----->|
+    ///   |<----------r---------->|
     /// ```
     ///
     /// # Input
     ///
-    /// * `radius` -- the radius
-    /// * `ndiv` -- number of divisions (must be > 0)
-    /// * `target` -- Qua shapes only
-    pub fn quarter_disk_2d_a(radius: f64, ndiv: usize, target: GeoKind) -> Result<Mesh, StrError> {
-        let m = radius / 2.0;
-        let n = radius / SQRT_2;
+    /// * `r` -- the radius
+    /// * `na` -- number of divisions along 'a' (must be > 0)
+    /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
+    pub fn quarter_disk_2d_a(r: f64, na: usize, target: GeoKind) -> Result<Mesh, StrError> {
+        let m = r / 2.0;
+        let n = r / SQRT_2;
         let p = 1.15 * m / SQRT_2;
         let mut block_1 = Block::new(&[[0.0, 0.0], [m, 0.0], [p, p], [0.0, m]])?;
-        let mut block_2 = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]])?;
-        let mut block_3 = Block::new(&[[0.0, m], [p, p], [n, n], [0.0, radius]])?;
-        block_1.set_ndiv(&[ndiv, ndiv])?;
-        block_2.set_ndiv(&[ndiv, ndiv])?;
-        block_3.set_ndiv(&[ndiv, ndiv])?;
-        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        let mut block_2 = Block::new(&[[m, 0.0], [r, 0.0], [n, n], [p, p]])?;
+        let mut block_3 = Block::new(&[[0.0, m], [p, p], [n, n], [0.0, r]])?;
+        block_1.set_ndiv(&[na, na])?;
+        block_2.set_ndiv(&[na, na])?;
+        block_3.set_ndiv(&[na, na])?;
+        let ct = Constraint2D::Circle(0.0, 0.0, r);
         block_2.set_edge_constraint(1, Some(ct.clone()))?;
         block_3.set_edge_constraint(2, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -152,27 +154,31 @@ impl Structured {
     /// ```text
     /// y ^
     ///   .
-    ///   #**=---__
+    /// r #**=---__
     ///   |        '*._
     ///   |            *._
-    ///   |               *.
-    ///   |                 *.
-    ///   |                   *
-    ///   |                    *
-    ///   |                     *
-    ///   |                      *
-    ///   |                       *
-    ///   |                       #
+    ///   |               ..
+    ///   |             .'  *.
+    ///   |**=-__     .'      *
+    ///   |      '*..'         *
+    ///   |         \           *
+    ///   |          '           *
+    ///   |           |           *
+    ///   |           |           #
     ///   o-----------------------# --> x
-    ///                        radius
+    ///                           r
+    ///   |<----a---->|<----b---->|
+    ///   |<----------r---------->|
     /// ```
     ///
     /// # Input
     ///
-    /// * `radius` -- the radius
-    /// * `ndiv` -- number of divisions (must be > 0)
-    /// * `target` -- Qua shapes only
-    pub fn quarter_disk_2d_b(a: f64, r: f64, ndiv_a: usize, ndiv_b: usize, target: GeoKind) -> Result<Mesh, StrError> {
+    /// * `a` -- distance such that the outer cells belong to a ring (must be < r)
+    /// * `r` -- the radius
+    /// * `na` -- number of divisions along 'a' (must be > 0)
+    /// * `nb` -- number of divisions along 'b' (must be > 0)
+    /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
+    pub fn quarter_disk_2d_b(a: f64, r: f64, na: usize, nb: usize, target: GeoKind) -> Result<Mesh, StrError> {
         if a >= r {
             return Err("'a' must be smaller than 'r'");
         }
@@ -220,9 +226,9 @@ impl Structured {
             [ d1, d3],
             [0.0,  n],
         ])?;
-        block_1.set_ndiv(&[ndiv_a, ndiv_a])?;
-        block_2.set_ndiv(&[ndiv_b, ndiv_a])?;
-        block_3.set_ndiv(&[ndiv_a, ndiv_b])?;
+        block_1.set_ndiv(&[na, na])?;
+        block_2.set_ndiv(&[nb, na])?;
+        block_3.set_ndiv(&[na, nb])?;
         let ct = Constraint2D::Circle(0.0, 0.0, r);
         block_2.set_edge_constraint(1, Some(ct.clone()))?;
         block_3.set_edge_constraint(2, Some(ct))?;
@@ -233,34 +239,36 @@ impl Structured {
         join_meshes(&mesh_1_2, &mesh_3)
     }
 
-    /// Generates a mesh representing a quarter of a disk in 3D (A-version)
+    /// Generates a mesh representing a quarter of a disk in 3D (extrusion along the z-direction) (A-version)
     ///
     /// ```text
     /// y ^
     ///   .
-    ///   #**=---__
+    /// r #**=---__
     ///   |        '*._
     ///   |            *._
-    ///   |               *.
-    ///   |                 *.
-    ///   |                   *
-    ///   |                    *
-    ///   |                     *
-    ///   |                      *
-    ///   |                       *
-    ///   |                       #
-    ///   o-----------------------# --> x
-    ///                        radius
+    ///   |              .*.
+    ///   |            .'   *.
+    ///   |          .'       *
+    ///   |---------'          *
+    ///   |         |           *
+    ///   |         |            *
+    ///   |         |             *
+    ///   |         |             #
+    /// z o-----------------------# --> x
+    ///                           r
+    ///   |<---a--->|<-----b----->|
+    ///   |<----------r---------->|
     /// ```
     ///
     /// # Input
     ///
     /// * `r` -- radius
-    /// * `z` -- thickness
-    /// * `ndiv` -- number of divisions along on the x-y plane (must be > 0)
-    /// * `ndiv_z` -- number of divisions along thickness (must be > 0)
-    /// * `target` -- Hex shapes only
-    pub fn quarter_disk_3d_a(r: f64, z: f64, ndiv: usize, ndiv_z: usize, target: GeoKind) -> Result<Mesh, StrError> {
+    /// * `z` -- thickness (zmin = 0.0)
+    /// * `na` -- number of divisions along 'a' on the x-y plane (must be > 0)
+    /// * `nz` -- number of divisions along 'z' (thickness) (must be > 0)
+    /// * `target` -- [crate::shapes::GeoClass::Hex] shapes only
+    pub fn quarter_disk_3d_a(r: f64, z: f64, na: usize, nz: usize, target: GeoKind) -> Result<Mesh, StrError> {
         let m = r / 2.0;
         let n = r / SQRT_2;
         let p = 1.15 * m / SQRT_2;
@@ -297,9 +305,9 @@ impl Structured {
             [  n, n,   z],
             [0.0, r,   z],
         ])?;
-        block_1.set_ndiv(&[ndiv, ndiv, ndiv_z])?;
-        block_2.set_ndiv(&[ndiv, ndiv, ndiv_z])?;
-        block_3.set_ndiv(&[ndiv, ndiv, ndiv_z])?;
+        block_1.set_ndiv(&[na, na, nz])?;
+        block_2.set_ndiv(&[na, na, nz])?;
+        block_3.set_ndiv(&[na, na, nz])?;
         let ct = Constraint3D::CylinderZ(0.0, 0.0, r);
         block_2.set_face_constraint(1, Some(ct.clone()))?;
         block_3.set_face_constraint(3, Some(ct))?;
@@ -310,43 +318,44 @@ impl Structured {
         join_meshes(&mesh_1_2, &mesh_3)
     }
 
-    /// Generates a mesh representing a quarter of a disk in 3D (B-version)
+    /// Generates a mesh representing a quarter of a disk in 3D (extrusion along the z-direction) (B-version)
     ///
     /// ```text
     /// y ^
     ///   .
-    ///   #**=---__
+    /// r #**=---__
     ///   |        '*._
     ///   |            *._
-    ///   |               *.
-    ///   |                 *.
-    ///   |                   *
-    ///   |                    *
-    ///   |                     *
-    ///   |                      *
-    ///   |                       *
-    ///   |                       #
-    ///   o-----------------------# --> x
-    ///                        radius
+    ///   |               ..
+    ///   |             .'  *.
+    ///   |**=-__     .'      *
+    ///   |      '*..'         *
+    ///   |         \           *
+    ///   |          '           *
+    ///   |           |           *
+    ///   |           |           #
+    /// z o-----------------------# --> x
+    ///                           r
     ///   |<----a---->|<----b---->|
     ///   |<----------r---------->|
     /// ```
     ///
     /// # Input
     ///
+    /// * `a` -- distance such that the outer cells belong to a ring (must be < r)
     /// * `r` -- the radius
     /// * `z` -- thickness
-    /// * `ndiv_a` -- number of divisions for 'a' on the x-y plane (must be > 0)
-    /// * `ndiv_b` -- number of divisions for 'b' on the x-y plane (must be > 0)
-    /// * `ndiv_z` -- number of divisions along thickness (must be > 0)
-    /// * `target` -- Hex shapes only
+    /// * `na` -- number of divisions along 'a' on the x-y plane (must be > 0)
+    /// * `nb` -- number of divisions along 'b' on the x-y plane (must be > 0)
+    /// * `nz` -- number of divisions along 'z' (thickness) (must be > 0)
+    /// * `target` -- [crate::shapes::GeoClass::Hex] shapes only
     pub fn quarter_disk_3d_b(
         a: f64,
         r: f64,
         z: f64,
-        ndiv_a: usize,
-        ndiv_b: usize,
-        ndiv_z: usize,
+        na: usize,
+        nb: usize,
+        nz: usize,
         target: GeoKind,
     ) -> Result<Mesh, StrError> {
         if a >= r {
@@ -433,9 +442,9 @@ impl Structured {
             [ d2, d2,   f],
             [0.0,  r,   f],
         ])?;
-        block_1.set_ndiv(&[ndiv_a, ndiv_a, ndiv_z])?;
-        block_2.set_ndiv(&[ndiv_b, ndiv_a, ndiv_z])?;
-        block_3.set_ndiv(&[ndiv_a, ndiv_b, ndiv_z])?;
+        block_1.set_ndiv(&[na, na, nz])?;
+        block_2.set_ndiv(&[nb, na, nz])?;
+        block_3.set_ndiv(&[na, nb, nz])?;
         let ct = Constraint3D::CylinderZ(0.0, 0.0, r);
         block_2.set_face_constraint(1, Some(ct.clone()))?;
         block_3.set_face_constraint(3, Some(ct))?;
