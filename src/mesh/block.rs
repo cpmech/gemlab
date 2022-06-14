@@ -744,7 +744,7 @@ impl Block {
                         // just moved middle edge nodes)
                         if target_n_interior_nodes > 0 {
                             if let Some(ref mut pad_ser) = serendipity {
-                                let pts = if pad_ser.kind == GeoKind::Qua17 {
+                                let pts = if target == GeoKind::Qua17 {
                                     vec![
                                         points[0], points[1], points[2], points[3], points[8], points[9], points[10],
                                         points[11],
@@ -2320,7 +2320,7 @@ mod tests {
         for (a, mid, b) in [(84, 96, 92), (56, 68, 64), (23, 40, 35)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 0.0071);
+            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if false {
             let mut plot = Plot::new();
