@@ -343,7 +343,7 @@ impl Block {
     }
 
     /// Draws this block
-    pub fn draw(&self, plot: &mut Plot, set_range: bool) -> Result<(), StrError> {
+    pub fn draw(&self, plot: &mut Plot, with_ids: bool, set_range: bool) -> Result<(), StrError> {
         if self.ndim == 2 && self.has_constraints {
             for ct in self.edge_constraints.values() {
                 match ct {
@@ -359,7 +359,7 @@ impl Block {
                 }
             }
         }
-        draw_shape(plot, &self.pad, "#046002", false, set_range)
+        draw_shape(plot, &self.pad, "#046002", with_ids, set_range)
     }
 
     /// Sets group
@@ -1248,7 +1248,7 @@ mod tests {
         let mut block = Block::new_square(1.0);
         block.set_edge_constraint(0, Some(Constraint2D::Circle(0.0, 0.0, 0.1)))?;
         let mut plot = Plot::new();
-        block.draw(&mut plot, true)
+        block.draw(&mut plot, true, true)
     }
 
     #[test]
@@ -1865,7 +1865,7 @@ mod tests {
     ) -> Result<(), StrError> {
         let region = Region::with(mesh, Extract::All)?;
         let mut draw = Draw::new();
-        block.draw(plot, set_range)?;
+        block.draw(plot, false, set_range)?;
         draw.canvas_point_ids
             .set_bbox(false)
             .set_align_horizontal("left")
