@@ -725,9 +725,6 @@ impl Block {
                                 // only change the coordinates of the middle edge nodes: idx >= 2
                                 for idx in 2..target_edge_nnode {
                                     let p = points[target.edge_node_id(e, idx)];
-                                    if constrained_point_to_side.contains_key(&p) {
-                                        continue; // skip middle point that was already modified by constraint
-                                    }
                                     // use a Lin2 with the natural coords of target to calculate
                                     // the real position of the interior/middle node
                                     let ksi_edge = target_edge_kind.reference_coords(idx);
