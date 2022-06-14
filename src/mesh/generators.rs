@@ -128,8 +128,9 @@ impl Structured {
     ///
     /// * `r` -- the radius
     /// * `na` -- number of divisions along 'a' (must be > 0)
+    /// * `nb` -- number of divisions along 'b' (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
-    pub fn quarter_disk_2d_a(r: f64, na: usize, target: GeoKind) -> Result<Mesh, StrError> {
+    pub fn quarter_disk_2d_a(r: f64, na: usize, nb: usize, target: GeoKind) -> Result<Mesh, StrError> {
         let m = r / 2.0;
         let n = r / SQRT_2;
         let p = 1.15 * m / SQRT_2;
@@ -137,8 +138,8 @@ impl Structured {
         let mut block_2 = Block::new(&[[m, 0.0], [r, 0.0], [n, n], [p, p]])?;
         let mut block_3 = Block::new(&[[0.0, m], [p, p], [n, n], [0.0, r]])?;
         block_1.set_ndiv(&[na, na])?;
-        block_2.set_ndiv(&[na, na])?;
-        block_3.set_ndiv(&[na, na])?;
+        block_2.set_ndiv(&[nb, na])?;
+        block_3.set_ndiv(&[na, nb])?;
         let ct = Constraint2D::Circle(0.0, 0.0, r);
         block_2.set_edge_constraint(1, Some(ct.clone()))?;
         block_3.set_edge_constraint(2, Some(ct))?;
@@ -266,9 +267,17 @@ impl Structured {
     /// * `r` -- radius
     /// * `z` -- thickness (zmin = 0.0)
     /// * `na` -- number of divisions along 'a' on the x-y plane (must be > 0)
+    /// * `nb` -- number of divisions along 'b' on the x-y plane (must be > 0)
     /// * `nz` -- number of divisions along 'z' (thickness) (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Hex] shapes only
-    pub fn quarter_disk_3d_a(r: f64, z: f64, na: usize, nz: usize, target: GeoKind) -> Result<Mesh, StrError> {
+    pub fn quarter_disk_3d_a(
+        r: f64,
+        z: f64,
+        na: usize,
+        nb: usize,
+        nz: usize,
+        target: GeoKind,
+    ) -> Result<Mesh, StrError> {
         let m = r / 2.0;
         let n = r / SQRT_2;
         let p = 1.15 * m / SQRT_2;
@@ -306,8 +315,8 @@ impl Structured {
             [0.0, r,   z],
         ])?;
         block_1.set_ndiv(&[na, na, nz])?;
-        block_2.set_ndiv(&[na, na, nz])?;
-        block_3.set_ndiv(&[na, na, nz])?;
+        block_2.set_ndiv(&[nb, na, nz])?;
+        block_3.set_ndiv(&[na, nb, nz])?;
         let ct = Constraint3D::CylinderZ(0.0, 0.0, r);
         block_2.set_face_constraint(1, Some(ct.clone()))?;
         block_3.set_face_constraint(3, Some(ct))?;
@@ -517,7 +526,7 @@ mod tests {
 
     #[test]
     fn quarter_disk_2d_a_works_qua8() -> Result<(), StrError> {
-        let mesh = Structured::quarter_disk_2d_a(6.0, 1, GeoKind::Qua8)?;
+        let mesh = Structured::quarter_disk_2d_a(6.0, 1, 1, GeoKind::Qua8)?;
         check_overlapping_points(&mesh, 0.02)?;
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 3);
@@ -533,7 +542,7 @@ mod tests {
 
     #[test]
     fn quarter_disk_2d_a_works_qua8_finer() -> Result<(), StrError> {
-        let mesh = Structured::quarter_disk_2d_a(6.0, 3, GeoKind::Qua8)?;
+        let mesh = Structured::quarter_disk_2d_a(6.0, 3, 3, GeoKind::Qua8)?;
         check_overlapping_points(&mesh, 0.02)?;
         assert_eq!(mesh.points.len(), 100);
         assert_eq!(mesh.cells.len(), 27);
@@ -549,7 +558,7 @@ mod tests {
 
     #[test]
     fn quarter_disk_2d_a_works_qua16() -> Result<(), StrError> {
-        let mesh = Structured::quarter_disk_2d_a(6.0, 1, GeoKind::Qua16)?;
+        let mesh = Structured::quarter_disk_2d_a(6.0, 1, 1, GeoKind::Qua16)?;
         check_overlapping_points(&mesh, 0.02)?;
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 3);
@@ -613,7 +622,7 @@ mod tests {
 
     #[test]
     fn quarter_disk_3d_a_works_hex32() -> Result<(), StrError> {
-        let mesh = Structured::quarter_disk_3d_a(6.0, 1.5, 1, 1, GeoKind::Hex32)?;
+        let mesh = Structured::quarter_disk_3d_a(6.0, 1.5, 1, 1, 1, GeoKind::Hex32)?;
         check_overlapping_points(&mesh, 0.02)?;
         assert_eq!(mesh.cells.len(), 3);
         for p in [
