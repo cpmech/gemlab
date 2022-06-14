@@ -164,8 +164,25 @@ mod tests {
     #[test]
     fn quarter_ring_2d_works() -> Result<(), StrError> {
         let mesh = Structured::quarter_ring_2d(3.0, 6.0, 1, 1, GeoKind::Qua16)?;
+        check_overlapping_points(&mesh, 0.02)?;
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 1);
+        for p in [0, 11, 7, 3] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 3.0, 1e-15);
+        }
+        for p in [4, 12, 15, 10] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 4.0, 1e-15);
+        }
+        for p in [8, 13, 14, 6] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 5.0, 1e-15);
+        }
+        for p in [1, 5, 9, 2] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
         if false {
             draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_ring_2d.svg")?;
         }
@@ -175,7 +192,17 @@ mod tests {
     #[test]
     fn quarter_ring_3d_works() -> Result<(), StrError> {
         let mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 4.0, 1, 2, 1, GeoKind::Hex32)?;
+        check_overlapping_points(&mesh, 0.02)?;
+        assert_eq!(mesh.points.len(), 52);
         assert_eq!(mesh.cells.len(), 2);
+        for p in [0, 15, 14, 3, 41, 40, 33] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0])?;
+            assert_approx_eq!(d, 3.0, 1e-15);
+        }
+        for p in [1, 10, 11, 2, 36, 37, 32] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0])?;
+            assert_approx_eq!(d, 6.0, 1e-15);
+        }
         if false {
             draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_ring_3d.svg")?;
         }
@@ -184,15 +211,15 @@ mod tests {
 
     #[test]
     fn quarter_disk_2d_works() -> Result<(), StrError> {
-        let mesh = Structured::quarter_disk_2d(6.0, 3, GeoKind::Qua8)?;
-        assert_eq!(mesh.cells.len(), 9 * 3);
-        assert_eq!(mesh.points.len(), 100);
-        for p in [92, 94, 91, 98, 96, 99, 70, 71, 61, 62, 51, 53, 50] {
+        let mesh = Structured::quarter_disk_2d(6.0, 1, GeoKind::Qua16)?;
+        check_overlapping_points(&mesh, 0.02)?;
+        assert_eq!(mesh.points.len(), 37);
+        assert_eq!(mesh.cells.len(), 3);
+        for p in [16, 19, 22, 17, 29, 31, 28] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
             assert_approx_eq!(d, 6.0, 1e-15);
         }
-        check_overlapping_points(&mesh, 0.02)?;
-        if true {
+        if false {
             draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d.svg")?;
         }
         Ok(())
