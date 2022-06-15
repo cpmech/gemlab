@@ -796,7 +796,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_ring_2d.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_ring_2d.svg")?;
         }
         Ok(())
     }
@@ -816,7 +816,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_ring_3d.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_ring_3d.svg")?;
         }
         Ok(())
     }
@@ -832,7 +832,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8.svg")?;
         }
         Ok(())
     }
@@ -848,7 +848,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8_finer.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8_finer.svg")?;
         }
         Ok(())
     }
@@ -864,7 +864,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua16.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua16.svg")?;
         }
         Ok(())
     }
@@ -880,7 +880,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8.svg")?;
         }
         Ok(())
     }
@@ -896,7 +896,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8_finer.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8_finer.svg")?;
         }
         Ok(())
     }
@@ -912,7 +912,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua16.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua16.svg")?;
         }
         Ok(())
     }
@@ -932,7 +932,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_3d_a_hex32.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_3d_a_hex32.svg")?;
         }
         Ok(())
     }
@@ -952,7 +952,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_3d_b_hex32.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_3d_b_hex32.svg")?;
         }
         Ok(())
     }
@@ -973,7 +973,7 @@ mod tests {
         }
         assert_eq!(mesh.points[21].coords, &[3.0, 3.0]);
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_plate_hole_2d.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_2d.svg")?;
         }
         Ok(())
     }
@@ -1006,7 +1006,7 @@ mod tests {
         assert_vec_approx_eq!(mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
         assert_vec_approx_eq!(mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_plate_hole_3d.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_3d.svg")?;
         }
         Ok(())
     }

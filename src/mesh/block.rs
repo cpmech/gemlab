@@ -1689,7 +1689,7 @@ mod tests {
         }
         if false {
             draw_ring_and_mesh(
-                &Region::with(mesh, Extract::All)?,
+                &Region::with(&mesh, Extract::All)?,
                 &block.args_ring,
                 true,
                 true,
@@ -1734,7 +1734,7 @@ mod tests {
         }
         if false {
             draw_ring_and_mesh(
-                &Region::with(mesh, Extract::All)?,
+                &Region::with(&mesh, Extract::All)?,
                 &block.args_ring,
                 true,
                 true,
@@ -1795,7 +1795,7 @@ mod tests {
             }
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_transform_into_ring_3d.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d.svg")?;
         }
         Ok(())
     }
@@ -1833,7 +1833,7 @@ mod tests {
             }
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg")?;
         }
         Ok(())
     }
@@ -1863,7 +1863,7 @@ mod tests {
         set_range: bool,
         filename: &str,
     ) -> Result<(), StrError> {
-        let region = Region::with(mesh, Extract::All)?;
+        let region = Region::with(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         block.draw(plot, false, set_range)?;
         draw.canvas_point_ids
