@@ -218,8 +218,8 @@ impl GridSearch {
                 return Err("max must be greater than min");
             }
             grid.size[i] = grid.delta[i] / (grid.ndiv[i] as f64);
-            if grid.size[i] <= 10.0 * grid.tol[i] {
-                return Err("container size = (max-min)/ndiv must be > 10*tol; reduce ndiv or tol");
+            if grid.size[i] <= 2.0 * grid.tol[i] {
+                return Err("container size = (max-min)/ndiv must be > 2·tol; reduce ndiv or tol");
             }
             grid.radius += grid.size[i] * grid.size[i] / 4.0;
         }
@@ -1074,10 +1074,10 @@ mod tests {
                 &[1.0, 1.0],
                 0.0,
                 GsNdiv::Spec(100, 1, 1),
-                GsTol::Spec(1e-3, 1e-4, 1e-4)
+                GsTol::Spec(0.5 * (1.0 / 100.0), 1e-4, 1e-4)
             )
             .err(),
-            Some("container size = (max-min)/ndiv must be > 10*tol; reduce ndiv or tol")
+            Some("container size = (max-min)/ndiv must be > 2·tol; reduce ndiv or tol")
         );
         assert_eq!(
             GridSearch::new(
@@ -1085,10 +1085,10 @@ mod tests {
                 &[1.0, 1.0, 1.0],
                 0.0,
                 GsNdiv::Spec(1, 100, 1),
-                GsTol::Spec(1e-4, 1e-3, 1e-4)
+                GsTol::Spec(1e-4, 0.5 * (1.0 / 100.0), 1e-4)
             )
             .err(),
-            Some("container size = (max-min)/ndiv must be > 10*tol; reduce ndiv or tol")
+            Some("container size = (max-min)/ndiv must be > 2·tol; reduce ndiv or tol")
         );
         assert_eq!(
             GridSearch::new(
@@ -1096,10 +1096,10 @@ mod tests {
                 &[1.0, 1.0, 1.0],
                 0.0,
                 GsNdiv::Spec(1, 1, 100),
-                GsTol::Spec(1e-4, 1e-4, 1e-3)
+                GsTol::Spec(1e-4, 1e-4, 0.5 * (1.0 / 100.0))
             )
             .err(),
-            Some("container size = (max-min)/ndiv must be > 10*tol; reduce ndiv or tol")
+            Some("container size = (max-min)/ndiv must be > 2·tol; reduce ndiv or tol")
         );
         Ok(())
     }
