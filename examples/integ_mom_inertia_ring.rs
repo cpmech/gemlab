@@ -33,7 +33,12 @@ fn main() -> Result<(), StrError> {
 
     // compare with analytical solution
     let correct = util::PI * (f64::powf(rmax, 4.0) - f64::powf(rmin, 4.0)) / 4.0;
-    println!("second_mom_inertia = {} ({})", second_mom_inertia, correct);
+    println!(
+        "second_mom_inertia = {} ({}): err = {:.2e}",
+        second_mom_inertia,
+        correct,
+        f64::abs(second_mom_inertia - correct),
+    );
     assert_approx_eq!(second_mom_inertia, correct, 1e-7);
 
     // draw mesh
