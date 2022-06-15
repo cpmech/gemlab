@@ -30,20 +30,19 @@ use russell_lab::{Matrix, Vector};
 ///        0
 /// ```
 ///
-/// # Note about edges
-///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to **Lin3** nodes
 pub struct Qua9 {}
 
 impl Qua9 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 9;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
     pub const EDGE_NNODE: usize = 3;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 1;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua9::EDGE_NNODE]; Qua9::NEDGE] = [
@@ -54,7 +53,7 @@ impl Qua9 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Qua9::NDIM]; Qua9::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua9::GEO_NDIM]; Qua9::NNODE] = [
         [-1.0, -1.0],
         [ 1.0, -1.0],
         [ 1.0,  1.0],
@@ -66,7 +65,17 @@ impl Qua9 {
         [ 0.0,  0.0],
     ];
 
+    pub const INTERIOR_NODES: [usize; Qua9::N_INTERIOR_NODE] = [8];
+
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -83,7 +92,16 @@ impl Qua9 {
         interp[8] = (r * r - 1.0) * (s * s - 1.0);
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 

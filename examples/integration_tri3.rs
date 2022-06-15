@@ -1,27 +1,22 @@
 use gemlab::integ;
-use gemlab::shapes::{Shape, StateOfShape};
+use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
 use russell_chk::assert_vec_approx_eq;
 use russell_lab::Vector;
 
 fn main() -> Result<(), StrError> {
-    // coordinates of Tri3
-    #[rustfmt::skip]
-    let coords = [
-        [0.0, 0.0],
-        [3.0, 0.0],
-        [0.0, 4.0],
-    ];
-
     // shape and state
     let space_ndim = 2;
-    let geo_ndim = 2;
-    let nnode = 3;
-    let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-    let mut state = StateOfShape::new(shape.geo_ndim, &coords)?;
+    let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3).unwrap();
+    pad.set_xx(0, 0, 0.0);
+    pad.set_xx(0, 1, 0.0);
+    pad.set_xx(1, 0, 3.0);
+    pad.set_xx(1, 1, 0.0);
+    pad.set_xx(2, 0, 0.0);
+    pad.set_xx(2, 1, 4.0);
 
     // analytical solutions
-    let ana = integ::AnalyticalTri3::new(&shape, &state);
+    let ana = integ::AnalyticalTri3::new(&pad);
 
     // shape times scalar, returns vector 'a'
     //
@@ -39,9 +34,10 @@ fn main() -> Result<(), StrError> {
     // a = ———— │ 1 │ = │ 36 │
     //       3  │ 1 │   │ 36 │
     //          └   ┘   └    ┘
-    let ips = integ::default_integ_points(shape.kind);
-    let mut a = Vector::filled(shape.nnode, 0.0);
-    integ::vec_a_shape_times_scalar(&mut a, &mut state, &shape, ips, 1.0, true, |_| Ok(18.0))?;
+    let nnode = pad.kind.nnode();
+    let ips = integ::default_integ_points(pad.kind);
+    let mut a = Vector::filled(nnode, 0.0);
+    integ::vec_a_shape_times_scalar(&mut a, &mut pad, ips, 1.0, true, |_| Ok(18.0))?;
     println!("a =\n{}", a);
 
     // check
@@ -67,8 +63,8 @@ fn main() -> Result<(), StrError> {
     //          │ 1 │   │ 24 │
     //          └   ┘   └    ┘
     // ```
-    let mut b = Vector::filled(shape.nnode * shape.space_ndim, 0.0);
-    integ::vec_b_shape_times_vector(&mut b, &mut state, &shape, ips, 1.0, true, |v, _| {
+    let mut b = Vector::filled(nnode * space_ndim, 0.0);
+    integ::vec_b_shape_times_vector(&mut b, &mut pad, ips, 1.0, true, |v, _| {
         v[0] = 12.0;
         v[1] = 12.0;
         Ok(())
@@ -94,8 +90,8 @@ fn main() -> Result<(), StrError> {
     // c = │ -4 │
     //     │  6 │
     //     └    ┘
-    let mut c = Vector::filled(shape.nnode, 0.0);
-    integ::vec_c_vector_dot_gradient(&mut c, &mut state, &shape, ips, 1.0, true, |w, _| {
+    let mut c = Vector::filled(nnode, 0.0);
+    integ::vec_c_vector_dot_gradient(&mut c, &mut pad, ips, 1.0, true, |w, _| {
         w[0] = -2.0;
         w[1] = 4.0;
         Ok(())
@@ -127,8 +123,8 @@ fn main() -> Result<(), StrError> {
     //     │   6 │
     //     └     ┘
     let (s00, s11, s01) = (6.0, 4.0, 2.0);
-    let mut d = Vector::filled(shape.nnode * shape.space_ndim, 0.0);
-    integ::vec_d_tensor_dot_gradient(&mut d, &mut state, &shape, ips, 1.0, true, |sig, _| {
+    let mut d = Vector::filled(nnode * space_ndim, 0.0);
+    integ::vec_d_tensor_dot_gradient(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
         sig.sym_set(0, 0, s00);
         sig.sym_set(1, 1, s11);
         sig.sym_set(0, 1, s01);

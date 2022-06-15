@@ -36,14 +36,12 @@ use russell_lab::{Matrix, Vector};
 ///        0
 /// ```
 ///
-/// # Note about edges
-///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to **Lin4** nodes
 pub struct Qua12 {}
 
 impl Qua12 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 12;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
@@ -60,7 +58,7 @@ impl Qua12 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Qua12::NDIM]; Qua12::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua12::GEO_NDIM]; Qua12::NNODE] = [
         [-1.0       , -1.0       ],
         [ 1.0       , -1.0       ],
         [ 1.0       ,  1.0       ],
@@ -76,6 +74,14 @@ impl Qua12 {
     ];
 
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -98,7 +104,16 @@ impl Qua12 {
         interp[11] = 9.0 * (1.0 - s * s) * (1.0 - 3.0 * s) * rm / 32.0;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 

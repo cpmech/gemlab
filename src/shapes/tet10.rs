@@ -7,37 +7,35 @@ use russell_lab::{Matrix, Vector};
 /// ```text
 ///               t               r    s    t
 ///               |         p:0 [0.0, 0.0, 0.0]
-///               @ 3       p:1 [1.0, 0.0, 0.0]
+///               3         p:1 [1.0, 0.0, 0.0]
 ///              /|`.       p:2 [0.0, 1.0, 0.0]
 ///              ||  `,     p:3 [0.0, 0.0, 1.0]
 ///             / |    ',
 ///             | |      \
 ///            /  |       `.
-///            |  |         `,  9
-///           /   @ 7         @,
+///            |  |         `,
+///           /   7           9,
 ///           |   |             \
 ///          /    |              `.
-///        8 @    |                ',
+///          8    |                ',
 ///         /     |                  \
-///         |     @.,,_               `.
-///        |     / 0   ``'-.,@__        `.
-///        |    /           6  ``''-.,,_  ',
-///       |    /                        ``-@-,_s
-///       |  @'                       ,.-`` 2
-///      |  , 4                  _,-'`
-///      ' /            5    ,.'`
-///     | /             _@-``      r    s    t
+///         |     0.,,_               `.
+///        |     /     ``'-.,6__        `.
+///        |    /              ``''-.,,_  ',
+///       |    /                        ``-2-,_s
+///       |  4'                       ,.-`` 2
+///      |  ,                    _,-'`
+///      ' /                 ,.'`
+///     | /             _5-``      r    s    t
 ///     '/          ,-'`     p:4 [0.5, 0.0, 0.0]
 ///    |/      ,.-``         p:5 [0.5, 0.5, 0.0]
 ///    /  _,-``              p:6 [0.0, 0.5, 0.0]
-///   @ '`                   p:7 [0.0, 0.0, 0.5]
-///  / 1                     p:8 [0.5, 0.0, 0.5]
+///   1 '`                   p:7 [0.0, 0.0, 0.5]
+///  /                       p:8 [0.5, 0.0, 0.5]
 /// r                        p:9 [0.0, 0.5, 0.5]
 /// ```
 ///
 /// # Local IDs of edges
-///
-/// The order of edge nodes corresponds to Lin2 nodes.
 ///
 /// ```text
 ///               t                    p0  p1 p2
@@ -69,6 +67,8 @@ use russell_lab::{Matrix, Vector};
 ///  /
 /// r
 /// ```
+///
+/// * The order of edge nodes corresponds to **Lin3** nodes.
 ///
 /// # Local IDs of faces
 ///
@@ -103,14 +103,12 @@ use russell_lab::{Matrix, Vector};
 /// r
 /// ```
 ///
-/// # Note about face nodes
-///
 /// * The order of face nodes is such that the normals are outward
 /// * The order of face nodes corresponds to **Tri6** nodes
 pub struct Tet10 {}
 
 impl Tet10 {
-    pub const NDIM: usize = 3;
+    pub const GEO_NDIM: usize = 3;
     pub const NNODE: usize = 10;
     pub const NEDGE: usize = 6;
     pub const NFACE: usize = 4;
@@ -145,7 +143,7 @@ impl Tet10 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Tet10::NDIM]; Tet10::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tet10::GEO_NDIM]; Tet10::NNODE] = [
         [0.0, 0.0, 0.0], // 0
         [1.0, 0.0, 0.0], // 1
         [0.0, 1.0, 0.0], // 2
@@ -159,6 +157,14 @@ impl Tet10 {
     ];
 
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
@@ -176,7 +182,16 @@ impl Tet10 {
         interp[9] = 4.0 * s * t;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 

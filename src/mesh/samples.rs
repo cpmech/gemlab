@@ -1,4 +1,5 @@
 use super::{Cell, Mesh, Point};
+use crate::shapes::GeoKind;
 
 /// Holds samples of meshes
 pub struct Samples;
@@ -21,7 +22,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn two_quads_horizontal() -> Mesh {
         Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id: 0, coords: vec![0.0, 0.0] },
                 Point { id: 1, coords: vec![1.0, 0.0] },
@@ -31,8 +32,8 @@ impl Samples {
                 Point { id: 5, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         }
     }
@@ -68,7 +69,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn two_cubes_vertical() -> Mesh {
         Mesh {
-            space_ndim: 3,
+            ndim: 3,
             points: vec![
                 Point { id:  0, coords: vec![0.0, 0.0, 0.0] },
                 Point { id:  1, coords: vec![1.0, 0.0, 0.0] },
@@ -84,8 +85,69 @@ impl Samples {
                 Point { id: 11, coords: vec![0.0, 1.0, 2.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,1,2,3, 4,5,6,7] },
-                Cell { id: 1, attribute_id: 2, geo_ndim: 3, points: vec![4,5,6,7, 8,9,10,11] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Hex8, points: vec![4,5,6,7, 8,9,10,11] },
+            ],
+        }
+    }
+
+    /// Returns four cubes making a vertical wall
+    ///
+    /// ```text
+    ///           [#] indicates id
+    ///           (#) indicates attribute_id
+    ///
+    ///       8-------------11-------------17  2.0
+    ///      /.             /.             /|
+    ///     / .            / .            / |
+    ///    /  .           /  .           /  |
+    ///   /   .          /   .          /   |
+    ///  9=============10=============16    |
+    ///  |    .         |    .         |    |
+    ///  |    4---------|----7---------|---15  1.0
+    ///  |   /. [1]     |   /. [3]     |   /|
+    ///  |  / . (2)     |  / . (2)     |  / |
+    ///  | /  .         | /  .         | /  |
+    ///  |/   .         |/   .         |/   |
+    ///  5--------------6-------------14    |          z
+    ///  |    .         |    .         |    |          ↑
+    ///  |    0---------|----3---------|---13  0.0     o → y
+    ///  |   /  [0]     |   /  [2]     |   /          ↙
+    ///  |  /   (1)     |  /   (1)     |  /          x
+    ///  | /            | /            | /
+    ///  |/             |/             |/
+    ///  1--------------2-------------12   1.0
+    /// 0.0            1.0            2.0
+    /// ```
+    #[rustfmt::skip]
+    pub fn four_cubes_wall() -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id:  0, coords: vec![0.0, 0.0, 0.0] },
+                Point { id:  1, coords: vec![1.0, 0.0, 0.0] },
+                Point { id:  2, coords: vec![1.0, 1.0, 0.0] },
+                Point { id:  3, coords: vec![0.0, 1.0, 0.0] },
+                Point { id:  4, coords: vec![0.0, 0.0, 1.0] },
+                Point { id:  5, coords: vec![1.0, 0.0, 1.0] },
+                Point { id:  6, coords: vec![1.0, 1.0, 1.0] },
+                Point { id:  7, coords: vec![0.0, 1.0, 1.0] },
+                Point { id:  8, coords: vec![0.0, 0.0, 2.0] },
+                Point { id:  9, coords: vec![1.0, 0.0, 2.0] },
+                Point { id: 10, coords: vec![1.0, 1.0, 2.0] },
+                Point { id: 11, coords: vec![0.0, 1.0, 2.0] },
+                Point { id: 12, coords: vec![1.0, 2.0, 0.0] },
+                Point { id: 13, coords: vec![0.0, 2.0, 0.0] },
+                Point { id: 14, coords: vec![1.0, 2.0, 1.0] },
+                Point { id: 15, coords: vec![0.0, 2.0, 1.0] },
+                Point { id: 16, coords: vec![1.0, 2.0, 2.0] },
+                Point { id: 17, coords: vec![0.0, 2.0, 2.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0,1, 2, 3,  4, 5, 6, 7] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Hex8, points: vec![4,5, 6, 7,  8, 9,10,11] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Hex8, points: vec![3,2,12,13,  7, 6,14,15] },
+                Cell { id: 3, attribute_id: 2, kind: GeoKind::Hex8, points: vec![7,6,14,15, 11,10,16,17] },
             ],
         }
     }
@@ -107,7 +169,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn mixed_shapes_2d() -> Mesh {
         Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id: 0, coords: vec![0.0, 0.0] },
                 Point { id: 1, coords: vec![1.0, 0.0] },
@@ -117,9 +179,9 @@ impl Samples {
                 Point { id: 5, coords: vec![3.0, 0.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 1, points: vec![0, 1] },
-                Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 2, 3, 4] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 1, points: vec![2, 5] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 2, 3, 4] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Lin2, points: vec![2, 5] },
             ],
         }
     }
@@ -147,7 +209,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn mixed_shapes_3d() -> Mesh {
         Mesh {
-            space_ndim: 3,
+            ndim: 3,
             points: vec![
                 Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
                 Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
@@ -164,11 +226,11 @@ impl Samples {
                 Point { id:12, coords: vec![1.0,-1.0, 0.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,1,2,3,4,5,6,7] },
-                Cell { id: 1, attribute_id: 2, geo_ndim: 3, points: vec![2,8,3,6] },
-                Cell { id: 2, attribute_id: 2, geo_ndim: 2, points: vec![3,9,10,7] },
-                Cell { id: 3, attribute_id: 2, geo_ndim: 2, points: vec![8,9,3] },
-                Cell { id: 4, attribute_id: 3, geo_ndim: 1, points: vec![1,11,12] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3,4,5,6,7] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Tet4, points: vec![2,8,3,6] },
+                Cell { id: 2, attribute_id: 2, kind: GeoKind::Qua4, points: vec![3,9,10,7] },
+                Cell { id: 3, attribute_id: 2, kind: GeoKind::Tri3, points: vec![8,9,3] },
+                Cell { id: 4, attribute_id: 3, kind: GeoKind::Lin3, points: vec![1,12,11] },
             ],
         }
     }
@@ -198,7 +260,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn block_2d_four_qua4() -> Mesh {
         Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id: 0, coords: vec![0.0, 0.0] },
                 Point { id: 1, coords: vec![1.0, 0.0] },
@@ -211,10 +273,10 @@ impl Samples {
                 Point { id: 8, coords: vec![2.0, 2.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1, 4, 5, 2] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3, 2, 6, 7] },
-                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 5, 8, 6] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua4, points: vec![3, 2, 6, 7] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua4, points: vec![2, 5, 8, 6] },
             ],
         }
     }
@@ -244,7 +306,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn block_2d_four_qua8() -> Mesh {
         Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id:  0, coords: vec![0.0, 0.0] },
                 Point { id:  1, coords: vec![1.0, 0.0] },
@@ -269,10 +331,10 @@ impl Samples {
                 Point { id: 20, coords: vec![1.5, 2.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1,  2,  3,  4,  5,  6,  7] },
-                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1, 8,  9,  2, 10, 11, 12,  5] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3, 2, 13, 14,  6, 15, 16, 17] },
-                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 9, 18, 13, 12, 19, 20, 15] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua8, points: vec![0, 1,  2,  3,  4,  5,  6,  7] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua8, points: vec![1, 8,  9,  2, 10, 11, 12,  5] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua8, points: vec![3, 2, 13, 14,  6, 15, 16, 17] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua8, points: vec![2, 9, 18, 13, 12, 19, 20, 15] },
             ],
         }
     }
@@ -304,7 +366,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn block_2d_four_qua9() -> Mesh {
         Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id:  0, coords: vec![0.0, 0.0] },
                 Point { id:  1, coords: vec![1.0, 0.0] },
@@ -333,10 +395,10 @@ impl Samples {
                 Point { id: 24, coords: vec![1.5, 1.5] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8] },
-                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1,  9, 10,  2, 11, 12, 13,  5, 14] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3,  2, 15, 16,  6, 17, 18, 19, 20] },
-                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 10, 21, 15, 13, 22, 23, 17, 24] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua9, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua9, points: vec![1,  9, 10,  2, 11, 12, 13,  5, 14] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua9, points: vec![3,  2, 15, 16,  6, 17, 18, 19, 20] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua9, points: vec![2, 10, 21, 15, 13, 22, 23, 17, 24] },
             ],
         }
     }
@@ -368,7 +430,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn block_2d_four_qua12() -> Mesh {
         Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id:  0, coords: vec![0.0, 0.0] },
                 Point { id:  1, coords: vec![1.5, 0.0] },
@@ -405,10 +467,10 @@ impl Samples {
                 Point { id: 32, coords: vec![2.0, 3.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11] },
-                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1, 12, 13,  2, 14, 15, 16,  9, 17, 18, 19,  5] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3,  2, 20, 21, 10, 22, 23, 24,  6, 25, 26, 27] },
-                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 13, 28, 20, 19, 29, 30, 25, 16, 31, 32, 22] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua12, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua12, points: vec![1, 12, 13,  2, 14, 15, 16,  9, 17, 18, 19,  5] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua12, points: vec![3,  2, 20, 21, 10, 22, 23, 24,  6, 25, 26, 27] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua12, points: vec![2, 13, 28, 20, 19, 29, 30, 25, 16, 31, 32, 22] },
             ],
         }
     }
@@ -440,7 +502,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn block_2d_four_qua16() -> Mesh {
         Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id:  0, coords: vec![0.0, 0.0] },
                 Point { id:  1, coords: vec![1.5, 0.0] },
@@ -493,10 +555,10 @@ impl Samples {
                 Point { id: 48, coords: vec![2.0, 2.5] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15] },
-                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1, 16, 17,  2, 18, 19, 20,  9, 21, 22, 23,  5, 24, 25, 26, 27] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3,  2, 28, 29, 10, 30, 31, 32,  6, 33, 34, 35, 36, 37, 38, 39] },
-                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 17, 40, 28, 23, 41, 42, 33, 20, 43, 44, 30, 45, 46, 47, 48] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua16, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua16, points: vec![1, 16, 17,  2, 18, 19, 20,  9, 21, 22, 23,  5, 24, 25, 26, 27] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua16, points: vec![3,  2, 28, 29, 10, 30, 31, 32,  6, 33, 34, 35, 36, 37, 38, 39] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua16, points: vec![2, 17, 40, 28, 23, 41, 42, 33, 20, 43, 44, 30, 45, 46, 47, 48] },
             ],
         }
     }
@@ -532,7 +594,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn block_2d_four_qua17() -> Mesh {
         Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id:  0, coords: vec![0.0, 0.0] },
                 Point { id:  1, coords: vec![2.0, 0.0] },
@@ -585,10 +647,10 @@ impl Samples {
                 Point { id: 48, coords: vec![3.0, 3.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16] },
-                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![1, 17, 18,  2, 19, 20, 21, 13, 22, 23, 24,  9, 25, 26, 27,  5, 28] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![3,  2, 29, 30, 14, 31, 32, 33, 10, 34, 35, 36,  6, 37, 38, 39, 40] },
-                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![2, 18, 41, 29, 27, 42, 43, 37, 24, 44, 45, 34, 21, 46, 47, 31, 48] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua17, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua17, points: vec![1, 17, 18,  2, 19, 20, 21, 13, 22, 23, 24,  9, 25, 26, 27,  5, 28] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua17, points: vec![3,  2, 29, 30, 14, 31, 32, 33, 10, 34, 35, 36,  6, 37, 38, 39, 40] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua17, points: vec![2, 18, 41, 29, 27, 42, 43, 37, 24, 44, 45, 34, 21, 46, 47, 31, 48] },
             ],
         }
     }
@@ -647,7 +709,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn block_3d_eight_hex8() -> Mesh {
         Mesh {
-            space_ndim: 3,
+            ndim: 3,
             points: vec![
                 Point { id:  0, coords: vec![0.0, 0.0, 0.0] },
                 Point { id:  1, coords: vec![1.0, 0.0, 0.0] },
@@ -678,14 +740,14 @@ impl Samples {
                 Point { id: 26, coords: vec![2.0, 2.0, 4.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,  1,  2,  3,  4,  5,  6,  7] },
-                Cell { id: 1, attribute_id: 1, geo_ndim: 3, points: vec![1,  8,  9,  2,  5, 10, 11,  6] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 3, points: vec![3,  2, 12, 13,  7,  6, 14, 15] },
-                Cell { id: 3, attribute_id: 1, geo_ndim: 3, points: vec![2,  9, 16, 12,  6, 11, 17, 14] },
-                Cell { id: 4, attribute_id: 1, geo_ndim: 3, points: vec![4,  5,  6,  7, 18, 19, 20, 21] },
-                Cell { id: 5, attribute_id: 1, geo_ndim: 3, points: vec![5, 10, 11,  6, 19, 22, 23, 20] },
-                Cell { id: 6, attribute_id: 1, geo_ndim: 3, points: vec![7,  6, 14, 15, 21, 20, 24, 25] },
-                Cell { id: 7, attribute_id: 1, geo_ndim: 3, points: vec![6, 11, 17, 14, 20, 23, 26, 24] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0,  1,  2,  3,  4,  5,  6,  7] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Hex8, points: vec![1,  8,  9,  2,  5, 10, 11,  6] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Hex8, points: vec![3,  2, 12, 13,  7,  6, 14, 15] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Hex8, points: vec![2,  9, 16, 12,  6, 11, 17, 14] },
+                Cell { id: 4, attribute_id: 1, kind: GeoKind::Hex8, points: vec![4,  5,  6,  7, 18, 19, 20, 21] },
+                Cell { id: 5, attribute_id: 1, kind: GeoKind::Hex8, points: vec![5, 10, 11,  6, 19, 22, 23, 20] },
+                Cell { id: 6, attribute_id: 1, kind: GeoKind::Hex8, points: vec![7,  6, 14, 15, 21, 20, 24, 25] },
+                Cell { id: 7, attribute_id: 1, kind: GeoKind::Hex8, points: vec![6, 11, 17, 14, 20, 23, 26, 24] },
             ],
         }
     }
@@ -744,7 +806,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn block_3d_eight_hex20() -> Mesh {
         Mesh {
-            space_ndim: 3,
+            ndim: 3,
             points: vec![
                 Point { id:  0, coords: vec![0.0, 0.0, 0.0] },
                 Point { id:  1, coords: vec![1.0, 0.0, 0.0] },
@@ -829,14 +891,14 @@ impl Samples {
                 Point { id: 80, coords: vec![2.0, 2.0, 3.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 3, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] },
-                Cell { id: 1, attribute_id: 1, geo_ndim: 3, points: vec![1, 20, 21,  2,  5, 22, 23,  6, 24, 25, 26,  9, 27, 28, 29, 13, 17, 30, 31, 18] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 3, points: vec![3,  2, 32, 33,  7,  6, 34, 35, 10, 36, 37, 38, 14, 39, 40, 41, 19, 18, 42, 43] },
-                Cell { id: 3, attribute_id: 1, geo_ndim: 3, points: vec![2, 21, 44, 32,  6, 23, 45, 34, 26, 46, 47, 36, 29, 48, 49, 39, 18, 31, 50, 42] },
-                Cell { id: 4, attribute_id: 1, geo_ndim: 3, points: vec![4,  5,  6,  7, 51, 52, 53, 54, 12, 13, 14, 15, 55, 56, 57, 58, 59, 60, 61, 62] },
-                Cell { id: 5, attribute_id: 1, geo_ndim: 3, points: vec![5, 22, 23,  6, 52, 63, 64, 53, 27, 28, 29, 13, 65, 66, 67, 56, 60, 68, 69, 61] },
-                Cell { id: 6, attribute_id: 1, geo_ndim: 3, points: vec![7,  6, 34, 35, 54, 53, 70, 71, 14, 39, 40, 41, 57, 72, 73, 74, 62, 61, 75, 76] },
-                Cell { id: 7, attribute_id: 1, geo_ndim: 3, points: vec![6, 23, 45, 34, 53, 64, 77, 70, 29, 48, 49, 39, 67, 78, 79, 72, 61, 69, 80, 75] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex20, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Hex20, points: vec![1, 20, 21,  2,  5, 22, 23,  6, 24, 25, 26,  9, 27, 28, 29, 13, 17, 30, 31, 18] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Hex20, points: vec![3,  2, 32, 33,  7,  6, 34, 35, 10, 36, 37, 38, 14, 39, 40, 41, 19, 18, 42, 43] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Hex20, points: vec![2, 21, 44, 32,  6, 23, 45, 34, 26, 46, 47, 36, 29, 48, 49, 39, 18, 31, 50, 42] },
+                Cell { id: 4, attribute_id: 1, kind: GeoKind::Hex20, points: vec![4,  5,  6,  7, 51, 52, 53, 54, 12, 13, 14, 15, 55, 56, 57, 58, 59, 60, 61, 62] },
+                Cell { id: 5, attribute_id: 1, kind: GeoKind::Hex20, points: vec![5, 22, 23,  6, 52, 63, 64, 53, 27, 28, 29, 13, 65, 66, 67, 56, 60, 68, 69, 61] },
+                Cell { id: 6, attribute_id: 1, kind: GeoKind::Hex20, points: vec![7,  6, 34, 35, 54, 53, 70, 71, 14, 39, 40, 41, 57, 72, 73, 74, 62, 61, 75, 76] },
+                Cell { id: 7, attribute_id: 1, kind: GeoKind::Hex20, points: vec![6, 23, 45, 34, 53, 64, 77, 70, 29, 48, 49, 39, 67, 78, 79, 72, 61, 69, 80, 75] },
             ],
         }
     }
@@ -865,7 +927,7 @@ impl Samples {
     #[rustfmt::skip]
     pub fn ring_eight_qua8_rad1_thick1() -> Mesh {
         Mesh {
-            space_ndim: 2,
+            ndim: 2,
             points: vec![
                 Point { id:  0, coords: vec![1.000000000000000e+00, 0.000000000000000e+00] },
                 Point { id:  1, coords: vec![1.500000000000000e+00, 0.000000000000000e+00] },
@@ -906,14 +968,14 @@ impl Samples {
                 Point { id: 36, coords: vec![4.358436327495734e-01, 1.951932459843745e+00] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![ 0, 1, 4, 3,15,26,17,25] },
-                Cell { id: 1, attribute_id: 1, geo_ndim: 2, points: vec![ 1, 2, 5, 4,16,27,18,26] },
-                Cell { id: 2, attribute_id: 1, geo_ndim: 2, points: vec![ 3, 4, 7, 6,17,29,19,28] },
-                Cell { id: 3, attribute_id: 1, geo_ndim: 2, points: vec![ 4, 5, 8, 7,18,30,20,29] },
-                Cell { id: 4, attribute_id: 1, geo_ndim: 2, points: vec![ 6, 7,10, 9,19,32,21,31] },
-                Cell { id: 5, attribute_id: 1, geo_ndim: 2, points: vec![ 7, 8,11,10,20,33,22,32] },
-                Cell { id: 6, attribute_id: 1, geo_ndim: 2, points: vec![ 9,10,13,12,21,35,23,34] },
-                Cell { id: 7, attribute_id: 1, geo_ndim: 2, points: vec![10,11,14,13,22,36,24,35] },
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua8, points: vec![ 0, 1, 4, 3,15,26,17,25] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua8, points: vec![ 1, 2, 5, 4,16,27,18,26] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua8, points: vec![ 3, 4, 7, 6,17,29,19,28] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua8, points: vec![ 4, 5, 8, 7,18,30,20,29] },
+                Cell { id: 4, attribute_id: 1, kind: GeoKind::Qua8, points: vec![ 6, 7,10, 9,19,32,21,31] },
+                Cell { id: 5, attribute_id: 1, kind: GeoKind::Qua8, points: vec![ 7, 8,11,10,20,33,22,32] },
+                Cell { id: 6, attribute_id: 1, kind: GeoKind::Qua8, points: vec![ 9,10,13,12,21,35,23,34] },
+                Cell { id: 7, attribute_id: 1, kind: GeoKind::Qua8, points: vec![10,11,14,13,22,36,24,35] },
             ],
         }
     }
@@ -924,150 +986,94 @@ impl Samples {
 #[cfg(test)]
 mod tests {
     use super::Samples;
+    use crate::mesh::check_all;
+    use crate::StrError;
 
     #[test]
-    fn samples_work() {
+    fn samples_work() -> Result<(), StrError> {
         let mesh = Samples::two_quads_horizontal();
-        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 2);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::two_cubes_vertical();
-        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 12);
         assert_eq!(mesh.cells.len(), 2);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
+
+        let mesh = Samples::four_cubes_wall();
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 18);
+        assert_eq!(mesh.cells.len(), 4);
+        check_all(&mesh)?;
 
         let mesh = Samples::mixed_shapes_2d();
-        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 3);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::mixed_shapes_3d();
-        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 13);
         assert_eq!(mesh.cells.len(), 5);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua4();
-        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua8();
-        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 21);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua9();
-        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua12();
-        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua16();
-        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::block_2d_four_qua17();
-        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::block_3d_eight_hex8();
-        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::block_3d_eight_hex20();
-        assert_eq!(mesh.space_ndim, 3);
+        assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 81);
         assert_eq!(mesh.cells.len(), 8);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
 
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        assert_eq!(mesh.space_ndim, 2);
+        assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 8);
-        for i in 0..mesh.points.len() {
-            assert_eq!(mesh.points[i].id, i);
-        }
-        for i in 0..mesh.cells.len() {
-            assert_eq!(mesh.cells[i].id, i);
-        }
+        check_all(&mesh)?;
+        Ok(())
     }
 }

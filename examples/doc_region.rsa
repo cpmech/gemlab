@@ -1,0 +1,48 @@
+
+    ///
+    /// # Input
+    ///
+    /// * `mesh` -- the mesh
+    /// * `with_internal` -- saves also the internal points, edges and faces in `boundary`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::mesh::{At, Cell, Extract, Mesh, Point, Region};
+    /// use gemlab::shapes::GeoKind;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3---------2---------5
+    ///     //  |         |         |
+    ///     //  |   [0]   |   [1]   |
+    ///     //  |         |         |
+    ///     //  0---------1---------4
+    ///     let mesh = Mesh {
+    ///         space_ndim: 2,
+    ///         points: vec![
+    ///             Point { id: 0, coords: vec![0.0, 0.0] },
+    ///             Point { id: 1, coords: vec![1.0, 0.0] },
+    ///             Point { id: 2, coords: vec![1.0, 1.0] },
+    ///             Point { id: 3, coords: vec![0.0, 1.0] },
+    ///             Point { id: 4, coords: vec![2.0, 0.0] },
+    ///             Point { id: 5, coords: vec![2.0, 1.0] },
+    ///         ],
+    ///         cells: vec![
+    ///             Cell { id: 0, attribute_id: 1, geo_ndim: 2, points: vec![0, 1, 2, 3] },
+    ///             Cell { id: 1, attribute_id: 2, geo_ndim: 2, points: vec![1, 4, 5, 2] },
+    ///         ],
+    ///     };
+    ///     let region = Region::with(mesh, Extract::Boundary)?;
+    ///     assert_eq!(region.mesh.space_ndim, 2);
+    ///     assert_eq!(region.shapes.len(), 2);
+    ///     assert_eq!(region.shapes[0].kind, GeoKind::Qua4);
+    ///     assert_eq!(region.boundary.points.len(), 6);
+    ///     assert_eq!(region.boundary.edges.len(), 6);
+    ///     assert_eq!(region.boundary.faces.len(), 0);
+    ///     assert_eq!(region.boundary.min, &[0.0, 0.0]);
+    ///     assert_eq!(region.boundary.max, &[2.0, 1.0]);
+    ///     assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
+    ///     Ok(())
+    /// }
+    /// ```

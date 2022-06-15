@@ -45,6 +45,8 @@ use russell_lab::{Matrix, Vector};
 ///           1
 /// ```
 ///
+/// * The order of edge nodes corresponds to **Lin3** nodes.
+///
 /// # Local IDs of faces
 ///
 /// ```text
@@ -64,14 +66,12 @@ use russell_lab::{Matrix, Vector};
 /// 1-------9--------2'
 /// ```
 ///
-/// # Note about face nodes
-///
 /// * The order of face nodes is such that the normals are outward
 /// * The order of face nodes corresponds to **Qua8** nodes
 pub struct Hex20 {}
 
 impl Hex20 {
-    pub const NDIM: usize = 3;
+    pub const GEO_NDIM: usize = 3;
     pub const NNODE: usize = 20;
     pub const NEDGE: usize = 12;
     pub const NFACE: usize = 6;
@@ -116,7 +116,7 @@ impl Hex20 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Hex20::NDIM]; Hex20::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Hex20::GEO_NDIM]; Hex20::NNODE] = [
         [-1.0, -1.0, -1.0],
         [ 1.0, -1.0, -1.0],
         [ 1.0,  1.0, -1.0],
@@ -144,110 +144,136 @@ impl Hex20 {
     ];
 
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
-        let rp1 = 1.0 + r;
-        let rm1 = 1.0 - r;
-        let sp1 = 1.0 + s;
-        let sm1 = 1.0 - s;
-        let tp1 = 1.0 + t;
-        let tm1 = 1.0 - t;
+        let rm = 1.0 - r;
+        let sm = 1.0 - s;
+        let tm = 1.0 - t;
+        let rp = 1.0 + r;
+        let sp = 1.0 + s;
+        let tp = 1.0 + t;
+        let rr = 1.0 - r * r;
+        let ss = 1.0 - s * s;
+        let tt = 1.0 - t * t;
 
-        interp[0] = rm1 * sm1 * tm1 * (-r - s - t - 2.0) / 8.0;
-        interp[1] = rp1 * sm1 * tm1 * (r - s - t - 2.0) / 8.0;
-        interp[2] = rp1 * sp1 * tm1 * (r + s - t - 2.0) / 8.0;
-        interp[3] = rm1 * sp1 * tm1 * (-r + s - t - 2.0) / 8.0;
-        interp[4] = rm1 * sm1 * tp1 * (-r - s + t - 2.0) / 8.0;
-        interp[5] = rp1 * sm1 * tp1 * (r - s + t - 2.0) / 8.0;
-        interp[6] = rp1 * sp1 * tp1 * (r + s + t - 2.0) / 8.0;
-        interp[7] = rm1 * sp1 * tp1 * (-r + s + t - 2.0) / 8.0;
-        interp[8] = (1.0 - r * r) * sm1 * tm1 / 4.0;
-        interp[9] = rp1 * (1.0 - s * s) * tm1 / 4.0;
-        interp[10] = (1.0 - r * r) * sp1 * tm1 / 4.0;
-        interp[11] = rm1 * (1.0 - s * s) * tm1 / 4.0;
-        interp[12] = (1.0 - r * r) * sm1 * tp1 / 4.0;
-        interp[13] = rp1 * (1.0 - s * s) * tp1 / 4.0;
-        interp[14] = (1.0 - r * r) * sp1 * tp1 / 4.0;
-        interp[15] = rm1 * (1.0 - s * s) * tp1 / 4.0;
-        interp[16] = rm1 * sm1 * (1.0 - t * t) / 4.0;
-        interp[17] = rp1 * sm1 * (1.0 - t * t) / 4.0;
-        interp[18] = rp1 * sp1 * (1.0 - t * t) / 4.0;
-        interp[19] = rm1 * sp1 * (1.0 - t * t) / 4.0;
+        interp[0] = rm * sm * tm * (-2.0 - r - s - t) / 8.0;
+        interp[1] = rp * sm * tm * (-2.0 + r - s - t) / 8.0;
+        interp[2] = rp * sp * tm * (-2.0 + r + s - t) / 8.0;
+        interp[3] = rm * sp * tm * (-2.0 - r + s - t) / 8.0;
+        interp[4] = rm * sm * tp * (-2.0 - r - s + t) / 8.0;
+        interp[5] = rp * sm * tp * (-2.0 + r - s + t) / 8.0;
+        interp[6] = rp * sp * tp * (-2.0 + r + s + t) / 8.0;
+        interp[7] = rm * sp * tp * (-2.0 - r + s + t) / 8.0;
+        interp[8] = rr * sm * tm / 4.0;
+        interp[9] = rp * ss * tm / 4.0;
+        interp[10] = rr * sp * tm / 4.0;
+        interp[11] = rm * ss * tm / 4.0;
+        interp[12] = rr * sm * tp / 4.0;
+        interp[13] = rp * ss * tp / 4.0;
+        interp[14] = rr * sp * tp / 4.0;
+        interp[15] = rm * ss * tp / 4.0;
+        interp[16] = rm * sm * tt / 4.0;
+        interp[17] = rp * sm * tt / 4.0;
+        interp[18] = rp * sp * tt / 4.0;
+        interp[19] = rm * sp * tt / 4.0;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
-        let rp1 = 1.0 + r;
-        let rm1 = 1.0 - r;
-        let sp1 = 1.0 + s;
-        let sm1 = 1.0 - s;
-        let tp1 = 1.0 + t;
-        let tm1 = 1.0 - t;
+        let rm = 1.0 - r;
+        let sm = 1.0 - s;
+        let tm = 1.0 - t;
+        let rp = 1.0 + r;
+        let sp = 1.0 + s;
+        let tp = 1.0 + t;
+        let rr = 1.0 - r * r;
+        let ss = 1.0 - s * s;
+        let tt = 1.0 - t * t;
 
-        deriv[0][0] = -0.125 * sm1 * tm1 * (-r - s - t - 2.0) - 0.125 * rm1 * sm1 * tm1;
-        deriv[1][0] = 0.125 * sm1 * tm1 * (r - s - t - 2.0) + 0.125 * rp1 * sm1 * tm1;
-        deriv[2][0] = 0.125 * sp1 * tm1 * (r + s - t - 2.0) + 0.125 * rp1 * sp1 * tm1;
-        deriv[3][0] = -0.125 * sp1 * tm1 * (-r + s - t - 2.0) - 0.125 * rm1 * sp1 * tm1;
-        deriv[4][0] = -0.125 * sm1 * tp1 * (-r - s + t - 2.0) - 0.125 * rm1 * sm1 * tp1;
-        deriv[5][0] = 0.125 * sm1 * tp1 * (r - s + t - 2.0) + 0.125 * rp1 * sm1 * tp1;
-        deriv[6][0] = 0.125 * sp1 * tp1 * (r + s + t - 2.0) + 0.125 * rp1 * sp1 * tp1;
-        deriv[7][0] = -0.125 * sp1 * tp1 * (-r + s + t - 2.0) - 0.125 * rm1 * sp1 * tp1;
-        deriv[8][0] = -0.5 * r * sm1 * tm1;
-        deriv[9][0] = 0.25 * (1.0 - s * s) * tm1;
-        deriv[10][0] = -0.5 * r * sp1 * tm1;
-        deriv[11][0] = -0.25 * (1.0 - s * s) * tm1;
-        deriv[12][0] = -0.5 * r * sm1 * tp1;
-        deriv[13][0] = 0.25 * (1.0 - s * s) * tp1;
-        deriv[14][0] = -0.5 * r * sp1 * tp1;
-        deriv[15][0] = -0.25 * (1.0 - s * s) * tp1;
-        deriv[16][0] = -0.25 * sm1 * (1.0 - t * t);
-        deriv[17][0] = 0.25 * sm1 * (1.0 - t * t);
-        deriv[18][0] = 0.25 * sp1 * (1.0 - t * t);
-        deriv[19][0] = -0.25 * sp1 * (1.0 - t * t);
+        // with respect to r
+        deriv[0][0] = -rm * sm * tm / 8.0 - sm * (-2.0 - r - s - t) * tm / 8.0;
+        deriv[1][0] = rp * sm * tm / 8.0 + sm * (-2.0 + r - s - t) * tm / 8.0;
+        deriv[2][0] = rp * sp * tm / 8.0 + sp * (-2.0 + r + s - t) * tm / 8.0;
+        deriv[3][0] = -rm * sp * tm / 8.0 - sp * (-2.0 - r + s - t) * tm / 8.0;
+        deriv[4][0] = -rm * sm * tp / 8.0 - sm * (-2.0 - r - s + t) * tp / 8.0;
+        deriv[5][0] = rp * sm * tp / 8.0 + sm * (-2.0 + r - s + t) * tp / 8.0;
+        deriv[6][0] = rp * sp * tp / 8.0 + sp * (-2.0 + r + s + t) * tp / 8.0;
+        deriv[7][0] = -rm * sp * tp / 8.0 - sp * (-2.0 - r + s + t) * tp / 8.0;
+        deriv[8][0] = -r * sm * tm / 2.0;
+        deriv[9][0] = ss * tm / 4.0;
+        deriv[10][0] = -r * sp * tm / 2.0;
+        deriv[11][0] = -ss * tm / 4.0;
+        deriv[12][0] = -r * sm * tp / 2.0;
+        deriv[13][0] = ss * tp / 4.0;
+        deriv[14][0] = -r * sp * tp / 2.0;
+        deriv[15][0] = -ss * tp / 4.0;
+        deriv[16][0] = -sm * tt / 4.0;
+        deriv[17][0] = sm * tt / 4.0;
+        deriv[18][0] = sp * tt / 4.0;
+        deriv[19][0] = -sp * tt / 4.0;
 
-        deriv[0][1] = -0.125 * rm1 * tm1 * (-r - s - t - 2.0) - 0.125 * rm1 * sm1 * tm1;
-        deriv[1][1] = -0.125 * rp1 * tm1 * (r - s - t - 2.0) - 0.125 * rp1 * sm1 * tm1;
-        deriv[2][1] = 0.125 * rp1 * tm1 * (r + s - t - 2.0) + 0.125 * rp1 * sp1 * tm1;
-        deriv[3][1] = 0.125 * rm1 * tm1 * (-r + s - t - 2.0) + 0.125 * rm1 * sp1 * tm1;
-        deriv[4][1] = -0.125 * rm1 * tp1 * (-r - s + t - 2.0) - 0.125 * rm1 * sm1 * tp1;
-        deriv[5][1] = -0.125 * rp1 * tp1 * (r - s + t - 2.0) - 0.125 * rp1 * sm1 * tp1;
-        deriv[6][1] = 0.125 * rp1 * tp1 * (r + s + t - 2.0) + 0.125 * rp1 * sp1 * tp1;
-        deriv[7][1] = 0.125 * rm1 * tp1 * (-r + s + t - 2.0) + 0.125 * rm1 * sp1 * tp1;
-        deriv[8][1] = -0.25 * (1.0 - r * r) * tm1;
-        deriv[9][1] = -0.5 * s * rp1 * tm1;
-        deriv[10][1] = 0.25 * (1.0 - r * r) * tm1;
-        deriv[11][1] = -0.5 * s * rm1 * tm1;
-        deriv[12][1] = -0.25 * (1.0 - r * r) * tp1;
-        deriv[13][1] = -0.5 * s * rp1 * tp1;
-        deriv[14][1] = 0.25 * (1.0 - r * r) * tp1;
-        deriv[15][1] = -0.5 * s * rm1 * tp1;
-        deriv[16][1] = -0.25 * rm1 * (1.0 - t * t);
-        deriv[17][1] = -0.25 * rp1 * (1.0 - t * t);
-        deriv[18][1] = 0.25 * rp1 * (1.0 - t * t);
-        deriv[19][1] = 0.25 * rm1 * (1.0 - t * t);
+        // with respect to s
+        deriv[0][1] = -rm * sm * tm / 8.0 - rm * (-2.0 - r - s - t) * tm / 8.0;
+        deriv[1][1] = -rp * sm * tm / 8.0 - rp * (-2.0 + r - s - t) * tm / 8.0;
+        deriv[2][1] = rp * sp * tm / 8.0 + rp * (-2.0 + r + s - t) * tm / 8.0;
+        deriv[3][1] = rm * sp * tm / 8.0 + rm * (-2.0 - r + s - t) * tm / 8.0;
+        deriv[4][1] = -rm * sm * tp / 8.0 - rm * (-2.0 - r - s + t) * tp / 8.0;
+        deriv[5][1] = -rp * sm * tp / 8.0 - rp * (-2.0 + r - s + t) * tp / 8.0;
+        deriv[6][1] = rp * sp * tp / 8.0 + rp * (-2.0 + r + s + t) * tp / 8.0;
+        deriv[7][1] = rm * sp * tp / 8.0 + rm * (-2.0 - r + s + t) * tp / 8.0;
+        deriv[8][1] = -rr * tm / 4.0;
+        deriv[9][1] = -rp * s * tm / 2.0;
+        deriv[10][1] = rr * tm / 4.0;
+        deriv[11][1] = -rm * s * tm / 2.0;
+        deriv[12][1] = -rr * tp / 4.0;
+        deriv[13][1] = -rp * s * tp / 2.0;
+        deriv[14][1] = rr * tp / 4.0;
+        deriv[15][1] = -rm * s * tp / 2.0;
+        deriv[16][1] = -rm * tt / 4.0;
+        deriv[17][1] = -rp * tt / 4.0;
+        deriv[18][1] = rp * tt / 4.0;
+        deriv[19][1] = rm * tt / 4.0;
 
-        deriv[0][2] = -0.125 * rm1 * sm1 * (-r - s - t - 2.0) - 0.125 * rm1 * sm1 * tm1;
-        deriv[1][2] = -0.125 * rp1 * sm1 * (r - s - t - 2.0) - 0.125 * rp1 * sm1 * tm1;
-        deriv[2][2] = -0.125 * rp1 * sp1 * (r + s - t - 2.0) - 0.125 * rp1 * sp1 * tm1;
-        deriv[3][2] = -0.125 * rm1 * sp1 * (-r + s - t - 2.0) - 0.125 * rm1 * sp1 * tm1;
-        deriv[4][2] = 0.125 * rm1 * sm1 * (-r - s + t - 2.0) + 0.125 * rm1 * sm1 * tp1;
-        deriv[5][2] = 0.125 * rp1 * sm1 * (r - s + t - 2.0) + 0.125 * rp1 * sm1 * tp1;
-        deriv[6][2] = 0.125 * rp1 * sp1 * (r + s + t - 2.0) + 0.125 * rp1 * sp1 * tp1;
-        deriv[7][2] = 0.125 * rm1 * sp1 * (-r + s + t - 2.0) + 0.125 * rm1 * sp1 * tp1;
-        deriv[8][2] = -0.25 * (1.0 - r * r) * sm1;
-        deriv[9][2] = -0.25 * rp1 * (1.0 - s * s);
-        deriv[10][2] = -0.25 * (1.0 - r * r) * sp1;
-        deriv[11][2] = -0.25 * rm1 * (1.0 - s * s);
-        deriv[12][2] = 0.25 * (1.0 - r * r) * sm1;
-        deriv[13][2] = 0.25 * rp1 * (1.0 - s * s);
-        deriv[14][2] = 0.25 * (1.0 - r * r) * sp1;
-        deriv[15][2] = 0.25 * rm1 * (1.0 - s * s);
-        deriv[16][2] = -0.5 * t * rm1 * sm1;
-        deriv[17][2] = -0.5 * t * rp1 * sm1;
-        deriv[18][2] = -0.5 * t * rp1 * sp1;
-        deriv[19][2] = -0.5 * t * rm1 * sp1;
+        // with respect to s
+        deriv[0][2] = -rm * sm * (-2.0 - r - s - t) / 8.0 - rm * sm * tm / 8.0;
+        deriv[1][2] = -rp * sm * (-2.0 + r - s - t) / 8.0 - rp * sm * tm / 8.0;
+        deriv[2][2] = -rp * sp * (-2.0 + r + s - t) / 8.0 - rp * sp * tm / 8.0;
+        deriv[3][2] = -rm * sp * (-2.0 - r + s - t) / 8.0 - rm * sp * tm / 8.0;
+        deriv[4][2] = rm * sm * (-2.0 - r - s + t) / 8.0 + rm * sm * tp / 8.0;
+        deriv[5][2] = rp * sm * (-2.0 + r - s + t) / 8.0 + rp * sm * tp / 8.0;
+        deriv[6][2] = rp * sp * (-2.0 + r + s + t) / 8.0 + rp * sp * tp / 8.0;
+        deriv[7][2] = rm * sp * (-2.0 - r + s + t) / 8.0 + rm * sp * tp / 8.0;
+        deriv[8][2] = -rr * sm / 4.0;
+        deriv[9][2] = -rp * ss / 4.0;
+        deriv[10][2] = -rr * sp / 4.0;
+        deriv[11][2] = -rm * ss / 4.0;
+        deriv[12][2] = rr * sm / 4.0;
+        deriv[13][2] = rp * ss / 4.0;
+        deriv[14][2] = rr * sp / 4.0;
+        deriv[15][2] = rm * ss / 4.0;
+        deriv[16][2] = -rm * sm * t / 2.0;
+        deriv[17][2] = -rp * sm * t / 2.0;
+        deriv[18][2] = -rp * sp * t / 2.0;
+        deriv[19][2] = -rm * sp * t / 2.0;
     }
 }

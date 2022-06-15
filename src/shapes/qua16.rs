@@ -36,20 +36,19 @@ use russell_lab::{Matrix, Vector};
 ///        0
 /// ```
 ///
-/// # Note about edges
-///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to **Lin4** nodes
 pub struct Qua16 {}
 
 impl Qua16 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 16;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
     pub const EDGE_NNODE: usize = 4;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 4;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua16::EDGE_NNODE]; Qua16::NEDGE] = [
@@ -60,7 +59,7 @@ impl Qua16 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Qua16::NDIM]; Qua16::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua16::GEO_NDIM]; Qua16::NNODE] = [
         [-1.0       , -1.0       ],
         [ 1.0       , -1.0       ],
         [ 1.0       ,  1.0       ],
@@ -79,7 +78,17 @@ impl Qua16 {
         [-1.0 / 3.0 ,  1.0 / 3.0 ],
     ];
 
+    pub const INTERIOR_NODES: [usize; Qua16::N_INTERIOR_NODE] = [12, 13, 14, 15];
+
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -113,7 +122,16 @@ impl Qua16 {
         interp[15] = nn_r2 * nn_s3;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -129,13 +147,13 @@ impl Qua16 {
         let nn_s2 = (27.0 * s * s * s - 9.0 * s * s - 27.0 * s + 9.0) / 16.0;
         let nn_s3 = (-27.0 * s * s * s - 9.0 * s * s + 27.0 * s + 9.0) / 16.0;
 
-        // derivs of Lin4 interp w.r.t r
+        // derivatives of Lin4 interp with respect to r
         let dnn_dr0 = (-27.0 * r * r + 18.0 * r + 1.0) / 16.0;
         let dnn_dr1 = (27.0 * r * r + 18.0 * r - 1.0) / 16.0;
         let dnn_dr2 = (81.0 * r * r - 18.0 * r - 27.0) / 16.0;
         let dnn_dr3 = (-81.0 * r * r - 18.0 * r + 27.0) / 16.0;
 
-        // derivs of Lin4 interp w.r.t s
+        // derivatives of Lin4 interp with respect to s
         let dnn_ds0 = (-27.0 * s * s + 18.0 * s + 1.0) / 16.0;
         let dnn_ds1 = (27.0 * s * s + 18.0 * s - 1.0) / 16.0;
         let dnn_ds2 = (81.0 * s * s - 18.0 * s - 27.0) / 16.0;

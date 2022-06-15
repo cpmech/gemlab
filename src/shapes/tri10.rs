@@ -31,20 +31,19 @@ use russell_lab::{Matrix, Vector};
 ///     0
 /// ```
 ///
-/// # Note about edges
-///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to **Lin4** nodes
 pub struct Tri10 {}
 
 impl Tri10 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 10;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
     pub const EDGE_NNODE: usize = 4;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 1;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri10::EDGE_NNODE]; Tri10::NEDGE] = [
@@ -54,7 +53,7 @@ impl Tri10 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Tri10::NDIM]; Tri10::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri10::GEO_NDIM]; Tri10::NNODE] = [
         [0.0       , 0.0      ], // 0
         [1.0       , 0.0      ], // 1
         [0.0       , 1.0      ], // 2
@@ -67,7 +66,17 @@ impl Tri10 {
         [1.0 / 3.0 , 1.0 / 3.0], // 9
     ];
 
+    pub const INTERIOR_NODES: [usize; Tri10::N_INTERIOR_NODE] = [9];
+
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -88,7 +97,16 @@ impl Tri10 {
         interp[9] = 27.0 * s * z * r;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 

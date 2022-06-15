@@ -1,3 +1,5 @@
+#![feature(no_coverage)]
+
 //! Gemlab -- Geometry, meshes, and integration for finite element analyses
 
 /// Defines a type alias for the error type as a static string

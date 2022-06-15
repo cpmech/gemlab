@@ -1,4 +1,4 @@
-use crate::shapes::{GeoKind, Shape, StateOfShape};
+use crate::shapes::{GeoKind, Scratchpad};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
@@ -27,23 +27,23 @@ pub struct AnalyticalTet4 {
 }
 
 impl AnalyticalTet4 {
-    pub fn new(shape: &Shape, state: &StateOfShape) -> Self {
-        assert_eq!(shape.kind, GeoKind::Tet4);
+    pub fn new(pad: &Scratchpad) -> Self {
+        assert_eq!(pad.kind, GeoKind::Tet4);
 
-        let x1 = state.coords_transp[0][0];
-        let x2 = state.coords_transp[0][1];
-        let x3 = state.coords_transp[0][2];
-        let x4 = state.coords_transp[0][3];
+        let x1 = pad.xxt[0][0];
+        let x2 = pad.xxt[0][1];
+        let x3 = pad.xxt[0][2];
+        let x4 = pad.xxt[0][3];
 
-        let y1 = state.coords_transp[1][0];
-        let y2 = state.coords_transp[1][1];
-        let y3 = state.coords_transp[1][2];
-        let y4 = state.coords_transp[1][3];
+        let y1 = pad.xxt[1][0];
+        let y2 = pad.xxt[1][1];
+        let y3 = pad.xxt[1][2];
+        let y4 = pad.xxt[1][3];
 
-        let z1 = state.coords_transp[2][0];
-        let z2 = state.coords_transp[2][1];
-        let z3 = state.coords_transp[2][2];
-        let z4 = state.coords_transp[2][3];
+        let z1 = pad.xxt[2][0];
+        let z2 = pad.xxt[2][1];
+        let z3 = pad.xxt[2][2];
+        let z4 = pad.xxt[2][3];
 
         let x12 = x1 - x2;
         let x13 = x1 - x3;
@@ -134,15 +134,10 @@ impl AnalyticalTet4 {
     ///
     /// # Input
     ///
-    /// * `shape` -- The same shape used in `new` because we need the nodal coordinates here.
-    ///              Do not change the coordinates, otherwise the values will be wrong.
-    pub fn integ_vec_a_linear_along_z(&self, state: &StateOfShape) -> Vec<f64> {
-        let (z1, z2, z3, z4) = (
-            state.coords_transp[2][0],
-            state.coords_transp[2][1],
-            state.coords_transp[2][2],
-            state.coords_transp[2][3],
-        );
+    /// * `pad` -- The same pad used in `new` because we need the nodal coordinates here.
+    ///            Do not change the coordinates, otherwise the values will be wrong.
+    pub fn integ_vec_a_linear_along_z(&self, pad: &Scratchpad) -> Vec<f64> {
+        let (z1, z2, z3, z4) = (pad.xxt[2][0], pad.xxt[2][1], pad.xxt[2][2], pad.xxt[2][3]);
         vec![
             (self.volume * (2.0 * z1 + z2 + z3 + z4)) / 20.0,
             (self.volume * (z1 + 2.0 * z2 + z3 + z4)) / 20.0,
@@ -244,7 +239,7 @@ impl AnalyticalTet4 {
 #[cfg(test)]
 mod tests {
     use super::AnalyticalTet4;
-    use crate::shapes::{Shape, StateOfShape};
+    use crate::shapes::{op, GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
@@ -252,15 +247,26 @@ mod tests {
     #[test]
     fn analytical_tet4_works() -> Result<(), StrError> {
         // unit tet4
-        let shape = Shape::new(3, 3, 4).unwrap();
-        let mut state =
-            StateOfShape::new(3, &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]).unwrap();
-        let mut tet = AnalyticalTet4::new(&shape, &mut state);
-        shape.calc_gradient(&mut state, &[0.1, 0.1, 0.1])?;
+        let space_ndim = 3;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4)?;
+        pad.set_xx(0, 0, 0.0);
+        pad.set_xx(0, 1, 0.0);
+        pad.set_xx(0, 2, 0.0);
+        pad.set_xx(1, 0, 1.0);
+        pad.set_xx(1, 1, 0.0);
+        pad.set_xx(1, 2, 0.0);
+        pad.set_xx(2, 0, 0.0);
+        pad.set_xx(2, 1, 1.0);
+        pad.set_xx(2, 2, 0.0);
+        pad.set_xx(3, 0, 0.0);
+        pad.set_xx(3, 1, 0.0);
+        pad.set_xx(3, 2, 1.0);
+        let mut tet = AnalyticalTet4::new(&pad);
+        op::calc_gradient(&mut pad, &[0.1, 0.1, 0.1])?;
         assert_eq!(tet.volume, 1.0 / 6.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        assert_vec_approx_eq!(tet.gg.as_data(), state.gradient.as_data(), 1e-15);
+        assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
         let ee = 480.0;
         let nu = 1.0 / 3.0;
         let eb = ee / (12.0 * (1.0 - 2.0 * nu) * (1.0 + nu));
@@ -286,15 +292,26 @@ mod tests {
         let kk = tet.integ_stiffness(ee, nu)?;
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
 
-        // random tet4
-        let mut state =
-            StateOfShape::new(3, &[[2.0, 3.0, 4.0], [6.0, 3.0, 2.0], [2.0, 5.0, 1.0], [4.0, 3.0, 6.0]]).unwrap();
-        let mut tet = AnalyticalTet4::new(&shape, &mut state);
-        shape.calc_gradient(&mut state, &[0.1, 0.2, 0.3])?;
+        // non-right-angles tet4
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4)?;
+        pad.set_xx(0, 0, 2.0);
+        pad.set_xx(0, 1, 3.0);
+        pad.set_xx(0, 2, 4.0);
+        pad.set_xx(1, 0, 6.0);
+        pad.set_xx(1, 1, 3.0);
+        pad.set_xx(1, 2, 2.0);
+        pad.set_xx(2, 0, 2.0);
+        pad.set_xx(2, 1, 5.0);
+        pad.set_xx(2, 2, 1.0);
+        pad.set_xx(3, 0, 4.0);
+        pad.set_xx(3, 1, 3.0);
+        pad.set_xx(3, 2, 6.0);
+        let mut tet = AnalyticalTet4::new(&pad);
+        op::calc_gradient(&mut pad, &[0.1, 0.2, 0.3])?;
         assert_eq!(tet.volume, 4.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        assert_vec_approx_eq!(tet.gg.as_data(), state.gradient.as_data(), 1e-15);
+        assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
         let kk = tet.integ_stiffness(ee, nu)?;
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[

@@ -44,6 +44,8 @@ use russell_lab::{Matrix, Vector};
 ///           1
 /// ```
 ///
+/// * The order of edge nodes corresponds to **Lin2** nodes.
+///
 /// # Local IDs of faces
 ///
 /// ```text
@@ -63,14 +65,12 @@ use russell_lab::{Matrix, Vector};
 /// 1----------------2'
 /// ```
 ///
-/// # Note about face nodes
-///
 /// * The order of face nodes is such that the normals are outward
 /// * The order of face nodes corresponds to **Qua4** nodes
 pub struct Hex8 {}
 
 impl Hex8 {
-    pub const NDIM: usize = 3;
+    pub const GEO_NDIM: usize = 3;
     pub const NNODE: usize = 8;
     pub const NEDGE: usize = 12;
     pub const NFACE: usize = 6;
@@ -115,7 +115,7 @@ impl Hex8 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Hex8::NDIM]; Hex8::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Hex8::GEO_NDIM]; Hex8::NNODE] = [
         [-1.0, -1.0, -1.0],
         [ 1.0, -1.0, -1.0],
         [ 1.0,  1.0, -1.0],
@@ -127,53 +127,82 @@ impl Hex8 {
     ];
 
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
-        interp[0] = (1.0 - r - s + r * s - t + s * t + r * t - r * s * t) / 8.0;
-        interp[1] = (1.0 + r - s - r * s - t + s * t - r * t + r * s * t) / 8.0;
-        interp[2] = (1.0 + r + s + r * s - t - s * t - r * t - r * s * t) / 8.0;
-        interp[3] = (1.0 - r + s - r * s - t - s * t + r * t + r * s * t) / 8.0;
-        interp[4] = (1.0 - r - s + r * s + t - s * t - r * t + r * s * t) / 8.0;
-        interp[5] = (1.0 + r - s - r * s + t - s * t + r * t - r * s * t) / 8.0;
-        interp[6] = (1.0 + r + s + r * s + t + s * t + r * t + r * s * t) / 8.0;
-        interp[7] = (1.0 - r + s - r * s + t + s * t - r * t - r * s * t) / 8.0;
+        let rm = 1.0 - r;
+        let sm = 1.0 - s;
+        let tm = 1.0 - t;
+        let rp = 1.0 + r;
+        let sp = 1.0 + s;
+        let tp = 1.0 + t;
+
+        interp[0] = rm * sm * tm / 8.0;
+        interp[1] = rp * sm * tm / 8.0;
+        interp[2] = rp * sp * tm / 8.0;
+        interp[3] = rm * sp * tm / 8.0;
+        interp[4] = rm * sm * tp / 8.0;
+        interp[5] = rp * sm * tp / 8.0;
+        interp[6] = rp * sp * tp / 8.0;
+        interp[7] = rm * sp * tp / 8.0;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
-        deriv[0][0] = (-1.0 + s + t - s * t) / 8.0;
-        deriv[0][1] = (-1.0 + r + t - r * t) / 8.0;
-        deriv[0][2] = (-1.0 + r + s - r * s) / 8.0;
+        let rm = 1.0 - r;
+        let sm = 1.0 - s;
+        let tm = 1.0 - t;
+        let rp = 1.0 + r;
+        let sp = 1.0 + s;
+        let tp = 1.0 + t;
 
-        deriv[1][0] = (1.0 - s - t + s * t) / 8.0;
-        deriv[1][1] = (-1.0 - r + t + r * t) / 8.0;
-        deriv[1][2] = (-1.0 - r + s + r * s) / 8.0;
+        // with respect to r
+        deriv[0][0] = -sm * tm / 8.0;
+        deriv[1][0] = sm * tm / 8.0;
+        deriv[2][0] = sp * tm / 8.0;
+        deriv[3][0] = -sp * tm / 8.0;
+        deriv[4][0] = -sm * tp / 8.0;
+        deriv[5][0] = sm * tp / 8.0;
+        deriv[6][0] = sp * tp / 8.0;
+        deriv[7][0] = -sp * tp / 8.0;
 
-        deriv[2][0] = (1.0 + s - t - s * t) / 8.0;
-        deriv[2][1] = (1.0 + r - t - r * t) / 8.0;
-        deriv[2][2] = (-1.0 - r - s - r * s) / 8.0;
+        // with respect to s
+        deriv[0][1] = -rm * tm / 8.0;
+        deriv[1][1] = -rp * tm / 8.0;
+        deriv[2][1] = rp * tm / 8.0;
+        deriv[3][1] = rm * tm / 8.0;
+        deriv[4][1] = -rm * tp / 8.0;
+        deriv[5][1] = -rp * tp / 8.0;
+        deriv[6][1] = rp * tp / 8.0;
+        deriv[7][1] = rm * tp / 8.0;
 
-        deriv[3][0] = (-1.0 - s + t + s * t) / 8.0;
-        deriv[3][1] = (1.0 - r - t + r * t) / 8.0;
-        deriv[3][2] = (-1.0 + r - s + r * s) / 8.0;
-
-        deriv[4][0] = (-1.0 + s - t + s * t) / 8.0;
-        deriv[4][1] = (-1.0 + r - t + r * t) / 8.0;
-        deriv[4][2] = (1.0 - r - s + r * s) / 8.0;
-
-        deriv[5][0] = (1.0 - s + t - s * t) / 8.0;
-        deriv[5][1] = (-1.0 - r - t - r * t) / 8.0;
-        deriv[5][2] = (1.0 + r - s - r * s) / 8.0;
-
-        deriv[6][0] = (1.0 + s + t + s * t) / 8.0;
-        deriv[6][1] = (1.0 + r + t + r * t) / 8.0;
-        deriv[6][2] = (1.0 + r + s + r * s) / 8.0;
-
-        deriv[7][0] = (-1.0 - s - t - s * t) / 8.0;
-        deriv[7][1] = (1.0 - r + t - r * t) / 8.0;
-        deriv[7][2] = (1.0 - r + s - r * s) / 8.0;
+        // with respect to t
+        deriv[0][2] = -rm * sm / 8.0;
+        deriv[1][2] = -rp * sm / 8.0;
+        deriv[2][2] = -rp * sp / 8.0;
+        deriv[3][2] = -rm * sp / 8.0;
+        deriv[4][2] = rm * sm / 8.0;
+        deriv[5][2] = rp * sm / 8.0;
+        deriv[6][2] = rp * sp / 8.0;
+        deriv[7][2] = rm * sp / 8.0;
     }
 }

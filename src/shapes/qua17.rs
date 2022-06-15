@@ -38,20 +38,19 @@ use russell_lab::{Matrix, Vector};
 ///        0
 /// ```
 ///
-/// # Note about edges
-///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to **Lin5** nodes
 pub struct Qua17 {}
 
 impl Qua17 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 17;
     pub const NEDGE: usize = 4;
     pub const NFACE: usize = 0;
     pub const EDGE_NNODE: usize = 5;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 1;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua17::EDGE_NNODE]; Qua17::NEDGE] = [
@@ -62,7 +61,7 @@ impl Qua17 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Qua17::NDIM]; Qua17::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Qua17::GEO_NDIM]; Qua17::NNODE] = [
         [-1.0, -1.0], //  0
         [ 1.0, -1.0], //  1
         [ 1.0,  1.0], //  2
@@ -82,7 +81,17 @@ impl Qua17 {
         [ 0.0,  0.0], // 16
     ];
 
+    pub const INTERIOR_NODES: [usize; Qua17::N_INTERIOR_NODE] = [16];
+
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -114,7 +123,16 @@ impl Qua17 {
         interp[16] = rm * rp * sm * sp
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 

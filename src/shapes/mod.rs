@@ -1,5 +1,8 @@
 //! Interpolation functions and derivatives for geometric shapes (elements)
 //!
+//! **Important:** See the **submodule [op]** for functions to perform the calculations discussed below.
+//! The submodule [op] also offers some examples.
+//!
 //! # Definitions
 //!
 //! Here, we consider the following definitions:
@@ -29,6 +32,18 @@
 //! * `face_nnode` -- number of points/nodes that define the face
 //! * `face_nedge` -- number of edges on the face
 //!
+//! Geometry cases regarding the number of dimensions (geo vs space)
+//!
+//! 1. Case `CABLE` -- `geo_ndim = 1` and `space_ndim = 2 or 3`; e.g., line in 2D or 3D (cables and rods)
+//! 2. Case `SHELL` -- `geo_ndim = 2` and `space_ndim = 3`; e.g. Tri or Qua in 3D (shells and surfaces)
+//! 3. Case `SOLID` -- `geo_ndim = space_ndim`; e.g., Tri and Qua in 2D or Tet and Hex in 3D
+//!
+//! | `geo_ndim` | `space_ndim = 2` | `space_ndim = 3` |
+//! |:----------:|:----------------:|:----------------:|
+//! |     1      |     `CABLE`      |     `CABLE`      |
+//! |     2      |     `SOLID`      |     `SHELL`      |
+//! |     3      |    impossible    |     `SOLID`      |
+//!
 //! # Isoparametric formulation
 //!
 //! The isoparametric formulation establishes that we can calculate the coordinates `x(ξ)`
@@ -38,7 +53,7 @@
 //! ```text
 //! → →         →  →
 //! x(ξ) = Σ Nᵐ(ξ) xᵐ
-//!        m         
+//!        m
 //! ```
 //!
 //! where `x` is the (space_ndim) vector of real coordinates, `ξ` is the (geo_ndim)
@@ -58,12 +73,12 @@
 //!
 //! Here, we consider two cases:
 //!
-//! * General case with geo_ndim == space_ndim; and
+//! * General case with geo_ndim = space_ndim; and
 //! * Line in multi-dimensions with geo_ndim = 1 and space_ndim > 1.
 //!
-//! ## General case with geo_ndim == space_ndim
+//! ## SOLID case with geo_ndim = space_ndim
 //!
-//! If `geo_ndim == space_ndim`, we define the Jacobian tensor as
+//! If `SOLID` (`geo_ndim = space_ndim = 2 or 3`), we define the Jacobian tensor as
 //!
 //! ```text
 //!         →
@@ -87,7 +102,7 @@
 //! reference coordinate. `Lᵐ` are (geo_ndim) vectors and can be organized in
 //! an (nnode,geo_ndim) matrix `L` of **local** derivatives.
 //!
-//! We can write the Jacobian in matrix notation as follows
+//! We can write the Jacobian in matrix (space_ndim,geo_ndim) notation as follows
 //!
 //! ```text
 //! J = Xᵀ · L
@@ -96,7 +111,7 @@
 //! where `X` is the (nnode,space_ndim) matrix of coordinates and `L` is the (nnode,geo_ndim) matrix.
 //!
 //! Next, we define the gradient of interpolation functions (i.e., derivatives of interpolation
-//! functions w.r.t real coordinates) by means of
+//! functions with respect to real coordinates) by means of
 //!
 //! ```text
 //!             →
@@ -123,16 +138,36 @@
 //!
 //! where `G` is an (nnode,space_ndim) matrix.
 //!
-//! ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+//! ## SHELL case with geo_ndim = 2 and space_ndim = 3
+//!
+//! In this case, the Jacobian matrix is (3,2) and can also be computed by the following matrix
+//! multiplication
+//!
+//! ```text
+//!        dx
+//! J(ξ) = ——
+//!        dξ
+//! ```
+//!
+//! Or, in matrix notation,
+//!
+//! ```text
+//! J = Jshell = Xᵀ · L
+//! ```
+//!
+//! However, the inverse Jacobian and gradients are not available in this case.
+//!
+//! ## CABLE case with geo_ndim = 1 and space_ndim = 2 or 3
 //!
 //! In this case, the Jacobian equals the (space_ndim,1) base vector `g₁` which
 //! is tangent to the line element, i.e.,
 //!
 //! ```text
-//!                          →
-//! →    →     →            dx
-//! J := Jline(ξ) = g₁(ξ) = —— = Xᵀ · L
-//!                         dξ
+//!                           →
+//! →    →      →    →  →    dx
+//! J := Jcable(ξ) = g₁(ξ) = ——
+//!                          dξ
+//! matrix notation: Jcable = Xᵀ · L
 //! ```
 //!
 //! We also consider a parametric coordinate `ℓ` which varies
@@ -158,7 +193,7 @@
 //!
 //! # Normal vectors
 //!
-//! ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+//! ## CABLE case with geo_ndim = 1 and space_ndim = 2 or 3
 //!
 //! Base vector tangent to the line:
 //!
@@ -195,7 +230,7 @@
 //!
 //! because all [GeoClass::Lin] have `Δξ = 2`.
 //!
-//! ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
+//! ## SHELL case with geo_ndim = 2 and space_ndim = 3
 //!
 //! Base vectors tangent to the surface:
 //!
@@ -225,7 +260,7 @@
 //! dA := ||n|| dξ₁ dξ₂
 //! ```
 //!
-//! For flat quadrilateral faces:
+//! For flat quadrilateral faces with sides perpendicular one with another
 //!
 //! ```text
 //!   →
@@ -237,20 +272,22 @@
 
 mod enums;
 mod hex20;
+mod hex32;
 mod hex8;
 mod lin2;
 mod lin3;
 mod lin4;
 mod lin5;
+pub mod op;
 mod qua12;
 mod qua16;
 mod qua17;
 mod qua4;
 mod qua8;
 mod qua9;
-mod shape;
-mod state_of_shape;
+mod scratchpad;
 mod tet10;
+mod tet20;
 mod tet4;
 mod tri10;
 mod tri15;
@@ -258,6 +295,7 @@ mod tri3;
 mod tri6;
 pub use crate::shapes::enums::*;
 pub use crate::shapes::hex20::*;
+pub use crate::shapes::hex32::*;
 pub use crate::shapes::hex8::*;
 pub use crate::shapes::lin2::*;
 pub use crate::shapes::lin3::*;
@@ -269,9 +307,9 @@ pub use crate::shapes::qua17::*;
 pub use crate::shapes::qua4::*;
 pub use crate::shapes::qua8::*;
 pub use crate::shapes::qua9::*;
-pub use crate::shapes::shape::*;
-pub use crate::shapes::state_of_shape::*;
+pub use crate::shapes::scratchpad::*;
 pub use crate::shapes::tet10::*;
+pub use crate::shapes::tet20::*;
 pub use crate::shapes::tet4::*;
 pub use crate::shapes::tri10::*;
 pub use crate::shapes::tri15::*;

@@ -1,0 +1,17 @@
+# header
+# ndim npoint ncell
+     2      6     2
+
+# points
+# id   x   y
+   0 0.0 0.0
+   1 1.0 0.0
+   2 1.0 1.0
+   3 0.0 1.0
+   4 2.0 0.0
+   5 2.0 1.0
+
+# cells
+# id att kind   point_ids...
+   0   1 Qua4   0 1 2 3  
+   1   0 wrong  1 4 5 2  

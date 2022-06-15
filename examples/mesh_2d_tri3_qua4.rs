@@ -14,8 +14,8 @@ fn main() -> Result<(), StrError> {
     //     0.0     0.5     1.0
     let mesh = Mesh::from_text(
         r"# header
-          # space_ndim npoint ncell
-                     2      8     5
+          # ndim npoint ncell
+               2      8     5
           
           # points
           # id    x   y
@@ -29,12 +29,12 @@ fn main() -> Result<(), StrError> {
              7  1.0 1.0
           
           # cells
-          # id att geo_ndim nnode  point_ids...
-             0   1        2     3  0 1 3
-             1   1        2     3  1 2 4
-             2   1        2     4  1 4 6 3
-             3   1        2     3  5 3 6
-             4   1        2     3  7 6 4
+          # id att kind  point_ids...
+             0   1 tri3  0 1 3
+             1   1 tri3  1 2 4
+             2   1 qua4  1 4 6 3
+             3   1 tri3  5 3 6
+             4   1 tri3  7 6 4
          ",
     )?;
     println!("{}", mesh);

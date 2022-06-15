@@ -13,7 +13,7 @@ use russell_lab::{Matrix, Vector};
 /// 10     9,
 ///  |       ',
 ///  |         ',
-///  5   14      4,
+///  5    14     4,
 ///  |             ',
 ///  |               ',
 /// 11    12    13     8,
@@ -34,20 +34,19 @@ use russell_lab::{Matrix, Vector};
 ///     0
 /// ```
 ///
-/// # Note about edges
-///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to **Lin5** nodes
 pub struct Tri15 {}
 
 impl Tri15 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 15;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
     pub const EDGE_NNODE: usize = 5;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const N_INTERIOR_NODE: usize = 3;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri15::EDGE_NNODE]; Tri15::NEDGE] = [
@@ -57,7 +56,7 @@ impl Tri15 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Tri15::NDIM]; Tri15::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri15::GEO_NDIM]; Tri15::NNODE] = [
         [0.0  , 0.0 ], //  0
         [1.0  , 0.0 ], //  1
         [0.0  , 1.0 ], //  2
@@ -75,7 +74,17 @@ impl Tri15 {
         [0.25 , 0.5 ], // 14
     ];
 
+    pub const INTERIOR_NODES: [usize; Tri15::N_INTERIOR_NODE] = [12, 13, 14];
+
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -109,7 +118,16 @@ impl Tri15 {
         interp[14] = 128.0 * r * s * cc * t4;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 

@@ -32,14 +32,12 @@ use russell_lab::{Matrix, Vector};
 ///     0
 /// ```
 ///
-/// # Note about edges
-///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to **Lin2** nodes
 pub struct Tri3 {}
 
 impl Tri3 {
-    pub const NDIM: usize = 2;
+    pub const GEO_NDIM: usize = 2;
     pub const NNODE: usize = 3;
     pub const NEDGE: usize = 3;
     pub const NFACE: usize = 0;
@@ -55,13 +53,21 @@ impl Tri3 {
     ];
 
     #[rustfmt::skip]
-    pub const NODE_REFERENCE_COORDS: [[f64; Tri3::NDIM]; Tri3::NNODE] = [
+    pub const NODE_REFERENCE_COORDS: [[f64; Tri3::GEO_NDIM]; Tri3::NNODE] = [
         [0.0, 0.0],
         [1.0, 0.0],
         [0.0, 1.0],
     ];
 
     /// Computes the interpolation functions
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- interpolation function evaluated at ksi (nnode)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_interp(interp: &mut Vector, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
@@ -70,7 +76,16 @@ impl Tri3 {
         interp[2] = s;
     }
 
-    /// Computes the derivatives of interpolation functions
+    /// Computes the derivatives of interpolation functions with respect to the reference coordinates
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- derivatives of the interpolation function with respect to
+    ///   the reference coordinates ksi, evaluated at ksi (nnode,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, _: &[f64]) {
         deriv[0][0] = -1.0;
         deriv[1][0] = 1.0;

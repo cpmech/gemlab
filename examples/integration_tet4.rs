@@ -1,25 +1,25 @@
 use gemlab::integ::{default_integ_points, mat_gdg_stiffness};
-use gemlab::shapes::{Shape, StateOfShape};
+use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
 use russell_lab::{copy_matrix, Matrix};
 use russell_tensor::LinElasticity;
 
 fn main() -> Result<(), StrError> {
-    // coordinates of Tet4
-    #[rustfmt::skip]
-    let coords = [
-        [2.0, 3.0, 4.0],
-        [6.0, 3.0, 2.0],
-        [2.0, 5.0, 1.0],
-        [4.0, 3.0, 6.0],
-    ];
-
-    // shape and state
+    // scratchpad
     let space_ndim = 3;
-    let geo_ndim = 3;
-    let nnode = 4;
-    let shape = Shape::new(space_ndim, geo_ndim, nnode)?;
-    let mut state = StateOfShape::new(shape.geo_ndim, &coords)?;
+    let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4)?;
+    pad.set_xx(0, 0, 2.0);
+    pad.set_xx(0, 1, 3.0);
+    pad.set_xx(0, 2, 4.0);
+    pad.set_xx(1, 0, 6.0);
+    pad.set_xx(1, 1, 3.0);
+    pad.set_xx(1, 2, 2.0);
+    pad.set_xx(2, 0, 2.0);
+    pad.set_xx(2, 1, 5.0);
+    pad.set_xx(2, 2, 1.0);
+    pad.set_xx(3, 0, 4.0);
+    pad.set_xx(3, 1, 3.0);
+    pad.set_xx(3, 2, 6.0);
 
     // constants
     let young = 96.0;
@@ -29,10 +29,11 @@ fn main() -> Result<(), StrError> {
     let model = LinElasticity::new(young, poisson, two_dim, plane_stress);
 
     // stiffness
-    let nrow = shape.nnode * shape.space_ndim;
+    let nnode = pad.kind.nnode();
+    let nrow = nnode * space_ndim;
     let mut kk = Matrix::new(nrow, nrow);
-    let ips = default_integ_points(shape.kind);
-    mat_gdg_stiffness(&mut kk, &mut state, &shape, ips, 1.0, true, |dd, _| {
+    let ips = default_integ_points(pad.kind);
+    mat_gdg_stiffness(&mut kk, &mut pad, ips, 1.0, true, |dd, _| {
         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
     })?;
 
