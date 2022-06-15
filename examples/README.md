@@ -13,6 +13,8 @@
 
 Shows how to subdivide a rectangle (Block) into Qua8 cells.
 
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/integ_mom_inertia_disk.rs)
+
 The output is:
 
 ```text
@@ -56,6 +58,8 @@ The output is:
 
 ## find_in_grid_2d
 
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/find_in_grid_2d.rs)
+
 Uses GridSearch to assist in finding points in the x-y space.
 
 ![find_in_grid_2d](https://github.com/cpmech/gemlab/raw/main/data/figures/example_find_in_grid_2d.svg)
@@ -63,6 +67,8 @@ Uses GridSearch to assist in finding points in the x-y space.
 ## integ_mom_inertia_disk
 
 Approximates the second moment of inertia of a disk (circle).
+
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/integ_mom_inertia_disk.rs)
 
 First mesh:
 
@@ -80,6 +86,8 @@ mesh 2: second_mom_inertia = 63.61725006590863 (63.61725123519331): err = 1.17e-
 ```
 
 ## integ_mom_inertia_ring
+
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/integ_mom_inertia_ring.rs)
 
 Approximates the second moment of inertia of a ring.
 
