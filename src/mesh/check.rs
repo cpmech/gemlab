@@ -113,7 +113,7 @@ pub fn check_face_normals(
 /// Checks if there are overlapping points
 pub fn check_overlapping_points(mesh: &Mesh, tol: f64) -> Result<(), StrError> {
     let (min, max) = get_mesh_limits(mesh);
-    let mut grid = GridSearch::new(&min, &max, 0.01, GsNdiv::Default, GsTol::Spec(tol, tol, tol))?;
+    let mut grid = GridSearch::new(&min, &max, 0.01, GsNdiv::Prop(5), GsTol::Spec(tol, tol, tol))?;
     for point in &mesh.points {
         grid.insert(point.id, &point.coords)?;
     }
@@ -121,7 +121,8 @@ pub fn check_overlapping_points(mesh: &Mesh, tol: f64) -> Result<(), StrError> {
         match grid.find(&point.coords)? {
             Some(id) => {
                 if id != point.id {
-                    return Err("found overlapping point");
+                    println!("found overlapping points: {} => {}", id, point.id);
+                    return Err("found overlapping points");
                 }
             }
             None => (),
@@ -399,7 +400,7 @@ mod tests {
         mesh.points[1].coords[0] = 1e-3;
         assert_eq!(
             check_overlapping_points(&mesh, 1e-2).err(),
-            Some("found overlapping point")
+            Some("found overlapping points")
         );
     }
 }
