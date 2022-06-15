@@ -51,7 +51,7 @@ impl Structured {
         block.subdivide(target)
     }
 
-    /// Generates a mesh representing a quarter of a ring in 3D (extrusion along the z-direction)
+    /// Generates a mesh representing a quarter of a ring in 3D (extrusion along z)
     ///
     /// ```text
     /// y ^
@@ -240,7 +240,7 @@ impl Structured {
         join_meshes(&mesh_1_2, &mesh_3)
     }
 
-    /// Generates a mesh representing a quarter of a disk in 3D (extrusion along the z-direction) (A-version)
+    /// Generates a mesh representing a quarter of a disk in 3D (extrusion along z) (A-version)
     ///
     /// ```text
     /// y ^
@@ -327,7 +327,7 @@ impl Structured {
         join_meshes(&mesh_1_2, &mesh_3)
     }
 
-    /// Generates a mesh representing a quarter of a disk in 3D (extrusion along the z-direction) (B-version)
+    /// Generates a mesh representing a quarter of a disk in 3D (extrusion along z) (B-version)
     ///
     /// ```text
     /// y ^
@@ -585,6 +585,181 @@ impl Structured {
         let mesh_1_2_3 = join_meshes(&mesh_1_2, &mesh_3)?;
         join_meshes(&mesh_1_2_3, &mesh_4)
     }
+
+    /// Generates a mesh representing a quarter of a plate with a hole in 3D (extrusion along z)
+    ///
+    /// ```text
+    /// y ^
+    ///   ---------------------------------
+    ///   |                             .'|
+    ///   |                           .'  |
+    ///   |                         .'    |
+    ///   |                       .'      |
+    ///   #**=---__             .'        |
+    ///   |        '*._       .'          |
+    ///   |            *._  .'            |
+    ///   |               .'              |
+    ///   |             .'  *.            |
+    ///   #**=-__     .'      *           |
+    ///          '*..'         *          |
+    ///   .         \           *         |
+    ///              '           *        |
+    ///   .           |          *        |
+    ///               |          |        |
+    /// z o   -   -   ---------------------  --> x
+    ///   |<----r---->|<----a--->|<--b--->|
+    ///   |<----------------l------------>|
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `r` -- the radius of the hole
+    /// * `a` -- distance to make a ring around the hole
+    /// * `b` -- the difference `l-(r+a)` with 'l' being the length of the square plate
+    /// * `z` -- thickness (zmin = 0)
+    /// * `na` -- number of divisions along 'a' (must be > 0)
+    /// * `nb` -- number of divisions along 'b' (must be > 0)
+    /// * `n45` -- number of divisions along the 45 degrees angle
+    /// * `nz` -- number of divisions along 'z' (must be > 0)
+    /// * `target` -- [crate::shapes::GeoClass::Hex] shapes only
+    pub fn quarter_plate_hole_3d(
+        r: f64,
+        a: f64,
+        b: f64,
+        z: f64,
+        na: usize,
+        nb: usize,
+        n45: usize,
+        nz: usize,
+        target: GeoKind,
+    ) -> Result<Mesh, StrError> {
+        const COS_PI_BY_4: f64 = ONE_BY_SQRT_2;
+        let ra = r + a;
+        let c1 = r * SIN_PI_BY_8;
+        let c2 = r * COS_PI_BY_4;
+        let c3 = r * COS_PI_BY_8;
+        let d1 = ra * SIN_PI_BY_8;
+        let d2 = ra * COS_PI_BY_4;
+        let d3 = ra * COS_PI_BY_8;
+        let m = r + a / 2.0;
+        let n = ra + b / 2.0;
+        let l = ra + b;
+        let hl = l / 2.0;
+        let e = (c2 + d2) / 2.0;
+        let f = (d2 + l) / 2.0;
+        let hz = z / 2.0;
+        #[rustfmt::skip]
+        let mut block_1 = Block::new(&[
+            [ r, 0.0, 0.0],
+            [ra, 0.0, 0.0],
+            [d2,  d2, 0.0],
+            [c2,  c2, 0.0],
+            [ r, 0.0,   z],
+            [ra, 0.0,   z],
+            [d2,  d2,   z],
+            [c2,  c2,   z],
+            [ m, 0.0, 0.0],
+            [d3,  d1, 0.0],
+            [ e,   e, 0.0],
+            [c3,  c1, 0.0],
+            [ m, 0.0,   z],
+            [d3,  d1,   z],
+            [ e,   e,   z],
+            [c3,  c1,   z],
+            [ r, 0.0,  hz],
+            [ra, 0.0,  hz],
+            [d2,  d2,  hz],
+            [c2,  c2,  hz],
+        ])?;
+        #[rustfmt::skip]
+        let mut block_2 = Block::new(&[
+            [ c2, c2, 0.0],
+            [ d2, d2, 0.0],
+            [0.0, ra, 0.0],
+            [0.0,  r, 0.0],
+            [ c2, c2,   z],
+            [ d2, d2,   z],
+            [0.0, ra,   z],
+            [0.0,  r,   z],
+            [  e,  e, 0.0],
+            [ d1, d3, 0.0],
+            [0.0,  m, 0.0],
+            [ c1, c3, 0.0],
+            [  e,  e,   z],
+            [ d1, d3,   z],
+            [0.0,  m,   z],
+            [ c1, c3,   z],
+            [ c2, c2,  hz],
+            [ d2, d2,  hz],
+            [0.0, ra,  hz],
+            [0.0,  r,  hz],
+        ])?;
+        #[rustfmt::skip]
+        let mut block_3 = Block::new(&[
+            [ ra, 0.0, 0.0],
+            [  l, 0.0, 0.0],
+            [  l,   l, 0.0],
+            [ d2,  d2, 0.0],
+            [ ra, 0.0,   z],
+            [  l, 0.0,   z],
+            [  l,   l,   z],
+            [ d2,  d2,   z],
+            [  n, 0.0, 0.0],
+            [  l,  hl, 0.0],
+            [  f,   f, 0.0],
+            [ d3,  d1, 0.0],
+            [  n, 0.0,   z],
+            [  l,  hl,   z],
+            [  f,   f,   z],
+            [ d3,  d1,   z],
+            [ ra, 0.0,  hz],
+            [  l, 0.0,  hz],
+            [  l,   l,  hz],
+            [ d2,  d2,  hz],
+        ])?;
+        #[rustfmt::skip]
+        let mut block_4 = Block::new(&[
+            [ d2, d2, 0.0],
+            [  l,  l, 0.0],
+            [0.0,  l, 0.0],
+            [0.0, ra, 0.0],
+            [ d2, d2,   z],
+            [  l,  l,   z],
+            [0.0,  l,   z],
+            [0.0, ra,   z],
+            [  f,  f, 0.0],
+            [ hl,  l, 0.0],
+            [0.0,  n, 0.0],
+            [ d1, d3, 0.0],
+            [  f,  f,   z],
+            [ hl,  l,   z],
+            [0.0,  n,   z],
+            [ d1, d3,   z],
+            [ d2, d2,  hz],
+            [  l,  l,  hz],
+            [0.0,  l,  hz],
+            [0.0, ra,  hz],
+        ])?;
+        let ct_r = Constraint3D::CylinderZ(0.0, 0.0, r);
+        let ct_ra = Constraint3D::CylinderZ(0.0, 0.0, ra);
+        block_1.set_face_constraint(0, Some(ct_r.clone()))?;
+        block_1.set_face_constraint(1, Some(ct_ra.clone()))?;
+        block_1.set_ndiv(&[na, n45, nz])?;
+        block_2.set_face_constraint(0, Some(ct_r))?;
+        block_2.set_face_constraint(1, Some(ct_ra.clone()))?;
+        block_2.set_ndiv(&[na, n45, nz])?;
+        block_3.set_face_constraint(0, Some(ct_ra.clone()))?;
+        block_3.set_ndiv(&[nb, n45, nz])?;
+        block_4.set_face_constraint(0, Some(ct_ra.clone()))?;
+        block_4.set_ndiv(&[nb, n45, nz])?;
+        let mesh_1 = block_1.subdivide(target)?;
+        let mesh_2 = block_2.subdivide(target)?;
+        let mesh_3 = block_3.subdivide(target)?;
+        let mesh_4 = block_4.subdivide(target)?;
+        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
+        let mesh_1_2_3 = join_meshes(&mesh_1_2, &mesh_3)?;
+        join_meshes(&mesh_1_2_3, &mesh_4)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -596,7 +771,7 @@ mod tests {
     use crate::mesh::{check_overlapping_points, draw_mesh};
     use crate::shapes::GeoKind;
     use crate::StrError;
-    use russell_chk::assert_approx_eq;
+    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     #[test]
     fn quarter_ring_2d_works() -> Result<(), StrError> {
@@ -799,6 +974,39 @@ mod tests {
         assert_eq!(mesh.points[21].coords, &[3.0, 3.0]);
         if false {
             draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_plate_hole_2d.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn quarter_plate_hole_3d_works() -> Result<(), StrError> {
+        let mesh = Structured::quarter_plate_hole_3d(1.0, 1.0, 1.0, 1.5, 1, 1, 1, 1, GeoKind::Hex32)?;
+        assert_eq!(mesh.points.len(), 66 + 18);
+        assert_eq!(mesh.cells.len(), 4);
+        check_overlapping_points(&mesh, 0.13)?;
+        // z-min
+        for p in [0, 1, 2, 32, 33, 52, 53, 72] {
+            assert_eq!(mesh.points[p].coords[2], 0.0);
+        }
+        // z-max
+        for p in [4, 5, 6, 7, 34, 35, 54, 55, 73] {
+            assert_eq!(mesh.points[p].coords[2], 1.5);
+        }
+        // hole/inner
+        for p in [0, 15, 14, 3, 41, 40, 33] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0])?;
+            assert_approx_eq!(d, 1.0, 1e-15);
+        }
+        // hole/outer (ring)
+        for p in [1, 10, 11, 2, 36, 37, 32] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0])?;
+            assert_approx_eq!(d, 2.0, 1e-15);
+        }
+        assert_vec_approx_eq!(mesh.points[26].coords, &[2.0, 0.0, 0.5], 1e-15);
+        assert_vec_approx_eq!(mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
+        assert_vec_approx_eq!(mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
+        if false {
+            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_plate_hole_3d.svg")?;
         }
         Ok(())
     }
