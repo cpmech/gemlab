@@ -463,6 +463,128 @@ impl Structured {
         let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
         join_meshes(&mesh_1_2, &mesh_3)
     }
+
+    /// Generates a mesh representing a quarter of a plate with a hole in 2D
+    ///
+    /// ```text
+    /// y ^
+    ///   ---------------------------------
+    ///   |                             .'|
+    ///   |                           .'  |
+    ///   |                         .'    |
+    ///   |                       .'      |
+    ///   #**=---__             .'        |
+    ///   |        '*._       .'          |
+    ///   |            *._  .'            |
+    ///   |               .'              |
+    ///   |             .'  *.            |
+    ///   #**=-__     .'      *           |
+    ///          '*..'         *          |
+    ///   .         \           *         |
+    ///              '           *        |
+    ///   .           |          *        |
+    ///               |          |        |
+    ///   o   -   -   ---------------------  --> x
+    ///   |<----r---->|<----a--->|<--b--->|
+    ///   |<----------------l------------>|
+    /// ```
+    ///
+    /// # Input
+    ///
+    /// * `r` -- the radius of the hole
+    /// * `a` -- distance to make a ring around the hole
+    /// * `b` -- the difference `l-(r+a)` with 'l' being the length of the square plate
+    /// * `na` -- number of divisions along 'a' (must be > 0)
+    /// * `nb` -- number of divisions along 'b' (must be > 0)
+    /// * `n45` -- number of divisions along the 45 degrees angle
+    /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
+    pub fn quarter_plate_hole_2d(
+        r: f64,
+        a: f64,
+        b: f64,
+        na: usize,
+        nb: usize,
+        n45: usize,
+        target: GeoKind,
+    ) -> Result<Mesh, StrError> {
+        const COS_PI_BY_4: f64 = ONE_BY_SQRT_2;
+        let ra = r + a;
+        let c1 = r * SIN_PI_BY_8;
+        let c2 = r * COS_PI_BY_4;
+        let c3 = r * COS_PI_BY_8;
+        let d1 = ra * SIN_PI_BY_8;
+        let d2 = ra * COS_PI_BY_4;
+        let d3 = ra * COS_PI_BY_8;
+        let m = r + a / 2.0;
+        let n = ra + b / 2.0;
+        let l = ra + b;
+        let hl = l / 2.0;
+        let e = (c2 + d2) / 2.0;
+        let f = (d2 + l) / 2.0;
+        #[rustfmt::skip]
+        let mut block_1 = Block::new(&[
+            [ r, 0.0],
+            [ra, 0.0],
+            [d2,  d2],
+            [c2,  c2],
+            [ m, 0.0],
+            [d3,  d1],
+            [ e,   e],
+            [c3,  c1],
+        ])?;
+        #[rustfmt::skip]
+        let mut block_2 = Block::new(&[
+            [ c2, c2],
+            [ d2, d2],
+            [0.0, ra],
+            [0.0,  r],
+            [  e,  e],
+            [ d1, d3],
+            [0.0,  m],
+            [ c1, c3],
+        ])?;
+        #[rustfmt::skip]
+        let mut block_3 = Block::new(&[
+            [ ra, 0.0],
+            [  l, 0.0],
+            [  l,   l],
+            [ d2,  d2],
+            [  n, 0.0],
+            [  l,  hl],
+            [  f,   f],
+            [ d3,  d1],
+        ])?;
+        #[rustfmt::skip]
+        let mut block_4 = Block::new(&[
+            [ d2, d2],
+            [  l,  l],
+            [0.0,  l],
+            [0.0, ra],
+            [  f,  f],
+            [ hl,  l],
+            [0.0,  n],
+            [ d1, d3],
+        ])?;
+        let ct_r = Constraint2D::Circle(0.0, 0.0, r);
+        let ct_ra = Constraint2D::Circle(0.0, 0.0, ra);
+        block_1.set_edge_constraint(3, Some(ct_r.clone()))?;
+        block_1.set_edge_constraint(1, Some(ct_ra.clone()))?;
+        block_1.set_ndiv(&[na, n45])?;
+        block_2.set_edge_constraint(3, Some(ct_r))?;
+        block_2.set_edge_constraint(1, Some(ct_ra.clone()))?;
+        block_2.set_ndiv(&[na, n45])?;
+        block_3.set_edge_constraint(3, Some(ct_ra.clone()))?;
+        block_3.set_ndiv(&[nb, n45])?;
+        block_4.set_edge_constraint(3, Some(ct_ra.clone()))?;
+        block_4.set_ndiv(&[nb, n45])?;
+        let mesh_1 = block_1.subdivide(target)?;
+        let mesh_2 = block_2.subdivide(target)?;
+        let mesh_3 = block_3.subdivide(target)?;
+        let mesh_4 = block_4.subdivide(target)?;
+        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
+        let mesh_1_2_3 = join_meshes(&mesh_1_2, &mesh_3)?;
+        join_meshes(&mesh_1_2_3, &mesh_4)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -656,6 +778,27 @@ mod tests {
         }
         if false {
             draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_disk_3d_b_hex32.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn quarter_plate_hole_2d_works() -> Result<(), StrError> {
+        let mesh = Structured::quarter_plate_hole_2d(1.0, 1.0, 1.0, 1, 1, 1, GeoKind::Qua12)?;
+        assert_eq!(mesh.points.len(), 33);
+        assert_eq!(mesh.cells.len(), 4);
+        check_overlapping_points(&mesh, 0.18)?;
+        for p in [0, 11, 7, 3, 19, 16, 13] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 1.0, 1e-15);
+        }
+        for p in [1, 5, 9, 2, 14, 17, 12] {
+            let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0])?;
+            assert_approx_eq!(d, 2.0, 1e-15);
+        }
+        assert_eq!(mesh.points[21].coords, &[3.0, 3.0]);
+        if false {
+            draw_mesh(mesh, true, "/tmp/gemlab/test_quarter_plate_hole_2d.svg")?;
         }
         Ok(())
     }
