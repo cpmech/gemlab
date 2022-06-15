@@ -15,7 +15,7 @@ where
 fn test_tetrahedra() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/five_tets_within_cube.msh")?;
-    let region = Region::with(mesh, Extract::Boundary)?;
+    let region = Region::with(&mesh, Extract::Boundary)?;
     let npoint = region.mesh.points.len();
     assert_eq!(npoint, 8);
     assert_eq!(region.mesh.cells.len(), 5);
