@@ -1,4 +1,4 @@
-# Geometry, meshes, and integration for finite element analyses
+# Geometry, meshes, and numerical integration for finite element analyses
 
 This repository contains structures and functions to perform geometry computations, generate meshes, and perform numerical integration for finite element analyses (FEM/FEA).
 
@@ -102,7 +102,7 @@ where
 - [x] Implement read/write mesh functions
 - [x] Add tests for the numerical integrations
 - [ ] Implement triangle and tetrahedron generators
-- [ ] Implement drawing functions
+- [x] Implement drawing functions
 
 
 ## Appendix
