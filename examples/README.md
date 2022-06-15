@@ -13,7 +13,7 @@
 
 Shows how to subdivide a rectangle (Block) into Qua8 cells.
 
-[Source code](https://github.com/cpmech/gemlab/blob/main/examples/integ_mom_inertia_disk.rs)
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/block_2d_qua8.rs)
 
 The output is:
 
@@ -98,3 +98,93 @@ The output is:
 ```text
 second_mom_inertia = 62.83185310895357 (62.83185307179586): err = 3.72e-8
 ```
+
+## integration_tet4
+
+Computes the stiffness matrix of a Tet4 element.
+
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/integration_tet4.rs)
+
+The output is:
+
+```text
+┌                                                             ┐
+│  149  108   24   -1    6   12  -54  -48    0  -94  -66  -36 │
+│  108  344   54  -24  104   42  -24 -216  -12  -60 -232  -84 │
+│   24   54  113    0   30   35    0  -24  -54  -24  -60  -94 │
+│   -1  -24    0   29  -18  -12  -18   24    0  -10   18   12 │
+│    6  104   30  -18   44   18   12  -72  -12    0  -76  -36 │
+│   12   42   35  -12   18   29    0  -24  -18    0  -36  -46 │
+│  -54  -24    0  -18   12    0   36    0    0   36   12    0 │
+│  -48 -216  -24   24  -72  -24    0  144    0   24  144   48 │
+│    0  -12  -54    0  -12  -18    0    0   36    0   24   36 │
+│  -94  -60  -24  -10    0    0   36   24    0   68   36   24 │
+│  -66 -232  -60   18  -76  -36   12  144   24   36  164   72 │
+│  -36  -84  -94   12  -36  -46    0   48   36   24   72  104 │
+└                                                             ┘
+```
+
+## integration_tri3
+
+Performs numerical integrations with a Tri3 element.
+
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/integration_tri3.rs)
+
+```text
+a =
+┌                   ┐
+│ 36.00000000000001 │
+│                36 │
+│                36 │
+└                   ┘
+b =
+┌                    ┐
+│ 24.000000000000007 │
+│ 24.000000000000007 │
+│                 24 │
+│                 24 │
+│                 24 │
+│                 24 │
+└                    ┘
+c =
+┌    ┐
+│ -2 │
+│ -4 │
+│  6 │
+└    ┘
+d =
+┌     ┐
+│ -15 │
+│ -10 │
+│  12 │
+│   4 │
+│   3 │
+│   6 │
+└     ┘
+```
+
+## isoparametric_qua4
+
+Illustrates the isoparametric formula with a Qua4
+
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/isoparametric_qua4.rs)
+
+```text
+xm = 4, ym = 4.5
+x_interpolated =
+┌     ┐
+│   4 │
+│ 4.5 │
+└     ┘
+```
+
+## mesh_2d_tri3_qua4
+
+Converts a string into a Mesh of Tri3 and Qua4
+
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/mesh_2d_tri3_qua4.rs)
+
+Draws the following mesh:
+
+![mesh](https://github.com/cpmech/gemlab/raw/main/data/figures/example_mesh_2d_tri3_qua4.svg)
+
