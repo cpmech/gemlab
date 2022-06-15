@@ -16,7 +16,7 @@ fn main() -> Result<(), StrError> {
     let mut second_mom_inertia = 0.0; // second moment of inertia about the x-axis
     for cell in &mesh.cells {
         // set the matrix of coordinates from cell points
-        mesh::set_xxt_from_points(&mut pad, &cell.points, &mesh);
+        mesh::set_pad_coords(&mut pad, &cell.points, &mesh);
 
         // calculate the coordinates of the integration points
         let x_ips = integ::calc_ips_coords(&mut pad, ips)?;

@@ -1,7 +1,7 @@
 use super::{Mesh, PointId};
 use crate::shapes::Scratchpad;
 
-/// Sets the matrix of coordinates (transposed) Xᵀ given a list of point ids
+/// Sets the pad's matrix of coordinates X given a list of point ids
 ///
 /// # Panics
 ///
@@ -9,7 +9,7 @@ use crate::shapes::Scratchpad;
 /// 2. This function does not check for bounds on point indices and dimensions
 /// 3. Use [crate::mesh::check_all()] to capture (some) errors
 #[inline]
-pub fn set_xxt_from_points(pad: &mut Scratchpad, points: &[PointId], mesh: &Mesh) {
+pub fn set_pad_coords(pad: &mut Scratchpad, points: &[PointId], mesh: &Mesh) {
     let nnode = pad.kind.nnode();
     assert_eq!(nnode, points.len());
     for m in 0..nnode {
@@ -37,13 +37,13 @@ pub fn get_mesh_limits(mesh: &Mesh) -> (Vec<f64>, Vec<f64>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{get_mesh_limits, set_xxt_from_points};
+    use super::{get_mesh_limits, set_pad_coords};
     use crate::mesh::Samples;
     use crate::shapes::Scratchpad;
     use crate::StrError;
 
     #[test]
-    fn set_xxt_from_points_works_2d() -> Result<(), StrError> {
+    fn set_pad_coords_works_2d() -> Result<(), StrError> {
         //  3--------2--------5
         //  |        |        |
         //  |        |        |
@@ -52,7 +52,7 @@ mod tests {
         let mesh = Samples::two_quads_horizontal();
         let cell = &mesh.cells[0];
         let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
-        set_xxt_from_points(&mut pad, &cell.points, &mesh);
+        set_pad_coords(&mut pad, &cell.points, &mesh);
         assert_eq!(
             format!("{}", pad.xxt),
             "┌         ┐\n\
@@ -62,7 +62,7 @@ mod tests {
         );
         let cell = &mesh.cells[1];
         let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
-        set_xxt_from_points(&mut pad, &cell.points, &mesh);
+        set_pad_coords(&mut pad, &cell.points, &mesh);
         assert_eq!(
             format!("{}", pad.xxt),
             "┌         ┐\n\
@@ -74,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn set_xxt_from_points_works_3d() -> Result<(), StrError> {
+    fn set_pad_coords_works_3d() -> Result<(), StrError> {
         //       8-------------11
         //      /.             /|
         //     / .            / |
@@ -98,7 +98,7 @@ mod tests {
         let mesh = Samples::two_cubes_vertical();
         let cell = &mesh.cells[0];
         let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
-        set_xxt_from_points(&mut pad, &cell.points, &mesh);
+        set_pad_coords(&mut pad, &cell.points, &mesh);
         assert_eq!(
             format!("{}", pad.xxt),
             "┌                 ┐\n\
@@ -109,7 +109,7 @@ mod tests {
         );
         let cell = &mesh.cells[1];
         let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
-        set_xxt_from_points(&mut pad, &cell.points, &mesh);
+        set_pad_coords(&mut pad, &cell.points, &mesh);
         assert_eq!(
             format!("{}", pad.xxt),
             "┌                 ┐\n\

@@ -1,5 +1,5 @@
 use super::{Cell, Mesh, Point};
-use crate::mesh::{set_xxt_from_points, PointId};
+use crate::mesh::{set_pad_coords, PointId};
 use crate::shapes::op::draw_shape;
 use crate::shapes::{op, GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
 use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol, PI};
@@ -717,7 +717,7 @@ impl Block {
                                     continue; // skip edge that doesn't contain the constrained point
                                 }
                                 // set Lin2 with the first two (corner) points of target's edge
-                                set_xxt_from_points(
+                                set_pad_coords(
                                     &mut pad_lin2,
                                     &[points[target.edge_node_id(e, 0)], points[target.edge_node_id(e, 1)]],
                                     &mesh,
@@ -750,7 +750,7 @@ impl Block {
                                     let nn = pad_ser.interp.dim();
                                     points[0..nn].to_vec()
                                 };
-                                set_xxt_from_points(pad_ser, &pts, &mesh);
+                                set_pad_coords(pad_ser, &pts, &mesh);
                                 for idx in 0..target_n_interior_nodes {
                                     let m = target.interior_node(idx);
                                     let ksi_interior = target.reference_coords(m);

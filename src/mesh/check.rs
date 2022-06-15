@@ -1,4 +1,4 @@
-use super::{get_mesh_limits, set_xxt_from_points, Edge, EdgeKey, Face, FaceKey, Mesh};
+use super::{get_mesh_limits, set_pad_coords, Edge, EdgeKey, Face, FaceKey, Mesh};
 use crate::shapes::op::DET_JAC_NOT_AVAILABLE;
 use crate::shapes::{geo_case, op, GeoCase, Scratchpad};
 use crate::util::{GridSearch, GsNdiv, GsTol, ONE_BY_3};
@@ -42,7 +42,7 @@ pub fn check_jacobian(mesh: &Mesh) -> Result<(), StrError> {
     let ksi = [ONE_BY_3, ONE_BY_3, ONE_BY_3];
     for cell in &mesh.cells {
         let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
-        set_xxt_from_points(&mut pad, &cell.points, mesh);
+        set_pad_coords(&mut pad, &cell.points, mesh);
         let det_jac = op::calc_jacobian(&mut pad, &ksi)?;
         if geo_case(cell.kind.ndim(), mesh.ndim) == GeoCase::Shell {
             assert_eq!(det_jac, DET_JAC_NOT_AVAILABLE);
@@ -75,7 +75,7 @@ pub fn check_2d_edge_normals(
     for (edge_key, solution) in solutions {
         let edge = edges.get(edge_key).ok_or("cannot find edge_key in edges map")?;
         let mut pad = Scratchpad::new(mesh.ndim, edge.kind)?;
-        set_xxt_from_points(&mut pad, &edge.points, mesh);
+        set_pad_coords(&mut pad, &edge.points, mesh);
         op::calc_normal_vector(&mut normal, &mut pad, ksi)?;
         // shape.calc_boundary_normal(&mut normal, &mut state, ksi)?;
         for i in 0..mesh.ndim {
@@ -99,7 +99,7 @@ pub fn check_face_normals(
     for (face_key, solution) in solutions {
         let face = faces.get(face_key).ok_or("cannot find face_key in faces map")?;
         let mut pad = Scratchpad::new(mesh.ndim, face.kind)?;
-        set_xxt_from_points(&mut pad, &face.points, mesh);
+        set_pad_coords(&mut pad, &face.points, mesh);
         op::calc_normal_vector(&mut normal, &mut pad, ksi)?;
         for i in 0..mesh.ndim {
             if f64::abs(normal[i] - solution[i]) > tolerance {
