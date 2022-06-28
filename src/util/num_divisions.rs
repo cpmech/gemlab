@@ -12,7 +12,7 @@ use crate::StrError;
 ///
 /// # Input
 ///
-/// * `ndiv_min` -- minimum number of divisions for the other directions (≥ 2)
+/// * `ndiv_min` -- minimum number of divisions for the other directions (≥ 1)
 /// * `ndiv_long` -- number of divisions for the longest direction (> ndiv_min)
 /// * `min` -- min coordinates (len = ndim)
 /// * `max` -- min coordinates (len = ndim); must be greater than min
@@ -40,8 +40,8 @@ use crate::StrError;
 /// }
 /// ```
 pub fn num_divisions(ndiv_min: usize, ndiv_long: usize, min: &[f64], max: &[f64]) -> Result<Vec<usize>, StrError> {
-    if ndiv_min < 2 {
-        return Err("ndiv_min must be ≥ 2");
+    if ndiv_min < 1 {
+        return Err("ndiv_min must be ≥ 1");
     }
     if ndiv_long <= ndiv_min {
         return Err("ndiv_long must be > ndiv_min");
@@ -87,8 +87,8 @@ mod tests {
     #[test]
     fn num_divisions_fails_on_errors() {
         assert_eq!(
-            num_divisions(1, 20, &[0.0, 0.0], &[1.0, 1.0]).err(),
-            Some("ndiv_min must be ≥ 2")
+            num_divisions(0, 20, &[0.0, 0.0], &[1.0, 1.0]).err(),
+            Some("ndiv_min must be ≥ 1")
         );
         assert_eq!(
             num_divisions(2, 1, &[0.0, 0.0], &[1.0, 1.0]).err(),

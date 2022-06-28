@@ -1,7 +1,7 @@
 use super::{get_mesh_limits, set_pad_coords, Edge, EdgeKey, Face, FaceKey, Mesh};
 use crate::shapes::op::DET_JAC_NOT_AVAILABLE;
 use crate::shapes::{geo_case, op, GeoCase, Scratchpad};
-use crate::util::{GridSearch, GsNdiv, GsTol, ONE_BY_3};
+use crate::util::{GridSearch, ONE_BY_3};
 use crate::StrError;
 use russell_lab::Vector;
 use std::collections::HashMap;
@@ -113,7 +113,7 @@ pub fn check_face_normals(
 /// Checks if there are overlapping points
 pub fn check_overlapping_points(mesh: &Mesh, tol: f64) -> Result<(), StrError> {
     let (min, max) = get_mesh_limits(mesh);
-    let mut grid = GridSearch::new(&min, &max, 0.01, GsNdiv::Prop(5), GsTol::Spec(tol, tol, tol))?;
+    let mut grid = GridSearch::new(&min, &max, 0.01, Some(5), Some(tol))?;
     for point in &mesh.points {
         grid.insert(point.id, &point.coords)?;
     }

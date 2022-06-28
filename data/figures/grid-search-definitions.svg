@@ -25,9 +25,9 @@
      inkscape:document-units="pt"
      showgrid="true"
      inkscape:zoom="1.4475477"
-     inkscape:cx="400.33223"
-     inkscape:cy="399.64141"
-     inkscape:window-width="3436"
+     inkscape:cx="401.02305"
+     inkscape:cy="400.33223"
+     inkscape:window-width="1716"
      inkscape:window-height="1324"
      inkscape:window-x="0"
      inkscape:window-y="80"
@@ -917,6 +917,6 @@
          id="tspan16757"
          style="font-size:4.23333px;stroke-width:0.264583"
          x="128.19925"
-         y="131.64812">radius_tol</tspan></text>
+         y="131.64812">tol_dist</tspan></text>
   </g>
 </svg>

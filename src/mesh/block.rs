@@ -2,7 +2,7 @@ use super::{Cell, Mesh, Point};
 use crate::mesh::{set_pad_coords, PointId};
 use crate::shapes::op::draw_shape;
 use crate::shapes::{op, GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
-use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol, PI};
+use crate::util::{AsArray2D, GridSearch, PI};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
 use russell_lab::Vector;
@@ -549,13 +549,7 @@ impl Block {
         }
 
         // grid to search reference coordinates
-        let mut grid_ksi = GridSearch::new(
-            &vec![-1.0; ndim],
-            &vec![1.0; ndim],
-            0.01,
-            GsNdiv::Default,
-            GsTol::Default,
-        )?;
+        let mut grid_ksi = GridSearch::new(&vec![-1.0; ndim], &vec![1.0; ndim], 0.01, None, None)?;
 
         // resulting mesh
         let mut mesh = Mesh {
