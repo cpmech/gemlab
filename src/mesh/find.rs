@@ -63,7 +63,7 @@ impl Find {
     /// If the `features` does not correspond to `mesh`, a panic will occur.
     pub(crate) fn new(mesh: &Mesh, features: &Features) -> Result<Self, StrError> {
         // add point ids to grid
-        let mut grid = GridSearch::new(&features.min, &features.max, 0.01, None, None)?;
+        let mut grid = GridSearch::new(&features.min, &features.max, None, None, None)?;
         for point_id in &features.points {
             grid.insert(*point_id, &mesh.points[*point_id].coords)?;
         }

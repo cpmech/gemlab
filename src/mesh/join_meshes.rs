@@ -19,7 +19,7 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     let (_, _, boundary_a) = Features::new(a, Extract::Boundary);
 
     // allocate and prepare a GridSearch for mesh A
-    let mut grid_a = GridSearch::new(&boundary_a.min, &boundary_a.max, 0.01, None, None)?;
+    let mut grid_a = GridSearch::new(&boundary_a.min, &boundary_a.max, None, None, None)?;
     for m in 0..a.points.len() {
         grid_a.insert(a.points[m].id, &a.points[m].coords)?;
     }

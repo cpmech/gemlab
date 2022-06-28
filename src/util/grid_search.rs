@@ -5,7 +5,10 @@ use plotpy::{Canvas, Curve, Plot, Text};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-/// Default GridSearch number of divisions for all directions
+/// Default GridSearch expansion factor
+pub const GS_DEFAULT_EXPANSION: f64 = 0.01;
+
+/// Default GridSearch number of divisions for the longest direction
 pub const GS_DEFAULT_NDIV: usize = 20;
 
 /// Default GridSearch tolerance for all directions
@@ -35,7 +38,7 @@ type Containers = HashMap<ContainerKey, Container>;
 /// * `expansion` -- expansion factor for the bounding box.
 ///     - This constant serves to accommodate eventual imprecision near the boundaries.
 ///     - The value is a multiplier for `xdelta = xmax - xmin`
-///     - For example, **(recommended) expansion = 0.01** means 1% of delta
+///     - For example, expansion = 0.01 means 1% of delta
 /// * `ndiv` -- number of division for the longest direction
 /// * `tolerance` -- tolerance used to define the Halo and to compare points
 ///     - For example, tolerance = 1e-4
@@ -64,7 +67,7 @@ type Containers = HashMap<ContainerKey, Container>;
 /// fn main() -> Result<(), StrError> {
 ///     let xmin = &[0.0, 0.0];
 ///     let xmax = &[10.0, 10.0];
-///     let mut grid = GridSearch::new(xmin, xmax, 0.01, Some(2), None)?;
+///     let mut grid = GridSearch::new(xmin, xmax, None, Some(2), None)?;
 ///     grid.insert(123, &[5.5, SQRT_2])?;
 ///     assert_eq!(grid.find(&[5.5, SQRT_2])?, Some(123));
 ///     assert_eq!(grid.find(&[5.501, SQRT_2])?, None);
@@ -100,17 +103,20 @@ impl GridSearch {
     ///
     /// * `xmin` -- (ndim) minimum coordinates to define the boundary
     /// * `xmax` -- (ndim) maximum coordinates to define the boundary
-    /// * `expansion` -- expansion factor for the bounding box.
-    ///     - This constant serves to accommodate eventual imprecision near the boundaries.
+    /// * `expansion` -- expansion factor for the bounding box
+    ///     - Use [GS_DEFAULT_EXPANSION] if None
+    ///     - This constant serves to accommodate eventual imprecision near the boundaries
     ///     - The value is a multiplier for `xdelta = xmax - xmin`
-    ///     - For example, **(recommended) expansion = 0.01** means 1% of delta
+    ///     - For example, expansion = 0.01 means 1% of delta
     /// * `ndiv` -- number of division (≥ 1)
+    ///     - Use [GS_DEFAULT_NDIV] if None
     ///     - This number is used for the longest direction
     ///     - The other directions will be subdivided with a number such that the
     ///       containers will be square/cubic
     ///     - For the other directions, the minimum number of divisions will be 1,
     ///       in case they are too short compared with the longest direction
     /// * `tolerance` -- tolerance used to define the Halo and to compare points
+    ///     - Use [GS_DEFAULT_TOL] if None
     ///     - For example, tolerance = 1e-4
     ///
     /// Given the ndiv for the longest direction, the number of divisions for
@@ -134,7 +140,7 @@ impl GridSearch {
     pub fn new(
         xmin: &[f64],
         xmax: &[f64],
-        expansion: f64,
+        expansion: Option<f64>,
         ndiv: Option<usize>,
         tolerance: Option<f64>,
     ) -> Result<Self, StrError> {
@@ -145,6 +151,15 @@ impl GridSearch {
         }
         if xmax.len() != ndim {
             return Err("max.len() must equal ndim = min.len()");
+        }
+
+        // expansion
+        let expansion = match expansion {
+            Some(v) => v,
+            None => GS_DEFAULT_EXPANSION,
+        };
+        if expansion < 0.0 || expansion > 1.0 {
+            return Err("expansion must be ≥ 0.0 and ≤ 1.0");
         }
 
         // ndiv
