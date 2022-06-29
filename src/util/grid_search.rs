@@ -832,6 +832,21 @@ mod tests {
         [[-0.2, 1.8], [0.8, 1.8]], // horizontal line
         [[0.2, -0.2], [0.8, 0.1]],
     ];
+    const CYLINDER: ([f64; 3], [f64; 3], f64) = ([1.0, -1.0, -1.0], [1.0, 1.0, -1.0], 0.4); // a,b,radius
+    const POINTS_3D: [[f64; 3]; 8] = [
+        [-1.0 + NOISE, -1.0 + NOISE, -1.0 + NOISE],
+        [0.0, 0.0, 0.0],
+        [1.0, 1.0 + NOISE, 1.0],
+        [0.0, -0.5, -1.0 + NOISE],
+        [CYLINDER.0[0] - CYLINDER.2, CYLINDER.0[1], CYLINDER.0[2] + NOISE],
+        [CYLINDER.0[0], CYLINDER.0[1], CYLINDER.0[2] + CYLINDER.2 + NOISE],
+        [CYLINDER.1[0] - CYLINDER.2, CYLINDER.1[1], CYLINDER.1[2] + NOISE],
+        [CYLINDER.1[0], CYLINDER.1[1], CYLINDER.1[2] + CYLINDER.2 + NOISE],
+    ];
+    const LINES_3D: [[[f64; 3]; 2]; 2] = [
+        [[-1.0, -1.0, -1.0], [1.0, -1.0, -1.0]], // line along x
+        [[-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]],   // diagonal
+    ];
 
     fn add_sample_points_to_grid_2d(grid: &mut GridSearch) -> Result<(), StrError> {
         let mut id = 100;
@@ -840,6 +855,23 @@ mod tests {
             id += 1;
         }
         Ok(())
+    }
+
+    fn add_sample_points_to_grid_3d(grid: &mut GridSearch) -> Result<(), StrError> {
+        let mut id = 100;
+        for x in &POINTS_3D {
+            grid.insert(id, x)?;
+            id += 1;
+        }
+        Ok(())
+    }
+
+    fn sample_grid_2d() -> Result<GridSearch, StrError> {
+        GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(8), None, Some(0.1))
+    }
+
+    fn sample_grid_3d() -> Result<GridSearch, StrError> {
+        GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(2), None, Some(0.1))
     }
 
     #[test]
@@ -968,7 +1000,7 @@ mod tests {
 
     #[test]
     fn draw_works_2d() -> Result<(), StrError> {
-        let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(8), None, Some(0.1))?;
+        let mut grid = sample_grid_2d()?;
         add_sample_points_to_grid_2d(&mut grid)?;
         let mut plot = grid.draw()?;
         if false {
@@ -1010,34 +1042,43 @@ mod tests {
 
     #[test]
     fn draw_works_3d() -> Result<(), StrError> {
-        let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(3), None, Some(0.0))?;
+        let mut grid = sample_grid_3d()?;
+        add_sample_points_to_grid_3d(&mut grid)?;
         let mut plot = grid.draw()?;
         if false {
-            let mut curve = Curve::new();
-            curve.set_line_color("#fab32f").set_line_width(1.5);
-            curve.draw_3d(&[-1.0, 1.0], &[-1.0, -1.0], &[-1.0, -1.0]);
-            curve.draw_3d(&[-1.0, 1.0], &[-1.0, 1.0], &[-1.0, 1.0]);
+            // draw lines
+            let mut canvas = Canvas::new();
+            canvas.set_edge_color("#fab32f").set_line_width(1.5);
+            for l in &LINES_3D {
+                canvas.draw_polyline(l, false);
+            }
+            // draw cylinder used in search
+            let (a, b, r) = CYLINDER;
             let mut surface = Surface::new();
-            surface.set_with_surface(false).set_with_wireframe(true);
-            surface.draw_cylinder(&[1.0, -1.0, -1.0], &[1.0, 1.0, -1.0], 0.4, 1, 20)?;
-            plot.add(&curve);
-            plot.add(&surface);
-            plot.set_figure_size_points(600.0, 600.0);
-            plot.save("/tmp/gemlab/test_plot_grid_search_3d.svg")?;
+            surface
+                .set_with_surface(false)
+                .set_with_wireframe(true)
+                .set_line_color("#3da83b")
+                .draw_cylinder(&a, &b, r, 12, 30)?;
+            // setup and save figure
+            plot.add(&canvas).add(&surface);
+            plot.set_equal_axes(true)
+                .set_figure_size_points(800.0, 800.0)
+                .save("/tmp/gemlab/test_plot_grid_search_3d.svg")?;
         }
         Ok(())
     }
 
     #[test]
     fn set_halo_works() -> Result<(), StrError> {
-        let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(6), None, Some(0.0))?;
+        let mut grid = sample_grid_2d()?;
         grid.set_halo(&[0.5, 0.5]);
         assert_eq!(grid.halo[0], [0.4999, 0.4999]);
         assert_eq!(grid.halo[1], [0.5001, 0.4999]);
         assert_eq!(grid.halo[2], [0.5001, 0.5001]);
         assert_eq!(grid.halo[3], [0.4999, 0.5001]);
 
-        let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(3), None, Some(0.0))?;
+        let mut grid = sample_grid_3d()?;
         grid.set_halo(&[0.5, 0.5, 0.5]);
         assert_eq!(grid.halo[0], [0.4999, 0.4999, 0.4999]);
         assert_eq!(grid.halo[1], [0.5001, 0.4999, 0.4999]);
@@ -1050,154 +1091,96 @@ mod tests {
         Ok(())
     }
 
-    /*
     #[test]
-    fn container_index_works() -> Result<(), StrError> {
-        let g2d = get_test_grid_2d()?;
-        for data in get_test_data_2d() {
-            let index = g2d.calc_container_key(data.x);
-            assert_eq!(index, Some(data.container));
-        }
-        // outside, to the left
-        assert_eq!(g2d.calc_container_key(&[-10.0, 0.0]), None);
-        // outside, to the right
-        assert_eq!(g2d.calc_container_key(&[0.80001, 0.0]), None);
-        // outside, to the bottom
-        assert_eq!(g2d.calc_container_key(&[0.0, -1.0]), None);
-        // outside, to the top
-        assert_eq!(g2d.calc_container_key(&[0.0, 2.0]), None);
-        // outside, to the bottom-left
-        assert_eq!(g2d.calc_container_key(&[-100.0, -100.0]), None);
-        // outside, to the top-right
-        assert_eq!(g2d.calc_container_key(&[100.0, 100.0]), None);
+    fn calc_container_key_works() -> Result<(), StrError> {
+        let mut grid = sample_grid_2d()?;
+        // outside
+        assert_eq!(grid.calc_container_key(&[-10.0, 0.0]), None);
+        assert_eq!(grid.calc_container_key(&[10.0, 0.0]), None);
+        assert_eq!(grid.calc_container_key(&[0.0, -10.0]), None);
+        assert_eq!(grid.calc_container_key(&[0.0, 10.0]), None);
+        assert_eq!(grid.calc_container_key(&[-100.0, -100.0]), None);
+        assert_eq!(grid.calc_container_key(&[100.0, 100.0]), None);
+        // inside
+        assert_eq!(grid.calc_container_key(&[0.0 - 1e-4, 0.0 - 1e-4]), Some(0));
+        assert_eq!(grid.calc_container_key(&[0.1, 0.5]), Some(9));
+        assert_eq!(grid.calc_container_key(&[0.7, 0.8]), Some(15));
+        assert_eq!(grid.calc_container_key(&[-0.2, 1.8]), Some(24));
+        assert_eq!(grid.calc_container_key(&[0.8, 1.8]), Some(27));
 
-        let g3d = get_test_grid_3d()?;
-        for data in get_test_data_3d() {
-            let index = g3d.calc_container_key(data.x);
-            assert_eq!(index, Some(data.container));
-        }
-        assert_eq!(g3d.calc_container_key(&[1.00001, 0.0, 0.0]), None);
-        assert_eq!(g3d.calc_container_key(&[0.0, 1.00001, 0.0]), None);
-        assert_eq!(g3d.calc_container_key(&[0.0, 0.0, 1.00001]), None);
-        assert_eq!(g3d.calc_container_key(&[-10.0, -10.0, -10.0]), None);
-        assert_eq!(g3d.calc_container_key(&[10.0, -10.0, -10.0]), None);
-        assert_eq!(g3d.calc_container_key(&[-10.0, 10.0, -10.0]), None);
-        assert_eq!(g3d.calc_container_key(&[10.0, 10.0, -10.0]), None);
-        assert_eq!(g3d.calc_container_key(&[-10.0, -10.0, 10.0]), None);
-        assert_eq!(g3d.calc_container_key(&[10.0, -10.0, 10.0]), None);
-        assert_eq!(g3d.calc_container_key(&[-10.0, 10.0, 10.0]), None);
-        assert_eq!(g3d.calc_container_key(&[10.0, 10.0, 10.0]), None);
-        Ok(())
-    }
-
-    #[test]
-    fn container_index_handles_imprecision() -> Result<(), StrError> {
-        let grid = GridSearch::new(
-            &[6.123233995736766e-17, 0.0],
-            &[2.0000001, 2.0],
-            0.0,
-            GsNdiv::Default,
-            GsTol::Default,
-        )?;
-        if false {
-            let mut plot = grid.draw()?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(800.0, 800.0)
-                .save("/tmp/gemlab/test_container_index_handles_imprecision.svg")?;
-        }
-        assert_eq!(grid.calc_container_key(&[0.0, 0.0]), None);
-        assert_eq!(grid.calc_container_key(&[2.0, 0.0]), Some(19));
-        assert_eq!(grid.calc_container_key(&[2.0, 2.0]), Some(379));
-        assert_eq!(grid.calc_container_key(&[0.0, 2.0]), None);
-
-        let grid = GridSearch::new(
-            &[6.123233995736766e-17, 0.0],
-            &[2.0000001, 2.0],
-            0.01,
-            GsNdiv::Default,
-            GsTol::Default,
-        )?;
-        assert_eq!(grid.calc_container_key(&[0.0, 0.0]), Some(0));
-        assert_eq!(grid.calc_container_key(&[2.0, 0.0]), Some(19));
-        assert_eq!(grid.calc_container_key(&[2.0, 2.0]), Some(379));
-        assert_eq!(grid.calc_container_key(&[0.0, 2.0]), Some(360));
+        let mut grid = sample_grid_3d()?;
+        // outside
+        assert_eq!(grid.calc_container_key(&[-10.0, -10.0, -10.0]), None);
+        assert_eq!(grid.calc_container_key(&[10.0, -10.0, -10.0]), None);
+        assert_eq!(grid.calc_container_key(&[-10.0, 10.0, -10.0]), None);
+        assert_eq!(grid.calc_container_key(&[10.0, 10.0, -10.0]), None);
+        assert_eq!(grid.calc_container_key(&[-10.0, -10.0, 10.0]), None);
+        assert_eq!(grid.calc_container_key(&[10.0, -10.0, 10.0]), None);
+        assert_eq!(grid.calc_container_key(&[-10.0, 10.0, 10.0]), None);
+        assert_eq!(grid.calc_container_key(&[10.0, 10.0, 10.0]), None);
+        // inside
+        assert_eq!(grid.calc_container_key(&[-1.0, -1.0, -1.0]), Some(0));
+        assert_eq!(grid.calc_container_key(&[1.0, 1.0, 1.0]), Some(7));
         Ok(())
     }
 
     #[test]
     fn container_pivot_indices_works() -> Result<(), StrError> {
-        let g2d = get_test_grid_2d()?;
-        assert_eq!(g2d.container_pivot_indices(0), (0, 0, 0));
-        assert_eq!(g2d.container_pivot_indices(4), (4, 0, 0));
-        assert_eq!(g2d.container_pivot_indices(20), (0, 4, 0));
-        assert_eq!(g2d.container_pivot_indices(24), (4, 4, 0));
-        assert_eq!(g2d.container_pivot_indices(8), (3, 1, 0));
-        assert_eq!(g2d.container_pivot_indices(17), (2, 3, 0));
-        assert_eq!(g2d.container_pivot_indices(23), (3, 4, 0));
+        let mut grid = sample_grid_2d()?;
+        assert_eq!(grid.container_pivot_indices(0), (0, 0, 0));
+        assert_eq!(grid.container_pivot_indices(3), (3, 0, 0));
+        assert_eq!(grid.container_pivot_indices(4), (0, 1, 0));
+        assert_eq!(grid.container_pivot_indices(20), (0, 5, 0));
+        assert_eq!(grid.container_pivot_indices(27), (3, 6, 0));
 
-        let g3d = get_test_grid_3d()?;
-        assert_eq!(g3d.container_pivot_indices(0), (0, 0, 0));
-        assert_eq!(g3d.container_pivot_indices(2), (2, 0, 0));
-        assert_eq!(g3d.container_pivot_indices(6), (0, 2, 0));
-        assert_eq!(g3d.container_pivot_indices(8), (2, 2, 0));
-        assert_eq!(g3d.container_pivot_indices(18), (0, 0, 2));
-        assert_eq!(g3d.container_pivot_indices(20), (2, 0, 2));
-        assert_eq!(g3d.container_pivot_indices(24), (0, 2, 2));
-        assert_eq!(g3d.container_pivot_indices(26), (2, 2, 2));
-        assert_eq!(g3d.container_pivot_indices(13), (1, 1, 1));
+        let mut grid = sample_grid_3d()?;
+        assert_eq!(grid.container_pivot_indices(0), (0, 0, 0));
+        assert_eq!(grid.container_pivot_indices(2), (0, 1, 0));
+        assert_eq!(grid.container_pivot_indices(7), (1, 1, 1));
         Ok(())
     }
 
     #[test]
     fn container_center_works() -> Result<(), StrError> {
-        let g2d = get_test_grid_2d()?;
-        let mut cen2d = vec![0.0; 2];
-        g2d.container_center(&mut cen2d, 0, 0, 0);
-        assert_vec_approx_eq!(cen2d, &[-0.1, 0.0], 1e-15);
-        g2d.container_center(&mut cen2d, 4, 0, 0);
-        assert_vec_approx_eq!(cen2d, &[0.7, 0.0], 1e-15);
-        g2d.container_center(&mut cen2d, 0, 4, 0);
-        assert_vec_approx_eq!(cen2d, &[-0.1, 1.6], 1e-15);
-        g2d.container_center(&mut cen2d, 4, 4, 0);
-        assert_vec_approx_eq!(cen2d, &[0.7, 1.6], 1e-15);
-        g2d.container_center(&mut cen2d, 3, 1, 0);
-        assert_vec_approx_eq!(cen2d, &[0.5, 0.4], 1e-15);
-        g2d.container_center(&mut cen2d, 2, 3, 0);
-        assert_vec_approx_eq!(cen2d, &[0.3, 1.2], 1e-15);
-        g2d.container_center(&mut cen2d, 3, 4, 0);
-        assert_vec_approx_eq!(cen2d, &[0.5, 1.6], 1e-15);
+        let mut grid = sample_grid_2d()?;
+        let mut x = vec![0.0; 2];
+        let (xa, ya) = (grid.xmin[0], grid.xmin[1]);
+        let (xb, yb) = (grid.xmax[0], grid.xmax[1]);
+        let h = grid.side_length / 2.0;
+        grid.container_center(&mut x, 0, 0, 0);
+        assert_vec_approx_eq!(x, &[xa + h, ya + h], 1e-15);
+        grid.container_center(&mut x, grid.ndiv[0] - 1, grid.ndiv[1] - 1, 0);
+        assert_vec_approx_eq!(x, &[xb - h, yb - h], 1e-15);
 
-        let g3d = get_test_grid_3d()?;
-        let mut cen3d = vec![0.0; 3];
-        let l = 2.0 / 3.0;
-        let hl = l / 2.0;
-        let l2 = l * 2.0;
-        g3d.container_center(&mut cen3d, 0, 0, 0);
-        assert_vec_approx_eq!(cen3d, &[-1.0 + hl, -1.0 + hl, -1.0 + hl], 1e-14);
-        g3d.container_center(&mut cen3d, 2, 0, 0);
-        assert_vec_approx_eq!(cen3d, &[-1.0 + l2 + hl, -1.0 + hl, -1.0 + hl], 1e-14);
-        g3d.container_center(&mut cen3d, 0, 2, 0);
-        assert_vec_approx_eq!(cen3d, &[-1.0 + hl, -1.0 + l2 + hl, -1.0 + hl], 1e-14);
-        g3d.container_center(&mut cen3d, 2, 2, 2);
-        assert_vec_approx_eq!(cen3d, &[-1.0 + l2 + hl, -1.0 + l2 + hl, -1.0 + l2 + hl], 1e-14);
+        let mut grid = sample_grid_3d()?;
+        let mut x = vec![0.0; 3];
+        let (xa, ya, za) = (grid.xmin[0], grid.xmin[1], grid.xmin[2]);
+        let (xb, yb, zb) = (grid.xmax[0], grid.xmax[1], grid.xmax[2]);
+        let h = grid.side_length / 2.0;
+        grid.container_center(&mut x, 0, 0, 0);
+        assert_vec_approx_eq!(x, &[xa + h, ya + h, za + h], 1e-15);
+        grid.container_center(&mut x, grid.ndiv[0] - 1, grid.ndiv[1] - 1, grid.ndiv[2] - 1);
+        assert_vec_approx_eq!(x, &[xb - h, yb - h, zb - h], 1e-15);
         Ok(())
     }
 
     #[test]
     fn is_outside_works() -> Result<(), StrError> {
-        let g2d = get_test_grid_2d()?;
-        assert_eq!(g2d.is_outside(&[-0.3, 0.8]), true);
-        assert_eq!(g2d.is_outside(&[0.3, -0.3]), true);
-        assert_eq!(g2d.is_outside(&[0.3, 0.8]), false);
+        let grid = sample_grid_2d()?;
+        assert_eq!(grid.is_outside(&[-10.0, 0.0]), true);
+        assert_eq!(grid.is_outside(&[10.0, 0.0]), true);
+        assert_eq!(grid.is_outside(&[0.0,10.0]), true);
+        assert_eq!(grid.is_outside(&[0.0,-10.0]), true);
+        assert_eq!(grid.is_outside(&[0.0, 0.0]), false);
 
-        let g3d = get_test_grid_3d()?;
-        assert_eq!(g3d.is_outside(&[-1.1, 0.0, 0.0]), true);
-        assert_eq!(g3d.is_outside(&[0.0, -1.1, 0.0]), true);
-        assert_eq!(g3d.is_outside(&[0.0, 0.0, -1.1]), true);
-        assert_eq!(g3d.is_outside(&[0.0, 0.0, 0.0]), false);
+        let grid = sample_grid_3d()?;
+        assert_eq!(grid.is_outside(&[-10.0, 0.0, 0.0]), true);
+        assert_eq!(grid.is_outside(&[0.0, -10.0, 0.0]), true);
+        assert_eq!(grid.is_outside(&[0.0, 0.0, 0.0]), false);
         Ok(())
     }
 
+    /*
     #[test]
     fn insert_fails_on_wrong_input() -> Result<(), StrError> {
         let mut g2d = get_test_grid_2d()?;
