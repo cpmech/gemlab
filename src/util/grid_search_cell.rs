@@ -2,7 +2,7 @@
 
 use super::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE, SQRT_2, SQRT_3};
 use crate::StrError;
-use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
+use plotpy::{Canvas, Plot, PolyCode, Text};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -83,6 +83,9 @@ impl GridSearchCell {
             let nnode = get_nnode(c)?;
             for m in 0..nnode {
                 let x = get_x(c, m)?;
+                if x.len() != ndim {
+                    return Err("x.len() must be equal to ndim");
+                }
                 for i in 0..ndim {
                     // limits
                     xmin[i] = f64::min(xmin[i], x[i]);
@@ -219,7 +222,36 @@ impl GridSearchCell {
                 bbox.polycurve_add(x_min_max[0][I_MIN], x_min_max[1][I_MAX], PolyCode::LineTo);
                 bbox.polycurve_end(true);
             } else {
-                // TODO
+                bbox.polyline_3d_begin();
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MIN], x_min_max[2][I_MIN]);
+                bbox.polyline_3d_add(x_min_max[0][I_MAX], x_min_max[1][I_MIN], x_min_max[2][I_MIN]);
+                bbox.polyline_3d_add(x_min_max[0][I_MAX], x_min_max[1][I_MAX], x_min_max[2][I_MIN]);
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MAX], x_min_max[2][I_MIN]);
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MIN], x_min_max[2][I_MIN]);
+                bbox.polyline_3d_end();
+                bbox.polyline_3d_begin();
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MIN], x_min_max[2][I_MAX]);
+                bbox.polyline_3d_add(x_min_max[0][I_MAX], x_min_max[1][I_MIN], x_min_max[2][I_MAX]);
+                bbox.polyline_3d_add(x_min_max[0][I_MAX], x_min_max[1][I_MAX], x_min_max[2][I_MAX]);
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MAX], x_min_max[2][I_MAX]);
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MIN], x_min_max[2][I_MAX]);
+                bbox.polyline_3d_end();
+                bbox.polyline_3d_begin();
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MIN], x_min_max[2][I_MIN]);
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MIN], x_min_max[2][I_MAX]);
+                bbox.polyline_3d_end();
+                bbox.polyline_3d_begin();
+                bbox.polyline_3d_add(x_min_max[0][I_MAX], x_min_max[1][I_MIN], x_min_max[2][I_MIN]);
+                bbox.polyline_3d_add(x_min_max[0][I_MAX], x_min_max[1][I_MIN], x_min_max[2][I_MAX]);
+                bbox.polyline_3d_end();
+                bbox.polyline_3d_begin();
+                bbox.polyline_3d_add(x_min_max[0][I_MAX], x_min_max[1][I_MAX], x_min_max[2][I_MIN]);
+                bbox.polyline_3d_add(x_min_max[0][I_MAX], x_min_max[1][I_MAX], x_min_max[2][I_MAX]);
+                bbox.polyline_3d_end();
+                bbox.polyline_3d_begin();
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MAX], x_min_max[2][I_MIN]);
+                bbox.polyline_3d_add(x_min_max[0][I_MIN], x_min_max[1][I_MAX], x_min_max[2][I_MAX]);
+                bbox.polyline_3d_end();
             }
         }
 
@@ -300,6 +332,23 @@ mod tests {
         plot.add(&canvas);
     }
 
+    fn draw_tetrahedra(plot: &mut Plot, tets: &[[[f64; 3]; 4]]) {
+        const EDGES: [(usize, usize); 6] = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
+        let mut canvas = Canvas::new();
+        canvas.set_face_color("None").set_edge_color("#fcb827");
+        for t in 0..tets.len() {
+            for (ma, mb) in &EDGES {
+                let xa = &tets[t][*ma];
+                let xb = &tets[t][*mb];
+                canvas.polyline_3d_begin();
+                canvas.polyline_3d_add(xa[0], xa[1], xa[2]);
+                canvas.polyline_3d_add(xb[0], xb[1], xb[2]);
+                canvas.polyline_3d_end();
+            }
+        }
+        plot.add(&canvas);
+    }
+
     #[test]
     fn new_works_1() -> Result<(), StrError> {
         const TRIANGLES: [[[f64; 2]; 3]; 2] = [
@@ -321,12 +370,12 @@ mod tests {
         assert_eq!(grid.bbox_large, &[1.0, 1.0]);
         assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 2);
-        assert_eq!(grid.containers.len(), 2);
+        assert_eq!(grid.containers.len(), 4);
         let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
         let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(bbox_1, &[[0.0, 1.0], [0.0, 1.0]]);
-        if true {
+        if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIANGLES);
             grid.draw(&mut plot)?;
@@ -366,7 +415,7 @@ mod tests {
         let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(bbox_1, &[[0.0, 1.2], [0.0, 1.5]]);
-        if true {
+        if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIANGLES);
             grid.draw(&mut plot)?;
@@ -381,7 +430,42 @@ mod tests {
     }
 
     #[test]
-    fn insert_cell_works_2d() -> Result<(), StrError> {
+    fn new_works_3() -> Result<(), StrError> {
+        const TETS: [[[f64; 3]; 4]; 1] = [[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]];
+        let tolerance = 1e-3;
+        let border_tol = 0.1;
+        let get_nnode = |_| Ok(4);
+        let get_x = |t: usize, m: usize| Ok(&TETS[t][m][..]);
+        let mut grid = GridSearchCell::new(3, TETS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let max_len = 1.0;
+        let side_len = max_len + 2.0 * tolerance; // because the bbox is expanded
+        assert_eq!(grid.ndim, 3);
+        assert_eq!(grid.side_length, side_len);
+        assert_eq!(grid.ndiv, &[2, 2, 2]);
+        assert_eq!(grid.xmin, &[-0.1, -0.1, -0.1]);
+        assert_eq!(
+            grid.xmax,
+            &[-0.1 + side_len * 2.0, -0.1 + side_len * 2.0, -0.1 + side_len * 2.0]
+        );
+        assert_eq!(grid.bbox_large, &[1.0, 1.0, 1.0]);
+        assert_eq!(grid.tol_dist, SQRT_3 * tolerance);
+        assert_eq!(grid.bounding_boxes.len(), 1);
+        assert_eq!(grid.containers.len(), 8);
+        let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
+        assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]]);
+        if false {
+            let mut plot = Plot::new();
+            draw_tetrahedra(&mut plot, &TETS);
+            grid.draw(&mut plot)?;
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .save("/tmp/gemlab/test_grid_search_cell_new_3.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn gs_cell_works_2d() -> Result<(), StrError> {
         // [num_triangle][nnode=3][ndim=2]
         const TRIANGLES: [[[f64; 2]; 3]; 12] = [
             [[0.230951, 0.558482], [0.133721, 0.348832], [0.540745, 0.331184]],
@@ -400,7 +484,7 @@ mod tests {
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
         let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, None, None)?;
-        if true {
+        if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIANGLES);
             grid.draw(&mut plot)?;
@@ -409,45 +493,8 @@ mod tests {
                 .grid_and_labels("x", "y")
                 .set_ticks_x(0.2, 0.0, "")
                 .set_ticks_y(0.2, 0.0, "")
-                .save("/tmp/gemlab/test_grid_search_cell_insert_2d.svg")?;
+                .save("/tmp/gemlab/test_grid_search_cell_works_2d.svg")?;
         }
-        /*
-        println!("{}", grid);
-        let mut id = 0;
-        for t in 0..TRIANGLES.len() {
-            grid.insert_cell(id, 3, |m| Ok(&TRIANGLES[t][m]))?;
-            id += 1;
-        }
-        assert_eq!(
-            format!("{}", grid),
-            "0: [100, 101]\n\
-             ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
-             nitem = 12\n\
-             ncontainer = 21\n\
-             ndiv = [5, 5]\n"
-        );
-        if false {
-            let mut plot = Plot::new();
-            let mut canvas = Canvas::new();
-            canvas.set_face_color("#fefddc").set_edge_color("#fcb827");
-            for t in 0..TRIANGLES.len() {
-                canvas.polycurve_begin();
-                for m in 0..3 {
-                    let code = if m == 0 { PolyCode::MoveTo } else { PolyCode::LineTo };
-                    canvas.polycurve_add(&TRIANGLES[t][m][0], &TRIANGLES[t][m][1], code);
-                }
-                canvas.polycurve_end(true);
-            }
-            plot.add(&canvas);
-            grid.draw(&mut plot)?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .grid_and_labels("x", "y")
-                .set_ticks_x(0.1, 0.01, "")
-                .set_ticks_y(0.1, 0.01, "")
-                .save("/tmp/gemlab/test_insert_cell_2d.svg")?;
-        }
-        */
         Ok(())
     }
 }
