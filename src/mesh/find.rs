@@ -1,5 +1,5 @@
 use super::{EdgeKey, FaceKey, Features, Mesh, PointId};
-use crate::util::{GridSearch, GsNdiv, GsTol};
+use crate::util::GridSearch;
 use crate::StrError;
 use std::collections::{HashMap, HashSet};
 
@@ -63,7 +63,7 @@ impl Find {
     /// If the `features` does not correspond to `mesh`, a panic will occur.
     pub(crate) fn new(mesh: &Mesh, features: &Features) -> Result<Self, StrError> {
         // add point ids to grid
-        let mut grid = GridSearch::new(&features.min, &features.max, 0.01, GsNdiv::Default, GsTol::Default)?;
+        let mut grid = GridSearch::new(&features.min, &features.max, None, None, None)?;
         for point_id in &features.points {
             grid.insert(*point_id, &mesh.points[*point_id].coords)?;
         }
@@ -317,20 +317,20 @@ mod tests {
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
-        // plot_grid_two_quads_horizontal(&find)?;
+        if false {
+            plot_grid_two_quads_horizontal(&find)?;
+        }
         assert_eq!(
             format!("{}", find.grid),
             "0: [0]\n\
              9: [1]\n\
-             10: [1]\n\
              19: [4]\n\
              180: [3]\n\
              189: [2]\n\
-             190: [2]\n\
              199: [5]\n\
              ids = [0, 1, 2, 3, 4, 5]\n\
              nitem = 6\n\
-             ncontainer = 8\n\
+             ncontainer = 6\n\
              ndiv = [20, 10]\n"
         );
         Ok(())
@@ -393,7 +393,7 @@ mod tests {
         check(&find.points(At::XY(2.0, 1.0))?, &[5]);
         assert_eq!(
             find.points(At::XY(10.0, 0.0)).err(),
-            Some("cannot find point with coordinates outside the grid")
+            Some("cannot find point because the coordinates are outside the grid")
         );
         check(&find.points(At::Circle(0.0, 0.0, 1.0))?, &[1, 3]);
         check(&find.points(At::Circle(0.0, 0.0, SQRT_2))?, &[2]);
@@ -448,7 +448,7 @@ mod tests {
         check(&find.points(At::XYZ(1.0, 1.0, 2.0))?, &[10]);
         assert_eq!(
             find.points(At::XYZ(10.0, 0.0, 0.0)).err(),
-            Some("cannot find point with coordinates outside the grid")
+            Some("cannot find point because the coordinates are outside the grid")
         );
         check(
             &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
@@ -540,7 +540,7 @@ mod tests {
         check(&find.edges(At::XYZ(0.0, 0.0, 0.0))?, &[]);
         assert_eq!(
             find.edges(At::XYZ(10.0, 0.0, 0.0)).err(),
-            Some("cannot find point with coordinates outside the grid")
+            Some("cannot find point because the coordinates are outside the grid")
         );
         check(
             &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
@@ -615,7 +615,7 @@ mod tests {
         check(&find.faces(At::XYZ(0.0, 0.0, 0.0))?, &[]);
         assert_eq!(
             find.faces(At::XYZ(10.0, 0.0, 0.0)).err(),
-            Some("cannot find point with coordinates outside the grid")
+            Some("cannot find point because the coordinates are outside the grid")
         );
         check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?, &[]);
         check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?, &[]);

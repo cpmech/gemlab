@@ -1,4 +1,11 @@
 //! Mesh definitions, read/write, boundary, find, and generators for FEA
+//!
+//! It is recommended to look at [Region] first, since it is the struct
+//! of highest level in this module.
+//!
+//! Then, it is worth looking at [Mesh] which contains the raw mesh data
+//! and [Features] which contains post-processed information given mesh data.
+//!
 
 mod algorithms;
 mod block;

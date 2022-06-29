@@ -2,7 +2,7 @@ use super::{Cell, Mesh, Point};
 use crate::mesh::{set_pad_coords, PointId};
 use crate::shapes::op::draw_shape;
 use crate::shapes::{op, GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
-use crate::util::{AsArray2D, GridSearch, GsNdiv, GsTol, PI};
+use crate::util::{AsArray2D, GridSearch, PI};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
 use russell_lab::Vector;
@@ -549,13 +549,7 @@ impl Block {
         }
 
         // grid to search reference coordinates
-        let mut grid_ksi = GridSearch::new(
-            &vec![-1.0; ndim],
-            &vec![1.0; ndim],
-            0.01,
-            GsNdiv::Default,
-            GsTol::Default,
-        )?;
+        let mut grid_ksi = GridSearch::new(&vec![-1.0; ndim], &vec![1.0; ndim], None, None, None)?;
 
         // resulting mesh
         let mut mesh = Mesh {
@@ -1689,7 +1683,7 @@ mod tests {
         }
         if false {
             draw_ring_and_mesh(
-                &Region::with(mesh, Extract::All)?,
+                &Region::with(&mesh, Extract::All)?,
                 &block.args_ring,
                 true,
                 true,
@@ -1734,7 +1728,7 @@ mod tests {
         }
         if false {
             draw_ring_and_mesh(
-                &Region::with(mesh, Extract::All)?,
+                &Region::with(&mesh, Extract::All)?,
                 &block.args_ring,
                 true,
                 true,
@@ -1795,7 +1789,7 @@ mod tests {
             }
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_transform_into_ring_3d.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d.svg")?;
         }
         Ok(())
     }
@@ -1833,7 +1827,7 @@ mod tests {
             }
         }
         if false {
-            draw_mesh(mesh, true, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg")?;
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg")?;
         }
         Ok(())
     }
@@ -1863,7 +1857,7 @@ mod tests {
         set_range: bool,
         filename: &str,
     ) -> Result<(), StrError> {
-        let region = Region::with(mesh, Extract::All)?;
+        let region = Region::with(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         block.draw(plot, false, set_range)?;
         draw.canvas_point_ids

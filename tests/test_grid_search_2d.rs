@@ -1,12 +1,12 @@
 use gemlab::geometry::Circle;
-use gemlab::util::{GridSearch, GsNdiv, GsTol, PI};
+use gemlab::util::{GridSearch, PI};
 use gemlab::StrError;
 
 #[test]
 fn test_grid_search_2d() -> Result<(), StrError> {
-    let min = &[0.0, 0.0];
-    let max = &[1.0, 2.0];
-    let mut grid = GridSearch::new(min, max, 0.0, GsNdiv::Default, GsTol::Default)?;
+    let xmin = &[0.0, 0.0];
+    let xmax = &[1.0, 2.0];
+    let mut grid = GridSearch::new(xmin, xmax, None, None, Some(0.0))?;
 
     // id
     let mut id = 0;
