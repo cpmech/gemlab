@@ -1432,117 +1432,112 @@ mod tests {
         Ok(())
     }
 
-    /*
     #[test]
     fn containers_near_cylinder_works() -> Result<(), StrError> {
-        let mut g3d = get_test_grid_3d()?;
-        for data in get_test_data_3d() {
-            g3d.insert(data.id, data.x)?;
-        }
-        let mut indices = g3d.containers_near_cylinder(&[1.0, -1.0, -1.0], &[1.0, 1.0, -1.0], 0.4)?;
+        let mut grid = sample_grid_3d()?;
+        add_sample_points_to_grid_3d(&mut grid)?;
+
+        let mut indices = grid.containers_near_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2)?;
         indices.sort();
-        assert_eq!(indices, &[2, 8]);
+        assert_eq!(indices, &[1, 3]);
         Ok(())
     }
 
     #[test]
     fn find_on_cylinder_fails_on_wrong_input() -> Result<(), StrError> {
-        let g3d = get_test_grid_3d()?;
-        let res = g3d.find_on_cylinder(&[0.0, 0.0], &[1.0, 0.0, 0.0], 1.0);
-        assert_eq!(res, Err("a.len() must equal ndim"));
-        let res = g3d.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0);
-        assert_eq!(res, Err("b.len() must equal ndim"));
+        let grid = sample_grid_3d()?;
+        assert_eq!(
+            grid.find_on_cylinder(&[0.0, 0.0], &[1.0, 0.0, 0.0], 1.0),
+            Err("a.len() must equal ndim")
+        );
+        assert_eq!(
+            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0),
+            Err("b.len() must equal ndim")
+        );
 
-        let g2d = get_test_grid_2d()?;
-        let res = g2d.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0);
-        assert_eq!(res, Err("this works in 3D only"));
+        let grid = sample_grid_2d()?;
+        assert_eq!(
+            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0),
+            Err("find_on_cylinder works in 3D only")
+        );
         Ok(())
     }
 
     #[test]
     fn find_on_cylinder_works() -> Result<(), StrError> {
-        let mut g3d = get_test_grid_3d()?;
-        for data in get_test_data_3d() {
-            g3d.insert(data.id, data.x)?;
-        }
-        let map = g3d.find_on_cylinder(&[1.0, -1.0, -1.0], &[1.0, 1.0, -1.0], 0.4)?;
-        let mut ids: Vec<_> = map.iter().collect();
+        let mut grid = sample_grid_3d()?;
+        add_sample_points_to_grid_3d(&mut grid)?;
+
+        let res = grid.find_on_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2)?;
+        let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
-        assert_eq!(ids, [&101, &102, &103, &104, &105, &106]);
+        assert_eq!(ids, [104, 105, 106, 107]);
         Ok(())
     }
 
     #[test]
     fn containers_near_plane_works() -> Result<(), StrError> {
-        let mut g3d = get_test_grid_3d()?;
-        for data in get_test_data_3d() {
-            g3d.insert(data.id, data.x)?;
-        }
-        let mut indices = g3d.containers_near_plane(0, -1.0);
-        indices.sort();
-        assert_eq!(indices, &[0]);
+        let mut grid = sample_grid_3d()?;
+        add_sample_points_to_grid_3d(&mut grid)?;
 
-        let mut indices = g3d.containers_near_plane(1, -1.0);
+        let mut indices = grid.containers_near_plane(0, -1.0);
         indices.sort();
-        assert_eq!(indices, &[0, 1, 2]);
+        assert_eq!(indices, &[0, 2, 4, 6]);
 
-        let mut indices = g3d.containers_near_plane(2, -1.0);
+        let mut indices = grid.containers_near_plane(0, 1.0);
         indices.sort();
-        assert_eq!(indices, &[0, 1, 2, 8]);
+        assert_eq!(indices, &[1, 3, 5, 7]);
 
-        let mut indices = g3d.containers_near_plane(2, 0.0);
+        let mut indices = grid.containers_near_plane(1, -1.0);
         indices.sort();
-        assert_eq!(indices, &[13, 14, 16, 17]);
+        assert_eq!(indices, &[0, 1, 4, 5]);
+
+        let mut indices = grid.containers_near_plane(1, 1.0);
+        indices.sort();
+        assert_eq!(indices, &[2, 3, 6, 7]);
+
+        let mut indices = grid.containers_near_plane(2, -1.0);
+        indices.sort();
+        assert_eq!(indices, &[0, 1, 2, 3]);
+
+        let mut indices = grid.containers_near_plane(2, 1.0);
+        indices.sort();
+        assert_eq!(indices, &[4, 5, 6, 7]);
+
+        let mut indices = grid.containers_near_plane(2, 0.0);
+        indices.sort();
+        assert_eq!(indices, &[0, 1, 2, 3, 4, 5, 6, 7]);
         Ok(())
     }
 
     #[test]
     fn find_on_plane_fails_on_wrong_input() -> Result<(), StrError> {
-        let g2d = get_test_grid_2d()?;
-        let res = g2d.find_on_plane_xy(-1.0);
-        assert_eq!(res, Err("this works in 3D only"));
-
-        let res = g2d.find_on_plane_yz(-1.0);
-        assert_eq!(res, Err("this works in 3D only"));
-
-        let res = g2d.find_on_plane_xz(-1.0);
-        assert_eq!(res, Err("this works in 3D only"));
+        let grid = sample_grid_2d()?;
+        assert_eq!(grid.find_on_plane_xy(-1.0), Err("find_on_plane_xy works in 3D only"));
+        assert_eq!(grid.find_on_plane_yz(-1.0), Err("find_on_plane_yz works in 3D only"));
+        assert_eq!(grid.find_on_plane_xz(-1.0), Err("find_on_plane_xz works in 3D only"));
         Ok(())
     }
 
     #[test]
     fn find_on_plane_works() -> Result<(), StrError> {
-        let mut g3d = get_test_grid_3d()?;
-        for data in get_test_data_3d() {
-            g3d.insert(data.id, data.x)?;
-        }
-        let map = g3d.find_on_plane_xy(-1.0)?;
-        let mut ids: Vec<_> = map.iter().collect();
-        ids.sort();
-        assert_eq!(ids, [&100, &101, &104]);
+        let mut grid = sample_grid_3d()?;
+        add_sample_points_to_grid_3d(&mut grid)?;
 
-        let map = g3d.find_on_plane_yz(-1.0)?;
-        let mut ids: Vec<_> = map.iter().collect();
+        let res = grid.find_on_plane_xy(-1.0)?;
+        let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
-        assert_eq!(ids, [&100]);
+        assert_eq!(ids, [100, 103, 104, 106]);
 
-        let map = g3d.find_on_plane_xz(-1.0)?;
-        let mut ids: Vec<_> = map.iter().collect();
+        let res = grid.find_on_plane_yz(-1.0)?;
+        let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
-        assert_eq!(ids, [&100, &101, &102, &103]);
+        assert_eq!(ids, [100]);
+
+        let res = grid.find_on_plane_xz(-1.0)?;
+        let mut ids: Vec<_> = res.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, [100, 104, 105]);
         Ok(())
     }
-
-    #[test]
-    fn maybe_insert_works() -> Result<(), StrError> {
-        let mut grid = GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], 0.0, GsNdiv::Spec(3, 3, 0), GsTol::Default)?;
-        let id = grid.maybe_insert(111, &[0.5, 0.5])?;
-        assert_eq!(id, 111);
-        let id = grid.maybe_insert(222, &[0.75, 0.75])?;
-        assert_eq!(id, 222);
-        let id = grid.maybe_insert(333, &[0.5, 0.5])?;
-        assert_eq!(id, 111); // existent
-        Ok(())
-    }
-    */
 }
