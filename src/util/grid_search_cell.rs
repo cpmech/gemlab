@@ -2,7 +2,7 @@
 
 use super::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE, SQRT_2, SQRT_3};
 use crate::StrError;
-use plotpy::{Canvas, Curve, Plot, Text};
+use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -176,6 +176,74 @@ impl GridSearchCell {
         Ok(())
     }
 
+    /// Draws grid and items
+    pub fn draw(&self, plot: &mut Plot) -> Result<(), StrError> {
+        // draw grid
+        let mut xmin = vec![0.0; self.ndim];
+        let mut xmax = vec![0.0; self.ndim];
+        let mut ndiv = vec![0; self.ndim];
+        for i in 0..self.ndim {
+            xmin[i] = self.xmin[i];
+            xmax[i] = self.xmax[i];
+            ndiv[i] = self.ndiv[i];
+        }
+        let mut canvas = Canvas::new();
+        canvas
+            .set_alt_text_color("#5d5d5d")
+            .draw_grid(&xmin, &xmax, &ndiv, false, true)?;
+        plot.add(&canvas);
+
+        // draw bounding boxes
+        let mut bbox = Canvas::new();
+        bbox.set_edge_color("#3aff79")
+            .set_face_color("None")
+            .set_line_width(0.75);
+        for x_min_max in self.bounding_boxes.values() {
+            if self.ndim == 2 {
+                bbox.polycurve_begin();
+                bbox.polycurve_add(x_min_max[0][I_MIN], x_min_max[1][I_MIN], PolyCode::MoveTo);
+                bbox.polycurve_add(x_min_max[0][I_MAX], x_min_max[1][I_MIN], PolyCode::LineTo);
+                bbox.polycurve_add(x_min_max[0][I_MAX], x_min_max[1][I_MAX], PolyCode::LineTo);
+                bbox.polycurve_add(x_min_max[0][I_MIN], x_min_max[1][I_MAX], PolyCode::LineTo);
+                bbox.polycurve_end(true);
+            } else {
+                // TODO
+            }
+        }
+
+        // draw items
+        let mut points = Curve::new();
+        let mut text = Text::new();
+        points
+            .set_marker_style("o")
+            .set_marker_color("#fab32faa")
+            .set_marker_line_color("black")
+            .set_marker_line_width(0.5);
+        text.set_color("#cd0000");
+        let mut xcen = vec![0.0; self.ndim];
+        for container in self.containers.values() {
+            for id in container {
+                let x_min_max = self
+                    .bounding_boxes
+                    .get(&id)
+                    .ok_or("INTERNAL ERROR: bounding box is missing")?;
+                let txt = format!("{}", id);
+                for i in 0..self.ndim {
+                    xcen[i] = (x_min_max[i][I_MAX] - x_min_max[i][I_MIN]) / 2.0;
+                }
+                if self.ndim == 2 {
+                    points.draw(&[xcen[0]], &[xcen[1]]);
+                    text.draw(xcen[0], xcen[1], &txt);
+                } else {
+                    points.draw_3d(&[xcen[0]], &[xcen[1]], &[xcen[2]]);
+                    text.draw_3d(xcen[0], xcen[1], xcen[2], &txt);
+                }
+            }
+        }
+        plot.add(&bbox).add(&points).add(&text);
+        Ok(())
+    }
+
     /// Calculates the key of the container where the point should fall in
     ///
     /// **Note:** Returns None if the point is out-of-range
@@ -242,8 +310,22 @@ mod tests {
     use plotpy::{Canvas, Curve, Plot, PolyCode, RayEndpoint, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
+    fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
+        let mut canvas = Canvas::new();
+        canvas.set_face_color("#fefddc").set_edge_color("#fcb827");
+        for t in 0..triangles.len() {
+            canvas.polycurve_begin();
+            for m in 0..3 {
+                let code = if m == 0 { PolyCode::MoveTo } else { PolyCode::LineTo };
+                canvas.polycurve_add(&triangles[t][m][0], &triangles[t][m][1], code);
+            }
+            canvas.polycurve_end(true);
+        }
+        plot.add(&canvas);
+    }
+
     #[test]
-    fn new_works() -> Result<(), StrError> {
+    fn new_works_1() -> Result<(), StrError> {
         const TRIANGLES: [[[f64; 2]; 3]; 2] = [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
             [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
@@ -266,9 +348,61 @@ mod tests {
         assert_eq!(grid.bounding_boxes.len(), 2);
         assert_eq!(grid.containers.len(), 0);
         let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
-        let bbox_1 = grid.bounding_boxes.get(&0).unwrap();
+        let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(bbox_1, &[[0.0, 1.0], [0.0, 1.0]]);
+        if false {
+            let mut plot = Plot::new();
+            draw_triangles(&mut plot, &TRIANGLES);
+            grid.draw(&mut plot)?;
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .grid_and_labels("x", "y")
+                .set_ticks_x(0.2, 0.0, "")
+                .set_ticks_y(0.2, 0.0, "")
+                .save("/tmp/gemlab/test_grid_search_cell_new_1.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn new_works_2() -> Result<(), StrError> {
+        const TRIANGLES: [[[f64; 2]; 3]; 2] = [
+            [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
+            [[1.0, 0.0], [1.2, 1.5], [0.0, 1.0]],
+        ];
+        let tolerance = 1e-3;
+        let border_tol = 0.1;
+        let get_nnode = |_| Ok(3);
+        let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
+        let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let max_len = 1.5;
+        let side_len = max_len + 2.0 * tolerance; // because the bbox is expanded
+        assert_eq!(grid.ndim, 2);
+        assert_eq!(grid.side_length, side_len);
+        assert_eq!(grid.ndiv, &[1, 2]);
+        assert_eq!(grid.xmin, &[-0.1, -0.1]);
+        assert_eq!(grid.xmax, &[-0.1 + side_len, -0.1 + side_len * 2.0]);
+        assert_eq!(grid.bbox_large, &[1.2, 1.5]);
+        assert_eq!(grid.coefficient, &[1, 1, 1 * 2]);
+        assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
+        assert_eq!(grid.bounding_boxes.len(), 2);
+        assert_eq!(grid.containers.len(), 0);
+        let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
+        let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
+        assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
+        assert_eq!(bbox_1, &[[0.0, 1.2], [0.0, 1.5]]);
+        if false {
+            let mut plot = Plot::new();
+            draw_triangles(&mut plot, &TRIANGLES);
+            grid.draw(&mut plot)?;
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .grid_and_labels("x", "y")
+                .set_ticks_x(0.2, 0.0, "")
+                .set_ticks_y(0.2, 0.0, "")
+                .save("/tmp/gemlab/test_grid_search_cell_new_2.svg")?;
+        }
         Ok(())
     }
 
@@ -292,7 +426,17 @@ mod tests {
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
         let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, None, None)?;
-        println!("{:?}", grid.bbox_large);
+        if true {
+            let mut plot = Plot::new();
+            draw_triangles(&mut plot, &TRIANGLES);
+            grid.draw(&mut plot)?;
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .grid_and_labels("x", "y")
+                .set_ticks_x(0.2, 0.0, "")
+                .set_ticks_y(0.2, 0.0, "")
+                .save("/tmp/gemlab/test_grid_search_cell_insert_2d.svg")?;
+        }
         /*
         println!("{}", grid);
         let mut id = 0;
