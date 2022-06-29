@@ -32,7 +32,6 @@ pub struct GridSearchCell {
     xmax: Vec<f64>,                // (ndim) max values
     bbox_large: Vec<f64>,          // largest bounding box
     side_length: f64,              // side length of a container
-    coefficient: Vec<usize>,       // (3) coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
     tol_dist: f64,                 // tolerance to find points using the distance between points
     bounding_boxes: BoundingBoxes, // bounding boxes
     containers: Containers,        // structure to hold all items
@@ -137,9 +136,6 @@ impl GridSearchCell {
             xmax[i] = xmin[i] + side_length * (ndiv[i] as f64);
         }
 
-        // coefficient
-        let coefficient = vec![1, ndiv[0], ndiv[0] * ndiv[1]];
-
         // tolerance to find points
         let tol_dist = if ndim == 2 {
             SQRT_2 * tolerance
@@ -147,6 +143,38 @@ impl GridSearchCell {
             SQRT_3 * tolerance
         };
 
+        // insert cells
+        let coefficient = vec![1, ndiv[0], ndiv[0] * ndiv[1]];
+        let mut containers = HashMap::new();
+        let mut ratio = vec![0; ndim]; // ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
+        let mut x = vec![0.0; ndim];
+        for c in 0..ncell {
+            let x_min_max = bounding_boxes.get(&c).unwrap();
+            for r in 0..2 {
+                for s in 0..2 {
+                    for t in 0..(ndim - 1) {
+                        x[0] = x_min_max[0][r];
+                        x[1] = x_min_max[1][s];
+                        if ndim == 3 {
+                            x[2] = x_min_max[2][t];
+                        }
+                        let mut key = 0;
+                        for i in 0..ndim {
+                            ratio[i] = ((x[i] - xmin[i]) / side_length) as usize;
+                            if ratio[i] == ndiv[i] {
+                                // the point is exactly on the max edge, thus select inner container
+                                ratio[i] -= 1; // move to the inside
+                            }
+                            key += ratio[i] * coefficient[i];
+                        }
+                        let container = containers.entry(key).or_insert(HashSet::new());
+                        container.insert(c);
+                    }
+                }
+            }
+        }
+
+        // allocate grid
         Ok(GridSearchCell {
             ndim,
             ndiv,
@@ -154,26 +182,10 @@ impl GridSearchCell {
             xmax,
             bbox_large,
             side_length,
-            coefficient,
             tol_dist,
             bounding_boxes,
-            containers: HashMap::new(),
+            containers,
         })
-    }
-
-    /// Inserts a cell (e.g., triangle/tetrahedron) to the grid
-    ///
-    /// # Input
-    ///
-    /// * `id` -- is the id of the cell
-    /// * `nnode` -- is the number of nodes of the cell
-    /// * `get_x` -- is a function that returns the coordinates of a cell node
-    pub fn insert_cell<'a, F>(&mut self, id: usize, nnode: usize, get_x: F) -> Result<(), StrError>
-    where
-        F: Fn(usize) -> Result<&'a [f64], StrError>,
-    {
-        // TODO
-        Ok(())
     }
 
     /// Draws grid and items
@@ -212,13 +224,7 @@ impl GridSearchCell {
         }
 
         // draw items
-        let mut points = Curve::new();
         let mut text = Text::new();
-        points
-            .set_marker_style("o")
-            .set_marker_color("#fab32faa")
-            .set_marker_line_color("black")
-            .set_marker_line_width(0.5);
         text.set_color("#cd0000");
         let mut xcen = vec![0.0; self.ndim];
         for container in self.containers.values() {
@@ -229,47 +235,17 @@ impl GridSearchCell {
                     .ok_or("INTERNAL ERROR: bounding box is missing")?;
                 let txt = format!("{}", id);
                 for i in 0..self.ndim {
-                    xcen[i] = (x_min_max[i][I_MAX] - x_min_max[i][I_MIN]) / 2.0;
+                    xcen[i] = (x_min_max[i][I_MIN] + x_min_max[i][I_MAX]) / 2.0;
                 }
                 if self.ndim == 2 {
-                    points.draw(&[xcen[0]], &[xcen[1]]);
                     text.draw(xcen[0], xcen[1], &txt);
                 } else {
-                    points.draw_3d(&[xcen[0]], &[xcen[1]], &[xcen[2]]);
                     text.draw_3d(xcen[0], xcen[1], xcen[2], &txt);
                 }
             }
         }
-        plot.add(&bbox).add(&points).add(&text);
+        plot.add(&bbox).add(&text);
         Ok(())
-    }
-
-    /// Calculates the key of the container where the point should fall in
-    ///
-    /// **Note:** Returns None if the point is out-of-range
-    #[inline]
-    fn calc_container_key(&self, x: &[f64]) -> Option<usize> {
-        let mut ratio = vec![0; self.ndim]; // ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
-        let mut key = 0;
-        for i in 0..self.ndim {
-            if x[i] < self.xmin[i] || x[i] > self.xmax[i] {
-                return None;
-            }
-            ratio[i] = ((x[i] - self.xmin[i]) / self.side_length) as usize;
-            if ratio[i] == self.ndiv[i] {
-                // the point is exactly on the max edge, thus select inner container
-                ratio[i] -= 1; // move to the inside
-            }
-            key += ratio[i] * self.coefficient[i];
-        }
-        Some(key)
-    }
-
-    /// Updates a container or inserts a point into an existing container
-    #[inline]
-    fn update_or_insert(&mut self, key: ContainerKey, id: ItemID) {
-        let container = self.containers.entry(key).or_insert(HashSet::new());
-        container.insert(id);
     }
 }
 
@@ -343,15 +319,14 @@ mod tests {
         assert_eq!(grid.xmin, &[-0.1, -0.1]);
         assert_eq!(grid.xmax, &[-0.1 + side_len * 2.0, -0.1 + side_len * 2.0]);
         assert_eq!(grid.bbox_large, &[1.0, 1.0]);
-        assert_eq!(grid.coefficient, &[1, 2, 2 * 2]);
         assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 2);
-        assert_eq!(grid.containers.len(), 0);
+        assert_eq!(grid.containers.len(), 2);
         let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
         let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(bbox_1, &[[0.0, 1.0], [0.0, 1.0]]);
-        if false {
+        if true {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIANGLES);
             grid.draw(&mut plot)?;
@@ -384,15 +359,14 @@ mod tests {
         assert_eq!(grid.xmin, &[-0.1, -0.1]);
         assert_eq!(grid.xmax, &[-0.1 + side_len, -0.1 + side_len * 2.0]);
         assert_eq!(grid.bbox_large, &[1.2, 1.5]);
-        assert_eq!(grid.coefficient, &[1, 1, 1 * 2]);
         assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 2);
-        assert_eq!(grid.containers.len(), 0);
+        assert_eq!(grid.containers.len(), 2);
         let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
         let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(bbox_1, &[[0.0, 1.2], [0.0, 1.5]]);
-        if false {
+        if true {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIANGLES);
             grid.draw(&mut plot)?;
