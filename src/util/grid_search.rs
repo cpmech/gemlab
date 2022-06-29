@@ -60,6 +60,7 @@ type Containers = HashMap<ContainerKey, Container>;
 /// ```
 /// use gemlab::util::{GridSearch, SQRT_2};
 /// use gemlab::StrError;
+/// use plotpy::Plot;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let xmin = &[0.0, 0.0];
@@ -69,7 +70,9 @@ type Containers = HashMap<ContainerKey, Container>;
 ///     assert_eq!(grid.find(&[5.5, SQRT_2])?, Some(123));
 ///     assert_eq!(grid.find(&[5.501, SQRT_2])?, None);
 ///     if false {
-///         grid.draw()?.set_equal_axes(true).save("/tmp/gemlab/doc_grid_search.svg")?;
+///         let mut plot = Plot::new();
+///         grid.draw(&mut plot)?;
+///         plot.set_equal_axes(true).save("/tmp/gemlab/doc_grid_search.svg")?;
 ///     }
 ///     Ok(())
 /// }
@@ -94,7 +97,7 @@ pub struct GridSearch {
 }
 
 impl GridSearch {
-    /// Creates a new GridSearch
+    /// Allocates a new instance
     ///
     /// # Input
     ///
@@ -553,10 +556,7 @@ impl GridSearch {
     }
 
     /// Draws grid and items
-    pub fn draw(&self) -> Result<Plot, StrError> {
-        // create plot
-        let mut plot = Plot::new();
-
+    pub fn draw(&self, plot: &mut Plot) -> Result<(), StrError> {
         // draw grid
         let mut xmin = vec![0.0; self.ndim];
         let mut xmax = vec![0.0; self.ndim];
@@ -593,11 +593,8 @@ impl GridSearch {
                 }
             }
         }
-        plot.add(&curve);
-        plot.add(&text);
-
-        // done
-        Ok(plot)
+        plot.add(&curve).add(&text);
+        Ok(())
     }
 
     /// Calculates the key of the container where the point should fall in
@@ -807,7 +804,7 @@ mod tests {
     use super::{GridSearch, GS_DEFAULT_TOLERANCE};
     use crate::util::{SQRT_2, SQRT_3};
     use crate::StrError;
-    use plotpy::{Canvas, Curve, RayEndpoint, Surface};
+    use plotpy::{Canvas, Curve, Plot, RayEndpoint, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     const NOISE: f64 = 1.23456e-5;
@@ -1004,7 +1001,8 @@ mod tests {
     fn draw_works_2d() -> Result<(), StrError> {
         let mut grid = sample_grid_2d()?;
         add_sample_points_to_grid_2d(&mut grid)?;
-        let mut plot = grid.draw()?;
+        let mut plot = Plot::new();
+        grid.draw(&mut plot)?;
         if false {
             let h = grid.side_length / 2.0;
             let r = grid.radius;
@@ -1046,7 +1044,8 @@ mod tests {
     fn draw_works_3d() -> Result<(), StrError> {
         let mut grid = sample_grid_3d()?;
         add_sample_points_to_grid_3d(&mut grid)?;
-        let mut plot = grid.draw()?;
+        let mut plot = Plot::new();
+        grid.draw(&mut plot)?;
         if false {
             // draw lines
             let mut canvas = Canvas::new();
