@@ -9,11 +9,11 @@ use std::fmt;
 /// Specifies the key of containers (or bins in the grid)
 type ContainerKey = usize;
 
-/// Specifies the identification number of items
-type ItemID = usize;
+/// Specifies the identification number of cells (must be sequential from 0 to ncell - 1)
+type CellId = usize;
 
 /// Defines the container type: ID to Coordinates
-type Container = HashSet<ItemID>;
+type Container = HashSet<CellId>;
 
 /// Defines the containers type: Key to Container
 type Containers = HashMap<ContainerKey, Container>;
@@ -23,18 +23,17 @@ const N_MIN_MAX: usize = 2; // 2 means {min,max}
 const I_MIN: usize = 0;
 const I_MAX: usize = 1;
 type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
-type BoundingBoxes = HashMap<ItemID, BboxMinMax>;
 
 pub struct GridSearchCell {
-    ndim: usize,                   // space dimension
-    ndiv: Vec<usize>,              // (ndim) number of divisions along each direction
-    xmin: Vec<f64>,                // (ndim) min values
-    xmax: Vec<f64>,                // (ndim) max values
-    bbox_large: Vec<f64>,          // largest bounding box
-    side_length: f64,              // side length of a container
-    tol_dist: f64,                 // tolerance to find points using the distance between points
-    bounding_boxes: BoundingBoxes, // bounding boxes
-    containers: Containers,        // structure to hold all items
+    ndim: usize,                     // space dimension
+    ndiv: Vec<usize>,                // (ndim) number of divisions along each direction
+    xmin: Vec<f64>,                  // (ndim) min values
+    xmax: Vec<f64>,                  // (ndim) max values
+    bbox_large: Vec<f64>,            // largest bounding box
+    side_length: f64,                // side length of a container
+    tol_dist: f64,                   // tolerance to find points using the distance between points
+    bounding_boxes: Vec<BboxMinMax>, // (ncell) bounding boxes
+    containers: Containers,          // structure to hold all items
 }
 
 impl GridSearchCell {
@@ -78,11 +77,11 @@ impl GridSearchCell {
         let mut xmax = vec![f64::MIN; ndim];
         let mut x_min_max = vec![vec![0.0; N_MIN_MAX]; ndim];
         let mut bbox_large = vec![f64::MIN; ndim];
-        let mut bounding_boxes = HashMap::new();
-        for c in 0..ncell {
-            let nnode = get_nnode(c)?;
+        let mut bounding_boxes = Vec::new();
+        for cell_id in 0..ncell {
+            let nnode = get_nnode(cell_id)?;
             for m in 0..nnode {
-                let x = get_x(c, m)?;
+                let x = get_x(cell_id, m)?;
                 if x.len() != ndim {
                     return Err("x.len() must be equal to ndim");
                 }
@@ -107,7 +106,7 @@ impl GridSearchCell {
                 bbox_large[i] = f64::max(bbox_large[i], x_min_max[i][I_MAX] - x_min_max[i][I_MIN]);
             }
             // add to bounding box maps
-            bounding_boxes.insert(c, x_min_max.clone());
+            bounding_boxes.push(x_min_max.clone());
         }
 
         // make the side_length equal to the largest bounding box dimension
@@ -151,8 +150,8 @@ impl GridSearchCell {
         let mut containers = HashMap::new();
         let mut ratio = vec![0; ndim]; // ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
         let mut x = vec![0.0; ndim];
-        for c in 0..ncell {
-            let x_min_max = bounding_boxes.get(&c).unwrap();
+        for cell_id in 0..ncell {
+            let x_min_max = &bounding_boxes[cell_id];
             for r in 0..2 {
                 for s in 0..2 {
                     for t in 0..(ndim - 1) {
@@ -171,7 +170,7 @@ impl GridSearchCell {
                             key += ratio[i] * coefficient[i];
                         }
                         let container = containers.entry(key).or_insert(HashSet::new());
-                        container.insert(c);
+                        container.insert(cell_id);
                     }
                 }
             }
@@ -213,7 +212,7 @@ impl GridSearchCell {
         bbox.set_edge_color("#3aff79")
             .set_face_color("None")
             .set_line_width(0.75);
-        for x_min_max in self.bounding_boxes.values() {
+        for x_min_max in &self.bounding_boxes {
             if self.ndim == 2 {
                 bbox.polycurve_begin();
                 bbox.polycurve_add(x_min_max[0][I_MIN], x_min_max[1][I_MIN], PolyCode::MoveTo);
@@ -260,12 +259,9 @@ impl GridSearchCell {
         text.set_color("#cd0000");
         let mut xcen = vec![0.0; self.ndim];
         for container in self.containers.values() {
-            for id in container {
-                let x_min_max = self
-                    .bounding_boxes
-                    .get(&id)
-                    .ok_or("INTERNAL ERROR: bounding box is missing")?;
-                let txt = format!("{}", id);
+            for cell_id in container {
+                let x_min_max = &self.bounding_boxes[*cell_id];
+                let txt = format!("{}", cell_id);
                 for i in 0..self.ndim {
                     xcen[i] = (x_min_max[i][I_MIN] + x_min_max[i][I_MAX]) / 2.0;
                 }
@@ -371,8 +367,8 @@ mod tests {
         assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 2);
         assert_eq!(grid.containers.len(), 4);
-        let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
-        let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
+        let bbox_0 = &grid.bounding_boxes[0];
+        let bbox_1 = &grid.bounding_boxes[1];
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(bbox_1, &[[0.0, 1.0], [0.0, 1.0]]);
         let container_0 = grid.containers.get(&0).unwrap();
@@ -430,8 +426,8 @@ mod tests {
         assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 2);
         assert_eq!(grid.containers.len(), 2);
-        let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
-        let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
+        let bbox_0 = &grid.bounding_boxes[0];
+        let bbox_1 = &grid.bounding_boxes[1];
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(bbox_1, &[[0.0, 1.2], [0.0, 1.5]]);
         let container_0 = grid.containers.get(&0).unwrap();
@@ -480,7 +476,7 @@ mod tests {
         assert_eq!(grid.tol_dist, SQRT_3 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 1);
         assert_eq!(grid.containers.len(), 8);
-        let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
+        let bbox_0 = &grid.bounding_boxes[0];
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(
             format!("{}", grid),
@@ -545,7 +541,7 @@ mod tests {
         assert_eq!(grid.tol_dist, SQRT_2 * GS_DEFAULT_TOLERANCE);
         assert_eq!(grid.bounding_boxes.len(), TRIANGLES.len());
         assert_eq!(grid.containers.len(), 4);
-        let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
+        let bbox_0 = &grid.bounding_boxes[0];
         assert_eq!(
             bbox_0,
             &[
