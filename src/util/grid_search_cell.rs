@@ -109,10 +109,13 @@ impl GridSearchCell {
         }
 
         // make the side_length equal to the largest bounding box dimension
-        let mut side_length = bbox_large[0] + tolerance;
+        let mut side_length = bbox_large[0];
         for i in 1..ndim {
-            side_length = f64::max(side_length, bbox_large[i] + tolerance);
+            side_length = f64::max(side_length, bbox_large[i]);
         }
+
+        // expand side_length by two times the tolerance (left and right)
+        side_length += 2.0 * tolerance;
 
         // expand borders
         if border_tol > 0.0 {
@@ -126,7 +129,7 @@ impl GridSearchCell {
         let mut ndiv = vec![0; ndim];
         for i in 0..ndim {
             assert!(xmax[i] > xmin[i]);
-            ndiv[i] = ((xmax[i] - xmin[i]) / side_length) as usize;
+            ndiv[i] = f64::ceil((xmax[i] - xmin[i]) / side_length) as usize;
         }
 
         // update xmax after deciding on the side_length and number of divisions
@@ -202,6 +205,33 @@ impl GridSearchCell {
     }
 }
 
+impl fmt::Display for GridSearchCell {
+    /// Shows info about the items in the grid containers
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // items
+        let mut unique_items: HashMap<usize, bool> = HashMap::new();
+        let mut indices: Vec<_> = self.containers.keys().collect();
+        indices.sort();
+        for index in indices {
+            let container = self.containers.get(index).unwrap();
+            let mut ids: Vec<_> = container.iter().map(|id| *id).collect();
+            ids.sort();
+            write!(f, "{}: {:?}\n", index, ids).unwrap();
+            for id in ids {
+                unique_items.insert(id, true);
+            }
+        }
+        // summary
+        let mut ids: Vec<_> = unique_items.keys().collect();
+        ids.sort();
+        write!(f, "ids = {:?}\n", ids).unwrap();
+        write!(f, "nitem = {}\n", unique_items.len()).unwrap();
+        write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();
+        write!(f, "ndiv = {:?}\n", self.ndiv).unwrap();
+        Ok(())
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -211,6 +241,36 @@ mod tests {
     use crate::StrError;
     use plotpy::{Canvas, Curve, Plot, PolyCode, RayEndpoint, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+
+    #[test]
+    fn new_works() -> Result<(), StrError> {
+        const TRIANGLES: [[[f64; 2]; 3]; 2] = [
+            [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
+            [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+        ];
+        let tolerance = 1e-3;
+        let border_tol = 0.1;
+        let get_nnode = |_| Ok(3);
+        let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
+        let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let max_len = 1.0;
+        let side_len = max_len + 2.0 * tolerance; // because the bbox is expanded
+        assert_eq!(grid.ndim, 2);
+        assert_eq!(grid.side_length, side_len);
+        assert_eq!(grid.ndiv, &[2, 2]);
+        assert_eq!(grid.xmin, &[-0.1, -0.1]);
+        assert_eq!(grid.xmax, &[-0.1 + side_len * 2.0, -0.1 + side_len * 2.0]);
+        assert_eq!(grid.bbox_large, &[1.0, 1.0]);
+        assert_eq!(grid.coefficient, &[1, 2, 2 * 2]);
+        assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
+        assert_eq!(grid.bounding_boxes.len(), 2);
+        assert_eq!(grid.containers.len(), 0);
+        let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
+        let bbox_1 = grid.bounding_boxes.get(&0).unwrap();
+        assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
+        assert_eq!(bbox_1, &[[0.0, 1.0], [0.0, 1.0]]);
+        Ok(())
+    }
 
     #[test]
     fn insert_cell_works_2d() -> Result<(), StrError> {
