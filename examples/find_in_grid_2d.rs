@@ -9,9 +9,9 @@ struct Segment {
 }
 
 fn main() -> Result<(), StrError> {
-    let min = &[0.0, 0.0];
-    let max = &[10.0, 10.0];
-    let mut grid = GridSearch::new(min, max, None, None, None)?;
+    let xmin = &[0.0, 0.0];
+    let xmax = &[10.0, 10.0];
+    let mut grid = GridSearch::new(xmin, xmax, None, None, None)?;
 
     // number of points in each entity
     const NPOINT: usize = 12;

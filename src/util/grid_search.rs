@@ -5,14 +5,14 @@ use plotpy::{Canvas, Curve, Plot, Text};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-/// Default GridSearch expansion factor
-pub const GS_DEFAULT_EXPANSION: f64 = 0.01;
-
 /// Default GridSearch number of divisions for the longest direction
 pub const GS_DEFAULT_NDIV: usize = 20;
 
 /// Default GridSearch tolerance for all directions
-pub const GS_DEFAULT_TOL: f64 = 1e-4;
+pub const GS_DEFAULT_TOLERANCE: f64 = 1e-4;
+
+/// Default GridSearch border tol to handle imprecision near the borders
+pub const GS_DEFAULT_BORDER_TOL: f64 = 1e-2;
 
 /// Specifies the key of containers (or bins in the grid)
 type ContainerKey = usize;
@@ -35,13 +35,10 @@ type Containers = HashMap<ContainerKey, Container>;
 ///
 /// * `xmin` -- (ndim) minimum coordinates to define the boundary
 /// * `xmax` -- (ndim) maximum coordinates to define the boundary
-/// * `expansion` -- expansion factor for the bounding box.
-///     - This constant serves to accommodate eventual imprecision near the boundaries.
-///     - The value is a multiplier for `xdelta = xmax - xmin`
-///     - For example, expansion = 0.01 means 1% of delta
 /// * `ndiv` -- number of division for the longest direction
-/// * `tolerance` -- tolerance used to define the Halo and to compare points
-///     - For example, tolerance = 1e-4
+/// * `tolerance` -- tolerance used to define the Halo and to compare points; e.g. 1e-4
+/// * `border_tol` -- tolerance used to expand the border a little bit and then
+///   accommodate eventual imprecision near the borders; e.g. 1e-2
 ///
 /// **Important:** The number of divisions cannot be very large because it could
 /// make the container's `side_length` be smaller the the `tolerance`. Conversely,
@@ -67,11 +64,11 @@ type Containers = HashMap<ContainerKey, Container>;
 /// fn main() -> Result<(), StrError> {
 ///     let xmin = &[0.0, 0.0];
 ///     let xmax = &[10.0, 10.0];
-///     let mut grid = GridSearch::new(xmin, xmax, None, Some(2), None)?;
+///     let mut grid = GridSearch::new(xmin, xmax, Some(2), None, None)?;
 ///     grid.insert(123, &[5.5, SQRT_2])?;
 ///     assert_eq!(grid.find(&[5.5, SQRT_2])?, Some(123));
 ///     assert_eq!(grid.find(&[5.501, SQRT_2])?, None);
-///     if false {
+///     if true {
 ///         grid.draw()?.set_equal_axes(true).save("/tmp/gemlab/doc_grid_search.svg")?;
 ///     }
 ///     Ok(())
@@ -86,11 +83,11 @@ pub struct GridSearch {
     ndiv: Vec<usize>,        // (ndim) number of divisions along each direction
     xmin: Vec<f64>,          // (ndim) min values
     xmax: Vec<f64>,          // (ndim) max values
-    side_length: Vec<f64>,   // (ndim) side lengths of each container
     coefficient: Vec<usize>, // (3) coefficients [1, ndiv[0], ndiv[0]*ndiv[1]] (Eq. 8)
+    side_length: f64,        // side length of a container
     tolerance: f64,          // tolerance to define the halo
     tol_dist: f64,           // tolerance to find points using the distance between points
-    radius: f64,             // radius of the circumscribed circle of containers
+    radius: f64,             // radius of the circumscribed circle around a container box
     halo: Vec<Vec<f64>>,     // (ncorner) 4 in 2D or 8 in 3D (each contains ndim coords)
     halo_ncorner: usize,     // number of halo corners = 4 in 2D or 8 in 3D
     containers: Containers,  // structure to hold all items
@@ -103,21 +100,18 @@ impl GridSearch {
     ///
     /// * `xmin` -- (ndim) minimum coordinates to define the boundary
     /// * `xmax` -- (ndim) maximum coordinates to define the boundary
-    /// * `expansion` -- expansion factor for the bounding box
-    ///     - Use [GS_DEFAULT_EXPANSION] if None
-    ///     - This constant serves to accommodate eventual imprecision near the boundaries
-    ///     - The value is a multiplier for `xdelta = xmax - xmin`
-    ///     - For example, expansion = 0.01 means 1% of delta
     /// * `ndiv` -- number of division (≥ 1)
-    ///     - Use [GS_DEFAULT_NDIV] if None
+    ///     - If None, [GS_DEFAULT_NDIV] is used
     ///     - This number is used for the longest direction
     ///     - The other directions will be subdivided with a number such that the
     ///       containers will be square/cubic
     ///     - For the other directions, the minimum number of divisions will be 1,
     ///       in case they are too short compared with the longest direction
-    /// * `tolerance` -- tolerance used to define the Halo and to compare points
-    ///     - Use [GS_DEFAULT_TOL] if None
-    ///     - For example, tolerance = 1e-4
+    /// * `tolerance` -- tolerance used to define the Halo and to compare points; e.g. 1e-4
+    ///     - If None, [GS_DEFAULT_TOLERANCE] is used
+    /// * `border_tol` -- tolerance used to expand the border a little bit and then
+    ///   accommodate eventual imprecision near the borders; e.g. 1e-2
+    ///     - If None, [GS_DEFAULT_BORDER_TOL] is used
     ///
     /// Given the ndiv for the longest direction, the number of divisions for
     /// the other directions are calculated as follows:
@@ -140,26 +134,17 @@ impl GridSearch {
     pub fn new(
         xmin: &[f64],
         xmax: &[f64],
-        expansion: Option<f64>,
         ndiv: Option<usize>,
         tolerance: Option<f64>,
+        border_tol: Option<f64>,
     ) -> Result<Self, StrError> {
         // check input
         let ndim = xmin.len();
         if ndim < 2 || ndim > 3 {
-            return Err("min.len() = ndim must be 2 or 3");
+            return Err("xmin.len() = ndim must be 2 or 3");
         }
         if xmax.len() != ndim {
-            return Err("max.len() must equal ndim = min.len()");
-        }
-
-        // expansion
-        let expansion = match expansion {
-            Some(v) => v,
-            None => GS_DEFAULT_EXPANSION,
-        };
-        if expansion < 0.0 || expansion > 1.0 {
-            return Err("expansion must be ≥ 0.0 and ≤ 1.0");
+            return Err("xmax.len() must equal ndim = xmin.len()");
         }
 
         // ndiv
@@ -167,48 +152,68 @@ impl GridSearch {
             Some(v) => v,
             None => GS_DEFAULT_NDIV,
         };
-        let ndiv = num_divisions(1, ndiv_long, xmin, xmax)?;
+        if ndiv_long < 1 {
+            return Err("ndiv must be ≥ 1");
+        }
+        let ndiv = num_divisions(1, ndiv_long, xmin, xmax)?; // checks that xmax > xmin
         let coefficient = vec![1, ndiv[0], ndiv[0] * ndiv[1]];
 
-        // tol
+        // tolerance
         let tolerance = match tolerance {
             Some(v) => v,
-            None => GS_DEFAULT_TOL,
+            None => GS_DEFAULT_TOLERANCE,
         };
+        if tolerance <= 0.0 {
+            return Err("tolerance must be > 0.0");
+        }
 
-        // expanded borders
+        // border tolerance
+        let border_tol = match border_tol {
+            Some(v) => v,
+            None => GS_DEFAULT_BORDER_TOL,
+        };
+        if border_tol < 0.0 {
+            return Err("border_tol must be ≥ 0.0");
+        }
+
+        // expand borders
         let mut xmin = xmin.to_vec();
         let mut xmax = xmax.to_vec();
-        if expansion > 0.0 {
+        if border_tol > 0.0 {
             for i in 0..ndim {
-                let delta = xmax[i] - xmin[i];
-                xmin[i] -= expansion * delta;
-                xmax[i] += expansion * delta;
+                xmin[i] -= border_tol;
+                xmax[i] += border_tol;
             }
         }
 
-        // check and compute sizes
-        let mut xdelta = vec![0.0; ndim];
-        let mut side_length = vec![0.0; ndim];
-        let mut radius = 0.0;
-        for i in 0..ndim {
-            xdelta[i] = xmax[i] - xmin[i];
-            if xdelta[i] <= 0.0 {
-                return Err("xmax must be greater than xmin");
-            }
-            side_length[i] = xdelta[i] / (ndiv[i] as f64);
-            if side_length[i] <= 2.0 * tolerance {
-                return Err("container size = (max-min)/ndiv must be > 2·tol; reduce ndiv or tol");
-            }
-            radius += side_length[i] * side_length[i] / 4.0;
+        // compute size of square/cubic container
+        let mut side_length = (xmax[0] - xmin[0]) / (ndiv[0] as f64);
+        for i in 1..ndim {
+            let sl = (xmax[i] - xmin[i]) / (ndiv[i] as f64);
+            side_length = f64::max(side_length, sl);
         }
-        radius = f64::sqrt(radius);
+        if side_length <= 2.0 * tolerance {
+            return Err("(xmax-xmin)/ndiv must be > 2·tolerance; reduce the tolerance (or ndiv)");
+        }
+
+        // update xmax after deciding on the side_length
+        // (to make sure that all the area/volume is covered by the grid)
+        for i in 0..ndim {
+            xmax[i] = xmin[i] + side_length * (ndiv[i] as f64);
+        }
 
         // tolerance to find points
         let tol_dist = if ndim == 2 {
             SQRT_2 * tolerance
         } else {
             SQRT_3 * tolerance
+        };
+
+        // radius of the circumscribed circle around a container box
+        let radius = if ndim == 2 {
+            SQRT_2 * side_length / 2.0
+        } else {
+            SQRT_3 * side_length / 2.0
         };
 
         // halo
@@ -221,8 +226,8 @@ impl GridSearch {
             ndiv,
             xmin,
             xmax,
-            side_length,
             coefficient,
+            side_length,
             tolerance,
             tol_dist,
             radius,
@@ -606,7 +611,7 @@ impl GridSearch {
             if x[i] < self.xmin[i] || x[i] > self.xmax[i] {
                 return None;
             }
-            ratio[i] = ((x[i] - self.xmin[i]) / self.side_length[i]) as usize;
+            ratio[i] = ((x[i] - self.xmin[i]) / self.side_length) as usize;
             if ratio[i] == self.ndiv[i] {
                 // the point is exactly on the max edge, thus select inner container
                 ratio[i] -= 1; // move to the inside
@@ -628,10 +633,10 @@ impl GridSearch {
     /// Computes the center coordinates of container
     #[inline]
     fn container_center(&self, cen: &mut [f64], i: usize, j: usize, k: usize) {
-        cen[0] = self.xmin[0] + (i as f64) * self.side_length[0] + self.side_length[0] / 2.0;
-        cen[1] = self.xmin[1] + (j as f64) * self.side_length[1] + self.side_length[1] / 2.0;
+        cen[0] = self.xmin[0] + (i as f64) * self.side_length + self.side_length / 2.0;
+        cen[1] = self.xmin[1] + (j as f64) * self.side_length + self.side_length / 2.0;
         if self.ndim == 3 {
-            cen[2] = self.xmin[2] + (k as f64) * self.side_length[2] + self.side_length[2] / 2.0;
+            cen[2] = self.xmin[2] + (k as f64) * self.side_length + self.side_length / 2.0;
         }
     }
 
@@ -799,345 +804,160 @@ impl fmt::Display for GridSearch {
 
 #[cfg(test)]
 mod tests {
+    #![allow(unused)]
 
-    /*
-    use super::GridSearch;
-    use crate::util::SQRT_2;
+    use super::{GridSearch, GS_DEFAULT_NDIV, GS_DEFAULT_TOLERANCE};
+    use crate::util::{SQRT_2, SQRT_3};
     use crate::StrError;
     use plotpy::{Canvas, Curve, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
-    struct TestData<'a> {
-        id: usize,
-        x: &'a [f64],
-        container: usize,        // container index calc with x only
-        containers: &'a [usize], // container index calc with halo and x
-    }
+    const NOISE: f64 = 1e-5;
+    const CIRCLE: (f64, f64, f64) = (-0.2, 1.8, 0.45); // xc,yc,radius
+    const POINTS_2D: [[f64; 2]; 11] = [
+        [-0.1, -0.1 + NOISE],
+        [0.0, 0.0],
+        [0.6 + NOISE, 0.0],
+        [0.0, 0.3],
+        [0.2, 0.5 + NOISE],
+        [0.31, 0.42],
+        [0.8, 1.8],
+        [0.6 + NOISE, 1.5],
+        [CIRCLE.0 + NOISE, CIRCLE.1 - CIRCLE.2 + NOISE],
+        [CIRCLE.0 + CIRCLE.2 + NOISE, CIRCLE.1 + NOISE],
+        [CIRCLE.0 + CIRCLE.2 * SQRT_2 / 2.0, CIRCLE.1 - CIRCLE.2 * SQRT_2 / 2.0],
+    ];
+    const LINES_2D: [[[f64; 2]; 2]; 3] = [
+        [[0.6, -0.2], [0.6, 1.8]], // vertical line
+        [[-0.2, 1.8], [0.8, 1.8]], // horizontal line
+        [[0.2, -0.2], [0.8, 0.1]],
+    ];
 
-    fn get_test_grid_2d() -> Result<GridSearch, StrError> {
-        GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], 0.0, GsNdiv::Spec(5, 5, 0), GsTol::Default)
-    }
-
-    fn get_test_grid_3d() -> Result<GridSearch, StrError> {
-        GridSearch::new(
-            &[-1.0, -1.0, -1.0],
-            &[1.0, 1.0, 1.0],
-            0.0,
-            GsNdiv::Spec(3, 3, 3),
-            GsTol::Default,
-        )
-    }
-
-    fn get_test_data_2d<'a>() -> Vec<TestData<'a>> {
-        vec![
-            TestData {
-                id: 100,
-                x: &[0.0, 0.2],
-                container: 6,
-                containers: &[0, 1, 5, 6],
-            },
-            TestData {
-                id: 200,
-                x: &[0.2, 0.6000000000000001],
-                container: 12,
-                containers: &[6, 7, 11, 12],
-            },
-            TestData {
-                id: 300,
-                x: &[0.4, 1.0],
-                // in this case, the ratio is:
-                // 3.0000000000000004, 2.9999999999999996
-                // thus, the point falls in #13 instead of #18
-                container: 13,
-                containers: &[12, 13, 17, 18],
-            },
-            TestData {
-                id: 400,
-                x: &[0.6, 1.4],
-                // in this case, the ratio is:
-                // 4, 3.9999999999999996
-                // thus, the point falls in #19 instead of #24
-                container: 19,
-                containers: &[18, 19, 23, 24],
-            },
-            TestData {
-                id: 500,
-                x: &[0.8, 1.8],
-                container: 24,
-                containers: &[24],
-            },
-            TestData {
-                id: 600,
-                x: &[0.6, 0.0],
-                container: 4,
-                containers: &[3, 4], // will be on 3 twice
-            },
-            // circle @ (-0.2,1.8) radius 0.3
-            TestData {
-                id: 101,
-                x: &[-0.2, 1.5],
-                container: 20,
-                containers: &[20],
-            },
-            TestData {
-                id: 102,
-                x: &[-0.2 + 0.3 * SQRT_2 / 2.0, 1.8 - 0.3 * SQRT_2 / 2.0],
-                container: 21,
-                containers: &[21],
-            },
-            TestData {
-                id: 103,
-                x: &[0.1, 1.8],
-                container: 21,
-                containers: &[21],
-            },
-        ]
-    }
-
-    fn get_test_data_3d<'a>() -> Vec<TestData<'a>> {
-        const L: f64 = 2.0;
-        vec![
-            TestData {
-                id: 100,
-                x: &[-1.0, -1.0, -1.0],
-                container: 0,
-                containers: &[0],
-            },
-            TestData {
-                id: 200,
-                x: &[0.0, 0.0, 0.0],
-                container: 13,
-                containers: &[13],
-            },
-            TestData {
-                id: 300,
-                x: &[-1.0 + L * 2.0 / 3.0, -1.0 + L * 2.0 / 3.0, -1.0 + L * 2.0 / 3.0],
-                container: 26,
-                containers: &[13, 14, 16, 17, 22, 23, 25, 26],
-            },
-            TestData {
-                id: 400,
-                x: &[-1.0 + L * 2.0 / 3.0, -0.7, -0.7],
-                container: 2,
-                containers: &[1, 2], // will be on 1 four times
-            },
-            TestData {
-                id: 500,
-                x: &[0.75, -0.75, -0.75],
-                container: 2,
-                containers: &[2],
-            },
-            // cylinder with 0.4 radius parallel to y passing through (1,-1,-1) and (1,1,-1)
-            TestData {
-                id: 101,
-                x: &[1.0 - 0.4, -1.0, -1.0],
-                container: 2,
-                containers: &[2],
-            },
-            TestData {
-                id: 102,
-                x: &[1.0 - 0.4 * SQRT_2 / 2.0, -1.0, -1.0 + 0.4 * SQRT_2 / 2.0],
-                container: 2,
-                containers: &[2],
-            },
-            TestData {
-                id: 103,
-                x: &[1.0, -1.0, -1.0 + 0.4],
-                container: 2,
-                containers: &[2],
-            },
-            TestData {
-                id: 104,
-                x: &[1.0 - 0.4, 0.75, -1.0],
-                container: 8,
-                containers: &[8],
-            },
-            TestData {
-                id: 105,
-                x: &[1.0 - 0.4 * SQRT_2 / 2.0, 0.75, -1.0 + 0.4 * SQRT_2 / 2.0],
-                container: 8,
-                containers: &[8],
-            },
-            TestData {
-                id: 106,
-                x: &[1.0, 0.75, -1.0 + 0.4],
-                container: 8,
-                containers: &[8],
-            },
-        ]
+    fn add_sample_points_to_grid_2d(grid: &mut GridSearch) -> Result<(), StrError> {
+        let mut id = 100;
+        for x in &POINTS_2D {
+            grid.insert(id, x)?;
+            id += 1;
+        }
+        Ok(())
     }
 
     #[test]
     fn new_fails_on_wrong_input() -> Result<(), StrError> {
         assert_eq!(
-            GridSearch::new(&[0.0], &[1.0, 1.0], 0.0, GsNdiv::Default, GsTol::Default).err(),
-            Some("min.len() = ndim must be 2 or 3")
+            GridSearch::new(&[0.0], &[1.0, 1.0], None, None, None).err(),
+            Some("xmin.len() = ndim must be 2 or 3")
         );
 
         assert_eq!(
-            GridSearch::new(&[0.0, 0.0], &[1.0], 0.0, GsNdiv::Default, GsTol::Default).err(),
-            Some("max.len() must equal ndim = min.len()")
+            GridSearch::new(&[0.0, 0.0], &[1.0], None, None, None).err(),
+            Some("xmax.len() must equal ndim = xmin.len()")
         );
 
         assert_eq!(
-            GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], 0.0, GsNdiv::Spec(0, 1, 1), GsTol::Default).err(),
-            Some("ndiv must be ≥ 1")
+            GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], None, Some(-0.1), None).err(),
+            Some("tolerance must be > 0.0")
         );
+
         assert_eq!(
-            GridSearch::new(
-                &[0.0, 0.0, 0.0],
-                &[1.0, 1.0, 1.0],
-                0.0,
-                GsNdiv::Spec(1, 0, 1),
-                GsTol::Default
-            )
-            .err(),
-            Some("ndiv must be ≥ 1")
+            GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], None, None, Some(-0.1)).err(),
+            Some("border_tol must be ≥ 0.0")
         );
+
         assert_eq!(
-            GridSearch::new(
-                &[0.0, 0.0, 0.0],
-                &[1.0, 1.0, 1.0],
-                0.0,
-                GsNdiv::Spec(1, 1, 0),
-                GsTol::Default
-            )
-            .err(),
+            GridSearch::new(&[0.0, 0.0], &[1.0, 1.0], Some(0), None, None).err(),
             Some("ndiv must be ≥ 1")
         );
 
         assert_eq!(
-            GridSearch::new(&[0.0, 0.0], &[0.0, 1.0], 0.0, GsNdiv::Spec(10, 10, 10), GsTol::Default).err(),
-            Some("max must be greater than min")
+            GridSearch::new(&[0.0, 0.0], &[0.0, 1.0], None, None, None).err(),
+            Some("xmax must be greater than xmin")
         );
 
         assert_eq!(
-            GridSearch::new(
-                &[0.0, 0.0, 0.0],
-                &[1.0, 0.0, 1.0],
-                0.0,
-                GsNdiv::Spec(10, 10, 10),
-                GsTol::Default
-            )
-            .err(),
-            Some("max must be greater than min")
+            GridSearch::new(&[0.0, 0.0, 0.0], &[1.0, 0.0, 1.0], None, None, None,).err(),
+            Some("xmax must be greater than xmin")
         );
+
         assert_eq!(
-            GridSearch::new(
-                &[0.0, 0.0, 0.0],
-                &[1.0, 1.0, 0.0],
-                0.0,
-                GsNdiv::Spec(10, 10, 10),
-                GsTol::Default
-            )
-            .err(),
-            Some("max must be greater than min")
+            GridSearch::new(&[0.0, 0.0, 0.0], &[1.0, 1.0, 0.0], None, None, None,).err(),
+            Some("xmax must be greater than xmin")
         );
 
         assert_eq!(
             GridSearch::new(
                 &[0.0, 0.0],
                 &[1.0, 1.0],
-                0.0,
-                GsNdiv::Spec(100, 1, 1),
-                GsTol::Spec(0.5 * (1.0 / 100.0), 1e-4, 1e-4)
+                Some(100),
+                Some(0.5 * (1.0 / 100.0)),
+                Some(0.0),
             )
             .err(),
-            Some("container size = (max-min)/ndiv must be > 2·tol; reduce ndiv or tol")
-        );
-        assert_eq!(
-            GridSearch::new(
-                &[0.0, 0.0, 0.0],
-                &[1.0, 1.0, 1.0],
-                0.0,
-                GsNdiv::Spec(1, 100, 1),
-                GsTol::Spec(1e-4, 0.5 * (1.0 / 100.0), 1e-4)
-            )
-            .err(),
-            Some("container size = (max-min)/ndiv must be > 2·tol; reduce ndiv or tol")
-        );
-        assert_eq!(
-            GridSearch::new(
-                &[0.0, 0.0, 0.0],
-                &[1.0, 1.0, 1.0],
-                0.0,
-                GsNdiv::Spec(1, 1, 100),
-                GsTol::Spec(1e-4, 1e-4, 0.5 * (1.0 / 100.0))
-            )
-            .err(),
-            Some("container size = (max-min)/ndiv must be > 2·tol; reduce ndiv or tol")
+            Some("(xmax-xmin)/ndiv must be > 2·tolerance; reduce the tolerance (or ndiv)")
         );
         Ok(())
     }
 
     #[test]
     fn new_works() -> Result<(), StrError> {
-        let g2d = GridSearch::new(
-            &[0.0, 0.0],
-            &[10.0, 1.0],
-            0.0,
-            GsNdiv::Prop(20),
-            GsTol::Spec(1e-4, 1e-5, 0.0),
-        )?;
-        assert_eq!(g2d.ndiv, [20, 2]);
-        assert_eq!(g2d.tol, [1e-4, 1e-5]);
+        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], None, None, None)?;
+        assert_eq!(grid.ndim, 2);
+        assert_eq!(grid.ndiv, [10, 20]);
+        assert_approx_eq!(grid.side_length, 0.102, 1e-15);
+        assert_vec_approx_eq!(grid.xmin, &[-0.21, -0.21], 1e-15);
+        assert_vec_approx_eq!(grid.xmax, &[0.81, -0.21 + 20.0 * 0.102], 1e-15);
+        assert_eq!(grid.coefficient, &[1, 10, 10 * 20]);
+        assert_eq!(grid.tolerance, GS_DEFAULT_TOLERANCE);
+        assert_approx_eq!(grid.tol_dist, SQRT_2 * GS_DEFAULT_TOLERANCE, 1e-15);
+        assert_approx_eq!(grid.radius, SQRT_2 * 0.102 / 2.0, 1e-15);
+        assert_eq!(grid.halo.len(), 4);
+        assert_eq!(grid.halo_ncorner, 4);
+        assert_eq!(grid.containers.len(), 0);
 
-        let g3d = GridSearch::new(
-            &[0.0, 0.0, 0.0],
-            &[10.0, 1.0, 20.0],
-            0.0,
-            GsNdiv::Prop(20),
-            GsTol::Spec(1e-4, 1e-5, 1e-6),
-        )?;
-        assert_eq!(g3d.ndiv, [10, 2, 20]);
-        assert_eq!(g3d.tol, [1e-4, 1e-5, 1e-6]);
+        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(8), None, Some(0.1))?;
+        assert_eq!(grid.ndim, 2);
+        assert_eq!(grid.ndiv, [4, 8]);
+        assert_approx_eq!(grid.side_length, 0.3, 1e-15);
+        assert_vec_approx_eq!(grid.xmin, &[-0.3, -0.3], 1e-15);
+        assert_vec_approx_eq!(grid.xmax, &[0.9, 2.1], 1e-15);
+        assert_eq!(grid.coefficient, &[1, 4, 4 * 8]);
+        assert_eq!(grid.tolerance, GS_DEFAULT_TOLERANCE);
+        assert_approx_eq!(grid.tol_dist, SQRT_2 * GS_DEFAULT_TOLERANCE, 1e-15);
+        assert_approx_eq!(grid.radius, SQRT_2 * 0.3 / 2.0, 1e-15);
+        assert_eq!(grid.halo.len(), 4);
+        assert_eq!(grid.halo_ncorner, 4);
+        assert_eq!(grid.containers.len(), 0);
 
-        let g2d = get_test_grid_2d()?;
-        assert_eq!(g2d.ndim, 2);
-        assert_eq!(g2d.ndiv, [5, 5]);
-        assert_eq!(g2d.xmin, [-0.2, -0.2]);
-        assert_eq!(g2d.xmax, [0.8, 1.8]);
-        assert_eq!(g2d.xdelta, [1.0, 2.0]);
-        assert_eq!(g2d.side_length, [0.2, 0.4]);
-        assert_eq!(g2d.coefficient, [1, 5, 25]);
-        assert_eq!(g2d.tol, [1e-4, 1e-4]);
-        assert_eq!(g2d.halo.len(), 4);
-        assert_eq!(g2d.halo_ncorner, 4);
-        assert_eq!(g2d.containers.len(), 0);
-        assert_approx_eq!(g2d.radius, f64::sqrt(0.1 * 0.1 + 0.2 * 0.2), 1e-15);
-        assert_approx_eq!(g2d.tol_dist, f64::sqrt(2.0 * 1e-4 * 1e-4), 1e-15);
-
-        let g3d = get_test_grid_3d()?;
-        assert_eq!(g3d.ndim, 3);
-        assert_eq!(g3d.ndiv, [3, 3, 3]);
-        assert_eq!(g3d.xmin, [-1.0, -1.0, -1.0]);
-        assert_eq!(g3d.xmax, [1.0, 1.0, 1.0]);
-        assert_eq!(g3d.xdelta, [2.0, 2.0, 2.0]);
-        assert_eq!(g3d.side_length, [2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]);
-        assert_eq!(g3d.coefficient, [1, 3, 9]);
-        assert_eq!(g3d.tol, [1e-4, 1e-4, 1e-4]);
-        assert_eq!(g3d.halo.len(), 8);
-        assert_eq!(g3d.halo_ncorner, 8);
-        assert_eq!(g3d.containers.len(), 0);
-        assert_approx_eq!(g3d.radius, f64::sqrt(3.0 * (1.0 / 3.0) * (1.0 / 3.0)), 1e-15);
-        assert_approx_eq!(g3d.tol_dist, f64::sqrt(3.0 * 1e-4 * 1e-4), 1e-15);
+        let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(2), None, Some(0.1))?;
+        assert_eq!(grid.ndim, 3);
+        assert_eq!(grid.ndiv, [2, 2, 2]);
+        assert_approx_eq!(grid.side_length, 1.1, 1e-15);
+        assert_vec_approx_eq!(grid.xmin, &[-1.1, -1.1, -1.1], 1e-15);
+        assert_vec_approx_eq!(grid.xmax, &[1.1, 1.1, 1.1], 1e-15);
+        assert_eq!(grid.coefficient, &[1, 2, 2 * 2]);
+        assert_eq!(grid.tolerance, GS_DEFAULT_TOLERANCE);
+        assert_approx_eq!(grid.tol_dist, SQRT_3 * GS_DEFAULT_TOLERANCE, 1e-15);
+        assert_approx_eq!(grid.radius, SQRT_3 * 1.1 / 2.0, 1e-15);
+        assert_eq!(grid.halo.len(), 8);
+        assert_eq!(grid.halo_ncorner, 8);
+        assert_eq!(grid.containers.len(), 0);
         Ok(())
     }
 
     #[test]
     fn display_trait_works() -> Result<(), StrError> {
-        let g2d = get_test_grid_2d()?;
+        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(6), None, None)?;
         assert_eq!(
-            format!("{}", g2d),
+            format!("{}", grid),
             "ids = []\n\
              nitem = 0\n\
              ncontainer = 0\n\
-             ndiv = [5, 5]\n"
+             ndiv = [3, 6]\n"
         );
 
-        let g3d = get_test_grid_3d()?;
+        let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(3), None, None)?;
         assert_eq!(
-            format!("{}", g3d),
+            format!("{}", grid),
             "ids = []\n\
              nitem = 0\n\
              ncontainer = 0\n\
@@ -1148,35 +968,41 @@ mod tests {
 
     #[test]
     fn draw_works_2d() -> Result<(), StrError> {
-        let mut grid = get_test_grid_2d()?;
-        for data in get_test_data_2d() {
-            grid.insert(data.id, data.x)?;
-        }
+        let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(8), None, Some(0.1))?;
+        add_sample_points_to_grid_2d(&mut grid)?;
         let mut plot = grid.draw()?;
         if false {
+            let h = grid.side_length / 2.0;
+            let r = grid.radius;
             let mut canvas = Canvas::new();
-            canvas.set_face_color("None").set_edge_color("magenta");
-            canvas.draw_circle(0.5, 0.8, grid.radius);
-            canvas.draw_circle(0.1, 0.4, grid.radius);
-            canvas.draw_circle(0.5, 0.0, grid.radius);
-            canvas.draw_circle(0.1, 1.6, grid.radius);
+            // draw rectangle representing the original limits
+            canvas
+                .set_face_color("#00000015")
+                .set_edge_color("None")
+                .draw_polyline(&[[-0.2, -0.2], [0.8, -0.2], [0.8, 1.8], [-0.2, 1.8]], true);
+            // draw circle circumscribing the lower left container
+            canvas
+                .set_face_color("None")
+                .set_edge_color("magenta")
+                .draw_circle(grid.xmin[0] + h, grid.xmin[1] + h, r);
+            // draw lines
             canvas.set_edge_color("#fab32f").set_line_width(1.5);
-            canvas.draw_polyline(&vec![vec![0.6, -0.2], vec![0.6, 1.8]], false);
-            canvas.draw_polyline(&vec![vec![-0.2, 1.8], vec![0.8, 1.8]], false);
-            canvas.draw_polyline(&vec![vec![0.2, -0.2], vec![0.8, 0.1]], false);
-            canvas.draw_polyline(
-                &vec![vec![0.1 + grid.radius, -0.2], vec![0.1 + grid.radius, 1.8]],
-                false,
-            );
-            canvas.set_edge_color("green").set_line_width(0.5);
-            canvas.draw_circle(-0.2, 1.8, 0.3);
+            for l in &LINES_2D {
+                canvas.draw_polyline(l, false);
+            }
+            // draw circle used in search
+            let (xc, yc, r) = CIRCLE;
+            canvas
+                .set_edge_color("green")
+                .set_line_width(0.5)
+                .draw_circle(xc, yc, r);
+            // setup and save figure
             plot.add(&canvas);
             plot.set_equal_axes(true)
-                .set_range(-0.4, 1.0, -0.4, 2.0)
                 .set_ticks_x(0.1, 0.0, "")
-                .set_num_ticks_y(12)
+                .set_ticks_y(0.1, 0.0, "")
                 .grid_and_labels("x", "y")
-                .set_figure_size_points(400.0, 800.0);
+                .set_figure_size_points(500.0, 1000.0);
             plot.save("/tmp/gemlab/test_plot_grid_search_2d.svg")?;
         }
         Ok(())
@@ -1184,10 +1010,7 @@ mod tests {
 
     #[test]
     fn draw_works_3d() -> Result<(), StrError> {
-        let mut grid = get_test_grid_3d()?;
-        for data in get_test_data_3d() {
-            grid.insert(data.id, data.x)?;
-        }
+        let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(3), None, Some(0.0))?;
         let mut plot = grid.draw()?;
         if false {
             let mut curve = Curve::new();
@@ -1207,26 +1030,27 @@ mod tests {
 
     #[test]
     fn set_halo_works() -> Result<(), StrError> {
-        let mut g2d = get_test_grid_2d()?;
-        g2d.set_halo(&[0.5, 0.5]);
-        assert_eq!(g2d.halo[0], [0.4999, 0.4999]);
-        assert_eq!(g2d.halo[1], [0.5001, 0.4999]);
-        assert_eq!(g2d.halo[2], [0.5001, 0.5001]);
-        assert_eq!(g2d.halo[3], [0.4999, 0.5001]);
+        let mut grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(6), None, Some(0.0))?;
+        grid.set_halo(&[0.5, 0.5]);
+        assert_eq!(grid.halo[0], [0.4999, 0.4999]);
+        assert_eq!(grid.halo[1], [0.5001, 0.4999]);
+        assert_eq!(grid.halo[2], [0.5001, 0.5001]);
+        assert_eq!(grid.halo[3], [0.4999, 0.5001]);
 
-        let mut g3d = get_test_grid_3d()?;
-        g3d.set_halo(&[0.5, 0.5, 0.5]);
-        assert_eq!(g3d.halo[0], [0.4999, 0.4999, 0.4999]);
-        assert_eq!(g3d.halo[1], [0.5001, 0.4999, 0.4999]);
-        assert_eq!(g3d.halo[2], [0.5001, 0.5001, 0.4999]);
-        assert_eq!(g3d.halo[3], [0.4999, 0.5001, 0.4999]);
-        assert_eq!(g3d.halo[4], [0.4999, 0.4999, 0.5001]);
-        assert_eq!(g3d.halo[5], [0.5001, 0.4999, 0.5001]);
-        assert_eq!(g3d.halo[6], [0.5001, 0.5001, 0.5001]);
-        assert_eq!(g3d.halo[7], [0.4999, 0.5001, 0.5001]);
+        let mut grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(3), None, Some(0.0))?;
+        grid.set_halo(&[0.5, 0.5, 0.5]);
+        assert_eq!(grid.halo[0], [0.4999, 0.4999, 0.4999]);
+        assert_eq!(grid.halo[1], [0.5001, 0.4999, 0.4999]);
+        assert_eq!(grid.halo[2], [0.5001, 0.5001, 0.4999]);
+        assert_eq!(grid.halo[3], [0.4999, 0.5001, 0.4999]);
+        assert_eq!(grid.halo[4], [0.4999, 0.4999, 0.5001]);
+        assert_eq!(grid.halo[5], [0.5001, 0.4999, 0.5001]);
+        assert_eq!(grid.halo[6], [0.5001, 0.5001, 0.5001]);
+        assert_eq!(grid.halo[7], [0.4999, 0.5001, 0.5001]);
         Ok(())
     }
 
+    /*
     #[test]
     fn container_index_works() -> Result<(), StrError> {
         let g2d = get_test_grid_2d()?;

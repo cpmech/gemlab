@@ -317,20 +317,20 @@ mod tests {
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
-        // plot_grid_two_quads_horizontal(&find)?;
+        if false {
+            plot_grid_two_quads_horizontal(&find)?;
+        }
         assert_eq!(
             format!("{}", find.grid),
             "0: [0]\n\
              9: [1]\n\
-             10: [1]\n\
              19: [4]\n\
              180: [3]\n\
              189: [2]\n\
-             190: [2]\n\
              199: [5]\n\
              ids = [0, 1, 2, 3, 4, 5]\n\
              nitem = 6\n\
-             ncontainer = 8\n\
+             ncontainer = 6\n\
              ndiv = [20, 10]\n"
         );
         Ok(())

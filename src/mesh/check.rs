@@ -112,8 +112,8 @@ pub fn check_face_normals(
 
 /// Checks if there are overlapping points
 pub fn check_overlapping_points(mesh: &Mesh, tol: f64) -> Result<(), StrError> {
-    let (min, max) = get_mesh_limits(mesh);
-    let mut grid = GridSearch::new(&min, &max, None, Some(5), Some(tol))?;
+    let (xmin, xmax) = get_mesh_limits(mesh);
+    let mut grid = GridSearch::new(&xmin, &xmax, Some(5), Some(tol), None)?;
     for point in &mesh.points {
         grid.insert(point.id, &point.coords)?;
     }
