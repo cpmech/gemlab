@@ -296,8 +296,7 @@ impl fmt::Display for GridSearchCell {
         // summary
         let mut ids: Vec<_> = unique_items.keys().collect();
         ids.sort();
-        write!(f, "ids = {:?}\n", ids).unwrap();
-        write!(f, "nitem = {}\n", unique_items.len()).unwrap();
+        write!(f, "ncell = {}\n", unique_items.len()).unwrap();
         write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();
         write!(f, "ndiv = {:?}\n", self.ndiv).unwrap();
         Ok(())
@@ -385,8 +384,7 @@ mod tests {
              1: [0, 1]\n\
              2: [0, 1]\n\
              3: [0, 1]\n\
-             ids = [0, 1]\n\
-             nitem = 2\n\
+             ncell = 2\n\
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
         );
@@ -438,8 +436,7 @@ mod tests {
             format!("{}", grid),
             "0: [0, 1]\n\
              1: [1]\n\
-             ids = [0, 1]\n\
-             nitem = 2\n\
+             ncell = 2\n\
              ncontainer = 2\n\
              ndiv = [1, 2]\n"
         );
@@ -488,8 +485,7 @@ mod tests {
              5: [0]\n\
              6: [0]\n\
              7: [0]\n\
-             ids = [0]\n\
-             nitem = 1\n\
+             ncell = 1\n\
              ncontainer = 8\n\
              ndiv = [2, 2, 2]\n"
         );
@@ -555,8 +551,7 @@ mod tests {
              1: [8, 10]\n\
              2: [2, 4, 8, 10]\n\
              3: [8, 10]\n\
-             ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
-             nitem = 12\n\
+             ncell = 12\n\
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
         );
