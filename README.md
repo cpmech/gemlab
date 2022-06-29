@@ -29,16 +29,16 @@ gemlab = "0.2"
 
 ```rust
 use gemlab::integ::default_integ_points;
-use gemlab::mesh::{allocate_state, At, Extract, Region};
-use gemlab::shapes::GeoKind;
+use gemlab::mesh::{set_pad_coords, At, Extract, Mesh, Region};
+use gemlab::shapes::{op, Scratchpad};
 use gemlab::StrError;
 use std::collections::HashSet;
 
 fn main() -> Result<(), StrError> {
-    // 1. Input the raw mesh data using a text file
-    //    and compute all derived information such as shapes,
-    //    and boundary entities. These data area stored in a
-    //    Region for the sake of convenience.
+    // Input the raw mesh data using a text file
+    // and compute all derived information such as shapes,
+    // and boundary entities. These data area stored in a
+    // Region for the sake of convenience.
     //
     // 1.0  5------,6.------7
     //      | [3],'   `.[4] |
@@ -50,37 +50,29 @@ fn main() -> Result<(), StrError> {
     //      | [0]`.   .'[1] |
     // 0.0  0------`1'------2
     //     0.0     0.5     1.0
-    let region = Region::with_text_file("./data/meshes/four_tri3_one_qua4.msh", Extract::Boundary)?;
+    let path = "./data/meshes/four_tri3_one_qua4.msh";
+    let mesh = Mesh::from_text_file(path)?;
+    let region = Region::with(&mesh, Extract::Boundary)?;
 
-    // 2. Check the mesh, shapes, and boundary
-    assert_eq!(region.mesh.points.len(), 8);
-    assert_eq!(region.mesh.cells.len(), 5);
-    assert_eq!(region.shapes.len(), 5);
-    assert_eq!(region.shapes[0].kind, GeoKind::Tri3);
-    assert_eq!(region.shapes[2].kind, GeoKind::Qua4);
-    assert_eq!(region.boundary.points.len(), 8);
-    assert_eq!(region.boundary.edges.len(), 8);
-    assert_eq!(region.boundary.faces.len(), 0);
-    assert_eq!(region.boundary.min, &[0.0, 0.0]);
-    assert_eq!(region.boundary.max, &[1.0, 1.0]);
-
-    // 3. Find entities along the boundary of the mesh
-    //    by giving coordinates. The `At` enum provides
-    //    an easy way to define the aspect of the constraint
-    //    such as line, plane, circle, etc.
+    // Find entities along the boundary of the mesh
+    // by giving coordinates. The `At` enum provides
+    // an easy way to define the type of the constraint
+    // such as line, plane, circle, etc.
     check(&region.find.points(At::Y(0.5))?, &[3, 4]);
     check(&region.find.edges(At::X(1.0))?, &[(2, 4), (4, 7)]);
 
-    // 4. Perform numerical integration to compute the
-    //    area of cell # 2
-    let shape = &region.shapes[2];
-    let ips = default_integ_points(shape.kind);
-    let mut state = allocate_state(&region.mesh, 2)?;
+    // Perform numerical integration to compute
+    // the area of cell # 2
+    let ndim = 2;
+    let cell_2 = &mesh.cells[2];
+    let mut pad = Scratchpad::new(ndim, cell_2.kind)?;
+    set_pad_coords(&mut pad, &cell_2.points, &mesh);
+    let ips = default_integ_points(cell_2.kind);
     let mut area = 0.0;
     for p in 0..ips.len() {
         let iota = &ips[p];
         let weight = ips[p][3];
-        let det_jac = shape.calc_jacobian(&mut state, iota)?;
+        let det_jac = op::calc_jacobian(&mut pad, iota)?;
         area += weight * det_jac;
     }
     assert_eq!(area, 0.5);
