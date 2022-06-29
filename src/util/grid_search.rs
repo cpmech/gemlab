@@ -18,13 +18,13 @@ pub const GS_DEFAULT_BORDER_TOL: f64 = 1e-2;
 type ContainerKey = usize;
 
 /// Specifies the identification number of items
-type ItemID = usize;
+type ItemId = usize;
 
 /// Defines the container type: ID to Coordinates
 ///
 /// Note: we cannot use a HashSet here, because we need to store the coordinates
 /// for later use such as when calculating point-to-point distances
-type Container = HashMap<ItemID, Vec<f64>>;
+type Container = HashMap<ItemId, Vec<f64>>;
 
 /// Defines the containers type: Key to Container
 type Containers = HashMap<ContainerKey, Container>;
@@ -714,7 +714,7 @@ impl GridSearch {
     /// Note: we need to store the coordinates for later use
     /// such as when calculating point-to-point distances
     #[inline]
-    fn update_or_insert(&mut self, key: ContainerKey, id: ItemID, x: &[f64]) {
+    fn update_or_insert(&mut self, key: ContainerKey, id: ItemId, x: &[f64]) {
         let container = self.containers.entry(key).or_insert(HashMap::new());
         container.insert(id, x.to_vec());
     }
