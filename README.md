@@ -27,7 +27,7 @@ gemlab = "0.2"
 
 ## Examples
 
-```text
+```rust
 use gemlab::integ::default_integ_points;
 use gemlab::mesh::{allocate_state, At, Extract, Region};
 use gemlab::shapes::GeoKind;
