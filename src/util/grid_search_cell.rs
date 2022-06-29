@@ -313,7 +313,7 @@ impl fmt::Display for GridSearchCell {
 #[cfg(test)]
 mod tests {
     use super::GridSearchCell;
-    use crate::util::{SQRT_2, SQRT_3};
+    use crate::util::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE, SQRT_2, SQRT_3};
     use crate::StrError;
     use plotpy::{Canvas, Curve, Plot, PolyCode, RayEndpoint, Surface};
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
@@ -361,12 +361,12 @@ mod tests {
         let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
         let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
         let max_len = 1.0;
-        let side_len = max_len + 2.0 * tolerance; // because the bbox is expanded
+        let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 2);
-        assert_eq!(grid.side_length, side_len);
+        assert_eq!(grid.side_length, sl);
         assert_eq!(grid.ndiv, &[2, 2]);
         assert_eq!(grid.xmin, &[-0.1, -0.1]);
-        assert_eq!(grid.xmax, &[-0.1 + side_len * 2.0, -0.1 + side_len * 2.0]);
+        assert_eq!(grid.xmax, &[-0.1 + sl * 2.0, -0.1 + sl * 2.0]);
         assert_eq!(grid.bbox_large, &[1.0, 1.0]);
         assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 2);
@@ -375,6 +375,25 @@ mod tests {
         let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(bbox_1, &[[0.0, 1.0], [0.0, 1.0]]);
+        let container_0 = grid.containers.get(&0).unwrap();
+        let container_1 = grid.containers.get(&1).unwrap();
+        let container_2 = grid.containers.get(&2).unwrap();
+        let container_3 = grid.containers.get(&3).unwrap();
+        assert_eq!(container_0.len(), 2);
+        assert_eq!(container_1.len(), 2);
+        assert_eq!(container_2.len(), 2);
+        assert_eq!(container_3.len(), 2);
+        assert_eq!(
+            format!("{}", grid),
+            "0: [0, 1]\n\
+             1: [0, 1]\n\
+             2: [0, 1]\n\
+             3: [0, 1]\n\
+             ids = [0, 1]\n\
+             nitem = 2\n\
+             ncontainer = 4\n\
+             ndiv = [2, 2]\n"
+        );
         if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIANGLES);
@@ -401,12 +420,12 @@ mod tests {
         let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
         let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
         let max_len = 1.5;
-        let side_len = max_len + 2.0 * tolerance; // because the bbox is expanded
+        let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 2);
-        assert_eq!(grid.side_length, side_len);
+        assert_eq!(grid.side_length, sl);
         assert_eq!(grid.ndiv, &[1, 2]);
         assert_eq!(grid.xmin, &[-0.1, -0.1]);
-        assert_eq!(grid.xmax, &[-0.1 + side_len, -0.1 + side_len * 2.0]);
+        assert_eq!(grid.xmax, &[-0.1 + sl, -0.1 + sl * 2.0]);
         assert_eq!(grid.bbox_large, &[1.2, 1.5]);
         assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 2);
@@ -415,6 +434,19 @@ mod tests {
         let bbox_1 = grid.bounding_boxes.get(&1).unwrap();
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0]]);
         assert_eq!(bbox_1, &[[0.0, 1.2], [0.0, 1.5]]);
+        let container_0 = grid.containers.get(&0).unwrap();
+        let container_1 = grid.containers.get(&1).unwrap();
+        assert_eq!(container_0.len(), 2);
+        assert_eq!(container_1.len(), 1);
+        assert_eq!(
+            format!("{}", grid),
+            "0: [0, 1]\n\
+             1: [1]\n\
+             ids = [0, 1]\n\
+             nitem = 2\n\
+             ncontainer = 2\n\
+             ndiv = [1, 2]\n"
+        );
         if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIANGLES);
@@ -438,21 +470,33 @@ mod tests {
         let get_x = |t: usize, m: usize| Ok(&TETS[t][m][..]);
         let mut grid = GridSearchCell::new(3, TETS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
         let max_len = 1.0;
-        let side_len = max_len + 2.0 * tolerance; // because the bbox is expanded
+        let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 3);
-        assert_eq!(grid.side_length, side_len);
+        assert_eq!(grid.side_length, sl);
         assert_eq!(grid.ndiv, &[2, 2, 2]);
         assert_eq!(grid.xmin, &[-0.1, -0.1, -0.1]);
-        assert_eq!(
-            grid.xmax,
-            &[-0.1 + side_len * 2.0, -0.1 + side_len * 2.0, -0.1 + side_len * 2.0]
-        );
+        assert_eq!(grid.xmax, &[-0.1 + sl * 2.0, -0.1 + sl * 2.0, -0.1 + sl * 2.0]);
         assert_eq!(grid.bbox_large, &[1.0, 1.0, 1.0]);
         assert_eq!(grid.tol_dist, SQRT_3 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 1);
         assert_eq!(grid.containers.len(), 8);
         let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
         assert_eq!(bbox_0, &[[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]]);
+        assert_eq!(
+            format!("{}", grid),
+            "0: [0]\n\
+             1: [0]\n\
+             2: [0]\n\
+             3: [0]\n\
+             4: [0]\n\
+             5: [0]\n\
+             6: [0]\n\
+             7: [0]\n\
+             ids = [0]\n\
+             nitem = 1\n\
+             ncontainer = 8\n\
+             ndiv = [2, 2, 2]\n"
+        );
         if false {
             let mut plot = Plot::new();
             draw_tetrahedra(&mut plot, &TETS);
@@ -467,23 +511,59 @@ mod tests {
     #[test]
     fn gs_cell_works_2d() -> Result<(), StrError> {
         // [num_triangle][nnode=3][ndim=2]
+        #[rustfmt::skip]
         const TRIANGLES: [[[f64; 2]; 3]; 12] = [
-            [[0.230951, 0.558482], [0.133721, 0.348832], [0.540745, 0.331184]],
-            [[0.13928, 0.180603], [0.133721, 0.348832], [0.0307942, 0.459123]],
-            [[0.0307942, 0.459123], [0.230951, 0.558482], [0.0980015, 0.981755]],
-            [[0.230951, 0.558482], [0.0307942, 0.459123], [0.133721, 0.348832]],
-            [[0.0980015, 0.981755], [0.230951, 0.558482], [0.578587, 0.760349]],
-            [[0.133721, 0.348832], [0.13928, 0.180603], [0.540745, 0.331184]],
-            [[0.540745, 0.331184], [0.578587, 0.760349], [0.230951, 0.558482]],
-            [[0.540745, 0.331184], [0.478554, 0.00869692], [0.648071, 0.369534]],
-            [[0.578587, 0.760349], [0.648071, 0.369534], [0.903726, 0.975904]],
-            [[0.648071, 0.369534], [0.578587, 0.760349], [0.540745, 0.331184]],
-            [[0.578587, 0.760349], [0.903726, 0.975904], [0.0980015, 0.981755]],
-            [[0.540745, 0.331184], [0.13928, 0.180603], [0.478554, 0.00869692]],
+            [[0.230951,  0.558482], [0.133721,  0.348832],   [0.540745,  0.331184]],   //  0
+            [[0.13928,   0.180603], [0.133721,  0.348832],   [0.0307942, 0.459123]],   //  1
+            [[0.0307942, 0.459123], [0.230951,  0.558482],   [0.0980015, 0.981755]],   //  2
+            [[0.230951,  0.558482], [0.0307942, 0.459123],   [0.133721,  0.348832]],   //  3
+            [[0.0980015, 0.981755], [0.230951,  0.558482],   [0.578587,  0.760349]],   //  4
+            [[0.133721,  0.348832], [0.13928,   0.180603],   [0.540745,  0.331184]],   //  5
+            [[0.540745,  0.331184], [0.578587,  0.760349],   [0.230951,  0.558482]],   //  6
+            [[0.540745,  0.331184], [0.478554,  0.00869692], [0.648071,  0.369534]],   //  7
+            [[0.578587,  0.760349], [0.648071,  0.369534],   [0.903726,  0.975904]],   //  8
+            [[0.648071,  0.369534], [0.578587,  0.760349],   [0.540745,  0.331184]],   //  9
+            [[0.578587,  0.760349], [0.903726,  0.975904],   [0.0980015, 0.981755]],   // 10
+            [[0.540745,  0.331184], [0.13928,   0.180603],   [0.478554,  0.00869692]], // 11
         ];
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
         let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, None, None)?;
+        let max_len = TRIANGLES[10][1][0] - TRIANGLES[10][2][0];
+        let max_len_y = TRIANGLES[8][2][1] - TRIANGLES[8][1][1];
+        let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE; // because the bbox is expanded
+        let g = GS_DEFAULT_BORDER_TOL;
+        assert_eq!(grid.ndim, 2);
+        assert_eq!(grid.side_length, sl);
+        assert_eq!(grid.ndiv, &[2, 2]);
+        assert_eq!(grid.xmin, &[TRIANGLES[1][2][0] - g, TRIANGLES[11][2][1] - g]);
+        assert_eq!(
+            grid.xmax,
+            &[TRIANGLES[1][2][0] - g + sl * 2.0, TRIANGLES[11][2][1] - g + sl * 2.0]
+        );
+        assert_eq!(grid.bbox_large, &[max_len, max_len_y]);
+        assert_eq!(grid.tol_dist, SQRT_2 * GS_DEFAULT_TOLERANCE);
+        assert_eq!(grid.bounding_boxes.len(), TRIANGLES.len());
+        assert_eq!(grid.containers.len(), 4);
+        let bbox_0 = grid.bounding_boxes.get(&0).unwrap();
+        assert_eq!(
+            bbox_0,
+            &[
+                [TRIANGLES[0][1][0], TRIANGLES[0][2][0]],
+                [TRIANGLES[0][2][1], TRIANGLES[0][0][1]]
+            ]
+        );
+        assert_eq!(
+            format!("{}", grid),
+            "0: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
+             1: [8, 10]\n\
+             2: [2, 4, 8, 10]\n\
+             3: [8, 10]\n\
+             ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
+             nitem = 12\n\
+             ncontainer = 4\n\
+             ndiv = [2, 2]\n"
+        );
         if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIANGLES);
