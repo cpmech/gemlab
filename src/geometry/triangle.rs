@@ -1,3 +1,12 @@
+/// Returns true if the sign of the cross product vector is negative, including -0.0
+///
+/// Specifically, returns true if the sign of the component of the out-of-plane vector,
+/// resulting from the cross product between u and v is negative
+#[inline]
+fn cross_is_negative(u0: f64, u1: f64, v0: f64, v1: f64) -> bool {
+    f64::is_sign_negative(u0 * v1 - u1 * v0)
+}
+
 /// Checks whether a point is inside a triangle or not
 ///
 /// ```text
@@ -32,20 +41,23 @@ pub fn is_point_inside_triangle(xa: &[f64], xb: &[f64], xc: &[f64], xp: &[f64]) 
     (na && nb && nc) || (!na && !nb && !nc)
 }
 
-/// Returns true if the sign of the cross product vector is negative, including -0.0
-///
-/// Specifically, returns true if the sign of the component of the out-of-plane vector,
-/// resulting from the cross product between u and v is negative
-#[inline]
-fn cross_is_negative(u0: f64, u1: f64, v0: f64, v1: f64) -> bool {
-    f64::is_sign_negative(u0 * v1 - u1 * v0)
+/// Computes the signed area of a triangle given its vertices
+/// 
+/// The sign is positive if the vertices are given in counter-clockwise order.
+/// Otherwise, the area is negative (clockwise order).
+#[rustfmt::skip]
+pub fn triangle_signed_area(xa: &[f64], xb: &[f64], xc: &[f64]) -> f64 {
+    (   xa[0] * (xb[1] - xc[1])
+      + xb[0] * (xc[1] - xa[1])
+      + xc[0] * (xa[1] - xb[1])
+    ) / 2.0
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::is_point_inside_triangle;
+    use super::{is_point_inside_triangle, triangle_signed_area};
     use crate::StrError;
     use plotpy::{Canvas, Plot, PolyCode, Text};
 
@@ -126,5 +138,13 @@ mod tests {
                 .save("/tmp/gemlab/test_is_point_inside_triangle_2.svg")?;
         }
         Ok(())
+    }
+
+    #[test]
+    fn triangle_signed_area_works() {
+        assert_eq!(triangle_signed_area(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0]), 0.5);
+        assert_eq!(triangle_signed_area(&[1.0, 0.0], &[0.0, 0.0], &[0.0, 1.0]), -0.5);
+        assert_eq!(triangle_signed_area(&[-1.0, 2.0], &[4.0, -3.0], &[2.0, 3.0]), 10.0);
+        assert_eq!(triangle_signed_area(&[-2.0, 3.0], &[-3.0, -1.0], &[3.0, -2.0]), 12.5);
     }
 }
