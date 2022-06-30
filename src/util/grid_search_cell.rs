@@ -220,11 +220,39 @@ impl GridSearchCell {
         })
     }
 
-    pub fn find_cell<F>(&self, x: &[f64], is_in_cell: F) -> Result<(), StrError>
+    pub fn find_cell<F>(&self, x: &[f64], is_in_cell: F) -> Result<Option<CellId>, StrError>
     where
         F: Fn(usize, &[f64]) -> Result<bool, StrError>,
     {
-        Ok(())
+        // check if the point is out-of-bounds
+        for i in 0..self.ndim {
+            if x[i] < self.xmin[i] || x[i] > self.xmax[i] {
+                return Err("given point coordinates are outsize the grid");
+            }
+        }
+
+        // get the container where `x` falls in
+        let key = GridSearchCell::calc_container_key(self.ndim, self.side_length, &self.ndiv, &self.xmin, x);
+        let container = match self.containers.get(&key) {
+            Some(c) => c,
+            None => return Ok(None), // no container with cells in it
+        };
+
+        // find the cell where the point falls in
+        for cell_id in container {
+            let x_min_max = &self.bounding_boxes[*cell_id];
+            for i in 0..self.ndim {
+                if x[i] < x_min_max[i][I_MIN] || x[i] > x_min_max[i][I_MAX] {
+                    continue; // outside the bounding box
+                }
+            }
+            if (is_in_cell)(*cell_id, x)? {
+                return Ok(Some(*cell_id));
+            }
+        }
+
+        // not found
+        Ok(None)
     }
 
     /// Draws grid and items
@@ -345,6 +373,7 @@ impl fmt::Display for GridSearchCell {
 #[cfg(test)]
 mod tests {
     use super::GridSearchCell;
+    use crate::geometry::is_point_inside_triangle;
     use crate::util::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE, SQRT_2, SQRT_3};
     use crate::StrError;
     use plotpy::{Canvas, Curve, Plot, PolyCode, RayEndpoint, Surface};
@@ -565,10 +594,10 @@ mod tests {
     }
 
     #[test]
-    fn gs_cell_works_2d() -> Result<(), StrError> {
+    fn find_works_2d() -> Result<(), StrError> {
         // [num_triangle][nnode=3][ndim=2]
         #[rustfmt::skip]
-        const TRIANGLES: [[[f64; 2]; 3]; 12] = [
+        const TRIS: [[[f64; 2]; 3]; 12] = [
             [[0.230951,  0.558482], [0.133721,  0.348832],   [0.540745,  0.331184]],   //  0
             [[0.13928,   0.180603], [0.133721,  0.348832],   [0.0307942, 0.459123]],   //  1
             [[0.0307942, 0.459123], [0.230951,  0.558482],   [0.0980015, 0.981755]],   //  2
@@ -583,31 +612,28 @@ mod tests {
             [[0.540745,  0.331184], [0.13928,   0.180603],   [0.478554,  0.00869692]], // 11
         ];
         let get_nnode = |_| Ok(3);
-        let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
-        let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, None, None)?;
-        let max_len = TRIANGLES[10][1][0] - TRIANGLES[10][2][0];
-        let max_len_y = TRIANGLES[8][2][1] - TRIANGLES[8][1][1];
+        let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
+        let mut grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, None)?;
+        let max_len = TRIS[10][1][0] - TRIS[10][2][0];
+        let max_len_y = TRIS[8][2][1] - TRIS[8][1][1];
         let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE; // because the bbox is expanded
         let g = GS_DEFAULT_BORDER_TOL;
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.side_length, sl);
         assert_eq!(grid.ndiv, &[2, 2]);
-        assert_eq!(grid.xmin, &[TRIANGLES[1][2][0] - g, TRIANGLES[11][2][1] - g]);
+        assert_eq!(grid.xmin, &[TRIS[1][2][0] - g, TRIS[11][2][1] - g]);
         assert_eq!(
             grid.xmax,
-            &[TRIANGLES[1][2][0] - g + sl * 2.0, TRIANGLES[11][2][1] - g + sl * 2.0]
+            &[TRIS[1][2][0] - g + sl * 2.0, TRIS[11][2][1] - g + sl * 2.0]
         );
         assert_eq!(grid.bbox_large, &[max_len, max_len_y]);
         assert_eq!(grid.tol_dist, SQRT_2 * GS_DEFAULT_TOLERANCE);
-        assert_eq!(grid.bounding_boxes.len(), TRIANGLES.len());
+        assert_eq!(grid.bounding_boxes.len(), TRIS.len());
         assert_eq!(grid.containers.len(), 4);
         let bbox_0 = &grid.bounding_boxes[0];
         assert_eq!(
             bbox_0,
-            &[
-                [TRIANGLES[0][1][0], TRIANGLES[0][2][0]],
-                [TRIANGLES[0][2][1], TRIANGLES[0][0][1]]
-            ]
+            &[[TRIS[0][1][0], TRIS[0][2][0]], [TRIS[0][2][1], TRIS[0][0][1]]]
         );
         assert_eq!(
             format!("{}", grid),
@@ -619,16 +645,32 @@ mod tests {
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
         );
+        let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
+        assert_eq!(grid.find_cell(&[0.4, 0.2], is_in_cell)?, Some(11));
+        assert_eq!(grid.find_cell(&[0.6, 0.3], is_in_cell)?, Some(7));
+        assert_eq!(grid.find_cell(&[0.1, 0.7], is_in_cell)?, Some(2));
+        assert_eq!(grid.find_cell(&[0.8, 0.8], is_in_cell)?, Some(8));
+        let res = grid.find_cell(&TRIS[7][1], is_in_cell)?;
+        if res != Some(7) {
+            assert_eq!(res, Some(11));
+        }
+        assert_eq!(grid.find_cell(&[0.1, 0.1], is_in_cell)?, None);
+        assert_eq!(grid.find_cell(&[0.6, 0.2], is_in_cell)?, None);
+        assert_eq!(grid.find_cell(&[0.4, 1.0], is_in_cell)?, None);
+        assert_eq!(
+            grid.find_cell(&[10.0, 1.0], is_in_cell).err(),
+            Some("given point coordinates are outsize the grid")
+        );
         if false {
             let mut plot = Plot::new();
-            draw_triangles(&mut plot, &TRIANGLES);
+            draw_triangles(&mut plot, &TRIS);
             grid.draw(&mut plot)?;
             plot.set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
                 .grid_and_labels("x", "y")
                 .set_ticks_x(0.2, 0.0, "")
                 .set_ticks_y(0.2, 0.0, "")
-                .save("/tmp/gemlab/test_grid_search_cell_works_2d.svg")?;
+                .save("/tmp/gemlab/test_grid_search_cell_find_works_2d.svg")?;
         }
         Ok(())
     }
