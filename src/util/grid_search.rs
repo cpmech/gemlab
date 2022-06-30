@@ -11,7 +11,7 @@ pub const GS_DEFAULT_NDIV: usize = 20;
 /// Default GridSearch tolerance for all directions
 pub const GS_DEFAULT_TOLERANCE: f64 = 1e-4;
 
-/// Default GridSearch border tol to handle imprecision near the borders
+/// Default GridSearch border tolerance to handle imprecision near the borders
 pub const GS_DEFAULT_BORDER_TOL: f64 = 1e-2;
 
 /// Specifies the key of containers (or bins in the grid)

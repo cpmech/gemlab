@@ -40,17 +40,17 @@ impl GridSearchCell {
         let mut ix = ((x[0] - xmin[0]) / side_length) as usize; // (Eq. 8)
         let mut iy = ((x[1] - xmin[1]) / side_length) as usize;
         if ix == ndiv[0] {
-            ix -= 1; // point is max edge => move to inner container
+            ix -= 1; // point is on max edge => move to inner container
         }
         if iy == ndiv[1] {
-            iy -= 1; // point is max edge => move to inner container
+            iy -= 1; // point is on max edge => move to inner container
         }
         if ndim == 2 {
             return ix + iy * ndiv[0];
         }
         let mut iz = ((x[2] - xmin[2]) / side_length) as usize;
         if iz == ndiv[2] {
-            iz -= 1; // point is max edge => move to inner container
+            iz -= 1; // point is on max edge => move to inner container
         }
         return ix + iy * ndiv[0] + iz * ndiv[0] * ndiv[1];
     }
@@ -63,7 +63,7 @@ impl GridSearchCell {
     /// * `ncell` -- is the number of cells (e.g., triangle/tetrahedron) in the mesh.
     ///     - All cells are numbered from `0` to `ncell - 1`
     ///     - The index of the cell in a mesh is also called CellId (`cell_id`)
-    /// * `get_node` -- is a function of the `cell_id` that returns the number of nodes `nnode` of the cell
+    /// * `get_nnode` -- is a function of the `cell_id` that returns the number of nodes `nnode` of the cell
     /// * `get_x` -- is a function of the `cell_id` and the local index of the node/point `m`.
     ///    This function returns the coordinates `x` of the point.
     /// * `tolerance` -- is a tolerance to expand the bounding box of cells and compare points; e.g. 1e-4
@@ -205,6 +205,10 @@ impl GridSearchCell {
         })
     }
 
+    /// Find the cell (e.g., triangle or tetrahedron) where the given coordinate falls in
+    ///
+    /// * Returns the CellId or None if no cell contains the point
+    /// * `is_in_cell` is a function of cell_id and x that tells whether the point si in the cell or not
     pub fn find_cell<F>(&self, x: &[f64], is_in_cell: F) -> Result<Option<CellId>, StrError>
     where
         F: Fn(usize, &[f64]) -> Result<bool, StrError>,
