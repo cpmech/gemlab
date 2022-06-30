@@ -1,6 +1,4 @@
-#![allow(unused)]
-
-use super::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE, SQRT_2, SQRT_3};
+use super::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
 use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
 use std::collections::{HashMap, HashSet};
@@ -30,9 +28,7 @@ pub struct GridSearchCell {
     ndiv: Vec<usize>,                // (ndim) number of divisions along each direction
     xmin: Vec<f64>,                  // (ndim) min values
     xmax: Vec<f64>,                  // (ndim) max values
-    bbox_large: Vec<f64>,            // largest bounding box
     side_length: f64,                // side length of a container
-    tol_dist: f64,                   // tolerance to find points using the distance between points
     bounding_boxes: Vec<BboxMinMax>, // (ncell) bounding boxes
     containers: Containers,          // structure to hold all items
 }
@@ -176,17 +172,8 @@ impl GridSearchCell {
             xmax[i] = xmin[i] + side_length * (ndiv[i] as f64);
         }
 
-        // tolerance to find points
-        let tol_dist = if ndim == 2 {
-            SQRT_2 * tolerance
-        } else {
-            SQRT_3 * tolerance
-        };
-
         // insert cells
-        let coefficient = vec![1, ndiv[0], ndiv[0] * ndiv[1]];
         let mut containers = HashMap::new();
-        let mut ratio = vec![0; ndim]; // ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
         let mut x = vec![0.0; ndim];
         for cell_id in 0..ncell {
             let x_min_max = &bounding_boxes[cell_id];
@@ -212,9 +199,7 @@ impl GridSearchCell {
             ndiv,
             xmin,
             xmax,
-            bbox_large,
             side_length,
-            tol_dist,
             bounding_boxes,
             containers,
         })
@@ -374,10 +359,9 @@ impl fmt::Display for GridSearchCell {
 mod tests {
     use super::GridSearchCell;
     use crate::geometry::is_point_inside_triangle;
-    use crate::util::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE, SQRT_2, SQRT_3};
+    use crate::util::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
     use crate::StrError;
-    use plotpy::{Canvas, Curve, Plot, PolyCode, RayEndpoint, Surface};
-    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+    use plotpy::{Canvas, Plot, PolyCode};
 
     fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
         let mut canvas = Canvas::new();
@@ -447,7 +431,7 @@ mod tests {
         let border_tol = 0.1;
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
-        let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
         let max_len = 1.0;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 2);
@@ -455,8 +439,6 @@ mod tests {
         assert_eq!(grid.ndiv, &[2, 2]);
         assert_eq!(grid.xmin, &[-0.1, -0.1]);
         assert_eq!(grid.xmax, &[-0.1 + sl * 2.0, -0.1 + sl * 2.0]);
-        assert_eq!(grid.bbox_large, &[1.0, 1.0]);
-        assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 2);
         assert_eq!(grid.containers.len(), 4);
         let bbox_0 = &grid.bounding_boxes[0];
@@ -505,7 +487,7 @@ mod tests {
         let border_tol = 0.1;
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
-        let mut grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
         let max_len = 1.5;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 2);
@@ -513,8 +495,6 @@ mod tests {
         assert_eq!(grid.ndiv, &[1, 2]);
         assert_eq!(grid.xmin, &[-0.1, -0.1]);
         assert_eq!(grid.xmax, &[-0.1 + sl, -0.1 + sl * 2.0]);
-        assert_eq!(grid.bbox_large, &[1.2, 1.5]);
-        assert_eq!(grid.tol_dist, SQRT_2 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 2);
         assert_eq!(grid.containers.len(), 2);
         let bbox_0 = &grid.bounding_boxes[0];
@@ -554,7 +534,7 @@ mod tests {
         let border_tol = 0.1;
         let get_nnode = |_| Ok(4);
         let get_x = |t: usize, m: usize| Ok(&TETS[t][m][..]);
-        let mut grid = GridSearchCell::new(3, TETS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let grid = GridSearchCell::new(3, TETS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
         let max_len = 1.0;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 3);
@@ -562,8 +542,6 @@ mod tests {
         assert_eq!(grid.ndiv, &[2, 2, 2]);
         assert_eq!(grid.xmin, &[-0.1, -0.1, -0.1]);
         assert_eq!(grid.xmax, &[-0.1 + sl * 2.0, -0.1 + sl * 2.0, -0.1 + sl * 2.0]);
-        assert_eq!(grid.bbox_large, &[1.0, 1.0, 1.0]);
-        assert_eq!(grid.tol_dist, SQRT_3 * tolerance);
         assert_eq!(grid.bounding_boxes.len(), 1);
         assert_eq!(grid.containers.len(), 8);
         let bbox_0 = &grid.bounding_boxes[0];
@@ -613,9 +591,8 @@ mod tests {
         ];
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
-        let mut grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, None)?;
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, None)?;
         let max_len = TRIS[10][1][0] - TRIS[10][2][0];
-        let max_len_y = TRIS[8][2][1] - TRIS[8][1][1];
         let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE; // because the bbox is expanded
         let g = GS_DEFAULT_BORDER_TOL;
         assert_eq!(grid.ndim, 2);
@@ -626,8 +603,6 @@ mod tests {
             grid.xmax,
             &[TRIS[1][2][0] - g + sl * 2.0, TRIS[11][2][1] - g + sl * 2.0]
         );
-        assert_eq!(grid.bbox_large, &[max_len, max_len_y]);
-        assert_eq!(grid.tol_dist, SQRT_2 * GS_DEFAULT_TOLERANCE);
         assert_eq!(grid.bounding_boxes.len(), TRIS.len());
         assert_eq!(grid.containers.len(), 4);
         let bbox_0 = &grid.bounding_boxes[0];
