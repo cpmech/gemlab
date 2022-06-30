@@ -12,7 +12,7 @@ type ContainerKey = usize;
 /// Specifies the identification number of cells (must be sequential from 0 to ncell - 1)
 type CellId = usize;
 
-/// Defines the container type: ID to Coordinates
+/// Defines the container type
 type Container = HashSet<CellId>;
 
 /// Defines the containers type: Key to Container
