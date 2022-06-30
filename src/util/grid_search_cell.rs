@@ -24,6 +24,7 @@ const I_MIN: usize = 0;
 const I_MAX: usize = 1;
 type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
 
+/// Defines a tool to search the cell where a point is located within a mesh
 pub struct GridSearchCell {
     ndim: usize,                     // space dimension
     ndiv: Vec<usize>,                // (ndim) number of divisions along each direction
@@ -37,6 +38,43 @@ pub struct GridSearchCell {
 }
 
 impl GridSearchCell {
+    /// Calculates the key of the container where the point should fall in
+    #[inline]
+    fn calc_container_key(ndim: usize, side_length: f64, ndiv: &[usize], xmin: &[f64], x: &[f64]) -> ContainerKey {
+        let mut ix = ((x[0] - xmin[0]) / side_length) as usize; // (Eq. 8)
+        let mut iy = ((x[1] - xmin[1]) / side_length) as usize;
+        if ix == ndiv[0] {
+            ix -= 1; // point is max edge => move to inner container
+        }
+        if iy == ndiv[1] {
+            iy -= 1; // point is max edge => move to inner container
+        }
+        if ndim == 2 {
+            return ix + iy * ndiv[0];
+        }
+        let mut iz = ((x[2] - xmin[2]) / side_length) as usize;
+        if iz == ndiv[2] {
+            iz -= 1; // point is max edge => move to inner container
+        }
+        return ix + iy * ndiv[0] + iz * ndiv[0] * ndiv[1];
+    }
+
+    /// Allocates a new instance
+    ///
+    /// # Input
+    ///
+    /// * `ndim` -- is the space dimension (2 or 3)
+    /// * `ncell` -- is the number of cells (e.g., triangle/tetrahedron) in the mesh.
+    ///     - All cells are numbered from `0` to `ncell - 1`
+    ///     - The index of the cell in a mesh is also called CellId (`cell_id`)
+    /// * `get_node` -- is a function of the `cell_id` that returns the number of nodes `nnode` of the cell
+    /// * `get_x` -- is a function of the `cell_id` and the local index of the node/point `m`.
+    ///    This function returns the coordinates `x` of the point.
+    /// * `tolerance` -- is a tolerance to expand the bounding box of cells and compare points; e.g. 1e-4
+    ///     - If None, [GS_DEFAULT_TOLERANCE] is used
+    /// * `border_tol` -- is a tolerance used to expand the border a little bit and then
+    ///   accommodate eventual imprecision near the borders; e.g. 1e-2
+    ///     - If None, [GS_DEFAULT_BORDER_TOL] is used
     pub fn new<'a, F, G>(
         ndim: usize,
         ncell: usize,
@@ -160,15 +198,7 @@ impl GridSearchCell {
                         if ndim == 3 {
                             x[2] = x_min_max[2][t];
                         }
-                        let mut key = 0;
-                        for i in 0..ndim {
-                            ratio[i] = ((x[i] - xmin[i]) / side_length) as usize;
-                            if ratio[i] == ndiv[i] {
-                                // the point is exactly on the max edge, thus select inner container
-                                ratio[i] -= 1; // move to the inside
-                            }
-                            key += ratio[i] * coefficient[i];
-                        }
+                        let key = GridSearchCell::calc_container_key(ndim, side_length, &ndiv, &xmin, &x);
                         let container = containers.entry(key).or_insert(HashSet::new());
                         container.insert(cell_id);
                     }
@@ -188,6 +218,13 @@ impl GridSearchCell {
             bounding_boxes,
             containers,
         })
+    }
+
+    pub fn find_cell<F>(&self, x: &[f64], is_in_cell: F) -> Result<(), StrError>
+    where
+        F: Fn(usize, &[f64]) -> Result<bool, StrError>,
+    {
+        Ok(())
     }
 
     /// Draws grid and items
@@ -342,6 +379,33 @@ mod tests {
             }
         }
         plot.add(&canvas);
+    }
+
+    #[test]
+    fn calc_container_key_works() {
+        // 2d
+        let ndim = 2;
+        let side_length = 0.30000000000000004;
+        let ndiv = &[4, 8];
+        let xmin = &[-0.30000000000000004, -0.30000000000000004];
+        let x = &[0.1, 0.5];
+        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 9);
+        let x = &[0.7, 0.8];
+        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 15);
+        let x = &[-0.2, 1.8];
+        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 24);
+        let x = &[0.8, 1.8];
+        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 27);
+
+        // 3d
+        let ndim = 3;
+        let side_length = 1.1;
+        let ndiv = &[2, 2, 2];
+        let xmin = &[-1.1, -1.1, -1.1];
+        let x = &[-1.0, -1.0, -1.0];
+        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 0);
+        let x = &[1.0, 1.0, 1.0];
+        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 7);
     }
 
     #[test]
