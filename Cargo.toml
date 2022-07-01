@@ -17,6 +17,7 @@ russell_chk = "0.4"
 russell_lab = "0.4"
 russell_sparse = "0.4"
 russell_tensor = "0.4"
+russell_stat = "0.4"
 rmp-serde = "1.0.0"
 serde = { version = "1.0.136", features = ["derive"] }
 

@@ -2,8 +2,10 @@ use gemlab::geometry::is_point_inside_triangle;
 use gemlab::util::GridSearchCell;
 use gemlab::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
-fn brute_force_search(triangles: &[[[f64; 2]; 3]], x: &[f64]) -> Option<usize> {
+fn brute_force_search(triangles: &Vec<Vec<Vec<f64>>>, x: &[f64]) -> Option<usize> {
     for i in 0..triangles.len() {
         let t = &triangles[i];
         if is_point_inside_triangle(&t[0], &t[1], &t[2], x) {
@@ -14,68 +16,59 @@ fn brute_force_search(triangles: &[[[f64; 2]; 3]], x: &[f64]) -> Option<usize> {
 }
 
 fn main() -> Result<(), StrError> {
-    // [num_triangle][nnode=3][ndim=2]
-    #[rustfmt::skip]
-    const TRIS: [[[f64; 2]; 3]; 8] = [
-        [[0.0, 0.0],  [1.0, 0.0],  [0.5, 0.85]],
-        [[1.0, 0.0],  [2.0, 0.0],  [1.5, 0.85]],
-        [[0.5, 0.85], [1.0, 0.0],  [1.5, 0.85]],
-        [[1.5, 0.85], [2.0, 0.0],  [2.5, 0.85]],
-        [[0.5, 0.85], [1.5, 0.85], [1.0, 1.7]],
-        [[1.5, 0.85], [2.5, 0.85], [2.0, 1.7]],
-        [[1.0, 1.7],  [1.5, 0.85], [2.0, 1.7]],
-        [[2.0, 1.7],  [2.5, 0.85], [3.0, 1.7]],
-    ];
+    // select mesh for testing
+    let num_triangle = 20000;
+    let path = format!("data/triangles/example_grid_search_gen_triangles_{}.dat", num_triangle);
+    let tris = read_data(path.as_str())?;
 
     // closure that returns the number of nodes of a cell `t`
     let get_nnode = |_t| Ok(3);
 
     // closure that returns the coordinates of point `m` of cell `t`
-    let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
+    let get_x = |t: usize, m: usize| Ok(&tris[t][m][..]);
 
     // allocate grid search tool
     let ndim = 2;
-    let grid = GridSearchCell::new(ndim, TRIS.len(), get_nnode, get_x, None, None)?;
+    let grid = GridSearchCell::new(ndim, tris.len(), get_nnode, get_x, None, None)?;
 
     // print information
-    println!("{}", grid);
+    // println!("{}", grid);
+    grid.print_stat();
 
     // closure that tells whether the point is in the cell or not
-    let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
+    let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&tris[t][0], &tris[t][1], &tris[t][2], x));
 
     // find triangle given coords
     let x = &[1.0, 0.5];
     let id = grid.find_cell(x, is_in_cell)?;
     println!("\nwith x = {:?}", x);
-    println!("found triangle with id = {:?} | {:?}", id, brute_force_search(&TRIS, x));
-    assert_eq!(id, Some(2));
+    println!("found triangle with id = {:?} | {:?}", id, brute_force_search(&tris, x));
 
     // find with another triangle
     let x = &[2.9, 1.6];
     let id = grid.find_cell(x, is_in_cell)?;
     println!("\nwith x = {:?}", x);
-    println!("found triangle with id = {:?} | {:?}", id, brute_force_search(&TRIS, x));
-    assert_eq!(id, Some(7));
+    println!("found triangle with id = {:?} | {:?}", id, brute_force_search(&tris, x));
 
     // maybe find with another triangle
     let x = &[3.0, 1.0];
     let id = grid.find_cell(x, is_in_cell)?;
     println!("\nwith x = {:?}", x);
-    println!("found triangle with id = {:?} | {:?}", id, brute_force_search(&TRIS, x));
-    assert_eq!(id, None);
+    println!("found triangle with id = {:?} | {:?}", id, brute_force_search(&tris, x));
 
     // draw triangles and grid
     let mut plot = Plot::new();
     grid.draw(&mut plot, false)?;
-    draw_triangles(&mut plot, &TRIS);
+    draw_triangles(&mut plot, &tris, false);
+    let path = format!("/tmp/gemlab/example_grid_search_triangles_{}.svg", tris.len());
     plot.set_equal_axes(true)
-        .set_figure_size_points(600.0, 600.0)
+        .set_figure_size_points(800.0, 800.0)
         .grid_and_labels("x", "y")
-        .save("/tmp/gemlab/example_grid_search_triangles.svg")?;
+        .save(path.as_str())?;
     Ok(())
 }
 
-fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
+fn draw_triangles(plot: &mut Plot, triangles: &Vec<Vec<Vec<f64>>>, with_ids: bool) {
     let mut ids = Text::new();
     ids.set_color("#cd0000")
         .set_bbox(true)
@@ -103,7 +96,49 @@ fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
         canvas.polycurve_end(true);
         xc /= 3.0;
         yc /= 3.0;
-        ids.draw(xc, yc, format!("{}", t).as_str());
+        if with_ids {
+            ids.draw(xc, yc, format!("{}", t).as_str());
+        }
     }
-    plot.add(&canvas).add(&ids);
+    plot.add(&canvas);
+    if with_ids {
+        plot.add(&ids);
+    }
+}
+
+// Returns [num_triangle][nnode=3][ndim=2]
+fn read_data(path: &str) -> Result<Vec<Vec<Vec<f64>>>, StrError> {
+    let mut data = Vec::new();
+    let input = File::open(path).map_err(|_| "cannot open file")?;
+    let buffered = BufReader::new(input);
+    let mut lines_iter = buffered.lines();
+    let num_triangle: usize = match lines_iter.next() {
+        Some(v) => {
+            let line = v.unwrap();
+            line.parse().map_err(|_| "cannot parse num_triangle")?
+        }
+        None => return Err("cannot read num_triangle"),
+    };
+    for _ in 0..num_triangle {
+        let mut vertices = Vec::new();
+        match lines_iter.next() {
+            Some(v) => {
+                let line = v.unwrap();
+                let mut array = line.split_whitespace();
+                for _ in 0..3 {
+                    let mut x = vec![0.0; 2];
+                    for i in 0..2 {
+                        x[i] = match array.next() {
+                            Some(w) => w.parse().map_err(|_| "cannot parse vertex coordinate")?,
+                            None => return Err("cannot read vertex coordinate"),
+                        };
+                    }
+                    vertices.push(x);
+                }
+            }
+            None => return Err("cannot read num_triangle"),
+        }
+        data.push(vertices);
+    }
+    Ok(data)
 }

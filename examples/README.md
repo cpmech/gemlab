@@ -195,6 +195,174 @@ Fast-search triangles in a mesh using the GridSearchCell tool.
 
 [Source code](https://github.com/cpmech/gemlab/blob/main/examples/grid_search_triangles.rs)
 
-Draws the following mesh:
+We run the code with 200, 800, 3200, 7200, and 20000 triangles. The next sections show the results.
+The majority of the containers are occupied by 8 triangles.
 
-![example_grid_search_triangles](https://github.com/cpmech/gemlab/raw/main/data/figures/example_grid_search_triangles.svg)
+### 200 triangles
+
+```text
+Summary
+=======
+ncell = 200
+xmin = [-0.01, -0.01]
+xmax = [15.9932, 8.9918]
+side_length = 1.0002
+num of non-empty containers = 109
+max container num items = 12
+
+Histogram of container num items
+================================
+[ 0, 1) |  0 
+[ 1, 2) | 11 ***********
+[ 2, 3) |  0 
+[ 3, 4) |  9 *********
+[ 4, 5) |  8 ********
+[ 5, 6) |  7 *******
+[ 6, 7) |  2 **
+[ 7, 8) |  7 *******
+[ 8, 9) | 56 ************************************************************
+[ 9,10) |  0 
+[10,11) |  0 
+[11,12) |  2 **
+[12,13) |  7 *******
+   sum = 109
+```
+
+![example_grid_search_triangles_200](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_200.svg)
+
+### 800 triangles
+
+```text
+Summary
+=======
+ncell = 800
+xmin = [-0.01, -0.01]
+xmax = [30.996199999999998, 17.993599999999997]
+side_length = 1.0002
+num of non-empty containers = 397
+max container num items = 12
+
+Histogram of container num items
+================================
+[ 0, 1) |   0 
+[ 1, 2) |  19 ****
+[ 2, 3) |   0 
+[ 3, 4) |  19 ****
+[ 4, 5) |  18 ****
+[ 5, 6) |  15 ***
+[ 6, 7) |   2 
+[ 7, 8) |  15 ***
+[ 8, 9) | 270 ************************************************************
+[ 9,10) |   2 
+[10,11) |   0 
+[11,12) |   2 
+[12,13) |  35 *******
+    sum = 397
+```
+
+![example_grid_search_triangles_800](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_800.svg)
+
+### 3200 triangles
+
+```text
+Summary
+=======
+ncell = 3200
+xmin = [-0.01, -0.01]
+xmax = [61.0022, 34.997]
+side_length = 1.0002
+num of non-empty containers = 1463
+max container num items = 15
+
+Histogram of container num items
+================================
+[ 0, 1) |    0 
+[ 1, 2) |   35 *
+[ 2, 3) |    1 
+[ 3, 4) |   34 *
+[ 4, 5) |   37 **
+[ 5, 6) |   29 *
+[ 6, 7) |    6 
+[ 7, 8) |   29 *
+[ 8, 9) | 1083 ************************************************************
+[ 9,10) |    5 
+[10,11) |   12 
+[11,12) |    6 
+[12,13) |  184 **********
+[13,14) |    0 
+[14,15) |    0 
+[15,16) |    2 
+    sum = 1463
+```
+
+![example_grid_search_triangles_3200](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_3200.svg)
+
+### 7200 triangles
+
+```text
+Summary
+=======
+ncell = 7200
+xmin = [-0.01, -0.01]
+xmax = [91.00819999999999, 52.0004]
+side_length = 1.0002
+num of non-empty containers = 3140
+max container num items = 15
+
+Histogram of container num items
+================================
+[ 0, 1) |    0 
+[ 1, 2) |   50 *
+[ 2, 3) |    0 
+[ 3, 4) |   52 *
+[ 4, 5) |    0 
+[ 5, 6) |   42 *
+[ 6, 7) |    8 
+[ 7, 8) |   44 *
+[ 8, 9) | 2429 ************************************************************
+[ 9,10) |    8 
+[10,11) |   43 *
+[11,12) |    8 
+[12,13) |  448 ***********
+[13,14) |    0 
+[14,15) |    0 
+[15,16) |    8 
+    sum = 3140
+```
+
+![example_grid_search_triangles_7200](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_7200.svg)
+
+### 20000 triangles
+
+```text
+Summary
+=======
+ncell = 20000
+xmin = [-0.01, -0.01]
+xmax = [150.02, 86.0072]
+side_length = 1.0002
+num of non-empty containers = 8634
+max container num items = 15
+
+Histogram of container num items
+================================
+[ 0, 1) |    0 
+[ 1, 2) |   84 
+[ 2, 3) |    0 
+[ 3, 4) |   86 
+[ 4, 5) |    0 
+[ 5, 6) |   70 
+[ 6, 7) |   14 
+[ 7, 8) |   71 
+[ 8, 9) | 6852 ************************************************************
+[ 9,10) |   15 
+[10,11) |   70 
+[11,12) |   14 
+[12,13) | 1344 ***********
+[13,14) |    0 
+[14,15) |    0 
+[15,16) |   14 
+    sum = 8634
+```
+
+![example_grid_search_triangles_20000](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_20000.svg)

@@ -1,6 +1,7 @@
 use super::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
 use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
+use russell_stat::Histogram;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -418,13 +419,44 @@ impl GridSearchCell {
     pub fn limits(&self) -> (Vec<f64>, Vec<f64>) {
         (self.xmin.clone(), self.xmax.clone())
     }
+
+    /// Print some statistics
+    pub fn print_stat(&self) {
+        let mut unique_items = HashSet::new();
+        let mut max_container_num_items = 0;
+        let mut container_num_items = Vec::new();
+        for container in self.containers.values() {
+            let n = container.len();
+            max_container_num_items = usize::max(max_container_num_items, n);
+            container_num_items.push(n);
+            for id in container {
+                unique_items.insert(id);
+            }
+        }
+        println!("Summary");
+        println!("=======");
+        println!("ncell = {:?}", unique_items.len());
+        println!("xmin = {:?}", self.xmin);
+        println!("xmax = {:?}", self.xmax);
+        println!("side_length = {:?}", self.side_length);
+        println!("num of non-empty containers = {}", self.containers.len());
+        println!("max container num items = {}", max_container_num_items);
+        println!("\nHistogram of container num items");
+        println!("================================");
+        let stations: Vec<_> = (0..max_container_num_items + 2).collect();
+        let mut hist = Histogram::new(&stations).unwrap();
+        hist.count(&container_num_items);
+        hist.set_bar_char('*');
+        hist.set_bar_max_len(60);
+        println!("{}", hist);
+    }
 }
 
 impl fmt::Display for GridSearchCell {
     /// Shows info about the items in the grid containers
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // items
-        let mut unique_items: HashMap<usize, bool> = HashMap::new();
+        let mut unique_items = HashSet::new();
         let mut indices: Vec<_> = self.containers.keys().collect();
         indices.sort();
         for index in indices {
@@ -433,11 +465,11 @@ impl fmt::Display for GridSearchCell {
             ids.sort();
             write!(f, "{}: {:?}\n", index, ids).unwrap();
             for id in ids {
-                unique_items.insert(id, true);
+                unique_items.insert(id);
             }
         }
         // summary
-        let mut ids: Vec<_> = unique_items.keys().collect();
+        let mut ids: Vec<_> = unique_items.iter().collect();
         ids.sort();
         write!(f, "ncell = {}\n", unique_items.len()).unwrap();
         write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();

@@ -1,6 +1,8 @@
 use gemlab::util::SQRT_3;
 use gemlab::StrError;
 use plotpy::{Canvas, Plot, PolyCode};
+use std::fmt::Write;
+use std::fs;
 
 const APPROXIMATED: bool = true;
 
@@ -33,8 +35,8 @@ fn generate_equilateral_triangle(l: f64, x0: f64, y0: f64, flipped: bool) -> Vec
 fn main() -> Result<(), StrError> {
     // constants
     const L: f64 = 1.0;
-    const NX: usize = 2;
-    const NY: usize = 2;
+    const NX: usize = 10;
+    const NY: usize = 10;
     const X0: f64 = 0.0;
     const Y0: f64 = 0.0;
     let h = if APPROXIMATED { L * 1.7 / 2.0 } else { L * SQRT_3 / 2.0 };
@@ -59,22 +61,27 @@ fn main() -> Result<(), StrError> {
     }
 
     // draw
+    let filekey = format!("example_grid_search_gen_triangles_{}", triangles.len());
     let mut plot = Plot::new();
     draw_triangles(&mut plot, &triangles);
     plot.set_equal_axes(true)
         .set_figure_size_points(600.0, 600.0)
         .grid_and_labels("x", "y")
-        .save("/tmp/gemlab/example_grid_search_gen_triangles.svg")?;
+        .save(format!("/tmp/gemlab/{}.svg", filekey).as_str())?;
 
-    // print code to be used in doc example
-    println!("const TRIS: [[[f64; 2]; 3]; {}] = [", triangles.len());
+    // generate file for use in examples
+    let mut buffer = String::new();
+    write!(&mut buffer, "{}\n", triangles.len()).unwrap();
     for t in &triangles {
-        println!(
-            "[[{:?},{:?}], [{:?},{:?}], [{:?},{:?}]],",
+        write!(
+            &mut buffer,
+            "{:?} {:?} {:?} {:?} {:?} {:?}\n",
             t[0][0], t[0][1], t[1][0], t[1][1], t[2][0], t[2][1]
-        );
+        )
+        .unwrap();
     }
-    println!("];");
+    let path = format!("/tmp/gemlab/{}.dat", filekey);
+    fs::write(path, buffer).expect("cannot write file");
     Ok(())
 }
 
