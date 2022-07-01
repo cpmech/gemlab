@@ -367,6 +367,7 @@ mod tests {
     use crate::StrError;
     use plotpy::{Canvas, Plot, PolyCode};
 
+    #[no_coverage]
     fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
         let mut canvas = Canvas::new();
         canvas.set_face_color("#fefddc").set_edge_color("#fcb827");
@@ -381,6 +382,7 @@ mod tests {
         plot.add(&canvas);
     }
 
+    #[no_coverage]
     fn draw_tetrahedra(plot: &mut Plot, tets: &[[[f64; 3]; 4]]) {
         const EDGES: [(usize, usize); 6] = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
         let mut canvas = Canvas::new();
@@ -448,15 +450,15 @@ mod tests {
 
     #[test]
     fn new_works_1() -> Result<(), StrError> {
-        const TRIANGLES: [[[f64; 2]; 3]; 2] = [
+        const TRIS: [[[f64; 2]; 3]; 2] = [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
             [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
         ];
         let tolerance = 1e-3;
         let border_tol = 0.1;
         let get_nnode = |_| Ok(3);
-        let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
-        let grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
         let max_len = 1.0;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 2);
@@ -490,7 +492,7 @@ mod tests {
         );
         if false {
             let mut plot = Plot::new();
-            draw_triangles(&mut plot, &TRIANGLES);
+            draw_triangles(&mut plot, &TRIS);
             grid.draw(&mut plot)?;
             plot.set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
@@ -504,12 +506,18 @@ mod tests {
 
     #[test]
     fn draw_works() -> Result<(), StrError> {
-        const TRIANGLES: [[[f64; 2]; 3]; 2] = [
+        const TRIS: [[[f64; 2]; 3]; 2] = [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
             [[1.0, 0.0], [1.2, 1.5], [0.0, 1.0]],
         ];
-        let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
+        let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
         let grid = GridSearchCell::new(2, 1, |_| Ok(3), get_x, None, None)?;
+        let mut plot = Plot::new();
+        grid.draw(&mut plot)?;
+
+        const TETS: [[[f64; 3]; 4]; 1] = [[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]];
+        let get_x = |t: usize, m: usize| Ok(&TETS[t][m][..]);
+        let grid = GridSearchCell::new(3, 1, |_| Ok(4), get_x, None, None)?;
         let mut plot = Plot::new();
         grid.draw(&mut plot)?;
         Ok(())
@@ -517,15 +525,15 @@ mod tests {
 
     #[test]
     fn new_works_2() -> Result<(), StrError> {
-        const TRIANGLES: [[[f64; 2]; 3]; 2] = [
+        const TRIS: [[[f64; 2]; 3]; 2] = [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
             [[1.0, 0.0], [1.2, 1.5], [0.0, 1.0]],
         ];
         let tolerance = 1e-3;
         let border_tol = 0.1;
         let get_nnode = |_| Ok(3);
-        let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
-        let grid = GridSearchCell::new(2, TRIANGLES.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
         let max_len = 1.5;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 2);
@@ -553,7 +561,7 @@ mod tests {
         );
         if false {
             let mut plot = Plot::new();
-            draw_triangles(&mut plot, &TRIANGLES);
+            draw_triangles(&mut plot, &TRIS);
             grid.draw(&mut plot)?;
             plot.set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
