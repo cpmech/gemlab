@@ -602,7 +602,7 @@ impl GridSearch {
     /// **Note:** Returns None if the point is out-of-range
     #[inline]
     fn calc_container_key(&self, x: &[f64]) -> Option<usize> {
-        let mut ratio = vec![0; self.ndim]; // ratio = trunc(δx[i]/Δx[i]) (Eq. 8)
+        let mut ratio = vec![0; self.ndim]; // ratio[i] = trunc(δx[i]/Δx[i]) (Eq. 8)
         let mut key = 0;
         for i in 0..self.ndim {
             if x[i] < self.xmin[i] || x[i] > self.xmax[i] {
