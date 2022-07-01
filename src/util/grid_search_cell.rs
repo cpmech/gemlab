@@ -503,6 +503,19 @@ mod tests {
     }
 
     #[test]
+    fn draw_works() -> Result<(), StrError> {
+        const TRIANGLES: [[[f64; 2]; 3]; 2] = [
+            [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
+            [[1.0, 0.0], [1.2, 1.5], [0.0, 1.0]],
+        ];
+        let get_x = |t: usize, m: usize| Ok(&TRIANGLES[t][m][..]);
+        let grid = GridSearchCell::new(2, 1, |_| Ok(3), get_x, None, None)?;
+        let mut plot = Plot::new();
+        grid.draw(&mut plot)?;
+        Ok(())
+    }
+
+    #[test]
     fn new_works_2() -> Result<(), StrError> {
         const TRIANGLES: [[[f64; 2]; 3]; 2] = [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
