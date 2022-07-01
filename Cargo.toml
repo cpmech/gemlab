@@ -21,4 +21,9 @@ rmp-serde = "1.0.0"
 serde = { version = "1.0.136", features = ["derive"] }
 
 [dev-dependencies]
+criterion = "0.3"
 serde_json = "1.0.78"
+
+[[bench]]
+name = "grid_search_cell_2d"
+harness = false

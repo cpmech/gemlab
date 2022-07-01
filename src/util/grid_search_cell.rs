@@ -413,6 +413,11 @@ impl GridSearchCell {
         }
         Ok(())
     }
+
+    /// Returns the grid limits (xmin,xmax)
+    pub fn limits(&self) -> (Vec<f64>, Vec<f64>) {
+        (self.xmin.clone(), self.xmax.clone())
+    }
 }
 
 impl fmt::Display for GridSearchCell {
