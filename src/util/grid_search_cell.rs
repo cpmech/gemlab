@@ -216,7 +216,7 @@ impl GridSearchCell {
         // check if the point is out-of-bounds
         for i in 0..self.ndim {
             if x[i] < self.xmin[i] || x[i] > self.xmax[i] {
-                return Err("given point coordinates are outsize the grid");
+                return Err("given point coordinates are outside the grid");
             }
         }
 
@@ -597,7 +597,19 @@ mod tests {
     }
 
     #[test]
-    fn find_works_2d() -> Result<(), StrError> {
+    fn find_cell_handles_errors() -> Result<(), StrError> {
+        let x = vec![0.0, 0.0];
+        let grid = GridSearchCell::new(2, 1, |_| Ok(3), |_, _| Ok(&x), None, None)?;
+        let y = vec![10.0, 0.0];
+        assert_eq!(
+            grid.find_cell(&y, |_, _| Ok(true)).err(),
+            Some("given point coordinates are outside the grid")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn find_cell_works_2d() -> Result<(), StrError> {
         // [num_triangle][nnode=3][ndim=2]
         #[rustfmt::skip]
         const TRIS: [[[f64; 2]; 3]; 12] = [
