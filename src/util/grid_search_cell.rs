@@ -426,6 +426,27 @@ mod tests {
     }
 
     #[test]
+    fn new_handles_errors() {
+        let x = vec![0.0, 0.0, 0.0];
+        assert_eq!(
+            GridSearchCell::new(1, 1, |_| Ok(3), |_, _| Ok(&x), None, None).err(),
+            Some("ndim must be 2 or 3")
+        );
+        assert_eq!(
+            GridSearchCell::new(2, 1, |_| Ok(3), |_, _| Ok(&x), Some(-1.0), None).err(),
+            Some("tolerance must be > 0.0")
+        );
+        assert_eq!(
+            GridSearchCell::new(2, 1, |_| Ok(3), |_, _| Ok(&x), None, Some(-1.0)).err(),
+            Some("border_tol must be ≥ 0.0")
+        );
+        assert_eq!(
+            GridSearchCell::new(2, 1, |_| Ok(3), |_, _| Ok(&x), None, None).err(),
+            Some("x.len() must be equal to ndim")
+        );
+    }
+
+    #[test]
     fn new_works_1() -> Result<(), StrError> {
         const TRIANGLES: [[[f64; 2]; 3]; 2] = [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
