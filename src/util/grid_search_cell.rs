@@ -339,7 +339,7 @@ impl GridSearchCell {
         let mut canvas = Canvas::new();
         canvas
             .set_alt_text_color("#5d5d5d")
-            .draw_grid(&xmin, &xmax, &ndiv, false, true)?;
+            .draw_grid(&xmin, &xmax, &ndiv, false, with_ids)?;
         plot.add(&canvas);
 
         // draw bounding boxes
@@ -388,28 +388,28 @@ impl GridSearchCell {
                 bbox.polyline_3d_end();
             }
         }
+        plot.add(&bbox);
 
-        // draw items
-        let mut text = Text::new();
-        text.set_color("#cd0000");
-        let mut xcen = vec![0.0; self.ndim];
-        for container in self.containers.values() {
-            for cell_id in container {
-                let x_min_max = &self.bounding_boxes[*cell_id];
-                let txt = format!("{}", cell_id);
-                for i in 0..self.ndim {
-                    xcen[i] = (x_min_max[i][I_MIN] + x_min_max[i][I_MAX]) / 2.0;
-                }
-                if self.ndim == 2 {
-                    text.draw(xcen[0], xcen[1], &txt);
-                } else {
-                    text.draw_3d(xcen[0], xcen[1], xcen[2], &txt);
+        // draw ids
+        if with_ids {
+            let mut ids = Text::new();
+            ids.set_color("#cd0000");
+            let mut xcen = vec![0.0; self.ndim];
+            for container in self.containers.values() {
+                for cell_id in container {
+                    let x_min_max = &self.bounding_boxes[*cell_id];
+                    let txt = format!("{}", cell_id);
+                    for i in 0..self.ndim {
+                        xcen[i] = (x_min_max[i][I_MIN] + x_min_max[i][I_MAX]) / 2.0;
+                    }
+                    if self.ndim == 2 {
+                        ids.draw(xcen[0], xcen[1], &txt);
+                    } else {
+                        ids.draw_3d(xcen[0], xcen[1], xcen[2], &txt);
+                    }
                 }
             }
-        }
-        plot.add(&bbox);
-        if with_ids {
-            plot.add(&text);
+            plot.add(&ids);
         }
         Ok(())
     }
