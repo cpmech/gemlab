@@ -465,6 +465,17 @@ mod tests {
             GridSearchCell::new(2, 1, |_| Ok(3), |_, _| Ok(&x), None, None).err(),
             Some("x.len() must be equal to ndim")
         );
+        let x = vec![0.0, 0.0];
+        let get_nnode = |_| Err("get_nnode returns error");
+        assert_eq!(
+            GridSearchCell::new(2, 1, get_nnode, |_, _| Ok(&x), None, None).err(),
+            Some("get_nnode returns error")
+        );
+        let get_x = |_: usize, _: usize| Err("get_x returns error");
+        assert_eq!(
+            GridSearchCell::new(2, 1, |_| Ok(3), get_x, None, None).err(),
+            Some("get_x returns error")
+        );
     }
 
     #[test]
@@ -520,6 +531,12 @@ mod tests {
                 .set_ticks_y(0.2, 0.0, "")
                 .save("/tmp/gemlab/test_grid_search_cell_new_1.svg")?;
         }
+        // with zero border
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, Some(0.0))?;
+        let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE;
+        assert_eq!(grid.xmin, &[0.0, 0.0]);
+        assert_eq!(grid.ndiv, &[1, 1]);
+        assert_eq!(grid.xmax, &[sl, sl]);
         Ok(())
     }
 
