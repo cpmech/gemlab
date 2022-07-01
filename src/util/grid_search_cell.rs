@@ -415,6 +415,15 @@ mod tests {
         assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 24);
         let x = &[0.8, 1.8];
         assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 27);
+        let xmax = &[
+            xmin[0] + (ndiv[0] as f64) * side_length,
+            xmin[1] + (ndiv[1] as f64) * side_length,
+        ];
+        let x = &[xmax[0], xmax[1]];
+        assert_eq!(
+            GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x),
+            (ndiv[0] * ndiv[1] - 1)
+        );
 
         // 3d
         let ndim = 3;
@@ -425,6 +434,16 @@ mod tests {
         assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 0);
         let x = &[1.0, 1.0, 1.0];
         assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 7);
+        let xmax = &[
+            xmin[0] + (ndiv[0] as f64) * side_length,
+            xmin[1] + (ndiv[1] as f64) * side_length,
+            xmin[2] + (ndiv[2] as f64) * side_length,
+        ];
+        let x = &[xmax[0], xmax[1], xmax[2]];
+        assert_eq!(
+            GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x),
+            (ndiv[0] * ndiv[1] * ndiv[2] - 1)
+        );
     }
 
     #[test]
