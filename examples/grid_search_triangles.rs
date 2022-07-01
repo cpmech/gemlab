@@ -3,6 +3,16 @@ use gemlab::util::GridSearchCell;
 use gemlab::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
 
+fn brute_force_search(triangles: &[[[f64; 2]; 3]], x: &[f64]) -> Option<usize> {
+    for i in 0..triangles.len() {
+        let t = &triangles[i];
+        if is_point_inside_triangle(&t[0], &t[1], &t[2], x) {
+            return Some(i);
+        }
+    }
+    None
+}
+
 fn main() -> Result<(), StrError> {
     // [num_triangle][nnode=3][ndim=2]
     #[rustfmt::skip]
@@ -34,16 +44,25 @@ fn main() -> Result<(), StrError> {
     let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
 
     // find triangle given coords
-    let x = &[0.5, 0.5];
+    let x = &[1.0, 0.5];
     let id = grid.find_cell(x, is_in_cell)?;
     println!("\nwith x = {:?}", x);
-    println!("found triangle with id = {:?}", id);
+    println!("found triangle with id = {:?} | {:?}", id, brute_force_search(&TRIS, x));
+    assert_eq!(id, Some(2));
 
-    // find with another point
-    let x = &[0.4, 0.2];
+    // find with another triangle
+    let x = &[2.9, 1.6];
     let id = grid.find_cell(x, is_in_cell)?;
     println!("\nwith x = {:?}", x);
-    println!("found triangle with id = {:?}", id);
+    println!("found triangle with id = {:?} | {:?}", id, brute_force_search(&TRIS, x));
+    assert_eq!(id, Some(7));
+
+    // maybe find with another triangle
+    let x = &[3.0, 1.0];
+    let id = grid.find_cell(x, is_in_cell)?;
+    println!("\nwith x = {:?}", x);
+    println!("found triangle with id = {:?} | {:?}", id, brute_force_search(&TRIS, x));
+    assert_eq!(id, None);
 
     // draw triangles and grid
     let mut plot = Plot::new();
