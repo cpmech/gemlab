@@ -774,7 +774,7 @@ impl fmt::Display for GridSearch {
     /// Shows info about the items in the grid containers
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // items
-        let mut unique_items: HashMap<usize, bool> = HashMap::new();
+        let mut unique_items = HashSet::new();
         let mut indices: Vec<_> = self.containers.keys().collect();
         indices.sort();
         for index in indices {
@@ -783,11 +783,11 @@ impl fmt::Display for GridSearch {
             ids.sort();
             write!(f, "{}: {:?}\n", index, ids).unwrap();
             for id in ids {
-                unique_items.insert(id, true);
+                unique_items.insert(id);
             }
         }
         // summary
-        let mut ids: Vec<_> = unique_items.keys().collect();
+        let mut ids: Vec<_> = unique_items.iter().collect();
         ids.sort();
         write!(f, "ids = {:?}\n", ids).unwrap();
         write!(f, "nitem = {}\n", unique_items.len()).unwrap();
