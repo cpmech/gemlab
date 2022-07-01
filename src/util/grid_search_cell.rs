@@ -671,7 +671,7 @@ mod tests {
         assert_eq!(grid.find_cell(&[0.4, 1.0], is_in_cell)?, None);
         assert_eq!(
             grid.find_cell(&[10.0, 1.0], is_in_cell).err(),
-            Some("given point coordinates are outsize the grid")
+            Some("given point coordinates are outside the grid")
         );
         if false {
             let mut plot = Plot::new();
