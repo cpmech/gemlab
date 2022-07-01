@@ -1,6 +1,7 @@
 use gemlab::geometry::Circle;
 use gemlab::util::{GridSearch, PI};
 use gemlab::StrError;
+use plotpy::Plot;
 use std::collections::HashSet;
 
 struct Segment {
@@ -70,7 +71,8 @@ fn main() -> Result<(), StrError> {
     }
 
     // draw grid
-    let mut plot = grid.draw()?;
+    let mut plot = Plot::new();
+    grid.draw(&mut plot)?;
     plot.set_equal_axes(true)
         .set_figure_size_points(600.0, 600.0)
         .save("/tmp/gemlab/example_find_in_grid_2d.svg")?;
