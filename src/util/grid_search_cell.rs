@@ -23,6 +23,87 @@ const I_MAX: usize = 1;
 type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
 
 /// Defines a tool to search the cell where a point is located within a mesh
+///
+/// # Concept
+///
+/// A grid is composed of containers. The container (aka "bin") is uniquely identified by its "left-most" corner (aka **key**).
+/// Any coordinate in 2D or 3D can be quickly compared with the "left-most" corner; therefore, we can find coordinates efficiently.
+///
+/// The main idea revolves around the following expression that calculates the index of a container
+/// where the coordinates `x` fall in (Eq. 8 of the Reference):
+///
+/// ```text
+/// ratio[i] = truncate((x[i] - xmin[i]) / Δx[i])
+/// key = ratio[0] + ratio[1] * ndiv[0]
+/// ```
+///
+/// Below is an illustration of a grid with two triangles:
+///
+/// ![test_grid_search_cell_new_2](https://github.com/cpmech/gemlab/raw/main/data/figures/test_grid_search_cell_new_2.svg)
+///
+/// Only the containers touched by the bounding box of the triangle are saved. Thus, we use a `HashMap` connecting the container
+/// key to a `HashSet` of cells belonging to this container. Therefore, all data is stored in the following data structure;
+///
+/// ```text
+/// type Container = HashSet<CellId>;
+/// type Containers = HashMap<ContainerKey, Container>;
+/// ```
+///
+/// This data structure avoids repetition, saves space, and is somewhat efficient.
+///
+/// # Limitations
+///
+/// The `GridSearchCell` only works if the minimum container size (edge/side length) is greater than
+/// the maximum dimension of the largest triangle. Therefore, if one triangle is much larger that the other ones,
+/// the algorithm won't perform as well as it could. On the other hand, if the triangles have similar "sizes," then the search should be fast.
+///
+/// In summary, we need to make sure that:
+///
+/// * The container's `side_length` must be greater than the maximum dimension of the largest triangle
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::geometry::is_point_inside_triangle;
+/// use gemlab::util::GridSearchCell;
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     // [num_triangle][nnode=3][ndim=2]
+///     #[rustfmt::skip]
+///     const TRIS: [[[f64; 2]; 3]; 8] = [
+///         [[0.0, 0.0],  [1.0, 0.0],  [0.5, 0.85]],
+///         [[1.0, 0.0],  [2.0, 0.0],  [1.5, 0.85]],
+///         [[0.5, 0.85], [1.0, 0.0],  [1.5, 0.85]],
+///         [[1.5, 0.85], [2.0, 0.0],  [2.5, 0.85]],
+///         [[0.5, 0.85], [1.5, 0.85], [1.0, 1.7]],
+///         [[1.5, 0.85], [2.5, 0.85], [2.0, 1.7]],
+///         [[1.0, 1.7],  [1.5, 0.85], [2.0, 1.7]],
+///         [[2.0, 1.7],  [2.5, 0.85], [3.0, 1.7]],
+///     ];
+///
+///     // closure that returns the number of nodes of a cell `t`
+///     let get_nnode = |_t| Ok(3);
+///
+///     // closure that returns the coordinates of point `m` of cell `t`
+///     let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
+///
+///     // allocate grid search tool
+///     let ndim = 2;
+///     let grid = GridSearchCell::new(ndim, TRIS.len(), get_nnode, get_x, None, None)?;
+///
+///     // closure that tells whether the point is in the cell or not
+///     let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
+///
+///     // find triangle given coords
+///     assert_eq!(grid.find_cell(&[1.0, 0.5], is_in_cell)?, Some(2));
+///     assert_eq!(grid.find_cell(&[2.9, 1.6], is_in_cell)?, Some(7));
+///     assert_eq!(grid.find_cell(&[3.0, 1.0], is_in_cell)?, None);
+///     Ok(())
+/// }
+/// ```
+///
+/// ![example_grid_search_triangles](https://github.com/cpmech/gemlab/raw/main/data/figures/example_grid_search_triangles.svg)
 pub struct GridSearchCell {
     ndim: usize,                     // space dimension
     ndiv: Vec<usize>,                // (ndim) number of divisions along each direction
@@ -245,7 +326,7 @@ impl GridSearchCell {
     }
 
     /// Draws grid and items
-    pub fn draw(&self, plot: &mut Plot) -> Result<(), StrError> {
+    pub fn draw(&self, plot: &mut Plot, with_ids: bool) -> Result<(), StrError> {
         // draw grid
         let mut xmin = vec![0.0; self.ndim];
         let mut xmax = vec![0.0; self.ndim];
@@ -326,7 +407,10 @@ impl GridSearchCell {
                 }
             }
         }
-        plot.add(&bbox).add(&text);
+        plot.add(&bbox);
+        if with_ids {
+            plot.add(&text);
+        }
         Ok(())
     }
 }
@@ -523,7 +607,7 @@ mod tests {
         if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIS);
-            grid.draw(&mut plot)?;
+            grid.draw(&mut plot, true)?;
             plot.set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
                 .grid_and_labels("x", "y")
@@ -549,13 +633,13 @@ mod tests {
         let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
         let grid = GridSearchCell::new(2, 1, |_| Ok(3), get_x, None, None)?;
         let mut plot = Plot::new();
-        grid.draw(&mut plot)?;
+        grid.draw(&mut plot, false)?;
 
         const TETS: [[[f64; 3]; 4]; 1] = [[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]];
         let get_x = |t: usize, m: usize| Ok(&TETS[t][m][..]);
         let grid = GridSearchCell::new(3, 1, |_| Ok(4), get_x, None, None)?;
         let mut plot = Plot::new();
-        grid.draw(&mut plot)?;
+        grid.draw(&mut plot, true)?;
         Ok(())
     }
 
@@ -598,7 +682,7 @@ mod tests {
         if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIS);
-            grid.draw(&mut plot)?;
+            grid.draw(&mut plot, true)?;
             plot.set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
                 .grid_and_labels("x", "y")
@@ -645,7 +729,7 @@ mod tests {
         if false {
             let mut plot = Plot::new();
             draw_tetrahedra(&mut plot, &TETS);
-            grid.draw(&mut plot)?;
+            grid.draw(&mut plot, true)?;
             plot.set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
                 .save("/tmp/gemlab/test_grid_search_cell_new_3.svg")?;
@@ -733,7 +817,7 @@ mod tests {
         if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIS);
-            grid.draw(&mut plot)?;
+            grid.draw(&mut plot, true)?;
             plot.set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
                 .grid_and_labels("x", "y")

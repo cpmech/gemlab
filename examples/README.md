@@ -8,6 +8,7 @@
 * [integration_tri3](#integration_tri3) -- Performs numerical integrations with a Tri3 element
 * [isoparametric_qua4](#isoparametric_qua4) -- Illustrates the isoparametric formula with a Qua4
 * [mesh_2d_tri3_qua4](#mesh_2d_tri3_qua4) -- Converts a string into a Mesh of Tri3 and Qua4
+* [grid_search_triangles](#grid_search_triangles) -- Fast-search triangles in a mesh using the GridSearchCell tool
 
 ## block_2d_qua8
 
@@ -188,3 +189,12 @@ Draws the following mesh:
 
 ![mesh](https://github.com/cpmech/gemlab/raw/main/data/figures/example_mesh_2d_tri3_qua4.svg)
 
+## grid_search_triangles
+
+Fast-search triangles in a mesh using the GridSearchCell tool.
+
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/grid_search_triangles.rs)
+
+Draws the following mesh:
+
+![example_grid_search_triangles](https://github.com/cpmech/gemlab/raw/main/data/figures/example_grid_search_triangles.svg)
