@@ -5,6 +5,7 @@ use russell_lab::{generate2d, StrError};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::time::Duration;
 
 fn brute_force_search(triangles: &Vec<Vec<Vec<f64>>>, x: &[f64]) -> Option<usize> {
     for i in 0..triangles.len() {
@@ -16,7 +17,7 @@ fn brute_force_search(triangles: &Vec<Vec<Vec<f64>>>, x: &[f64]) -> Option<usize
     None
 }
 
-const NP: usize = 20;
+const NP: usize = 100;
 
 fn my_benchmark(crit: &mut Criterion) {
     // let sizes = &[200];
@@ -73,7 +74,10 @@ fn my_benchmark(crit: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, my_benchmark);
+criterion_group!(
+    name = benches;
+    config = Criterion::default().measurement_time(Duration::from_secs(100));
+    targets= my_benchmark);
 criterion_main!(benches);
 
 // Returns [num_triangle][nnode=3][ndim=2]
