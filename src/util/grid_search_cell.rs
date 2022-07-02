@@ -291,10 +291,15 @@ impl GridSearchCell {
         // find the cell where the point falls in
         for cell_id in container {
             let x_min_max = &self.bounding_boxes[*cell_id];
+            let mut outside = false;
             for i in 0..self.ndim {
                 if x[i] < x_min_max[i][I_MIN] || x[i] > x_min_max[i][I_MAX] {
-                    continue; // outside the bounding box
+                    outside = true; // outside the bounding box
+                    break;
                 }
+            }
+            if outside {
+                continue;
             }
             if (is_in_cell)(*cell_id, x)? {
                 return Ok(Some(*cell_id));
