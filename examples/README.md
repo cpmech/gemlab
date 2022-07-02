@@ -228,7 +228,7 @@ Histogram of container num items
    sum = 109
 ```
 
-![example_grid_search_triangles_200](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_200.svg)
+![example_grid_search_triangles_200](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_200.png)
 
 ### 800 triangles
 
@@ -260,7 +260,7 @@ Histogram of container num items
     sum = 397
 ```
 
-![example_grid_search_triangles_800](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_800.svg)
+![example_grid_search_triangles_800](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_800.png)
 
 ### 3200 triangles
 
@@ -295,7 +295,7 @@ Histogram of container num items
     sum = 1463
 ```
 
-![example_grid_search_triangles_3200](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_3200.svg)
+![example_grid_search_triangles_3200](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_3200.png)
 
 ### 7200 triangles
 
@@ -330,7 +330,7 @@ Histogram of container num items
     sum = 3140
 ```
 
-![example_grid_search_triangles_7200](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_7200.svg)
+![example_grid_search_triangles_7200](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_7200.png)
 
 ### 20000 triangles
 
@@ -365,4 +365,4 @@ Histogram of container num items
     sum = 8634
 ```
 
-![example_grid_search_triangles_20000](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_20000.svg)
+![example_grid_search_triangles_20000](https://github.com/cpmech/gemlab/raw/main/data/triangles/example_grid_search_triangles_20000.png)
