@@ -12,7 +12,7 @@ const NDIM: usize = 2;
 /// Specifies the key of containers (or bins in the grid)
 type ContainerKey = usize;
 
-/// Specifies the identification number of cells (must be sequential from 0 to ncell - 1)
+/// Specifies the identification number of triangles (must be sequential from 0 to ntriangle - 1)
 type TriangleId = usize;
 
 /// Defines the container type
@@ -21,7 +21,7 @@ type Container = HashSet<TriangleId>;
 /// Defines the containers type: Key to Container
 type Containers = HashMap<ContainerKey, Container>;
 
-/// Defines the bounding box of a cell
+/// Defines the bounding box of a triangle
 const N_MIN_MAX: usize = 2; // 2 means {min,max}
 const I_MIN: usize = 0;
 const I_MAX: usize = 1;
@@ -38,7 +38,7 @@ pub struct GridSearchTri {
     xmin: Vec<f64>,                  // (ndim) min values
     xmax: Vec<f64>,                  // (ndim) max values
     side_length: f64,                // side length of a container
-    bounding_boxes: Vec<BboxMinMax>, // (ncell) bounding boxes
+    bounding_boxes: Vec<BboxMinMax>, // (ntriangle) bounding boxes
     containers: Containers,          // structure to hold all items
 }
 
@@ -49,7 +49,7 @@ impl GridSearchTri {
     ///
     /// * `coordinates` -- is a list of coordinates such as `[[x0,y0], [x1,y1], [x2,y2], [x3,y3]]`
     /// * `triangles` -- is a list of connectivity (topology) such as `[[0,2,1], [2,1,0]]`
-    /// * `tolerance` -- is a tolerance to expand the bounding box of cells and compare points; e.g. 1e-4
+    /// * `tolerance` -- is a tolerance to expand the bounding box of triangles and compare points; e.g. 1e-4
     ///     - If None, [GS_DEFAULT_TOLERANCE] is used
     /// * `border_tol` -- is a tolerance used to expand the border a little bit and then
     ///   accommodate eventual imprecision near the borders; e.g. 1e-2
@@ -73,9 +73,6 @@ impl GridSearchTri {
         if ndim != 2 {
             return Err("ndim must be = 2");
         }
-        if ntriangle < 1 {
-            return Err("number of triangles must be ≥ 1");
-        }
         if nnode != 3 {
             return Err("number of triangle nodes (nnode) must be = 3");
         }
@@ -98,16 +95,16 @@ impl GridSearchTri {
             return Err("border_tol must be ≥ 0.0");
         }
 
-        // find limits, bounding boxes, and largest cell
+        // find limits, bounding boxes, and largest triangle
         let mut xmin = vec![f64::MAX; ndim];
         let mut xmax = vec![f64::MIN; ndim];
         let mut x_min_max = vec![vec![0.0; N_MIN_MAX]; ndim];
         let mut bbox_large = vec![f64::MIN; ndim];
         let mut bounding_boxes = Vec::new();
         let mut x = vec![0.0; ndim];
-        for t in 0..ntriangle {
+        for cell_id in 0..ntriangle {
             for m in 0..nnode {
-                let p = triangles.at(t, m);
+                let p = triangles.at(cell_id, m);
                 x[0] = coordinates.at(p, 0);
                 x[1] = coordinates.at(p, 1);
                 for i in 0..ndim {
@@ -126,7 +123,7 @@ impl GridSearchTri {
                     }
                 }
             }
-            // largest cell
+            // largest triangle
             for i in 0..ndim {
                 bbox_large[i] = f64::max(bbox_large[i], x_min_max[i][I_MAX] - x_min_max[i][I_MIN]);
             }
@@ -163,20 +160,18 @@ impl GridSearchTri {
             xmax[i] = xmin[i] + side_length * (ndiv[i] as f64);
         }
 
-        // insert cells
+        // insert triangles
         let mut containers = HashMap::new();
         let mut x = vec![0.0; ndim];
-        for t in 0..ntriangle {
-            let x_min_max = &bounding_boxes[t];
+        for cell_id in 0..ntriangle {
+            let x_min_max = &bounding_boxes[cell_id];
             for r in 0..N_MIN_MAX {
                 for s in 0..N_MIN_MAX {
-                    for t in 0..(ndim - 1) {
-                        x[0] = x_min_max[0][r];
-                        x[1] = x_min_max[1][s];
-                        let key = calc_container_key(ndim, side_length, &ndiv, &xmin, &x);
-                        let container = containers.entry(key).or_insert(HashSet::new());
-                        container.insert(t);
-                    }
+                    x[0] = x_min_max[0][r];
+                    x[1] = x_min_max[1][s];
+                    let key = calc_container_key(ndim, side_length, &ndiv, &xmin, &x);
+                    let container = containers.entry(key).or_insert(HashSet::new());
+                    container.insert(cell_id);
                 }
             }
         }
@@ -228,18 +223,26 @@ impl GridSearchTri {
         let mut xa = vec![0.0; NDIM];
         let mut xb = vec![0.0; NDIM];
         let mut xc = vec![0.0; NDIM];
-        for t in container {
-            let x_min_max = &self.bounding_boxes[*t];
+        for cell_id in container {
+            let x_min_max = &self.bounding_boxes[*cell_id];
+            let a = triangles.at(*cell_id, 0);
+            let b = triangles.at(*cell_id, 1);
+            let c = triangles.at(*cell_id, 2);
+            let mut outside = false;
             for i in 0..NDIM {
                 if x[i] < x_min_max[i][I_MIN] || x[i] > x_min_max[i][I_MAX] {
-                    continue; // outside the bounding box
+                    outside = true; // outside the bounding box
+                    break;
                 }
-                xa[i] = coordinates.at(triangles.at(*t, 0), i);
-                xb[i] = coordinates.at(triangles.at(*t, 1), i);
-                xc[i] = coordinates.at(triangles.at(*t, 2), i);
+                xa[i] = coordinates.at(a, i);
+                xb[i] = coordinates.at(b, i);
+                xc[i] = coordinates.at(c, i);
+            }
+            if outside {
+                continue;
             }
             if is_point_inside_triangle(&xa, &xb, &xc, x) {
-                return Ok(Some(*t));
+                return Ok(Some(*cell_id));
             }
         }
 
@@ -315,9 +318,9 @@ impl GridSearchTri {
             ids.set_color("#cd0000");
             let mut xcen = vec![0.0; NDIM];
             for container in self.containers.values() {
-                for cell_id in container {
-                    let x_min_max = &self.bounding_boxes[*cell_id];
-                    let txt = format!("{}", cell_id);
+                for t in container {
+                    let x_min_max = &self.bounding_boxes[*t];
+                    let txt = format!("{}", t);
                     for i in 0..NDIM {
                         xcen[i] = (x_min_max[i][I_MIN] + x_min_max[i][I_MAX]) / 2.0;
                     }
@@ -349,7 +352,7 @@ impl GridSearchTri {
         }
         println!("Summary");
         println!("=======");
-        println!("ncell = {:?}", unique_items.len());
+        println!("ntriangle = {:?}", unique_items.len());
         println!("xmin = {:?}", self.xmin);
         println!("xmax = {:?}", self.xmax);
         println!("side_length = {:?}", self.side_length);
@@ -385,7 +388,7 @@ impl fmt::Display for GridSearchTri {
         // summary
         let mut ids: Vec<_> = unique_items.iter().collect();
         ids.sort();
-        write!(f, "ncell = {}\n", unique_items.len()).unwrap();
+        write!(f, "ntriangle = {}\n", unique_items.len()).unwrap();
         write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();
         write!(f, "ndiv = {:?}\n", self.ndiv).unwrap();
         Ok(())
@@ -397,36 +400,36 @@ impl fmt::Display for GridSearchTri {
 #[cfg(test)]
 mod tests {
     use super::GridSearchTri;
-    use crate::util::GS_DEFAULT_TOLERANCE;
+    use crate::util::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
     use crate::StrError;
     use plotpy::Plot;
 
     #[test]
     fn new_handles_errors() {
-        let coordinates = &[[0.0]];
-        let triangles = &[[0, 1]];
+        let coordinates = vec![vec![0.0]];
+        let triangles = vec![vec![]];
         assert_eq!(
-            GridSearchTri::new(coordinates, triangles, None, None).err(),
+            GridSearchTri::new(&coordinates, &triangles, None, None).err(),
             Some("number of points must be ≥ 3")
         );
+        let coordinates = vec![vec![0.0], vec![1.0], vec![2.0]];
         assert_eq!(
-            GridSearchTri::new(coordinates, triangles, None, None).err(),
+            GridSearchTri::new(&coordinates, &triangles, None, None).err(),
             Some("ndim must be = 2")
         );
+        let coordinates = vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![0.0, 1.0]];
+        let triangles = vec![vec![0, 1, 2, 3], vec![0, 1, 2], vec![0, 1, 2]];
         assert_eq!(
-            GridSearchTri::new(coordinates, triangles, None, None).err(),
-            Some("number of triangles must be ≥ 1")
-        );
-        assert_eq!(
-            GridSearchTri::new(coordinates, triangles, None, None).err(),
+            GridSearchTri::new(&coordinates, &triangles, None, None).err(),
             Some("number of triangle nodes (nnode) must be = 3")
         );
+        let triangles = vec![vec![0, 1, 2], vec![0, 1, 2], vec![0, 1, 2]];
         assert_eq!(
-            GridSearchTri::new(coordinates, triangles, Some(-1.0), None).err(),
+            GridSearchTri::new(&coordinates, &triangles, Some(-1.0), None).err(),
             Some("tolerance must be > 0.0")
         );
         assert_eq!(
-            GridSearchTri::new(coordinates, triangles, None, Some(-1.0)).err(),
+            GridSearchTri::new(&coordinates, &triangles, None, Some(-1.0)).err(),
             Some("border_tol must be ≥ 0.0")
         );
     }
@@ -464,7 +467,7 @@ mod tests {
              1: [0, 1]\n\
              2: [0, 1]\n\
              3: [0, 1]\n\
-             ncell = 2\n\
+             ntriangle = 2\n\
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
         );
@@ -512,16 +515,61 @@ mod tests {
 
     #[test]
     fn find_triangle_works() -> Result<(), StrError> {
-        let coordinates = &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
-        let triangles = &[[0, 1, 3], [1, 2, 3]];
+        #[rustfmt::skip]
+        let coordinates = &[
+            [0.0307942, 0.459123  ], // 0
+            [0.0980015, 0.981755  ], // 1
+            [0.133721,  0.348832  ], // 2
+            [0.13928,   0.180603  ], // 3
+            [0.230951,  0.558482  ], // 4
+            [0.478554,  0.00869692], // 5
+            [0.540745,  0.331184  ], // 6
+            [0.578587,  0.760349  ], // 7
+            [0.648071,  0.369534  ], // 8
+            [0.903726,  0.975904  ], // 9
+        ];
+        let triangles = &[
+            [4, 2, 6], //  0
+            [3, 2, 0], //  1
+            [0, 4, 1], //  2
+            [4, 0, 2], //  3
+            [1, 4, 7], //  4
+            [2, 3, 6], //  5
+            [6, 7, 4], //  6
+            [6, 5, 8], //  7
+            [7, 8, 9], //  8
+            [8, 7, 6], //  9
+            [7, 9, 1], // 10
+            [6, 3, 5], // 11
+        ];
         let grid = GridSearchTri::new(coordinates, triangles, None, None)?;
+        let max_len = coordinates[9][0] - coordinates[1][0];
+        let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE; // because the bbox is expanded
+        let g = GS_DEFAULT_BORDER_TOL;
+        assert_eq!(grid.side_length, sl);
+        assert_eq!(grid.ndiv, &[2, 2]);
+        assert_eq!(grid.xmin, &[coordinates[0][0] - g, coordinates[5][1] - g]);
+        assert_eq!(
+            grid.xmax,
+            &[coordinates[0][0] - g + sl * 2.0, coordinates[5][1] - g + sl * 2.0]
+        );
+        assert_eq!(grid.bounding_boxes.len(), triangles.len());
+        assert_eq!(grid.containers.len(), 4);
+        let bbox_0 = &grid.bounding_boxes[0];
+        assert_eq!(
+            bbox_0,
+            &[
+                [coordinates[2][0], coordinates[6][0]],
+                [coordinates[6][1], coordinates[4][1]]
+            ]
+        );
         assert_eq!(
             format!("{}", grid),
             "0: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
              1: [8, 10]\n\
              2: [2, 4, 8, 10]\n\
              3: [8, 10]\n\
-             ncell = 12\n\
+             ntriangle = 12\n\
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
         );
@@ -529,9 +577,17 @@ mod tests {
         assert_eq!(grid.find_triangle(&[0.6, 0.3], coordinates, triangles)?, Some(7));
         assert_eq!(grid.find_triangle(&[0.1, 0.7], coordinates, triangles)?, Some(2));
         assert_eq!(grid.find_triangle(&[0.8, 0.8], coordinates, triangles)?, Some(8));
+        let res = grid.find_triangle(&coordinates[5], coordinates, triangles)?;
+        if res != Some(7) {
+            assert_eq!(res, Some(11));
+        }
         assert_eq!(grid.find_triangle(&[0.1, 0.1], coordinates, triangles)?, None);
         assert_eq!(grid.find_triangle(&[0.6, 0.2], coordinates, triangles)?, None);
         assert_eq!(grid.find_triangle(&[0.4, 1.0], coordinates, triangles)?, None);
+        assert_eq!(
+            grid.find_triangle(&[10.0, 1.0], coordinates, triangles).err(),
+            Some("given point coordinates are outside the grid")
+        );
         if false {
             let mut plot = Plot::new();
             grid.draw(&mut plot, coordinates, triangles, true)?;
