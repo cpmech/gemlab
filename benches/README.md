@@ -53,7 +53,7 @@ bench_new_grid/NewGrid/20000
                         thrpt:  [2.1379 Melem/s 2.1392 Melem/s 2.1404 Melem/s]
 ```
 
-This chart below shows the mean measured time for as the number of triangles increases.
+This chart below shows the mean measured time as the number of triangles increases.
 
 ![bench_new_grid_1](https://github.com/cpmech/gemlab/raw/main/benches/figures/bench_new_grid_1.svg)
 
@@ -95,7 +95,7 @@ bench_grid_vs_brute/Brute/20000
                         thrpt:  [22.403 Kelem/s 22.573 Kelem/s 22.733 Kelem/s]
 ```
 
-This chart below shows the mean measured time for as the number of triangles increases.
+This chart below shows the mean measured time as the number of triangles increases.
 
 ![bench_grid_vs_brute_1](https://github.com/cpmech/gemlab/raw/main/benches/figures/bench_grid_vs_brute_1.svg)
 
