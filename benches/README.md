@@ -1,8 +1,39 @@
-# GridSearchCell
+# Benchmarks
+
+We run the benchmarks using the following systems:
+
+**System-1**
+
+`cat /proc/cpuinfo`
+
+```text
+processor	: 11
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 158
+model name	: Intel(R) Core(TM) i7-8700K CPU @ 3.70GHz
+```
+
+`lsb_release -a`
+
+```text
+Distributor ID:	Ubuntu
+Description:	Ubuntu 20.04.4 LTS
+Release:	20.04
+Codename:	focal
+```
+
+`grep MemTotal /proc/meminfo`
+
+```
+MemTotal:       49048068 kB
+```
+
+## GridSearchCell
+
+### Grid allocation times
 
 First, we benchmark the grid initialization which loops over all triangles, finds the bounding boxes, and finds the largest triangle.
-
-**Grid allocation times:**
 
 ```text
 bench_new_grid/NewGrid/200                                                                             
@@ -22,9 +53,14 @@ bench_new_grid/NewGrid/20000
                         thrpt:  [2.1379 Melem/s 2.1392 Melem/s 2.1404 Melem/s]
 ```
 
+This chart below shows the mean measured time for as the number of triangles increases.
+
+![bench_new_grid_1](https://github.com/cpmech/gemlab/raw/main/benches/figures/bench_new_grid_1.svg)
+
+### Grid search versus brute-force search times
+
 Next, we perform the search of 100 x 100 points over the 2D domain of a mesh of triangles. We use the GridSearchCell tool and a naive (brute-force) implementation which simply loops over all triangles for each point.
 
-**Grid search versus brute-force search times:**
 
 ```text
 bench_grid_vs_brute/Grid/200                                                                             
@@ -59,6 +95,10 @@ bench_grid_vs_brute/Brute/20000
                         thrpt:  [22.403 Kelem/s 22.573 Kelem/s 22.733 Kelem/s]
 ```
 
-**Discussion**
+This chart below shows the mean measured time for as the number of triangles increases.
+
+![bench_grid_vs_brute_1](https://github.com/cpmech/gemlab/raw/main/benches/figures/bench_grid_vs_brute_1.svg)
+
+### Discussion
 
 For 20000 triangles, the grid search average time is 9.3493 ms (initialization) plus 1.3124 ms (search) and the brute force time is 886.01 ms. Therefore, including the initialization time, `GridSearchCell` is roughly 80 times faster than the brute force algorithm.
