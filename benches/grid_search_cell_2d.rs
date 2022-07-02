@@ -1,71 +1,91 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode, Throughput};
 use gemlab::geometry::is_point_inside_triangle;
 use gemlab::util::GridSearchCell;
-use russell_lab::{generate2d, StrError};
+use russell_lab::{generate2d, Matrix, StrError};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
 
-fn brute_force_search(triangles: &Vec<Vec<Vec<f64>>>, x: &[f64]) -> Option<usize> {
-    for i in 0..triangles.len() {
-        let t = &triangles[i];
-        if is_point_inside_triangle(&t[0], &t[1], &t[2], x) {
-            return Some(i);
-        }
-    }
-    None
+const NP: usize = 100; // search 100*100 points
+
+struct Analysis {
+    tris: Vec<Vec<Vec<f64>>>,
+    grid: GridSearchCell,
+    xx: Matrix,
+    yy: Matrix,
 }
 
-const NP: usize = 100;
-
-fn my_benchmark(crit: &mut Criterion) {
-    // let sizes = &[200];
-    let sizes = &[200, 800, 3200, 7200, 20000];
-    let mut meshes = HashMap::new();
-    let mut grids = HashMap::new();
-    let mut xxs = HashMap::new();
-    let mut yys = HashMap::new();
+fn load_analyses(sizes: &[usize]) -> HashMap<usize, Analysis> {
+    let mut analyses = HashMap::new();
     for size in sizes {
         let path = format!("data/triangles/example_grid_search_gen_triangles_{}.dat", size);
         let (tris, xmin, xmax) = read_data(path.as_str()).unwrap();
         let get_x = |t: usize, m: usize| Ok(&tris[t][m][..]);
         let grid = GridSearchCell::new(2, tris.len(), |_| Ok(3), get_x, None, None).unwrap();
         let (xx, yy) = generate2d(xmin[0], xmax[0], xmin[1], xmax[1], NP, NP);
-        meshes.insert(size, tris);
-        grids.insert(size, grid);
-        xxs.insert(size, xx);
-        yys.insert(size, yy);
+        analyses.insert(*size, Analysis { tris, grid, xx, yy });
     }
-    let mut group = crit.benchmark_group("my_benchmark");
+    analyses
+}
+
+fn bench_new_grid(crit: &mut Criterion) {
+    // let sizes = &[200, 800];
+    let sizes = &[200, 800, 3200, 7200, 20000];
+    let mut all_tris = HashMap::new();
+    for size in sizes {
+        let path = format!("data/triangles/example_grid_search_gen_triangles_{}.dat", size);
+        let (tris, _, _) = read_data(path.as_str()).unwrap();
+        all_tris.insert(size, tris);
+    }
+    let mut group = crit.benchmark_group("bench_new_grid");
+    for size in sizes {
+        group.throughput(Throughput::Elements(*size as u64));
+        group.bench_with_input(BenchmarkId::new("NewGrid", size), size, |b, &size| {
+            let tris = all_tris.get(&size).unwrap();
+            let get_x = |t: usize, m: usize| Ok(&tris[t][m][..]);
+            b.iter(|| {
+                GridSearchCell::new(2, tris.len(), |_| Ok(3), get_x, None, None).unwrap();
+            });
+        });
+    }
+    group.finish();
+}
+
+fn bench_grid_vs_brute(crit: &mut Criterion) {
+    // let sizes = &[200, 800];
+    let sizes = &[200, 800, 3200, 7200, 20000];
+    let analyses = load_analyses(sizes);
+    let mut group = crit.benchmark_group("bench_grid_vs_brute");
     for size in sizes {
         group.sampling_mode(SamplingMode::Flat);
         group.throughput(Throughput::Elements(*size as u64));
         group.bench_with_input(BenchmarkId::new("Grid", size), size, |b, &size| {
-            let tris = meshes.get(&size).unwrap();
-            let grid = grids.get(&size).unwrap();
-            // println!("{}", grids.get(&size).unwrap());
-            let in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&tris[t][0], &tris[t][1], &tris[t][2], x));
-            let xx = xxs.get(&size).unwrap();
-            let yy = yys.get(&size).unwrap();
+            let ana = analyses.get(&size).unwrap();
+            let is_in_cell = |t: usize, x: &[f64]| {
+                Ok(is_point_inside_triangle(
+                    &ana.tris[t][0],
+                    &ana.tris[t][1],
+                    &ana.tris[t][2],
+                    x,
+                ))
+            };
             b.iter(|| {
                 for i in 0..NP {
                     for j in 0..NP {
-                        let x = &[xx[i][j], yy[i][j]];
-                        grid.find_cell(x, in_cell).unwrap();
+                        let x = &[ana.xx[i][j], ana.yy[i][j]];
+                        ana.grid.find_cell(x, is_in_cell).unwrap();
                     }
                 }
             });
         });
         group.bench_with_input(BenchmarkId::new("Brute", size), size, |b, &size| {
-            let tris = meshes.get(&size).unwrap();
-            let xx = xxs.get(&size).unwrap();
-            let yy = yys.get(&size).unwrap();
+            let ana = analyses.get(&size).unwrap();
             b.iter(|| {
                 for i in 0..NP {
                     for j in 0..NP {
-                        let x = &[xx[i][j], yy[i][j]];
-                        brute_force_search(&tris, x);
+                        let x = &[ana.xx[i][j], ana.yy[i][j]];
+                        brute_force_search(&ana.tris, x);
                     }
                 }
             });
@@ -77,8 +97,18 @@ fn my_benchmark(crit: &mut Criterion) {
 criterion_group!(
     name = benches;
     config = Criterion::default().measurement_time(Duration::from_secs(100));
-    targets= my_benchmark);
+    targets = bench_new_grid, bench_grid_vs_brute);
 criterion_main!(benches);
+
+fn brute_force_search(triangles: &Vec<Vec<Vec<f64>>>, x: &[f64]) -> Option<usize> {
+    for i in 0..triangles.len() {
+        let t = &triangles[i];
+        if is_point_inside_triangle(&t[0], &t[1], &t[2], x) {
+            return Some(i);
+        }
+    }
+    None
+}
 
 // Returns [num_triangle][nnode=3][ndim=2]
 fn read_data(path: &str) -> Result<(Vec<Vec<Vec<f64>>>, Vec<f64>, Vec<f64>), StrError> {
