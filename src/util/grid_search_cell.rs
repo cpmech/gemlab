@@ -1,4 +1,4 @@
-use super::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
+use super::{calc_container_key, GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
 use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
 use russell_stat::Histogram;
@@ -116,27 +116,6 @@ pub struct GridSearchCell {
 }
 
 impl GridSearchCell {
-    /// Calculates the key of the container where the point should fall in
-    #[inline]
-    fn calc_container_key(ndim: usize, side_length: f64, ndiv: &[usize], xmin: &[f64], x: &[f64]) -> ContainerKey {
-        let mut ix = ((x[0] - xmin[0]) / side_length) as usize; // (Eq. 8)
-        let mut iy = ((x[1] - xmin[1]) / side_length) as usize;
-        if ix == ndiv[0] {
-            ix -= 1; // point is on max edge => move to inner container
-        }
-        if iy == ndiv[1] {
-            iy -= 1; // point is on max edge => move to inner container
-        }
-        if ndim == 2 {
-            return ix + iy * ndiv[0];
-        }
-        let mut iz = ((x[2] - xmin[2]) / side_length) as usize;
-        if iz == ndiv[2] {
-            iz -= 1; // point is on max edge => move to inner container
-        }
-        return ix + iy * ndiv[0] + iz * ndiv[0] * ndiv[1];
-    }
-
     /// Allocates a new instance
     ///
     /// # Input
@@ -267,7 +246,7 @@ impl GridSearchCell {
                         if ndim == 3 {
                             x[2] = x_min_max[2][t];
                         }
-                        let key = GridSearchCell::calc_container_key(ndim, side_length, &ndiv, &xmin, &x);
+                        let key = calc_container_key(ndim, side_length, &ndiv, &xmin, &x);
                         let container = containers.entry(key).or_insert(HashSet::new());
                         container.insert(cell_id);
                     }
@@ -303,7 +282,7 @@ impl GridSearchCell {
         }
 
         // get the container where `x` falls in
-        let key = GridSearchCell::calc_container_key(self.ndim, self.side_length, &self.ndiv, &self.xmin, x);
+        let key = calc_container_key(self.ndim, self.side_length, &self.ndiv, &self.xmin, x);
         let container = match self.containers.get(&key) {
             Some(c) => c,
             None => return Ok(None), // no container with cells in it
@@ -519,52 +498,6 @@ mod tests {
             }
         }
         plot.add(&canvas);
-    }
-
-    #[test]
-    fn calc_container_key_works() {
-        // 2d
-        let ndim = 2;
-        let side_length = 0.30000000000000004;
-        let ndiv = &[4, 8];
-        let xmin = &[-0.30000000000000004, -0.30000000000000004];
-        let x = &[0.1, 0.5];
-        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 9);
-        let x = &[0.7, 0.8];
-        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 15);
-        let x = &[-0.2, 1.8];
-        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 24);
-        let x = &[0.8, 1.8];
-        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 27);
-        let xmax = &[
-            xmin[0] + (ndiv[0] as f64) * side_length,
-            xmin[1] + (ndiv[1] as f64) * side_length,
-        ];
-        let x = &[xmax[0], xmax[1]];
-        assert_eq!(
-            GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x),
-            (ndiv[0] * ndiv[1] - 1)
-        );
-
-        // 3d
-        let ndim = 3;
-        let side_length = 1.1;
-        let ndiv = &[2, 2, 2];
-        let xmin = &[-1.1, -1.1, -1.1];
-        let x = &[-1.0, -1.0, -1.0];
-        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 0);
-        let x = &[1.0, 1.0, 1.0];
-        assert_eq!(GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x), 7);
-        let xmax = &[
-            xmin[0] + (ndiv[0] as f64) * side_length,
-            xmin[1] + (ndiv[1] as f64) * side_length,
-            xmin[2] + (ndiv[2] as f64) * side_length,
-        ];
-        let x = &[xmax[0], xmax[1], xmax[2]];
-        assert_eq!(
-            GridSearchCell::calc_container_key(ndim, side_length, ndiv, xmin, x),
-            (ndiv[0] * ndiv[1] * ndiv[2] - 1)
-        );
     }
 
     #[test]
