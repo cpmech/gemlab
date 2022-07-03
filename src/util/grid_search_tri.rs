@@ -1,5 +1,5 @@
 use super::{calc_container_key, AsArray2D, GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
-use crate::geometry::is_point_inside_triangle;
+use crate::geometry::{is_point_inside_triangle, triangle_interpolation};
 use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
 use russell_stat::Histogram;
@@ -34,9 +34,9 @@ type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
 /// See [super::GridSearchCell] for more details.
 ///
 pub struct GridSearchTri {
-    ndiv: Vec<usize>,                // (ndim) number of divisions along each direction
-    xmin: Vec<f64>,                  // (ndim) min values
-    xmax: Vec<f64>,                  // (ndim) max values
+    ndiv: Vec<usize>,                // (NDIM) number of divisions along each direction
+    xmin: Vec<f64>,                  // (NDIM) min values
+    xmax: Vec<f64>,                  // (NDIM) max values
     side_length: f64,                // side length of a container
     bounding_boxes: Vec<BboxMinMax>, // (ntriangle) bounding boxes
     containers: Containers,          // structure to hold all items
@@ -65,13 +65,13 @@ impl GridSearchTri {
         T: AsArray2D<'a, usize>,
     {
         // constants
-        let (npoint, ndim) = coordinates.size();
+        let (npoint, ncol) = coordinates.size();
         let (ntriangle, nnode) = triangles.size();
         if npoint < 3 {
             return Err("number of points must be ≥ 3");
         }
-        if ndim != 2 {
-            return Err("ndim must be = 2");
+        if ncol < 2 {
+            return Err("coordinates.ncol must be ≥ 2");
         }
         if nnode != 3 {
             return Err("number of triangle nodes (nnode) must be = 3");
@@ -96,24 +96,24 @@ impl GridSearchTri {
         }
 
         // find limits, bounding boxes, and largest triangle
-        let mut xmin = vec![f64::MAX; ndim];
-        let mut xmax = vec![f64::MIN; ndim];
-        let mut x_min_max = vec![vec![0.0; N_MIN_MAX]; ndim];
-        let mut bbox_large = vec![f64::MIN; ndim];
+        let mut xmin = vec![f64::MAX; NDIM];
+        let mut xmax = vec![f64::MIN; NDIM];
+        let mut x_min_max = vec![vec![0.0; N_MIN_MAX]; NDIM];
+        let mut bbox_large = vec![f64::MIN; NDIM];
         let mut bounding_boxes = Vec::new();
-        let mut x = vec![0.0; ndim];
+        let mut x = vec![0.0; NDIM];
         for cell_id in 0..ntriangle {
             for m in 0..nnode {
                 let p = triangles.at(cell_id, m);
                 x[0] = coordinates.at(p, 0);
                 x[1] = coordinates.at(p, 1);
-                for i in 0..ndim {
+                for i in 0..NDIM {
                     // limits
                     xmin[i] = f64::min(xmin[i], x[i]);
                     xmax[i] = f64::max(xmax[i], x[i]);
                     // bounding box
                     if m == 0 {
-                        for i in 0..ndim {
+                        for i in 0..NDIM {
                             x_min_max[i][I_MIN] = x[i];
                             x_min_max[i][I_MAX] = x[i];
                         }
@@ -124,7 +124,7 @@ impl GridSearchTri {
                 }
             }
             // largest triangle
-            for i in 0..ndim {
+            for i in 0..NDIM {
                 bbox_large[i] = f64::max(bbox_large[i], x_min_max[i][I_MAX] - x_min_max[i][I_MIN]);
             }
             // add to bounding box maps
@@ -133,7 +133,7 @@ impl GridSearchTri {
 
         // make the side_length equal to the largest bounding box dimension
         let mut side_length = bbox_large[0];
-        for i in 1..ndim {
+        for i in 1..NDIM {
             side_length = f64::max(side_length, bbox_large[i]);
         }
 
@@ -142,34 +142,34 @@ impl GridSearchTri {
 
         // expand borders
         if border_tol > 0.0 {
-            for i in 0..ndim {
+            for i in 0..NDIM {
                 xmin[i] -= border_tol;
                 xmax[i] += border_tol;
             }
         }
 
         // number of divisions
-        let mut ndiv = vec![0; ndim];
-        for i in 0..ndim {
+        let mut ndiv = vec![0; NDIM];
+        for i in 0..NDIM {
             assert!(xmax[i] > xmin[i]);
             ndiv[i] = f64::ceil((xmax[i] - xmin[i]) / side_length) as usize;
         }
 
         // update xmax after deciding on the side_length and number of divisions
-        for i in 0..ndim {
+        for i in 0..NDIM {
             xmax[i] = xmin[i] + side_length * (ndiv[i] as f64);
         }
 
         // insert triangles
         let mut containers = HashMap::new();
-        let mut x = vec![0.0; ndim];
+        let mut x = vec![0.0; NDIM];
         for cell_id in 0..ntriangle {
             let x_min_max = &bounding_boxes[cell_id];
             for r in 0..N_MIN_MAX {
                 for s in 0..N_MIN_MAX {
                     x[0] = x_min_max[0][r];
                     x[1] = x_min_max[1][s];
-                    let key = calc_container_key(ndim, side_length, &ndiv, &xmin, &x);
+                    let key = calc_container_key(NDIM, side_length, &ndiv, &xmin, &x);
                     let container = containers.entry(key).or_insert(HashSet::new());
                     container.insert(cell_id);
                 }
@@ -187,11 +187,18 @@ impl GridSearchTri {
         })
     }
 
-    /// Find the triangle where the given coordinate falls in
+    /// Finds the triangle where the given coordinate falls in
     ///
-    /// * Returns the TriangleId or None if no triangle contains the point
+    /// # Input
     ///
-    /// # Warning
+    /// * `coordinates` -- is a list of coordinates such as `[[x0,y0], [x1,y1], [x2,y2], [x3,y3]]`
+    /// * `triangles` -- is a list of connectivity (topology) such as `[[0,2,1], [2,1,0]]`
+    ///
+    /// # Output
+    ///
+    /// Returns the index of the triangle in `triangles` or None if no triangle contains the point
+    ///
+    /// # Warning (Panics)
     ///
     /// The pair `coordinates` and `triangles` must be the same as the ones used in the `new` function,
     /// otherwise **panics** may occur or, even worse, you may get **incorrect results**.
@@ -243,6 +250,88 @@ impl GridSearchTri {
             }
             if is_point_inside_triangle(&xa, &xb, &xc, x) {
                 return Ok(Some(*cell_id));
+            }
+        }
+
+        // not found
+        Ok(None)
+    }
+
+    /// Finds the triangle where the given coordinate falls in and performs an interpolation of coordinates
+    ///
+    /// # Input
+    ///
+    /// * `coordinates` -- is a list of coordinates such as `[[x0,y0,T0], [x1,y1,T1], [x2,y2,T2], [x3,y3,T3]]`
+    ///   where `T[i]` are the values (e.g., temperatures) at that coordinate and will be used for interpolation
+    /// * `triangles` -- is a list of connectivity (topology) such as `[[0,2,1], [2,1,0]]`
+    ///
+    /// # Output
+    ///
+    /// Returns the value (e.g., temperature) at the target point (xp) inside the triangle.
+    /// Returns None if no triangle contains the point.
+    ///
+    /// # Warning (Panics)
+    ///
+    /// The pair `coordinates` and `triangles` must be the same as the ones used in the `new` function,
+    /// otherwise **panics** may occur or, even worse, you may get **incorrect results**.
+    pub fn find_triangle_and_interpolate<'a, C, T>(
+        &self,
+        x: &[f64],
+        coordinates: &'a C,
+        triangles: &'a T,
+    ) -> Result<Option<f64>, StrError>
+    where
+        C: AsArray2D<'a, f64>,
+        T: AsArray2D<'a, usize>,
+    {
+        // check if the point is out-of-bounds
+        for i in 0..NDIM {
+            if x[i] < self.xmin[i] || x[i] > self.xmax[i] {
+                return Err("given point coordinates are outside the grid");
+            }
+        }
+        // check if the temperature is present in the coordinates list
+        let (_, ncol) = coordinates.size();
+        if ncol < 3 {
+            return Err("coordinates must contain a third column with the temperature values");
+        }
+
+        // get the container where `x` falls in
+        let key = calc_container_key(NDIM, self.side_length, &self.ndiv, &self.xmin, x);
+        let container = match self.containers.get(&key) {
+            Some(c) => c,
+            None => return Ok(None), // no container with triangles in it
+        };
+
+        // find the triangle where the point falls in
+        let mut xa = vec![0.0; NDIM];
+        let mut xb = vec![0.0; NDIM];
+        let mut xc = vec![0.0; NDIM];
+        let mut temp = vec![0.0; 3];
+        for cell_id in container {
+            let x_min_max = &self.bounding_boxes[*cell_id];
+            let a = triangles.at(*cell_id, 0);
+            let b = triangles.at(*cell_id, 1);
+            let c = triangles.at(*cell_id, 2);
+            let mut outside = false;
+            for i in 0..NDIM {
+                if x[i] < x_min_max[i][I_MIN] || x[i] > x_min_max[i][I_MAX] {
+                    outside = true; // outside the bounding box
+                    break;
+                }
+                xa[i] = coordinates.at(a, i);
+                xb[i] = coordinates.at(b, i);
+                xc[i] = coordinates.at(c, i);
+            }
+            if outside {
+                continue;
+            }
+            if is_point_inside_triangle(&xa, &xb, &xc, x) {
+                temp[0] = coordinates.at(a, 2);
+                temp[1] = coordinates.at(b, 2);
+                temp[2] = coordinates.at(c, 2);
+                let res = triangle_interpolation(&xa, &xb, &xc, &temp, x);
+                return Ok(Some(res));
             }
         }
 
@@ -403,6 +492,7 @@ mod tests {
     use crate::util::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
     use crate::StrError;
     use plotpy::Plot;
+    use russell_chk::assert_approx_eq;
 
     #[test]
     fn new_handles_errors() {
@@ -415,7 +505,7 @@ mod tests {
         let coordinates = vec![vec![0.0], vec![1.0], vec![2.0]];
         assert_eq!(
             GridSearchTri::new(&coordinates, &triangles, None, None).err(),
-            Some("ndim must be = 2")
+            Some("coordinates.ncol must be ≥ 2")
         );
         let coordinates = vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![0.0, 1.0]];
         let triangles = vec![vec![0, 1, 2, 3], vec![0, 1, 2], vec![0, 1, 2]];
@@ -597,6 +687,54 @@ mod tests {
                 .set_ticks_x(0.2, 0.0, "")
                 .set_ticks_y(0.2, 0.0, "")
                 .save("/tmp/gemlab/test_grid_search_tri_find_works.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn find_triangle_and_interpolate_works() -> Result<(), StrError> {
+        let coordinates = &[
+            [0.0, 0.0, 0.0], // last column is the temperature
+            [0.5, 0.85, 0.986154146165801],
+            [1.0, 0.0, 1.0],
+            [1.0, 1.7, 1.972308292331602],
+            [1.5, 0.85, 1.724093964956667],
+            [2.0, 0.0, 2.0],
+            [2.0, 1.7, 2.6248809496813372],
+            [2.5, 0.85, 2.640549185302179],
+            [3.0, 1.7, 3.448187929913334],
+        ];
+        let triangles = &[
+            [0, 2, 1],
+            [2, 5, 4],
+            [1, 2, 4],
+            [4, 5, 7],
+            [1, 4, 3],
+            [4, 7, 6],
+            [3, 4, 6],
+            [6, 7, 8],
+        ];
+        let grid = GridSearchTri::new(coordinates, triangles, None, None)?;
+        for x_y_tt in coordinates {
+            let tt = f64::sqrt(x_y_tt[0] * x_y_tt[0] + x_y_tt[1] * x_y_tt[1]);
+            assert_eq!(
+                grid.find_triangle_and_interpolate(x_y_tt, coordinates, triangles)?,
+                Some(tt)
+            );
+        }
+        let temp = grid
+            .find_triangle_and_interpolate(&[1.5, 1.0], coordinates, triangles)?
+            .unwrap();
+        assert_approx_eq!(temp, f64::sqrt(1.5 * 1.5 + 1.0 * 1.0), 0.025);
+        if true {
+            let mut plot = Plot::new();
+            grid.draw(&mut plot, coordinates, triangles, true)?;
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .grid_and_labels("x", "y")
+                .set_ticks_x(0.2, 0.0, "")
+                .set_ticks_y(0.2, 0.0, "")
+                .save("/tmp/gemlab/test_grid_search_tri_interpolate_works.svg")?;
         }
         Ok(())
     }
