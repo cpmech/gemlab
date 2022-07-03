@@ -18,11 +18,13 @@ sudo apt-get install \
     libopenblas-dev
 ```
 
-Add this to your Cargo.toml:
+[![Crates.io](https://img.shields.io/crates/v/gemlab.svg)](https://crates.io/crates/gemlab)
+
+👆 Check the crate version and update your Cargo.toml accordingly:
 
 ```toml
 [dependencies]
-gemlab = "0.2"
+gemlab = "*"
 ```
 
 ## Examples
