@@ -290,6 +290,7 @@ impl GridSearchTri {
                 return Err("given point coordinates are outside the grid");
             }
         }
+
         // check if the temperature is present in the coordinates list
         let (_, ncol) = coordinates.size();
         if ncol < 3 {
@@ -307,7 +308,7 @@ impl GridSearchTri {
         let mut xa = vec![0.0; NDIM];
         let mut xb = vec![0.0; NDIM];
         let mut xc = vec![0.0; NDIM];
-        let mut temp = vec![0.0; 3];
+        let mut temp = vec![0.0; 3]; // 3 nodes
         for cell_id in container {
             let x_min_max = &self.bounding_boxes[*cell_id];
             let a = triangles.at(*cell_id, 0);
@@ -716,6 +717,10 @@ mod tests {
         ];
         let grid = GridSearchTri::new(coordinates, triangles, None, None)?;
         for x_y_tt in coordinates {
+            assert_eq!(
+                grid.find_triangle_and_interpolate(x_y_tt, coordinates, triangles)?,
+                Some(x_y_tt[2])
+            );
             let tt = f64::sqrt(x_y_tt[0] * x_y_tt[0] + x_y_tt[1] * x_y_tt[1]);
             assert_eq!(
                 grid.find_triangle_and_interpolate(x_y_tt, coordinates, triangles)?,
