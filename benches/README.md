@@ -37,20 +37,20 @@ First, we benchmark the grid initialization which loops over all triangles, find
 
 ```text
 bench_new_grid/NewGrid/200                                                                             
-                        time:   [94.311 us 94.405 us 94.514 us]
-                        thrpt:  [2.1161 Melem/s 2.1185 Melem/s 2.1206 Melem/s]
+                        time:   [93.762 us 93.817 us 93.881 us]
+                        thrpt:  [2.1304 Melem/s 2.1318 Melem/s 2.1331 Melem/s]
 bench_new_grid/NewGrid/800                                                                             
-                        time:   [373.66 us 373.86 us 374.08 us]
-                        thrpt:  [2.1386 Melem/s 2.1398 Melem/s 2.1410 Melem/s]
+                        time:   [370.13 us 370.33 us 370.56 us]
+                        thrpt:  [2.1589 Melem/s 2.1603 Melem/s 2.1614 Melem/s]
 bench_new_grid/NewGrid/3200                                                                            
-                        time:   [1.4656 ms 1.4663 ms 1.4670 ms]
-                        thrpt:  [2.1813 Melem/s 2.1823 Melem/s 2.1834 Melem/s]
+                        time:   [1.4503 ms 1.4509 ms 1.4517 ms]
+                        thrpt:  [2.2044 Melem/s 2.2055 Melem/s 2.2064 Melem/s]
 bench_new_grid/NewGrid/7200                                                                            
-                        time:   [3.3000 ms 3.3018 ms 3.3037 ms]
-                        thrpt:  [2.1794 Melem/s 2.1806 Melem/s 2.1818 Melem/s]
+                        time:   [3.2617 ms 3.2630 ms 3.2645 ms]
+                        thrpt:  [2.2056 Melem/s 2.2066 Melem/s 2.2075 Melem/s]
 bench_new_grid/NewGrid/20000                                                                            
-                        time:   [9.3440 ms 9.3493 ms 9.3550 ms]
-                        thrpt:  [2.1379 Melem/s 2.1392 Melem/s 2.1404 Melem/s]
+                        time:   [9.2292 ms 9.2349 ms 9.2412 ms]
+                        thrpt:  [2.1642 Melem/s 2.1657 Melem/s 2.1670 Melem/s]
 ```
 
 This chart below shows the mean measured time as the number of triangles increases.
@@ -61,38 +61,37 @@ This chart below shows the mean measured time as the number of triangles increas
 
 Next, we perform the search of 100 x 100 points over the 2D domain of a mesh of triangles. We use the GridSearchCell tool and a naive (brute-force) implementation which simply loops over all triangles for each point.
 
-
 ```text
 bench_grid_vs_brute/Grid/200                                                                             
-                        time:   [776.10 us 776.49 us 776.91 us]
-                        thrpt:  [257.43 Kelem/s 257.57 Kelem/s 257.70 Kelem/s]
+                        time:   [613.52 us 613.81 us 614.12 us]
+                        thrpt:  [325.67 Kelem/s 325.84 Kelem/s 325.99 Kelem/s]
 bench_grid_vs_brute/Brute/200                                                                             
-                        time:   [10.524 ms 10.529 ms 10.534 ms]
-                        thrpt:  [18.987 Kelem/s 18.995 Kelem/s 19.003 Kelem/s]
+                        time:   [10.973 ms 10.978 ms 10.983 ms]
+                        thrpt:  [18.210 Kelem/s 18.219 Kelem/s 18.226 Kelem/s]
 bench_grid_vs_brute/Grid/800                                                                             
-                        time:   [877.44 us 877.84 us 878.27 us]
-                        thrpt:  [910.88 Kelem/s 911.33 Kelem/s 911.74 Kelem/s]
+                        time:   [722.73 us 723.04 us 723.39 us]
+                        thrpt:  [1.1059 Melem/s 1.1064 Melem/s 1.1069 Melem/s]
 bench_grid_vs_brute/Brute/800                                                                             
-                        time:   [37.116 ms 37.136 ms 37.159 ms]
-                        thrpt:  [21.529 Kelem/s 21.542 Kelem/s 21.554 Kelem/s]
+                        time:   [39.245 ms 39.262 ms 39.281 ms]
+                        thrpt:  [20.366 Kelem/s 20.376 Kelem/s 20.385 Kelem/s]
 bench_grid_vs_brute/Grid/3200                                                                             
-                        time:   [983.19 us 984.27 us 985.75 us]
-                        thrpt:  [3.2463 Melem/s 3.2511 Melem/s 3.2547 Melem/s]
+                        time:   [831.14 us 831.46 us 831.83 us]
+                        thrpt:  [3.8469 Melem/s 3.8486 Melem/s 3.8501 Melem/s]
 bench_grid_vs_brute/Brute/3200                                                                            
-                        time:   [144.54 ms 144.65 ms 144.76 ms]
-                        thrpt:  [22.105 Kelem/s 22.123 Kelem/s 22.139 Kelem/s]
-bench_grid_vs_brute/Grid/7200                                                                            
-                        time:   [1.1606 ms 1.1661 ms 1.1715 ms]
-                        thrpt:  [6.1457 Melem/s 6.1743 Melem/s 6.2035 Melem/s]
+                        time:   [150.57 ms 150.64 ms 150.72 ms]
+                        thrpt:  [21.232 Kelem/s 21.242 Kelem/s 21.252 Kelem/s]
+bench_grid_vs_brute/Grid/7200                                                                             
+                        time:   [917.37 us 917.79 us 918.28 us]
+                        thrpt:  [7.8408 Melem/s 7.8449 Melem/s 7.8485 Melem/s]
 bench_grid_vs_brute/Brute/7200                                                                            
-                        time:   [331.91 ms 333.21 ms 334.50 ms]
-                        thrpt:  [21.525 Kelem/s 21.608 Kelem/s 21.692 Kelem/s]
+                        time:   [331.90 ms 332.05 ms 332.21 ms]
+                        thrpt:  [21.673 Kelem/s 21.683 Kelem/s 21.693 Kelem/s]
 bench_grid_vs_brute/Grid/20000                                                                            
-                        time:   [1.3010 ms 1.3124 ms 1.3241 ms]
-                        thrpt:  [15.105 Melem/s 15.239 Melem/s 15.373 Melem/s]
+                        time:   [1.0091 ms 1.0096 ms 1.0102 ms]
+                        thrpt:  [19.798 Melem/s 19.810 Melem/s 19.820 Melem/s]
 bench_grid_vs_brute/Brute/20000                                                                            
-                        time:   [879.77 ms 886.01 ms 892.72 ms]
-                        thrpt:  [22.403 Kelem/s 22.573 Kelem/s 22.733 Kelem/s]
+                        time:   [893.07 ms 893.54 ms 894.05 ms]
+                        thrpt:  [22.370 Kelem/s 22.383 Kelem/s 22.395 Kelem/s]
 ```
 
 This chart below shows the mean measured time as the number of triangles increases.
@@ -101,4 +100,4 @@ This chart below shows the mean measured time as the number of triangles increas
 
 ### Discussion
 
-For 20000 triangles, the grid search average time is 9.3493 ms (initialization) plus 1.3124 ms (search) and the brute force time is 886.01 ms. Therefore, including the initialization time, `GridSearchCell` is roughly 80 times faster than the brute force algorithm.
+For 20000 triangles, the grid search average time is 9.2349 ms (initialization) plus 1.0096 ms (search) and the brute force time is 893.54 ms. Therefore, including the initialization time, `GridSearchCell` is roughly 87 times faster than the brute force algorithm.
