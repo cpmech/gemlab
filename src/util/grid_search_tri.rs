@@ -743,4 +743,23 @@ mod tests {
         }
         Ok(())
     }
+
+    #[test]
+    fn find_triangle_works_2d_particles() -> Result<(), StrError> {
+        #[rustfmt::skip]
+        let coordinates = &[
+            [0.0, 0.0], [1.0,  0.0], [0.5,  0.85],
+            [2.0, 0.0], [3.0,  0.0], [2.5,  0.85],
+            [1.0, 1.0], [2.0,  1.0], [1.5,  1.85],
+        ];
+        let triangles = &[[0, 1, 2], [3, 4, 5], [6, 7, 8]];
+        let grid = GridSearchTri::new(coordinates, triangles, None, None)?;
+        assert_eq!(grid.find_triangle(&[0.4, 0.2], coordinates, triangles)?, Some(0));
+        assert_eq!(grid.find_triangle(&[3.0, 0.0], coordinates, triangles)?, Some(1));
+        assert_eq!(grid.find_triangle(&[1.5, 1.4], coordinates, triangles)?, Some(2));
+        assert_eq!(grid.find_triangle(&[0.5, 1.6], coordinates, triangles)?, None);
+        assert_eq!(grid.find_triangle(&[1.5, 0.5], coordinates, triangles)?, None);
+        assert_eq!(grid.find_triangle(&[2.5, 1.6], coordinates, triangles)?, None);
+        Ok(())
+    }
 }
