@@ -29,8 +29,19 @@ fn cross_is_negative(u0: f64, u1: f64, v0: f64, v1: f64) -> bool {
 /// C-------------------B   C-------------------B
 /// ```
 ///
-/// **Note:** This function returns true if the point is
-/// on any boundary or coincides with any vertex
+/// # Input
+///
+/// `xa,xb,xc` -- are the coordinates of the triangle vertices (each: len = 2 = ndim)
+/// `temp` -- are the known values at the triangle vertices; e.g., the temperatures (len = 3)
+///
+/// # Output
+///
+/// Returns true if the point is inside the triangle.
+/// Note: this function also returns true if the point is on any boundary or coincides with any vertex.
+///
+/// # Panics
+///
+/// This function will panic if the array sizes are incorrect
 pub fn is_point_inside_triangle(xa: &[f64], xb: &[f64], xc: &[f64], xp: &[f64]) -> bool {
     if (xp[0] == xa[0] && xp[1] == xa[1]) || (xp[0] == xb[0] && xp[1] == xb[1]) || (xp[0] == xc[0] && xp[1] == xc[1]) {
         return true;
@@ -53,11 +64,37 @@ pub fn triangle_signed_area(xa: &[f64], xb: &[f64], xc: &[f64]) -> f64 {
     ) / 2.0
 }
 
+/// Interpolates a value at a given point over a triangle
+/// 
+/// See file data/derivations/interpolation-over-triangle.pdf
+/// 
+/// # Input
+/// 
+/// `xa,xb,xc` -- are the coordinates of the triangle vertices (each: len = 2 = ndim)
+/// `temp` -- are the known values at the triangle vertices; e.g., the temperatures (len = 3)
+/// `xp` -- are the coordinates of the point of interest (len = ndim)
+/// 
+/// # Output
+/// 
+/// Returns the "temperature" `T @ x`
+/// 
+/// # Panics
+/// 
+/// This function will panic if the array sizes are incorrect
+#[rustfmt::skip]
+pub fn triangle_interpolation(xa: &[f64], xb: &[f64], xc: &[f64], temp: &[f64], xp: &[f64]) -> f64 {
+    let aa2    =  xa[0] * (xb[1] - xc[1]) + xb[0] * (xc[1] - xa[1]) + xc[0] * (xa[1] - xb[1]);
+    let zeta_0 = (xp[0] * (xb[1] - xc[1]) + xb[0] * (xc[1] - xp[1]) + xc[0] * (xp[1] - xb[1])) / aa2;
+    let zeta_1 = (xa[0] * (xp[1] - xc[1]) + xp[0] * (xc[1] - xa[1]) + xc[0] * (xa[1] - xp[1])) / aa2;
+    let zeta_2 = (xa[0] * (xb[1] - xp[1]) + xb[0] * (xp[1] - xa[1]) + xp[0] * (xa[1] - xb[1])) / aa2;
+    zeta_0 * temp[0] + zeta_1 * temp[1] + zeta_2 * temp[2]
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{is_point_inside_triangle, triangle_signed_area};
+    use super::{is_point_inside_triangle, triangle_interpolation, triangle_signed_area};
     use crate::StrError;
     use plotpy::{Canvas, Plot, PolyCode, Text};
 
@@ -146,5 +183,21 @@ mod tests {
         assert_eq!(triangle_signed_area(&[1.0, 0.0], &[0.0, 0.0], &[0.0, 1.0]), -0.5);
         assert_eq!(triangle_signed_area(&[-1.0, 2.0], &[4.0, -3.0], &[2.0, 3.0]), 10.0);
         assert_eq!(triangle_signed_area(&[-2.0, 3.0], &[-3.0, -1.0], &[3.0, -2.0]), 12.5);
+    }
+
+    #[test]
+    fn triangle_interpolation_works() -> Result<(), StrError> {
+        let xa = &[0.0, 0.0];
+        let xb = &[1.5, 0.0];
+        let xc = &[0.0, 1.0];
+        let temp = &[3.0, 2.0, 1.0];
+        assert_eq!(triangle_interpolation(xa, xb, xc, temp, xa), temp[0]);
+        assert_eq!(triangle_interpolation(xa, xb, xc, temp, xb), temp[1]);
+        assert_eq!(triangle_interpolation(xa, xb, xc, temp, xc), temp[2]);
+        assert_eq!(
+            triangle_interpolation(xa, xb, xc, temp, &[1.0 / 2.0, 1.0 / 4.0]),
+            13.0 / 6.0
+        );
+        Ok(())
     }
 }
