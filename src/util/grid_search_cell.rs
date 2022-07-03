@@ -550,11 +550,13 @@ mod tests {
         let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
         let max_len = 1.0;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
+        let xmin = &[-0.1, -0.1];
+        let xmax = &[-0.1 + sl * 2.0, -0.1 + sl * 2.0];
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.side_length, sl);
         assert_eq!(grid.ndiv, &[2, 2]);
-        assert_eq!(grid.xmin, &[-0.1, -0.1]);
-        assert_eq!(grid.xmax, &[-0.1 + sl * 2.0, -0.1 + sl * 2.0]);
+        assert_eq!(grid.xmin, xmin);
+        assert_eq!(grid.xmax, xmax);
         assert_eq!(grid.bounding_boxes.len(), 2);
         assert_eq!(grid.containers.len(), 4);
         let bbox_0 = &grid.bounding_boxes[0];
@@ -579,6 +581,10 @@ mod tests {
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
         );
+        grid.print_stat();
+        let (mi, ma) = grid.limits();
+        assert_eq!(mi, xmin);
+        assert_eq!(ma, xmax);
         if false {
             let mut plot = Plot::new();
             draw_triangles(&mut plot, &TRIS);
@@ -608,7 +614,7 @@ mod tests {
         let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
         let grid = GridSearchCell::new(2, 1, |_| Ok(3), get_x, None, None)?;
         let mut plot = Plot::new();
-        grid.draw(&mut plot, false)?;
+        grid.draw(&mut plot, true)?;
 
         const TETS: [[[f64; 3]; 4]; 1] = [[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]];
         let get_x = |t: usize, m: usize| Ok(&TETS[t][m][..]);
@@ -799,6 +805,39 @@ mod tests {
                 .set_ticks_x(0.2, 0.0, "")
                 .set_ticks_y(0.2, 0.0, "")
                 .save("/tmp/gemlab/test_grid_search_cell_find_works_2d.svg")?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn find_cell_works_2d_particles() -> Result<(), StrError> {
+        // [num_triangle][nnode=3][ndim=2]
+        #[rustfmt::skip]
+        const TRIS: [[[f64; 2]; 3]; 3] = [
+            [[0.0, 0.0], [1.0,  0.0], [0.5,  0.85]],
+            [[2.0, 0.0], [3.0,  0.0], [2.5,  0.85]],
+            [[1.0, 1.0], [2.0,  1.0], [1.5,  1.85]],
+        ];
+        let get_nnode = |_| Ok(3);
+        let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, None)?;
+        let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
+        assert_eq!(grid.find_cell(&[0.4, 0.2], is_in_cell)?, Some(0));
+        assert_eq!(grid.find_cell(&[3.0, 0.0], is_in_cell)?, Some(1));
+        assert_eq!(grid.find_cell(&[1.5, 1.4], is_in_cell)?, Some(2));
+        assert_eq!(grid.find_cell(&[0.5, 1.6], is_in_cell)?, None);
+        assert_eq!(grid.find_cell(&[1.5, 0.5], is_in_cell)?, None);
+        assert_eq!(grid.find_cell(&[2.5, 1.6], is_in_cell)?, None);
+        if false {
+            let mut plot = Plot::new();
+            draw_triangles(&mut plot, &TRIS);
+            grid.draw(&mut plot, true)?;
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .grid_and_labels("x", "y")
+                .set_ticks_x(0.2, 0.0, "")
+                .set_ticks_y(0.2, 0.0, "")
+                .save("/tmp/gemlab/test_grid_search_cell_find_works_2d_particles.svg")?;
         }
         Ok(())
     }
