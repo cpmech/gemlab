@@ -6,9 +6,6 @@ use crate::StrError;
 /// Groups generators of structured meshes (Qua and Hex -- sometimes Tri)
 pub struct Structured {}
 
-/// TODO Groups generators of unstructured meshes (Tri and Tet only)
-pub struct Unstructured {}
-
 impl Structured {
     /// Generates a mesh representing a quarter of a ring in 2D
     ///
