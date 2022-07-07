@@ -2,15 +2,18 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a line (segment) with 4 nodes (cubic functions)
 ///
-/// The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// ![lin4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_lin4.svg)
 ///
 /// # Local IDs of nodes
 ///
 /// ```text
-/// -1                    +1
-///  @------@-------@------@  --> r
-///  0      2       3      1
+///   0-------2-------3-------1  --> r
+/// -1.0    -1/3     1/3     1.0
 /// ```
+///
+/// # Notes
+///
+/// * The reference coordinates range from -1 to +1 with the geometry centred @ 0
 pub struct Lin4 {}
 
 impl Lin4 {

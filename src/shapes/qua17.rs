@@ -2,39 +2,49 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a quadrilateral with 17 nodes (quartic edge; interior node)
 ///
+/// ![qua17](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_qua17.svg)
+///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
 /// # Local IDs of nodes
 ///
 /// ```text
-///    3----14-----6----13-----2
-///    |                  (1,1)|
-///    |                       |
-///   15                      12
-///    |         s ^           |
-///    |           |           |
-///    7           |           5
-///    |           8----> r    |
-///    |         (0,0)         |
-///   16                      11
-///    |                       |
-///    |(-1,-1)                |
-///    0-----9-----4----10-----1
+///  3----14-----6----13-----2
+///  |                  (1,1)|
+///  |                       |
+/// 15         s ^          12
+///  |           |           |
+///  |                       |
+///  7           8  --> r    5
+///  |                       |
+///  |         (0,0)         |
+/// 16                      11
+///  |                       |
+///  |(-1,-1)                |
+///  0-----9-----4----10-----1
 /// ```
 ///
 /// # Local IDs of edges
 ///
 /// ```text
-///        2
-///  +-----------+         p0 p1  p2 p3  p4
-///  |           |     e:0 [1, 0, 4, 10,  9]
-///  |           |     e:1 [2, 1, 5, 12, 11]
-/// 3|           |1    e:2 [3, 2, 6, 14, 13]
-///  |           |     e:3 [0, 3, 7, 16, 15]
-///  |           |
-///  +-----------+
-///        0
+///                2
+///    3----14-----6----13-----2
+///    |                       |
+///    |                       |
+///   15                      12         p0 p1  p2 p3  p4
+///    |                       |     e:0 [1, 0, 4, 10,  9]
+///    |                       |     e:1 [2, 1, 5, 12, 11]
+/// 3  7           8           5 1   e:2 [3, 2, 6, 14, 13]
+///    |                       |     e:3 [0, 3, 7, 16, 15]
+///    |                       |
+///   16                      11
+///    |                       |
+///    |                       |
+///    0-----9-----4----10-----1
+///                0
 /// ```
+///
+/// # Notes
 ///
 /// * The order of edge nodes is such that the normals are outward
 /// * The order of edge nodes corresponds to [super::Lin5] nodes

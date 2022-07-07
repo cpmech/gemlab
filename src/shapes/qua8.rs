@@ -2,7 +2,7 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a quadrilateral with 8 nodes (quadratic edges)
 ///
-/// The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// ![qua8](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_qua8.svg)
 ///
 /// # Local IDs of nodes
 ///
@@ -19,19 +19,23 @@ use russell_lab::{Matrix, Vector};
 /// # Local IDs of edges
 ///
 /// ```text
-///        2
-///  +-----------+         p0 p1 p2
-///  |           |     e:0 [1, 0, 4]
-///  |           |     e:1 [2, 1, 5]
-/// 3|           |1    e:2 [3, 2, 6]
-///  |           |     e:3 [0, 3, 7]
-///  |           |
-///  +-----------+
-///        0
+///         2
+///   3-----6-----2          p0 p1 p2
+///   |           |      e:0 [1, 0, 4]
+///   |           |      e:1 [2, 1, 5]
+/// 3 7           5 1    e:2 [3, 2, 6]
+///   |           |      e:3 [0, 3, 7]
+///   |           |
+///   0-----4-----1
+///         0
 /// ```
 ///
+/// # Notes
+///
+/// * The reference coordinates range from -1 to +1 with the geometry centred @ 0
 /// * The order of edge nodes is such that the normals are outward
-/// * The order of edge nodes corresponds to **Lin3** nodes
+/// * The order of edge nodes corresponds to [super::Lin3] nodes
+/// * This shape is a higher-order version of [super::Qua4]
 pub struct Qua8 {}
 
 impl Qua8 {

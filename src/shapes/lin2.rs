@@ -2,15 +2,19 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a line (segment) with 2 nodes (linear functions)
 ///
-/// The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// ![lin2](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_lin2.svg)
 ///
 /// # Local IDs of nodes
 ///
 /// ```text
-/// -1                    +1
-///  @---------------------@  --> r
-///  0                     1
+///   0-----------------------1  --> r
+/// -1.0                     1.0
 /// ```
+///
+/// # Notes
+///
+/// * The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// * This shape is a lower-order version of [super::Lin3]
 pub struct Lin2 {}
 
 impl Lin2 {

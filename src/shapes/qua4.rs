@@ -2,7 +2,7 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a quadrilateral with 4 nodes (linear edges)
 ///
-/// The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// ![qua4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_qua4.svg)
 ///
 /// # Local IDs of nodes
 ///
@@ -20,18 +20,21 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///        2
-///  +-----------+         p0  p1
+///  3-----------2         p0  p1
 ///  |           |     e:0 [1, 0]
 ///  |           |     e:1 [2, 1]
 /// 3|           |1    e:2 [3, 2]
 ///  |           |     e:3 [0, 3]
 ///  |           |
-///  +-----------+
+///  0-----------1
 ///        0
 /// ```
 ///
+/// # Notes
+///
+/// * The reference coordinates range from -1 to +1 with the geometry centred @ 0
 /// * The order of edge nodes is such that the normals are outward
-/// * The order of edge nodes corresponds to **Lin2** nodes
+/// * The order of edge nodes corresponds to [super::Lin2] nodes
 pub struct Qua4 {}
 
 impl Qua4 {

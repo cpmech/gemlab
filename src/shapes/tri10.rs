@@ -2,6 +2,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a triangle with 10 nodes (cubic edges; interior node)
 ///
+/// ![tri10](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_tri10.svg)
+///
 /// # Local IDs of nodes
 ///
 /// ```text
@@ -22,17 +24,23 @@ use russell_lab::{Matrix, Vector};
 /// # Local IDs of edges
 ///
 /// ```text
-///  |\            p0  p1 p2 p3
-///  | \       e:0 [1, 0, 6, 3]
-///  |  \ 1    e:1 [2, 1, 7, 4]
-/// 2|   \     e:2 [0, 2, 8, 5]
-///  |    \
-///  |_____\
-///     0
+///   2,
+///   | ',
+///   |   ',              p0  p1 p2 p3
+///   5     7,        e:0 [1, 0, 6, 3]
+///   |       ', 1    e:1 [2, 1, 7, 4]
+/// 2 |         ',    e:2 [0, 2, 8, 5]
+///   8     9     4,
+///   |             ',
+///   |               ',
+///   0-----3-----6-----1
+///            0
 /// ```
 ///
+/// # Notes
+///
 /// * The order of edge nodes is such that the normals are outward
-/// * The order of edge nodes corresponds to **Lin4** nodes
+/// * The order of edge nodes corresponds to [super::Lin4] nodes
 pub struct Tri10 {}
 
 impl Tri10 {

@@ -2,6 +2,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a triangle with 15 nodes (quartic edges; interior nodes)
 ///
+/// ![tri15](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_tri15.svg)
+///
 /// # Local IDs of nodes
 ///
 /// ```text
@@ -25,17 +27,27 @@ use russell_lab::{Matrix, Vector};
 /// # Local IDs of edges
 ///
 /// ```text
-///  |\            p0  p1 p2 p3  p4
-///  | \       e:0 [1, 0, 3,  7,  6]
-///  |  \ 1    e:1 [2, 1, 4,  9,  8]
-/// 2|   \     e:2 [0, 2, 5, 11, 10]
-///  |    \
-///  |_____\
-///     0
+///    2,
+///    | ',
+///    |   ',                p0  p1 p2 p3  p4
+///   10     9,          e:0 [1, 0, 3,  7,  6]
+///    |       ',        e:1 [2, 1, 4,  9,  8]
+///    |         ', 1    e:2 [0, 2, 5, 11, 10]
+/// 2  5    14     4,
+///    |             ',
+///    |               ',
+///   11    12    13     8,
+///    |                   ',
+///    |                     ',
+///    0-----6-----3-----7-----1
+///                0
 /// ```
 ///
+/// # Notes
+///
 /// * The order of edge nodes is such that the normals are outward
-/// * The order of edge nodes corresponds to **Lin5** nodes
+/// * The order of edge nodes corresponds to [super::Lin5] nodes
+/// * This shape is a higher-order version of [super::Tri6]
 pub struct Tri15 {}
 
 impl Tri15 {

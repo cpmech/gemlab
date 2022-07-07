@@ -2,15 +2,19 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a line (segment) with 5 nodes (quartic functions)
 ///
-/// The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// ![lin5](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_lin5.svg)
 ///
 /// # Local IDs of nodes
 ///
 /// ```text
-/// -1   -0.5    0    0.5   +1
-///  @-----@-----@-----@-----@  --> r
-///  0     3     2     4     1
+///   0-----3-----2-----4-----1  --> r
+/// -1.0  -0.5   0.0   0.5   1.0
 /// ```
+///
+/// # Notes
+///
+/// * The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// * This shape is a higher-order version of [super::Lin3]
 pub struct Lin5 {}
 
 impl Lin5 {

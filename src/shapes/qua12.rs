@@ -2,42 +2,47 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a quadrilateral with 12 nodes (cubic edges)
 ///
-/// The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// ![qua12](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_qua12.svg)
 ///
 /// # Local IDs of nodes
 ///
 /// ```text
-///  3      10       6        2
-///    @-----@-------@------@
-///    |               (1,1)|
-///    |       s ^          |
-///  7 @         |          @ 9
-///    |         |          |
-///    |         +----> r   |
-///    |       (0,0)        |
-/// 11 @                    @ 5
-///    |                    |
-///    |(-1,-1)             |
-///    @-----@-------@------@
-///  0       4       8        1
+///  3----10-------6------2
+///  |               (1,1)|
+///  |       s ^          |
+///  7         |          9
+///  |         |          |
+///  |         +----> r   |
+///  |       (0,0)        |
+/// 11                    5
+///  |                    |
+///  |(-1,-1)             |
+///  0-----4-------8------1
 /// ```
 ///
 /// # Local IDs of edges
 ///
 /// ```text
-///        2
-///  +-----------+         p0 p1  p2 p3
-///  |           |     e:0 [1, 0,  8, 4]
-///  |           |     e:1 [2, 1,  9, 5]
-/// 3|           |1    e:2 [3, 2, 10, 6]
-///  |           |     e:3 [0, 3, 11, 7]
-///  |           |
-///  +-----------+
-///        0
+///              2
+///    3----10-------6------2
+///    |                    |
+///    |                    |
+///    7                    9          p0 p1  p2 p3
+///    |                    |      e:0 [1, 0,  8, 4]
+/// 3  |                    | 1    e:1 [2, 1,  9, 5]
+///    |                    |      e:2 [3, 2, 10, 6]
+///   11                    5      e:3 [0, 3, 11, 7]
+///    |                    |
+///    |                    |
+///    0-----4-------8------1
+///              0
 /// ```
 ///
+/// # Notes
+///
+/// * The reference coordinates range from -1 to +1 with the geometry centred @ 0
 /// * The order of edge nodes is such that the normals are outward
-/// * The order of edge nodes corresponds to **Lin4** nodes
+/// * The order of edge nodes corresponds to [super::Lin4] nodes
 pub struct Qua12 {}
 
 impl Qua12 {

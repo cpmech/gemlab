@@ -2,7 +2,7 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a hexahedron with 8 nodes (bilinear faces)
 ///
-/// The reference coordinates range from -1 to +1 with the geometry centred @ 0.
+/// ![hex8](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_hex8.svg)
 ///
 /// # Local IDs of nodes
 ///
@@ -65,8 +65,12 @@ use russell_lab::{Matrix, Vector};
 /// 1----------------2'
 /// ```
 ///
+/// # Notes
+///
+/// * The reference coordinates range from -1 to +1 with the geometry centred @ 0.
 /// * The order of face nodes is such that the normals are outward
-/// * The order of face nodes corresponds to **Qua4** nodes
+/// * The order of face nodes corresponds to [super::Qua4] nodes
+/// * This shape is a lower-order version of [super::Hex20]
 pub struct Hex8 {}
 
 impl Hex8 {
