@@ -568,23 +568,23 @@ impl Samples {
     /// ```text
     /// cell ids as in block_2d_four_qua8
     ///
-    /// 4.0  30---38---35---32---29---47---45---43---41
+    /// 4.0  30---38---32---37---29---48---43---47---41
     ///       |                   |                   |
-    /// 3.5  33                  37                  46
+    /// 3.5  39                  36                  46
     ///       |                   |                   |
-    /// 3.0  36        40        34        48        44
+    /// 3.0  33        34        31        44        42
     ///       |                   |                   |
-    /// 2.5  39                  31                  42
+    /// 2.5  40                  35                  45
     ///       |                   |                   |
-    /// 2.0   3---14---10----6----2---27---24---21---18
+    /// 2.0   3---14----6---13----2---28---21---27---18
     ///       |                   |                   |
-    /// 1.5   7                  13                  26
+    /// 1.5  15                  12                  26
     ///       |                   |                   |
-    /// 1.0  11        16         9        28        23
+    /// 1.0   7         8         5        22        20
     ///       |                   |                   |
-    /// 0.5  15                   5                  20
+    /// 0.5  16                  11                  25
     ///       |                   |                   |
-    /// 0.0   0----4----8---12----1---19---22---25---17
+    /// 0.0   0----9----4---10----1---23---19---24---17
     ///
     ///      0.0  0.5  1.0  1.5  2.0  2.5  3.0  3.5  4.0
     ///
@@ -600,57 +600,57 @@ impl Samples {
                 Point { id:  1, coords: vec![2.0, 0.0] },
                 Point { id:  2, coords: vec![2.0, 2.0] },
                 Point { id:  3, coords: vec![0.0, 2.0] },
-                Point { id:  4, coords: vec![0.5, 0.0] },
-                Point { id:  5, coords: vec![2.0, 0.5] },
-                Point { id:  6, coords: vec![1.5, 2.0] },
-                Point { id:  7, coords: vec![0.0, 1.5] },
-                Point { id:  8, coords: vec![1.0, 0.0] },
-                Point { id:  9, coords: vec![2.0, 1.0] },
-                Point { id: 10, coords: vec![1.0, 2.0] },
-                Point { id: 11, coords: vec![0.0, 1.0] },
-                Point { id: 12, coords: vec![1.5, 0.0] },
-                Point { id: 13, coords: vec![2.0, 1.5] },
+                Point { id:  4, coords: vec![1.0, 0.0] },
+                Point { id:  5, coords: vec![2.0, 1.0] },
+                Point { id:  6, coords: vec![1.0, 2.0] },
+                Point { id:  7, coords: vec![0.0, 1.0] },
+                Point { id:  8, coords: vec![1.0, 1.0] },
+                Point { id:  9, coords: vec![0.5, 0.0] },
+                Point { id: 10, coords: vec![1.5, 0.0] },
+                Point { id: 11, coords: vec![2.0, 0.5] },
+                Point { id: 12, coords: vec![2.0, 1.5] },
+                Point { id: 13, coords: vec![1.5, 2.0] },
                 Point { id: 14, coords: vec![0.5, 2.0] },
-                Point { id: 15, coords: vec![0.0, 0.5] },
-                Point { id: 16, coords: vec![1.0, 1.0] },
+                Point { id: 15, coords: vec![0.0, 1.5] },
+                Point { id: 16, coords: vec![0.0, 0.5] },
                 Point { id: 17, coords: vec![4.0, 0.0] },
                 Point { id: 18, coords: vec![4.0, 2.0] },
-                Point { id: 19, coords: vec![2.5, 0.0] },
-                Point { id: 20, coords: vec![4.0, 0.5] },
-                Point { id: 21, coords: vec![3.5, 2.0] },
-                Point { id: 22, coords: vec![3.0, 0.0] },
-                Point { id: 23, coords: vec![4.0, 1.0] },
-                Point { id: 24, coords: vec![3.0, 2.0] },
-                Point { id: 25, coords: vec![3.5, 0.0] },
+                Point { id: 19, coords: vec![3.0, 0.0] },
+                Point { id: 20, coords: vec![4.0, 1.0] },
+                Point { id: 21, coords: vec![3.0, 2.0] },
+                Point { id: 22, coords: vec![3.0, 1.0] },
+                Point { id: 23, coords: vec![2.5, 0.0] },
+                Point { id: 24, coords: vec![3.5, 0.0] },
+                Point { id: 25, coords: vec![4.0, 0.5] },
                 Point { id: 26, coords: vec![4.0, 1.5] },
-                Point { id: 27, coords: vec![2.5, 2.0] },
-                Point { id: 28, coords: vec![3.0, 1.0] },
+                Point { id: 27, coords: vec![3.5, 2.0] },
+                Point { id: 28, coords: vec![2.5, 2.0] },
                 Point { id: 29, coords: vec![2.0, 4.0] },
                 Point { id: 30, coords: vec![0.0, 4.0] },
-                Point { id: 31, coords: vec![2.0, 2.5] },
-                Point { id: 32, coords: vec![1.5, 4.0] },
-                Point { id: 33, coords: vec![0.0, 3.5] },
-                Point { id: 34, coords: vec![2.0, 3.0] },
-                Point { id: 35, coords: vec![1.0, 4.0] },
-                Point { id: 36, coords: vec![0.0, 3.0] },
-                Point { id: 37, coords: vec![2.0, 3.5] },
+                Point { id: 31, coords: vec![2.0, 3.0] },
+                Point { id: 32, coords: vec![1.0, 4.0] },
+                Point { id: 33, coords: vec![0.0, 3.0] },
+                Point { id: 34, coords: vec![1.0, 3.0] },
+                Point { id: 35, coords: vec![2.0, 2.5] },
+                Point { id: 36, coords: vec![2.0, 3.5] },
+                Point { id: 37, coords: vec![1.5, 4.0] },
                 Point { id: 38, coords: vec![0.5, 4.0] },
-                Point { id: 39, coords: vec![0.0, 2.5] },
-                Point { id: 40, coords: vec![1.0, 3.0] },
+                Point { id: 39, coords: vec![0.0, 3.5] },
+                Point { id: 40, coords: vec![0.0, 2.5] },
                 Point { id: 41, coords: vec![4.0, 4.0] },
-                Point { id: 42, coords: vec![4.0, 2.5] },
-                Point { id: 43, coords: vec![3.5, 4.0] },
-                Point { id: 44, coords: vec![4.0, 3.0] },
-                Point { id: 45, coords: vec![3.0, 4.0] },
+                Point { id: 42, coords: vec![4.0, 3.0] },
+                Point { id: 43, coords: vec![3.0, 4.0] },
+                Point { id: 44, coords: vec![3.0, 3.0] },
+                Point { id: 45, coords: vec![4.0, 2.5] },
                 Point { id: 46, coords: vec![4.0, 3.5] },
-                Point { id: 47, coords: vec![2.5, 4.0] },
-                Point { id: 48, coords: vec![3.0, 3.0] },
+                Point { id: 47, coords: vec![3.5, 4.0] },
+                Point { id: 48, coords: vec![2.5, 4.0] },
             ],
             cells: vec![
                 Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua17, points: vec![0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16] },
-                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua17, points: vec![1, 17, 18,  2, 19, 20, 21, 13, 22, 23, 24,  9, 25, 26, 27,  5, 28] },
-                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua17, points: vec![3,  2, 29, 30, 14, 31, 32, 33, 10, 34, 35, 36,  6, 37, 38, 39, 40] },
-                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua17, points: vec![2, 18, 41, 29, 27, 42, 43, 37, 24, 44, 45, 34, 21, 46, 47, 31, 48] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua17, points: vec![1, 17, 18,  2, 19, 20, 21,  5, 22, 23, 24, 25, 26, 27, 28, 12, 11] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua17, points: vec![3,  2, 29, 30,  6, 31, 32, 33, 34, 14, 13, 35, 36, 37, 38, 39, 40] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua17, points: vec![2, 18, 41, 29, 21, 42, 43, 31, 44, 28, 27, 45, 46, 47, 48, 36, 35] },
             ],
         }
     }
