@@ -2,15 +2,20 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a line (segment) with 3 nodes (quadratic functions)
 ///
-/// The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// ![lin3](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_lin3.svg)
 ///
 /// # Local IDs of nodes
 ///
 /// ```text
-/// -1                    +1
-///  @----------@----------@  --> r
-///  0          2          1
+///   0-----------2-----------1  --> r
+/// -1.0         0.0         1.0
 /// ```
+///
+/// # Notes
+///
+/// * The reference coordinates range from -1 to +1 with the geometry centred @ 0
+/// * This shape is a lower-order version of [super::Lin5]
+/// * This shape is a higher-order version of [super::Lin2]
 pub struct Lin3 {}
 
 impl Lin3 {

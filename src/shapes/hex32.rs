@@ -2,7 +2,7 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a hexahedron with 32 nodes (cubic faces)
 ///
-/// The reference coordinates (r,s,t) range from -1 to +1 with the geometry centred @ 0
+/// ![hex32](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_hex32.svg)
 ///
 /// # Local IDs of nodes
 ///
@@ -76,8 +76,11 @@ use russell_lab::{Matrix, Vector};
 /// 1----10----11----2'
 /// ```
 ///
+/// # Notes
+///
+/// * The reference coordinates (r,s,t) range from -1 to +1 with the geometry centred @ 0
 /// * The order of face nodes is such that the normals are outward
-/// * The order of face nodes corresponds to **Qua12** nodes
+/// * The order of face nodes corresponds to [super::Qua12] nodes
 pub struct Hex32 {}
 
 impl Hex32 {

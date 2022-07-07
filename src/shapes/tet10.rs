@@ -2,6 +2,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a tetrahedron with 10 nodes (quadratic faces)
 ///
+/// ![tet10](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_tet10.svg)
+///
 /// # Local IDs of nodes
 ///
 /// ```text
@@ -103,8 +105,10 @@ use russell_lab::{Matrix, Vector};
 /// r
 /// ```
 ///
+/// # Notes
+///
 /// * The order of face nodes is such that the normals are outward
-/// * The order of face nodes corresponds to **Tri6** nodes
+/// * The order of face nodes corresponds to [super::Tri6] nodes
 pub struct Tet10 {}
 
 impl Tet10 {

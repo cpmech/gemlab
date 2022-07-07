@@ -572,6 +572,37 @@ impl GeoKind {
         }
     }
 
+    /// Returns the compatible lower-order version (e.g., Tri6 => Tri3, Qua17 => Qua9)
+    pub fn lower_order(&self) -> Option<GeoKind> {
+        match self {
+            // Lin
+            Self::Lin2 => None,
+            Self::Lin3 => Some(GeoKind::Lin2),
+            Self::Lin4 => None,
+            Self::Lin5 => Some(GeoKind::Lin3),
+            // Tri
+            Self::Tri3 => None,
+            Self::Tri6 => Some(GeoKind::Tri3),
+            Self::Tri10 => None,
+            Self::Tri15 => Some(GeoKind::Tri6),
+            // Qua
+            Self::Qua4 => None,
+            Self::Qua8 => Some(GeoKind::Qua4),
+            Self::Qua9 => Some(GeoKind::Qua4),
+            Self::Qua12 => None,
+            Self::Qua16 => None,
+            Self::Qua17 => Some(GeoKind::Qua9),
+            // Tet
+            Self::Tet4 => None,
+            Self::Tet10 => Some(GeoKind::Tet4),
+            Self::Tet20 => None,
+            // Hex
+            Self::Hex8 => None,
+            Self::Hex20 => Some(GeoKind::Hex8),
+            Self::Hex32 => None,
+        }
+    }
+
     /// Returns the local id of node on edge
     ///
     /// # Input
@@ -1196,6 +1227,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), None);
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Lin3 => {
                     assert_eq!(GeoKind::from("lin3")?, kind);
@@ -1210,6 +1244,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), None);
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), Some(GeoKind::Lin2));
+                    assert_eq!(kind.n_interior_nodes(), 1);
+                    assert_eq!(kind.interior_node(0), 2);
                 }
                 GeoKind::Lin4 => {
                     assert_eq!(GeoKind::from("lin4")?, kind);
@@ -1224,6 +1261,10 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), None);
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 2);
+                    assert_eq!(kind.interior_node(0), 2);
+                    assert_eq!(kind.interior_node(1), 3);
                 }
                 GeoKind::Lin5 => {
                     assert_eq!(GeoKind::from("lin5")?, kind);
@@ -1238,6 +1279,11 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), None);
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), Some(GeoKind::Lin3));
+                    assert_eq!(kind.n_interior_nodes(), 3);
+                    assert_eq!(kind.interior_node(0), 2);
+                    assert_eq!(kind.interior_node(1), 3);
+                    assert_eq!(kind.interior_node(2), 4);
                 }
 
                 // Tri
@@ -1254,6 +1300,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin2));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Tri6 => {
                     assert_eq!(GeoKind::from("tri6")?, kind);
@@ -1268,6 +1317,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), Some(GeoKind::Tri3));
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Tri10 => {
                     assert_eq!(GeoKind::from("tri10")?, kind);
@@ -1282,6 +1334,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 1);
+                    assert_eq!(kind.interior_node(0), 9);
                 }
                 GeoKind::Tri15 => {
                     assert_eq!(GeoKind::from("tri15")?, kind);
@@ -1296,6 +1351,11 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin5));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), Some(GeoKind::Tri6));
+                    assert_eq!(kind.n_interior_nodes(), 3);
+                    assert_eq!(kind.interior_node(0), 12);
+                    assert_eq!(kind.interior_node(1), 13);
+                    assert_eq!(kind.interior_node(2), 14);
                 }
 
                 // Qua
@@ -1312,6 +1372,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin2));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Qua8 => {
                     assert_eq!(GeoKind::from("qua8")?, kind);
@@ -1326,6 +1389,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), Some(GeoKind::Qua4));
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Qua9 => {
                     assert_eq!(GeoKind::from("qua9")?, kind);
@@ -1340,6 +1406,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), Some(GeoKind::Qua4));
+                    assert_eq!(kind.n_interior_nodes(), 1);
+                    assert_eq!(kind.interior_node(0), 8);
                 }
                 GeoKind::Qua12 => {
                     assert_eq!(GeoKind::from("qua12")?, kind);
@@ -1354,6 +1423,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Qua16 => {
                     assert_eq!(GeoKind::from("qua16")?, kind);
@@ -1368,6 +1440,12 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 4);
+                    assert_eq!(kind.interior_node(0), 12);
+                    assert_eq!(kind.interior_node(1), 13);
+                    assert_eq!(kind.interior_node(2), 14);
+                    assert_eq!(kind.interior_node(3), 15);
                 }
                 GeoKind::Qua17 => {
                     assert_eq!(GeoKind::from("qua17")?, kind);
@@ -1382,6 +1460,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 0);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin5));
                     assert_eq!(kind.face_kind(), None);
+                    assert_eq!(kind.lower_order(), Some(GeoKind::Qua9));
+                    assert_eq!(kind.n_interior_nodes(), 1);
+                    assert_eq!(kind.interior_node(0), 8);
                 }
 
                 // Tet
@@ -1398,6 +1479,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 3);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin2));
                     assert_eq!(kind.face_kind(), Some(GeoKind::Tri3));
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Tet10 => {
                     assert_eq!(GeoKind::from("tet10")?, kind);
@@ -1412,6 +1496,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 3);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
                     assert_eq!(kind.face_kind(), Some(GeoKind::Tri6));
+                    assert_eq!(kind.lower_order(), Some(GeoKind::Tet4));
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Tet20 => {
                     assert_eq!(GeoKind::from("tet20")?, kind);
@@ -1426,6 +1513,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 3);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
                     assert_eq!(kind.face_kind(), Some(GeoKind::Tri10));
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
 
                 // Hex
@@ -1442,6 +1532,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 4);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin2));
                     assert_eq!(kind.face_kind(), Some(GeoKind::Qua4));
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Hex20 => {
                     assert_eq!(GeoKind::from("hex20")?, kind);
@@ -1456,6 +1549,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 4);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin3));
                     assert_eq!(kind.face_kind(), Some(GeoKind::Qua8));
+                    assert_eq!(kind.lower_order(), Some(GeoKind::Hex8));
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Hex32 => {
                     assert_eq!(GeoKind::from("hex32")?, kind);
@@ -1470,6 +1566,9 @@ mod tests {
                     assert_eq!(kind.face_nedge(), 4);
                     assert_eq!(kind.edge_kind(), Some(GeoKind::Lin4));
                     assert_eq!(kind.face_kind(), Some(GeoKind::Qua12));
+                    assert_eq!(kind.lower_order(), None);
+                    assert_eq!(kind.n_interior_nodes(), 0);
+                    assert_eq!(kind.interior_node(0), 0);
                 }
             }
             match kind.class() {
@@ -1506,6 +1605,11 @@ mod tests {
             }
             assert_eq!(kind.face_node_id(0, 0), 0);
             assert_eq!(kind.face_edge_node_id(0, 0, 0), 0);
+            if let Some(lo) = kind.lower_order() {
+                for m in 0..lo.nnode() {
+                    assert_eq!(lo.reference_coords(m), kind.reference_coords(m));
+                }
+            }
         }
         Ok(())
     }

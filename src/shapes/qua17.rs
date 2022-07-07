@@ -2,44 +2,53 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a quadrilateral with 17 nodes (quartic edge; interior node)
 ///
+/// ![qua17](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_qua17.svg)
+///
 /// The reference coordinates range from -1 to +1 with the geometry centred @ 0
 ///
 /// # Local IDs of nodes
 ///
 /// ```text
-///   3      14    10     6     2
-///    @-----@-----@-----@-----@
-///    |                  (1,1)|
-///    |                       |
-///  7 @                       @ 13
-///    |         s ^           |
-///    |           |           |
-/// 11 @           |16         @ 9
-///    |           @----> r    |
-///    |         (0,0)         |
-/// 15 @                       @ 5
-///    |                       |
-///    |(-1,-1)                |
-///    @-----@-----@-----@-----@
-///   0      4     8    12      1
+///  3----14-----6----13-----2
+///  |                  (1,1)|
+///  |                       |
+/// 15         s ^          12
+///  |           |           |
+///  |                       |
+///  7           8  --> r    5
+///  |                       |
+///  |         (0,0)         |
+/// 16                      11
+///  |                       |
+///  |(-1,-1)                |
+///  0-----9-----4----10-----1
 /// ```
 ///
 /// # Local IDs of edges
 ///
 /// ```text
-///        2
-///  +-----------+         p0 p1  p2 p3  p4
-///  |           |     e:0 [1, 0,  8, 12, 4]
-///  |           |     e:1 [2, 1,  9, 13, 5]
-/// 3|           |1    e:2 [3, 2, 10, 14, 6]
-///  |           |     e:3 [0, 3, 11, 15, 7]
-///  |           |
-///  +-----------+
-///        0
+///                2
+///    3----14-----6----13-----2
+///    |                       |
+///    |                       |
+///   15                      12         p0 p1  p2 p3  p4
+///    |                       |     e:0 [1, 0, 4, 10,  9]
+///    |                       |     e:1 [2, 1, 5, 12, 11]
+/// 3  7           8           5 1   e:2 [3, 2, 6, 14, 13]
+///    |                       |     e:3 [0, 3, 7, 16, 15]
+///    |                       |
+///   16                      11
+///    |                       |
+///    |                       |
+///    0-----9-----4----10-----1
+///                0
 /// ```
 ///
+/// # Notes
+///
 /// * The order of edge nodes is such that the normals are outward
-/// * The order of edge nodes corresponds to **Lin5** nodes
+/// * The order of edge nodes corresponds to [super::Lin5] nodes
+/// * This shape is a higher-order version of [super::Qua9]
 pub struct Qua17 {}
 
 impl Qua17 {
@@ -54,10 +63,10 @@ impl Qua17 {
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua17::EDGE_NNODE]; Qua17::NEDGE] = [
-        [1, 0,  8, 12, 4],
-        [2, 1,  9, 13, 5],
-        [3, 2, 10, 14, 6],
-        [0, 3, 11, 15, 7]
+        [1, 0, 4, 10, 9],
+        [2, 1, 5, 12, 11],
+        [3, 2, 6, 14, 13],
+        [0, 3, 7, 16, 15]
     ];
 
     #[rustfmt::skip]
@@ -66,22 +75,22 @@ impl Qua17 {
         [ 1.0, -1.0], //  1
         [ 1.0,  1.0], //  2
         [-1.0,  1.0], //  3
-        [-0.5, -1.0], //  4
-        [ 1.0, -0.5], //  5
-        [ 0.5,  1.0], //  6
-        [-1.0,  0.5], //  7
-        [ 0.0, -1.0], //  8
-        [ 1.0,  0.0], //  9
-        [ 0.0,  1.0], // 10
-        [-1.0,  0.0], // 11
-        [ 0.5, -1.0], // 12
-        [ 1.0,  0.5], // 13
+        [ 0.0, -1.0], //  4
+        [ 1.0,  0.0], //  5
+        [ 0.0,  1.0], //  6
+        [-1.0,  0.0], //  7
+        [ 0.0,  0.0], //  8
+        [-0.5, -1.0], //  9
+        [ 0.5, -1.0], // 10
+        [ 1.0, -0.5], // 11
+        [ 1.0,  0.5], // 12
+        [ 0.5,  1.0], // 13
         [-0.5,  1.0], // 14
-        [-1.0, -0.5], // 15
-        [ 0.0,  0.0], // 16
+        [-1.0,  0.5], // 15
+        [-1.0, -0.5], // 16
     ];
 
-    pub const INTERIOR_NODES: [usize; Qua17::N_INTERIOR_NODE] = [16];
+    pub const INTERIOR_NODES: [usize; Qua17::N_INTERIOR_NODE] = [/*16*/ 8];
 
     /// Computes the interpolation functions
     ///
@@ -108,19 +117,22 @@ impl Qua17 {
         interp[1] = rp * sm * (4.0 * r * (rr - 1.0) - 4.0 * s * (ss - 1.0) - 3.0 * rs) / 12.0;
         interp[2] = rp * sp * (4.0 * r * (rr - 1.0) + 4.0 * s * (ss - 1.0) + 3.0 * rs) / 12.0;
         interp[3] = rm * sp * (-4.0 * r * (rr - 1.0) + 4.0 * s * (ss - 1.0) - 3.0 * rs) / 12.0;
-        interp[4] = -a * r * sm * rm * rp * (1.0 - 2.0 * r);
-        interp[5] = -a * s * rp * sm * sp * (1.0 - 2.0 * s);
-        interp[6] = a * r * sp * rm * rp * (1.0 + 2.0 * r);
-        interp[7] = a * s * sm * sp * (1.0 + 2.0 * s) * rm;
-        interp[8] = 0.5 * rm * rp * (-s - 4.0 * rr) * sm;
-        interp[9] = 0.5 * sm * sp * (r - 4.0 * ss) * rp;
-        interp[10] = 0.5 * rm * rp * (s - 4.0 * rr) * sp;
-        interp[11] = 0.5 * sm * sp * (-r - 4.0 * ss) * rm;
-        interp[12] = a * r * sm * rm * rp * (1.0 + 2.0 * r);
-        interp[13] = a * s * rp * sm * sp * (1.0 + 2.0 * s);
+
+        interp[4] = 0.5 * rm * rp * (-s - 4.0 * rr) * sm;
+        interp[5] = 0.5 * sm * sp * (r - 4.0 * ss) * rp;
+        interp[6] = 0.5 * rm * rp * (s - 4.0 * rr) * sp;
+        interp[7] = 0.5 * sm * sp * (-r - 4.0 * ss) * rm;
+
+        interp[8] = rm * rp * sm * sp;
+
+        interp[9] = -a * r * sm * rm * rp * (1.0 - 2.0 * r);
+        interp[10] = a * r * sm * rm * rp * (1.0 + 2.0 * r);
+        interp[11] = -a * s * rp * sm * sp * (1.0 - 2.0 * s);
+        interp[12] = a * s * rp * sm * sp * (1.0 + 2.0 * s);
+        interp[13] = a * r * sp * rm * rp * (1.0 + 2.0 * r);
         interp[14] = -a * r * sp * rm * rp * (1.0 - 2.0 * r);
-        interp[15] = -a * s * rm * sm * sp * (1.0 - 2.0 * s);
-        interp[16] = rm * rp * sm * sp
+        interp[15] = a * s * sm * sp * (1.0 + 2.0 * s) * rm;
+        interp[16] = -a * s * rm * sm * sp * (1.0 - 2.0 * s);
     }
 
     /// Computes the derivatives of interpolation functions with respect to the reference coordinates
@@ -154,36 +166,38 @@ impl Qua17 {
         deriv[1][0] = b * sm * (16.0 * rrr + 12.0 * rr - 6.0 * rs - 8.0 * r - 4.0 * sss + s - 4.0);
         deriv[2][0] = b * sp * (16.0 * rrr + 12.0 * rr + 6.0 * rs - 8.0 * r + 4.0 * sss - s - 4.0);
         deriv[3][0] = b * sp * (16.0 * rrr - 12.0 * rr + 6.0 * rs - 8.0 * r - 4.0 * sss + s + 4.0);
-        deriv[4][0] = -a * (1.0 - 4.0 * r - 3.0 * rr + 8.0 * rrr) * sm;
-        deriv[5][0] = a * s * sm * sp * (-1.0 + 2.0 * s);
-        deriv[6][0] = -a * (-1.0 - 4.0 * r + 3.0 * rr + 8.0 * rrr) * sp;
-        deriv[7][0] = -a * s * sm * sp * (1.0 + 2.0 * s);
-        deriv[8][0] = r * sm * (8.0 * rr + s - 4.0);
-        deriv[9][0] = 0.5 * sm * sp * (2.0 * r - 4.0 * ss + 1.0);
-        deriv[10][0] = r * sp * (8.0 * rr - s - 4.0);
-        deriv[11][0] = 0.5 * sm * sp * (2.0 * r - 1.0 + 4.0 * ss);
-        deriv[12][0] = a * (1.0 + 4.0 * r - 3.0 * rr - 8.0 * rrr) * sm;
-        deriv[13][0] = a * s * sm * sp * (1.0 + 2.0 * s);
+
+        deriv[9][0] = -a * (1.0 - 4.0 * r - 3.0 * rr + 8.0 * rrr) * sm;
+        deriv[11][0] = a * s * sm * sp * (-1.0 + 2.0 * s);
+        deriv[13][0] = -a * (-1.0 - 4.0 * r + 3.0 * rr + 8.0 * rrr) * sp;
+        deriv[15][0] = -a * s * sm * sp * (1.0 + 2.0 * s);
+        deriv[4][0] = r * sm * (8.0 * rr + s - 4.0);
+        deriv[5][0] = 0.5 * sm * sp * (2.0 * r - 4.0 * ss + 1.0);
+        deriv[6][0] = r * sp * (8.0 * rr - s - 4.0);
+        deriv[7][0] = 0.5 * sm * sp * (2.0 * r - 1.0 + 4.0 * ss);
+        deriv[10][0] = a * (1.0 + 4.0 * r - 3.0 * rr - 8.0 * rrr) * sm;
+        deriv[12][0] = a * s * sm * sp * (1.0 + 2.0 * s);
         deriv[14][0] = -a * (1.0 - 4.0 * r - 3.0 * rr + 8.0 * rrr) * sp;
-        deriv[15][0] = a * s * sm * sp * (1.0 - 2.0 * s);
-        deriv[16][0] = -2.0 * r * sm * sp;
+        deriv[16][0] = a * s * sm * sp * (1.0 - 2.0 * s);
+        deriv[8][0] = -2.0 * r * sm * sp;
 
         deriv[0][1] = b * rm * (16.0 * sss - 12.0 * ss - 6.0 * rs - 8.0 * s + 4.0 * rrr - r + 4.0);
         deriv[1][1] = -b * rp * (-16.0 * sss + 12.0 * ss - 6.0 * rs + 8.0 * s + 4.0 * rrr - r - 4.0);
         deriv[2][1] = b * rp * (16.0 * sss + 12.0 * ss + 6.0 * rs - 8.0 * s + 4.0 * rrr - r - 4.0);
         deriv[3][1] = b * r1 * (-16.0 * sss - 12.0 * ss + 6.0 * rs + 8.0 * s + 4.0 * rrr - r + 4.0);
-        deriv[4][1] = a * r * r1 * rp * (2.0 * r - 1.0);
-        deriv[5][1] = -a * (1.0 - 4.0 * s - 3.0 * ss + 8.0 * sss) * rp;
-        deriv[6][1] = -a * r * r1 * rp * (1.0 + 2.0 * r);
-        deriv[7][1] = a * (-1.0 - 4.0 * s + 3.0 * ss + 8.0 * sss) * r1;
-        deriv[8][1] = -0.5 * r1 * rp * (2.0 * s - 1.0 + 4.0 * rr);
-        deriv[9][1] = -s * rp * (-8.0 * ss + r + 4.0);
-        deriv[10][1] = 0.5 * r1 * rp * (-2.0 * s + 4.0 * rr - 1.0);
-        deriv[11][1] = -s * r1 * (8.0 * ss + r - 4.0);
-        deriv[12][1] = a * r * r1 * rp * (1.0 + 2.0 * r);
-        deriv[13][1] = -a * (-1.0 - 4.0 * s + 3.0 * ss + 8.0 * sss) * rp;
+
+        deriv[9][1] = a * r * r1 * rp * (2.0 * r - 1.0);
+        deriv[11][1] = -a * (1.0 - 4.0 * s - 3.0 * ss + 8.0 * sss) * rp;
+        deriv[13][1] = -a * r * r1 * rp * (1.0 + 2.0 * r);
+        deriv[15][1] = a * (-1.0 - 4.0 * s + 3.0 * ss + 8.0 * sss) * r1;
+        deriv[4][1] = -0.5 * r1 * rp * (2.0 * s - 1.0 + 4.0 * rr);
+        deriv[5][1] = -s * rp * (-8.0 * ss + r + 4.0);
+        deriv[6][1] = 0.5 * r1 * rp * (-2.0 * s + 4.0 * rr - 1.0);
+        deriv[7][1] = -s * r1 * (8.0 * ss + r - 4.0);
+        deriv[10][1] = a * r * r1 * rp * (1.0 + 2.0 * r);
+        deriv[12][1] = -a * (-1.0 - 4.0 * s + 3.0 * ss + 8.0 * sss) * rp;
         deriv[14][1] = -a * r * r1 * rp * (2.0 * r - 1.0);
-        deriv[15][1] = a * (1.0 - 4.0 * s - 3.0 * ss + 8.0 * sss) * r1;
-        deriv[16][1] = 2.0 * s * r1 * rp;
+        deriv[16][1] = a * (1.0 - 4.0 * s - 3.0 * ss + 8.0 * sss) * r1;
+        deriv[8][1] = 2.0 * s * r1 * rp;
     }
 }

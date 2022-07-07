@@ -2,6 +2,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Defines a triangle with 6 nodes (quadratic edges)
 ///
+/// ![tri6](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_shape_tri6.svg)
+///
 /// # Local IDs of nodes
 ///
 /// ```text
@@ -23,17 +25,26 @@ use russell_lab::{Matrix, Vector};
 /// # Local IDs of edges
 ///
 /// ```text
-///  |\            p0  p1 p2
-///  | \       e:0 [1, 0, 3]
-///  |  \ 1    e:1 [2, 1, 4]
-/// 2|   \     e:2 [0, 2, 5]
-///  |    \
-///  |_____\
-///     0
+///   2,
+///   | ',                 p0  p1 p2
+///   |   ',           e:0 [1, 0, 3]
+///   |     ',         e:1 [2, 1, 4]
+///   |       ', 1     e:2 [0, 2, 5]
+/// 2 5         4,
+///   |           ',
+///   |             ',
+///   |               ',
+///   |                 ',
+///   0---------3---------1
+///             0
 /// ```
 ///
+/// # Notes
+///
 /// * The order of edge nodes is such that the normals are outward
-/// * The order of edge nodes corresponds to **Lin3** nodes
+/// * The order of edge nodes corresponds to [super::Lin3] nodes
+/// * This shape is a lower-order version of [super::Tri15]
+/// * This shape is a higher-order version of [super::Tri3]
 pub struct Tri6 {}
 
 impl Tri6 {

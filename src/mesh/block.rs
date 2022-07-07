@@ -572,7 +572,7 @@ impl Block {
             match target {
                 GeoKind::Qua9 => Some(Scratchpad::new(ndim, GeoKind::Qua8)?),
                 GeoKind::Qua16 => Some(Scratchpad::new(ndim, GeoKind::Qua12)?),
-                GeoKind::Qua17 => Some(Scratchpad::new(ndim, GeoKind::Qua8)?), // only option available => need to remap node ids
+                GeoKind::Qua17 => Some(Scratchpad::new(ndim, GeoKind::Qua8)?), // only option available
                 _ => None,
             }
         } else {
@@ -735,15 +735,8 @@ impl Block {
                         // just moved middle edge nodes)
                         if target_n_interior_nodes > 0 {
                             if let Some(ref mut pad_ser) = serendipity {
-                                let pts = if target == GeoKind::Qua17 {
-                                    vec![
-                                        points[0], points[1], points[2], points[3], points[8], points[9], points[10],
-                                        points[11],
-                                    ]
-                                } else {
-                                    let nn = pad_ser.interp.dim();
-                                    points[0..nn].to_vec()
-                                };
+                                let nn = pad_ser.interp.dim();
+                                let pts = points[0..nn].to_vec();
                                 set_pad_coords(pad_ser, &pts, &mesh);
                                 for idx in 0..target_n_interior_nodes {
                                     let m = target.interior_node(idx);
@@ -1433,23 +1426,23 @@ mod tests {
 
     #[test]
     fn subdivide_2d_qua17_works() -> Result<(), StrError> {
-        // 30---38---35---32---29---47---45---43---41
+        // 30---38---32---37---29---48---43---47---41
         //  |                   |                   |
-        // 33                  37                  46
+        // 39                  36                  46
         //  |                   |                   |
-        // 36        40        34        48        44
+        // 33        34        31        44        42
         //  |                   |                   |
-        // 39                  31                  42
+        // 40                  35                  45
         //  |                   |                   |
-        //  3---14---10----6----2---27---24---21---18
+        //  3---14----6---13----2---28---21---27---18
         //  |                   |                   |
-        //  7                  13                  26
+        // 15                  12                  26
         //  |                   |                   |
-        // 11        16         9        28        23
+        //  7         8         5        22        20
         //  |                   |                   |
-        // 15                   5                  20
+        // 16                  11                  25
         //  |                   |                   |
-        //  0----4----8---12----1---19---22---25---17
+        //  0----9----4---10----1---23---19---24---17
         #[rustfmt::skip]
         let mut block = Block::new(&[
             [0.0, 0.0],
@@ -2401,7 +2394,7 @@ mod tests {
         let ct = Constraint2D::Circle(0.0, 0.0, radius);
         block.set_edge_constraint(1, Some(ct))?;
         let mesh = block.subdivide(GeoKind::Qua17)?;
-        for (a, mid, b) in [(84, 96, 92), (56, 68, 64), (23, 40, 35)] {
+        for (a, mid, b) in [(82, 92, 90), (54, 64, 62), (20, 34, 32)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
