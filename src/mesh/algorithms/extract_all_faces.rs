@@ -72,7 +72,7 @@ mod tests {
         // | /            | /
         // |/             |/
         // 1--------------2
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let mut keys: Vec<_> = faces.keys().collect();
         keys.sort();

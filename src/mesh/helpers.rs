@@ -49,7 +49,7 @@ mod tests {
         //  |        |        |
         //  |        |        |
         //  0--------1--------4
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let cell = &mesh.cells[0];
         let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
         set_pad_coords(&mut pad, &cell.points, &mesh);
@@ -95,7 +95,7 @@ mod tests {
         //  | /            | /
         //  |/             |/
         //  1--------------2
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let cell = &mesh.cells[0];
         let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
         set_pad_coords(&mut pad, &cell.points, &mesh);
@@ -123,12 +123,12 @@ mod tests {
 
     #[test]
     fn get_mesh_limits_works() {
-        let mesh = &Samples::two_quads_horizontal();
+        let mesh = &Samples::two_qua4();
         let (min, max) = get_mesh_limits(&mesh);
         assert_eq!(min, &[0.0, 0.0]);
         assert_eq!(max, &[2.0, 1.0]);
 
-        let mesh = &Samples::two_cubes_vertical();
+        let mesh = &Samples::two_hex8();
         let (min, max) = get_mesh_limits(&mesh);
         assert_eq!(min, &[0.0, 0.0, 0.0]);
         assert_eq!(max, &[1.0, 1.0, 2.0]);

@@ -47,7 +47,7 @@ mod tests {
         //  |   [0]   |   [1]   |
         //  |         |         |
         //  0---------1---------4
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();

@@ -238,7 +238,7 @@ mod tests {
 
     #[test]
     fn derive_works() -> Result<(), StrError> {
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let mesh_clone = mesh.clone();
         let correct ="Mesh { ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute_id: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute_id: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
         assert_eq!(format!("{:?}", mesh), correct);
@@ -255,7 +255,7 @@ mod tests {
 
     #[test]
     fn display_works_2d() {
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let text = format!("{}", mesh);
         assert_eq!(
             text,
@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn display_works_3d() {
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let text = format!("{}", mesh);
         assert_eq!(
             text,

@@ -299,29 +299,29 @@ mod tests {
     use std::collections::HashSet;
 
     #[allow(dead_code)]
-    fn plot_grid_two_quads_horizontal(find: &Find) -> Result<(), StrError> {
+    fn plot_grid_two_qua4(find: &Find) -> Result<(), StrError> {
         let mut plot = Plot::new();
         find.grid.draw(&mut plot)?;
         plot.set_equal_axes(true).set_figure_size_points(800.0, 400.0);
-        plot.save("/tmp/gemlab/find_with_two_quads_horizontal.svg")
+        plot.save("/tmp/gemlab/test_find_with_two_qua4.svg")
     }
 
     #[allow(dead_code)]
-    fn plot_grid_two_cubes_vertical(find: &Find) -> Result<(), StrError> {
+    fn plot_grid_two_hex8(find: &Find) -> Result<(), StrError> {
         let mut plot = Plot::new();
         find.grid.draw(&mut plot)?;
         plot.set_equal_axes(true).set_figure_size_points(2048.0, 2048.0);
-        plot.save("/tmp/gemlab/find_with_two_cubes_vertical.svg")
+        plot.save("/tmp/gemlab/test_find_with_two_hex8.svg")
     }
 
     #[test]
     fn new_works() -> Result<(), StrError> {
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
         if false {
-            plot_grid_two_quads_horizontal(&find)?;
+            plot_grid_two_qua4(&find)?;
         }
         assert_eq!(
             format!("{}", find.grid),
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn find_points_fails_on_wrong_input() -> Result<(), StrError> {
         // 2d
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -359,7 +359,7 @@ mod tests {
         );
 
         // 3d
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -388,7 +388,7 @@ mod tests {
         //   |      `.|        |
         //   0--------1--------4
         //           circle
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -424,7 +424,7 @@ mod tests {
         //  |/           |/
         //  1------------2   1.0
         // 0.0          1.0
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -472,7 +472,7 @@ mod tests {
         // |        |        |
         // |        |        |
         // 0--------1--------4
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -505,7 +505,7 @@ mod tests {
         //  |/           |/
         //  1------------2   1.0
         // 0.0          1.0
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -564,7 +564,7 @@ mod tests {
         // |        |        |
         // |        |        |
         // 0--------1--------4
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;
@@ -592,7 +592,7 @@ mod tests {
         //  |/           |/
         //  1------------2   1.0
         // 0.0          1.0
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary)?;

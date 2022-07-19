@@ -5,6 +5,187 @@ use crate::shapes::GeoKind;
 pub struct Samples;
 
 impl Samples {
+    /// Returns the mesh used in Example 1.4 of Bhatti's book
+    ///
+    /// ```text
+    ///               (3)
+    ///               [2]
+    ///     2----------------------3
+    ///     |'.  (4)           _.-'
+    ///     |  '.[3]       _.-'
+    ///     |    '.    _.-'  (1)
+    /// (2) |      '1-'      [1]
+    /// [2] |      /
+    ///     |     /
+    ///     |    / (0)   The lines are ROD (Lin2) elements
+    ///     |   /  [1]
+    ///     |  /
+    ///     | /    (#) indicates cell id
+    ///     0'     [#] indicates attribute id
+    /// ```
+    ///
+    /// ![bhatti_example_1dot4_truss.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_bhatti_example_1dot4_truss.svg)
+    #[rustfmt::skip]
+    pub fn bhatti_example_1dot4_truss() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![   0.0,    0.0] },
+                Point { id: 1, coords: vec![1500.0, 3500.0] },
+                Point { id: 2, coords: vec![   0.0, 5000.0] },
+                Point { id: 3, coords: vec![5000.0, 5000.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Lin2, points: vec![1, 3] },
+                Cell { id: 2, attribute_id: 2, kind: GeoKind::Lin2, points: vec![0, 2] },
+                Cell { id: 3, attribute_id: 2, kind: GeoKind::Lin2, points: vec![2, 3] },
+                Cell { id: 4, attribute_id: 3, kind: GeoKind::Lin2, points: vec![2, 1] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with two Tri3
+    ///
+    /// ```text
+    ///      y
+    ///      ^
+    /// 1.0  3------------2
+    ///      |`.      [1] |    [#] indicates id
+    ///      |  `.    (1) |    (#) indicates attribute_id
+    ///      |    `.      |
+    ///      |      `.    |
+    ///      | [0]    `.  |
+    ///      | (1)      `.|
+    /// 0.0  0------------1 -> x
+    ///     0.0          1.0
+    /// ```
+    ///
+    /// ![two_tri3.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_tri3.svg)
+    #[rustfmt::skip]
+    pub fn two_tri3() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0] },
+                Point { id: 3, coords: vec![0.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![2, 3, 1] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with three Tri3
+    ///
+    /// ```text
+    ///       4---.__
+    ///      / \     `--.___3    [#] indicates id
+    ///     /   \          / \   (#) indicates attribute_id
+    ///    /     \  [1]   /   \
+    ///   /  [0]  \ (1)  / [2] \
+    ///  /   (1)   \    /  (1)  \
+    /// 0---.__     \  /      ___2
+    ///        `--.__\/__.---'
+    ///               1
+    /// ```
+    ///
+    /// ![three_tri3.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri3.svg)
+    #[rustfmt::skip]
+    pub fn three_tri3() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.2] },
+                Point { id: 1, coords: vec![1.2, 0.0] },
+                Point { id: 2, coords: vec![2.2, 0.1] },
+                Point { id: 3, coords: vec![1.8, 1.0] },
+                Point { id: 4, coords: vec![0.5, 1.2] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 4] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![1, 3, 4] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with two Tri3 and one Qua4
+    ///
+    /// ```text
+    ///      y
+    ///      ^
+    /// 1.0  3------------2------------5
+    ///      |`.      [1] |            |    [#] indicates id
+    ///      |  `.    (1) |            |    (#) indicates attribute_id
+    ///      |    `.      |     [2]    |
+    ///      |      `.    |     (2)    |
+    ///      | [0]    `.  |            |
+    ///      | (1)      `.|            |
+    /// 0.0  0------------1------------4 -> x
+    ///     0.0          1.0          2.0
+    /// ```
+    ///
+    /// ![two_tri3_one_qua4.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_tri3_one_qua4.svg)
+    #[rustfmt::skip]
+    pub fn two_tri3_one_qua4() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0] },
+                Point { id: 3, coords: vec![0.0, 1.0] },
+                Point { id: 4, coords: vec![2.0, 0.0] },
+                Point { id: 5, coords: vec![2.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![2, 3, 1] },
+                Cell { id: 2, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Qua8
+    ///
+    /// ```text
+    ///      y
+    ///      ^
+    /// 1.0  3------6------2
+    ///      |             |    [#] indicates id
+    ///      |             |    (#) indicates attribute_id
+    ///      7     [0]     5
+    ///      |     (1)     |
+    ///      |             |
+    /// 0.0  0------4------1 -> x
+    ///     0.0           1.0
+    /// ```
+    ///
+    /// ![one_qua8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_qua8.svg)
+    #[rustfmt::skip]
+    pub fn one_qua8() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0] },
+                Point { id: 3, coords: vec![0.0, 1.0] },
+                Point { id: 4, coords: vec![0.5, 0.0] },
+                Point { id: 5, coords: vec![1.0, 0.5] },
+                Point { id: 6, coords: vec![0.5, 1.0] },
+                Point { id: 7, coords: vec![0.0, 0.5] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua8, points: vec![0, 1, 2, 3, 4, 5, 6, 7] },
+            ],
+        }
+    }
+
     /// Returns two quadrilaterals along the horizontal
     ///
     /// ```text
@@ -19,8 +200,10 @@ impl Samples {
     /// 0.0  0-----------1-----------4  → x
     ///     0.0         1.0         2.0
     /// ```
+    ///
+    /// ![two_qua4.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_qua4.svg)
     #[rustfmt::skip]
-    pub fn two_quads_horizontal() -> Mesh {
+    pub fn two_qua4() -> Mesh {
         Mesh {
             ndim: 2,
             points: vec![
@@ -34,6 +217,77 @@ impl Samples {
             cells: vec![
                 Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
                 Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Qua8, one Tri6, and two Lin2
+    ///
+    /// ![qua8_tri6_lin2.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_qua8_tri6_lin2.svg)
+    #[rustfmt::skip]
+    pub fn qua8_tri6_lin2() -> Mesh {
+        let h = 0.866; // ~ SQRT_3 / 2
+        let m = h / 2.0;
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id:  0, coords: vec![0.0,   0.0 ] },
+                Point { id:  1, coords: vec![0.5,   0.0 ] },
+                Point { id:  2, coords: vec![1.0,   0.0 ] },
+                Point { id:  3, coords: vec![1.0+m, 0.25] },
+                Point { id:  4, coords: vec![1.0+h, 0.5 ] },
+                Point { id:  5, coords: vec![1.0+m, 0.75] },
+                Point { id:  6, coords: vec![1.0,   1.0 ] },
+                Point { id:  7, coords: vec![0.5,   1.0 ] },
+                Point { id:  8, coords: vec![0.0,   1.0 ] },
+                Point { id:  9, coords: vec![0.0,   0.5 ] },
+                Point { id: 10, coords: vec![1.0,   0.5 ] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
+                Cell { id: 2, attribute_id: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
+                Cell { id: 3, attribute_id: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Hex8
+    ///
+    /// ```text
+    ///       4--------------7  1.0
+    ///      /.             /|
+    ///     / .            / |    [#] indicates id
+    ///    /  .           /  |    (#) indicates attribute_id
+    ///   /   .          /   |
+    ///  5--------------6    |          z
+    ///  |    .         |    |          ↑
+    ///  |    0---------|----3  0.0     o → y
+    ///  |   /  [0]     |   /          ↙
+    ///  |  /   (1)     |  /          x
+    ///  | /            | /
+    ///  |/             |/
+    ///  1--------------2   1.0
+    /// 0.0            1.0
+    /// ```
+    ///
+    /// ![one_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_hex8.svg)
+    #[rustfmt::skip]
+    pub fn one_hex8() -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0, 0.0] },
+                Point { id: 3, coords: vec![0.0, 1.0, 0.0] },
+                Point { id: 4, coords: vec![0.0, 0.0, 1.0] },
+                Point { id: 5, coords: vec![1.0, 0.0, 1.0] },
+                Point { id: 6, coords: vec![1.0, 1.0, 1.0] },
+                Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
         }
     }
@@ -66,8 +320,10 @@ impl Samples {
     ///  1--------------2   1.0
     /// 0.0            1.0
     /// ```
+    ///
+    /// ![two_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_hex8.svg)
     #[rustfmt::skip]
-    pub fn two_cubes_vertical() -> Mesh {
+    pub fn two_hex8() -> Mesh {
         Mesh {
             ndim: 3,
             points: vec![
@@ -119,8 +375,10 @@ impl Samples {
     ///  1--------------2-------------12   1.0
     /// 0.0            1.0            2.0
     /// ```
+    ///
+    /// ![four_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_four_hex8.svg)
     #[rustfmt::skip]
-    pub fn four_cubes_wall() -> Mesh {
+    pub fn four_hex8() -> Mesh {
         Mesh {
             ndim: 3,
             points: vec![
@@ -166,6 +424,8 @@ impl Samples {
     ///
     ///     0.0         1.0         2.0         3.0
     /// ```
+    ///
+    /// ![mixed_shapes_2d.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_mixed_shapes_2d.svg)
     #[rustfmt::skip]
     pub fn mixed_shapes_2d() -> Mesh {
         Mesh {
@@ -206,6 +466,8 @@ impl Samples {
     ///                  |/           |/         `. /
     ///  12-----11-------1------------2------------8
     /// ```
+    ///
+    /// ![mixed_shapes_3d.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_mixed_shapes_3d.svg)
     #[rustfmt::skip]
     pub fn mixed_shapes_3d() -> Mesh {
         Mesh {
@@ -256,7 +518,9 @@ impl Samples {
     ///
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
-    /// ```
+    /// ``
+    ///
+    /// ![block_2d_four_qua4.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua4.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua4() -> Mesh {
         Mesh {
@@ -303,6 +567,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
     /// ```
+    ///
+    /// ![block_2d_four_qua8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua8.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua8() -> Mesh {
         Mesh {
@@ -363,6 +629,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
     /// ```
+    ///
+    /// ![block_2d_four_qua9.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua9.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua9() -> Mesh {
         Mesh {
@@ -427,6 +695,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 3.0
     /// ymin = 0.0, ymax = 3.0
     /// ```
+    ///
+    /// ![block_2d_four_qua12.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua12.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua12() -> Mesh {
         Mesh {
@@ -499,6 +769,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 3.0
     /// ymin = 0.0, ymax = 3.0
     /// ```
+    ///
+    /// ![block_2d_four_qua16.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua16.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua16() -> Mesh {
         Mesh {
@@ -591,6 +863,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 4.0
     /// ymin = 0.0, ymax = 4.0
     /// ```
+    ///
+    /// ![block_2d_four_qua17.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua17.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua17() -> Mesh {
         Mesh {
@@ -706,6 +980,8 @@ impl Samples {
     /// ymin = 0.0, ymax = 2.0
     /// zmin = 0.0, zmax = 4.0
     /// ```
+    ///
+    /// ![block_3d_eight_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_3d_eight_hex8.svg)
     #[rustfmt::skip]
     pub fn block_3d_eight_hex8() -> Mesh {
         Mesh {
@@ -803,6 +1079,8 @@ impl Samples {
     /// ymin = 0.0, ymax = 2.0
     /// zmin = 0.0, zmax = 4.0
     /// ```
+    ///
+    /// ![block_3d_eight_hex20.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_3d_eight_hex20.svg)
     #[rustfmt::skip]
     pub fn block_3d_eight_hex20() -> Mesh {
         Mesh {
@@ -924,6 +1202,8 @@ impl Samples {
     ///
     ///                     1.0 1.25  1.5 1.75  2.0
     /// ```
+    ///
+    /// ![ring_eight_qua8_rad1_thick1.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_ring_eight_qua8_rad1_thick1.svg)
     #[rustfmt::skip]
     pub fn ring_eight_qua8_rad1_thick1() -> Mesh {
         Mesh {
@@ -986,94 +1266,200 @@ impl Samples {
 #[cfg(test)]
 mod tests {
     use super::Samples;
-    use crate::mesh::check_all;
+    use crate::mesh::{check_all, draw_mesh};
     use crate::StrError;
 
     #[test]
     fn samples_work() -> Result<(), StrError> {
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::bhatti_example_1dot4_truss();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 4);
+        assert_eq!(mesh.cells.len(), 5);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_bhatti_example_1dot4_truss.svg")?;
+        }
+
+        let mesh = Samples::two_tri3();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 4);
+        assert_eq!(mesh.cells.len(), 2);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_tri3.svg")?;
+        }
+
+        let mesh = Samples::three_tri3();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 5);
+        assert_eq!(mesh.cells.len(), 3);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_three_tri3.svg")?;
+        }
+
+        let mesh = Samples::two_tri3_one_qua4();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 6);
+        assert_eq!(mesh.cells.len(), 3);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_tri3_one_qua4.svg")?;
+        }
+
+        let mesh = Samples::one_qua8();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 8);
+        assert_eq!(mesh.cells.len(), 1);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_qua8.svg")?;
+        }
+
+        let mesh = Samples::two_qua4();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 2);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_qua4.svg")?;
+        }
 
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::qua8_tri6_lin2();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 11);
+        assert_eq!(mesh.cells.len(), 4);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_qua8_tri6_lin2.svg")?;
+        }
+
+        let mesh = Samples::one_hex8();
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 8);
+        assert_eq!(mesh.cells.len(), 1);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_hex8.svg")?;
+        }
+
+        let mesh = Samples::two_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 12);
         assert_eq!(mesh.cells.len(), 2);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_hex8.svg")?;
+        }
 
-        let mesh = Samples::four_cubes_wall();
+        let mesh = Samples::four_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_four_hex8.svg")?;
+        }
 
         let mesh = Samples::mixed_shapes_2d();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 3);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_mixed_shapes_2d.svg")?;
+        }
 
         let mesh = Samples::mixed_shapes_3d();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 13);
         assert_eq!(mesh.cells.len(), 5);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_mixed_shapes_3d.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua4();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua4.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua8();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 21);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua8.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua9();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua9.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua12();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua12.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua16();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua16.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua17();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua17.svg")?;
+        }
 
         let mesh = Samples::block_3d_eight_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex8.svg")?;
+        }
 
         let mesh = Samples::block_3d_eight_hex20();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 81);
         assert_eq!(mesh.cells.len(), 8);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex20.svg")?;
+        }
 
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 8);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_ring_eight_qua8_rad1_thick1.svg")?;
+        }
+
         Ok(())
     }
 }
