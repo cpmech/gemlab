@@ -472,7 +472,6 @@ mod tests {
     use crate::StrError;
     use plotpy::{Canvas, Plot, PolyCode};
 
-    #[no_coverage]
     fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
         let mut canvas = Canvas::new();
         canvas.set_face_color("#fefddc").set_edge_color("#fcb827");
@@ -487,7 +486,6 @@ mod tests {
         plot.add(&canvas);
     }
 
-    #[no_coverage]
     fn draw_tetrahedra(plot: &mut Plot, tets: &[[[f64; 3]; 4]]) {
         const EDGES: [(usize, usize); 6] = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
         let mut canvas = Canvas::new();
