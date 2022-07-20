@@ -1,10 +1,37 @@
-//! Mesh definitions, read/write, boundary, find, and generators for FEA
+//! Mesh definitions and generation, including tools to find features
 //!
-//! It is recommended to look at [Region] first, since it is the struct
-//! of highest level in this module.
+//! This module defines the [Mesh] structure and auxiliary functions for mesh generation,
+//! finding features such as [Point], [Edge], and [Face], and other algorithms such as
+//! merging meshes and drawing.
 //!
-//! Then, it is worth looking at [Mesh] which contains the raw mesh data
-//! and [Features] which contains post-processed information given mesh data.
+//! A [Mesh] is composed of [Point]s and [Cell]s whereas the secondary features are [Edge]
+//! and [Face]. The structure [Features] holds the (secondary) features.
+//!
+//! The structure [Region] holds a [Mesh], [Features], [Find], and optionally collections
+//! of edges and faces that can be used for computing neighbors.
+//!
+//! Below are some example of [Cell]s, classified according to [super::shapes::GeoClass].
+//! The numbers are the local numbers of the cell points (nodes).
+//!
+//! # Linear cells -- Lin
+//!
+//! ![test_draw_cells_and_points_work_1_lin](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
+//!
+//! # Triangles -- Tri
+//!
+//! ![test_draw_cells_and_points_work_2_tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
+//!
+//! # Quadrilaterals -- Qua
+//!
+//! ![test_draw_cells_and_points_work_3_qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
+//!
+//! # Tetrahedra -- Tet
+//!
+//! ![test_draw_cells_and_points_work_4_tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
+//!
+//! # Hexahedra -- Hex
+//!
+//! ![test_draw_cells_and_points_work_5_hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
 //!
 
 mod algorithms;

@@ -101,6 +101,28 @@ where
 
 ## Appendix
 
+## Available shapes and local numbering of nodes
+
+### Lines -- Lin
+
+![test_draw_cells_and_points_work_1_lin](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
+
+### Triangles -- Tri
+
+![test_draw_cells_and_points_work_2_tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
+
+### Quadrilaterals -- Qua
+
+![test_draw_cells_and_points_work_3_qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
+
+### Tetrahedra -- Tet
+
+![test_draw_cells_and_points_work_4_tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
+
+### Hexahedra -- Hex
+
+![test_draw_cells_and_points_work_5_hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
+
 ### Geometry versus space dimensions
 
 The following table shows what combinations of geometry-number-of-dimensions (`geo_ndim`) and

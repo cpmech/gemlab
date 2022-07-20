@@ -269,6 +269,34 @@
 //!
 //! because all [GeoClass::Qua] have `Δξᵢ = 2`.
 //!
+//! # GeoKind and GeoClass
+//!
+//! [GeoKind] is perhaps the most important *enum* in this module.
+//! It defines the actual *shape* used in finite element analyses.
+//!
+//! Below are some example of shapes, classified according to [GeoClass].
+//! The numbers are the local numbers (nodes).
+//!
+//! # Lines -- Lin
+//!
+//! ![test_draw_cells_and_points_work_1_lin](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
+//!
+//! # Triangles -- Tri
+//!
+//! ![test_draw_cells_and_points_work_2_tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
+//!
+//! # Quadrilaterals -- Qua
+//!
+//! ![test_draw_cells_and_points_work_3_qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
+//!
+//! # Tetrahedra -- Tet
+//!
+//! ![test_draw_cells_and_points_work_4_tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
+//!
+//! # Hexahedra -- Hex
+//!
+//! ![test_draw_cells_and_points_work_5_hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
+//!
 
 mod enums;
 mod hex20;
