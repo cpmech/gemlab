@@ -1,4 +1,4 @@
-use super::{Features, Mesh, PointId, Region};
+use super::{Mesh, PointId, Region};
 use crate::shapes::{GeoKind, Scratchpad};
 use crate::util::ONE_BY_3;
 use crate::StrError;
@@ -506,172 +506,35 @@ impl Draw {
     /// * `region` -- the region containing the mesh and features
     /// * `set_range` -- sets the range of `plot` to the limits of region; otherwise do not modifies the range/limits.
     pub fn edges(&mut self, plot: &mut Plot, region: &Region, set_range: bool) -> Result<(), StrError> {
-        if region.mesh.ndim == 2 {
-            self.edges_2d(plot, &region.mesh, &region.features, set_range)
-        } else {
-            self.edges_3d(plot, &region.mesh, &region.features, set_range)
+        let mut pads = HashMap::new();
+        for (_, edge) in &region.features.edges {
+            draw_cell(
+                &mut &mut self.canvas_edges,
+                &region.mesh,
+                edge.kind,
+                &edge.points,
+                &mut pads,
+            )?;
         }
-    }
-
-    /// Draws 2D edges
-    fn edges_2d(&mut self, plot: &mut Plot, mesh: &Mesh, features: &Features, set_range: bool) -> Result<(), StrError> {
-        // space dimension
-        let space_ndim = mesh.ndim;
-        assert_eq!(space_ndim, 2);
-
-        // middle points (x..) on Bezier curve and control points (q..)
-        let mut xc = Vector::new(space_ndim); // first middle point on Bezier curve with t=⅓(ξ=-⅓) or t=½(ξ=0)
-        let mut xd = Vector::new(space_ndim); // second middle point on Bezier curve with t=⅔(ξ=+⅓)
-        let mut qc = Vector::new(space_ndim); // control point corresponding to pc
-        let mut qd = Vector::new(space_ndim); // control point corresponding to pd
-
-        // reference coordinate
-        let mut ksi = vec![0.0; space_ndim];
-
-        // memoization of scratchpads
-        let mut pads_memo: HashMap<GeoKind, Scratchpad> = HashMap::new();
-
-        // begin poly-curve
-        self.canvas_edges.polycurve_begin();
-
-        // loop over edges (GeoKind::Lin)
-        for (_, edge) in &features.edges {
-            // retrieve pad or allocate new
-            let pad = pads_memo
-                .entry(edge.kind)
-                .or_insert(Scratchpad::new(space_ndim, edge.kind)?);
-
-            // set coordinates of GeoKind::Lin
-            let nnode = edge.points.len();
-            for m in 0..nnode {
-                for j in 0..space_ndim {
-                    pad.set_xx(m, j, mesh.points[edge.points[m]].coords[j]);
-                }
-            }
-            let (xa, ya) = (pad.xxt[0][0], pad.xxt[1][0]);
-            let (xb, yb) = (pad.xxt[0][1], pad.xxt[1][1]);
-
-            // add poly-curve points (or control points for quadratic/cubic Bezier)
-            // (see file bezier-curves-math.pdf under data/derivations)
-            match nnode {
-                2 => {
-                    self.canvas_edges
-                        .polycurve_add(xa, ya, PolyCode::MoveTo)
-                        .polycurve_add(xb, yb, PolyCode::LineTo);
-                }
-                3 => {
-                    ksi[0] = 0.0; // middle
-                    pad.calc_coords(&mut xc, &ksi)?;
-                    qc[0] = (-xa - xb + 4.0 * xc[0]) / 2.0;
-                    qc[1] = (-ya - yb + 4.0 * xc[1]) / 2.0;
-                    self.canvas_edges
-                        .polycurve_add(xa, ya, PolyCode::MoveTo)
-                        .polycurve_add(qc[0], qc[1], PolyCode::Curve3)
-                        .polycurve_add(xb, yb, PolyCode::Curve3);
-                }
-                _ => {
-                    ksi[0] = -1.0 / 3.0; // => t=⅓(ξ=-⅓)
-                    pad.calc_coords(&mut xc, &ksi)?;
-                    ksi[0] = 1.0 / 3.0; // => t=⅔(ξ=+⅓)
-                    pad.calc_coords(&mut xd, &ksi)?;
-                    qc[0] = (-5.0 * xa + 2.0 * xb + 18.0 * xc[0] - 9.0 * xd[0]) / 6.0;
-                    qc[1] = (-5.0 * ya + 2.0 * yb + 18.0 * xc[1] - 9.0 * xd[1]) / 6.0;
-                    qd[0] = (2.0 * xa - 5.0 * xb - 9.0 * xc[0] + 18.0 * xd[0]) / 6.0;
-                    qd[1] = (2.0 * ya - 5.0 * yb - 9.0 * xc[1] + 18.0 * xd[1]) / 6.0;
-                    self.canvas_edges
-                        .polycurve_add(xa, ya, PolyCode::MoveTo)
-                        .polycurve_add(qc[0], qc[1], PolyCode::Curve4)
-                        .polycurve_add(qd[0], qd[1], PolyCode::Curve4)
-                        .polycurve_add(xb, yb, PolyCode::Curve4);
-                }
-            }
-        }
-
-        // end polycurve and add to plot
-        self.canvas_edges.polycurve_end(false);
         plot.add(&self.canvas_edges);
         if set_range {
-            plot.set_range(features.min[0], features.max[0], features.min[1], features.max[1]);
-        }
-        Ok(())
-    }
-
-    /// Draws 3D edges
-    fn edges_3d(&mut self, plot: &mut Plot, mesh: &Mesh, features: &Features, set_range: bool) -> Result<(), StrError> {
-        // space dimension
-        let space_ndim = mesh.ndim;
-        assert_eq!(space_ndim, 3);
-
-        // middle points (x..) on edge
-        let mut xc = Vector::new(space_ndim);
-        let mut xd = Vector::new(space_ndim);
-
-        // reference coordinate
-        let mut ksi = vec![0.0; space_ndim];
-
-        // memoization of scratchpads
-        let mut pads_memo: HashMap<GeoKind, Scratchpad> = HashMap::new();
-
-        // loop over edges (GeoKind::Lin)
-        for (_, edge) in &features.edges {
-            // retrieve pad or allocate new
-            let pad = pads_memo
-                .entry(edge.kind)
-                .or_insert(Scratchpad::new(space_ndim, edge.kind)?);
-
-            // set coordinates of GeoKind::Lin
-            let nnode = edge.points.len();
-            for m in 0..nnode {
-                for j in 0..space_ndim {
-                    pad.set_xx(m, j, mesh.points[edge.points[m]].coords[j]);
-                }
+            if region.mesh.ndim == 2 {
+                plot.set_range(
+                    region.features.min[0],
+                    region.features.max[0],
+                    region.features.min[1],
+                    region.features.max[1],
+                );
+            } else {
+                plot.set_range_3d(
+                    region.features.min[0],
+                    region.features.max[0],
+                    region.features.min[1],
+                    region.features.max[1],
+                    region.features.min[2],
+                    region.features.max[2],
+                );
             }
-            let (xa, ya, za) = (pad.xxt[0][0], pad.xxt[1][0], pad.xxt[2][0]);
-            let (xb, yb, zb) = (pad.xxt[0][1], pad.xxt[1][1], pad.xxt[2][1]);
-
-            // add poly-line points
-            self.canvas_edges.polyline_3d_begin();
-            match nnode {
-                2 => {
-                    self.canvas_edges
-                        .polyline_3d_add(xa, ya, za)
-                        .polyline_3d_add(xb, yb, zb);
-                }
-                3 => {
-                    ksi[0] = 0.0; // middle
-                    pad.calc_coords(&mut xc, &ksi)?;
-                    self.canvas_edges
-                        .polyline_3d_add(xa, ya, za)
-                        .polyline_3d_add(xc[0], xc[1], xc[2])
-                        .polyline_3d_add(xb, yb, zb);
-                }
-                4 => {
-                    ksi[0] = -1.0 / 3.0; // middle-left
-                    pad.calc_coords(&mut xc, &ksi)?;
-                    ksi[0] = 1.0 / 3.0; // middle-right
-                    pad.calc_coords(&mut xd, &ksi)?;
-                    self.canvas_edges
-                        .polyline_3d_add(xa, ya, za)
-                        .polyline_3d_add(xc[0], xc[1], xc[2])
-                        .polyline_3d_add(xd[0], xd[1], xd[2])
-                        .polyline_3d_add(xb, yb, zb);
-                }
-                _ => return Err("drawing of 3D edge with more than 4 nodes is not available"),
-            }
-            self.canvas_edges.polyline_3d_end();
-        }
-
-        // add to plot
-        plot.add(&self.canvas_edges);
-        if set_range {
-            plot.set_range_3d(
-                features.min[0],
-                features.max[0],
-                features.min[1],
-                features.max[1],
-                features.min[2],
-                features.max[2],
-            );
         }
         Ok(())
     }
