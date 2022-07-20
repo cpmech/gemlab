@@ -1,8 +1,5 @@
 //! Interpolation functions and derivatives for geometric shapes (elements)
 //!
-//! **Important:** See the **submodule [op]** for functions to perform the calculations discussed below.
-//! The submodule [op] also offers some examples.
-//!
 //! # Definitions
 //!
 //! Here, we consider the following definitions:

@@ -4,7 +4,7 @@ use russell_lab::Vector;
 
 /// Calculates the x-y-z coordinates of all integration points
 ///
-/// This function calls [op::calc_coords] to apply the isoparametric formula
+/// This function applies the isoparametric formula
 /// to all p-th integration points `ιᵖ` according to:
 ///
 /// ```text
