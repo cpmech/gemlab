@@ -149,7 +149,7 @@ mod tests {
         // | /            | /
         // |/             |/
         // 1--------------2
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let features = extract_features_3d(&mesh, &faces, Extract::Boundary);
         let correct_edge_keys = [
@@ -252,7 +252,7 @@ mod tests {
         // | /            | /
         // |/             |/
         // 1--------------2
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let features = extract_features_3d(&mesh, &faces, Extract::All);
         let correct_edge_keys = [
@@ -357,7 +357,7 @@ mod tests {
         // | /            | /
         // |/             |/
         // 1--------------2
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let features = extract_features_3d(&mesh, &faces, Extract::Interior);
         let correct_edge_keys = [(4, 5), (4, 7), (5, 6), (6, 7)];

@@ -5,6 +5,460 @@ use crate::shapes::GeoKind;
 pub struct Samples;
 
 impl Samples {
+    /// Returns a mesh with every kind of Lin cell
+    ///
+    /// ![test_draw_cells_and_points_work_1_lin](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
+    #[rustfmt::skip]
+    pub fn lin_cells() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] }, // 0
+                Point { id: 1, coords: vec![1.2, 1.2] }, // 1
+
+                Point { id: 2, coords: vec![1.4+0.0, 0.0] }, // 0
+                Point { id: 3, coords: vec![1.4+1.2, 1.2] }, // 1
+                Point { id: 4, coords: vec![1.4+0.8, 0.4] }, // 2
+
+                Point { id: 5, coords: vec![2.8+0.0, 0.0] }, // 0
+                Point { id: 6, coords: vec![2.8+1.2, 1.2] }, // 1
+                Point { id: 7, coords: vec![2.8+0.4, 0.2] }, // 2
+                Point { id: 8, coords: vec![2.8+0.8, 0.8] }, // 3
+
+                Point { id:  9, coords: vec![4.2+0.0, 0.0] }, // 0
+                Point { id: 10, coords: vec![4.2+1.2, 1.2] }, // 1
+                Point { id: 11, coords: vec![4.2+0.6, 0.6] }, // 2
+                Point { id: 12, coords: vec![4.2+0.3, 0.2] }, // 3
+                Point { id: 13, coords: vec![4.2+0.9, 1.0] }, // 4
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 2, kind: GeoKind::Lin2, points: vec![0, 1] },
+                Cell { id: 1, attribute_id: 3, kind: GeoKind::Lin3, points: vec![2, 3, 4] },
+                Cell { id: 2, attribute_id: 4, kind: GeoKind::Lin4, points: vec![5, 6, 7, 8] },
+                Cell { id: 3, attribute_id: 5, kind: GeoKind::Lin5, points: vec![9, 10, 11, 12, 13] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with every kind of Tri cell
+    ///
+    /// ![test_draw_cells_and_points_work_2_tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
+    #[rustfmt::skip]
+    pub fn tri_cells() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0,  0.0 ] }, // 0
+                Point { id: 1, coords: vec![1.0,  0.0 ] }, // 1
+                Point { id: 2, coords: vec![0.5,  0.85] }, // 2
+
+                Point { id: 3, coords: vec![1.2+0.0,       0.0     ] }, // 0
+                Point { id: 4, coords: vec![1.2+1.0,       0.0     ] }, // 1
+                Point { id: 5, coords: vec![1.2+0.5,       0.85    ] }, // 2
+                Point { id: 6, coords: vec![1.2+0.5,       0.0-0.05] }, // 3
+                Point { id: 7, coords: vec![1.2+0.75+0.05, 0.425   ] }, // 4
+                Point { id: 8, coords: vec![1.2+0.25-0.05, 0.425   ] }, // 5
+
+                Point { id:  9, coords: vec![0.0,        1.2+0.0       ] }, // 0
+                Point { id: 10, coords: vec![1.0,        1.2+0.0       ] }, // 1
+                Point { id: 11, coords: vec![0.5,        1.2+0.85      ] }, // 2
+                Point { id: 12, coords: vec![0.333,      1.2+0.0  +0.05] }, // 3
+                Point { id: 13, coords: vec![0.833-0.05, 1.2+0.283     ] }, // 4
+                Point { id: 14, coords: vec![0.333+0.05, 1.2+0.567     ] }, // 5
+                Point { id: 15, coords: vec![0.667-0.05, 1.2+0.00 -0.05] }, // 6
+                Point { id: 16, coords: vec![0.667+0.05, 1.2+0.567     ] }, // 7
+                Point { id: 17, coords: vec![0.167,      1.2+0.283     ] }, // 8
+                Point { id: 18, coords: vec![0.5,        1.2+0.283     ] }, // 9
+
+                Point { id: 19, coords: vec![1.2+0.0,        1.2+0.0        ] }, //  0
+                Point { id: 20, coords: vec![1.2+1.0,        1.2+0.0        ] }, //  1
+                Point { id: 21, coords: vec![1.2+0.5,        1.2+0.85       ] }, //  2
+                Point { id: 22, coords: vec![1.2+0.5,        1.2+0.0        ] }, //  3
+                Point { id: 23, coords: vec![1.2+0.75,       1.2+0.425      ] }, //  4
+                Point { id: 24, coords: vec![1.2+0.25,       1.2+0.425      ] }, //  5
+                Point { id: 25, coords: vec![1.2+0.25,       1.2+0.0   -0.05] }, //  6
+                Point { id: 26, coords: vec![1.2+0.75,       1.2+0.0   +0.05] }, //  7
+                Point { id: 27, coords: vec![1.2+0.875+0.05, 1.2+0.2125     ] }, //  8
+                Point { id: 28, coords: vec![1.2+0.625-0.05, 1.2+0.6375     ] }, //  9
+                Point { id: 29, coords: vec![1.2+0.375-0.05, 1.2+0.6375     ] }, // 10
+                Point { id: 30, coords: vec![1.2+0.125+0.05, 1.2+0.2125     ] }, // 11
+                Point { id: 31, coords: vec![1.2+0.375,      1.2+0.2125     ] }, // 12
+                Point { id: 32, coords: vec![1.2+0.625,      1.2+0.2125     ] }, // 13
+                Point { id: 33, coords: vec![1.2+0.5,        1.2+0.425      ] }, // 14
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3,  points: vec![0, 1, 2] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri6,  points: vec![3, 4, 5, 6, 7, 8] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Tri10, points: vec![9, 10, 11, 12, 13, 14, 15, 16, 17, 18] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Tri15, points: vec![19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with every kind of Qua cell
+    ///
+    /// ![test_draw_cells_and_points_work_3_qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
+    #[rustfmt::skip]
+    pub fn qua_cells() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] }, // 0
+                Point { id: 1, coords: vec![0.8, 0.0] }, // 1
+                Point { id: 2, coords: vec![0.8, 0.8] }, // 2
+                Point { id: 3, coords: vec![0.0, 0.8] }, // 3
+
+                Point { id:  4, coords: vec![1.1+0.0,      0.0     ] }, // 0
+                Point { id:  5, coords: vec![1.1+0.8,      0.0     ] }, // 1
+                Point { id:  6, coords: vec![1.1+0.8,      0.8     ] }, // 2
+                Point { id:  7, coords: vec![1.1+0.0,      0.8     ] }, // 3
+                Point { id:  8, coords: vec![1.1+0.4,      0.0+0.05] }, // 4
+                Point { id:  9, coords: vec![1.1+0.8-0.05, 0.4     ] }, // 5
+                Point { id: 10, coords: vec![1.1+0.4,      0.8-0.05] }, // 6
+                Point { id: 11, coords: vec![1.1+0.0-0.05, 0.4     ] }, // 7
+
+                Point { id: 12, coords: vec![2.2+0.0,      0.0     ] }, // 0
+                Point { id: 13, coords: vec![2.2+0.8,      0.0     ] }, // 1
+                Point { id: 14, coords: vec![2.2+0.8,      0.8     ] }, // 2
+                Point { id: 15, coords: vec![2.2+0.0,      0.8     ] }, // 3
+                Point { id: 16, coords: vec![2.2+0.4,      0.0+0.05] }, // 4
+                Point { id: 17, coords: vec![2.2+0.8-0.05, 0.4     ] }, // 5
+                Point { id: 18, coords: vec![2.2+0.4,      0.8-0.05] }, // 6
+                Point { id: 19, coords: vec![2.2+0.0-0.05, 0.4     ] }, // 7
+                Point { id: 20, coords: vec![2.2+0.4,      0.4     ] }, // 8
+
+                Point { id: 21, coords: vec![0.0,      1.2+0.0     ] }, //  0
+                Point { id: 22, coords: vec![0.8,      1.2+0.0     ] }, //  1
+                Point { id: 23, coords: vec![0.8,      1.2+0.8     ] }, //  2
+                Point { id: 24, coords: vec![0.0,      1.2+0.8     ] }, //  3
+                Point { id: 25, coords: vec![0.267,    1.2+0.0+0.03] }, //  4
+                Point { id: 26, coords: vec![0.8-0.03, 1.2+0.267,  ] }, //  5
+                Point { id: 27, coords: vec![0.533,    1.2+0.8-0.03] }, //  6
+                Point { id: 28, coords: vec![0.0+0.03, 1.2+0.533,  ] }, //  7
+                Point { id: 29, coords: vec![0.533,    1.2+0.0-0.03] }, //  8
+                Point { id: 30, coords: vec![0.8+0.03, 1.2+0.533,  ] }, //  9
+                Point { id: 31, coords: vec![0.267,    1.2+0.8+0.03] }, // 10
+                Point { id: 32, coords: vec![0.0-0.03, 1.2+0.267,  ] }, // 11
+
+                Point { id: 33, coords: vec![1.1+0.0,      1.2+0.0     ] }, //  0
+                Point { id: 34, coords: vec![1.1+0.8,      1.2+0.0     ] }, //  1
+                Point { id: 35, coords: vec![1.1+0.8,      1.2+0.8     ] }, //  2
+                Point { id: 36, coords: vec![1.1+0.0,      1.2+0.8     ] }, //  3
+                Point { id: 37, coords: vec![1.1+0.267,    1.2+0.0+0.03] }, //  4
+                Point { id: 38, coords: vec![1.1+0.8-0.03, 1.2+0.267   ] }, //  5
+                Point { id: 39, coords: vec![1.1+0.533,    1.2+0.8-0.03] }, //  6
+                Point { id: 40, coords: vec![1.1+0.0+0.03, 1.2+0.533   ] }, //  7
+                Point { id: 41, coords: vec![1.1+0.533,    1.2+0.0-0.03] }, //  8
+                Point { id: 42, coords: vec![1.1+0.8+0.03, 1.2+0.533   ] }, //  9
+                Point { id: 43, coords: vec![1.1+0.267,    1.2+0.8+0.03] }, // 10
+                Point { id: 44, coords: vec![1.1+0.0-0.03, 1.2+0.267   ] }, // 11
+                Point { id: 45, coords: vec![1.1+0.267,    1.2+0.267   ] }, // 12
+                Point { id: 46, coords: vec![1.1+0.533,    1.2+0.267   ] }, // 13
+                Point { id: 47, coords: vec![1.1+0.533,    1.2+0.533   ] }, // 14
+                Point { id: 48, coords: vec![1.1+0.267,    1.2+0.533   ] }, // 15
+
+                Point { id: 49, coords: vec![2.2+0.0,      1.2+0.0     ] }, //  0
+                Point { id: 50, coords: vec![2.2+0.8,      1.2+0.0     ] }, //  1
+                Point { id: 51, coords: vec![2.2+0.8,      1.2+0.8     ] }, //  2
+                Point { id: 52, coords: vec![2.2+0.0,      1.2+0.8     ] }, //  3
+                Point { id: 53, coords: vec![2.2+0.4,      1.2+0.0     ] }, //  4
+                Point { id: 54, coords: vec![2.2+0.8,      1.2+0.4     ] }, //  5
+                Point { id: 55, coords: vec![2.2+0.4,      1.2+0.8     ] }, //  6
+                Point { id: 56, coords: vec![2.2+0.0,      1.2+0.4     ] }, //  7
+                Point { id: 57, coords: vec![2.2+0.4,      1.2+0.4     ] }, //  8
+                Point { id: 58, coords: vec![2.2+0.2,      1.2+0.0+0.03] }, //  9
+                Point { id: 59, coords: vec![2.2+0.6,      1.2+0.0-0.03] }, // 10
+                Point { id: 60, coords: vec![2.2+0.8-0.03, 1.2+0.2     ] }, // 11
+                Point { id: 61, coords: vec![2.2+0.8+0.03, 1.2+0.6     ] }, // 12
+                Point { id: 62, coords: vec![2.2+0.6,      1.2+0.8-0.03] }, // 13
+                Point { id: 63, coords: vec![2.2+0.2,      1.2+0.8+0.03] }, // 14
+                Point { id: 64, coords: vec![2.2+0.0+0.03, 1.2+0.6     ] }, // 15
+                Point { id: 65, coords: vec![2.2+0.0-0.03, 1.2+0.2     ] }, // 16
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4,  points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Qua8,  points: vec![4, 5, 6, 7, 8, 9, 10, 11] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Qua9,  points: vec![12, 13, 14, 15, 16, 17, 18, 19, 20] },
+                Cell { id: 3, attribute_id: 1, kind: GeoKind::Qua12, points: vec![21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32] },
+                Cell { id: 4, attribute_id: 1, kind: GeoKind::Qua16, points: vec![33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48] },
+                Cell { id: 5, attribute_id: 1, kind: GeoKind::Qua17, points: vec![49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with every kind of Tet cell
+    ///
+    /// ![test_draw_cells_and_points_work_4_tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
+    #[rustfmt::skip]
+    pub fn tet_cells() -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0, 0.0] }, // 0
+                Point { id: 1, coords: vec![1.0, 0.0, 0.0] }, // 1
+                Point { id: 2, coords: vec![0.5, 1.0, 0.0] }, // 2
+                Point { id: 3, coords: vec![0.5, 0.5, 1.0] }, // 3
+
+                Point { id:  4, coords: vec![1.2+0.0,  0.0,  0.0] }, // 0
+                Point { id:  5, coords: vec![1.2+1.0,  0.0,  0.0] }, // 1
+                Point { id:  6, coords: vec![1.2+0.5,  1.0,  0.0] }, // 2
+                Point { id:  7, coords: vec![1.2+0.5,  0.5,  1.0] }, // 3
+                Point { id:  8, coords: vec![1.2+0.5,  0.0,  0.0] }, // 4
+                Point { id:  9, coords: vec![1.2+0.75, 0.5,  0.0] }, // 5
+                Point { id: 10, coords: vec![1.2+0.25, 0.5,  0.0] }, // 6
+                Point { id: 11, coords: vec![1.2+0.25, 0.25, 0.5] }, // 7
+                Point { id: 12, coords: vec![1.2+0.75, 0.25, 0.5] }, // 8
+                Point { id: 13, coords: vec![1.2+0.5,  0.75, 0.5] }, // 9
+
+                Point { id: 14, coords: vec![0.5+0.0,  1.2+0.0,  0.8+0.0] }, //  0
+                Point { id: 15, coords: vec![0.5+1.2,  1.2+0.0,  0.8+0.0] }, //  1
+                Point { id: 16, coords: vec![0.5+0.6,  1.2+1.2,  0.8+0.0] }, //  2
+                Point { id: 17, coords: vec![0.5+0.6,  1.2+0.6,  0.8+1.2] }, //  3
+                Point { id: 18, coords: vec![0.5+0.4,  1.2+0.0,  0.8+0.0] }, //  4
+                Point { id: 19, coords: vec![0.5+0.8,  1.2+0.0,  0.8+0.0] }, //  5
+                Point { id: 20, coords: vec![0.5+0.2,  1.2+0.4,  0.8+0.0] }, //  6
+                Point { id: 21, coords: vec![0.5+0.4,  1.2+0.8,  0.8+0.0] }, //  7
+                Point { id: 22, coords: vec![0.5+0.2,  1.2+0.2,  0.8+0.4] }, //  8
+                Point { id: 23, coords: vec![0.5+0.4,  1.2+0.4,  0.8+0.8] }, //  9
+                Point { id: 24, coords: vec![0.5+0.6,  1.2+1.0,  0.8+0.4] }, // 10
+                Point { id: 25, coords: vec![0.5+0.6,  1.2+0.8,  0.8+0.8] }, // 11
+                Point { id: 26, coords: vec![0.5+1.0,  1.2+0.2,  0.8+0.4] }, // 12
+                Point { id: 27, coords: vec![0.5+0.8,  1.2+0.4,  0.8+0.8] }, // 13
+                Point { id: 28, coords: vec![0.5+1.0,  1.2+0.4,  0.8+0.0] }, // 14
+                Point { id: 29, coords: vec![0.5+0.8,  1.2+0.8,  0.8+0.0] }, // 15
+                Point { id: 30, coords: vec![0.5+0.4,  1.2+0.6,  0.8+0.4] }, // 16
+                Point { id: 31, coords: vec![0.5+0.6,  1.2+0.2,  0.8+0.4] }, // 17
+                Point { id: 32, coords: vec![0.5+0.6,  1.2+0.4,  0.8+0.0] }, // 18
+                Point { id: 33, coords: vec![0.5+0.8,  1.2+0.6,  0.8+0.4] }, // 19
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tet4,  points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tet10,  points: vec![4, 5, 6, 7, 8, 9, 10, 11, 12, 13] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Tet20,  points: vec![14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with every kind of Hex cell
+    ///
+    /// ![test_draw_cells_and_points_work_5_hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
+    #[rustfmt::skip]
+    pub fn hex_cells() -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0, 0.0] }, // 0
+                Point { id: 1, coords: vec![1.0, 0.0, 0.0] }, // 1
+                Point { id: 2, coords: vec![1.0, 1.0, 0.0] }, // 2
+                Point { id: 3, coords: vec![0.0, 1.0, 0.0] }, // 3
+                Point { id: 4, coords: vec![0.0, 0.0, 1.0] }, // 4
+                Point { id: 5, coords: vec![1.0, 0.0, 1.0] }, // 5
+                Point { id: 6, coords: vec![1.0, 1.0, 1.0] }, // 6
+                Point { id: 7, coords: vec![0.0, 1.0, 1.0] }, // 7
+
+                Point { id:  8, coords: vec![1.8+0.0, 0.0, 0.0] }, //  0
+                Point { id:  9, coords: vec![1.8+1.0, 0.0, 0.0] }, //  1
+                Point { id: 10, coords: vec![1.8+1.0, 1.0, 0.0] }, //  2
+                Point { id: 11, coords: vec![1.8+0.0, 1.0, 0.0] }, //  3
+                Point { id: 12, coords: vec![1.8+0.0, 0.0, 1.0] }, //  4
+                Point { id: 13, coords: vec![1.8+1.0, 0.0, 1.0] }, //  5
+                Point { id: 14, coords: vec![1.8+1.0, 1.0, 1.0] }, //  6
+                Point { id: 15, coords: vec![1.8+0.0, 1.0, 1.0] }, //  7
+                Point { id: 16, coords: vec![1.8+0.5, 0.0, 0.0] }, //  8
+                Point { id: 17, coords: vec![1.8+1.0, 0.5, 0.0] }, //  9
+                Point { id: 18, coords: vec![1.8+0.5, 1.0, 0.0] }, // 10
+                Point { id: 19, coords: vec![1.8+0.0, 0.5, 0.0] }, // 10
+                Point { id: 20, coords: vec![1.8+0.5, 0.0, 1.0] }, // 11
+                Point { id: 21, coords: vec![1.8+1.0, 0.5, 1.0] }, // 12
+                Point { id: 22, coords: vec![1.8+0.5, 1.0, 1.0] }, // 13
+                Point { id: 23, coords: vec![1.8+0.0, 0.5, 1.0] }, // 14
+                Point { id: 24, coords: vec![1.8+0.0, 0.0, 0.5] }, // 15
+                Point { id: 25, coords: vec![1.8+1.0, 0.0, 0.5] }, // 16
+                Point { id: 26, coords: vec![1.8+1.0, 1.0, 0.5] }, // 17
+                Point { id: 27, coords: vec![1.8+0.0, 1.0, 0.5] }, // 18
+
+                Point { id: 28, coords: vec![0.5+0.0, 1.3+0.0, 1.3+0.0] }, //  0
+                Point { id: 29, coords: vec![0.5+1.2, 1.3+0.0, 1.3+0.0] }, //  1
+                Point { id: 30, coords: vec![0.5+1.2, 1.3+1.2, 1.3+0.0] }, //  2
+                Point { id: 31, coords: vec![0.5+0.0, 1.3+1.2, 1.3+0.0] }, //  3
+                Point { id: 32, coords: vec![0.5+0.0, 1.3+0.0, 1.3+1.2] }, //  4
+                Point { id: 33, coords: vec![0.5+1.2, 1.3+0.0, 1.3+1.2] }, //  5
+                Point { id: 34, coords: vec![0.5+1.2, 1.3+1.2, 1.3+1.2] }, //  6
+                Point { id: 35, coords: vec![0.5+0.0, 1.3+1.2, 1.3+1.2] }, //  7
+                Point { id: 36, coords: vec![0.5+0.4, 1.3+0.0, 1.3+0.0] }, //  8
+                Point { id: 37, coords: vec![0.5+0.8, 1.3+0.0, 1.3+0.0] }, //  9
+                Point { id: 38, coords: vec![0.5+1.2, 1.3+0.4, 1.3+0.0] }, // 10
+                Point { id: 39, coords: vec![0.5+1.2, 1.3+0.8, 1.3+0.0] }, // 11
+                Point { id: 40, coords: vec![0.5+0.8, 1.3+1.2, 1.3+0.0] }, // 12
+                Point { id: 41, coords: vec![0.5+0.4, 1.3+1.2, 1.3+0.0] }, // 13
+                Point { id: 42, coords: vec![0.5+0.0, 1.3+0.8, 1.3+0.0] }, // 14
+                Point { id: 43, coords: vec![0.5+0.0, 1.3+0.4, 1.3+0.0] }, // 15
+                Point { id: 44, coords: vec![0.5+0.4, 1.3+0.0, 1.3+1.2] }, // 16
+                Point { id: 45, coords: vec![0.5+0.8, 1.3+0.0, 1.3+1.2] }, // 17
+                Point { id: 46, coords: vec![0.5+1.2, 1.3+0.4, 1.3+1.2] }, // 18
+                Point { id: 47, coords: vec![0.5+1.2, 1.3+0.8, 1.3+1.2] }, // 19
+                Point { id: 48, coords: vec![0.5+0.8, 1.3+1.2, 1.3+1.2] }, // 20
+                Point { id: 49, coords: vec![0.5+0.4, 1.3+1.2, 1.3+1.2] }, // 21
+                Point { id: 50, coords: vec![0.5+0.0, 1.3+0.8, 1.3+1.2] }, // 22
+                Point { id: 51, coords: vec![0.5+0.0, 1.3+0.4, 1.3+1.2] }, // 23
+                Point { id: 52, coords: vec![0.5+0.0, 1.3+0.0, 1.3+0.4] }, // 24
+                Point { id: 53, coords: vec![0.5+0.0, 1.3+0.0, 1.3+0.8] }, // 25
+                Point { id: 54, coords: vec![0.5+1.2, 1.3+0.0, 1.3+0.4] }, // 26
+                Point { id: 55, coords: vec![0.5+1.2, 1.3+0.0, 1.3+0.8] }, // 27
+                Point { id: 56, coords: vec![0.5+1.2, 1.3+1.2, 1.3+0.4] }, // 28
+                Point { id: 57, coords: vec![0.5+1.2, 1.3+1.2, 1.3+0.8] }, // 29
+                Point { id: 58, coords: vec![0.5+0.0, 1.3+1.2, 1.3+0.4] }, // 30
+                Point { id: 59, coords: vec![0.5+0.0, 1.3+1.2, 1.3+0.8] }, // 31
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0, 1, 2, 3, 4, 5, 6, 7] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Hex20, points: vec![8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Hex32, points: vec![28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with two Tri3
+    ///
+    /// ```text
+    ///      y
+    ///      ^
+    /// 1.0  3------------2
+    ///      |`.      [1] |    [#] indicates id
+    ///      |  `.    (1) |    (#) indicates attribute_id
+    ///      |    `.      |
+    ///      |      `.    |
+    ///      | [0]    `.  |
+    ///      | (1)      `.|
+    /// 0.0  0------------1 -> x
+    ///     0.0          1.0
+    /// ```
+    ///
+    /// ![two_tri3.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_tri3.svg)
+    #[rustfmt::skip]
+    pub fn two_tri3() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0] },
+                Point { id: 3, coords: vec![0.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![2, 3, 1] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with three Tri3
+    ///
+    /// ```text
+    ///       4---.__
+    ///      / \     `--.___3    [#] indicates id
+    ///     /   \          / \   (#) indicates attribute_id
+    ///    /     \  [1]   /   \
+    ///   /  [0]  \ (1)  / [2] \
+    ///  /   (1)   \    /  (1)  \
+    /// 0---.__     \  /      ___2
+    ///        `--.__\/__.---'
+    ///               1
+    /// ```
+    ///
+    /// ![three_tri3.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri3.svg)
+    #[rustfmt::skip]
+    pub fn three_tri3() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.2] },
+                Point { id: 1, coords: vec![1.2, 0.0] },
+                Point { id: 2, coords: vec![2.2, 0.1] },
+                Point { id: 3, coords: vec![1.8, 1.0] },
+                Point { id: 4, coords: vec![0.5, 1.2] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 4] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![1, 3, 4] },
+                Cell { id: 2, attribute_id: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with two Tri3 and one Qua4
+    ///
+    /// ```text
+    ///      y
+    ///      ^
+    /// 1.0  3------------2------------5
+    ///      |`.      [1] |            |    [#] indicates id
+    ///      |  `.    (1) |            |    (#) indicates attribute_id
+    ///      |    `.      |     [2]    |
+    ///      |      `.    |     (2)    |
+    ///      | [0]    `.  |            |
+    ///      | (1)      `.|            |
+    /// 0.0  0------------1------------4 -> x
+    ///     0.0          1.0          2.0
+    /// ```
+    ///
+    /// ![two_tri3_one_qua4.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_tri3_one_qua4.svg)
+    #[rustfmt::skip]
+    pub fn two_tri3_one_qua4() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0] },
+                Point { id: 3, coords: vec![0.0, 1.0] },
+                Point { id: 4, coords: vec![2.0, 0.0] },
+                Point { id: 5, coords: vec![2.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![2, 3, 1] },
+                Cell { id: 2, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Qua8
+    ///
+    /// ```text
+    ///      y
+    ///      ^
+    /// 1.0  3------6------2
+    ///      |             |    [#] indicates id
+    ///      |             |    (#) indicates attribute_id
+    ///      7     [0]     5
+    ///      |     (1)     |
+    ///      |             |
+    /// 0.0  0------4------1 -> x
+    ///     0.0           1.0
+    /// ```
+    ///
+    /// ![one_qua8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_qua8.svg)
+    #[rustfmt::skip]
+    pub fn one_qua8() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0] },
+                Point { id: 3, coords: vec![0.0, 1.0] },
+                Point { id: 4, coords: vec![0.5, 0.0] },
+                Point { id: 5, coords: vec![1.0, 0.5] },
+                Point { id: 6, coords: vec![0.5, 1.0] },
+                Point { id: 7, coords: vec![0.0, 0.5] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua8, points: vec![0, 1, 2, 3, 4, 5, 6, 7] },
+            ],
+        }
+    }
+
     /// Returns two quadrilaterals along the horizontal
     ///
     /// ```text
@@ -19,8 +473,10 @@ impl Samples {
     /// 0.0  0-----------1-----------4  → x
     ///     0.0         1.0         2.0
     /// ```
+    ///
+    /// ![two_qua4.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_qua4.svg)
     #[rustfmt::skip]
-    pub fn two_quads_horizontal() -> Mesh {
+    pub fn two_qua4() -> Mesh {
         Mesh {
             ndim: 2,
             points: vec![
@@ -34,6 +490,77 @@ impl Samples {
             cells: vec![
                 Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
                 Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Qua8, one Tri6, and two Lin2
+    ///
+    /// ![qua8_tri6_lin2.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_qua8_tri6_lin2.svg)
+    #[rustfmt::skip]
+    pub fn qua8_tri6_lin2() -> Mesh {
+        let h = 0.866; // ~ SQRT_3 / 2
+        let m = h / 2.0;
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id:  0, coords: vec![0.0,   0.0 ] },
+                Point { id:  1, coords: vec![0.5,   0.0 ] },
+                Point { id:  2, coords: vec![1.0,   0.0 ] },
+                Point { id:  3, coords: vec![1.0+m, 0.25] },
+                Point { id:  4, coords: vec![1.0+h, 0.5 ] },
+                Point { id:  5, coords: vec![1.0+m, 0.75] },
+                Point { id:  6, coords: vec![1.0,   1.0 ] },
+                Point { id:  7, coords: vec![0.5,   1.0 ] },
+                Point { id:  8, coords: vec![0.0,   1.0 ] },
+                Point { id:  9, coords: vec![0.0,   0.5 ] },
+                Point { id: 10, coords: vec![1.0,   0.5 ] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
+                Cell { id: 1, attribute_id: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
+                Cell { id: 2, attribute_id: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
+                Cell { id: 3, attribute_id: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Hex8
+    ///
+    /// ```text
+    ///       4--------------7  1.0
+    ///      /.             /|
+    ///     / .            / |    [#] indicates id
+    ///    /  .           /  |    (#) indicates attribute_id
+    ///   /   .          /   |
+    ///  5--------------6    |          z
+    ///  |    .         |    |          ↑
+    ///  |    0---------|----3  0.0     o → y
+    ///  |   /  [0]     |   /          ↙
+    ///  |  /   (1)     |  /          x
+    ///  | /            | /
+    ///  |/             |/
+    ///  1--------------2   1.0
+    /// 0.0            1.0
+    /// ```
+    ///
+    /// ![one_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_hex8.svg)
+    #[rustfmt::skip]
+    pub fn one_hex8() -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0, 0.0] },
+                Point { id: 3, coords: vec![0.0, 1.0, 0.0] },
+                Point { id: 4, coords: vec![0.0, 0.0, 1.0] },
+                Point { id: 5, coords: vec![1.0, 0.0, 1.0] },
+                Point { id: 6, coords: vec![1.0, 1.0, 1.0] },
+                Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
         }
     }
@@ -66,8 +593,10 @@ impl Samples {
     ///  1--------------2   1.0
     /// 0.0            1.0
     /// ```
+    ///
+    /// ![two_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_hex8.svg)
     #[rustfmt::skip]
-    pub fn two_cubes_vertical() -> Mesh {
+    pub fn two_hex8() -> Mesh {
         Mesh {
             ndim: 3,
             points: vec![
@@ -119,8 +648,10 @@ impl Samples {
     ///  1--------------2-------------12   1.0
     /// 0.0            1.0            2.0
     /// ```
+    ///
+    /// ![four_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_four_hex8.svg)
     #[rustfmt::skip]
-    pub fn four_cubes_wall() -> Mesh {
+    pub fn four_hex8() -> Mesh {
         Mesh {
             ndim: 3,
             points: vec![
@@ -166,6 +697,8 @@ impl Samples {
     ///
     ///     0.0         1.0         2.0         3.0
     /// ```
+    ///
+    /// ![mixed_shapes_2d.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_mixed_shapes_2d.svg)
     #[rustfmt::skip]
     pub fn mixed_shapes_2d() -> Mesh {
         Mesh {
@@ -206,6 +739,8 @@ impl Samples {
     ///                  |/           |/         `. /
     ///  12-----11-------1------------2------------8
     /// ```
+    ///
+    /// ![mixed_shapes_3d.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_mixed_shapes_3d.svg)
     #[rustfmt::skip]
     pub fn mixed_shapes_3d() -> Mesh {
         Mesh {
@@ -256,7 +791,9 @@ impl Samples {
     ///
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
-    /// ```
+    /// ``
+    ///
+    /// ![block_2d_four_qua4.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua4.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua4() -> Mesh {
         Mesh {
@@ -303,6 +840,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
     /// ```
+    ///
+    /// ![block_2d_four_qua8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua8.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua8() -> Mesh {
         Mesh {
@@ -363,6 +902,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
     /// ```
+    ///
+    /// ![block_2d_four_qua9.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua9.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua9() -> Mesh {
         Mesh {
@@ -427,6 +968,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 3.0
     /// ymin = 0.0, ymax = 3.0
     /// ```
+    ///
+    /// ![block_2d_four_qua12.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua12.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua12() -> Mesh {
         Mesh {
@@ -499,6 +1042,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 3.0
     /// ymin = 0.0, ymax = 3.0
     /// ```
+    ///
+    /// ![block_2d_four_qua16.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua16.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua16() -> Mesh {
         Mesh {
@@ -591,6 +1136,8 @@ impl Samples {
     /// xmin = 0.0, xmax = 4.0
     /// ymin = 0.0, ymax = 4.0
     /// ```
+    ///
+    /// ![block_2d_four_qua17.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua17.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua17() -> Mesh {
         Mesh {
@@ -706,6 +1253,8 @@ impl Samples {
     /// ymin = 0.0, ymax = 2.0
     /// zmin = 0.0, zmax = 4.0
     /// ```
+    ///
+    /// ![block_3d_eight_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_3d_eight_hex8.svg)
     #[rustfmt::skip]
     pub fn block_3d_eight_hex8() -> Mesh {
         Mesh {
@@ -803,6 +1352,8 @@ impl Samples {
     /// ymin = 0.0, ymax = 2.0
     /// zmin = 0.0, zmax = 4.0
     /// ```
+    ///
+    /// ![block_3d_eight_hex20.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_3d_eight_hex20.svg)
     #[rustfmt::skip]
     pub fn block_3d_eight_hex20() -> Mesh {
         Mesh {
@@ -924,6 +1475,8 @@ impl Samples {
     ///
     ///                     1.0 1.25  1.5 1.75  2.0
     /// ```
+    ///
+    /// ![ring_eight_qua8_rad1_thick1.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_ring_eight_qua8_rad1_thick1.svg)
     #[rustfmt::skip]
     pub fn ring_eight_qua8_rad1_thick1() -> Mesh {
         Mesh {
@@ -986,94 +1539,220 @@ impl Samples {
 #[cfg(test)]
 mod tests {
     use super::Samples;
-    use crate::mesh::check_all;
+    use crate::mesh::{check_all, draw_mesh};
     use crate::StrError;
 
     #[test]
     fn samples_work() -> Result<(), StrError> {
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::lin_cells();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 14);
+        assert_eq!(mesh.cells.len(), 4);
+        check_all(&mesh)?;
+
+        let mesh = Samples::tri_cells();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 34);
+        assert_eq!(mesh.cells.len(), 4);
+        check_all(&mesh)?;
+
+        let mesh = Samples::qua_cells();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 66);
+        assert_eq!(mesh.cells.len(), 6);
+        check_all(&mesh)?;
+
+        let mesh = Samples::tet_cells();
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 34);
+        assert_eq!(mesh.cells.len(), 3);
+        check_all(&mesh)?;
+
+        let mesh = Samples::hex_cells();
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 60);
+        assert_eq!(mesh.cells.len(), 3);
+        check_all(&mesh)?;
+
+        let mesh = Samples::two_tri3();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 4);
+        assert_eq!(mesh.cells.len(), 2);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_tri3.svg")?;
+        }
+
+        let mesh = Samples::three_tri3();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 5);
+        assert_eq!(mesh.cells.len(), 3);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_three_tri3.svg")?;
+        }
+
+        let mesh = Samples::two_tri3_one_qua4();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 6);
+        assert_eq!(mesh.cells.len(), 3);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_tri3_one_qua4.svg")?;
+        }
+
+        let mesh = Samples::one_qua8();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 8);
+        assert_eq!(mesh.cells.len(), 1);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_qua8.svg")?;
+        }
+
+        let mesh = Samples::two_qua4();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 2);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_qua4.svg")?;
+        }
 
-        let mesh = Samples::two_cubes_vertical();
+        let mesh = Samples::qua8_tri6_lin2();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 11);
+        assert_eq!(mesh.cells.len(), 4);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_qua8_tri6_lin2.svg")?;
+        }
+
+        let mesh = Samples::one_hex8();
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 8);
+        assert_eq!(mesh.cells.len(), 1);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_hex8.svg")?;
+        }
+
+        let mesh = Samples::two_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 12);
         assert_eq!(mesh.cells.len(), 2);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_hex8.svg")?;
+        }
 
-        let mesh = Samples::four_cubes_wall();
+        let mesh = Samples::four_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_four_hex8.svg")?;
+        }
 
         let mesh = Samples::mixed_shapes_2d();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 3);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_mixed_shapes_2d.svg")?;
+        }
 
         let mesh = Samples::mixed_shapes_3d();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 13);
         assert_eq!(mesh.cells.len(), 5);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_mixed_shapes_3d.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua4();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua4.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua8();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 21);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua8.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua9();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua9.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua12();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua12.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua16();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua16.svg")?;
+        }
 
         let mesh = Samples::block_2d_four_qua17();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua17.svg")?;
+        }
 
         let mesh = Samples::block_3d_eight_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex8.svg")?;
+        }
 
         let mesh = Samples::block_3d_eight_hex20();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 81);
         assert_eq!(mesh.cells.len(), 8);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex20.svg")?;
+        }
 
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 8);
         check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_ring_eight_qua8_rad1_thick1.svg")?;
+        }
         Ok(())
     }
 }

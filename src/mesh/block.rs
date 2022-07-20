@@ -1580,7 +1580,6 @@ mod tests {
         check_all(&mesh)
     }
 
-    #[no_coverage]
     fn draw_ring_and_mesh(
         region: &Region,
         args: &ArgsRing,
@@ -1842,7 +1841,6 @@ mod tests {
         Ok(())
     }
 
-    #[no_coverage]
     fn draw_mesh_and_block(
         plot: &mut Plot,
         mesh: Mesh,

@@ -9,7 +9,7 @@ fn test_normal_vectors_2d() -> Result<(), StrError> {
     //  |   [0]   |   [1]   |
     //  |         |         |
     //  0---------1---------4
-    let mesh = Samples::two_quads_horizontal();
+    let mesh = Samples::two_qua4();
     let region = Region::with(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to
@@ -252,7 +252,7 @@ fn test_normal_vectors_3d() -> Result<(), StrError> {
     // | /            | /
     // |/             |/
     // 1--------------2
-    let mesh = Samples::two_cubes_vertical();
+    let mesh = Samples::two_hex8();
     let region = Region::with(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to

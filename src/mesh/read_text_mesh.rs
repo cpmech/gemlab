@@ -596,11 +596,11 @@ mod tests {
     #[test]
     fn from_text_file_works() -> Result<(), StrError> {
         let mesh = Mesh::from_text_file("./data/meshes/two_quads_horizontal.msh")?;
-        let sample = Samples::two_quads_horizontal();
+        let sample = Samples::two_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
         let mesh = Mesh::from_text_file("./data/meshes/two_cubes_vertical.msh")?;
-        let sample = Samples::two_cubes_vertical();
+        let sample = Samples::two_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
         let mesh = Mesh::from_text_file("./data/meshes/mixed_shapes_2d.msh")?;
@@ -741,7 +741,7 @@ mod tests {
                0   1 qua4  0 1 2 3
                1   2 qua4  1 4 5 2",
         )?;
-        let sample = Samples::two_quads_horizontal();
+        let sample = Samples::two_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
         let mesh = Mesh::from_text(
@@ -769,7 +769,7 @@ mod tests {
                0   1 hex8  0 1 2 3 4 5  6  7
                1   2 hex8  4 5 6 7 8 9 10 11",
         )?;
-        let sample = Samples::two_cubes_vertical();
+        let sample = Samples::two_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
         Ok(())
     }

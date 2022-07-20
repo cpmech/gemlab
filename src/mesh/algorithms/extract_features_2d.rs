@@ -88,7 +88,7 @@ mod tests {
         //  |   [0]   |   [1]   |
         //  |         |         |
         //  0---------1---------4
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let features = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let correct_keys = [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)];
@@ -109,7 +109,7 @@ mod tests {
         //  |   [0]   |   [1]   |
         //  |         |         |
         //  0---------1---------4
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let features = extract_features_2d(&mesh, &edges, Extract::All);
         let correct_keys = [(0, 1), (0, 3), (1, 2), (1, 4), (2, 3), (2, 5), (4, 5)];
@@ -130,7 +130,7 @@ mod tests {
         //  |   [0]   |   [1]   |
         //  |         |         |
         //  0---------1---------4
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let features = extract_features_2d(&mesh, &edges, Extract::Interior);
         let correct_keys = [(1, 2)];

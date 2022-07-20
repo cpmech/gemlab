@@ -71,8 +71,8 @@ mod tests {
 
     #[test]
     fn join_meshes_handles_errors() {
-        let a = Samples::two_quads_horizontal();
-        let b = Samples::two_cubes_vertical();
+        let a = Samples::two_qua4();
+        let b = Samples::two_hex8();
         assert_eq!(join_meshes(&a, &b).err(), Some("meshes must have the same ndim"));
     }
 
@@ -97,8 +97,8 @@ mod tests {
         //      |           |           |
         // 0.0  0-----------1-----------4  → x
         //     0.0         1.0         2.0
-        let a = Samples::two_quads_horizontal();
-        let mut b = Samples::two_quads_horizontal();
+        let a = Samples::two_qua4();
+        let mut b = Samples::two_qua4();
 
         // shift B-mesh up
         for m in 0..b.points.len() {
@@ -164,8 +164,8 @@ mod tests {
         //  | /            | /             | /            | /
         //  |/             |/              |/             |/
         //  1--------------2   1.0         1--------------2   1.0
-        let a = Samples::two_cubes_vertical();
-        let mut b = Samples::two_cubes_vertical();
+        let a = Samples::two_hex8();
+        let mut b = Samples::two_hex8();
 
         // shift mesh B along y (to the right)
         for m in 0..b.points.len() {
@@ -200,7 +200,7 @@ mod tests {
         check_ids_and_kind(&mesh)?;
         check_jacobian(&mesh)?;
 
-        let sample = Samples::four_cubes_wall();
+        let sample = Samples::four_hex8();
         for i in 0..mesh.cells.len() {
             assert_eq!(mesh.cells[i].id, sample.cells[i].id);
             assert_eq!(mesh.cells[i].points, sample.cells[i].points);

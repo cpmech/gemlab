@@ -221,7 +221,7 @@ mod tests {
         //  |   [0]   |   [1]   |
         //  |         |         |
         //  0---------1---------4
-        let mesh = Samples::two_quads_horizontal();
+        let mesh = Samples::two_qua4();
         let region = Region::with(&mesh, Extract::Boundary)?;
         // println!("{:?}", mesh);
         assert_eq!(region.mesh.ndim, 2);
