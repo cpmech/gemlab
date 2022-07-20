@@ -1,5 +1,5 @@
 use super::IntegPointData;
-use crate::shapes::{op, Scratchpad};
+use crate::shapes::Scratchpad;
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::Vector;
@@ -116,7 +116,7 @@ where
 
         // calculate interpolation functions and Jacobian
         (pad.fn_interp)(&mut pad.interp, iota);
-        let det_jac = op::calc_jacobian(pad, iota)?;
+        let det_jac = pad.calc_jacobian(iota)?;
 
         // calculate s
         let s = fn_s(p)?;
@@ -248,7 +248,7 @@ where
 
         // calculate interpolation functions and Jacobian
         (pad.fn_interp)(&mut pad.interp, iota);
-        let det_jac = op::calc_jacobian(pad, iota)?;
+        let det_jac = pad.calc_jacobian(iota)?;
 
         // calculate v
         fn_v(&mut v, p)?;
@@ -387,7 +387,7 @@ where
         let weight = ips[p][3];
 
         // calculate Jacobian and Gradient
-        let det_jac = op::calc_gradient(pad, iota)?;
+        let det_jac = pad.calc_gradient(iota)?;
 
         // calculate w
         fn_w(&mut w, p)?;
@@ -531,7 +531,7 @@ where
         let weight = ips[index][3];
 
         // calculate Jacobian and Gradient
-        let det_jac = op::calc_gradient(pad, iota)?;
+        let det_jac = pad.calc_gradient(iota)?;
 
         // calculate σ tensor
         fn_sig(&mut sig, index)?;

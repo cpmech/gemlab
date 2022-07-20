@@ -226,8 +226,10 @@ pub mod aux {
 
 #[cfg(test)]
 mod tests {
-    use super::aux::{draw_point_coords_2d, extract_edge, extract_face, gen_scratchpad_with_coords};
-    use crate::shapes::op::testing::aux::{self, gen_scratchpad_with_coords_aligned};
+    use super::aux::{
+        self, draw_point_coords_2d, extract_edge, extract_face, gen_scratchpad_with_coords,
+        gen_scratchpad_with_coords_aligned,
+    };
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq};

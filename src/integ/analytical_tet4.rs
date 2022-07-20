@@ -239,7 +239,7 @@ impl AnalyticalTet4 {
 #[cfg(test)]
 mod tests {
     use super::AnalyticalTet4;
-    use crate::shapes::{op, GeoKind, Scratchpad};
+    use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
@@ -262,7 +262,7 @@ mod tests {
         pad.set_xx(3, 1, 0.0);
         pad.set_xx(3, 2, 1.0);
         let mut tet = AnalyticalTet4::new(&pad);
-        op::calc_gradient(&mut pad, &[0.1, 0.1, 0.1])?;
+        pad.calc_gradient(&[0.1, 0.1, 0.1])?;
         assert_eq!(tet.volume, 1.0 / 6.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
@@ -307,7 +307,7 @@ mod tests {
         pad.set_xx(3, 1, 3.0);
         pad.set_xx(3, 2, 6.0);
         let mut tet = AnalyticalTet4::new(&pad);
-        op::calc_gradient(&mut pad, &[0.1, 0.2, 0.3])?;
+        pad.calc_gradient(&[0.1, 0.2, 0.3])?;
         assert_eq!(tet.volume, 4.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);

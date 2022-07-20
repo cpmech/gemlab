@@ -1,103 +1,102 @@
-use super::calc_jacobian;
-use crate::shapes::Scratchpad;
+use super::Scratchpad;
 use crate::StrError;
 use russell_lab::mat_mat_mul;
 
-/// Calculates the gradient of the interpolation functions
-///
-/// **Note:** This function works with `geo_ndim == space_ndim` only.
-///
-/// The gradient is given by:
-///
-/// ```text
-///             →
-/// →  →    dNᵐ(ξ)
-/// Gᵐ(ξ) = ——————
-///            →
-///           dx
-/// ```
-///
-/// which can be organized in an (nnode,space_ndim) matrix `G` as follows
-///
-/// ```text
-/// G = L · J⁻¹
-/// ```
-///
-/// # Output
-///
-/// * `pad.deriv` -- interpolation functions (nnode)
-/// * `pad.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
-/// * `pad.inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
-/// * `pad.gradient` -- gradient matrix (nnode,space_ndim)
-/// * Returns the determinant of the Jacobian matrix
-///
-/// # Input
-///
-/// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
-///
-/// # Example
-///
-/// ```
-/// use gemlab::shapes::{op, GeoKind, Scratchpad};
-/// use gemlab::StrError;
-/// use russell_chk::assert_vec_approx_eq;
-/// use russell_lab::Matrix;
-///
-/// fn main() -> Result<(), StrError> {
-///     //  3-------------2         ξ₀   ξ₁
-///     //  |      ξ₁     |  node    r    s
-///     //  |      |      |     0 -1.0 -1.0
-///     //  |      +--ξ₀  |     1  1.0 -1.0
-///     //  |             |     2  1.0  1.0
-///     //  |             |     3 -1.0  1.0
-///     //  0-------------1
-///
-///     let a = 3.0;
-///     let space_ndim = 2;
-///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
-///     pad.set_xx(0, 0, 0.0);
-///     pad.set_xx(0, 1, 0.0);
-///     pad.set_xx(1, 0, 2.0 * a);
-///     pad.set_xx(1, 1, 0.0);
-///     pad.set_xx(2, 0, 2.0 * a);
-///     pad.set_xx(2, 1, a);
-///     pad.set_xx(3, 0, 0.0);
-///     pad.set_xx(3, 1, a);
-///
-///     op::calc_gradient(&mut pad, &[0.0, 0.0])?;
-///
-///     let correct_gg = Matrix::from(&[
-///         [-1.0 / (4.0 * a), -1.0 / (2.0 * a)],
-///         [1.0 / (4.0 * a), -1.0 / (2.0 * a)],
-///         [1.0 / (4.0 * a), 1.0 / (2.0 * a)],
-///         [-1.0 / (4.0 * a), 1.0 / (2.0 * a)],
-///     ]);
-///     assert_vec_approx_eq!(pad.gradient.as_data(), correct_gg.as_data(), 1e-15);
-///     Ok(())
-/// }
-/// ```
-pub fn calc_gradient(pad: &mut Scratchpad, ksi: &[f64]) -> Result<f64, StrError> {
-    // check
-    let (space_ndim, geo_ndim) = pad.jacobian.dims();
-    if geo_ndim != space_ndim {
-        return Err("calc_gradient requires that geo_ndim = space_ndim");
+impl Scratchpad {
+    /// Calculates the gradient of the interpolation functions
+    ///
+    /// **Note:** This function works with `geo_ndim == space_ndim` only.
+    ///
+    /// The gradient is given by:
+    ///
+    /// ```text
+    ///             →
+    /// →  →    dNᵐ(ξ)
+    /// Gᵐ(ξ) = ——————
+    ///            →
+    ///           dx
+    /// ```
+    ///
+    /// which can be organized in an (nnode,space_ndim) matrix `G` as follows
+    ///
+    /// ```text
+    /// G = L · J⁻¹
+    /// ```
+    ///
+    /// # Output
+    ///
+    /// * `deriv` -- interpolation functions (nnode)
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
+    /// * `gradient` -- gradient matrix (nnode,space_ndim)
+    /// * Returns the determinant of the Jacobian matrix
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use gemlab::shapes::{GeoKind, Scratchpad};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_lab::Matrix;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///
+    ///     let a = 3.0;
+    ///     let space_ndim = 2;
+    ///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
+    ///     pad.set_xx(0, 0, 0.0);
+    ///     pad.set_xx(0, 1, 0.0);
+    ///     pad.set_xx(1, 0, 2.0 * a);
+    ///     pad.set_xx(1, 1, 0.0);
+    ///     pad.set_xx(2, 0, 2.0 * a);
+    ///     pad.set_xx(2, 1, a);
+    ///     pad.set_xx(3, 0, 0.0);
+    ///     pad.set_xx(3, 1, a);
+    ///
+    ///     pad.calc_gradient(&[0.0, 0.0])?;
+    ///
+    ///     let correct_gg = Matrix::from(&[
+    ///         [-1.0 / (4.0 * a), -1.0 / (2.0 * a)],
+    ///         [1.0 / (4.0 * a), -1.0 / (2.0 * a)],
+    ///         [1.0 / (4.0 * a), 1.0 / (2.0 * a)],
+    ///         [-1.0 / (4.0 * a), 1.0 / (2.0 * a)],
+    ///     ]);
+    ///     assert_vec_approx_eq!(pad.gradient.as_data(), correct_gg.as_data(), 1e-15);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn calc_gradient(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
+        // check
+        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        if geo_ndim != space_ndim {
+            return Err("calc_gradient requires that geo_ndim = space_ndim");
+        }
+
+        // Jacobian matrix J: dx/dξ
+        let det_jac = self.calc_jacobian(ksi)?;
+
+        // gradient: G = L · J⁻¹
+        mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian).unwrap(); // cannot fail because the dims are checked
+        Ok(det_jac)
     }
-
-    // Jacobian matrix J: dx/dξ
-    let det_jac = calc_jacobian(pad, ksi)?;
-
-    // gradient: G = L · J⁻¹
-    mat_mat_mul(&mut pad.gradient, 1.0, &pad.deriv, &pad.inv_jacobian).unwrap(); // cannot fail because the dims are checked
-    Ok(det_jac)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::calc_gradient;
-    use crate::shapes::op::testing::aux;
-    use crate::shapes::op::{approximate_ksi, calc_coords};
+    use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::ONE_BY_3;
     use crate::StrError;
@@ -108,13 +107,13 @@ mod tests {
     fn calc_gradient_handles_errors() {
         let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
         assert_eq!(
-            calc_gradient(&mut pad, &[0.0, 0.0]).err(),
+            pad.calc_gradient(&[0.0, 0.0]).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
 
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         assert_eq!(
-            calc_gradient(&mut pad, &[0.0, 0.0]).err(),
+            pad.calc_gradient(&[0.0, 0.0]).err(),
             Some("all components of the coordinates matrix must be set first")
         );
     }
@@ -133,7 +132,7 @@ mod tests {
     fn nn_given_x(v: f64, args: &mut ArgsNumGrad) -> f64 {
         copy_vector(&mut args.x, &args.at_x).unwrap();
         args.x[args.j] = v;
-        approximate_ksi(&mut args.ksi, &mut args.pad, &args.x, 10, 1e-14).unwrap();
+        args.pad.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-14).unwrap();
         (args.pad.fn_interp)(&mut args.pad.interp, &args.ksi);
         args.pad.interp[args.m]
     }
@@ -176,10 +175,10 @@ mod tests {
 
             // compute x corresponding to ξ using the isoparametric formula
             let mut at_x = Vector::new(space_ndim);
-            calc_coords(&mut at_x, &mut pad, &at_ksi)?;
+            pad.calc_coords(&mut at_x, &at_ksi)?;
 
             // compute gradient
-            let det_jac = calc_gradient(&mut pad, &at_ksi)?;
+            let det_jac = pad.calc_gradient(&at_ksi)?;
             assert!(det_jac > 0.0);
 
             // set arguments for numerical integration

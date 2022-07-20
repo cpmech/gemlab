@@ -1,4 +1,4 @@
-use crate::shapes::Scratchpad;
+use super::Scratchpad;
 use crate::StrError;
 use russell_lab::{inverse, mat_mat_mul};
 
@@ -7,124 +7,126 @@ use russell_lab::{inverse, mat_mat_mul};
 /// **Note:** This also indicates that the inverse Jacobian matrix has not been computed
 pub const DET_JAC_NOT_AVAILABLE: f64 = -1.0;
 
-/// Calculates the Jacobian of the mapping from general to reference space
-///
-/// The components of the Jacobian matrix are
-///
-/// ```text
-///        ∂xᵢ
-/// Jᵢⱼ := ——— = Σ X[m][i] * L[m][j]
-///        ∂ξⱼ   m
-/// ```
-///
-/// Thus, in matrix notation
-///
-/// ```text
-/// jacobian := J = Xᵀ · L
-/// jacobian := Jcable = Xᵀ · L
-/// jacobian := Jshell = Xᵀ · L
-/// ```
-///
-/// where:
-///
-/// * `Jcable`` -- Jacobian for line in multi-dimensions (geom_ndim < space_ndim)
-/// * `Jshell`` -- Jacobian for 3D surfaces (geo_ndim = 2 and space_ndim = 3)
-///
-/// For the `SOLID` case (`geo_ndim = space_ndim`), this function also computes the inverse Jacobian:
-///
-/// ```text
-/// inv_jacobian := J⁻¹
-/// ```
-///
-/// # Output
-///
-/// * `pad.deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
-/// * `pad.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
-/// * `pad.inv_jacobian` -- If `geo_ndim = space_ndim` (`SOLID` case): inverse Jacobian matrix (space_ndim,space_ndim)
-/// * Returns one of the following:
-///     * `CABLE`: (geo_ndim = 1 and space_ndim = 2 or 3), returns the norm of the Jacobian vector
-///     * `SHELL`: (geo_ndim = 2 and space_ndim = 3), returns [DET_JAC_NOT_AVAILABLE] indicating that the
-///        determinant of the Jacobian is not available and the inverse Jacobian has not been computed
-///     * `SOLID`: (geo_ndim = space_ndim), returns the determinant of the Jacobian
-///
-/// # Input
-///
-/// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
-///
-/// # Examples
-///
-/// ```
-/// use gemlab::shapes::{op, GeoKind, Scratchpad};
-/// use gemlab::StrError;
-/// use russell_chk::assert_approx_eq;
-///
-/// fn main() -> Result<(), StrError> {
-///     //  3-------------2         ξ₀   ξ₁
-///     //  |      ξ₁     |  node    r    s
-///     //  |      |      |     0 -1.0 -1.0
-///     //  |      +--ξ₀  |     1  1.0 -1.0
-///     //  |             |     2  1.0  1.0
-///     //  |             |     3 -1.0  1.0
-///     //  0-------------1
-///
-///     let a = 3.0;
-///     let space_ndim = 2;
-///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
-///     pad.set_xx(0, 0, 0.0);
-///     pad.set_xx(0, 1, 0.0);
-///     pad.set_xx(1, 0, 2.0 * a);
-///     pad.set_xx(1, 1, 0.0);
-///     pad.set_xx(2, 0, 2.0 * a);
-///     pad.set_xx(2, 1, a);
-///     pad.set_xx(3, 0, 0.0);
-///     pad.set_xx(3, 1, a);
-///
-///     let det_jac = op::calc_jacobian(&mut pad, &[0.0, 0.0])?;
-///     assert_approx_eq!(det_jac, a * a / 2.0, 1e-15);
-///
-///     // the solution is
-///     //  ┌         ┐
-///     //  │  a   0  │
-///     //  │  0  a/2 │
-///     //  └         ┘
-///     assert_eq!(
-///         format!("{}", pad.jacobian),
-///         "┌         ┐\n\
-///          │   3   0 │\n\
-///          │   0 1.5 │\n\
-///          └         ┘"
-///     );
-///     Ok(())
-/// }
-/// ```
-pub fn calc_jacobian(pad: &mut Scratchpad, ksi: &[f64]) -> Result<f64, StrError> {
-    // check
-    if !pad.ok_xxt {
-        return Err("all components of the coordinates matrix must be set first");
-    }
+impl Scratchpad {
+    /// Calculates the Jacobian of the mapping from general to reference space
+    ///
+    /// The components of the Jacobian matrix are
+    ///
+    /// ```text
+    ///        ∂xᵢ
+    /// Jᵢⱼ := ——— = Σ X[m][i] * L[m][j]
+    ///        ∂ξⱼ   m
+    /// ```
+    ///
+    /// Thus, in matrix notation
+    ///
+    /// ```text
+    /// jacobian := J = Xᵀ · L
+    /// jacobian := Jcable = Xᵀ · L
+    /// jacobian := Jshell = Xᵀ · L
+    /// ```
+    ///
+    /// where:
+    ///
+    /// * `Jcable`` -- Jacobian for line in multi-dimensions (geom_ndim < space_ndim)
+    /// * `Jshell`` -- Jacobian for 3D surfaces (geo_ndim = 2 and space_ndim = 3)
+    ///
+    /// For the `SOLID` case (`geo_ndim = space_ndim`), this function also computes the inverse Jacobian:
+    ///
+    /// ```text
+    /// inv_jacobian := J⁻¹
+    /// ```
+    ///
+    /// # Output
+    ///
+    /// * `pad.deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
+    /// * `pad.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `pad.inv_jacobian` -- If `geo_ndim = space_ndim` (`SOLID` case): inverse Jacobian matrix (space_ndim,space_ndim)
+    /// * Returns one of the following:
+    ///     * `CABLE`: (geo_ndim = 1 and space_ndim = 2 or 3), returns the norm of the Jacobian vector
+    ///     * `SHELL`: (geo_ndim = 2 and space_ndim = 3), returns [DET_JAC_NOT_AVAILABLE] indicating that the
+    ///        determinant of the Jacobian is not available and the inverse Jacobian has not been computed
+    ///     * `SOLID`: (geo_ndim = space_ndim), returns the determinant of the Jacobian
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{GeoKind, Scratchpad};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_approx_eq;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3-------------2         ξ₀   ξ₁
+    ///     //  |      ξ₁     |  node    r    s
+    ///     //  |      |      |     0 -1.0 -1.0
+    ///     //  |      +--ξ₀  |     1  1.0 -1.0
+    ///     //  |             |     2  1.0  1.0
+    ///     //  |             |     3 -1.0  1.0
+    ///     //  0-------------1
+    ///
+    ///     let a = 3.0;
+    ///     let space_ndim = 2;
+    ///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
+    ///     pad.set_xx(0, 0, 0.0);
+    ///     pad.set_xx(0, 1, 0.0);
+    ///     pad.set_xx(1, 0, 2.0 * a);
+    ///     pad.set_xx(1, 1, 0.0);
+    ///     pad.set_xx(2, 0, 2.0 * a);
+    ///     pad.set_xx(2, 1, a);
+    ///     pad.set_xx(3, 0, 0.0);
+    ///     pad.set_xx(3, 1, a);
+    ///
+    ///     let det_jac = pad.calc_jacobian(&[0.0, 0.0])?;
+    ///     assert_approx_eq!(det_jac, a * a / 2.0, 1e-15);
+    ///
+    ///     // the solution is
+    ///     //  ┌         ┐
+    ///     //  │  a   0  │
+    ///     //  │  0  a/2 │
+    ///     //  └         ┘
+    ///     assert_eq!(
+    ///         format!("{}", pad.jacobian),
+    ///         "┌         ┐\n\
+    ///          │   3   0 │\n\
+    ///          │   0 1.5 │\n\
+    ///          └         ┘"
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn calc_jacobian(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
+        // check
+        if !self.ok_xxt {
+            return Err("all components of the coordinates matrix must be set first");
+        }
 
-    // matrix L: dNᵐ/dξ
-    (pad.fn_deriv)(&mut pad.deriv, ksi);
+        // matrix L: dNᵐ/dξ
+        (self.fn_deriv)(&mut self.deriv, ksi);
 
-    // matrix J: dx/dξ
-    mat_mat_mul(&mut pad.jacobian, 1.0, &pad.xxt, &pad.deriv)?;
+        // matrix J: dx/dξ
+        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv)?;
 
-    // inverse Jacobian and determinant/norm (or not possible)
-    let (space_ndim, geo_ndim) = pad.jacobian.dims();
-    if geo_ndim == space_ndim {
-        // SOLID case: inverse J (returns determinant)
-        inverse(&mut pad.inv_jacobian, &pad.jacobian)
-    } else {
-        // CABLE case: norm of Jacobian vector
-        if geo_ndim == 1 {
-            let mut norm_jac = 0.0;
-            for i in 0..space_ndim {
-                norm_jac += pad.jacobian[i][0] * pad.jacobian[i][0];
-            }
-            Ok(f64::sqrt(norm_jac))
+        // inverse Jacobian and determinant/norm (or not possible)
+        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        if geo_ndim == space_ndim {
+            // SOLID case: inverse J (returns determinant)
+            inverse(&mut self.inv_jacobian, &self.jacobian)
         } else {
-            // SHELL case
-            Ok(DET_JAC_NOT_AVAILABLE)
+            // CABLE case: norm of Jacobian vector
+            if geo_ndim == 1 {
+                let mut norm_jac = 0.0;
+                for i in 0..space_ndim {
+                    norm_jac += self.jacobian[i][0] * self.jacobian[i][0];
+                }
+                Ok(f64::sqrt(norm_jac))
+            } else {
+                // SHELL case
+                Ok(DET_JAC_NOT_AVAILABLE)
+            }
         }
     }
 }
@@ -133,9 +135,8 @@ pub fn calc_jacobian(pad: &mut Scratchpad, ksi: &[f64]) -> Result<f64, StrError>
 
 #[cfg(test)]
 mod tests {
-    use super::{calc_jacobian, DET_JAC_NOT_AVAILABLE};
-    use crate::shapes::op::testing::aux;
-    use crate::shapes::op::{calc_coords, draw_shape_simple};
+    use super::DET_JAC_NOT_AVAILABLE;
+    use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_deriv_approx_eq;
@@ -145,7 +146,7 @@ mod tests {
     fn calc_jacobian_handles_errors() {
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         assert_eq!(
-            calc_jacobian(&mut pad, &[0.0, 0.0]).err(),
+            pad.calc_jacobian(&[0.0, 0.0]).err(),
             Some("all components of the coordinates matrix must be set first")
         );
 
@@ -154,10 +155,7 @@ mod tests {
         pad.set_xx(2, 1, 0.0); // setting the last component
                                // (cannot really check that all components have been set)
         pad.jacobian = Matrix::new(0, 0);
-        assert_eq!(
-            calc_jacobian(&mut pad, &[0.0, 0.0]).err(),
-            Some("matrices are incompatible")
-        );
+        assert_eq!(pad.calc_jacobian(&[0.0, 0.0]).err(), Some("matrices are incompatible"));
     }
 
     // Holds arguments for numerical differentiation of x with respect to ξ => Jacobian
@@ -174,7 +172,7 @@ mod tests {
     fn x_given_ksi(v: f64, args: &mut ArgsNumJac) -> f64 {
         args.ksi.copy_from_slice(&args.at_ksi);
         args.ksi[args.j] = v;
-        calc_coords(&mut args.x, &mut args.pad, &args.ksi).unwrap();
+        args.pad.calc_coords(&mut args.x, &args.ksi).unwrap();
         args.x[args.i]
     }
 
@@ -221,7 +219,7 @@ mod tests {
             let at_ksi = vec![0.25; geo_ndim];
 
             // compute Jacobian, its inverse, and determinant
-            let det_jac = calc_jacobian(&mut pad, &at_ksi)?;
+            let det_jac = pad.calc_jacobian(&at_ksi)?;
             assert!(det_jac > 0.0);
 
             // set arguments for numerical integration
@@ -257,7 +255,7 @@ mod tests {
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(1, 0, l); // node 1
         pad.set_xx(1, 1, 0.0);
-        let norm_jac_vec = calc_jacobian(&mut pad, &[0.0])?;
+        let norm_jac_vec = pad.calc_jacobian(&[0.0])?;
         assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
 
         // SHELL: triangle on a plane diagonal to the y-z plane
@@ -272,10 +270,10 @@ mod tests {
         pad.set_xx(2, 0, 0.5); // node 2
         pad.set_xx(2, 1, 1.0);
         pad.set_xx(2, 2, 1.0);
-        let norm_jac_vec = calc_jacobian(&mut pad, &[0.0, 0.0])?;
+        let norm_jac_vec = pad.calc_jacobian(&[0.0, 0.0])?;
         assert_eq!(norm_jac_vec, DET_JAC_NOT_AVAILABLE);
         if false {
-            draw_shape_simple(&pad, "/tmp/gemlab/test_jacobian_tri3_in_3d.svg")?;
+            pad.draw_shape_simple("/tmp/gemlab/test_jacobian_tri3_in_3d.svg")?;
         }
         Ok(())
     }

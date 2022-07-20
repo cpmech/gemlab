@@ -1,6 +1,6 @@
 use gemlab::integ::default_integ_points;
 use gemlab::mesh::{check_2d_edge_normals, At, EdgeKey, Extract, Mesh, Region};
-use gemlab::shapes::{op, GeoKind, Scratchpad};
+use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
 use russell_chk::assert_approx_eq;
@@ -132,7 +132,7 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     for index in 0..ips.len() {
         let iota = &ips[index];
         let weight = ips[index][3];
-        let det_jac = op::calc_jacobian(&mut pad_edge_7_11, iota)?;
+        let det_jac = pad_edge_7_11.calc_jacobian(iota)?;
         length_numerical += weight * det_jac;
     }
     assert_approx_eq!(length_numerical, SQRT_2, 1e-14);
@@ -150,7 +150,7 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     for p in 0..ips.len() {
         let iota = &ips[p];
         let weight = ips[p][3];
-        let det_jac = op::calc_jacobian(&mut pad_cell_5, iota)?;
+        let det_jac = pad_cell_5.calc_jacobian(iota)?;
         area_numerical += weight * det_jac;
     }
     assert_approx_eq!(area_numerical, 2.0, 1e-15);

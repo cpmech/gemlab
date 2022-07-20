@@ -1,5 +1,5 @@
 use super::{Features, Mesh, PointId, Region};
-use crate::shapes::{op, GeoKind, Scratchpad};
+use crate::shapes::{GeoKind, Scratchpad};
 use crate::util::ONE_BY_3;
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
@@ -115,7 +115,7 @@ fn add_curve(
                 // add poly-curve points or control points (q..) for cubic Bezier
                 // (see file bezier-curves-math.pdf under data/derivations)
                 // in this case, we have to interpolate the Lin5 to make it a Lin4
-                let mut pad = pads.entry(lin_kind).or_insert(Scratchpad::new(mesh.ndim, lin_kind)?);
+                let pad = pads.entry(lin_kind).or_insert(Scratchpad::new(mesh.ndim, lin_kind)?);
                 for m in 0..lin_points.len() {
                     for j in 0..mesh.ndim {
                         pad.set_xx(m, j, pp[ii[m]].coords[j]);
@@ -123,9 +123,9 @@ fn add_curve(
                 }
                 let (xa, ya) = (pp[ii[0]].coords[0], pp[ii[0]].coords[1]);
                 let (xb, yb) = (pp[ii[1]].coords[0], pp[ii[1]].coords[1]);
-                op::calc_coords(&mut x, &mut pad, &[-ONE_BY_3, 0.0]).unwrap();
+                pad.calc_coords(&mut x, &[-ONE_BY_3, 0.0]).unwrap();
                 let (xc, yc) = (x[0], x[1]);
-                op::calc_coords(&mut x, &mut pad, &[ONE_BY_3, 0.0]).unwrap();
+                pad.calc_coords(&mut x, &[ONE_BY_3, 0.0]).unwrap();
                 let (xd, yd) = (x[0], x[1]);
                 let qcx = (-5.0 * xa + 2.0 * xb + 18.0 * xc - 9.0 * xd) / 6.0;
                 let qcy = (-5.0 * ya + 2.0 * yb + 18.0 * yc - 9.0 * yd) / 6.0;
@@ -537,7 +537,7 @@ impl Draw {
         // loop over edges (GeoKind::Lin)
         for (_, edge) in &features.edges {
             // retrieve pad or allocate new
-            let mut pad = pads_memo
+            let pad = pads_memo
                 .entry(edge.kind)
                 .or_insert(Scratchpad::new(space_ndim, edge.kind)?);
 
@@ -561,7 +561,7 @@ impl Draw {
                 }
                 3 => {
                     ksi[0] = 0.0; // middle
-                    op::calc_coords(&mut xc, &mut pad, &ksi)?;
+                    pad.calc_coords(&mut xc, &ksi)?;
                     qc[0] = (-xa - xb + 4.0 * xc[0]) / 2.0;
                     qc[1] = (-ya - yb + 4.0 * xc[1]) / 2.0;
                     self.canvas_edges
@@ -571,9 +571,9 @@ impl Draw {
                 }
                 _ => {
                     ksi[0] = -1.0 / 3.0; // => t=⅓(ξ=-⅓)
-                    op::calc_coords(&mut xc, &mut pad, &ksi)?;
+                    pad.calc_coords(&mut xc, &ksi)?;
                     ksi[0] = 1.0 / 3.0; // => t=⅔(ξ=+⅓)
-                    op::calc_coords(&mut xd, &mut pad, &ksi)?;
+                    pad.calc_coords(&mut xd, &ksi)?;
                     qc[0] = (-5.0 * xa + 2.0 * xb + 18.0 * xc[0] - 9.0 * xd[0]) / 6.0;
                     qc[1] = (-5.0 * ya + 2.0 * yb + 18.0 * xc[1] - 9.0 * xd[1]) / 6.0;
                     qd[0] = (2.0 * xa - 5.0 * xb - 9.0 * xc[0] + 18.0 * xd[0]) / 6.0;
@@ -615,7 +615,7 @@ impl Draw {
         // loop over edges (GeoKind::Lin)
         for (_, edge) in &features.edges {
             // retrieve pad or allocate new
-            let mut pad = pads_memo
+            let pad = pads_memo
                 .entry(edge.kind)
                 .or_insert(Scratchpad::new(space_ndim, edge.kind)?);
 
@@ -639,7 +639,7 @@ impl Draw {
                 }
                 3 => {
                     ksi[0] = 0.0; // middle
-                    op::calc_coords(&mut xc, &mut pad, &ksi)?;
+                    pad.calc_coords(&mut xc, &ksi)?;
                     self.canvas_edges
                         .polyline_3d_add(xa, ya, za)
                         .polyline_3d_add(xc[0], xc[1], xc[2])
@@ -647,9 +647,9 @@ impl Draw {
                 }
                 4 => {
                     ksi[0] = -1.0 / 3.0; // middle-left
-                    op::calc_coords(&mut xc, &mut pad, &ksi)?;
+                    pad.calc_coords(&mut xc, &ksi)?;
                     ksi[0] = 1.0 / 3.0; // middle-right
-                    op::calc_coords(&mut xd, &mut pad, &ksi)?;
+                    pad.calc_coords(&mut xd, &ksi)?;
                     self.canvas_edges
                         .polyline_3d_add(xa, ya, za)
                         .polyline_3d_add(xc[0], xc[1], xc[2])

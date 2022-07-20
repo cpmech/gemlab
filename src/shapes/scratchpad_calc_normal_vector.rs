@@ -1,163 +1,164 @@
-use crate::shapes::Scratchpad;
+use super::Scratchpad;
 use crate::StrError;
 use russell_lab::{mat_mat_mul, Vector};
 
-/// Calculates the normal vector
-///
-/// **Important:** This function only works with:
-///
-/// * `CABLE` case (geo_ndim = 1 and space_ndim = 2) -- e.g., line in 2D, or
-/// * `SHELL` case (geo_ndim = 2 and space_ndim = 3) -- e.g., surface in 3D.
-///
-/// i.e., `geo_ndim < space_ndim`.
-///
-/// # Output
-///
-/// * `normal` -- (space_ndim) the normal vector; not necessarily unitary
-/// * `pad.deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
-/// * `pad.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
-///
-/// # Input
-///
-/// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
-///
-/// # Examples
-///
-/// ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
-///
-/// ```
-/// use gemlab::shapes::{op, GeoKind, Scratchpad};
-/// use gemlab::StrError;
-/// use russell_lab::Vector;
-///
-/// fn main() -> Result<(), StrError> {
-///     //  →  __       1   -----
-///     //  n |.      ,'     / \
-///     //      '.  ,'        |
-///     //        2'          H
-///     //      ,'            |
-///     //    ,'   45°        |
-///     //   0  ____________ \ /
-///
-///     const H: f64 = 5.0;
-///     let space_ndim = 2;
-///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin3)?;
-///     pad.set_xx(0, 0, 0.0);
-///     pad.set_xx(0, 1, 0.0);
-///     pad.set_xx(1, 0, H);
-///     pad.set_xx(1, 1, H);
-///     pad.set_xx(2, 0, H / 2.0);
-///     pad.set_xx(2, 1, H / 2.0);
-///
-///     // ||n|| = L/2 (2 is the length in the natural space)
-///     // nx = -(L/2)sin(45) = -(H√2/2) √2/2 = -H/2
-///     // ny = +(L/2)cos(45) = +(H√2/2) √2/2 = +H/2
-///     let mut normal = Vector::new(2);
-///     op::calc_normal_vector(&mut normal, &mut pad, &[0.0, 0.0])?;
-///     assert_eq!(normal.as_data(), &[-H / 2.0, H / 2.0]);
-///     Ok(())
-/// }
-/// ```
-///
-/// ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
-///
-/// ```
-/// use gemlab::shapes::{op, GeoKind, Scratchpad};
-/// use gemlab::StrError;
-/// use russell_lab::Vector;
-///
-/// fn main() -> Result<(), StrError> {
-///     //           .   .  .   . ,.2|
-///     //         ' .           ,,'||
-///     //       '   .         ,,'  ||
-///     //     '     .       .,'    ||  →
-///     //  .  .   . .   .  3'      ||  n
-///     //           z     ||   ==========)
-///     //  .        |     ||       ||
-///     //          ,*---y || .  . ,1
-///     //  .      x       ||    ,,'
-///     //      ,'         ||  ,,'
-///     //  . ,'           ||,,'
-///     //  . . .   .   .  |0'
-///
-///     let space_ndim = 3;
-///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
-///     pad.set_xx(0, 0, 1.0); // node 0
-///     pad.set_xx(0, 1, 1.0);
-///     pad.set_xx(0, 2, 0.0);
-///     pad.set_xx(1, 0, 0.0); // node 1
-///     pad.set_xx(1, 1, 1.0);
-///     pad.set_xx(1, 2, 0.0);
-///     pad.set_xx(2, 0, 0.0); // node 2
-///     pad.set_xx(2, 1, 1.0);
-///     pad.set_xx(2, 2, 1.0);
-///     pad.set_xx(3, 0, 1.0); // node 3
-///     pad.set_xx(3, 1, 1.0);
-///     pad.set_xx(3, 2, 1.0);
-///
-///     let mut normal = Vector::new(3);
-///     op::calc_normal_vector(&mut normal, &mut pad, &[0.0, 0.0, 0.0])?;
-///     const A: f64 = 1.0;
-///     assert_eq!(normal.as_data(), &[0.0, A / 4.0, 0.0]);
-///     Ok(())
-/// }
-/// ```
-pub fn calc_normal_vector(n: &mut Vector, pad: &mut Scratchpad, ksi: &[f64]) -> Result<(), StrError> {
-    // check
-    let (space_ndim, geo_ndim) = pad.jacobian.dims();
-    if geo_ndim >= space_ndim {
-        return Err("calc_normal_vector requires that geo_ndim must be smaller than space_ndim");
+impl Scratchpad {
+    /// Calculates the normal vector
+    ///
+    /// **Important:** This function only works with:
+    ///
+    /// * `CABLE` case (geo_ndim = 1 and space_ndim = 2) -- e.g., line in 2D, or
+    /// * `SHELL` case (geo_ndim = 2 and space_ndim = 3) -- e.g., surface in 3D.
+    ///
+    /// i.e., `geo_ndim < space_ndim`.
+    ///
+    /// # Output
+    ///
+    /// * `normal` -- (space_ndim) the normal vector; not necessarily unitary
+    /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- reference coordinates ξ with len ≥ geo_ndim
+    ///
+    /// # Examples
+    ///
+    /// ## Line in multi-dimensions (geo_ndim = 1 and space_ndim > 1)
+    ///
+    /// ```
+    /// use gemlab::shapes::{GeoKind, Scratchpad};
+    /// use gemlab::StrError;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  →  __       1   -----
+    ///     //  n |.      ,'     / \
+    ///     //      '.  ,'        |
+    ///     //        2'          H
+    ///     //      ,'            |
+    ///     //    ,'   45°        |
+    ///     //   0  ____________ \ /
+    ///
+    ///     const H: f64 = 5.0;
+    ///     let space_ndim = 2;
+    ///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin3)?;
+    ///     pad.set_xx(0, 0, 0.0);
+    ///     pad.set_xx(0, 1, 0.0);
+    ///     pad.set_xx(1, 0, H);
+    ///     pad.set_xx(1, 1, H);
+    ///     pad.set_xx(2, 0, H / 2.0);
+    ///     pad.set_xx(2, 1, H / 2.0);
+    ///
+    ///     // ||n|| = L/2 (2 is the length in the natural space)
+    ///     // nx = -(L/2)sin(45) = -(H√2/2) √2/2 = -H/2
+    ///     // ny = +(L/2)cos(45) = +(H√2/2) √2/2 = +H/2
+    ///     let mut normal = Vector::new(2);
+    ///     pad.calc_normal_vector(&mut normal, &[0.0, 0.0])?;
+    ///     assert_eq!(normal.as_data(), &[-H / 2.0, H / 2.0]);
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
+    /// ## Boundary surface (geo_ndim = 2 and space_ndim = 3)
+    ///
+    /// ```
+    /// use gemlab::shapes::{GeoKind, Scratchpad};
+    /// use gemlab::StrError;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //           .   .  .   . ,.2|
+    ///     //         ' .           ,,'||
+    ///     //       '   .         ,,'  ||
+    ///     //     '     .       .,'    ||  →
+    ///     //  .  .   . .   .  3'      ||  n
+    ///     //           z     ||   ==========)
+    ///     //  .        |     ||       ||
+    ///     //          ,*---y || .  . ,1
+    ///     //  .      x       ||    ,,'
+    ///     //      ,'         ||  ,,'
+    ///     //  . ,'           ||,,'
+    ///     //  . . .   .   .  |0'
+    ///
+    ///     let space_ndim = 3;
+    ///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4)?;
+    ///     pad.set_xx(0, 0, 1.0); // node 0
+    ///     pad.set_xx(0, 1, 1.0);
+    ///     pad.set_xx(0, 2, 0.0);
+    ///     pad.set_xx(1, 0, 0.0); // node 1
+    ///     pad.set_xx(1, 1, 1.0);
+    ///     pad.set_xx(1, 2, 0.0);
+    ///     pad.set_xx(2, 0, 0.0); // node 2
+    ///     pad.set_xx(2, 1, 1.0);
+    ///     pad.set_xx(2, 2, 1.0);
+    ///     pad.set_xx(3, 0, 1.0); // node 3
+    ///     pad.set_xx(3, 1, 1.0);
+    ///     pad.set_xx(3, 2, 1.0);
+    ///
+    ///     let mut normal = Vector::new(3);
+    ///     pad.calc_normal_vector(&mut normal, &[0.0, 0.0, 0.0])?;
+    ///     const A: f64 = 1.0;
+    ///     assert_eq!(normal.as_data(), &[0.0, A / 4.0, 0.0]);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn calc_normal_vector(&mut self, n: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
+        // check
+        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        if geo_ndim >= space_ndim {
+            return Err("calc_normal_vector requires that geo_ndim must be smaller than space_ndim");
+        }
+        if n.dim() != space_ndim {
+            return Err("n.dim() must be equal to space_ndim");
+        }
+
+        // matrix L: dNᵐ/dξ
+        (self.fn_deriv)(&mut self.deriv, ksi);
+
+        // matrix J: dx/dξ
+        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv)?;
+
+        // CABLE: line in 2D (geo_ndim = 1 and self.space_ndim = 2)
+        //          →
+        //         dx
+        // g₁(ξ) = —— = Xᵀ · L = first_column(J)
+        //         dξ
+        //
+        // →   →    →
+        // n = e₃ × g₁ = {-g₁_0, +g₁_1}
+        if space_ndim == 2 {
+            n[0] = -self.jacobian[1][0];
+            n[1] = self.jacobian[0][0];
+            return Ok(());
+        }
+
+        // SHELL: surface in 3D (geo_ndim = 2 and space_ndim = 3)
+        //          →
+        // →  →    dx
+        // g₁(ξ) = ——— = first_column(J)
+        //         dξ₁
+        //
+        //          →
+        // →  →    dx
+        // g₂(ξ) = ——— = second_column(J)
+        //         dξ₂
+        //
+        // →   →    →
+        // n = g₁ × g₂
+        let jj = &self.jacobian;
+        n[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
+        n[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
+        n[2] = jj[0][0] * jj[1][1] - jj[1][0] * jj[0][1];
+        Ok(())
     }
-    if n.dim() != space_ndim {
-        return Err("n.dim() must be equal to space_ndim");
-    }
-
-    // matrix L: dNᵐ/dξ
-    (pad.fn_deriv)(&mut pad.deriv, ksi);
-
-    // matrix J: dx/dξ
-    mat_mat_mul(&mut pad.jacobian, 1.0, &pad.xxt, &pad.deriv)?;
-
-    // CABLE: line in 2D (geo_ndim = 1 and self.space_ndim = 2)
-    //          →
-    //         dx
-    // g₁(ξ) = —— = Xᵀ · L = first_column(J)
-    //         dξ
-    //
-    // →   →    →
-    // n = e₃ × g₁ = {-g₁_0, +g₁_1}
-    if space_ndim == 2 {
-        n[0] = -pad.jacobian[1][0];
-        n[1] = pad.jacobian[0][0];
-        return Ok(());
-    }
-
-    // SHELL: surface in 3D (geo_ndim = 2 and space_ndim = 3)
-    //          →
-    // →  →    dx
-    // g₁(ξ) = ——— = first_column(J)
-    //         dξ₁
-    //
-    //          →
-    // →  →    dx
-    // g₂(ξ) = ——— = second_column(J)
-    //         dξ₂
-    //
-    // →   →    →
-    // n = g₁ × g₂
-    let jj = &pad.jacobian;
-    n[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
-    n[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
-    n[2] = jj[0][0] * jj[1][1] - jj[1][0] * jj[0][1];
-    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::calc_normal_vector;
-    use crate::shapes::op::testing::aux::{self, extract_edge, extract_face};
+    use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::ONE_BY_3;
     use crate::StrError;
@@ -169,12 +170,12 @@ mod tests {
         let mut n = Vector::new(1);
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         assert_eq!(
-            calc_normal_vector(&mut n, &mut pad, &[0.0, 0.0]).err(),
+            pad.calc_normal_vector(&mut n, &[0.0, 0.0]).err(),
             Some("calc_normal_vector requires that geo_ndim must be smaller than space_ndim")
         );
         let mut pad = Scratchpad::new(3, GeoKind::Tri3).unwrap();
         assert_eq!(
-            calc_normal_vector(&mut n, &mut pad, &[0.0, 0.0]).err(),
+            pad.calc_normal_vector(&mut n, &[0.0, 0.0]).err(),
             Some("n.dim() must be equal to space_ndim")
         );
     }
@@ -207,7 +208,7 @@ mod tests {
             let mut pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
 
             // check
-            calc_normal_vector(&mut normal, &mut pad, ksi)?;
+            pad.calc_normal_vector(&mut normal, ksi)?;
             assert_approx_eq!(vector_norm(&normal, NormVec::Euc), correct_magnitude, tol_mag);
             assert_vec_approx_eq!(normal.as_data(), &correct_normal, tol_vec);
         }
@@ -248,22 +249,22 @@ mod tests {
             let pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
 
             // face # 0
-            let mut pad_face = extract_face(0, &pad);
-            calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
+            let mut pad_face = aux::extract_face(0, &pad);
+            pad_face.calc_normal_vector(&mut normal, ksi)?;
             assert!(normal[0] < 0.0);
             assert!(normal[1] < 0.0);
             assert_approx_eq!(normal[2], 0.0, tol_vec);
 
             // face # 1
-            let mut pad_face = extract_face(1, &pad);
-            calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
+            let mut pad_face = aux::extract_face(1, &pad);
+            pad_face.calc_normal_vector(&mut normal, ksi)?;
             assert!(normal[0] > 0.0);
             assert!(normal[1] > 0.0);
             assert_approx_eq!(normal[2], 0.0, tol_vec);
 
             // face # 2
-            let mut pad_face = extract_face(2, &pad);
-            calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
+            let mut pad_face = aux::extract_face(2, &pad);
+            pad_face.calc_normal_vector(&mut normal, ksi)?;
             assert_approx_eq!(
                 vector_norm(&normal, NormVec::Euc),
                 correct_magnitude_face2_face3,
@@ -272,8 +273,8 @@ mod tests {
             assert_vec_approx_eq!(normal.as_data(), &correct_normal_face2, tol_vec);
 
             // face # 3
-            let mut pad_face = extract_face(3, &pad);
-            calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
+            let mut pad_face = aux::extract_face(3, &pad);
+            pad_face.calc_normal_vector(&mut normal, ksi)?;
             assert_approx_eq!(
                 vector_norm(&normal, NormVec::Euc),
                 correct_magnitude_face2_face3,
@@ -282,15 +283,15 @@ mod tests {
             assert_vec_approx_eq!(normal.as_data(), &correct_normal_face3, tol_vec);
 
             // face # 4
-            let mut pad_face = extract_face(4, &pad);
-            calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
+            let mut pad_face = aux::extract_face(4, &pad);
+            pad_face.calc_normal_vector(&mut normal, ksi)?;
             assert_approx_eq!(normal[0], 0.0, tol_vec);
             assert_approx_eq!(normal[1], 0.0, tol_vec);
             assert!(normal[2] < 0.0);
 
             // face # 5
-            let mut pad_face = extract_face(5, &pad);
-            calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
+            let mut pad_face = aux::extract_face(5, &pad);
+            pad_face.calc_normal_vector(&mut normal, ksi)?;
             assert_approx_eq!(normal[0], 0.0, tol_vec);
             assert_approx_eq!(normal[1], 0.0, tol_vec);
             assert!(normal[2] > 0.0);
@@ -348,8 +349,8 @@ mod tests {
             // loop over edges
             for e in 0..pad.kind.nedge() {
                 for ksi in ksi_values {
-                    let mut pad_edge = extract_edge(e, &pad);
-                    calc_normal_vector(&mut normal, &mut pad_edge, ksi)?;
+                    let mut pad_edge = aux::extract_edge(e, &pad);
+                    pad_edge.calc_normal_vector(&mut normal, ksi)?;
                     if pad.kind.is_tri_or_tet() {
                         // check triangle
                         assert_vec_approx_eq!(normal.as_data(), tri_correct[e], 1e-15);
@@ -424,8 +425,8 @@ mod tests {
             // loop over faces
             for f in 0..pad.kind.nface() {
                 for ksi in ksi_values {
-                    let mut pad_face = extract_face(f, &pad);
-                    calc_normal_vector(&mut normal, &mut pad_face, ksi)?;
+                    let mut pad_face = aux::extract_face(f, &pad);
+                    pad_face.calc_normal_vector(&mut normal, ksi)?;
                     if pad.kind.is_tri_or_tet() {
                         // check tetrahedron
                         assert_vec_approx_eq!(normal.as_data(), tet_correct[f], tol);
