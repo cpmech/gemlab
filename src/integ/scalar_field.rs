@@ -1,5 +1,5 @@
 use super::IntegPointData;
-use crate::shapes::{op, Scratchpad};
+use crate::shapes::Scratchpad;
 use crate::StrError;
 
 /// Implements the integration of a scalar field over a geometric shape
@@ -42,7 +42,7 @@ where
         let weight = ips[p][3];
 
         // calculate Jacobian
-        let det_jac = op::calc_jacobian(pad, iota)?;
+        let det_jac = pad.calc_jacobian(iota)?;
 
         // calculate s
         let s = fn_s(p)?;
@@ -63,8 +63,6 @@ mod tests {
     use crate::StrError;
     use russell_chk::assert_approx_eq;
 
-    #[allow(unused_imports)]
-    use crate::shapes::op::draw_shape;
     #[allow(unused_imports)]
     use plotpy::Plot;
 
@@ -193,7 +191,7 @@ mod tests {
 
         if false {
             let mut plot = Plot::new();
-            draw_shape(&mut plot, &pad, "", true, true)?;
+            pad.draw_shape(&mut plot, "", true, true)?;
             plot.set_equal_axes(true)
                 .set_figure_size_points(400.0, 400.0)
                 .save("/tmp/gemlab/test_scalar_fields_over_slanted_hex8.svg")?;

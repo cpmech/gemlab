@@ -1,10 +1,10 @@
-use crate::shapes::{op, Scratchpad};
+use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::Vector;
 
 /// Calculates the x-y-z coordinates of all integration points
 ///
-/// This function calls [op::calc_coords] to apply the isoparametric formula
+/// This function applies the isoparametric formula
 /// to all p-th integration points `ιᵖ` according to:
 ///
 /// ```text
@@ -68,7 +68,7 @@ pub fn calc_ips_coords(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Resul
     let mut all_coords = Vec::new();
     for iota in integ_points {
         let mut x = Vector::new(space_ndim);
-        op::calc_coords(&mut x, pad, iota)?;
+        pad.calc_coords(&mut x, iota)?;
         all_coords.push(x);
     }
     Ok(all_coords)

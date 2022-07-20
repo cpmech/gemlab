@@ -32,7 +32,7 @@ gemlab = "*"
 ```rust
 use gemlab::integ::default_integ_points;
 use gemlab::mesh::{set_pad_coords, At, Extract, Mesh, Region};
-use gemlab::shapes::{op, Scratchpad};
+use gemlab::shapes::Scratchpad;
 use gemlab::StrError;
 use std::collections::HashSet;
 
@@ -74,7 +74,7 @@ fn main() -> Result<(), StrError> {
     for p in 0..ips.len() {
         let iota = &ips[p];
         let weight = ips[p][3];
-        let det_jac = op::calc_jacobian(&mut pad, iota)?;
+        let det_jac = pad.calc_jacobian(iota)?;
         area += weight * det_jac;
     }
     assert_eq!(area, 0.5);

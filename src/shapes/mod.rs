@@ -1,8 +1,5 @@
 //! Interpolation functions and derivatives for geometric shapes (elements)
 //!
-//! **Important:** See the **submodule [op]** for functions to perform the calculations discussed below.
-//! The submodule [op] also offers some examples.
-//!
 //! # Definitions
 //!
 //! Here, we consider the following definitions:
@@ -306,7 +303,6 @@ mod lin2;
 mod lin3;
 mod lin4;
 mod lin5;
-pub mod op;
 mod qua12;
 mod qua16;
 mod qua17;
@@ -314,6 +310,13 @@ mod qua4;
 mod qua8;
 mod qua9;
 mod scratchpad;
+mod scratchpad_approximate_ksi;
+mod scratchpad_calc_coords;
+mod scratchpad_calc_gradient;
+mod scratchpad_calc_jacobian;
+mod scratchpad_calc_normal_vector;
+mod scratchpad_draw_shape;
+mod scratchpad_testing;
 mod tet10;
 mod tet20;
 mod tet4;
@@ -336,6 +339,12 @@ pub use crate::shapes::qua4::*;
 pub use crate::shapes::qua8::*;
 pub use crate::shapes::qua9::*;
 pub use crate::shapes::scratchpad::*;
+pub use crate::shapes::scratchpad_approximate_ksi::*;
+pub use crate::shapes::scratchpad_calc_coords::*;
+pub use crate::shapes::scratchpad_calc_gradient::*;
+pub use crate::shapes::scratchpad_calc_jacobian::*;
+pub use crate::shapes::scratchpad_calc_normal_vector::*;
+pub use crate::shapes::scratchpad_draw_shape::*;
 pub use crate::shapes::tet10::*;
 pub use crate::shapes::tet20::*;
 pub use crate::shapes::tet4::*;

@@ -1,7 +1,6 @@
 use super::{Cell, Mesh, Point};
 use crate::mesh::{set_pad_coords, PointId};
-use crate::shapes::op::draw_shape;
-use crate::shapes::{op, GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
+use crate::shapes::{GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
 use crate::util::{AsArray2D, GridSearch, PI};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
@@ -359,7 +358,7 @@ impl Block {
                 }
             }
         }
-        draw_shape(plot, &self.pad, "#046002", with_ids, set_range)
+        self.pad.draw_shape(plot, "#046002", with_ids, set_range)
     }
 
     /// Sets group
@@ -665,7 +664,7 @@ impl Block {
                                     self.map_coords_cylindrical(&mut x, &ksi);
                                 } else {
                                     // compute real coordinates of point using the block's
-                                    op::calc_coords(&mut x, &mut self.pad, &ksi)?;
+                                    self.pad.calc_coords(&mut x, &ksi)?;
                                     if self.has_constraints {
                                         if let Some(side) = self.handle_constraints(&mut x, &ksi)? {
                                             constrained_point_to_side.insert(point_id, side);
@@ -722,7 +721,7 @@ impl Block {
                                     // use a Lin2 with the natural coords of target to calculate
                                     // the real position of the interior/middle node
                                     let ksi_edge = target_edge_kind.reference_coords(idx);
-                                    op::calc_coords(&mut x, &mut pad_lin2, ksi_edge)?;
+                                    pad_lin2.calc_coords(&mut x, ksi_edge)?;
                                     for dim in 0..ndim {
                                         mesh.points[p].coords[dim] = x[dim];
                                     }
@@ -741,7 +740,7 @@ impl Block {
                                 for idx in 0..target_n_interior_nodes {
                                     let m = target.interior_node(idx);
                                     let ksi_interior = target.reference_coords(m);
-                                    op::calc_coords(&mut x, pad_ser, ksi_interior)?;
+                                    pad_ser.calc_coords(&mut x, ksi_interior)?;
                                     for dim in 0..ndim {
                                         mesh.points[points[m]].coords[dim] = x[dim];
                                     }

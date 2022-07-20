@@ -1,131 +1,130 @@
-use super::{calc_coords, calc_jacobian};
-use crate::shapes::Scratchpad;
+use super::Scratchpad;
 use crate::StrError;
 use russell_lab::{mat_vec_mul, vector_norm, NormVec, Vector};
 
-/// Approximates the reference coordinates from given real coordinates (inverse mapping)
-///
-/// **Note:** This function works with `geo_ndim == space_ndim` only.
-///
-/// This function uses Newton iterations and the inverse of the Jacobian to compute `ξ(x)`.
-///
-/// # Output
-///
-/// * `ksi` -- ξ reference coordinates (geo_ndim=space_ndim)
-/// * `pad.interp` -- interpolation functions (nnode)
-/// * `pad.deriv` -- interpolation functions (nnode,geo_ndim=space_ndim)
-/// * `pad.jacobian` -- Jacobian matrix (space_ndim,geo_ndim=space_ndim)
-/// * `pad.inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
-/// * Returns the number of iterations
-///
-/// # Input
-///
-/// * `x` -- real coordinates (space_ndim = geo_ndim)
-/// * `nit_max` -- maximum number of iterations (e.g., 10)
-/// * `tol` -- tolerance for the norm of the difference x - x(ξ) (e.g., 1e-14)
-///
-/// # Examples
-///
-/// ```
-/// use gemlab::shapes::{op, GeoKind, Scratchpad};
-/// use gemlab::StrError;
-/// use russell_chk::assert_vec_approx_eq;
-/// use russell_lab::Vector;
-///
-/// fn main() -> Result<(), StrError> {
-///     // 7.0        2                ξ₀   ξ₁
-///     //           / `.       node    r    s
-///     //          /    `.        0  0.0  0.0
-///     //     (3.5,6.0)   `.      1  1.0  0.0
-///     //        /          `.    2  0.0  1.0
-///     //       /             `.
-///     // 5.0  0-----------------1
-///     //     3.0   4.0   5.0   6.0
-///
-///     let space_ndim = 2;
-///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
-///     pad.set_xx(0, 0, 3.0);
-///     pad.set_xx(0, 1, 5.0);
-///     pad.set_xx(1, 0, 6.0);
-///     pad.set_xx(1, 1, 5.0);
-///     pad.set_xx(2, 0, 4.0);
-///     pad.set_xx(2, 1, 7.0);
-///
-///     // x @ middle of edge (0,2)
-///     let x = Vector::from(&[3.5, 6.0]);
-///
-///     // find ξ corresponding to x @ middle of edge (0,2)
-///     let mut ksi = vec![0.0; 2];
-///     op::approximate_ksi(&mut ksi, &mut pad, &x, 10, 1e-8)?;
-///     assert_vec_approx_eq!(ksi, &[0.0, 0.5], 1e-8);
-///     Ok(())
-/// }
-/// ```
-pub fn approximate_ksi(
-    ksi: &mut [f64],
-    pad: &mut Scratchpad,
-    x: &Vector,
-    nit_max: usize,
-    tol: f64,
-) -> Result<usize, StrError> {
-    // check
-    let (space_ndim, geo_ndim) = pad.jacobian.dims();
-    if geo_ndim != space_ndim {
-        return Err("approximate_ksi requires that geo_ndim = space_ndim");
-    }
-    if x.dim() != space_ndim {
-        return Err("x.dim() must be equal to space_ndim");
-    }
-    if ksi.len() != geo_ndim {
-        return Err("ksi.len() must be equal to geo_ndim = space_ndim");
-    }
-
-    // use linear interpolation to guess ksi
-    let (kmin, kdel) = if pad.kind.is_tri_or_tet() {
-        (0.0, 1.0) // Tri or Tet
-    } else {
-        (-1.0, 2.0) // Qua or Hex
-    };
-    for j in 0..space_ndim {
-        ksi[j] = kmin + kdel * (x[j] - pad.xmin[j]) / (pad.xmax[j] - pad.xmin[j]);
-    }
-
-    // perform iterations
-    let mut residual = Vector::new(space_ndim);
-    let mut x_at_ksi = Vector::new(space_ndim);
-    let mut delta_ksi = Vector::new(geo_ndim);
-    for it in 0..nit_max {
-        // check residual
-        calc_coords(&mut x_at_ksi, pad, ksi)?;
-        for i in 0..space_ndim {
-            residual[i] = x[i] - x_at_ksi[i];
+impl Scratchpad {
+    /// Approximates the reference coordinates from given real coordinates (inverse mapping)
+    ///
+    /// **Note:** This function works with `geo_ndim == space_ndim` only.
+    ///
+    /// This function uses Newton iterations and the inverse of the Jacobian to compute `ξ(x)`.
+    ///
+    /// # Output
+    ///
+    /// * `ksi` -- ξ reference coordinates (geo_ndim=space_ndim)
+    /// * `interp` -- interpolation functions (nnode)
+    /// * `deriv` -- interpolation functions (nnode,geo_ndim=space_ndim)
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim=space_ndim)
+    /// * `inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
+    /// * Returns the number of iterations
+    ///
+    /// # Input
+    ///
+    /// * `x` -- real coordinates (space_ndim = geo_ndim)
+    /// * `nit_max` -- maximum number of iterations (e.g., 10)
+    /// * `tol` -- tolerance for the norm of the difference x - x(ξ) (e.g., 1e-14)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::{GeoKind, Scratchpad};
+    /// use gemlab::StrError;
+    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_lab::Vector;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     // 7.0        2                ξ₀   ξ₁
+    ///     //           / `.       node    r    s
+    ///     //          /    `.        0  0.0  0.0
+    ///     //     (3.5,6.0)   `.      1  1.0  0.0
+    ///     //        /          `.    2  0.0  1.0
+    ///     //       /             `.
+    ///     // 5.0  0-----------------1
+    ///     //     3.0   4.0   5.0   6.0
+    ///
+    ///     let space_ndim = 2;
+    ///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+    ///     pad.set_xx(0, 0, 3.0);
+    ///     pad.set_xx(0, 1, 5.0);
+    ///     pad.set_xx(1, 0, 6.0);
+    ///     pad.set_xx(1, 1, 5.0);
+    ///     pad.set_xx(2, 0, 4.0);
+    ///     pad.set_xx(2, 1, 7.0);
+    ///
+    ///     // x @ middle of edge (0,2)
+    ///     let x = Vector::from(&[3.5, 6.0]);
+    ///
+    ///     // find ξ corresponding to x @ middle of edge (0,2)
+    ///     let mut ksi = vec![0.0; 2];
+    ///     pad.approximate_ksi(&mut ksi, &x, 10, 1e-8)?;
+    ///     assert_vec_approx_eq!(ksi, &[0.0, 0.5], 1e-8);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn approximate_ksi(
+        &mut self,
+        ksi: &mut [f64],
+        x: &Vector,
+        nit_max: usize,
+        tol: f64,
+    ) -> Result<usize, StrError> {
+        // check
+        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        if geo_ndim != space_ndim {
+            return Err("approximate_ksi requires that geo_ndim = space_ndim");
         }
-        if vector_norm(&residual, NormVec::Euc) <= tol {
-            return Ok(it);
+        if x.dim() != space_ndim {
+            return Err("x.dim() must be equal to space_ndim");
+        }
+        if ksi.len() != geo_ndim {
+            return Err("ksi.len() must be equal to geo_ndim = space_ndim");
         }
 
-        // calc Jacobian
-        calc_jacobian(pad, ksi)?;
-
-        // calc ksi increment
-        mat_vec_mul(&mut delta_ksi, 1.0, &pad.inv_jacobian, &residual).unwrap(); // cannot fail because all dims have been checked
-
-        // update ksi
-        for j in 0..geo_ndim {
-            ksi[j] += delta_ksi[j];
+        // use linear interpolation to guess ksi
+        let (kmin, kdel) = if self.kind.is_tri_or_tet() {
+            (0.0, 1.0) // Tri or Tet
+        } else {
+            (-1.0, 2.0) // Qua or Hex
+        };
+        for j in 0..space_ndim {
+            ksi[j] = kmin + kdel * (x[j] - self.xmin[j]) / (self.xmax[j] - self.xmin[j]);
         }
-    }
 
-    Err("approximate_ksi failed to converge")
+        // perform iterations
+        let mut residual = Vector::new(space_ndim);
+        let mut x_at_ksi = Vector::new(space_ndim);
+        let mut delta_ksi = Vector::new(geo_ndim);
+        for it in 0..nit_max {
+            // check residual
+            self.calc_coords(&mut x_at_ksi, ksi)?;
+            for i in 0..space_ndim {
+                residual[i] = x[i] - x_at_ksi[i];
+            }
+            if vector_norm(&residual, NormVec::Euc) <= tol {
+                return Ok(it);
+            }
+
+            // calc Jacobian
+            self.calc_jacobian(ksi)?;
+
+            // calc ksi increment
+            mat_vec_mul(&mut delta_ksi, 1.0, &self.inv_jacobian, &residual).unwrap(); // cannot fail because all dims have been checked
+
+            // update ksi
+            for j in 0..geo_ndim {
+                ksi[j] += delta_ksi[j];
+            }
+        }
+
+        Err("approximate_ksi failed to converge")
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::approximate_ksi;
-    use crate::shapes::op::calc_coords;
-    use crate::shapes::op::testing::aux;
+    use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::GeoKind;
     use crate::shapes::Scratchpad;
     use crate::util::{ONE_BY_3, SQRT_3};
@@ -139,22 +138,22 @@ mod tests {
         let x = Vector::new(1);
         let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
         assert_eq!(
-            approximate_ksi(&mut ksi, &mut pad, &x, 1, 1e-15).err(),
+            pad.approximate_ksi(&mut ksi, &x, 1, 1e-15).err(),
             Some("approximate_ksi requires that geo_ndim = space_ndim")
         );
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         assert_eq!(
-            approximate_ksi(&mut ksi, &mut pad, &x, 1, 1e-15).err(),
+            pad.approximate_ksi(&mut ksi, &x, 1, 1e-15).err(),
             Some("x.dim() must be equal to space_ndim")
         );
         let x = Vector::new(2);
         assert_eq!(
-            approximate_ksi(&mut ksi, &mut pad, &x, 1, 1e-15).err(),
+            pad.approximate_ksi(&mut ksi, &x, 1, 1e-15).err(),
             Some("ksi.len() must be equal to geo_ndim = space_ndim")
         );
         let mut ksi = vec![0.0; 2];
         assert_eq!(
-            approximate_ksi(&mut ksi, &mut pad, &x, 1, 1e-15).err(),
+            pad.approximate_ksi(&mut ksi, &x, 1, 1e-15).err(),
             Some("all components of the coordinates matrix must be set first")
         );
     }
@@ -201,10 +200,10 @@ mod tests {
                 let ksi_ref = kind.reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
-                calc_coords(&mut x, &mut pad, ksi_ref)?;
+                pad.calc_coords(&mut x, ksi_ref)?;
 
                 // compute approximation of the inverse mapping ξᵐ(xᵐ)
-                let nit = approximate_ksi(&mut ksi, &mut pad, &x, 10, 1e-14)?;
+                let nit = pad.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
 
                 // check (linear and bi-linear shapes converge with nit = 1)
                 if kind == GeoKind::Tri3 || kind == GeoKind::Qua4 || kind == GeoKind::Tet4 || kind == GeoKind::Hex8 {
@@ -219,8 +218,8 @@ mod tests {
             } else {
                 vec![0.0; geo_ndim]
             };
-            calc_coords(&mut x, &mut pad, &ksi_in)?;
-            approximate_ksi(&mut ksi, &mut pad, &x, 10, 1e-14)?;
+            pad.calc_coords(&mut x, &ksi_in)?;
+            pad.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
             assert_vec_approx_eq!(ksi, ksi_in, tol);
         }
         Ok(())
@@ -287,9 +286,9 @@ mod tests {
             (6, [100.0, 100.0], 1e-12),
         ] {
             let x = Vector::from(x_data);
-            let nit = approximate_ksi(&mut ksi, &mut pad, &x, 30, *tol)?;
+            let nit = pad.approximate_ksi(&mut ksi, &x, 30, *tol)?;
             let mut x_out = Vector::new(2);
-            calc_coords(&mut x_out, &mut pad, &ksi)?;
+            pad.calc_coords(&mut x_out, &ksi)?;
             assert_vec_approx_eq!(x.as_data(), x_out.as_data(), *tol);
             assert_eq!(nit, *nit_correct);
         }

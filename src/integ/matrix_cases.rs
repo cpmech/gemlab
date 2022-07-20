@@ -1,5 +1,5 @@
 use super::IntegPointData;
-use crate::shapes::{op, Scratchpad};
+use crate::shapes::Scratchpad;
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::Matrix;
@@ -152,7 +152,7 @@ where
         let weight = ips[p][3];
 
         // calculate Jacobian and Gradient
-        let det_jac = op::calc_gradient(pad, iota)?;
+        let det_jac = pad.calc_gradient(iota)?;
 
         // calculate D tensor
         fn_dd(&mut dd, p)?;
