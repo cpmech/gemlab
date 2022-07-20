@@ -918,7 +918,7 @@ mod tests {
         draw.cell_ids(&mut plot, &region.mesh)?;
 
         // save figure
-        if false {
+        if true {
             plot.set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)
                 .set_range(-0.1, 2.1, -0.1, 2.1)
@@ -936,7 +936,7 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        if false {
+        if true {
             plot.set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)
                 .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua12.svg")?;
@@ -953,7 +953,7 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        if false {
+        if true {
             plot.set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)
                 .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua16.svg")?;
@@ -969,7 +969,7 @@ mod tests {
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
-        if false {
+        if true {
             plot.set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)
                 .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua17.svg")?;
@@ -986,7 +986,7 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        if false {
+        if true {
             plot.set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)
                 .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_mixed.svg")?;
@@ -1011,7 +1011,7 @@ mod tests {
         draw.points(&mut plot, &region.mesh);
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        if false {
+        if true {
             plot.set_figure_size_points(500.0, 500.0)
                 .set_equal_axes(true)
                 .save("/tmp/gemlab/test_draw_edges_points_and_ids_work_3d.svg")?;
@@ -1028,7 +1028,7 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        if false {
+        if true {
             plot.set_figure_size_points(800.0, 800.0)
                 .set_equal_axes(true)
                 .save("/tmp/gemlab/test_draw_edges_and_ids_work_3d_1.svg")?;
@@ -1045,7 +1045,7 @@ mod tests {
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
         draw.cell_ids(&mut plot, &region.mesh)?;
-        if false {
+        if true {
             plot.set_figure_size_points(800.0, 800.0)
                 .set_equal_axes(true)
                 .save("/tmp/gemlab/test_draw_edges_and_ids_work_3d_2.svg")?;
