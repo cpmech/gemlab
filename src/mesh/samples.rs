@@ -334,7 +334,7 @@ impl Samples {
     ///     0.0          1.0
     /// ```
     ///
-    /// ![two_tri3.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_tri3.svg)
+    /// ![two_tri3](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_tri3.svg)
     #[rustfmt::skip]
     pub fn two_tri3() -> Mesh {
         Mesh {
@@ -366,7 +366,7 @@ impl Samples {
     ///               1
     /// ```
     ///
-    /// ![three_tri3.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri3.svg)
+    /// ![three_tri3](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri3.svg)
     #[rustfmt::skip]
     pub fn three_tri3() -> Mesh {
         Mesh {
@@ -402,7 +402,7 @@ impl Samples {
     ///     0.0          1.0          2.0
     /// ```
     ///
-    /// ![two_tri3_one_qua4.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_tri3_one_qua4.svg)
+    /// ![two_tri3_one_qua4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_tri3_one_qua4.svg)
     #[rustfmt::skip]
     pub fn two_tri3_one_qua4() -> Mesh {
         Mesh {
@@ -438,7 +438,7 @@ impl Samples {
     ///     0.0           1.0
     /// ```
     ///
-    /// ![one_qua8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_qua8.svg)
+    /// ![one_qua8](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_qua8.svg)
     #[rustfmt::skip]
     pub fn one_qua8() -> Mesh {
         Mesh {
@@ -474,7 +474,7 @@ impl Samples {
     ///     0.0         1.0         2.0
     /// ```
     ///
-    /// ![two_qua4.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_qua4.svg)
+    /// ![two_qua4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_qua4.svg)
     #[rustfmt::skip]
     pub fn two_qua4() -> Mesh {
         Mesh {
@@ -496,7 +496,7 @@ impl Samples {
 
     /// Returns a mesh with one Qua8, one Tri6, and two Lin2
     ///
-    /// ![qua8_tri6_lin2.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_qua8_tri6_lin2.svg)
+    /// ![qua8_tri6_lin2](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_qua8_tri6_lin2.svg)
     #[rustfmt::skip]
     pub fn qua8_tri6_lin2() -> Mesh {
         let h = 0.866; // ~ SQRT_3 / 2
@@ -544,7 +544,7 @@ impl Samples {
     /// 0.0            1.0
     /// ```
     ///
-    /// ![one_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_hex8.svg)
+    /// ![one_hex8](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_hex8.svg)
     #[rustfmt::skip]
     pub fn one_hex8() -> Mesh {
         Mesh {
@@ -594,7 +594,7 @@ impl Samples {
     /// 0.0            1.0
     /// ```
     ///
-    /// ![two_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_hex8.svg)
+    /// ![two_hex8](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_hex8.svg)
     #[rustfmt::skip]
     pub fn two_hex8() -> Mesh {
         Mesh {
@@ -649,7 +649,7 @@ impl Samples {
     /// 0.0            1.0            2.0
     /// ```
     ///
-    /// ![four_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_four_hex8.svg)
+    /// ![four_hex8](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_four_hex8.svg)
     #[rustfmt::skip]
     pub fn four_hex8() -> Mesh {
         Mesh {
@@ -698,7 +698,7 @@ impl Samples {
     ///     0.0         1.0         2.0         3.0
     /// ```
     ///
-    /// ![mixed_shapes_2d.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_mixed_shapes_2d.svg)
+    /// ![mixed_shapes_2d](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_mixed_shapes_2d.svg)
     #[rustfmt::skip]
     pub fn mixed_shapes_2d() -> Mesh {
         Mesh {
@@ -740,7 +740,7 @@ impl Samples {
     ///  12-----11-------1------------2------------8
     /// ```
     ///
-    /// ![mixed_shapes_3d.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_mixed_shapes_3d.svg)
+    /// ![mixed_shapes_3d](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_mixed_shapes_3d.svg)
     #[rustfmt::skip]
     pub fn mixed_shapes_3d() -> Mesh {
         Mesh {
@@ -791,9 +791,9 @@ impl Samples {
     ///
     /// xmin = 0.0, xmax = 2.0
     /// ymin = 0.0, ymax = 2.0
-    /// ``
+    /// ```
     ///
-    /// ![block_2d_four_qua4.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua4.svg)
+    /// ![block_2d_four_qua4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua4.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua4() -> Mesh {
         Mesh {
@@ -841,7 +841,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 2.0
     /// ```
     ///
-    /// ![block_2d_four_qua8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua8.svg)
+    /// ![block_2d_four_qua8](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua8.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua8() -> Mesh {
         Mesh {
@@ -903,7 +903,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 2.0
     /// ```
     ///
-    /// ![block_2d_four_qua9.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua9.svg)
+    /// ![block_2d_four_qua9](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua9.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua9() -> Mesh {
         Mesh {
@@ -969,7 +969,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 3.0
     /// ```
     ///
-    /// ![block_2d_four_qua12.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua12.svg)
+    /// ![block_2d_four_qua12](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua12.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua12() -> Mesh {
         Mesh {
@@ -1043,7 +1043,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 3.0
     /// ```
     ///
-    /// ![block_2d_four_qua16.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua16.svg)
+    /// ![block_2d_four_qua16](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua16.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua16() -> Mesh {
         Mesh {
@@ -1137,7 +1137,7 @@ impl Samples {
     /// ymin = 0.0, ymax = 4.0
     /// ```
     ///
-    /// ![block_2d_four_qua17.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua17.svg)
+    /// ![block_2d_four_qua17](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_2d_four_qua17.svg)
     #[rustfmt::skip]
     pub fn block_2d_four_qua17() -> Mesh {
         Mesh {
@@ -1254,7 +1254,7 @@ impl Samples {
     /// zmin = 0.0, zmax = 4.0
     /// ```
     ///
-    /// ![block_3d_eight_hex8.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_3d_eight_hex8.svg)
+    /// ![block_3d_eight_hex8](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_3d_eight_hex8.svg)
     #[rustfmt::skip]
     pub fn block_3d_eight_hex8() -> Mesh {
         Mesh {
@@ -1353,7 +1353,7 @@ impl Samples {
     /// zmin = 0.0, zmax = 4.0
     /// ```
     ///
-    /// ![block_3d_eight_hex20.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_3d_eight_hex20.svg)
+    /// ![block_3d_eight_hex20](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_block_3d_eight_hex20.svg)
     #[rustfmt::skip]
     pub fn block_3d_eight_hex20() -> Mesh {
         Mesh {
@@ -1476,7 +1476,7 @@ impl Samples {
     ///                     1.0 1.25  1.5 1.75  2.0
     /// ```
     ///
-    /// ![ring_eight_qua8_rad1_thick1.svg](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_ring_eight_qua8_rad1_thick1.svg)
+    /// ![ring_eight_qua8_rad1_thick1](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_ring_eight_qua8_rad1_thick1.svg)
     #[rustfmt::skip]
     pub fn ring_eight_qua8_rad1_thick1() -> Mesh {
         Mesh {
