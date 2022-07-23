@@ -7,7 +7,7 @@ pub struct Samples;
 impl Samples {
     /// Returns a mesh with every kind of Lin cell
     ///
-    /// ![test_draw_cells_and_points_work_1_lin](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
+    /// ![lin_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
     #[rustfmt::skip]
     pub fn lin_cells() -> Mesh {
         Mesh {
@@ -42,7 +42,7 @@ impl Samples {
 
     /// Returns a mesh with every kind of Tri cell
     ///
-    /// ![test_draw_cells_and_points_work_2_tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
+    /// ![tri_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
     #[rustfmt::skip]
     pub fn tri_cells() -> Mesh {
         Mesh {
@@ -97,7 +97,7 @@ impl Samples {
 
     /// Returns a mesh with every kind of Qua cell
     ///
-    /// ![test_draw_cells_and_points_work_3_qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
+    /// ![qua_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
     #[rustfmt::skip]
     pub fn qua_cells() -> Mesh {
         Mesh {
@@ -188,7 +188,7 @@ impl Samples {
 
     /// Returns a mesh with every kind of Tet cell
     ///
-    /// ![test_draw_cells_and_points_work_4_tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
+    /// ![tet_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
     #[rustfmt::skip]
     pub fn tet_cells() -> Mesh {
         Mesh {
@@ -241,7 +241,7 @@ impl Samples {
 
     /// Returns a mesh with every kind of Hex cell
     ///
-    /// ![test_draw_cells_and_points_work_5_hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
+    /// ![hex_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
     #[rustfmt::skip]
     pub fn hex_cells() -> Mesh {
         Mesh {
@@ -314,6 +314,115 @@ impl Samples {
                 Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0, 1, 2, 3, 4, 5, 6, 7] },
                 Cell { id: 1, attribute_id: 1, kind: GeoKind::Hex20, points: vec![8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] },
                 Cell { id: 2, attribute_id: 1, kind: GeoKind::Hex32, points: vec![28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Lin2
+    ///
+    /// ```text
+    ///    1
+    ///   /
+    ///  /
+    /// 0
+    /// ```
+    ///
+    /// ![one_lin2](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_lin2.svg)
+    #[rustfmt::skip]
+    pub fn one_lin2() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Tri3
+    ///
+    /// ```text
+    ///       2
+    ///      / \
+    ///     /   \
+    ///    /     \
+    ///   /       \
+    ///  /         \
+    /// 0-----------1
+    /// ```
+    ///
+    /// ![one_tri3](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_tri3.svg)
+    #[rustfmt::skip]
+    pub fn one_tri3() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0 ] },
+                Point { id: 1, coords: vec![1.0, 0.0 ] },
+                Point { id: 2, coords: vec![0.5, 0.85] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Tri6
+    ///
+    /// ```text
+    ///       2
+    ///      / \
+    ///     /   \
+    ///    5     4
+    ///   /       \
+    ///  /         \
+    /// 0-----3-----1
+    /// ```
+    ///
+    /// ![one_tri6](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_tri6.svg)
+    #[rustfmt::skip]
+    pub fn one_tri6() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0,  0.0  ] },
+                Point { id: 1, coords: vec![1.0,  0.0  ] },
+                Point { id: 2, coords: vec![0.5,  0.85 ] },
+                Point { id: 3, coords: vec![0.5,  0.0  ] },
+                Point { id: 4, coords: vec![0.75, 0.425] },
+                Point { id: 5, coords: vec![0.25, 0.425] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri6, points: vec![0, 1, 2, 3, 4, 5] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with one Qua4
+    ///
+    /// ```text
+    /// 3------2
+    /// |      |
+    /// |      |
+    /// 0------1
+    /// ```
+    ///
+    /// ![one_qua4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_qua4.svg)
+    #[rustfmt::skip]
+    pub fn one_qua4() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0] },
+                Point { id: 2, coords: vec![1.0, 1.0] },
+                Point { id: 3, coords: vec![0.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
             ],
         }
     }
@@ -1573,6 +1682,42 @@ mod tests {
         assert_eq!(mesh.points.len(), 60);
         assert_eq!(mesh.cells.len(), 3);
         check_all(&mesh)?;
+
+        let mesh = Samples::one_lin2();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 2);
+        assert_eq!(mesh.cells.len(), 1);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_lin2.svg")?;
+        }
+
+        let mesh = Samples::one_tri3();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 3);
+        assert_eq!(mesh.cells.len(), 1);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_tri3.svg")?;
+        }
+
+        let mesh = Samples::one_tri6();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 6);
+        assert_eq!(mesh.cells.len(), 1);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_tri6.svg")?;
+        }
+
+        let mesh = Samples::one_qua4();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 4);
+        assert_eq!(mesh.cells.len(), 1);
+        check_all(&mesh)?;
+        if false {
+            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_qua4.svg")?;
+        }
 
         let mesh = Samples::two_tri3();
         assert_eq!(mesh.ndim, 2);
