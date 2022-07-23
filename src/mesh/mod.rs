@@ -15,23 +15,23 @@
 //!
 //! # Linear cells -- Lin
 //!
-//! ![test_draw_cells_and_points_work_1_lin](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
+//! ![lin_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
 //!
 //! # Triangles -- Tri
 //!
-//! ![test_draw_cells_and_points_work_2_tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
+//! ![tri_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
 //!
 //! # Quadrilaterals -- Qua
 //!
-//! ![test_draw_cells_and_points_work_3_qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
+//! ![qua_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
 //!
 //! # Tetrahedra -- Tet
 //!
-//! ![test_draw_cells_and_points_work_4_tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
+//! ![tet_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
 //!
 //! # Hexahedra -- Hex
 //!
-//! ![test_draw_cells_and_points_work_5_hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
+//! ![hex_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
 //!
 
 mod algorithms;
