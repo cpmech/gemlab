@@ -54,7 +54,7 @@ fn main() -> Result<(), StrError> {
     //     0.0     0.5     1.0
     let path = "./data/meshes/four_tri3_one_qua4.msh";
     let mesh = Mesh::from_text_file(path)?;
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // Find entities along the boundary of the mesh
     // by giving coordinates. The `At` enum provides

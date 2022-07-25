@@ -1674,7 +1674,7 @@ mod tests {
         }
         if false {
             draw_ring_and_mesh(
-                &Region::with(&mesh, Extract::All)?,
+                &Region::new(&mesh, Extract::All)?,
                 &block.args_ring,
                 true,
                 true,
@@ -1719,7 +1719,7 @@ mod tests {
         }
         if false {
             draw_ring_and_mesh(
-                &Region::with(&mesh, Extract::All)?,
+                &Region::new(&mesh, Extract::All)?,
                 &block.args_ring,
                 true,
                 true,
@@ -1847,7 +1847,7 @@ mod tests {
         set_range: bool,
         filename: &str,
     ) -> Result<(), StrError> {
-        let region = Region::with(&mesh, Extract::All)?;
+        let region = Region::new(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         block.draw(plot, false, set_range)?;
         draw.canvas_point_ids

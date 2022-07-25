@@ -761,7 +761,7 @@ mod tests {
 
         // draw edges
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let region = Region::with(&mesh, Extract::All)?;
+        let region = Region::new(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, false)?;
 
@@ -794,7 +794,7 @@ mod tests {
     fn draw_edges_and_ids_work_2d_qua12() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua12();
-        let region = Region::with(&mesh, Extract::All)?;
+        let region = Region::new(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
@@ -811,7 +811,7 @@ mod tests {
     fn draw_edges_and_ids_work_2d_qua16() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua16();
-        let region = Region::with(&mesh, Extract::All)?;
+        let region = Region::new(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
@@ -828,7 +828,7 @@ mod tests {
     fn draw_edges_and_ids_work_2d_qua17() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua17();
-        let region = Region::with(&mesh, Extract::All)?;
+        let region = Region::new(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
@@ -844,7 +844,7 @@ mod tests {
     fn draw_edges_and_ids_work_2d_mixed() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::mixed_shapes_2d();
-        let region = Region::with(&mesh, Extract::All)?;
+        let region = Region::new(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
@@ -861,7 +861,7 @@ mod tests {
     fn draw_edges_points_and_ids_work_3d() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::two_hex8();
-        let region = Region::with(&mesh, Extract::All)?;
+        let region = Region::new(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.canvas_point_ids
@@ -886,7 +886,7 @@ mod tests {
     fn draw_edges_and_ids_work_3d_1() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::block_3d_eight_hex20();
-        let region = Region::with(&mesh, Extract::All)?;
+        let region = Region::new(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);
@@ -903,7 +903,7 @@ mod tests {
     fn draw_edges_and_ids_work_3d_2() -> Result<(), StrError> {
         let mut plot = Plot::new();
         let mesh = Samples::mixed_shapes_3d();
-        let region = Region::with(&mesh, Extract::All)?;
+        let region = Region::new(&mesh, Extract::All)?;
         let mut draw = Draw::new();
         draw.edges(&mut plot, &region, true)?;
         draw.point_ids(&mut plot, &region.mesh);

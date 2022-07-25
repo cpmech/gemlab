@@ -19,7 +19,7 @@ where
 fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/column_distorted_tris_quads.msh")?;
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // check sizes
     assert_eq!(region.mesh.points.len(), 13);
@@ -92,7 +92,7 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
 fn test_rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
     // for both tris or quas where 2.0 corresponds to the edge_length in the reference system
