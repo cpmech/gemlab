@@ -77,7 +77,6 @@ pub fn check_2d_edge_normals(
         let mut pad = Scratchpad::new(mesh.ndim, edge.kind)?;
         set_pad_coords(&mut pad, &edge.points, mesh);
         pad.calc_normal_vector(&mut normal, ksi)?;
-        // shape.calc_boundary_normal(&mut normal, &mut state, ksi)?;
         for i in 0..mesh.ndim {
             if f64::abs(normal[i] - solution[i]) > tolerance {
                 return Err("wrong 2d edge normal vector found");
