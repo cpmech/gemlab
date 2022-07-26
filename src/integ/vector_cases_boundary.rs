@@ -50,8 +50,8 @@ use russell_lab::Vector;
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
-/// * `fn_t` -- Function `f(t,p,n)` that calculates `t(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
-///    and given the normal vector `n(x(ιᵖ))`. The dim of `v` and `n` is equal to `space_ndim`.
+/// * `fn_t` -- Function `f(t,p,un)` that calculates `t(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+///    and given the **unit** normal vector `un(x(ιᵖ))`. The dim of `v` and `n` is equal to `space_ndim`.
 ///
 /// # Examples
 ///
@@ -75,7 +75,7 @@ where
 
     // allocate auxiliary vectors
     let mut t = Vector::new(space_ndim);
-    let mut n = Vector::new(space_ndim); // normal vector
+    let mut un = Vector::new(space_ndim); // unit normal vector
 
     // clear output vector
     if clear_b {
@@ -88,12 +88,12 @@ where
         let iota = &ips[p];
         let weight = ips[p][3];
 
-        // calculate interpolation functions and normal vector
+        // calculate interpolation functions and unit normal vector
         (pad.fn_interp)(&mut pad.interp, iota);
-        let mag_n = pad.calc_normal_vector(&mut n, iota)?;
+        let mag_n = pad.calc_normal_vector(&mut un, iota)?;
 
         // calculate t
-        fn_t(&mut t, p, &n)?;
+        fn_t(&mut t, p, &un)?;
 
         // add contribution to b vector
         let coef = th * mag_n * weight;
@@ -386,9 +386,9 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = default_integ_points(pad.kind);
         let p = -20.0;
-        vec_b_shape_times_vector_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, n| {
-            t[0] = p * n[0];
-            t[1] = p * n[1];
+        vec_b_shape_times_vector_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, un| {
+            t[0] = p * un[0];
+            t[1] = p * un[1];
             Ok(())
         })
         .unwrap();

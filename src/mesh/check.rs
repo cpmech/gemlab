@@ -64,9 +64,9 @@ pub fn check_all(mesh: &Mesh) -> Result<(), StrError> {
     check_jacobian(mesh)
 }
 
-/// Checks if normal vectors of some 2D edges are correct
+/// Checks if unit normal vectors of some 2D edges are correct
 ///
-/// Note: the solutions map holds the magnitude of the normal and the unit normal
+/// Note: the solutions map holds the magnitude of the normal, followed by the unit normal.
 pub fn check_2d_edge_normals(
     mesh: &Mesh,
     edges: &HashMap<EdgeKey, Edge>,
@@ -83,16 +83,16 @@ pub fn check_2d_edge_normals(
         assert_approx_eq!(mag_n, correct_mag_n, tolerance);
         for i in 0..mesh.ndim {
             if f64::abs(un[i] - correct_un[i]) > tolerance {
-                return Err("wrong 2d edge normal vector found");
+                return Err("wrong 2d edge unit normal vector found");
             }
         }
     }
     Ok(())
 }
 
-/// Checks if normal vectors of some faces are correct
+/// Checks if unit normal vectors of some faces are correct
 ///
-/// Note: the solutions map holds the magnitude of the normal and the unit normal
+/// Note: the solutions map holds the magnitude of the normal, followed by the unit normal.
 pub fn check_face_normals(
     mesh: &Mesh,
     faces: &HashMap<FaceKey, Face>,
@@ -109,7 +109,7 @@ pub fn check_face_normals(
         assert_approx_eq!(mag_n, correct_mag_n, tolerance);
         for i in 0..mesh.ndim {
             if f64::abs(un[i] - correct_un[i]) > tolerance {
-                return Err("wrong face normal vector found");
+                return Err("wrong face unit normal vector found");
             }
         }
     }
@@ -301,7 +301,7 @@ mod tests {
         points[1] = 0;
         assert_eq!(
             check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).err(),
-            Some("wrong 2d edge normal vector found")
+            Some("wrong 2d edge unit normal vector found")
         );
 
         let solutions = HashMap::from([((10, 20), (l, [0.0, 1.0]))]);
@@ -373,7 +373,7 @@ mod tests {
         points[3] = 4;
         assert_eq!(
             check_face_normals(&mesh, &faces, &solutions, 1e-15).err(),
-            Some("wrong face normal vector found")
+            Some("wrong face unit normal vector found")
         );
 
         let solutions = HashMap::from([((10, 20, 30, 40), (l, [0.0, 0.0, 1.0]))]);
