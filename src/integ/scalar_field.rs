@@ -58,7 +58,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::scalar_field;
-    use crate::integ::{calc_ips_coords, select_integ_points};
+    use crate::integ;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_approx_eq;
@@ -97,7 +97,7 @@ mod tests {
         let class = pad.kind.class();
         let selection: Vec<_> = [1, 4, 5, 1_005, 8, 9, 16]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
 
         // s(x) is constant = 1; i.e., the integral will result in the area of the "diamond" shape
@@ -115,7 +115,7 @@ mod tests {
         let ii_correct = 8.0 / 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -131,7 +131,7 @@ mod tests {
         let ii_correct = 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -201,7 +201,7 @@ mod tests {
         let class = pad.kind.class();
         let selection: Vec<_> = [6, 8, 9, 1_009, 14, 27, 64]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
 
         // s(x) is constant = 1; i.e., the integral will result in the volume
@@ -219,7 +219,7 @@ mod tests {
         let tolerances = [1e-15, 1e-15, 1e-15, 1e-7, 1e-15, 1e-14, 1e-15];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -236,7 +236,7 @@ mod tests {
         let tolerances = [1e-15, 1e-15, 1e-15, 1e-6, 1e-15, 1e-15, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];

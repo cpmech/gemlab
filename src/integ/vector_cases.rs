@@ -62,7 +62,7 @@ use russell_tensor::Tensor2;
 /// See also the `examples` directory.
 ///
 /// ```
-/// use gemlab::integ::{default_integ_points, vec_a_shape_times_scalar};
+/// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_chk::assert_vec_approx_eq;
@@ -77,16 +77,16 @@ use russell_tensor::Tensor2;
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = default_integ_points(pad.kind);
+///     let ips = integ::default_points(pad.kind);
 ///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
-///     vec_a_shape_times_scalar(&mut a, &mut pad, ips, 1.0, true, |_| Ok(5.0))?;
+///     integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |_| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
 ///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_a_shape_times_scalar<F>(
+pub fn vec_a<F>(
     a: &mut Vector,
     pad: &mut Scratchpad,
     ips: IntegPointData,
@@ -185,7 +185,7 @@ where
 /// See also the `examples` directory.
 ///
 /// ```
-/// use gemlab::integ::{default_integ_points, vec_b_shape_times_vector};
+/// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_chk::assert_vec_approx_eq;
@@ -200,9 +200,9 @@ where
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = default_integ_points(pad.kind);
+///     let ips = integ::default_points(pad.kind);
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     vec_b_shape_times_vector(&mut b, &mut pad, ips, 1.0, true, |v, _| {
+///     integ::vec_b(&mut b, &mut pad, ips, 1.0, true, |v, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
 ///         Ok(())
@@ -214,7 +214,7 @@ where
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_b_shape_times_vector<F>(
+pub fn vec_b<F>(
     b: &mut Vector,
     pad: &mut Scratchpad,
     ips: IntegPointData,
@@ -321,7 +321,7 @@ where
 /// See also the `examples` directory.
 ///
 /// ```
-/// use gemlab::integ::{default_integ_points, vec_c_vector_dot_gradient};
+/// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_chk::assert_vec_approx_eq;
@@ -336,9 +336,9 @@ where
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = default_integ_points(pad.kind);
+///     let ips = integ::default_points(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     vec_c_vector_dot_gradient(&mut c, &mut pad, ips, 1.0, true, |w, _| {
+///     integ::vec_c(&mut c, &mut pad, ips, 1.0, true, |w, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
 ///         Ok(())
@@ -354,7 +354,7 @@ where
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_c_vector_dot_gradient<F>(
+pub fn vec_c<F>(
     c: &mut Vector,
     pad: &mut Scratchpad,
     ips: IntegPointData,
@@ -462,7 +462,7 @@ where
 /// See also the `examples` directory.
 ///
 /// ```
-/// use gemlab::integ::{default_integ_points, vec_d_tensor_dot_gradient};
+/// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_chk::assert_vec_approx_eq;
@@ -477,9 +477,9 @@ where
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = default_integ_points(pad.kind);
+///     let ips = integ::default_points(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     vec_d_tensor_dot_gradient(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
+///     integ::vec_d(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
 ///         sig.sym_set(0, 1, 3.0);
@@ -497,7 +497,7 @@ where
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_d_tensor_dot_gradient<F>(
+pub fn vec_d<F>(
     d: &mut Vector,
     pad: &mut Scratchpad,
     ips: IntegPointData,
@@ -560,10 +560,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        vec_a_shape_times_scalar, vec_b_shape_times_vector, vec_c_vector_dot_gradient, vec_d_tensor_dot_gradient,
-    };
-    use crate::integ::{calc_ips_coords, select_integ_points, AnalyticalTet4, AnalyticalTri3};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -617,28 +614,28 @@ mod tests {
         let mut pad = gen_pad_lin2(1.0);
         let mut a = Vector::new(3);
         assert_eq!(
-            vec_a_shape_times_scalar(&mut a, &mut pad, &[], 1.0, false, |_| Ok(0.0)).err(),
+            integ::vec_a(&mut a, &mut pad, &[], 1.0, false, |_| Ok(0.0)).err(),
             Some("a.len() must be equal to nnode")
         );
         let mut b = Vector::new(5);
         assert_eq!(
-            vec_b_shape_times_vector(&mut b, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
+            integ::vec_b(&mut b, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
             Some("b.len() must be equal to nnode * space_ndim")
         );
         let mut c = Vector::new(3);
         assert_eq!(
-            vec_c_vector_dot_gradient(&mut c, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
+            integ::vec_c(&mut c, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
             Some("c.len() must be equal to nnode")
         );
         let mut d = Vector::new(5);
         assert_eq!(
-            vec_d_tensor_dot_gradient(&mut d, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
+            integ::vec_d(&mut d, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
             Some("d.len() must be equal to nnode * space_ndim")
         );
     }
 
     #[test]
-    fn vec_a_shape_times_scalar_works_lin2_linear() -> Result<(), StrError> {
+    fn vec_a_works_lin2_linear() -> Result<(), StrError> {
         // lin2 with linear source term:
         //
         // s(x) = x
@@ -661,23 +658,20 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-15, 1e-14, 1e-15, 1e-15];
-        let selection: Vec<_> = [2, 3, 4, 5]
-            .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
-            .collect();
+        let selection: Vec<_> = [2, 3, 4, 5].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
-            vec_a_shape_times_scalar(&mut a, &mut pad, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
+            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+            integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
     }
 
     #[test]
-    fn vec_a_shape_times_scalar_works_tri3_constant() -> Result<(), StrError> {
+    fn vec_a_works_tri3_constant() -> Result<(), StrError> {
         // tri3 with a constant source term s(x) = cₛ
         let mut pad = gen_pad_tri3();
 
@@ -691,20 +685,20 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-15, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            vec_a_shape_times_scalar(&mut a, &mut pad, ips, 1.0, true, |_| Ok(CS)).unwrap();
+            integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |_| Ok(CS)).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
     }
 
     #[test]
-    fn vec_a_shape_times_scalar_works_tet4_linear() -> Result<(), StrError> {
+    fn vec_a_works_tet4_linear() -> Result<(), StrError> {
         // tet 4 with a linear source term s(x) = z = x₂
         let mut pad = gen_pad_tet4();
 
@@ -719,22 +713,22 @@ mod tests {
         let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15, 1e-15, 1e-15];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
-            vec_a_shape_times_scalar(&mut a, &mut pad, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
+            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+            integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
     }
 
     #[test]
-    fn vec_b_shape_times_vector_works_lin2_linear() -> Result<(), StrError> {
+    fn vec_b_works_lin2_linear() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with lin2
         const L: f64 = 6.0;
         let mut pad = gen_pad_lin2(L);
@@ -752,15 +746,15 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-15, 1e-15];
-        let selection: Vec<_> = [2, 3].iter().map(|n| select_integ_points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [2, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
         let space_ndim = pad.xmax.len();
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
-            vec_b_shape_times_vector(&mut b, &mut pad, ips, 1.0, true, |v, p| {
+            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+            integ::vec_b(&mut b, &mut pad, ips, 1.0, true, |v, p| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
                 Ok(())
@@ -772,7 +766,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_b_shape_times_vector_works_tri3_constant() -> Result<(), StrError> {
+    fn vec_b_works_tri3_constant() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let mut pad = gen_pad_tri3();
@@ -786,14 +780,14 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [1, 3].iter().map(|n| select_integ_points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
         let space_ndim = pad.xmax.len();
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            vec_b_shape_times_vector(&mut b, &mut pad, ips, 1.0, true, |v, _| {
+            integ::vec_b(&mut b, &mut pad, ips, 1.0, true, |v, _| {
                 v[0] = V0;
                 v[1] = V1;
                 Ok(())
@@ -805,7 +799,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_b_shape_times_vector_works_tet4_constant() -> Result<(), StrError> {
+    fn vec_b_works_tet4_constant() -> Result<(), StrError> {
         // tet 4 with constant vector
         const V0: f64 = 2.0;
         const V1: f64 = 3.0;
@@ -819,14 +813,14 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-15, 1e-15];
-        let selection: Vec<_> = [1, 4].iter().map(|n| select_integ_points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
         let space_ndim = pad.xmax.len();
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            vec_b_shape_times_vector(&mut b, &mut pad, ips, 1.0, true, |v, _| {
+            integ::vec_b(&mut b, &mut pad, ips, 1.0, true, |v, _| {
                 v[0] = V0;
                 v[1] = V1;
                 v[2] = V2;
@@ -839,7 +833,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_c_vector_dot_gradient_works_tri3_constant() -> Result<(), StrError> {
+    fn vec_c_works_tri3_constant() -> Result<(), StrError> {
         // constant vector function: w(x) = {w₀, w₁}
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
@@ -852,13 +846,13 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [1, 3].iter().map(|n| select_integ_points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            vec_c_vector_dot_gradient(&mut c, &mut pad, ips, 1.0, true, |w, _| {
+            integ::vec_c(&mut c, &mut pad, ips, 1.0, true, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(())
@@ -870,7 +864,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_c_vector_dot_gradient_works_tri3_bilinear() -> Result<(), StrError> {
+    fn vec_c_works_tri3_bilinear() -> Result<(), StrError> {
         // bilinear vector function: w(x) = {x, y}
         let mut pad = gen_pad_tri3();
 
@@ -881,14 +875,14 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [1, 3].iter().map(|n| select_integ_points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
-            vec_c_vector_dot_gradient(&mut c, &mut pad, ips, 1.0, true, |w, p| {
+            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+            integ::vec_c(&mut c, &mut pad, ips, 1.0, true, |w, p| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(())
@@ -900,7 +894,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_c_vector_dot_gradient_works_tet4_constant() -> Result<(), StrError> {
+    fn vec_c_works_tet4_constant() -> Result<(), StrError> {
         // tet 4 with constant vector  w(x) = {w0, w1, w2}
         let mut pad = gen_pad_tet4();
 
@@ -916,14 +910,14 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            vec_c_vector_dot_gradient(&mut c, &mut pad, ips, 1.0, true, |w, _| {
+            integ::vec_c(&mut c, &mut pad, ips, 1.0, true, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;
@@ -936,7 +930,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_d_tensor_dot_gradient_tri3_works_constant() -> Result<(), StrError> {
+    fn vec_d_tri3_works_constant() -> Result<(), StrError> {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
         //    dᵐ₀ = ½ (σ₀₀ bₘ + σ₀₁ cₘ)
@@ -956,7 +950,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
 
         // check
@@ -964,7 +958,7 @@ mod tests {
         let mut d = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            vec_d_tensor_dot_gradient(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
+            integ::vec_d(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -978,7 +972,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_d_tensor_dot_gradient_tet4_works_constant() -> Result<(), StrError> {
+    fn vec_d_tet4_works_constant() -> Result<(), StrError> {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
         let mut pad = gen_pad_tet4();
 
@@ -997,7 +991,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-13, 1e-14, 1e-14, 1e-13, 1e-13];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
 
         // check
@@ -1005,7 +999,7 @@ mod tests {
         let mut d = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            vec_d_tensor_dot_gradient(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
+            integ::vec_d(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);

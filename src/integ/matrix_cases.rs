@@ -60,7 +60,7 @@ use russell_tensor::Tensor4;
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ::{default_integ_points, mat_gdg_stiffness};
+/// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_lab::{copy_matrix, Matrix};
@@ -93,8 +93,8 @@ use russell_tensor::Tensor4;
 ///     // stiffness
 ///     let nrow = pad.kind.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
-///     let ips = default_integ_points(pad.kind);
-///     mat_gdg_stiffness(&mut kk, &mut pad, ips, 1.0, true, |dd, _| {
+///     let ips = integ::default_points(pad.kind);
+///     integ::mat_gdg(&mut kk, &mut pad, ips, 1.0, true, |dd, _| {
 ///         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
 ///     })?;
 ///
@@ -118,7 +118,7 @@ use russell_tensor::Tensor4;
 ///     Ok(())
 /// }
 /// ```
-pub fn mat_gdg_stiffness<F>(
+pub fn mat_gdg<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ips: IntegPointData,
@@ -203,8 +203,7 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, pad: &mut Scratc
 
 #[cfg(test)]
 mod tests {
-    use super::mat_gdg_stiffness;
-    use crate::integ::{select_integ_points, AnalyticalTet4, AnalyticalTri3};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -244,13 +243,13 @@ mod tests {
         let mut pad = gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
-            mat_gdg_stiffness(&mut kk, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
+            integ::mat_gdg(&mut kk, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
             Some("K.dims() must be equal to (nnode*space_ndim,nnode*space_ndim)")
         );
     }
 
     #[test]
-    fn mat_gdg_stiffness_works_tri3_plane_stress() -> Result<(), StrError> {
+    fn mat_gdg_works_tri3_plane_stress() -> Result<(), StrError> {
         // Element # 0 from example 1.6 from [@bhatti] page 32
         // Solid bracket with thickness = 0.25
         //              1     -10                connectivity:
@@ -289,8 +288,8 @@ mod tests {
         let space_ndim = pad.xmax.len();
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
-        let ips = select_integ_points(class, 1)?;
-        mat_gdg_stiffness(&mut kk, &mut pad, ips, th, true, |dd, _| {
+        let ips = integ::points(class, 1)?;
+        integ::mat_gdg(&mut kk, &mut pad, ips, th, true, |dd, _| {
             copy_matrix(&mut dd.mat, &model.get_modulus().mat)
         })?;
 
@@ -314,11 +313,11 @@ mod tests {
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-11, 1e-12];
         let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            mat_gdg_stiffness(&mut kk, &mut pad, ips, th, true, |dd, _| {
+            integ::mat_gdg(&mut kk, &mut pad, ips, th, true, |dd, _| {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();
@@ -328,7 +327,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_gdg_stiffness_works_tet4() -> Result<(), StrError> {
+    fn mat_gdg_works_tet4() -> Result<(), StrError> {
         // scratchpad
         let mut pad = gen_pad_tet4();
 
@@ -350,11 +349,11 @@ mod tests {
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            mat_gdg_stiffness(&mut kk, &mut pad, ips, 1.0, true, |dd, _| {
+            integ::mat_gdg(&mut kk, &mut pad, ips, 1.0, true, |dd, _| {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();

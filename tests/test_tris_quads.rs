@@ -1,4 +1,4 @@
-use gemlab::integ::default_integ_points;
+use gemlab::integ;
 use gemlab::mesh::{check_2d_edge_normals, At, Extract, Mesh, Region};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::SQRT_2;
@@ -127,7 +127,7 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     pad_edge_7_11.set_xx(0, 1, p[7].coords[1]);
     pad_edge_7_11.set_xx(1, 0, p[11].coords[0]);
     pad_edge_7_11.set_xx(1, 1, p[11].coords[1]);
-    let ips = default_integ_points(pad_edge_7_11.kind);
+    let ips = integ::default_points(pad_edge_7_11.kind);
     let mut length_numerical = 0.0;
     for index in 0..ips.len() {
         let iota = &ips[index];
@@ -145,7 +145,7 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
             pad_cell_5.set_xx(m, j, p[cell.points[m]].coords[j]);
         }
     }
-    let ips = default_integ_points(pad_cell_5.kind);
+    let ips = integ::default_points(pad_cell_5.kind);
     let mut area_numerical = 0.0;
     for p in 0..ips.len() {
         let iota = &ips[p];

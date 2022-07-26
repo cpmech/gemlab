@@ -9,7 +9,7 @@ fn main() -> Result<(), StrError> {
     let mesh = mesh::Structured::quarter_ring_2d(rmin, rmax, 4, 8, kind)?;
 
     // allocate integration points and Scratchpad
-    let ips = integ::default_integ_points(kind);
+    let ips = integ::default_points(kind);
     let mut pad = shapes::Scratchpad::new(2, kind)?;
 
     // sum contribution of all cells

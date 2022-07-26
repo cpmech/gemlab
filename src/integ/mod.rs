@@ -32,7 +32,7 @@
 //!
 //! ## Integration of some combinations involving N and G resulting in vectors
 //!
-//! Interpolation functions times scalar field [vec_a_shape_times_scalar()]:
+//! Interpolation functions times scalar field [vec_a()]:
 //!
 //! ```text
 //!      ⌠    → →     →
@@ -41,7 +41,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! Interpolation functions times vector field [vec_b_shape_times_vector()]:
+//! Interpolation functions times vector field [vec_b()]:
 //!
 //! ```text
 //! →    ⌠    → →   → →
@@ -50,7 +50,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! Vector dot gradient [vec_c_vector_dot_gradient()]:
+//! Vector dot gradient [vec_c()]:
 //!
 //! ```text
 //!      ⌠ → →    →  → →
@@ -59,7 +59,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! Tensor dot gradient [vec_d_tensor_dot_gradient()]:
+//! Tensor dot gradient [vec_d()]:
 //!
 //! ```text
 //! →    ⌠   →    →  → →
@@ -70,7 +70,7 @@
 //!
 //! ## Integration of some combinations involving N, tensors, and G, resulting in matrices
 //!
-//! Gradient(G) dot 4th-tensor(D) dot gradient(G) integration (stiffness matrix) [mat_gdg_stiffness()]:
+//! Gradient(G) dot 4th-tensor(D) dot gradient(G) integration (stiffness matrix) [mat_gdg()]:
 //!
 //! ```text
 //!       ⌠               →    →

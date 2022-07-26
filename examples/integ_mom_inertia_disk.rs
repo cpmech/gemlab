@@ -10,7 +10,7 @@ fn main() -> Result<(), StrError> {
     let mesh_2 = mesh::Structured::quarter_disk_2d_b(r / 2.0, r, 3, 3, kind)?;
 
     // allocate integration points and Scratchpad
-    let ips = integ::default_integ_points(kind);
+    let ips = integ::default_points(kind);
     let mut pad = shapes::Scratchpad::new(2, kind)?;
 
     // mesh 1: sum contribution of all cells

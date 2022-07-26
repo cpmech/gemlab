@@ -21,13 +21,13 @@ pub type IntegPointData = &'static [[f64; 4]];
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ::default_integ_points;
+/// use gemlab::integ;
 /// use gemlab::shapes::GeoKind;
 ///
-/// let ips = default_integ_points(GeoKind::Tet4);
+/// let ips = integ::default_points(GeoKind::Tet4);
 /// assert_eq!(ips, [[0.25, 0.25, 0.25, 1.0/6.0]]);
 /// ```
-pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
+pub fn default_points(kind: GeoKind) -> IntegPointData {
     match kind {
         // Lin
         GeoKind::Lin2 => &IP_LIN_LEGENDRE_2,
@@ -118,17 +118,17 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ::select_integ_points;
+/// use gemlab::integ;
 /// use gemlab::shapes::GeoClass;
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
-///     let ips = select_integ_points(GeoClass::Tet, 1)?;
+///     let ips = integ::points(GeoClass::Tet, 1)?;
 ///     assert_eq!(ips, [[0.25, 0.25, 0.25, 1.0/6.0]]);
 ///     Ok(())
 /// }
 /// ```
-pub fn select_integ_points(class: GeoClass, n_integ_point: usize) -> Result<IntegPointData, StrError> {
+pub fn points(class: GeoClass, n_integ_point: usize) -> Result<IntegPointData, StrError> {
     let ips: IntegPointData = match class {
         // Lin
         GeoClass::Lin => match n_integ_point {
@@ -713,94 +713,94 @@ pub const IP_HEX_LEGENDRE_64: [[f64; 4]; 64] = [
 
 #[cfg(test)]
 mod tests {
-    use super::{default_integ_points, select_integ_points};
+    use super::{default_points, points};
     use crate::shapes::{GeoClass, GeoKind};
     use crate::StrError;
 
     #[test]
-    fn default_integ_points_works() {
+    fn default_points_works() {
         // Lin
-        assert_eq!(default_integ_points(GeoKind::Lin2).len(), 2);
-        assert_eq!(default_integ_points(GeoKind::Lin3).len(), 3);
-        assert_eq!(default_integ_points(GeoKind::Lin4).len(), 4);
-        assert_eq!(default_integ_points(GeoKind::Lin5).len(), 5);
+        assert_eq!(default_points(GeoKind::Lin2).len(), 2);
+        assert_eq!(default_points(GeoKind::Lin3).len(), 3);
+        assert_eq!(default_points(GeoKind::Lin4).len(), 4);
+        assert_eq!(default_points(GeoKind::Lin5).len(), 5);
         // Tri
-        assert_eq!(default_integ_points(GeoKind::Tri3).len(), 1);
-        assert_eq!(default_integ_points(GeoKind::Tri6).len(), 4);
-        assert_eq!(default_integ_points(GeoKind::Tri10).len(), 12);
-        assert_eq!(default_integ_points(GeoKind::Tri15).len(), 16);
+        assert_eq!(default_points(GeoKind::Tri3).len(), 1);
+        assert_eq!(default_points(GeoKind::Tri6).len(), 4);
+        assert_eq!(default_points(GeoKind::Tri10).len(), 12);
+        assert_eq!(default_points(GeoKind::Tri15).len(), 16);
         // Qua
-        assert_eq!(default_integ_points(GeoKind::Qua4).len(), 4);
-        assert_eq!(default_integ_points(GeoKind::Qua8).len(), 9);
-        assert_eq!(default_integ_points(GeoKind::Qua9).len(), 9);
-        assert_eq!(default_integ_points(GeoKind::Qua12).len(), 16);
-        assert_eq!(default_integ_points(GeoKind::Qua16).len(), 16);
-        assert_eq!(default_integ_points(GeoKind::Qua17).len(), 16);
+        assert_eq!(default_points(GeoKind::Qua4).len(), 4);
+        assert_eq!(default_points(GeoKind::Qua8).len(), 9);
+        assert_eq!(default_points(GeoKind::Qua9).len(), 9);
+        assert_eq!(default_points(GeoKind::Qua12).len(), 16);
+        assert_eq!(default_points(GeoKind::Qua16).len(), 16);
+        assert_eq!(default_points(GeoKind::Qua17).len(), 16);
         // Tet
-        assert_eq!(default_integ_points(GeoKind::Tet4).len(), 1);
-        assert_eq!(default_integ_points(GeoKind::Tet10).len(), 14);
-        assert_eq!(default_integ_points(GeoKind::Tet20).len(), 24);
+        assert_eq!(default_points(GeoKind::Tet4).len(), 1);
+        assert_eq!(default_points(GeoKind::Tet10).len(), 14);
+        assert_eq!(default_points(GeoKind::Tet20).len(), 24);
         // Hex
-        assert_eq!(default_integ_points(GeoKind::Hex8).len(), 8);
-        assert_eq!(default_integ_points(GeoKind::Hex20).len(), 27);
-        assert_eq!(default_integ_points(GeoKind::Hex32).len(), 64);
+        assert_eq!(default_points(GeoKind::Hex8).len(), 8);
+        assert_eq!(default_points(GeoKind::Hex20).len(), 27);
+        assert_eq!(default_points(GeoKind::Hex32).len(), 64);
     }
 
     #[test]
-    fn select_integ_points_works() -> Result<(), StrError> {
+    fn get_points_works() -> Result<(), StrError> {
         // Lin
         for n_integ_point in [1, 2, 3, 4, 5] {
-            let ips = select_integ_points(GeoClass::Lin, n_integ_point)?;
+            let ips = points(GeoClass::Lin, n_integ_point)?;
             assert_eq!(ips.len(), n_integ_point);
         }
         assert_eq!(
-            select_integ_points(GeoClass::Lin, 100).err(),
+            points(GeoClass::Lin, 100).err(),
             Some("desired number of integration points is not available for Lin class")
         );
 
         // Tri
         for n_integ_point in [1, 3, 4, 12, 16] {
-            let ips = select_integ_points(GeoClass::Tri, n_integ_point)?;
+            let ips = points(GeoClass::Tri, n_integ_point)?;
             assert_eq!(ips.len(), n_integ_point);
         }
-        let ips = select_integ_points(GeoClass::Tri, 1_003)?;
+        let ips = points(GeoClass::Tri, 1_003)?;
         assert_eq!(ips.len(), 3);
         assert_eq!(
-            select_integ_points(GeoClass::Tri, 100).err(),
+            points(GeoClass::Tri, 100).err(),
             Some("desired number of integration points is not available for Tri class")
         );
 
         // Qua
         for n_integ_point in [1, 4, 5, 8, 9, 16] {
-            let ips = select_integ_points(GeoClass::Qua, n_integ_point)?;
+            let ips = points(GeoClass::Qua, n_integ_point)?;
             assert_eq!(ips.len(), n_integ_point);
         }
-        let ips = select_integ_points(GeoClass::Qua, 1_005)?;
+        let ips = points(GeoClass::Qua, 1_005)?;
         assert_eq!(ips.len(), 5);
         assert_eq!(
-            select_integ_points(GeoClass::Qua, 100).err(),
+            points(GeoClass::Qua, 100).err(),
             Some("desired number of integration points is not available for Qua class")
         );
 
         // Tet
         for n_integ_point in [1, 4, 5, 8, 14] {
-            let ips = select_integ_points(GeoClass::Tet, n_integ_point)?;
+            let ips = points(GeoClass::Tet, n_integ_point)?;
             assert_eq!(ips.len(), n_integ_point);
         }
         assert_eq!(
-            select_integ_points(GeoClass::Tet, 100).err(),
+            points(GeoClass::Tet, 100).err(),
             Some("desired number of integration points is not available for Tet class")
         );
 
         // Hex
         for n_integ_point in [6, 8, 9, 14, 27] {
-            let ips = select_integ_points(GeoClass::Hex, n_integ_point)?;
+            let ips = points(GeoClass::Hex, n_integ_point)?;
             assert_eq!(ips.len(), n_integ_point);
         }
-        let ips = select_integ_points(GeoClass::Hex, 1_009)?;
+        let ips = points(GeoClass::Hex, 1_009)?;
         assert_eq!(ips.len(), 9);
         assert_eq!(
-            select_integ_points(GeoClass::Hex, 100).err(),
+            points(GeoClass::Hex, 100).err(),
             Some("desired number of integration points is not available for Hex class")
         );
         Ok(())
