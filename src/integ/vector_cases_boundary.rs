@@ -119,7 +119,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::vec_b_shape_times_vector_boundary;
-    use crate::integ::default_integ_points;
+    use crate::integ::{calc_ips_coords, default_integ_points};
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
@@ -129,6 +129,9 @@ mod tests {
 
     #[test]
     fn vec_b_shape_times_vector_boundary_works_2d() {
+        // Reference:
+        // * `sgm:14` -- Smith, Griffiths, Margetts (2014) Programming the Finite Element Method, 5th ed.
+
         let space_ndim = 2;
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin2).unwrap();
         let ll = 4.0;
@@ -138,6 +141,7 @@ mod tests {
         pad.set_xx(1, 1, 0.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = default_integ_points(pad.kind);
+        // uniform
         vec_b_shape_times_vector_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
@@ -145,9 +149,18 @@ mod tests {
         })
         .unwrap();
         assert_vec_approx_eq!(b.as_data(), &[0.0, -2.0, 0.0, -2.0], 1e-15);
+        // triangular (see [@sgm:14]\page{605})
+        let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+        vec_b_shape_times_vector_boundary(&mut b, &mut pad, ips, 1.0, true, |t, p, _| {
+            let c = x_ips[p][0] / ll;
+            t[0] = 0.0;
+            t[1] = -c;
+            Ok(())
+        })
+        .unwrap();
+        assert_vec_approx_eq!(b.as_data(), &[0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
 
         // example from [@sgm:14]\page{183}
-        // * `sgm:14` -- Smith, Griffiths, Margetts (2014) Programming the Finite Element Method, 5th ed.
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin3).unwrap();
         let ll = 3.0;
         pad.set_xx(0, 0, 0.0);
@@ -158,6 +171,7 @@ mod tests {
         pad.set_xx(2, 1, 0.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = default_integ_points(pad.kind);
+        // uniform
         vec_b_shape_times_vector_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
@@ -165,6 +179,80 @@ mod tests {
         })
         .unwrap();
         assert_vec_approx_eq!(b.as_data(), &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
+        // triangular (see [@sgm:14]\page{605})
+        let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+        vec_b_shape_times_vector_boundary(&mut b, &mut pad, ips, 1.0, true, |t, p, _| {
+            let c = x_ips[p][0] / ll;
+            t[0] = 0.0;
+            t[1] = -c;
+            Ok(())
+        })
+        .unwrap();
+        assert_vec_approx_eq!(b.as_data(), &[0.0, 0.0, 0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
+
+        // example from [@sgm:14]\page{183}
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin5).unwrap();
+        let ll = 4.0;
+        pad.set_xx(0, 0, 0.0);
+        pad.set_xx(0, 1, 0.0);
+        pad.set_xx(1, 0, ll);
+        pad.set_xx(1, 1, 0.0);
+        pad.set_xx(2, 0, ll / 2.0);
+        pad.set_xx(2, 1, 0.0);
+        pad.set_xx(3, 0, ll / 4.0);
+        pad.set_xx(3, 1, 0.0);
+        pad.set_xx(4, 0, 3.0 * ll / 4.0);
+        pad.set_xx(4, 1, 0.0);
+        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let ips = default_integ_points(pad.kind);
+        // uniform
+        vec_b_shape_times_vector_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, _| {
+            t[0] = 0.0;
+            t[1] = -1.0;
+            Ok(())
+        })
+        .unwrap();
+        assert_vec_approx_eq!(
+            b.as_data(),
+            &[
+                0.0,
+                -ll * 7.0 / 90.0, // 0
+                0.0,
+                -ll * 7.0 / 90.0, // 1
+                0.0,
+                -ll * 2.0 / 15.0, // 2
+                0.0,
+                -ll * 16.0 / 45.0, // 3
+                0.0,
+                -ll * 16.0 / 45.0, // 4
+            ],
+            1e-15
+        );
+        // triangular (see [@sgm:14]\page{605})
+        let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+        vec_b_shape_times_vector_boundary(&mut b, &mut pad, ips, 1.0, true, |t, p, _| {
+            let c = x_ips[p][0] / ll;
+            t[0] = 0.0;
+            t[1] = -c;
+            Ok(())
+        })
+        .unwrap();
+        assert_vec_approx_eq!(
+            b.as_data(),
+            &[
+                0.0,
+                0.0, // 0
+                0.0,
+                -ll * 7.0 / 90.0, // 1
+                0.0,
+                -ll * 1.0 / 15.0, // 2
+                0.0,
+                -ll * 4.0 / 45.0, // 3
+                0.0,
+                -ll * 4.0 / 15.0, // 4
+            ],
+            1e-15
+        );
     }
 
     #[test]
