@@ -17,6 +17,7 @@ impl Scratchpad {
     /// * `normal` -- (space_ndim) the normal vector; not necessarily unitary
     /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
     /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * Returns the magnitude of the normal vector
     ///
     /// # Input
     ///
@@ -28,6 +29,7 @@ impl Scratchpad {
     ///
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
+    /// use gemlab::util::SQRT_2;
     /// use gemlab::StrError;
     /// use russell_lab::Vector;
     ///
@@ -54,8 +56,9 @@ impl Scratchpad {
     ///     // nx = -(L/2)sin(45) = -(H√2/2) √2/2 = -H/2
     ///     // ny = +(L/2)cos(45) = +(H√2/2) √2/2 = +H/2
     ///     let mut normal = Vector::new(2);
-    ///     pad.calc_normal_vector(&mut normal, &[0.0, 0.0])?;
+    ///     let mag_n = pad.calc_normal_vector(&mut normal, &[0.0, 0.0])?;
     ///     assert_eq!(normal.as_data(), &[-H / 2.0, H / 2.0]);
+    ///     assert_eq!(mag_n, H * SQRT_2 / 2.0);
     ///     Ok(())
     /// }
     /// ```
@@ -97,13 +100,14 @@ impl Scratchpad {
     ///     pad.set_xx(3, 2, 1.0);
     ///
     ///     let mut normal = Vector::new(3);
-    ///     pad.calc_normal_vector(&mut normal, &[0.0, 0.0, 0.0])?;
+    ///     let mag_n = pad.calc_normal_vector(&mut normal, &[0.0, 0.0, 0.0])?;
     ///     const A: f64 = 1.0;
     ///     assert_eq!(normal.as_data(), &[0.0, A / 4.0, 0.0]);
+    ///     assert_eq!(mag_n, 1.0 / 4.0);
     ///     Ok(())
     /// }
     /// ```
-    pub fn calc_normal_vector(&mut self, n: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
+    pub fn calc_normal_vector(&mut self, n: &mut Vector, ksi: &[f64]) -> Result<f64, StrError> {
         // check
         let (space_ndim, geo_ndim) = self.jacobian.dims();
         if geo_ndim >= space_ndim {
@@ -130,7 +134,7 @@ impl Scratchpad {
         if space_ndim == 2 {
             n[0] = -self.jacobian[1][0];
             n[1] = self.jacobian[0][0];
-            return Ok(());
+            return Ok(f64::sqrt(n[0] * n[0] + n[1] * n[1]));
         }
 
         // SHELL: surface in 3D (geo_ndim = 2 and space_ndim = 3)
@@ -150,7 +154,7 @@ impl Scratchpad {
         n[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
         n[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
         n[2] = jj[0][0] * jj[1][1] - jj[1][0] * jj[0][1];
-        Ok(())
+        Ok(f64::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]))
     }
 }
 
@@ -160,7 +164,7 @@ impl Scratchpad {
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::util::ONE_BY_3;
+    use crate::util::{ONE_BY_3, SQRT_2, SQRT_3};
     use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
     use russell_lab::{vector_norm, NormVec, Vector};
@@ -208,7 +212,8 @@ mod tests {
             let mut pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
 
             // check
-            pad.calc_normal_vector(&mut normal, ksi)?;
+            let mag_n = pad.calc_normal_vector(&mut normal, ksi)?;
+            assert_approx_eq!(mag_n, correct_magnitude, tol_mag);
             assert_approx_eq!(vector_norm(&normal, NormVec::Euc), correct_magnitude, tol_mag);
             assert_vec_approx_eq!(normal.as_data(), &correct_normal, tol_vec);
         }
@@ -264,7 +269,8 @@ mod tests {
 
             // face # 2
             let mut pad_face = aux::extract_face(2, &pad);
-            pad_face.calc_normal_vector(&mut normal, ksi)?;
+            let mag_n = pad_face.calc_normal_vector(&mut normal, ksi)?;
+            assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
             assert_approx_eq!(
                 vector_norm(&normal, NormVec::Euc),
                 correct_magnitude_face2_face3,
@@ -274,7 +280,8 @@ mod tests {
 
             // face # 3
             let mut pad_face = aux::extract_face(3, &pad);
-            pad_face.calc_normal_vector(&mut normal, ksi)?;
+            let mag_n = pad_face.calc_normal_vector(&mut normal, ksi)?;
+            assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
             assert_approx_eq!(
                 vector_norm(&normal, NormVec::Euc),
                 correct_magnitude_face2_face3,
@@ -350,12 +357,18 @@ mod tests {
             for e in 0..pad.kind.nedge() {
                 for ksi in ksi_values {
                     let mut pad_edge = aux::extract_edge(e, &pad);
-                    pad_edge.calc_normal_vector(&mut normal, ksi)?;
+                    let mag_n = pad_edge.calc_normal_vector(&mut normal, ksi)?;
                     if pad.kind.is_tri_or_tet() {
                         // check triangle
+                        if e == 1 {
+                            assert_approx_eq!(mag_n, SQRT_2, 1e-15);
+                        } else {
+                            assert_approx_eq!(mag_n, 1.0, 1e-15);
+                        }
                         assert_vec_approx_eq!(normal.as_data(), tri_correct[e], 1e-15);
                     } else {
                         // check quadrilateral
+                        assert_approx_eq!(mag_n, 1.0, 1e-15);
                         assert_vec_approx_eq!(normal.as_data(), qua_correct[e], 1e-15);
                     }
                 }
@@ -426,12 +439,18 @@ mod tests {
             for f in 0..pad.kind.nface() {
                 for ksi in ksi_values {
                     let mut pad_face = aux::extract_face(f, &pad);
-                    pad_face.calc_normal_vector(&mut normal, ksi)?;
+                    let mag_n = pad_face.calc_normal_vector(&mut normal, ksi)?;
                     if pad.kind.is_tri_or_tet() {
                         // check tetrahedron
+                        if f == 3 {
+                            assert_approx_eq!(mag_n, 4.0 * SQRT_3, tol);
+                        } else {
+                            assert_approx_eq!(mag_n, 4.0, tol);
+                        }
                         assert_vec_approx_eq!(normal.as_data(), tet_correct[f], tol);
                     } else {
                         // check hexahedron
+                        assert_approx_eq!(mag_n, 1.0, tol);
                         assert_vec_approx_eq!(normal.as_data(), hex_correct[f], tol);
                     }
                 }
