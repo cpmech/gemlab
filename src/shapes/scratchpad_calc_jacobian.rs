@@ -39,9 +39,9 @@ impl Scratchpad {
     ///
     /// # Output
     ///
-    /// * `pad.deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
-    /// * `pad.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
-    /// * `pad.inv_jacobian` -- If `geo_ndim = space_ndim` (`SOLID` case): inverse Jacobian matrix (space_ndim,space_ndim)
+    /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `inv_jacobian` -- If `geo_ndim = space_ndim` (`SOLID` case): inverse Jacobian matrix (space_ndim,space_ndim)
     /// * Returns one of the following:
     ///     * `CABLE`: (geo_ndim = 1 and space_ndim = 2 or 3), returns the norm of the Jacobian vector
     ///     * `SHELL`: (geo_ndim = 2 and space_ndim = 3), returns [DET_JAC_NOT_AVAILABLE] indicating that the
