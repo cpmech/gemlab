@@ -55,7 +55,7 @@ use russell_tensor::Tensor2;
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
-/// * `fn_s` -- Function `f(p)` corresponding to `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///
 /// # Examples
 ///
@@ -177,7 +177,7 @@ where
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
-/// * `fn_v` -- Function `f(v,p)` corresponding to `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_v` -- Function `f(v,p)` that computes `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///             The dim of `v` is equal to `space_ndim`.
 ///
 /// # Examples
@@ -313,7 +313,7 @@ where
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
-/// * `fn_w` -- Function `f(w,p)` corresponding to `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_w` -- Function `f(w,p)` that computes `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///             The dim of `w` is equal to `space_ndim`.
 ///
 /// # Examples
@@ -455,7 +455,7 @@ where
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_d` -- Fills `d` vector with zeros, otherwise accumulate values into `d`
-/// * `fn_sig` -- Function `f(sig,p)` corresponding to `σ(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_sig` -- Function `f(sig,p)` that computes `σ(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///
 /// # Examples
 ///

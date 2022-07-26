@@ -55,7 +55,7 @@ use russell_tensor::Tensor4;
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
-/// * `fn_dd` -- Function f(D,p) corresponding to `D(x(ιᵖ))`
+/// * `fn_dd` -- Function f(D,p) that computes `D(x(ιᵖ))`
 ///
 /// # Examples
 ///
