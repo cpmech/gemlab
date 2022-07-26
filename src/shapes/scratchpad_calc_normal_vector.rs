@@ -55,9 +55,11 @@ impl Scratchpad {
     ///     // ||n|| = L/2 (2 is the length in the natural space)
     ///     // nx = -(L/2)sin(45) = -(H√2/2) √2/2 = -H/2
     ///     // ny = +(L/2)cos(45) = +(H√2/2) √2/2 = +H/2
-    ///     let mut normal = Vector::new(2);
-    ///     let mag_n = pad.calc_normal_vector(&mut normal, &[0.0, 0.0])?;
-    ///     assert_eq!(normal.as_data(), &[-H / 2.0, H / 2.0]);
+    ///     // unx = -(H/2)/(H√2/2) = -1/√2
+    ///     // uny = +(H/2)/(H√2/2) = +1/√2
+    ///     let mut un = Vector::new(2);
+    ///     let mag_n = pad.calc_normal_vector(&mut un, &[0.0, 0.0])?;
+    ///     assert_eq!(un.as_data(), &[-1.0 / SQRT_2, 1.0 / SQRT_2]);
     ///     assert_eq!(mag_n, H * SQRT_2 / 2.0);
     ///     Ok(())
     /// }
@@ -99,10 +101,9 @@ impl Scratchpad {
     ///     pad.set_xx(3, 1, 1.0);
     ///     pad.set_xx(3, 2, 1.0);
     ///
-    ///     let mut normal = Vector::new(3);
-    ///     let mag_n = pad.calc_normal_vector(&mut normal, &[0.0, 0.0, 0.0])?;
-    ///     const A: f64 = 1.0;
-    ///     assert_eq!(normal.as_data(), &[0.0, A / 4.0, 0.0]);
+    ///     let mut un = Vector::new(3);
+    ///     let mag_n = pad.calc_normal_vector(&mut un, &[0.0, 0.0, 0.0])?;
+    ///     assert_eq!(un.as_data(), &[0.0, 1.0, 0.0]);
     ///     assert_eq!(mag_n, 1.0 / 4.0);
     ///     Ok(())
     /// }
@@ -134,7 +135,12 @@ impl Scratchpad {
         if space_ndim == 2 {
             n[0] = -self.jacobian[1][0];
             n[1] = self.jacobian[0][0];
-            return Ok(f64::sqrt(n[0] * n[0] + n[1] * n[1]));
+            let mag_n = f64::sqrt(n[0] * n[0] + n[1] * n[1]);
+            if mag_n > 0.0 {
+                n[0] /= mag_n;
+                n[1] /= mag_n;
+            }
+            return Ok(mag_n);
         }
 
         // SHELL: surface in 3D (geo_ndim = 2 and space_ndim = 3)
@@ -154,7 +160,13 @@ impl Scratchpad {
         n[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
         n[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
         n[2] = jj[0][0] * jj[1][1] - jj[1][0] * jj[0][1];
-        Ok(f64::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]))
+        let mag_n = f64::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+        if mag_n > 0.0 {
+            n[0] /= mag_n;
+            n[1] /= mag_n;
+            n[2] /= mag_n;
+        }
+        Ok(mag_n)
     }
 }
 
@@ -197,10 +209,7 @@ mod tests {
         // correct values
         const KSI_DEL: f64 = 2.0;
         let correct_magnitude = (aux::RMAX - aux::RMIN) / KSI_DEL;
-        let correct_normal = vec![
-            -correct_magnitude * f64::sin(aux::AMAX),
-            correct_magnitude * f64::cos(aux::AMAX),
-        ];
+        let correct_normal = vec![-f64::sin(aux::AMAX), f64::cos(aux::AMAX)];
 
         // lover over shapes
         let ksi = &[0.25];
@@ -214,7 +223,7 @@ mod tests {
             // check
             let mag_n = pad.calc_normal_vector(&mut normal, ksi)?;
             assert_approx_eq!(mag_n, correct_magnitude, tol_mag);
-            assert_approx_eq!(vector_norm(&normal, NormVec::Euc), correct_magnitude, tol_mag);
+            assert_approx_eq!(vector_norm(&normal, NormVec::Euc), 1.0, tol_mag);
             assert_vec_approx_eq!(normal.as_data(), &correct_normal, tol_vec);
         }
         Ok(())
@@ -233,16 +242,8 @@ mod tests {
         const REF_AREA: f64 = 4.0;
         let area_face2_face3 = (aux::RMAX - aux::RMIN) * (aux::ZMAX - aux::ZMIN);
         let correct_magnitude_face2_face3 = area_face2_face3 / REF_AREA;
-        let correct_normal_face2 = vec![
-            correct_magnitude_face2_face3 * f64::sin(aux::AMIN),
-            -correct_magnitude_face2_face3 * f64::cos(aux::AMIN),
-            0.0,
-        ];
-        let correct_normal_face3 = vec![
-            -correct_magnitude_face2_face3 * f64::sin(aux::AMAX),
-            correct_magnitude_face2_face3 * f64::cos(aux::AMAX),
-            0.0,
-        ];
+        let correct_normal_face2 = vec![f64::sin(aux::AMIN), -f64::cos(aux::AMIN), 0.0];
+        let correct_normal_face3 = vec![-f64::sin(aux::AMAX), f64::cos(aux::AMAX), 0.0];
 
         // lover over shapes
         let ksi = &[ONE_BY_3, ONE_BY_3];
@@ -271,22 +272,14 @@ mod tests {
             let mut pad_face = aux::extract_face(2, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut normal, ksi)?;
             assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
-            assert_approx_eq!(
-                vector_norm(&normal, NormVec::Euc),
-                correct_magnitude_face2_face3,
-                tol_mag
-            );
+            assert_approx_eq!(vector_norm(&normal, NormVec::Euc), 1.0, tol_mag);
             assert_vec_approx_eq!(normal.as_data(), &correct_normal_face2, tol_vec);
 
             // face # 3
             let mut pad_face = aux::extract_face(3, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut normal, ksi)?;
             assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
-            assert_approx_eq!(
-                vector_norm(&normal, NormVec::Euc),
-                correct_magnitude_face2_face3,
-                tol_mag
-            );
+            assert_approx_eq!(vector_norm(&normal, NormVec::Euc), 1.0, tol_mag);
             assert_vec_approx_eq!(normal.as_data(), &correct_normal_face3, tol_vec);
 
             // face # 4
@@ -332,9 +325,10 @@ mod tests {
         //                                                 →     2 √2
         // For the diagonal of Tri: Δℓ_edge = 2 √2, thus ||n|| = ————— = √2
         //                                                         2
+        const OS2: f64 = 1.0 / SQRT_2;
         let tri_correct = vec![
             &[0.0, -1.0], // bottom
-            &[1.0, 1.0],  // diagonal
+            &[OS2, OS2],  // diagonal
             &[-1.0, 0.0], // left
         ];
         let qua_correct = vec![
@@ -411,11 +405,12 @@ mod tests {
         //      →     ΔA_face   √3 h²/2
         //    ||n|| = ——————— = ——————— = 4 √3
         //             ΔA_tri     1/2
+        const OS3: f64 = 1.0 / SQRT_3;
         let tet_correct = vec![
-            &[-4.0, 0.0, 0.0], // negative-x face
-            &[0.0, -4.0, 0.0], // negative-y face
-            &[0.0, 0.0, -4.0], // negative-z face
-            &[4.0, 4.0, 4.0],  // face orthogonal to the diagonal
+            &[-1.0, 0.0, 0.0], // negative-x face
+            &[0.0, -1.0, 0.0], // negative-y face
+            &[0.0, 0.0, -1.0], // negative-z face
+            &[OS3, OS3, OS3],  // face orthogonal to the diagonal
         ];
         let hex_correct = vec![
             &[-1.0, 0.0, 0.0], // behind

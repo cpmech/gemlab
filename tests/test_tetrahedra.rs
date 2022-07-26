@@ -1,4 +1,4 @@
-use gemlab::mesh::{check_face_normals, At, Extract, FaceKey, Mesh, Region};
+use gemlab::mesh::{check_face_normals, At, Extract, Mesh, Region};
 use gemlab::StrError;
 use std::collections::{HashMap, HashSet};
 
@@ -65,19 +65,19 @@ fn test_tetrahedra() -> Result<(), StrError> {
     let l = 2.0 / 0.5; // norm of normal vector
 
     // face keys and correct normal vectors (solutions)
-    let solutions: HashMap<FaceKey, [f64; 3]> = HashMap::from([
-        ((0, 3, 7, npoint), [-l, 0.0, 0.0]), // x-min
-        ((0, 4, 7, npoint), [-l, 0.0, 0.0]), // x-min
-        ((1, 2, 5, npoint), [l, 0.0, 0.0]),  // x-max
-        ((2, 5, 6, npoint), [l, 0.0, 0.0]),  // x-max
-        ((0, 1, 5, npoint), [0.0, -l, 0.0]), // y-min
-        ((0, 4, 5, npoint), [0.0, -l, 0.0]), // y-min
-        ((2, 3, 7, npoint), [0.0, l, 0.0]),  // y-max
-        ((2, 6, 7, npoint), [0.0, l, 0.0]),  // y-max
-        ((0, 1, 2, npoint), [0.0, 0.0, -l]), // z-min
-        ((0, 2, 3, npoint), [0.0, 0.0, -l]), // z-min
-        ((4, 5, 7, npoint), [0.0, 0.0, l]),  // z-max
-        ((5, 6, 7, npoint), [0.0, 0.0, l]),  // z-max
+    let solutions = HashMap::from([
+        ((0, 3, 7, npoint), (l, [-1.0, 0.0, 0.0])), // x-min
+        ((0, 4, 7, npoint), (l, [-1.0, 0.0, 0.0])), // x-min
+        ((1, 2, 5, npoint), (l, [1.0, 0.0, 0.0])),  // x-max
+        ((2, 5, 6, npoint), (l, [1.0, 0.0, 0.0])),  // x-max
+        ((0, 1, 5, npoint), (l, [0.0, -1.0, 0.0])), // y-min
+        ((0, 4, 5, npoint), (l, [0.0, -1.0, 0.0])), // y-min
+        ((2, 3, 7, npoint), (l, [0.0, 1.0, 0.0])),  // y-max
+        ((2, 6, 7, npoint), (l, [0.0, 1.0, 0.0])),  // y-max
+        ((0, 1, 2, npoint), (l, [0.0, 0.0, -1.0])), // z-min
+        ((0, 2, 3, npoint), (l, [0.0, 0.0, -1.0])), // z-min
+        ((4, 5, 7, npoint), (l, [0.0, 0.0, 1.0])),  // z-max
+        ((5, 6, 7, npoint), (l, [0.0, 0.0, 1.0])),  // z-max
     ]);
 
     // check if the normal vectors at boundary are outward

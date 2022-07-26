@@ -1,5 +1,5 @@
 use gemlab::integ::default_integ_points;
-use gemlab::mesh::{check_2d_edge_normals, At, EdgeKey, Extract, Mesh, Region};
+use gemlab::mesh::{check_2d_edge_normals, At, Extract, Mesh, Region};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
@@ -47,24 +47,24 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     // Note that the edge is mapped to [-1,+1] in both Lin or Qua
 
     // edge keys and correct normal vectors (solutions)
-    let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
+    let solutions = HashMap::from([
         // left
-        ((0, 1), [-0.5 / 2.0, 0.0]),
-        ((1, 2), [-0.5 / 2.0, 0.0]),
-        ((2, 3), [-1.0 / 2.0, 0.0]),
-        ((3, 4), [-0.5 / 2.0, 0.0]),
-        ((4, 5), [-0.5 / 2.0, 0.0]),
-        ((5, 6), [-0.1 / 2.0, 0.0]),
+        ((0, 1), (0.25, [-1.0, 0.0])),
+        ((1, 2), (0.25, [-1.0, 0.0])),
+        ((2, 3), (0.50, [-1.0, 0.0])),
+        ((3, 4), (0.25, [-1.0, 0.0])),
+        ((4, 5), (0.25, [-1.0, 0.0])),
+        ((5, 6), (0.05, [-1.0, 0.0])),
         // right
-        ((7, 8), [0.2 / 2.0, 0.0]),
-        ((8, 9), [0.8 / 2.0, 0.0]),
-        ((9, 10), [0.8 / 2.0, 0.0]),
-        ((10, 11), [1.2 / 2.0, 0.0]),
-        ((11, 12), [0.1 / 2.0, 0.0]),
+        ((7, 8), (0.1, [1.0, 0.0])),
+        ((8, 9), (0.4, [1.0, 0.0])),
+        ((9, 10), (0.4, [1.0, 0.0])),
+        ((10, 11), (0.6, [1.0, 0.0])),
+        ((11, 12), (0.05, [1.0, 0.0])),
         // bottom
-        ((0, 7), [0.0, -1.0 / 2.0]),
+        ((0, 7), (0.5, [0.0, -1.0])),
         // top
-        ((6, 12), [0.0, 1.0 / 2.0]),
+        ((6, 12), (0.5, [0.0, 1.0])),
     ]);
 
     // check if the normal vectors at boundary are outward
@@ -99,15 +99,15 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     // Note that the edge is mapped to [-1,+1] in both Lin or Qua
 
     // edge keys and correct normal vectors (solutions)
-    let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
-        ((0, 3), [-1.0 / 2.0, 0.0]),  // left
-        ((3, 7), [-1.0 / 2.0, 0.0]),  // left
-        ((7, 10), [-1.0 / 2.0, 0.0]), // left
-        ((2, 6), [1.0 / 2.0, 0.0]),   // right
-        ((6, 9), [1.0 / 2.0, 0.0]),   // right
-        ((9, 13), [1.0 / 2.0, 0.0]),  // right
-        ((0, 1), [0.0, -2.0 / 2.0]),  // bottom
-        ((1, 2), [0.0, -2.0 / 2.0]),  // bottom
+    let solutions = HashMap::from([
+        ((0, 3), (0.5, [-1.0, 0.0])),  // left
+        ((3, 7), (0.5, [-1.0, 0.0])),  // left
+        ((7, 10), (0.5, [-1.0, 0.0])), // left
+        ((2, 6), (0.5, [1.0, 0.0])),   // right
+        ((6, 9), (0.5, [1.0, 0.0])),   // right
+        ((9, 13), (0.5, [1.0, 0.0])),  // right
+        ((0, 1), (1.0, [0.0, -1.0])),  // bottom
+        ((1, 2), (1.0, [0.0, -1.0])),  // bottom
     ]);
 
     // check if the normal vectors at boundary are outward

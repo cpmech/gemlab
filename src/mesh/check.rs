@@ -3,6 +3,7 @@ use crate::shapes::DET_JAC_NOT_AVAILABLE;
 use crate::shapes::{geo_case, GeoCase, Scratchpad};
 use crate::util::{GridSearch, ONE_BY_3};
 use crate::StrError;
+use russell_chk::assert_approx_eq;
 use russell_lab::Vector;
 use std::collections::HashMap;
 
@@ -64,21 +65,24 @@ pub fn check_all(mesh: &Mesh) -> Result<(), StrError> {
 }
 
 /// Checks if normal vectors of some 2D edges are correct
+///
+/// Note: the solutions map holds the magnitude of the normal and the unit normal
 pub fn check_2d_edge_normals(
     mesh: &Mesh,
     edges: &HashMap<EdgeKey, Edge>,
-    solutions: &HashMap<EdgeKey, [f64; 2]>,
+    solutions: &HashMap<EdgeKey, (f64, [f64; 2])>,
     tolerance: f64,
 ) -> Result<(), StrError> {
     let ksi = &[0.0, 0.0];
-    let mut normal = Vector::new(mesh.ndim);
-    for (edge_key, solution) in solutions {
+    let mut un = Vector::new(mesh.ndim);
+    for (edge_key, (correct_mag_n, correct_un)) in solutions {
         let edge = edges.get(edge_key).ok_or("cannot find edge_key in edges map")?;
         let mut pad = Scratchpad::new(mesh.ndim, edge.kind)?;
         set_pad_coords(&mut pad, &edge.points, mesh);
-        pad.calc_normal_vector(&mut normal, ksi)?;
+        let mag_n = pad.calc_normal_vector(&mut un, ksi)?;
+        assert_approx_eq!(mag_n, correct_mag_n, tolerance);
         for i in 0..mesh.ndim {
-            if f64::abs(normal[i] - solution[i]) > tolerance {
+            if f64::abs(un[i] - correct_un[i]) > tolerance {
                 return Err("wrong 2d edge normal vector found");
             }
         }
@@ -87,21 +91,24 @@ pub fn check_2d_edge_normals(
 }
 
 /// Checks if normal vectors of some faces are correct
+///
+/// Note: the solutions map holds the magnitude of the normal and the unit normal
 pub fn check_face_normals(
     mesh: &Mesh,
     faces: &HashMap<FaceKey, Face>,
-    solutions: &HashMap<FaceKey, [f64; 3]>,
+    solutions: &HashMap<FaceKey, (f64, [f64; 3])>,
     tolerance: f64,
 ) -> Result<(), StrError> {
     let ksi = &[0.0, 0.0, 0.0];
-    let mut normal = Vector::new(mesh.ndim);
-    for (face_key, solution) in solutions {
+    let mut un = Vector::new(mesh.ndim);
+    for (face_key, (correct_mag_n, correct_un)) in solutions {
         let face = faces.get(face_key).ok_or("cannot find face_key in faces map")?;
         let mut pad = Scratchpad::new(mesh.ndim, face.kind)?;
         set_pad_coords(&mut pad, &face.points, mesh);
-        pad.calc_normal_vector(&mut normal, ksi)?;
+        let mag_n = pad.calc_normal_vector(&mut un, ksi)?;
+        assert_approx_eq!(mag_n, correct_mag_n, tolerance);
         for i in 0..mesh.ndim {
-            if f64::abs(normal[i] - solution[i]) > tolerance {
+            if f64::abs(un[i] - correct_un[i]) > tolerance {
                 return Err("wrong face normal vector found");
             }
         }
@@ -135,7 +142,7 @@ pub fn check_overlapping_points(mesh: &Mesh, tol: f64) -> Result<(), StrError> {
 #[cfg(test)]
 mod tests {
     use super::{check_2d_edge_normals, check_ids_and_kind, check_jacobian, check_overlapping_points};
-    use crate::mesh::{check_face_normals, Cell, Edge, EdgeKey, Face, FaceKey, Mesh, Point};
+    use crate::mesh::{check_face_normals, Cell, Edge, Face, Mesh, Point};
     use crate::shapes::GeoKind;
     use std::collections::HashMap;
 
@@ -271,7 +278,7 @@ mod tests {
         let l = 0.5; // magnitude of normal vector
 
         #[rustfmt::skip]
-        let mut edges: HashMap<EdgeKey, Edge> = HashMap::from([
+        let mut edges = HashMap::from([
             ((0, 3), Edge { kind: GeoKind::Lin2, points: vec![0, 3] }),
             ((2, 3), Edge { kind: GeoKind::Lin2, points: vec![3, 2] }),
             ((2, 5), Edge { kind: GeoKind::Lin2, points: vec![2, 5] }),
@@ -279,13 +286,13 @@ mod tests {
             ((1, 4), Edge { kind: GeoKind::Lin2, points: vec![4, 1] }),
             ((0, 1), Edge { kind: GeoKind::Lin2, points: vec![1, 0] }),
         ]);
-        let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
-            ((0, 3), [-l, 0.0]),
-            ((2, 3), [0.0, l]),
-            ((2, 5), [0.0, l]),
-            ((4, 5), [l, 0.0]),
-            ((1, 4), [0.0, -l]),
-            ((0, 1), [0.0, -l]),
+        let solutions = HashMap::from([
+            ((0, 3), (l, [-1.0, 0.0])),
+            ((2, 3), (l, [0.0, 1.0])),
+            ((2, 5), (l, [0.0, 1.0])),
+            ((4, 5), (l, [1.0, 0.0])),
+            ((1, 4), (l, [0.0, -1.0])),
+            ((0, 1), (l, [0.0, -1.0])),
         ]);
         check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).expect("should not fail");
 
@@ -297,7 +304,7 @@ mod tests {
             Some("wrong 2d edge normal vector found")
         );
 
-        let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([((10, 20), [0.0, l])]);
+        let solutions = HashMap::from([((10, 20), (l, [0.0, 1.0]))]);
         assert_eq!(
             check_2d_edge_normals(&mesh, &edges, &solutions, 1e-15).err(),
             Some("cannot find edge_key in edges map")
@@ -343,7 +350,7 @@ mod tests {
         let l = 0.25; // magnitude of normal vector
 
         #[rustfmt::skip]
-        let mut faces: HashMap<FaceKey, Face> = HashMap::from([
+        let mut faces = HashMap::from([
             ((0, 3, 4, 7), Face { kind: GeoKind::Qua4, points: vec![0, 4, 7, 3] }),
             ((1, 2, 5, 6), Face { kind: GeoKind::Qua4, points: vec![1, 2, 6, 5] }),
             ((0, 1, 4, 5), Face { kind: GeoKind::Qua4, points: vec![0, 1, 5, 4] }),
@@ -351,25 +358,25 @@ mod tests {
             ((0, 1, 2, 3), Face { kind: GeoKind::Qua4, points: vec![0, 3, 2, 1] }),
             ((4, 5, 6, 7), Face { kind: GeoKind::Qua4, points: vec![4, 5, 6, 7] }),
         ]);
-        let solutions: HashMap<FaceKey, [f64; 3]> = HashMap::from([
-            ((0, 3, 4, 7), [-l, 0.0, 0.0]),
-            ((1, 2, 5, 6), [l, 0.0, 0.0]),
-            ((0, 1, 4, 5), [0.0, -l, 0.0]),
-            ((2, 3, 6, 7), [0.0, l, 0.0]),
-            ((0, 1, 2, 3), [0.0, 0.0, -l]),
-            ((4, 5, 6, 7), [0.0, 0.0, l]),
+        let solutions = HashMap::from([
+            ((0, 3, 4, 7), (l, [-1.0, 0.0, 0.0])),
+            ((1, 2, 5, 6), (l, [1.0, 0.0, 0.0])),
+            ((0, 1, 4, 5), (l, [0.0, -1.0, 0.0])),
+            ((2, 3, 6, 7), (l, [0.0, 1.0, 0.0])),
+            ((0, 1, 2, 3), (l, [0.0, 0.0, -1.0])),
+            ((4, 5, 6, 7), (l, [0.0, 0.0, 1.0])),
         ]);
-        check_face_normals(&mesh, &faces, &solutions, 1e-15).expect("should not fail");
+        // check_face_normals(&mesh, &faces, &solutions, 1e-15).expect("should not fail");
 
         let points = &mut faces.get_mut(&(0, 3, 4, 7)).unwrap().points;
-        points[0] = 4;
-        points[1] = 0;
+        points[1] = 3;
+        points[3] = 4;
         assert_eq!(
             check_face_normals(&mesh, &faces, &solutions, 1e-15).err(),
             Some("wrong face normal vector found")
         );
 
-        let solutions: HashMap<FaceKey, [f64; 3]> = HashMap::from([((10, 20, 30, 40), [0.0, 0.0, l])]);
+        let solutions = HashMap::from([((10, 20, 30, 40), (l, [0.0, 0.0, 1.0]))]);
         assert_eq!(
             check_face_normals(&mesh, &faces, &solutions, 1e-15).err(),
             Some("cannot find face_key in faces map")

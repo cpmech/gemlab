@@ -121,6 +121,7 @@ mod tests {
     use super::vec_b_shape_times_vector_boundary;
     use crate::integ::{calc_ips_coords, default_integ_points};
     use crate::shapes::{GeoKind, Scratchpad};
+    use crate::util::SQRT_2;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
@@ -366,6 +367,39 @@ mod tests {
                 -aa / 3.0, // 7
             ],
             1e-15
+        );
+    }
+
+    #[test]
+    fn vec_b_shape_times_vector_boundary_works_arc() {
+        // [@bhatti:05] Example 7.9, page 518
+        // Reference: Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
+        let space_ndim = 2;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin3).unwrap();
+        let r = 5.0;
+        pad.set_xx(0, 0, r);
+        pad.set_xx(0, 1, 0.0);
+        pad.set_xx(1, 0, 0.0);
+        pad.set_xx(1, 1, r);
+        pad.set_xx(2, 0, r * SQRT_2 / 2.0);
+        pad.set_xx(2, 1, r * SQRT_2 / 2.0);
+        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let ips = default_integ_points(pad.kind);
+        let p = -20.0;
+        vec_b_shape_times_vector_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, n| {
+            t[0] = p * n[0];
+            t[1] = p * n[1];
+            Ok(())
+        })
+        .unwrap();
+        assert_vec_approx_eq!(
+            b.as_data(),
+            &[
+                30.4738, 2.85955, // 0
+                2.85955, 30.4738, // 1
+                66.6667, 66.6667, // 2
+            ],
+            1e-4
         );
     }
 }
