@@ -177,6 +177,7 @@ mod matrix_cases;
 mod matrix_cases_coupled;
 mod point_coords;
 mod scalar_field;
+mod testing;
 mod vector_cases;
 mod vector_cases_boundary;
 pub use crate::integ::analytical_tet4::*;

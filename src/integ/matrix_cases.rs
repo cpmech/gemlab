@@ -15,8 +15,91 @@ use russell_tensor::Tensor4;
 ///       ⌡
 ///       Ωₑ
 /// ```
-pub fn mat_nsn() -> Result<(), StrError> {
-    Err("mat_nsn: TODO")
+///
+/// The numerical integration is:
+///
+/// ```text
+///       nip-1    →     →      →          →
+/// Kᵐⁿ ≈   Σ   Nᵐ(ιᵖ) s(ιᵖ) Nⁿ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+///        p=0
+/// ```
+///
+/// # Output
+///
+/// ```text
+///     ┌                     ┐
+///     | K⁰⁰ K⁰¹ K⁰² ··· K⁰ⁿ |  ⟸  ii0
+///     | K¹⁰ K¹¹ K¹² ··· K¹ⁿ |
+/// K = | K²⁰ K²¹ K²² ··· K²ⁿ |
+///     |  ··  ··  ·· ···  ·· |
+///     | Kᵐ⁰ Kᵐ¹ Kᵐ² ··· Kᵐⁿ |  ⟸  ii
+///     └                     ┘
+///        ⇑                ⇑
+///       jj0               jj
+/// ```
+///
+/// * `kk` -- A matrix containing all `Kᵐⁿ` values, one after another, and
+///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
+///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
+/// * `pad` -- Some members of the scratchpad will be modified.
+///
+/// # Input
+///
+/// * `ii0` -- Stride marking the first row in the output matrix where to add components.
+/// * `jj0` -- Stride marking the first column in the output matrix where to add components.
+/// * `ips` -- Integration points (n_integ_point)
+/// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+/// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
+/// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+pub fn mat_nsn<F>(
+    kk: &mut Matrix,
+    pad: &mut Scratchpad,
+    ii0: usize,
+    jj0: usize,
+    ips: IntegPointData,
+    th: f64,
+    clear_kk: bool,
+    fn_s: F,
+) -> Result<(), StrError>
+where
+    F: Fn(usize) -> Result<f64, StrError>,
+{
+    // check
+    let nnode = pad.interp.dim();
+    let (nrow_kk, ncol_kk) = kk.dims();
+    if nrow_kk < ii0 + nnode {
+        return Err("nrow(K) must be ≥ ii0 + nnode");
+    }
+    if ncol_kk < jj0 + nnode {
+        return Err("ncol(K) must be ≥ jj0 + nnode");
+    }
+
+    // clear output matrix
+    if clear_kk {
+        kk.fill(0.0);
+    }
+
+    // loop over integration points
+    for p in 0..ips.len() {
+        // ksi coordinates and weight
+        let iota = &ips[p];
+        let weight = ips[p][3];
+
+        // calculate Jacobian and Gradient
+        let det_jac = pad.calc_gradient(iota)?;
+
+        // calculate s
+        let s = fn_s(p)?;
+
+        // add contribution to K matrix
+        let val = s * th * det_jac * weight;
+        for m in 0..nnode {
+            for n in 0..nnode {
+                kk[ii0 + m][jj0 + n] += pad.interp[m] * val * pad.interp[n];
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Implements the gradient(G) dot vector(V) times shape(N) integration case (e.g., compressibility matrix)
@@ -279,6 +362,7 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, 
 
 #[cfg(test)]
 mod tests {
+    use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
@@ -286,37 +370,9 @@ mod tests {
     use russell_lab::{copy_matrix, Matrix};
     use russell_tensor::LinElasticity;
 
-    // generates pad Lin2 for tests
-    fn gen_pad_lin2(l: f64) -> Scratchpad {
-        let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
-        pad.set_xx(0, 0, 3.0);
-        pad.set_xx(0, 1, 4.0);
-        pad.set_xx(1, 0, 3.0 + l);
-        pad.set_xx(1, 1, 4.0);
-        pad
-    }
-
-    // generates pad Tet4 for tests
-    fn gen_pad_tet4() -> Scratchpad {
-        let mut pad = Scratchpad::new(3, GeoKind::Tet4).unwrap();
-        pad.set_xx(0, 0, 2.0);
-        pad.set_xx(0, 1, 3.0);
-        pad.set_xx(0, 2, 4.0);
-        pad.set_xx(1, 0, 6.0);
-        pad.set_xx(1, 1, 3.0);
-        pad.set_xx(1, 2, 2.0);
-        pad.set_xx(2, 0, 2.0);
-        pad.set_xx(2, 1, 5.0);
-        pad.set_xx(2, 2, 1.0);
-        pad.set_xx(3, 0, 4.0);
-        pad.set_xx(3, 1, 3.0);
-        pad.set_xx(3, 2, 6.0);
-        pad
-    }
-
     #[test]
     fn capture_some_errors() {
-        let mut pad = gen_pad_lin2(1.0);
+        let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
             integ::mat_gdg(&mut kk, &mut pad, 1, 0, &[], 1.0, false, |_, _| Ok(())).err(),
@@ -409,7 +465,7 @@ mod tests {
     #[test]
     fn mat_gdg_works_tet4() -> Result<(), StrError> {
         // scratchpad
-        let mut pad = gen_pad_tet4();
+        let mut pad = aux::gen_pad_tet4();
 
         // constants
         let young = 480.0;

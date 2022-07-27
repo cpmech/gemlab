@@ -561,58 +561,15 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
-    use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
-    // to test if variables are cleared before sum
-    const NOISE: f64 = 1234.56;
-
-    // generates pad Lin2 for tests
-    fn gen_pad_lin2(l: f64) -> Scratchpad {
-        let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
-        pad.set_xx(0, 0, 3.0);
-        pad.set_xx(0, 1, 4.0);
-        pad.set_xx(1, 0, 3.0 + l);
-        pad.set_xx(1, 1, 4.0);
-        pad
-    }
-
-    // generates pad Tri3 for tests
-    fn gen_pad_tri3() -> Scratchpad {
-        let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
-        pad.set_xx(0, 0, 3.0);
-        pad.set_xx(0, 1, 4.0);
-        pad.set_xx(1, 0, 8.0);
-        pad.set_xx(1, 1, 4.0);
-        pad.set_xx(2, 0, 5.0);
-        pad.set_xx(2, 1, 9.0);
-        pad
-    }
-
-    // generates pad Tet4 for tests
-    fn gen_pad_tet4() -> Scratchpad {
-        let mut pad = Scratchpad::new(3, GeoKind::Tet4).unwrap();
-        pad.set_xx(0, 0, 2.0);
-        pad.set_xx(0, 1, 3.0);
-        pad.set_xx(0, 2, 4.0);
-        pad.set_xx(1, 0, 6.0);
-        pad.set_xx(1, 1, 3.0);
-        pad.set_xx(1, 2, 2.0);
-        pad.set_xx(2, 0, 2.0);
-        pad.set_xx(2, 1, 5.0);
-        pad.set_xx(2, 2, 1.0);
-        pad.set_xx(3, 0, 4.0);
-        pad.set_xx(3, 1, 3.0);
-        pad.set_xx(3, 2, 6.0);
-        pad
-    }
-
     #[test]
     fn capture_some_errors() {
-        let mut pad = gen_pad_lin2(1.0);
+        let mut pad = aux::gen_pad_lin2(1.0);
         let mut a = Vector::new(2);
         assert_eq!(
             integ::vec_a(&mut a, &mut pad, 1, &[], 1.0, false, |_| Ok(0.0)).err(),
@@ -649,7 +606,7 @@ mod tests {
         //     6 │ xa + 2 xb │
         //       └           ┘
         const L: f64 = 6.0;
-        let mut pad = gen_pad_lin2(L);
+        let mut pad = aux::gen_pad_lin2(L);
 
         // solution
         let cf = L / 6.0;
@@ -662,7 +619,7 @@ mod tests {
         let selection: Vec<_> = [2, 3, 4, 5].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), NOISE);
+        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
@@ -674,7 +631,7 @@ mod tests {
     #[test]
     fn vec_a_works_tri3_constant() -> Result<(), StrError> {
         // tri3 with a constant source term s(x) = cₛ
-        let mut pad = gen_pad_tri3();
+        let mut pad = aux::gen_pad_tri3();
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
@@ -690,7 +647,7 @@ mod tests {
             .collect();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), NOISE);
+        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |_| Ok(CS)).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
@@ -701,7 +658,7 @@ mod tests {
     #[test]
     fn vec_a_works_tet4_linear() -> Result<(), StrError> {
         // tet 4 with a linear source term s(x) = z = x₂
-        let mut pad = gen_pad_tet4();
+        let mut pad = aux::gen_pad_tet4();
 
         // solution
         let ana = AnalyticalTet4::new(&pad);
@@ -718,7 +675,7 @@ mod tests {
             .collect();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), NOISE);
+        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
@@ -732,7 +689,7 @@ mod tests {
     fn vec_b_works_lin2_linear() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with lin2
         const L: f64 = 6.0;
-        let mut pad = gen_pad_lin2(L);
+        let mut pad = aux::gen_pad_lin2(L);
 
         // solution
         let cf = L / 6.0;
@@ -751,7 +708,7 @@ mod tests {
 
         // check
         let space_ndim = pad.xmax.len();
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
@@ -770,7 +727,7 @@ mod tests {
     fn vec_b_works_tri3_constant() -> Result<(), StrError> {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
-        let mut pad = gen_pad_tri3();
+        let mut pad = aux::gen_pad_tri3();
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
@@ -785,7 +742,7 @@ mod tests {
 
         // check
         let space_ndim = pad.xmax.len();
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, _| {
@@ -805,7 +762,7 @@ mod tests {
         const V0: f64 = 2.0;
         const V1: f64 = 3.0;
         const V2: f64 = 4.0;
-        let mut pad = gen_pad_tet4();
+        let mut pad = aux::gen_pad_tet4();
 
         // solution
         let ana = AnalyticalTet4::new(&pad);
@@ -818,7 +775,7 @@ mod tests {
 
         // check
         let space_ndim = pad.xmax.len();
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, _| {
@@ -838,7 +795,7 @@ mod tests {
         // constant vector function: w(x) = {w₀, w₁}
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
-        let mut pad = gen_pad_tri3();
+        let mut pad = aux::gen_pad_tri3();
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
@@ -850,7 +807,7 @@ mod tests {
         let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
-        let mut c = Vector::filled(pad.kind.nnode(), NOISE);
+        let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, _| {
@@ -867,7 +824,7 @@ mod tests {
     #[test]
     fn vec_c_works_tri3_bilinear() -> Result<(), StrError> {
         // bilinear vector function: w(x) = {x, y}
-        let mut pad = gen_pad_tri3();
+        let mut pad = aux::gen_pad_tri3();
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
@@ -879,7 +836,7 @@ mod tests {
         let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
-        let mut c = Vector::filled(pad.kind.nnode(), NOISE);
+        let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
@@ -897,7 +854,7 @@ mod tests {
     #[test]
     fn vec_c_works_tet4_constant() -> Result<(), StrError> {
         // tet 4 with constant vector  w(x) = {w0, w1, w2}
-        let mut pad = gen_pad_tet4();
+        let mut pad = aux::gen_pad_tet4();
 
         // solution
         const W0: f64 = 2.0;
@@ -915,7 +872,7 @@ mod tests {
             .collect();
 
         // check
-        let mut c = Vector::filled(pad.kind.nnode(), NOISE);
+        let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, _| {
@@ -936,7 +893,7 @@ mod tests {
         // solution:
         //    dᵐ₀ = ½ (σ₀₀ bₘ + σ₀₁ cₘ)
         //    dᵐ₁ = ½ (σ₁₀ bₘ + σ₁₁ cₘ)
-        let mut pad = gen_pad_tri3();
+        let mut pad = aux::gen_pad_tri3();
 
         // solution
         const S00: f64 = 2.0;
@@ -956,7 +913,7 @@ mod tests {
 
         // check
         let space_ndim = pad.xmax.len();
-        let mut d = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut d = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_d(&mut d, &mut pad, 0, ips, 1.0, true, |sig, _| {
@@ -975,7 +932,7 @@ mod tests {
     #[test]
     fn vec_d_tet4_works_constant() -> Result<(), StrError> {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
-        let mut pad = gen_pad_tet4();
+        let mut pad = aux::gen_pad_tet4();
 
         // solution
         const S00: f64 = 2.0;
@@ -997,7 +954,7 @@ mod tests {
 
         // check
         let space_ndim = pad.xmax.len();
-        let mut d = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut d = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_d(&mut d, &mut pad, 0, ips, 1.0, true, |sig, _| {
