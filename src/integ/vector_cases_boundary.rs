@@ -150,7 +150,7 @@ mod tests {
         .unwrap();
         assert_vec_approx_eq!(b.as_data(), &[0.0, -2.0, 0.0, -2.0], 1e-15);
         // triangular (see [@sgm:14]\page{605})
-        let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+        let x_ips = integ::points_coords(&mut pad, ips).unwrap();
         integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, p, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
@@ -180,7 +180,7 @@ mod tests {
         .unwrap();
         assert_vec_approx_eq!(b.as_data(), &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
         // triangular (see [@sgm:14]\page{605})
-        let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+        let x_ips = integ::points_coords(&mut pad, ips).unwrap();
         integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, p, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
@@ -229,7 +229,7 @@ mod tests {
             1e-15
         );
         // triangular (see [@sgm:14]\page{605})
-        let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+        let x_ips = integ::points_coords(&mut pad, ips).unwrap();
         integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, p, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;

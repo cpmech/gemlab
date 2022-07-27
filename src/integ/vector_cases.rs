@@ -663,7 +663,7 @@ mod tests {
         // check
         let mut a = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
@@ -720,7 +720,7 @@ mod tests {
         let mut a = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
@@ -753,7 +753,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             integ::vec_b(&mut b, &mut pad, ips, 1.0, true, |v, p| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
@@ -881,7 +881,7 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             integ::vec_c(&mut c, &mut pad, ips, 1.0, true, |w, p| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];

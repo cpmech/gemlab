@@ -20,7 +20,7 @@ fn main() -> Result<(), StrError> {
         mesh::set_pad_coords(&mut pad, &cell.points, &mesh_1);
 
         // calculate the coordinates of the integration points
-        let x_ips = integ::calc_ips_coords(&mut pad, ips)?;
+        let x_ips = integ::points_coords(&mut pad, ips)?;
 
         // perform the integration over the domain of a single cell
         second_mom_inertia_mesh_1 += integ::scalar_field(&mut pad, ips, |p| {
@@ -37,7 +37,7 @@ fn main() -> Result<(), StrError> {
         mesh::set_pad_coords(&mut pad, &cell.points, &mesh_2);
 
         // calculate the coordinates of the integration points
-        let x_ips = integ::calc_ips_coords(&mut pad, ips)?;
+        let x_ips = integ::points_coords(&mut pad, ips)?;
 
         // perform the integration over the domain of a single cell
         second_mom_inertia_mesh_2 += integ::scalar_field(&mut pad, ips, |p| {
