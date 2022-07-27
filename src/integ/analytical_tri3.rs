@@ -172,6 +172,18 @@ impl AnalyticalTri3 {
         Matrix::from(&[[2.0 * c, c, c], [c, 2.0 * c, c], [c, c, 2.0 * c]])
     }
 
+    /// Performs the gtg integration
+    pub fn integ_gtg(&self, kx: f64, ky: f64) -> Matrix {
+        let g = &self.gg;
+        let k00 = self.area * (g[0][0] * g[0][0] * kx + g[0][1] * g[0][1] * ky);
+        let k11 = self.area * (g[1][0] * g[1][0] * kx + g[1][1] * g[1][1] * ky);
+        let k01 = self.area * (g[0][0] * g[1][0] * kx + g[0][1] * g[1][1] * ky);
+        let k12 = self.area * (g[1][0] * g[2][0] * kx + g[1][1] * g[2][1] * ky);
+        let k02 = self.area * (g[0][0] * g[2][0] * kx + g[0][1] * g[2][1] * ky);
+        let k22 = self.area * (g[2][0] * g[2][0] * kx + g[2][1] * g[2][1] * ky);
+        Matrix::from(&[[k00, k01, k02], [k01, k11, k12], [k02, k12, k22]])
+    }
+
     /// Calculates the stiffness matrix
     ///
     /// solution:

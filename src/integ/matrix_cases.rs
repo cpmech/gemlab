@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::Matrix;
-use russell_tensor::Tensor4;
+use russell_tensor::{Tensor2, Tensor4};
 
 /// Implements the shape(N) times scalar(S) times shape(N) integration case (e.g., diffusion matrix)
 ///
@@ -127,8 +127,111 @@ pub fn mat_gvn() -> Result<(), StrError> {
 ///       ⌡      ▔
 ///       Ωₑ
 /// ```
-pub fn mat_gtg() -> Result<(), StrError> {
-    Err("mat_gtg: TODO")
+///
+/// The numerical integration is:
+///
+/// ```text
+///       nip-1 →  →       →     →  →          →
+/// Kᵐⁿ ≈   Σ   Gᵐ(ιᵖ) ⋅ T(ιᵖ) ⋅ Gⁿ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+///        p=0           ▔
+/// ```
+///
+/// # Output
+///
+/// ```text
+///     ┌                     ┐
+///     | K⁰⁰ K⁰¹ K⁰² ··· K⁰ⁿ |  ⟸  ii0
+///     | K¹⁰ K¹¹ K¹² ··· K¹ⁿ |
+/// K = | K²⁰ K²¹ K²² ··· K²ⁿ |
+///     |  ··  ··  ·· ···  ·· |
+///     | Kᵐ⁰ Kᵐ¹ Kᵐ² ··· Kᵐⁿ |  ⟸  ii
+///     └                     ┘
+///        ⇑                ⇑
+///       jj0               jj
+/// ```
+///
+/// * `kk` -- A matrix containing all `Kᵐⁿ` values, one after another, and
+///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
+///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
+/// * `pad` -- Some members of the scratchpad will be modified.
+///
+/// # Input
+///
+/// * `ii0` -- Stride marking the first row in the output matrix where to add components.
+/// * `jj0` -- Stride marking the first column in the output matrix where to add components.
+/// * `ips` -- Integration points (n_integ_point)
+/// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
+/// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
+/// * `fn_tt` -- Function `f(T,p)` that computes `T(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+pub fn mat_gtg<F>(
+    kk: &mut Matrix,
+    pad: &mut Scratchpad,
+    ii0: usize,
+    jj0: usize,
+    ips: IntegPointData,
+    th: f64,
+    clear_kk: bool,
+    fn_tt: F,
+) -> Result<(), StrError>
+where
+    F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
+{
+    // check
+    let nnode = pad.interp.dim();
+    let (nrow_kk, ncol_kk) = kk.dims();
+    if nrow_kk < ii0 + nnode {
+        return Err("nrow(K) must be ≥ ii0 + nnode");
+    }
+    if ncol_kk < jj0 + nnode {
+        return Err("ncol(K) must be ≥ jj0 + nnode");
+    }
+
+    // allocate auxiliary tensor
+    let space_ndim = pad.xmax.len();
+    let mut tt = Tensor2::new(true, space_ndim == 2);
+
+    // clear output matrix
+    if clear_kk {
+        kk.fill(0.0);
+    }
+
+    // loop over integration points
+    let s = SQRT_2;
+    for p in 0..ips.len() {
+        // ksi coordinates and weight
+        let iota = &ips[p];
+        let weight = ips[p][3];
+
+        // calculate interpolation functions and Jacobian
+        let det_jac = pad.calc_gradient(iota)?;
+
+        // calculate T tensor
+        fn_tt(&mut tt, p)?;
+
+        // add contribution to K matrix
+        let coef = th * det_jac * weight;
+        let g = &pad.gradient;
+        let t = &tt.vec;
+        if space_ndim == 2 {
+            for m in 0..nnode {
+                for n in 0..nnode {
+                    kk[ii0 + m][jj0 + n] += coef
+                        * (g[n][1] * (t[1] * g[m][1] + (t[3] * g[m][0]) / s)
+                            + g[n][0] * (t[0] * g[m][0] + (t[3] * g[m][1]) / s));
+                }
+            }
+        } else {
+            for m in 0..nnode {
+                for n in 0..nnode {
+                    kk[ii0 + m][jj0 + n] += coef
+                        * (g[n][2] * (t[2] * g[m][2] + (t[5] * g[m][0]) / s + (t[4] * g[m][1]) / s)
+                            + g[n][1] * (t[1] * g[m][1] + (t[3] * g[m][0]) / s + (t[4] * g[m][2]) / s)
+                            + g[n][0] * (t[0] * g[m][0] + (t[3] * g[m][1]) / s + (t[5] * g[m][2]) / s));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Implements the shape(N) times tensor(T) times shape(N) integration case (e.g., mass matrix)
@@ -449,6 +552,28 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_nsn(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |_| Ok(s)).unwrap();
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn mat_gtg_tri3_works() {
+        let mut pad = aux::gen_pad_tri3();
+        let mut kk = Matrix::new(3, 3);
+        let ana = AnalyticalTri3::new(&pad);
+        let (kx, ky) = (2.5, 3.8);
+        let kk_correct = ana.integ_gtg(kx, ky);
+        let class = pad.kind.class();
+        let tolerances = [1e-15, 1e-15, 1e-15];
+        let selection: Vec<_> = [1, 3, 7].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_gtg(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |tt, _| {
+                tt.sym_set(0, 0, kx);
+                tt.sym_set(1, 1, ky);
+                Ok(())
+            })
+            .unwrap();
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
