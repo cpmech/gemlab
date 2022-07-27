@@ -35,7 +35,7 @@ pub fn default_points(kind: GeoKind) -> IntegPointData {
         GeoKind::Lin4 => &IP_LIN_LEGENDRE_4,
         GeoKind::Lin5 => &IP_LIN_LEGENDRE_5,
         // Tri
-        GeoKind::Tri3 => &IP_TRI_INTERNAL_1,
+        GeoKind::Tri3 => &IP_TRI_INTERNAL_3,
         GeoKind::Tri6 => &IP_TRI_INTERNAL_4,
         GeoKind::Tri10 => &IP_TRI_INTERNAL_12,
         GeoKind::Tri15 => &IP_TRI_INTERNAL_16,
@@ -47,7 +47,7 @@ pub fn default_points(kind: GeoKind) -> IntegPointData {
         GeoKind::Qua16 => &IP_QUA_LEGENDRE_16,
         GeoKind::Qua17 => &IP_QUA_LEGENDRE_16,
         // Tet
-        GeoKind::Tet4 => &IP_TET_INTERNAL_1,
+        GeoKind::Tet4 => &IP_TET_INTERNAL_4,
         GeoKind::Tet10 => &IP_TET_FELIPPA_14,
         GeoKind::Tet20 => &IP_TET_FELIPPA_24,
         // Hex
