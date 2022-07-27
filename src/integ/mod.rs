@@ -171,6 +171,7 @@
 //! ```
 
 mod analytical_qua4;
+mod analytical_qua8;
 mod analytical_tet4;
 mod analytical_tri3;
 mod integ_points;
@@ -182,6 +183,7 @@ mod testing;
 mod vector_cases;
 mod vector_cases_boundary;
 pub use crate::integ::analytical_qua4::*;
+pub use crate::integ::analytical_qua8::*;
 pub use crate::integ::analytical_tet4::*;
 pub use crate::integ::analytical_tri3::*;
 pub use crate::integ::integ_points::*;

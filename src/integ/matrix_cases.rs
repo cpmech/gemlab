@@ -364,7 +364,7 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, 
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua4, AnalyticalTet4, AnalyticalTri3};
+    use crate::integ::{self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3};
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
@@ -428,6 +428,24 @@ mod tests {
             .iter()
             .map(|n| integ::points(class, *n).unwrap())
             .collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_nsn(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |_| Ok(s)).unwrap();
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn mat_nsn_qua8_works() {
+        let (a, b) = (2.0, 1.5);
+        let mut pad = aux::gen_pad_qua8(2.0, 1.0, a, b);
+        let mut kk = Matrix::new(8, 8);
+        let s = 3.0;
+        let ana = AnalyticalQua8::new(a, b);
+        let kk_correct = ana.integ_nsn(s, 1.0);
+        let class = pad.kind.class();
+        let tolerances = [0.2, 1e-14, 1e-14];
+        let selection: Vec<_> = [8, 9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_nsn(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |_| Ok(s)).unwrap();
