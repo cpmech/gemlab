@@ -579,6 +579,29 @@ mod tests {
     }
 
     #[test]
+    fn mat_gtg_qua8_works() {
+        let (a, b) = (2.0, 1.5);
+        let mut pad = aux::gen_pad_qua8(2.0, 1.0, a, b);
+        let mut kk = Matrix::new(8, 8);
+        let ana = AnalyticalQua8::new(a, b);
+        let (kx, ky) = (2.5, 3.8);
+        let kk_correct = ana.integ_gtg(kx, ky);
+        let class = pad.kind.class();
+        let tolerances = [1e-14, 1e-14];
+        let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_gtg(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |tt, _| {
+                tt.sym_set(0, 0, kx);
+                tt.sym_set(1, 1, ky);
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
     fn mat_gdg_works_tri3_plane_stress() -> Result<(), StrError> {
         // Element # 0 from example 1.6 from [@bhatti] page 32
         // Solid bracket with thickness = 0.25
