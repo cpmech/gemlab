@@ -36,7 +36,7 @@ pub fn default_points(kind: GeoKind) -> IntegPointData {
         GeoKind::Lin5 => &IP_LIN_LEGENDRE_5,
         // Tri
         GeoKind::Tri3 => &IP_TRI_INTERNAL_3,
-        GeoKind::Tri6 => &IP_TRI_INTERNAL_4,
+        GeoKind::Tri6 => &IP_TRI_FELIPPA_7,
         GeoKind::Tri10 => &IP_TRI_INTERNAL_12,
         GeoKind::Tri15 => &IP_TRI_INTERNAL_16,
         // Qua
@@ -80,6 +80,8 @@ pub fn default_points(kind: GeoKind) -> IntegPointData {
 /// * `3` -- Internal integration points and weights
 /// * `1_003` -- Edge integration points and weights
 /// * `4` -- Internal integration points and weights
+/// * `6` -- Internal integration points and weights (based on Felippa's code)
+/// * `7` -- Internal integration points and weights (based on Felippa's code)
 /// * `12` -- Internal integration points and weights
 /// * `16` -- Internal integration points and weights
 ///
@@ -145,6 +147,8 @@ pub fn points(class: GeoClass, n_integ_point: usize) -> Result<IntegPointData, S
             3 => &IP_TRI_INTERNAL_3,
             1_003 => &IP_TRI_EDGE_3,
             4 => &IP_TRI_INTERNAL_4,
+            6 => &IP_TRI_FELIPPA_6,
+            7 => &IP_TRI_FELIPPA_7,
             12 => &IP_TRI_INTERNAL_12,
             16 => &IP_TRI_INTERNAL_16,
             _ => return Err("desired number of integration points is not available for Tri class"),
@@ -267,6 +271,29 @@ pub const IP_TRI_INTERNAL_4: [[f64; 4]; 4] = [
     [1.0 / 5.0, 1.0 / 5.0, 0.0,  25.0 / 96.0],
     [3.0 / 5.0, 1.0 / 5.0, 0.0,  25.0 / 96.0],
     [1.0 / 5.0, 3.0 / 5.0, 0.0,  25.0 / 96.0],
+];
+
+/// Internal integration points and weights, 6 points
+#[rustfmt::skip]
+pub const IP_TRI_FELIPPA_6: [[f64; 4]; 6] = [
+    [0.44594849091596488632,  0.44594849091596488632,  0.0, 0.11169079483900573285 ],
+    [0.10810301816807022736,  0.44594849091596488632,  0.0, 0.11169079483900573285 ],
+    [0.44594849091596488632,  0.10810301816807022736,  0.0, 0.11169079483900573285 ],
+    [0.091576213509770743460, 0.091576213509770743460, 0.0, 0.054975871827660933819],
+    [0.81684757298045851308,  0.091576213509770743460, 0.0, 0.054975871827660933819],
+    [0.091576213509770743460, 0.81684757298045851308,  0.0, 0.054975871827660933819],
+];
+
+/// Internal integration points and weights, 7 points
+#[rustfmt::skip]
+pub const IP_TRI_FELIPPA_7: [[f64; 4]; 7] = [
+    [0.10128650732345633880,  0.10128650732345633880,  0.0, 0.062969590272413576298],
+    [0.79742698535308732240,  0.10128650732345633880,  0.0, 0.062969590272413576298],
+    [0.10128650732345633880,  0.79742698535308732240,  0.0, 0.062969590272413576298],
+    [0.47014206410511508977,  0.47014206410511508977,  0.0, 0.066197076394253090369],
+    [0.059715871789769820459, 0.47014206410511508977,  0.0, 0.066197076394253090369],
+    [0.47014206410511508977,  0.059715871789769820459, 0.0, 0.066197076394253090369],
+    [0.33333333333333333333,  0.33333333333333333333,  0.0, 0.11250000000000000000 ],
 ];
 
 /// Internal integration points and weights
@@ -726,7 +753,7 @@ mod tests {
         assert_eq!(default_points(GeoKind::Lin5).len(), 5);
         // Tri
         assert_eq!(default_points(GeoKind::Tri3).len(), 3);
-        assert_eq!(default_points(GeoKind::Tri6).len(), 4);
+        assert_eq!(default_points(GeoKind::Tri6).len(), 7);
         assert_eq!(default_points(GeoKind::Tri10).len(), 12);
         assert_eq!(default_points(GeoKind::Tri15).len(), 16);
         // Qua
@@ -759,7 +786,7 @@ mod tests {
         );
 
         // Tri
-        for n_integ_point in [1, 3, 4, 12, 16] {
+        for n_integ_point in [1, 3, 4, 6, 7, 12, 16] {
             let ips = points(GeoClass::Tri, n_integ_point)?;
             assert_eq!(ips.len(), n_integ_point);
         }
@@ -783,7 +810,7 @@ mod tests {
         );
 
         // Tet
-        for n_integ_point in [1, 4, 5, 8, 14] {
+        for n_integ_point in [1, 4, 5, 8, 14, 15, 24] {
             let ips = points(GeoClass::Tet, n_integ_point)?;
             assert_eq!(ips.len(), n_integ_point);
         }
@@ -793,7 +820,7 @@ mod tests {
         );
 
         // Hex
-        for n_integ_point in [6, 8, 9, 14, 27] {
+        for n_integ_point in [6, 8, 9, 14, 27, 64] {
             let ips = points(GeoClass::Hex, n_integ_point)?;
             assert_eq!(ips.len(), n_integ_point);
         }
