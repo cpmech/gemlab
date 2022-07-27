@@ -166,6 +166,12 @@ impl AnalyticalTri3 {
         ]
     }
 
+    /// Performs the nsn integration
+    pub fn integ_nsn(&self, s: f64, th: f64) -> Matrix {
+        let c = th * s * self.area / 12.0;
+        Matrix::from(&[[2.0 * c, c, c], [c, 2.0 * c, c], [c, c, 2.0 * c]])
+    }
+
     /// Calculates the stiffness matrix
     ///
     /// solution:

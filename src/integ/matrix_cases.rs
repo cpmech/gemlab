@@ -85,7 +85,8 @@ where
         let iota = &ips[p];
         let weight = ips[p][3];
 
-        // calculate Jacobian and Gradient
+        // calculate interpolation functions and Jacobian
+        (pad.fn_interp)(&mut pad.interp, iota);
         let det_jac = pad.calc_gradient(iota)?;
 
         // calculate s
@@ -373,6 +374,15 @@ mod tests {
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
+        let mut kk = Matrix::new(2, 2);
+        assert_eq!(
+            integ::mat_nsn(&mut kk, &mut pad, 1, 0, &[], 1.0, false, |_| Ok(0.0)).err(),
+            Some("nrow(K) must be ≥ ii0 + nnode")
+        );
+        assert_eq!(
+            integ::mat_nsn(&mut kk, &mut pad, 0, 1, &[], 1.0, false, |_| Ok(0.0)).err(),
+            Some("ncol(K) must be ≥ jj0 + nnode")
+        );
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
             integ::mat_gdg(&mut kk, &mut pad, 1, 0, &[], 1.0, false, |_, _| Ok(())).err(),
@@ -382,6 +392,26 @@ mod tests {
             integ::mat_gdg(&mut kk, &mut pad, 0, 1, &[], 1.0, false, |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
+    }
+
+    #[test]
+    fn mat_nsn_tri3_works() {
+        let mut pad = aux::gen_pad_tri3();
+        let mut kk = Matrix::new(3, 3);
+        let s = 12.0;
+        let ana = AnalyticalTri3::new(&pad);
+        let kk_correct = ana.integ_nsn(s, 1.0);
+        let class = pad.kind.class();
+        let tolerances = [8.34, 1e-14, 1e-15, 1e-14, 1e-14, 1e-12, 1e-13]; // note how bad rule-1 integ is here
+        let selection: Vec<_> = [1, 3, 1_003, 6, 7, 12, 16]
+            .iter()
+            .map(|n| integ::points(class, *n).unwrap())
+            .collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_nsn(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |_| Ok(s)).unwrap();
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
     }
 
     #[test]
