@@ -725,7 +725,7 @@ mod tests {
         assert_eq!(default_points(GeoKind::Lin4).len(), 4);
         assert_eq!(default_points(GeoKind::Lin5).len(), 5);
         // Tri
-        assert_eq!(default_points(GeoKind::Tri3).len(), 1);
+        assert_eq!(default_points(GeoKind::Tri3).len(), 3);
         assert_eq!(default_points(GeoKind::Tri6).len(), 4);
         assert_eq!(default_points(GeoKind::Tri10).len(), 12);
         assert_eq!(default_points(GeoKind::Tri15).len(), 16);
@@ -737,7 +737,7 @@ mod tests {
         assert_eq!(default_points(GeoKind::Qua16).len(), 16);
         assert_eq!(default_points(GeoKind::Qua17).len(), 16);
         // Tet
-        assert_eq!(default_points(GeoKind::Tet4).len(), 1);
+        assert_eq!(default_points(GeoKind::Tet4).len(), 4);
         assert_eq!(default_points(GeoKind::Tet10).len(), 14);
         assert_eq!(default_points(GeoKind::Tet20).len(), 24);
         // Hex
