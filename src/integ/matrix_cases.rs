@@ -5,9 +5,34 @@ use crate::StrError;
 use russell_lab::Matrix;
 use russell_tensor::Tensor4;
 
-/// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case (stiffness matrix)
+/// Implements the shape(N) times scalar(S) times shape(N) integration case (e.g., diffusion matrix)
+pub fn mat_nsn() -> Result<(), StrError> {
+    Err("mat_nsn: TODO")
+}
+
+/// Implements the gradient(G) dot vector(V) times shape(N) integration case (e.g., compressibility matrix)
+pub fn mat_gvn() -> Result<(), StrError> {
+    Err("mat_gvn: TODO")
+}
+
+/// Implements the gradient(G) dot tensor(T) dot gradient(G) integration case (e.g., conductivity matrix)
+pub fn mat_gtg() -> Result<(), StrError> {
+    Err("mat_gtg: TODO")
+}
+
+/// Implements the shape(N) times tensor(T) times shape(N) integration case (e.g., mass matrix)
+pub fn mat_ntn() -> Result<(), StrError> {
+    Err("mat_ntn: TODO")
+}
+
+/// Implements the shape(N) times vector(V) dot gradient(G) integration case (e.g., variable density matrix)
+pub fn mat_nvg() -> Result<(), StrError> {
+    Err("mat_nvg: TODO")
+}
+
+/// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case (e.g., stiffness matrix)
 ///
-/// Stiffness tensors:
+/// Stiffness tensors (assuming an implicit sum over repeated lower indices):
 ///
 /// ```text
 ///       ⌠               →    →
@@ -16,7 +41,7 @@ use russell_tensor::Tensor4;
 ///       Ωₑ
 /// ```
 ///
-/// The numerical integration is:
+/// The numerical integration is (assuming an implicit sum over repeated lower indices):
 ///
 /// ```text
 ///         nip-1     →         →       →          →
