@@ -97,8 +97,14 @@ impl Scratchpad {
             plot.add(&labels_corner).add(&labels_middle);
         }
         if set_range {
-            let dx = self.xmax[0] - self.xmin[0];
-            let dy = self.xmax[1] - self.xmin[1];
+            let mut dx = self.xmax[0] - self.xmin[0];
+            let mut dy = self.xmax[1] - self.xmin[1];
+            if dx <= 0.0 {
+                dx = 1.0
+            }
+            if dy <= 0.0 {
+                dy = 1.0
+            }
             const PCT: f64 = 2.0 / 100.0;
             if space_ndim == 2 {
                 plot.set_range(
