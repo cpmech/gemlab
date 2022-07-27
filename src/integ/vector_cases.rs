@@ -37,29 +37,28 @@ use russell_tensor::Tensor2;
 ///
 /// ```text
 ///     ┌     ┐
-///     |  a⁰ |
+///     |  a⁰ |  ⟸  ii0 = 0
 ///     |  a¹ |
 /// a = |  a² |
 ///     | ··· |
-///     |  aᵐ |
+///     |  aᵐ |  ⟸  ii
 ///     └     ┘
 /// ```
 ///
 /// * `a` -- A vector containing all `aᵐ` values, one after another, and
-///          sequentially placed as shown above. `m` is the index of the node.
-///          The length of `a` must be equal to `nnode`.
+///   sequentially placed as shown above. `m` is the index of the node.
+///   The length must be `a.len() ≥ ii0 + nnode`
+/// * `pad` -- Some members of the scratchpad will be modified
 ///
 /// # Input
 ///
-/// * `pad` -- **modified** Scratchpad
+/// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
 /// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///
 /// # Examples
-///
-/// See also the `examples` directory.
 ///
 /// ```
 /// use gemlab::integ;
@@ -79,7 +78,7 @@ use russell_tensor::Tensor2;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |_| Ok(5.0))?;
+///     integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |_| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
 ///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
@@ -89,6 +88,7 @@ use russell_tensor::Tensor2;
 pub fn vec_a<F>(
     a: &mut Vector,
     pad: &mut Scratchpad,
+    ii0: usize,
     ips: IntegPointData,
     th: f64,
     clear_a: bool,
@@ -99,8 +99,8 @@ where
 {
     // check
     let nnode = pad.interp.dim();
-    if a.dim() != nnode {
-        return Err("a.len() must be equal to nnode");
+    if a.dim() < ii0 + nnode {
+        return Err("a.len() must be ≥ ii0 + nnode");
     }
 
     // clear output vector
@@ -124,7 +124,7 @@ where
         // loop over nodes and perform sum
         let val = s * th * det_jac * weight;
         for m in 0..nnode {
-            a[m] += pad.interp[m] * val;
+            a[ii0 + m] += pad.interp[m] * val;
         }
     }
     Ok(())
@@ -153,14 +153,14 @@ where
 ///
 /// ```text
 ///     ┌     ┐
-///     | b⁰₀ |
+///     | b⁰₀ |  ⟸  ii0 = 0
 ///     | b⁰₁ |
 ///     | b¹₀ |
 /// b = | b¹₁ |
 ///     | b²₀ |
 ///     | b²₁ |
 ///     | ··· |
-///     | bᵐᵢ |  ⟸  ii := i + m * space_ndim
+///     | bᵐᵢ |  ⟸  ii := i + m ⋅ space_ndim
 ///     └     ┘       
 ///
 /// m = ii / space_ndim
@@ -168,21 +168,20 @@ where
 /// ```
 ///
 /// * `b` -- A vector containing all `bᵐᵢ` values, one after another, and sequentially placed
-///          as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
-///          The length of `b` must be equal to `nnode * space_ndim`.
+///   as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
+///   The length must be `b.len() ≥ ii0 + nnode ⋅ space_ndim`
+/// * `pad` -- Some members of the scratchpad will be modified
 ///
 /// # Input
 ///
-/// * `pad` -- **modified** Scratchpad
+/// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
-/// * `fn_v` -- Function `f(v,p)` that computes `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
-///             The dim of `v` is equal to `space_ndim`.
+/// * `fn_v` -- Function `f(v,p)` that computes `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`.
+///   The dim of `v` is equal to `space_ndim`.
 ///
 /// # Examples
-///
-/// See also the `examples` directory.
 ///
 /// ```
 /// use gemlab::integ;
@@ -202,7 +201,7 @@ where
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_b(&mut b, &mut pad, ips, 1.0, true, |v, _| {
+///     integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
 ///         Ok(())
@@ -217,6 +216,7 @@ where
 pub fn vec_b<F>(
     b: &mut Vector,
     pad: &mut Scratchpad,
+    ii0: usize,
     ips: IntegPointData,
     th: f64,
     clear_b: bool,
@@ -228,8 +228,8 @@ where
     // check
     let nnode = pad.interp.dim();
     let space_ndim = pad.xmax.len();
-    if b.dim() != nnode * space_ndim {
-        return Err("b.len() must be equal to nnode * space_ndim");
+    if b.dim() < ii0 + nnode * space_ndim {
+        return Err("b.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
 
     // allocate auxiliary vector
@@ -258,14 +258,14 @@ where
         let nn = &pad.interp;
         if space_ndim == 2 {
             for m in 0..nnode {
-                b[0 + m * 2] += coef * nn[m] * v[0];
-                b[1 + m * 2] += coef * nn[m] * v[1];
+                b[ii0 + 0 + m * 2] += coef * nn[m] * v[0];
+                b[ii0 + 1 + m * 2] += coef * nn[m] * v[1];
             }
         } else {
             for m in 0..nnode {
-                b[0 + m * 3] += coef * nn[m] * v[0];
-                b[1 + m * 3] += coef * nn[m] * v[1];
-                b[2 + m * 3] += coef * nn[m] * v[2];
+                b[ii0 + 0 + m * 3] += coef * nn[m] * v[0];
+                b[ii0 + 1 + m * 3] += coef * nn[m] * v[1];
+                b[ii0 + 2 + m * 3] += coef * nn[m] * v[2];
             }
         }
     }
@@ -295,26 +295,26 @@ where
 ///
 /// ```text
 ///     ┌     ┐
-///     |  c⁰ |
+///     |  c⁰ |  ⟸  ii0 = 0
 ///     |  c¹ |
 /// c = |  c² |
 ///     | ··· |
-///     |  cᵐ |
+///     |  cᵐ |  ⟸  ii
 ///     └     ┘
 /// ```
 ///
-/// * `c` -- A vector containing all `cᵐ` values, one after another, and
-///          sequentially placed as shown above. `m` is the index of the node.
-///          The length of `c` must be be equal to `nnode`.
+/// * `c` -- A vector containing all `cᵐ` values, one after another, and sequentially placed as shown above.
+///   `m` is the index of the node. The length must be `c.len() ≥ ii0 + nnode`.
+/// * `pad` -- Some members of the scratchpad will be modified
 ///
 /// # Input
 ///
-/// * `pad` -- **modified** Scratchpad
+/// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
-/// * `fn_w` -- Function `f(w,p)` that computes `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
-///             The dim of `w` is equal to `space_ndim`.
+/// * `fn_w` -- Function `f(w,p)` that computes `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`.
+///    The dim of `w` is equal to `space_ndim`.
 ///
 /// # Examples
 ///
@@ -338,7 +338,7 @@ where
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_c(&mut c, &mut pad, ips, 1.0, true, |w, _| {
+///     integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
 ///         Ok(())
@@ -357,6 +357,7 @@ where
 pub fn vec_c<F>(
     c: &mut Vector,
     pad: &mut Scratchpad,
+    ii0: usize,
     ips: IntegPointData,
     th: f64,
     clear_c: bool,
@@ -368,8 +369,8 @@ where
     // check
     let nnode = pad.interp.dim();
     let space_ndim = pad.xmax.len();
-    if c.dim() != nnode {
-        return Err("c.len() must be equal to nnode");
+    if c.dim() < ii0 + nnode {
+        return Err("c.len() must be ≥ ii0 + nnode");
     }
 
     // allocate auxiliary vector
@@ -397,11 +398,11 @@ where
         let g = &pad.gradient;
         if space_ndim == 2 {
             for m in 0..nnode {
-                c[m] += coef * (w[0] * g[m][0] + w[1] * g[m][1]);
+                c[ii0 + m] += coef * (w[0] * g[m][0] + w[1] * g[m][1]);
             }
         } else {
             for m in 0..nnode {
-                c[m] += coef * (w[0] * g[m][0] + w[1] * g[m][1] + w[2] * g[m][2]);
+                c[ii0 + m] += coef * (w[0] * g[m][0] + w[1] * g[m][1] + w[2] * g[m][2]);
             }
         }
     }
@@ -431,14 +432,14 @@ where
 ///
 /// ```text
 ///     ┌     ┐
-///     | d⁰₀ |
+///     | d⁰₀ |  ⟸  ii0 = 0
 ///     | d⁰₁ |
 ///     | d¹₀ |
 /// d = | d¹₁ |
 ///     | d²₀ |
 ///     | d²₁ |
 ///     | ··· |
-///     | dᵐᵢ |  ⟸  ii := i + m * space_ndim
+///     | dᵐᵢ |  ⟸  ii := i + m ⋅ space_ndim
 ///     └     ┘
 ///
 /// m = ii / space_ndim
@@ -446,20 +447,19 @@ where
 /// ```
 ///
 /// * `d` -- A vector containing all `dᵐᵢ` values, one after another, and sequentially placed
-///          as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
-///          The length of `d` must be equal to `nnode * space_ndim`.
+///   as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
+///   The length must be `d.len() ≥ ii0 + nnode ⋅ space_ndim`
+/// * `pad` -- Some members of the scratchpad will be modified
 ///
 /// # Input
 ///
-/// * `pad` -- **modified** Scratchpad
+/// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_d` -- Fills `d` vector with zeros, otherwise accumulate values into `d`
 /// * `fn_sig` -- Function `f(sig,p)` that computes `σ(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///
 /// # Examples
-///
-/// See also the `examples` directory.
 ///
 /// ```
 /// use gemlab::integ;
@@ -479,7 +479,7 @@ where
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_d(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
+///     integ::vec_d(&mut d, &mut pad, 0, ips, 1.0, true, |sig, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
 ///         sig.sym_set(0, 1, 3.0);
@@ -500,6 +500,7 @@ where
 pub fn vec_d<F>(
     d: &mut Vector,
     pad: &mut Scratchpad,
+    ii0: usize,
     ips: IntegPointData,
     th: f64,
     clear_d: bool,
@@ -511,8 +512,8 @@ where
     // check
     let nnode = pad.interp.dim();
     let space_ndim = pad.xmax.len();
-    if d.dim() != nnode * space_ndim {
-        return Err("d.len() must be equal to nnode * space_ndim");
+    if d.dim() < ii0 + nnode * space_ndim {
+        return Err("d.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
 
     // allocate auxiliary tensor
@@ -542,14 +543,14 @@ where
         let t = &sig.vec;
         if space_ndim == 2 {
             for m in 0..nnode {
-                d[0 + m * 2] += coef * (t[0] * g[m][0] + t[3] * g[m][1] / s);
-                d[1 + m * 2] += coef * (t[3] * g[m][0] / s + t[1] * g[m][1]);
+                d[ii0 + 0 + m * 2] += coef * (t[0] * g[m][0] + t[3] * g[m][1] / s);
+                d[ii0 + 1 + m * 2] += coef * (t[3] * g[m][0] / s + t[1] * g[m][1]);
             }
         } else {
             for m in 0..nnode {
-                d[0 + m * 3] += coef * (t[0] * g[m][0] + t[3] * g[m][1] / s + t[5] * g[m][2] / s);
-                d[1 + m * 3] += coef * (t[3] * g[m][0] / s + t[1] * g[m][1] + t[4] * g[m][2] / s);
-                d[2 + m * 3] += coef * (t[5] * g[m][0] / s + t[4] * g[m][1] / s + t[2] * g[m][2]);
+                d[ii0 + 0 + m * 3] += coef * (t[0] * g[m][0] + t[3] * g[m][1] / s + t[5] * g[m][2] / s);
+                d[ii0 + 1 + m * 3] += coef * (t[3] * g[m][0] / s + t[1] * g[m][1] + t[4] * g[m][2] / s);
+                d[ii0 + 2 + m * 3] += coef * (t[5] * g[m][0] / s + t[4] * g[m][1] / s + t[2] * g[m][2]);
             }
         }
     }
@@ -612,25 +613,25 @@ mod tests {
     #[test]
     fn capture_some_errors() {
         let mut pad = gen_pad_lin2(1.0);
-        let mut a = Vector::new(3);
+        let mut a = Vector::new(2);
         assert_eq!(
-            integ::vec_a(&mut a, &mut pad, &[], 1.0, false, |_| Ok(0.0)).err(),
-            Some("a.len() must be equal to nnode")
+            integ::vec_a(&mut a, &mut pad, 1, &[], 1.0, false, |_| Ok(0.0)).err(),
+            Some("a.len() must be ≥ ii0 + nnode")
         );
-        let mut b = Vector::new(5);
+        let mut b = Vector::new(4);
         assert_eq!(
-            integ::vec_b(&mut b, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
-            Some("b.len() must be equal to nnode * space_ndim")
+            integ::vec_b(&mut b, &mut pad, 1, &[], 1.0, false, |_, _| Ok(())).err(),
+            Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
-        let mut c = Vector::new(3);
+        let mut c = Vector::new(2);
         assert_eq!(
-            integ::vec_c(&mut c, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
-            Some("c.len() must be equal to nnode")
+            integ::vec_c(&mut c, &mut pad, 1, &[], 1.0, false, |_, _| Ok(())).err(),
+            Some("c.len() must be ≥ ii0 + nnode")
         );
-        let mut d = Vector::new(5);
+        let mut d = Vector::new(4);
         assert_eq!(
-            integ::vec_d(&mut d, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
-            Some("d.len() must be equal to nnode * space_ndim")
+            integ::vec_d(&mut d, &mut pad, 1, &[], 1.0, false, |_, _| Ok(())).err(),
+            Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
 
@@ -664,7 +665,7 @@ mod tests {
         let mut a = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
+            integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
@@ -691,7 +692,7 @@ mod tests {
         // check
         let mut a = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |_| Ok(CS)).unwrap();
+            integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |_| Ok(CS)).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
@@ -721,7 +722,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_a(&mut a, &mut pad, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
+            integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
@@ -754,7 +755,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_b(&mut b, &mut pad, ips, 1.0, true, |v, p| {
+            integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, p| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
                 Ok(())
@@ -787,7 +788,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_b(&mut b, &mut pad, ips, 1.0, true, |v, _| {
+            integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, _| {
                 v[0] = V0;
                 v[1] = V1;
                 Ok(())
@@ -820,7 +821,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_b(&mut b, &mut pad, ips, 1.0, true, |v, _| {
+            integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, _| {
                 v[0] = V0;
                 v[1] = V1;
                 v[2] = V2;
@@ -852,7 +853,7 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_c(&mut c, &mut pad, ips, 1.0, true, |w, _| {
+            integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(())
@@ -882,7 +883,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_c(&mut c, &mut pad, ips, 1.0, true, |w, p| {
+            integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, p| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(())
@@ -917,7 +918,7 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_c(&mut c, &mut pad, ips, 1.0, true, |w, _| {
+            integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;
@@ -958,7 +959,7 @@ mod tests {
         let mut d = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_d(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
+            integ::vec_d(&mut d, &mut pad, 0, ips, 1.0, true, |sig, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -999,7 +1000,7 @@ mod tests {
         let mut d = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_d(&mut d, &mut pad, ips, 1.0, true, |sig, _| {
+            integ::vec_d(&mut d, &mut pad, 0, ips, 1.0, true, |sig, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);

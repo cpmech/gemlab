@@ -26,14 +26,14 @@ use russell_lab::Vector;
 ///
 /// ```text
 ///     ┌     ┐
-///     | b⁰₀ |
+///     | b⁰₀ |  ⟸  ii0 = 0
 ///     | b⁰₁ |
 ///     | b¹₀ |
 /// b = | b¹₁ |
 ///     | b²₀ |
 ///     | b²₁ |
 ///     | ··· |
-///     | bᵐᵢ |  ⟸  ii := i + m * space_ndim
+///     | bᵐᵢ |  ⟸  ii := i + m ⋅ space_ndim
 ///     └     ┘       
 ///
 /// m = ii / space_ndim
@@ -41,12 +41,13 @@ use russell_lab::Vector;
 /// ```
 ///
 /// * `b` -- A vector containing all `bᵐᵢ` values, one after another, and sequentially placed
-///          as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
-///          The length of `b` must be equal to `nnode * space_ndim`.
+///   as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
+///   The length must be `b.len() ≥ ii0 + nnode ⋅ space_ndim`
+/// * `pad` -- Some members of the scratchpad will be modified
 ///
 /// # Input
 ///
-/// * `pad` -- **modified** Scratchpad
+/// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
@@ -58,6 +59,7 @@ use russell_lab::Vector;
 pub fn vec_b_boundary<F>(
     b: &mut Vector,
     pad: &mut Scratchpad,
+    ii0: usize,
     ips: IntegPointData,
     th: f64,
     clear_b: bool,
@@ -69,8 +71,8 @@ where
     // check
     let nnode = pad.interp.dim();
     let space_ndim = pad.xmax.len();
-    if b.dim() != nnode * space_ndim {
-        return Err("b.len() must be equal to nnode * space_ndim");
+    if b.dim() < ii0 + nnode * space_ndim {
+        return Err("b.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
 
     // allocate auxiliary vectors
@@ -100,14 +102,14 @@ where
         let nn = &pad.interp;
         if space_ndim == 2 {
             for m in 0..nnode {
-                b[0 + m * 2] += coef * nn[m] * t[0];
-                b[1 + m * 2] += coef * nn[m] * t[1];
+                b[ii0 + 0 + m * 2] += coef * nn[m] * t[0];
+                b[ii0 + 1 + m * 2] += coef * nn[m] * t[1];
             }
         } else {
             for m in 0..nnode {
-                b[0 + m * 3] += coef * nn[m] * t[0];
-                b[1 + m * 3] += coef * nn[m] * t[1];
-                b[2 + m * 3] += coef * nn[m] * t[2];
+                b[ii0 + 0 + m * 3] += coef * nn[m] * t[0];
+                b[ii0 + 1 + m * 3] += coef * nn[m] * t[1];
+                b[ii0 + 2 + m * 3] += coef * nn[m] * t[2];
             }
         }
     }
@@ -127,6 +129,26 @@ mod tests {
     // to test if variables are cleared before sum
     const NOISE: f64 = 1234.56;
 
+    // generates pad Lin2 for tests
+    fn gen_pad_lin2(l: f64) -> Scratchpad {
+        let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
+        pad.set_xx(0, 0, 3.0);
+        pad.set_xx(0, 1, 4.0);
+        pad.set_xx(1, 0, 3.0 + l);
+        pad.set_xx(1, 1, 4.0);
+        pad
+    }
+
+    #[test]
+    fn capture_some_errors() {
+        let mut pad = gen_pad_lin2(1.0);
+        let mut b = Vector::new(4);
+        assert_eq!(
+            integ::vec_b_boundary(&mut b, &mut pad, 1, &[], 1.0, false, |_, _, _| Ok(())).err(),
+            Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
+        );
+    }
+
     #[test]
     fn vec_b_boundary_works_2d() {
         // Reference:
@@ -142,7 +164,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         // uniform
-        integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
             Ok(())
@@ -151,7 +173,7 @@ mod tests {
         assert_vec_approx_eq!(b.as_data(), &[0.0, -2.0, 0.0, -2.0], 1e-15);
         // triangular (see [@sgm:14]\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-        integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, p, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, p, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
@@ -172,7 +194,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         // uniform
-        integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
             Ok(())
@@ -181,7 +203,7 @@ mod tests {
         assert_vec_approx_eq!(b.as_data(), &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
         // triangular (see [@sgm:14]\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-        integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, p, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, p, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
@@ -206,7 +228,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         // uniform
-        integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
             Ok(())
@@ -230,7 +252,7 @@ mod tests {
         );
         // triangular (see [@sgm:14]\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-        integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, p, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, p, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
@@ -274,7 +296,7 @@ mod tests {
         pad.set_xx(3, 2, 0.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
-        integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
             t[0] = 0.0;
             t[1] = 0.0;
             t[2] = -1.0;
@@ -330,7 +352,7 @@ mod tests {
         pad.set_xx(7, 2, 0.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
-        integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
             t[0] = 0.0;
             t[1] = 0.0;
             t[2] = -1.0;
@@ -385,7 +407,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         let p = -20.0;
-        integ::vec_b_boundary(&mut b, &mut pad, ips, 1.0, true, |t, _, un| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, un| {
             t[0] = p * un[0];
             t[1] = p * un[1];
             Ok(())

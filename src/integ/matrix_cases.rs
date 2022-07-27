@@ -28,30 +28,31 @@ use russell_tensor::Tensor4;
 ///
 /// ```text
 ///     ┌                                               ┐
-///     | K⁰⁰₀₀ K⁰⁰₀₁ K⁰¹₀₀ K⁰¹₀₁ K⁰²₀₀ K⁰²₀₁ ··· K⁰ⁿ₀ⱼ |
+///     | K⁰⁰₀₀ K⁰⁰₀₁ K⁰¹₀₀ K⁰¹₀₁ K⁰²₀₀ K⁰²₀₁ ··· K⁰ⁿ₀ⱼ |  ⟸  ii0
 ///     | K⁰⁰₁₀ K⁰⁰₁₁ K⁰¹₁₀ K⁰¹₁₁ K⁰²₁₀ K⁰²₁₁ ··· K⁰ⁿ₁ⱼ |
 ///     | K¹⁰₀₀ K¹⁰₀₁ K¹¹₀₀ K¹¹₀₁ K¹²₀₀ K¹²₀₁ ··· K¹ⁿ₀ⱼ |
 /// K = | K¹⁰₁₀ K¹⁰₁₁ K¹¹₁₀ K¹¹₁₁ K¹²₁₀ K¹²₁₁ ··· K¹ⁿ₁ⱼ |
 ///     | K²⁰₀₀ K²⁰₀₁ K²¹₀₀ K²¹₀₁ K²²₀₀ K²²₀₁ ··· K²ⁿ₀ⱼ |
 ///     | K²⁰₁₀ K²⁰₁₁ K²¹₁₀ K²¹₁₁ K²²₁₀ K²²₁₁ ··· K²ⁿ₁ⱼ |
 ///     |  ···   ···   ···   ···   ···   ···  ···  ···  |
-///     | Kᵐ⁰ᵢ₀ Kᵐ⁰ᵢ₁ Kᵐ¹ᵢ₀ Kᵐ¹ᵢ₁ Kᵐ²ᵢ₀ Kᵐ²ᵢ₁ ··· Kᵐⁿᵢⱼ |  ⟸  ii := i + m * space_ndim
+///     | Kᵐ⁰ᵢ₀ Kᵐ⁰ᵢ₁ Kᵐ¹ᵢ₀ Kᵐ¹ᵢ₁ Kᵐ²ᵢ₀ Kᵐ²ᵢ₁ ··· Kᵐⁿᵢⱼ |  ⟸  ii := i + m ⋅ space_ndim
 ///     └                                               ┘
-///                                                 ⇑
-///                                                 jj := j + n * space_ndim
+///        ⇑                                        ⇑
+///       jj0                                       jj := j + n ⋅ space_ndim
 ///
 /// m = ii / space_ndim    n = jj / space_ndim
 /// i = ii % space_ndim    j = jj % space_ndim
 /// ```
 ///
-/// * `kk` -- A matrix containing all `Kᵐⁿᵢⱼ` values, one after another, and sequentially placed
-///           as shown above (in 2D). `m` and `n` are the indices of the node and `i` and `j`
-///           correspond to `space_ndim`. The dimension of `K` must be equal to
-///           (`nnode * space_ndim`, `nnode * space_ndim`).
+/// * `kk` -- A matrix containing all `Kᵐⁿᵢⱼ` values, one after another, and sequentially placed as shown
+///   above (in 2D). `m` and `n` are the indices of the node and `i` and `j` correspond to `space_ndim`.
+///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + nnode ⋅ space_ndim`.
+/// * `pad` -- Some members of the scratchpad will be modified.
 ///
 /// # Input
 ///
-/// * `pad` -- **modified** Scratchpad
+/// * `ii0` -- Stride marking the first row in the output matrix where to add components.
+/// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `ips` -- Integration points (n_integ_point)
 /// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
@@ -94,7 +95,7 @@ use russell_tensor::Tensor4;
 ///     let nrow = pad.kind.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let ips = integ::default_points(pad.kind);
-///     integ::mat_gdg(&mut kk, &mut pad, ips, 1.0, true, |dd, _| {
+///     integ::mat_gdg(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |dd, _| {
 ///         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
 ///     })?;
 ///
@@ -121,6 +122,8 @@ use russell_tensor::Tensor4;
 pub fn mat_gdg<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
+    ii0: usize,
+    jj0: usize,
     ips: IntegPointData,
     th: f64,
     clear_kk: bool,
@@ -133,8 +136,11 @@ where
     let nnode = pad.interp.dim();
     let space_ndim = pad.xmax.len();
     let (nrow_kk, ncol_kk) = kk.dims();
-    if nrow_kk != ncol_kk || nrow_kk != nnode * space_ndim {
-        return Err("K.dims() must be equal to (nnode*space_ndim,nnode*space_ndim)");
+    if nrow_kk < ii0 + nnode * space_ndim {
+        return Err("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim");
+    }
+    if ncol_kk < jj0 + nnode * space_ndim {
+        return Err("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim");
     }
 
     // allocate auxiliary tensor
@@ -159,7 +165,7 @@ where
 
         // add contribution to K matrix
         let c = det_jac * weight * th;
-        mat_gdg_add_to_mat_kk(kk, &dd, c, pad);
+        mat_gdg_add_to_mat_kk(kk, ii0, jj0, &dd, c, pad);
     }
     Ok(())
 }
@@ -167,7 +173,7 @@ where
 /// Adds contribution to the K-matrix in integ_mat_10_gdg
 #[inline]
 #[rustfmt::skip]
-fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, pad: &mut Scratchpad) {
+fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, pad: &mut Scratchpad) {
     let s = SQRT_2;
     let g = &pad.gradient;
     let d = &dd.mat;
@@ -176,24 +182,24 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, dd: &Tensor4, c: f64, pad: &mut Scratc
     if space_ndim == 2 {
         for m in 0..nnode {
             for n in 0..nnode {
-                kk[0+m*2][0+n*2] += c * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
-                kk[0+m*2][1+n*2] += c * (g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
-                kk[1+m*2][0+n*2] += c * (g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0;
-                kk[1+m*2][1+n*2] += c * (g[m][0]*g[n][0]*d[3][3] + s*g[m][0]*g[n][1]*d[3][1] + s*g[m][1]*g[n][0]*d[1][3] + 2.0*g[m][1]*g[n][1]*d[1][1]) / 2.0;
+                kk[ii0+0+m*2][jj0+0+n*2] += c * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
+                kk[ii0+0+m*2][jj0+1+n*2] += c * (g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
+                kk[ii0+1+m*2][jj0+0+n*2] += c * (g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0;
+                kk[ii0+1+m*2][jj0+1+n*2] += c * (g[m][0]*g[n][0]*d[3][3] + s*g[m][0]*g[n][1]*d[3][1] + s*g[m][1]*g[n][0]*d[1][3] + 2.0*g[m][1]*g[n][1]*d[1][1]) / 2.0;
             }
         }
     } else {
         for m in 0..nnode {
             for n in 0..nnode {
-                kk[0+m*3][0+n*3] += c * (g[m][2]*g[n][2]*d[5][5] + g[m][2]*g[n][1]*d[5][3] + s*g[m][2]*g[n][0]*d[5][0] + g[m][1]*g[n][2]*d[3][5] + g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][2]*d[0][5] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
-                kk[0+m*3][1+n*3] += c * (g[m][2]*g[n][2]*d[5][4] + g[m][2]*g[n][0]*d[5][3] + s*g[m][2]*g[n][1]*d[5][1] + g[m][1]*g[n][2]*d[3][4] + g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][2]*d[0][4] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
-                kk[0+m*3][2+n*3] += c * (g[m][2]*g[n][0]*d[5][5] + g[m][2]*g[n][1]*d[5][4] + s*g[m][2]*g[n][2]*d[5][2] + g[m][1]*g[n][0]*d[3][5] + g[m][1]*g[n][1]*d[3][4] + s*g[m][1]*g[n][2]*d[3][2] + s*g[m][0]*g[n][0]*d[0][5] + s*g[m][0]*g[n][1]*d[0][4] + 2.0*g[m][0]*g[n][2]*d[0][2]) / 2.0;
-                kk[1+m*3][0+n*3] += c * (g[m][2]*g[n][2]*d[4][5] + g[m][2]*g[n][1]*d[4][3] + s*g[m][2]*g[n][0]*d[4][0] + g[m][0]*g[n][2]*d[3][5] + g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][2]*d[1][5] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0;
-                kk[1+m*3][1+n*3] += c * (g[m][2]*g[n][2]*d[4][4] + g[m][2]*g[n][0]*d[4][3] + s*g[m][2]*g[n][1]*d[4][1] + g[m][0]*g[n][2]*d[3][4] + g[m][0]*g[n][0]*d[3][3] + s*g[m][0]*g[n][1]*d[3][1] + s*g[m][1]*g[n][2]*d[1][4] + s*g[m][1]*g[n][0]*d[1][3] + 2.0*g[m][1]*g[n][1]*d[1][1]) / 2.0;
-                kk[1+m*3][2+n*3] += c * (g[m][2]*g[n][0]*d[4][5] + g[m][2]*g[n][1]*d[4][4] + s*g[m][2]*g[n][2]*d[4][2] + g[m][0]*g[n][0]*d[3][5] + g[m][0]*g[n][1]*d[3][4] + s*g[m][0]*g[n][2]*d[3][2] + s*g[m][1]*g[n][0]*d[1][5] + s*g[m][1]*g[n][1]*d[1][4] + 2.0*g[m][1]*g[n][2]*d[1][2]) / 2.0;
-                kk[2+m*3][0+n*3] += c * (g[m][0]*g[n][2]*d[5][5] + g[m][0]*g[n][1]*d[5][3] + s*g[m][0]*g[n][0]*d[5][0] + g[m][1]*g[n][2]*d[4][5] + g[m][1]*g[n][1]*d[4][3] + s*g[m][1]*g[n][0]*d[4][0] + s*g[m][2]*g[n][2]*d[2][5] + s*g[m][2]*g[n][1]*d[2][3] + 2.0*g[m][2]*g[n][0]*d[2][0]) / 2.0;
-                kk[2+m*3][1+n*3] += c * (g[m][0]*g[n][2]*d[5][4] + g[m][0]*g[n][0]*d[5][3] + s*g[m][0]*g[n][1]*d[5][1] + g[m][1]*g[n][2]*d[4][4] + g[m][1]*g[n][0]*d[4][3] + s*g[m][1]*g[n][1]*d[4][1] + s*g[m][2]*g[n][2]*d[2][4] + s*g[m][2]*g[n][0]*d[2][3] + 2.0*g[m][2]*g[n][1]*d[2][1]) / 2.0;
-                kk[2+m*3][2+n*3] += c * (g[m][0]*g[n][0]*d[5][5] + g[m][0]*g[n][1]*d[5][4] + s*g[m][0]*g[n][2]*d[5][2] + g[m][1]*g[n][0]*d[4][5] + g[m][1]*g[n][1]*d[4][4] + s*g[m][1]*g[n][2]*d[4][2] + s*g[m][2]*g[n][0]*d[2][5] + s*g[m][2]*g[n][1]*d[2][4] + 2.0*g[m][2]*g[n][2]*d[2][2]) / 2.0;
+                kk[ii0+0+m*3][jj0+0+n*3] += c * (g[m][2]*g[n][2]*d[5][5] + g[m][2]*g[n][1]*d[5][3] + s*g[m][2]*g[n][0]*d[5][0] + g[m][1]*g[n][2]*d[3][5] + g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][2]*d[0][5] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
+                kk[ii0+0+m*3][jj0+1+n*3] += c * (g[m][2]*g[n][2]*d[5][4] + g[m][2]*g[n][0]*d[5][3] + s*g[m][2]*g[n][1]*d[5][1] + g[m][1]*g[n][2]*d[3][4] + g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][2]*d[0][4] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0;
+                kk[ii0+0+m*3][jj0+2+n*3] += c * (g[m][2]*g[n][0]*d[5][5] + g[m][2]*g[n][1]*d[5][4] + s*g[m][2]*g[n][2]*d[5][2] + g[m][1]*g[n][0]*d[3][5] + g[m][1]*g[n][1]*d[3][4] + s*g[m][1]*g[n][2]*d[3][2] + s*g[m][0]*g[n][0]*d[0][5] + s*g[m][0]*g[n][1]*d[0][4] + 2.0*g[m][0]*g[n][2]*d[0][2]) / 2.0;
+                kk[ii0+1+m*3][jj0+0+n*3] += c * (g[m][2]*g[n][2]*d[4][5] + g[m][2]*g[n][1]*d[4][3] + s*g[m][2]*g[n][0]*d[4][0] + g[m][0]*g[n][2]*d[3][5] + g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][2]*d[1][5] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0;
+                kk[ii0+1+m*3][jj0+1+n*3] += c * (g[m][2]*g[n][2]*d[4][4] + g[m][2]*g[n][0]*d[4][3] + s*g[m][2]*g[n][1]*d[4][1] + g[m][0]*g[n][2]*d[3][4] + g[m][0]*g[n][0]*d[3][3] + s*g[m][0]*g[n][1]*d[3][1] + s*g[m][1]*g[n][2]*d[1][4] + s*g[m][1]*g[n][0]*d[1][3] + 2.0*g[m][1]*g[n][1]*d[1][1]) / 2.0;
+                kk[ii0+1+m*3][jj0+2+n*3] += c * (g[m][2]*g[n][0]*d[4][5] + g[m][2]*g[n][1]*d[4][4] + s*g[m][2]*g[n][2]*d[4][2] + g[m][0]*g[n][0]*d[3][5] + g[m][0]*g[n][1]*d[3][4] + s*g[m][0]*g[n][2]*d[3][2] + s*g[m][1]*g[n][0]*d[1][5] + s*g[m][1]*g[n][1]*d[1][4] + 2.0*g[m][1]*g[n][2]*d[1][2]) / 2.0;
+                kk[ii0+2+m*3][jj0+0+n*3] += c * (g[m][0]*g[n][2]*d[5][5] + g[m][0]*g[n][1]*d[5][3] + s*g[m][0]*g[n][0]*d[5][0] + g[m][1]*g[n][2]*d[4][5] + g[m][1]*g[n][1]*d[4][3] + s*g[m][1]*g[n][0]*d[4][0] + s*g[m][2]*g[n][2]*d[2][5] + s*g[m][2]*g[n][1]*d[2][3] + 2.0*g[m][2]*g[n][0]*d[2][0]) / 2.0;
+                kk[ii0+2+m*3][jj0+1+n*3] += c * (g[m][0]*g[n][2]*d[5][4] + g[m][0]*g[n][0]*d[5][3] + s*g[m][0]*g[n][1]*d[5][1] + g[m][1]*g[n][2]*d[4][4] + g[m][1]*g[n][0]*d[4][3] + s*g[m][1]*g[n][1]*d[4][1] + s*g[m][2]*g[n][2]*d[2][4] + s*g[m][2]*g[n][0]*d[2][3] + 2.0*g[m][2]*g[n][1]*d[2][1]) / 2.0;
+                kk[ii0+2+m*3][jj0+2+n*3] += c * (g[m][0]*g[n][0]*d[5][5] + g[m][0]*g[n][1]*d[5][4] + s*g[m][0]*g[n][2]*d[5][2] + g[m][1]*g[n][0]*d[4][5] + g[m][1]*g[n][1]*d[4][4] + s*g[m][1]*g[n][2]*d[4][2] + s*g[m][2]*g[n][0]*d[2][5] + s*g[m][2]*g[n][1]*d[2][4] + 2.0*g[m][2]*g[n][2]*d[2][2]) / 2.0;
             }
         }
     }
@@ -241,10 +247,14 @@ mod tests {
     #[test]
     fn capture_some_errors() {
         let mut pad = gen_pad_lin2(1.0);
-        let mut kk = Matrix::new(2, 2);
+        let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_gdg(&mut kk, &mut pad, &[], 1.0, false, |_, _| Ok(())).err(),
-            Some("K.dims() must be equal to (nnode*space_ndim,nnode*space_ndim)")
+            integ::mat_gdg(&mut kk, &mut pad, 1, 0, &[], 1.0, false, |_, _| Ok(())).err(),
+            Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
+        );
+        assert_eq!(
+            integ::mat_gdg(&mut kk, &mut pad, 0, 1, &[], 1.0, false, |_, _| Ok(())).err(),
+            Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
     }
 
@@ -289,7 +299,7 @@ mod tests {
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = integ::points(class, 1)?;
-        integ::mat_gdg(&mut kk, &mut pad, ips, th, true, |dd, _| {
+        integ::mat_gdg(&mut kk, &mut pad, 0, 0, ips, th, true, |dd, _| {
             copy_matrix(&mut dd.mat, &model.get_modulus().mat)
         })?;
 
@@ -317,7 +327,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gdg(&mut kk, &mut pad, ips, th, true, |dd, _| {
+            integ::mat_gdg(&mut kk, &mut pad, 0, 0, ips, th, true, |dd, _| {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();
@@ -353,7 +363,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gdg(&mut kk, &mut pad, ips, 1.0, true, |dd, _| {
+            integ::mat_gdg(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |dd, _| {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();
