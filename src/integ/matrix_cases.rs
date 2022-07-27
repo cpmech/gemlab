@@ -6,26 +6,71 @@ use russell_lab::Matrix;
 use russell_tensor::Tensor4;
 
 /// Implements the shape(N) times scalar(S) times shape(N) integration case (e.g., diffusion matrix)
+///
+/// Diffusion coefficients:
+///
+/// ```text
+///       ⌠
+/// Kᵐⁿ = │ Nᵐ s Nⁿ tₕ dΩ
+///       ⌡
+///       Ωₑ
+/// ```
 pub fn mat_nsn() -> Result<(), StrError> {
     Err("mat_nsn: TODO")
 }
 
 /// Implements the gradient(G) dot vector(V) times shape(N) integration case (e.g., compressibility matrix)
+///
+/// Compressibility coefficients:
+///
+/// ```text
+///       ⌠ →    →
+/// Kᵐⁿ = │ Gᵐ ⋅ v Nⁿ tₕ dΩ
+///       ⌡
+///       Ωₑ
+/// ```
 pub fn mat_gvn() -> Result<(), StrError> {
     Err("mat_gvn: TODO")
 }
 
 /// Implements the gradient(G) dot tensor(T) dot gradient(G) integration case (e.g., conductivity matrix)
+///
+/// Conductivity coefficients:
+///
+/// ```text
+///       ⌠ →        →
+/// Kᵐⁿ = │ Gᵐ ⋅ T ⋅ Gⁿ tₕ dΩ
+///       ⌡      ▔
+///       Ωₑ
+/// ```
 pub fn mat_gtg() -> Result<(), StrError> {
     Err("mat_gtg: TODO")
 }
 
 /// Implements the shape(N) times tensor(T) times shape(N) integration case (e.g., mass matrix)
+///
+/// Mass coefficients:
+///
+/// ```text
+///       ⌠
+/// Kᵐⁿ = │ Nᵐ T Nⁿ tₕ dΩ
+/// ▔     ⌡    ▔
+///       Ωₑ
+/// ```
 pub fn mat_ntn() -> Result<(), StrError> {
     Err("mat_ntn: TODO")
 }
 
 /// Implements the shape(N) times vector(V) dot gradient(G) integration case (e.g., variable density matrix)
+///
+/// Variable density coefficients:
+///
+/// ```text
+///       ⌠    →   →
+/// Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ tₕ dΩ
+/// ▔     ⌡
+///       Ωₑ
+/// ```
 pub fn mat_nvg() -> Result<(), StrError> {
     Err("mat_nvg: TODO")
 }
