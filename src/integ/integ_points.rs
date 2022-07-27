@@ -25,7 +25,7 @@ pub type IntegPointData = &'static [[f64; 4]];
 /// use gemlab::shapes::GeoKind;
 ///
 /// let ips = integ::default_points(GeoKind::Tet4);
-/// assert_eq!(ips, [[0.25, 0.25, 0.25, 1.0/6.0]]);
+/// assert_eq!(ips.len(), 4);
 /// ```
 pub fn default_points(kind: GeoKind) -> IntegPointData {
     match kind {
