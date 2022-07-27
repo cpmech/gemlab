@@ -17,7 +17,7 @@ fn brute_force_search(triangles: &Vec<Vec<Vec<f64>>>, x: &[f64]) -> Option<usize
 
 fn main() -> Result<(), StrError> {
     // select mesh for testing
-    let num_triangle = 20000;
+    let num_triangle = 200;
     let path = format!("data/triangles/example_grid_search_gen_triangles_{}.dat", num_triangle);
     let tris = read_data(path.as_str())?;
 
