@@ -505,8 +505,8 @@ mod tests {
         let ana = AnalyticalTri3::new(&pad);
         let kk_correct = ana.integ_nsn(s, 1.0);
         let class = pad.kind.class();
-        let tolerances = [8.34, 1e-14, 1e-15, 1e-14, 1e-14, 1e-12, 1e-13]; // note how bad rule-1 integ is here
-        let selection: Vec<_> = [1, 3, 1_003, 6, 7, 12, 16]
+        let tolerances = [8.34, 1e-14, 1e-14, 1e-14, 1e-12, 1e-13]; // note how bad rule-1 integ is here
+        let selection: Vec<_> = [1, 3, 6, 7, 12, 16]
             .iter()
             .map(|n| integ::points(class, *n).unwrap())
             .collect();
@@ -526,8 +526,8 @@ mod tests {
         let ana = AnalyticalQua4::new(a, b);
         let kk_correct = ana.integ_nsn(s, 1.0);
         let class = pad.kind.class();
-        let tolerances = [7.01, 1e-14, 2.01, 1e-2, 1e-14, 1e-14, 1e-14]; // note how bad rule-1 integ is here
-        let selection: Vec<_> = [1, 4, 5, 1_005, 8, 9, 16]
+        let tolerances = [7.01, 1e-14, 1e-14, 1e-14]; // note how bad rule-1 integ is here
+        let selection: Vec<_> = [1, 4, 9, 16]
             .iter()
             .map(|n| integ::points(class, *n).unwrap())
             .collect();
@@ -547,8 +547,8 @@ mod tests {
         let ana = AnalyticalQua8::new(a, b);
         let kk_correct = ana.integ_nsn(s, 1.0);
         let class = pad.kind.class();
-        let tolerances = [0.2, 1e-14, 1e-14];
-        let selection: Vec<_> = [8, 9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let tolerances = [1e-14, 1e-14];
+        let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_nsn(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |_| Ok(s)).unwrap();
@@ -686,8 +686,8 @@ mod tests {
         let kk_correct = ana.integ_stiffness(young, poisson, plane_stress, th)?;
 
         // compare against analytical solution
-        let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-11, 1e-12];
-        let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
+        let tolerances = [1e-12, 1e-12, 1e-12, 1e-11, 1e-12];
+        let selection: Vec<_> = [1, 3, 4, 12, 16]
             .iter()
             .map(|n| integ::points(class, *n).unwrap())
             .collect();

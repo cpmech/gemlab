@@ -641,8 +641,8 @@ mod tests {
 
         // integration points
         let class = pad.kind.class();
-        let tolerances = [1e-14, 1e-14, 1e-15, 1e-14, 1e-13, 1e-14];
-        let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
+        let tolerances = [1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
+        let selection: Vec<_> = [1, 3, 4, 12, 16]
             .iter()
             .map(|n| integ::points(class, *n).unwrap())
             .collect();
@@ -906,8 +906,8 @@ mod tests {
 
         // integration points
         let class = pad.kind.class();
-        let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
-        let selection: Vec<_> = [1, 3, 1_003, 4, 12, 16]
+        let tolerances = [1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
+        let selection: Vec<_> = [1, 3, 4, 12, 16]
             .iter()
             .map(|n| integ::points(class, *n).unwrap())
             .collect();
