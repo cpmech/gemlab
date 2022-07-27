@@ -615,12 +615,13 @@ mod tests {
 
         // integration points
         let class = pad.kind.class();
-        let tolerances = [1e-15, 1e-14, 1e-15, 1e-15];
+        let tolerances = [1e-15, 1e-14, 1e-14, 1e-14];
         let selection: Vec<_> = [2, 3, 4, 5].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
