@@ -55,3 +55,18 @@ pub fn mat_coupling_nvn() -> Result<(), StrError> {
 pub fn mat_coupling_gsn() -> Result<(), StrError> {
     Err("mat_coupling_gsn: TODO")
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use super::{mat_coupling_gsn, mat_coupling_gtn, mat_coupling_nsg, mat_coupling_nvn};
+
+    #[test]
+    fn functions_return_todo() {
+        assert_eq!(mat_coupling_nsg().err(), Some("mat_coupling_nsg: TODO"));
+        assert_eq!(mat_coupling_gtn().err(), Some("mat_coupling_gtn: TODO"));
+        assert_eq!(mat_coupling_nvn().err(), Some("mat_coupling_nvn: TODO"));
+        assert_eq!(mat_coupling_gsn().err(), Some("mat_coupling_gsn: TODO"));
+    }
+}
