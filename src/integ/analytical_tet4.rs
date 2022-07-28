@@ -2,7 +2,7 @@ use crate::shapes::{GeoKind, Scratchpad};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
-use russell_tensor::LinElasticity;
+use russell_tensor::{LinElasticity, Tensor2};
 
 /// Performs analytical integrations on a Tet4
 pub struct AnalyticalTet4 {
@@ -212,6 +212,26 @@ impl AnalyticalTet4 {
             (s01 * self.gg[3][0] + s11 * self.gg[3][1] + s12 * self.gg[3][2]) * self.volume,
             (s02 * self.gg[3][0] + s12 * self.gg[3][1] + s22 * self.gg[3][2]) * self.volume,
         ]
+    }
+
+    /// Performs the gtg integration with constant tensor
+    #[rustfmt::skip]
+    pub fn integ_gtg_constant(&self, sig: &Tensor2) -> Matrix {
+        let c = self.volume;
+        let mat = sig.to_matrix();
+        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
+        let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
+        let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
+        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
+        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
+        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
+        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        Matrix::from(&[
+            [c*g00*(a00*g00 + a10*g01 + a20*g02) + c*g01*(a01*g00 + a11*g01 + a21*g02) + c*g02*(a02*g00 + a12*g01 + a22*g02), c*g10*(a00*g00 + a10*g01 + a20*g02) + c*g11*(a01*g00 + a11*g01 + a21*g02) + c*g12*(a02*g00 + a12*g01 + a22*g02), c*g20*(a00*g00 + a10*g01 + a20*g02) + c*g21*(a01*g00 + a11*g01 + a21*g02) + c*g22*(a02*g00 + a12*g01 + a22*g02), c*g30*(a00*g00 + a10*g01 + a20*g02) + c*g31*(a01*g00 + a11*g01 + a21*g02) + c*g32*(a02*g00 + a12*g01 + a22*g02)],
+            [c*g00*(a00*g10 + a10*g11 + a20*g12) + c*g01*(a01*g10 + a11*g11 + a21*g12) + c*g02*(a02*g10 + a12*g11 + a22*g12), c*g10*(a00*g10 + a10*g11 + a20*g12) + c*g11*(a01*g10 + a11*g11 + a21*g12) + c*g12*(a02*g10 + a12*g11 + a22*g12), c*g20*(a00*g10 + a10*g11 + a20*g12) + c*g21*(a01*g10 + a11*g11 + a21*g12) + c*g22*(a02*g10 + a12*g11 + a22*g12), c*g30*(a00*g10 + a10*g11 + a20*g12) + c*g31*(a01*g10 + a11*g11 + a21*g12) + c*g32*(a02*g10 + a12*g11 + a22*g12)],
+            [c*g00*(a00*g20 + a10*g21 + a20*g22) + c*g01*(a01*g20 + a11*g21 + a21*g22) + c*g02*(a02*g20 + a12*g21 + a22*g22), c*g10*(a00*g20 + a10*g21 + a20*g22) + c*g11*(a01*g20 + a11*g21 + a21*g22) + c*g12*(a02*g20 + a12*g21 + a22*g22), c*g20*(a00*g20 + a10*g21 + a20*g22) + c*g21*(a01*g20 + a11*g21 + a21*g22) + c*g22*(a02*g20 + a12*g21 + a22*g22), c*g30*(a00*g20 + a10*g21 + a20*g22) + c*g31*(a01*g20 + a11*g21 + a21*g22) + c*g32*(a02*g20 + a12*g21 + a22*g22)],
+            [c*g00*(a00*g30 + a10*g31 + a20*g32) + c*g01*(a01*g30 + a11*g31 + a21*g32) + c*g02*(a02*g30 + a12*g31 + a22*g32), c*g10*(a00*g30 + a10*g31 + a20*g32) + c*g11*(a01*g30 + a11*g31 + a21*g32) + c*g12*(a02*g30 + a12*g31 + a22*g32), c*g20*(a00*g30 + a10*g31 + a20*g32) + c*g21*(a01*g30 + a11*g31 + a21*g32) + c*g22*(a02*g30 + a12*g31 + a22*g32), c*g30*(a00*g30 + a10*g31 + a20*g32) + c*g31*(a01*g30 + a11*g31 + a21*g32) + c*g32*(a02*g30 + a12*g31 + a22*g32)],
+        ])
     }
 
     /// Performs the gvn integration with constant vector
