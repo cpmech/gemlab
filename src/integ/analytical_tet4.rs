@@ -324,15 +324,14 @@ impl AnalyticalTet4 {
 mod tests {
     use super::AnalyticalTet4;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
 
     #[test]
-    fn analytical_tet4_works() -> Result<(), StrError> {
+    fn analytical_tet4_works() {
         // unit tet4
         let space_ndim = 3;
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4)?;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4).unwrap();
         pad.set_xx(0, 0, 0.0);
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(0, 2, 0.0);
@@ -346,7 +345,7 @@ mod tests {
         pad.set_xx(3, 1, 0.0);
         pad.set_xx(3, 2, 1.0);
         let mut tet = AnalyticalTet4::new(&pad);
-        pad.calc_gradient(&[0.1, 0.1, 0.1])?;
+        pad.calc_gradient(&[0.1, 0.1, 0.1]).unwrap();
         assert_eq!(tet.volume, 1.0 / 6.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
@@ -373,11 +372,11 @@ mod tests {
             [ 0.0,  -nt,  -nt,  0.0, 0.0, 0.0, 0.0,  0.0,  nt, 0.0,  nt,  0.0],
             [-tnu, -tnu, -tnh,  tnu, 0.0, 0.0, 0.0,  tnu, 0.0, 0.0, 0.0,  tnh],
         ]);
-        let kk = tet.integ_stiffness(ee, nu)?;
+        let kk = tet.integ_stiffness(ee, nu).unwrap();
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // non-right-angles tet4
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4)?;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4).unwrap();
         pad.set_xx(0, 0, 2.0);
         pad.set_xx(0, 1, 3.0);
         pad.set_xx(0, 2, 4.0);
@@ -391,12 +390,12 @@ mod tests {
         pad.set_xx(3, 1, 3.0);
         pad.set_xx(3, 2, 6.0);
         let mut tet = AnalyticalTet4::new(&pad);
-        pad.calc_gradient(&[0.1, 0.2, 0.3])?;
+        pad.calc_gradient(&[0.1, 0.2, 0.3]).unwrap();
         assert_eq!(tet.volume, 4.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
         assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
-        let kk = tet.integ_stiffness(ee, nu)?;
+        let kk = tet.integ_stiffness(ee, nu).unwrap();
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
             [ 745.0,  540.0, 120.0,  -5.0,  30.0,  60.0,-270.0, -240.0,   0.0,-470.0, -330.0,-180.0],
@@ -413,6 +412,5 @@ mod tests {
             [-180.0, -420.0,-470.0,  60.0,-180.0,-230.0,   0.0,  240.0, 180.0, 120.0,  360.0, 520.0],
         ]);
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-12);
-        Ok(())
     }
 }

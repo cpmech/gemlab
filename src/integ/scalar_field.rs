@@ -60,14 +60,13 @@ mod tests {
     use super::scalar_field;
     use crate::integ;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::StrError;
     use russell_chk::assert_approx_eq;
 
     #[allow(unused_imports)]
     use plotpy::Plot;
 
     #[test]
-    fn scalar_fields_over_rotated_square() -> Result<(), StrError> {
+    fn scalar_fields_over_rotated_square() {
         //       y         (1,1)
         //                   2
         //       ^        .'   `.
@@ -148,11 +147,10 @@ mod tests {
         //     (* returns 8/3 *)
         // Integrate[x^3 + y^3, {x, y} \[Element] region]
         //     (* returns 3 *)
-        Ok(())
     }
 
     #[test]
-    fn scalar_fields_over_slanted_hex8() -> Result<(), StrError> {
+    fn scalar_fields_over_slanted_hex8() {
         let mut pad = Scratchpad::new(3, GeoKind::Hex8).unwrap();
         // node 0
         pad.set_xx(0, 0, 0.0);
@@ -189,10 +187,11 @@ mod tests {
 
         if false {
             let mut plot = Plot::new();
-            pad.draw_shape(&mut plot, "", true, true)?;
+            pad.draw_shape(&mut plot, "", true, true).unwrap();
             plot.set_equal_axes(true)
                 .set_figure_size_points(400.0, 400.0)
-                .save("/tmp/gemlab/test_scalar_fields_over_slanted_hex8.svg")?;
+                .save("/tmp/gemlab/test_scalar_fields_over_slanted_hex8.svg")
+                .unwrap();
         }
 
         // integration points
@@ -252,6 +251,5 @@ mod tests {
         //     (* returns 11/6 *)
         // Integrate[x^3 + y^3 + z^3, {x, y, z} \[Element] region]
         //     (* returns 2 *)
-        Ok(())
     }
 }

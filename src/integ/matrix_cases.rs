@@ -552,7 +552,6 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3};
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::{copy_matrix, copy_vector, Matrix};
     use russell_tensor::{LinElasticity, Tensor2};
@@ -802,7 +801,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_gdg_works_tri3_plane_stress() -> Result<(), StrError> {
+    fn mat_gdg_works_tri3_plane_stress() {
         // Element # 0 from example 1.6 from [@bhatti] page 32
         // Solid bracket with thickness = 0.25
         //              1     -10                connectivity:
@@ -820,7 +819,7 @@ mod tests {
         //           and Applications, Wiley, 700p.
 
         // scratchpad
-        let mut pad = Scratchpad::new(2, GeoKind::Tri3)?;
+        let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         pad.set_xx(0, 0, 0.0);
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(1, 0, 2.0);
@@ -841,7 +840,7 @@ mod tests {
         let space_ndim = pad.xmax.len();
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
-        let ips = integ::points(class, 1)?;
+        let ips = integ::points(class, 1).unwrap();
         integ::mat_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
             let in_array = model.get_modulus().mat.as_data();
             let out_array = dd.mat.as_mut_data();
@@ -849,7 +848,8 @@ mod tests {
                 out_array[i] = th * in_array[i];
             }
             Ok(())
-        })?;
+        })
+        .unwrap();
 
         // compare against results from Bhatti's book
         #[rustfmt::skip]
@@ -865,7 +865,7 @@ mod tests {
 
         // analytical solution
         let ana = AnalyticalTri3::new(&pad);
-        let kk_correct = ana.integ_stiffness(young, poisson, plane_stress, th)?;
+        let kk_correct = ana.integ_stiffness(young, poisson, plane_stress, th).unwrap();
 
         // compare against analytical solution
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-11, 1e-12];
@@ -886,11 +886,10 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), tol); // 1e-12
         });
-        Ok(())
     }
 
     #[test]
-    fn mat_gdg_works_tet4() -> Result<(), StrError> {
+    fn mat_gdg_works_tet4() {
         // scratchpad
         let mut pad = aux::gen_pad_tet4();
 
@@ -901,7 +900,7 @@ mod tests {
 
         // analytical solution
         let mut ana = AnalyticalTet4::new(&pad);
-        let kk_correct = ana.integ_stiffness(young, poisson)?;
+        let kk_correct = ana.integ_stiffness(young, poisson).unwrap();
 
         // check
         let class = pad.kind.class();
@@ -922,6 +921,5 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol); //1e-12
         });
-        Ok(())
     }
 }

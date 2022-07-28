@@ -651,7 +651,6 @@ pub const IP_HEX_LEGENDRE_64: [[f64; 4]; 64] = [
 mod tests {
     use super::{default_points, points};
     use crate::shapes::{GeoClass, GeoKind};
-    use crate::StrError;
 
     #[test]
     fn default_points_works() {
@@ -683,10 +682,10 @@ mod tests {
     }
 
     #[test]
-    fn get_points_works() -> Result<(), StrError> {
+    fn get_points_works() {
         // Lin
         for n_integ_point in [1, 2, 3, 4, 5] {
-            let ips = points(GeoClass::Lin, n_integ_point)?;
+            let ips = points(GeoClass::Lin, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
         assert_eq!(
@@ -696,7 +695,7 @@ mod tests {
 
         // Tri
         for n_integ_point in [1, 3, 4, 6, 7, 12, 16] {
-            let ips = points(GeoClass::Tri, n_integ_point)?;
+            let ips = points(GeoClass::Tri, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
         assert_eq!(
@@ -706,7 +705,7 @@ mod tests {
 
         // Qua
         for n_integ_point in [1, 4, 9, 16] {
-            let ips = points(GeoClass::Qua, n_integ_point)?;
+            let ips = points(GeoClass::Qua, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
         assert_eq!(
@@ -716,7 +715,7 @@ mod tests {
 
         // Tet
         for n_integ_point in [1, 4, 5, 8, 14, 15, 24] {
-            let ips = points(GeoClass::Tet, n_integ_point)?;
+            let ips = points(GeoClass::Tet, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
         assert_eq!(
@@ -726,13 +725,12 @@ mod tests {
 
         // Hex
         for n_integ_point in [6, 8, 14, 27, 64] {
-            let ips = points(GeoClass::Hex, n_integ_point)?;
+            let ips = points(GeoClass::Hex, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
         assert_eq!(
             points(GeoClass::Hex, 100).err(),
             Some("desired number of integration points is not available for Hex class")
         );
-        Ok(())
     }
 }

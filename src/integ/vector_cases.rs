@@ -555,7 +555,6 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
-    use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
@@ -585,7 +584,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_a_works_lin2_linear() -> Result<(), StrError> {
+    fn vec_a_works_lin2_linear() {
         // lin2 with linear source term:
         //
         // s(x) = x
@@ -618,11 +617,10 @@ mod tests {
             integ::vec_a(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][0])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_a_works_tri3_constant() -> Result<(), StrError> {
+    fn vec_a_works_tri3_constant() {
         // tri3 with a constant source term s(x) = cₛ
         let mut pad = aux::gen_pad_tri3();
 
@@ -645,11 +643,10 @@ mod tests {
             integ::vec_a(&mut a, &mut pad, 0, true, ips, |_| Ok(CS)).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_a_works_tet4_linear() -> Result<(), StrError> {
+    fn vec_a_works_tet4_linear() {
         // tet 4 with a linear source term s(x) = z = x₂
         let mut pad = aux::gen_pad_tet4();
 
@@ -675,11 +672,10 @@ mod tests {
             integ::vec_a(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][2])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_b_works_lin2_linear() -> Result<(), StrError> {
+    fn vec_b_works_lin2_linear() {
         // This test is similar to the shape_times_scalar with lin2
         const L: f64 = 6.0;
         let mut pad = aux::gen_pad_lin2(L);
@@ -713,11 +709,10 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(b.as_data(), b_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_b_works_tri3_constant() -> Result<(), StrError> {
+    fn vec_b_works_tri3_constant() {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let mut pad = aux::gen_pad_tri3();
@@ -746,11 +741,10 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(b.as_data(), b_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_b_works_tet4_constant() -> Result<(), StrError> {
+    fn vec_b_works_tet4_constant() {
         // tet 4 with constant vector
         const V0: f64 = 2.0;
         const V1: f64 = 3.0;
@@ -780,11 +774,10 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(b.as_data(), b_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_c_works_tri3_constant() -> Result<(), StrError> {
+    fn vec_c_works_tri3_constant() {
         // constant vector function: w(x) = {w₀, w₁}
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
@@ -811,11 +804,10 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(c.as_data(), c_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_c_works_tri3_bilinear() -> Result<(), StrError> {
+    fn vec_c_works_tri3_bilinear() {
         // bilinear vector function: w(x) = {x, y}
         let mut pad = aux::gen_pad_tri3();
 
@@ -841,11 +833,10 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(c.as_data(), c_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_c_works_tet4_constant() -> Result<(), StrError> {
+    fn vec_c_works_tet4_constant() {
         // tet 4 with constant vector  w(x) = {w0, w1, w2}
         let mut pad = aux::gen_pad_tet4();
 
@@ -877,11 +868,10 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(c.as_data(), c_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_d_tri3_works_constant() -> Result<(), StrError> {
+    fn vec_d_tri3_works_constant() {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
         //    dᵐ₀ = ½ (σ₀₀ bₘ + σ₀₁ cₘ)
@@ -919,11 +909,10 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(d.as_data(), d_correct, tol);
         });
-        Ok(())
     }
 
     #[test]
-    fn vec_d_tet4_works_constant() -> Result<(), StrError> {
+    fn vec_d_tet4_works_constant() {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
         let mut pad = aux::gen_pad_tet4();
 
@@ -962,6 +951,5 @@ mod tests {
             .unwrap();
             assert_vec_approx_eq!(d.as_data(), d_correct, tol);
         });
-        Ok(())
     }
 }
