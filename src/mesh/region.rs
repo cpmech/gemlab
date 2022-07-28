@@ -212,23 +212,20 @@ impl<'a> Region<'a> {
 mod tests {
     use super::Region;
     use crate::mesh::{At, Extract, Samples};
-    use crate::StrError;
 
     #[test]
-    fn with_works() -> Result<(), StrError> {
+    fn with_works() {
         //  3---------2---------5
         //  |         |         |
         //  |   [0]   |   [1]   |
         //  |         |         |
         //  0---------1---------4
         let mesh = Samples::two_qua4();
-        let region = Region::new(&mesh, Extract::Boundary)?;
-        // println!("{:?}", mesh);
+        let region = Region::new(&mesh, Extract::Boundary).unwrap();
         assert_eq!(region.mesh.ndim, 2);
         assert_eq!(region.features.points.len(), 6);
         assert_eq!(region.features.edges.len(), 6);
         assert_eq!(region.features.faces.len(), 0);
-        assert_eq!(region.find.points(At::XY(0.0, 0.0))?.len(), 1);
-        Ok(())
+        assert_eq!(region.find.points(At::XY(0.0, 0.0)).unwrap().len(), 1);
     }
 }
