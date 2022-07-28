@@ -267,36 +267,34 @@ mod tests {
     }
 
     #[test]
-    fn point_point_distance_2d_works() -> Result<(), StrError> {
+    fn point_point_distance_2d_works() {
         let a = &[0.0, 0.0];
         let b = &[1.0, 0.0];
-        assert_approx_eq!(point_point_distance(a, b)?, 1.0, 1e-15);
+        assert_approx_eq!(point_point_distance(a, b).unwrap(), 1.0, 1e-15);
 
         let b = &[0.0, 2.0];
-        assert_approx_eq!(point_point_distance(a, b)?, 2.0, 1e-15);
+        assert_approx_eq!(point_point_distance(a, b).unwrap(), 2.0, 1e-15);
 
         let a = &[1.0, 1.0];
         let b = &[2.0, 2.0];
-        assert_approx_eq!(point_point_distance(a, b)?, SQRT_2, 1e-15);
-        Ok(())
+        assert_approx_eq!(point_point_distance(a, b).unwrap(), SQRT_2, 1e-15);
     }
 
     #[test]
-    fn point_point_distance_3d_works() -> Result<(), StrError> {
+    fn point_point_distance_3d_works() {
         let a = &[0.0, 0.0, 0.0];
         let b = &[1.0, 0.0, 0.0];
-        assert_approx_eq!(point_point_distance(a, b)?, 1.0, 1e-15);
+        assert_approx_eq!(point_point_distance(a, b).unwrap(), 1.0, 1e-15);
 
         let b = &[0.0, 2.0, 0.0];
-        assert_approx_eq!(point_point_distance(a, b)?, 2.0, 1e-15);
+        assert_approx_eq!(point_point_distance(a, b).unwrap(), 2.0, 1e-15);
 
         let b = &[0.0, 0.0, 3.0];
-        assert_approx_eq!(point_point_distance(a, b)?, 3.0, 1e-15);
+        assert_approx_eq!(point_point_distance(a, b).unwrap(), 3.0, 1e-15);
 
         let a = &[1.0, 1.0, 1.0];
         let b = &[2.0, 2.0, 2.0];
-        assert_approx_eq!(point_point_distance(a, b)?, SQRT_3, 1e-15);
-        Ok(())
+        assert_approx_eq!(point_point_distance(a, b).unwrap(), SQRT_3, 1e-15);
     }
 
     #[test]
@@ -316,119 +314,115 @@ mod tests {
     }
 
     #[test]
-    fn point_line_distance_2d_fails_on_short_segment() -> Result<(), StrError> {
+    fn point_line_distance_2d_fails_on_short_segment() {
         let a = &[0.0, 0.0];
         let b = &[0.0, f64::EPSILON];
         let c = &[1.0, 1.0];
         assert_eq!(point_line_distance(a, b, c).err(), Some("a-to-b segment is too short"));
-        Ok(())
     }
 
     #[test]
-    fn point_line_distance_3d_fails_on_short_segment() -> Result<(), StrError> {
+    fn point_line_distance_3d_fails_on_short_segment() {
         let a = &[0.0, 0.0, 0.0];
         let b = &[0.0, 0.0, f64::EPSILON];
         let c = &[1.0, 1.0, 1.0];
         assert_eq!(point_line_distance(a, b, c).err(), Some("a-to-b segment is too short"));
-        Ok(())
     }
 
     #[test]
-    fn point_line_distance_2d_works() -> Result<(), StrError> {
+    fn point_line_distance_2d_works() {
         let a = &[0.0, 0.0];
         let b = &[2.0, 2.0];
         let c = &a.clone();
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.0);
 
         let c = &b.clone();
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.0);
 
         let c = &[1.0, 0.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_approx_eq!(distance, SQRT_2 / 2.0, 1e-15);
 
         let c = &[0.0, 1.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_approx_eq!(distance, SQRT_2 / 2.0, 1e-15);
 
         let c = &[0.5, 0.5];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.0);
 
         let a = &[0.0, 0.0];
         let b = &[8.0, 0.0];
         let c = &[1.0, 0.5];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.5);
 
         let a = &[0.0, 0.0];
         let b = &[0.0, 3.0];
         let c = &[0.5, 1.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.5);
 
         let a = &[0.6, 0.0];
         let b = &[0.6, 1.8];
         let c = &[0.3, 1.2];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.3);
-        Ok(())
     }
 
     #[test]
-    fn point_line_distance_3d_works() -> Result<(), StrError> {
+    fn point_line_distance_3d_works() {
         let a = &[0.0, 0.0, 0.0];
         let b = &[2.0, 2.0, 2.0];
         let c = &a.clone();
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.0);
 
         let c = &b.clone();
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.0);
 
         let c = &[1.0, 1.0, 0.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_approx_eq!(distance, SQRT_2_BY_3, 1e-15);
 
         let c = &[0.0, 1.0, 1.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_approx_eq!(distance, SQRT_2_BY_3, 1e-15);
 
         let c = &[1.0, 0.0, 1.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_approx_eq!(distance, SQRT_2_BY_3, 1e-15);
 
         let c = &[0.5, 0.5, 0.5];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.0);
 
         let a = &[0.0, 0.0, 0.0];
         let b = &[2.0, 0.0, 0.0];
         let c = &[1.0, 0.5, 0.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.5);
 
         let a = &[0.0, 0.0, 0.0];
         let b = &[0.0, 3.0, 0.0];
         let c = &[0.5, 1.0, 0.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.5);
 
         let a = &[0.0, 0.0, 0.0];
         let b = &[0.0, 0.0, 4.0];
         let c = &[0.0, 0.5, 1.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 0.5);
 
         let a = &[1.0, 2.0, 1.0];
         let b = &[1.0, 2.0, 5.0];
         let c = &[1.0, 1.0, 2.0];
-        let distance = point_line_distance(a, b, c)?;
+        let distance = point_line_distance(a, b, c).unwrap();
         assert_eq!(distance, 1.0);
-        Ok(())
     }
 
     #[test]
@@ -444,21 +438,20 @@ mod tests {
     }
 
     #[test]
-    fn point_circle_distance_works() -> Result<(), StrError> {
+    fn point_circle_distance_works() {
         let center = &[3.0, 4.0];
         let radius = 5.0;
-        let distance = point_circle_distance(center, radius, &[0.0, 0.0])?;
+        let distance = point_circle_distance(center, radius, &[0.0, 0.0]).unwrap();
         assert_eq!(distance, 0.0);
 
-        let distance = point_circle_distance(center, radius, &[3.0, 4.0])?;
+        let distance = point_circle_distance(center, radius, &[3.0, 4.0]).unwrap();
         assert_eq!(distance, -5.0);
 
-        let distance = point_circle_distance(center, radius, &[6.0, 8.0])?;
+        let distance = point_circle_distance(center, radius, &[6.0, 8.0]).unwrap();
         assert_eq!(distance, 0.0);
 
-        let distance = point_circle_distance(center, radius, &[9.0, 12.0])?;
+        let distance = point_circle_distance(center, radius, &[9.0, 12.0]).unwrap();
         assert_eq!(distance, 5.0);
-        Ok(())
     }
 
     #[test]
@@ -478,54 +471,53 @@ mod tests {
     }
 
     #[test]
-    fn point_cylinder_distance_works() -> Result<(), StrError> {
+    fn point_cylinder_distance_works() {
         // parallel to x
         let axis_a = &[10.0, 3.0, 4.0];
         let axis_b = &[20.0, 3.0, 4.0];
         let radius = 5.0;
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[0.0, 0.0, 0.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[0.0, 0.0, 0.0]).unwrap();
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[80.0, 3.0, 4.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[80.0, 3.0, 4.0]).unwrap();
         assert_eq!(distance, -5.0);
 
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[-11.0, 6.0, 8.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[-11.0, 6.0, 8.0]).unwrap();
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[-5.0, 9.0, 12.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[-5.0, 9.0, 12.0]).unwrap();
         assert_eq!(distance, 5.0);
 
         // parallel to y
         let axis_a = &[3.0, 10.0, 4.0];
         let axis_b = &[3.0, -10.0, 4.0];
         let radius = 5.0;
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[0.0, 0.0, 0.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[0.0, 0.0, 0.0]).unwrap();
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[3.0, 80.0, 4.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[3.0, 80.0, 4.0]).unwrap();
         assert_eq!(distance, -5.0);
 
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[6.0, -11.0, 8.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[6.0, -11.0, 8.0]).unwrap();
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[9.0, -5.0, 12.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[9.0, -5.0, 12.0]).unwrap();
         assert_eq!(distance, 5.0);
 
         // parallel to z
         let axis_a = &[3.0, 4.0, 10.0];
         let axis_b = &[3.0, 4.0, 30.0];
         let radius = 5.0;
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[0.0, 0.0, 0.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[0.0, 0.0, 0.0]).unwrap();
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[3.0, 4.0, 80.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[3.0, 4.0, 80.0]).unwrap();
         assert_eq!(distance, -5.0);
 
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[6.0, 8.0, -11.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[6.0, 8.0, -11.0]).unwrap();
         assert_eq!(distance, 0.0);
 
-        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[9.0, 12.0, -5.0])?;
+        let distance = point_cylinder_distance(axis_a, axis_b, radius, &[9.0, 12.0, -5.0]).unwrap();
         assert_eq!(distance, 5.0);
-        Ok(())
     }
 }
