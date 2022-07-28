@@ -550,7 +550,9 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, 
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3};
+    use crate::integ::{
+        self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1,
+    };
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::{copy_matrix, copy_vector, Matrix};
@@ -592,6 +594,41 @@ mod tests {
         assert_eq!(
             integ::mat_gdg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
+        );
+        // more errors
+        assert_eq!(
+            integ::mat_nsn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_| Ok(0.0)).err(),
+            Some("calc_gradient requires that geo_ndim = space_ndim")
+        );
+        assert_eq!(
+            integ::mat_gtg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            Some("calc_gradient requires that geo_ndim = space_ndim")
+        );
+        assert_eq!(
+            integ::mat_ntn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            Some("calc_gradient requires that geo_ndim = space_ndim")
+        );
+        assert_eq!(
+            integ::mat_gdg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            Some("calc_gradient requires that geo_ndim = space_ndim")
+        );
+        let mut pad = aux::gen_pad_tri3();
+        assert_eq!(
+            integ::mat_nsn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_| Err("stop")).err(),
+            Some("stop")
+        );
+        assert_eq!(
+            integ::mat_gtg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            Some("stop")
+        );
+        let mut kk = Matrix::new(6, 6);
+        assert_eq!(
+            integ::mat_ntn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            Some("stop")
+        );
+        assert_eq!(
+            integ::mat_gdg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            Some("stop")
         );
     }
 
