@@ -184,7 +184,7 @@ pub fn point_circle_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f
     if p.len() != ndim {
         return Err("x.len() must equal center.len() == ndim");
     }
-    let center_distance = point_point_distance(center, p)?;
+    let center_distance = point_point_distance(center, p).unwrap(); // we can use unwrap here because center.len() == p.len() == 2
     let distance = center_distance - radius;
     Ok(distance)
 }
