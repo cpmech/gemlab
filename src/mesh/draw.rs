@@ -655,6 +655,25 @@ mod tests {
                 .save("/tmp/gemlab/test_draw_cells_and_points_work_1_lin.svg")?;
         }
 
+        // lin cells in 3d
+        let mesh = Samples::lin_cells_3d();
+        let mut plot = Plot::new();
+        let mut draw = Draw::new();
+        draw.cells(&mut plot, &mesh, true)?;
+        draw.points(&mut plot, &mesh);
+        if false {
+            draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.0, 0.05, 0.0);
+            caption.draw_3d(1.2, 1.33, 1.33, "Lin2");
+            caption.draw_3d(1.4 + 1.2, 1.33, 1.33, "Lin3");
+            caption.draw_3d(2.8 + 1.2, 1.33, 1.33, "Lin4");
+            caption.draw_3d(4.2 + 1.2, 1.33, 1.33, "Lin5");
+            plot.add(&caption);
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .set_range_3d(0.0, 5.3, 0.0, 1.2, 0.0, 1.2)
+                .save("/tmp/gemlab/test_draw_cells_and_points_work_1_lin_3d.svg")?;
+        }
+
         // tri cells
         let mesh = Samples::tri_cells();
         let mut plot = Plot::new();

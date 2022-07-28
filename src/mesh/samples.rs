@@ -40,6 +40,41 @@ impl Samples {
         }
     }
 
+    /// Returns a mesh with every kind of Lin cell in 2D
+    ///
+    /// ![lin_cells_3d](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin_3d.svg)
+    #[rustfmt::skip]
+    pub fn lin_cells_3d() -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0, 0.0] }, // 0
+                Point { id: 1, coords: vec![1.2, 1.2, 1.2] }, // 1
+
+                Point { id: 2, coords: vec![1.4+0.0, 0.0, 0.0] }, // 0
+                Point { id: 3, coords: vec![1.4+1.2, 1.2, 1.2] }, // 1
+                Point { id: 4, coords: vec![1.4+0.3, 0.6, 0.6] }, // 2
+
+                Point { id: 5, coords: vec![2.8+0.0, 0.0, 0.0] }, // 0
+                Point { id: 6, coords: vec![2.8+1.2, 1.2, 1.2] }, // 1
+                Point { id: 7, coords: vec![2.8+0.3, 0.4, 0.4] }, // 2
+                Point { id: 8, coords: vec![2.8+0.6, 0.8, 0.8] }, // 3
+
+                Point { id:  9, coords: vec![4.2+0.0, 0.0, 0.0] }, // 0
+                Point { id: 10, coords: vec![4.2+1.2, 1.2, 1.2] }, // 1
+                Point { id: 11, coords: vec![4.2+0.3, 0.6, 0.6] }, // 2
+                Point { id: 12, coords: vec![4.2+0.0, 0.3, 0.3] }, // 3
+                Point { id: 13, coords: vec![4.2+0.6, 0.9, 0.9] }, // 4
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 2, kind: GeoKind::Lin2, points: vec![0, 1] },
+                Cell { id: 1, attribute_id: 3, kind: GeoKind::Lin3, points: vec![2, 3, 4] },
+                Cell { id: 2, attribute_id: 4, kind: GeoKind::Lin4, points: vec![5, 6, 7, 8] },
+                Cell { id: 3, attribute_id: 5, kind: GeoKind::Lin5, points: vec![9, 10, 11, 12, 13] },
+            ],
+        }
+    }
+
     /// Returns a mesh with every kind of Tri cell
     ///
     /// ![tri_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
@@ -1655,6 +1690,12 @@ mod tests {
     fn samples_work() -> Result<(), StrError> {
         let mesh = Samples::lin_cells();
         assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 14);
+        assert_eq!(mesh.cells.len(), 4);
+        check_all(&mesh)?;
+
+        let mesh = Samples::lin_cells_3d();
+        assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh)?;
