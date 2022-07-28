@@ -250,12 +250,9 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3};
-    use crate::shapes::{GeoKind, Scratchpad};
-    use crate::StrError;
+    use crate::integ::{self, AnalyticalTri3};
     use russell_chk::assert_vec_approx_eq;
-    use russell_lab::{copy_matrix, Matrix};
-    use russell_tensor::LinElasticity;
+    use russell_lab::Matrix;
 
     #[test]
     fn capture_some_errors() {
@@ -278,5 +275,44 @@ mod tests {
             integ::mat_nvg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
+    }
+
+    #[test]
+    fn mat_gvn_tri3_works() {
+        let mut pad = aux::gen_pad_tri3();
+        let mut kk = Matrix::new(3, 3);
+        let ana = AnalyticalTri3::new(&pad);
+        // constant
+        let (vx, vy) = (2.0, 3.0);
+        let kk_correct = ana.integ_gvn_constant(vx, vy);
+        let class = pad.kind.class();
+        let tolerances = [1e-15];
+        let selection: Vec<_> = [3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_gvn(&mut kk, &mut pad, 0, 0, true, ips, |v, _| {
+                v[0] = vx;
+                v[1] = vy;
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+        // bilinear
+        let kk_correct = ana.integ_gvn_bilinear(&pad);
+        let class = pad.kind.class();
+        let tolerances = [1e-14, 1e-15];
+        let selection: Vec<_> = [3, 6].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            integ::mat_gvn(&mut kk, &mut pad, 0, 0, true, ips, |v, p| {
+                v[0] = x_ips[p][0];
+                v[1] = x_ips[p][1];
+                Ok(())
+            })
+            .unwrap();
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
     }
 }

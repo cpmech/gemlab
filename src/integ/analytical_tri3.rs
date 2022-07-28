@@ -197,6 +197,35 @@ impl AnalyticalTri3 {
         ])
     }
 
+    /// Performs the gvn integration with constant vector
+    #[rustfmt::skip]
+    pub fn integ_gvn_constant(&self, vx: f64, vy: f64) -> Matrix {
+        let aa = self.area;
+        let g = &self.gg;
+        Matrix::from(&[
+            [aa*(g[0][0]*vx + g[0][1]*vy)/3.0, aa*(g[0][0]*vx + g[0][1]*vy)/3.0, aa*(g[0][0]*vx + g[0][1]*vy)/3.0],
+            [aa*(g[1][0]*vx + g[1][1]*vy)/3.0, aa*(g[1][0]*vx + g[1][1]*vy)/3.0, aa*(g[1][0]*vx + g[1][1]*vy)/3.0],
+            [aa*(g[2][0]*vx + g[2][1]*vy)/3.0, aa*(g[2][0]*vx + g[2][1]*vy)/3.0, aa*(g[2][0]*vx + g[2][1]*vy)/3.0],
+        ])
+    }
+
+    /// Performs the gvn integration with v = {x, y}
+    #[rustfmt::skip]
+    pub fn integ_gvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
+        let aa = self.area;
+        let (g00, g01) = (self.gg[0][0], self.gg[0][1]);
+        let (g10, g11) = (self.gg[1][0], self.gg[1][1]);
+        let (g20, g21) = (self.gg[2][0], self.gg[2][1]);
+        let (x0, y0) = (pad.xxt[0][0], pad.xxt[1][0]);
+        let (x1, y1) = (pad.xxt[0][1], pad.xxt[1][1]);
+        let (x2, y2) = (pad.xxt[0][2], pad.xxt[1][2]);
+        Matrix::from(&[
+            [(aa*(2.0*g00*x0 + g00*x1 + g00*x2 + 2.0*g01*y0 + g01*y1 + g01*y2))/12.0,(aa*(g00*x0 + 2.0*g00*x1 + g00*x2 + g01*y0 + 2.0*g01*y1 + g01*y2))/12.0, (aa*(g00*x0 + g00*x1 + 2.0*g00*x2 + g01*y0 + g01*y1 + 2.0*g01*y2))/12.0],
+            [(aa*(2.0*g10*x0 + g10*x1 + g10*x2 + 2.0*g11*y0 + g11*y1 + g11*y2))/12.0,(aa*(g10*x0 + 2.0*g10*x1 + g10*x2 + g11*y0 + 2.0*g11*y1 + g11*y2))/12.0, (aa*(g10*x0 + g10*x1 + 2.0*g10*x2 + g11*y0 + g11*y1 + 2.0*g11*y2))/12.0],
+            [(aa*(2.0*g20*x0 + g20*x1 + g20*x2 + 2.0*g21*y0 + g21*y1 + g21*y2))/12.0,(aa*(g20*x0 + 2.0*g20*x1 + g20*x2 + g21*y0 + 2.0*g21*y1 + g21*y2))/12.0, (aa*(g20*x0 + g20*x1 + 2.0*g20*x2 + g21*y0 + g21*y1 + 2.0*g21*y2))/12.0],
+        ])
+    }
+
     /// Calculates the stiffness matrix
     ///
     /// solution:
