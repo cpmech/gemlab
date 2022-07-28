@@ -592,7 +592,7 @@ mod tests {
         let triangles = &[[0, 1, 3], [1, 2, 3]];
         let grid = GridSearchTri::new(coordinates, triangles, None, None).unwrap();
         let mut plot = Plot::new();
-        grid.draw(&mut plot, coordinates, triangles, false).unwrap();
+        grid.draw(&mut plot, coordinates, triangles, true).unwrap();
     }
 
     #[test]
