@@ -974,17 +974,98 @@ impl Block {
 mod tests {
     use super::{ArgsRing, Block, Constraint2D, Constraint3D};
     use crate::geometry::point_point_distance;
-    use crate::mesh::{check_all, Draw, Extract, Mesh, Region, Samples};
+    use crate::mesh::{check_all, Samples};
     use crate::shapes::GeoKind;
     use crate::util::{PI, SQRT_2};
-    use plotpy::{Canvas, Plot};
+    use plotpy::Plot;
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
 
     #[allow(unused_imports)]
     use crate::mesh::draw_mesh;
 
     #[allow(unused_imports)]
+    use crate::mesh::{Draw, Extract, Mesh, Region};
+
+    #[allow(unused_imports)]
+    use plotpy::Canvas;
+
+    #[allow(unused_imports)]
     use plotpy::Surface;
+
+    // DO NOT DELETE the following lines
+    // fn draw_ring_and_mesh(
+    //     region: &Region,
+    //     args: &ArgsRing,
+    //     with_ids: bool,
+    //     with_points: bool,
+    //     with_circle_mid: bool,
+    //     filename: &str,
+    // ) {
+    //     // draw reference circles
+    //     let mut plot = Plot::new();
+    //     let mut circle_in = Canvas::new();
+    //     let mut circle_mid = Canvas::new();
+    //     let mut circle_out = Canvas::new();
+    //     circle_in
+    //         .set_face_color("None")
+    //         .set_edge_color("#bfbfbf")
+    //         .set_line_width(7.0)
+    //         .draw_circle(0.0, 0.0, args.rmin);
+    //     if with_circle_mid {
+    //         circle_mid
+    //             .set_face_color("None")
+    //             .set_edge_color("#bfbfbf")
+    //             .set_line_width(7.0)
+    //             .draw_circle(0.0, 0.0, (args.rmax + args.rmin) / 2.0);
+    //     }
+    //     circle_out
+    //         .set_face_color("None")
+    //         .set_edge_color("#bfbfbf")
+    //         .set_line_width(7.0)
+    //         .draw_circle(0.0, 0.0, args.rmax);
+    //     plot.add(&circle_in);
+    //     plot.add(&circle_mid);
+    //     plot.add(&circle_out);
+    //     // draw mesh
+    //     let mut draw = Draw::new();
+    //     draw.canvas_point_ids
+    //         .set_bbox(false)
+    //         .set_align_horizontal("left")
+    //         .set_align_vertical("bottom");
+    //     draw.edges(&mut plot, region, false).unwrap();
+    //     if with_ids {
+    //         draw.cell_ids(&mut plot, &region.mesh).unwrap();
+    //         draw.point_ids(&mut plot, &region.mesh);
+    //     }
+    //     if with_points {
+    //         draw.points(&mut plot, &region.mesh);
+    //     }
+    //     let d = args.rmax * 0.05;
+    //     plot.set_equal_axes(true)
+    //         .set_figure_size_points(600.0, 600.0)
+    //         .set_range(-d, args.rmax + d, -d, args.rmax + d)
+    //         .save(filename)
+    //         .unwrap();
+    // }
+
+    // DO NOT DELETE the following lines
+    // fn draw_mesh_and_block(plot: &mut Plot, mesh: Mesh, block: &Block, set_range: bool, filename: &str) {
+    //     let region = Region::new(&mesh, Extract::All).unwrap();
+    //     let mut draw = Draw::new();
+    //     block.draw(plot, false, set_range).unwrap();
+    //     draw.canvas_point_ids
+    //         .set_bbox(false)
+    //         .set_align_horizontal("left")
+    //         .set_align_vertical("bottom");
+    //     draw.edges(plot, &region, false).unwrap();
+    //     draw.cell_ids(plot, &region.mesh).unwrap();
+    //     draw.point_ids(plot, &region.mesh);
+    //     draw.points(plot, &region.mesh);
+    //     plot.set_equal_axes(true)
+    //         .set_figure_size_points(600.0, 600.0)
+    //         .save(filename)
+    //         .unwrap();
+    // }
 
     #[test]
     fn derive_works() {
@@ -1582,61 +1663,6 @@ mod tests {
         check_all(&mesh).unwrap();
     }
 
-    fn _draw_ring_and_mesh(
-        region: &Region,
-        args: &ArgsRing,
-        with_ids: bool,
-        with_points: bool,
-        with_circle_mid: bool,
-        filename: &str,
-    ) {
-        // draw reference circles
-        let mut plot = Plot::new();
-        let mut circle_in = Canvas::new();
-        let mut circle_mid = Canvas::new();
-        let mut circle_out = Canvas::new();
-        circle_in
-            .set_face_color("None")
-            .set_edge_color("#bfbfbf")
-            .set_line_width(7.0)
-            .draw_circle(0.0, 0.0, args.rmin);
-        if with_circle_mid {
-            circle_mid
-                .set_face_color("None")
-                .set_edge_color("#bfbfbf")
-                .set_line_width(7.0)
-                .draw_circle(0.0, 0.0, (args.rmax + args.rmin) / 2.0);
-        }
-        circle_out
-            .set_face_color("None")
-            .set_edge_color("#bfbfbf")
-            .set_line_width(7.0)
-            .draw_circle(0.0, 0.0, args.rmax);
-        plot.add(&circle_in);
-        plot.add(&circle_mid);
-        plot.add(&circle_out);
-        // draw mesh
-        let mut draw = Draw::new();
-        draw.canvas_point_ids
-            .set_bbox(false)
-            .set_align_horizontal("left")
-            .set_align_vertical("bottom");
-        draw.edges(&mut plot, region, false).unwrap();
-        if with_ids {
-            draw.cell_ids(&mut plot, &region.mesh).unwrap();
-            draw.point_ids(&mut plot, &region.mesh);
-        }
-        if with_points {
-            draw.points(&mut plot, &region.mesh);
-        }
-        let d = args.rmax * 0.05;
-        plot.set_equal_axes(true)
-            .set_figure_size_points(600.0, 600.0)
-            .set_range(-d, args.rmax + d, -d, args.rmax + d)
-            .save(filename)
-            .unwrap();
-    }
-
     #[test]
     fn transform_into_ring_works_2d() {
         let mut block = Block::new_square(1.0);
@@ -1677,7 +1703,7 @@ mod tests {
                 assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
             }
         }
-        // _draw_ring_and_mesh(
+        // draw_ring_and_mesh(
         //     &Region::new(&mesh, Extract::All).unwrap(),
         //     &block.args_ring,
         //     true,
@@ -1721,7 +1747,7 @@ mod tests {
                 assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
             }
         }
-        // _draw_ring_and_mesh(
+        // draw_ring_and_mesh(
         //     &Region::new(&mesh, Extract::All).unwrap(),
         //     &block.args_ring,
         //     true,
@@ -1840,24 +1866,6 @@ mod tests {
         );
     }
 
-    fn _draw_mesh_and_block(plot: &mut Plot, mesh: Mesh, block: &Block, set_range: bool, filename: &str) {
-        let region = Region::new(&mesh, Extract::All).unwrap();
-        let mut draw = Draw::new();
-        block.draw(plot, false, set_range).unwrap();
-        draw.canvas_point_ids
-            .set_bbox(false)
-            .set_align_horizontal("left")
-            .set_align_vertical("bottom");
-        draw.edges(plot, &region, false).unwrap();
-        draw.cell_ids(plot, &region.mesh).unwrap();
-        draw.point_ids(plot, &region.mesh);
-        draw.points(plot, &region.mesh);
-        plot.set_equal_axes(true)
-            .set_figure_size_points(600.0, 600.0)
-            .save(filename)
-            .unwrap();
-    }
-
     #[test]
     fn constraints_2d_works() {
         // block does not touch constraint
@@ -1879,7 +1887,7 @@ mod tests {
             assert_approx_eq!(d, 1.0, 1e-15);
         }
         // let mut plot = Plot::new();
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -1896,7 +1904,7 @@ mod tests {
             assert_approx_eq!(d, 0.5, 1e-15);
         }
         // let mut plot = Plot::new();
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -1935,7 +1943,7 @@ mod tests {
             assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         // let mut plot = Plot::new();
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -2009,7 +2017,7 @@ mod tests {
         }
         // let mut plot = Plot::new();
         // plot.set_range(-4.0, 4.0, -4.0, 4.0);
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -2147,7 +2155,7 @@ mod tests {
         //     .unwrap();
         // plot.add(&surf);
         // plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
-        // _draw_mesh_and_block(&mut plot, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg");
+        // draw_mesh_and_block(&mut plot, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg");
     }
 
     #[test]
@@ -2237,7 +2245,7 @@ mod tests {
         //     .unwrap();
         // plot.add(&surf);
         // plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -2263,7 +2271,7 @@ mod tests {
             assert_approx_eq!(d, 6.0, 1e-15);
         }
         // let mut plot = Plot::new();
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -2293,7 +2301,7 @@ mod tests {
             assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         // let mut plot = Plot::new();
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -2323,7 +2331,7 @@ mod tests {
             assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         // let mut plot = Plot::new();
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -2363,7 +2371,7 @@ mod tests {
             assert_vec_approx_eq!(mesh.points[d].coords, &[xd, yd], 1e-15);
         }
         // let mut plot = Plot::new();
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -2389,7 +2397,7 @@ mod tests {
             assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         // let mut plot = Plot::new();
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
@@ -2434,7 +2442,7 @@ mod tests {
             assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         // let mut plot = Plot::new();
-        // _draw_mesh_and_block(
+        // draw_mesh_and_block(
         //     &mut plot,
         //     mesh,
         //     &block,
