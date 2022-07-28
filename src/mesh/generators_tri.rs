@@ -158,17 +158,28 @@ impl Unstructured {
 #[cfg(test)]
 mod tests {
     use super::Unstructured;
-    use crate::mesh::draw_mesh;
     use crate::StrError;
 
+    #[allow(unused_imports)]
+    use crate::mesh::draw_mesh;
+
     #[test]
-    fn tri_quarter_ring_2d_works() -> Result<(), StrError> {
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, false, None)?;
+    fn tri_quarter_ring_2d_captures_errors() {
+        assert_eq!(
+            Unstructured::quarter_ring_2d(3.0, 6.0, 0, 4, false, None).err(),
+            Some("number of divisions along the radius must be > 0")
+        );
+        assert_eq!(
+            Unstructured::quarter_ring_2d(3.0, 6.0, 2, 0, false, None).err(),
+            Some("number of divisions along alpha must be > 0")
+        );
+    }
+
+    #[test]
+    fn tri_quarter_ring_2d_works() {
+        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, false, None).unwrap();
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 14);
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_tri_quarter_ring_2d.svg")?;
-        }
-        Ok(())
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_tri_quarter_ring_2d.svg").unwrap();
     }
 }
