@@ -19,7 +19,7 @@ pub struct AnalyticalTet4 {
     ///           dx
     /// ```
     ///
-    /// Organized as the G matrix (nnode=3, space_ndim=2)
+    /// Organized as the G matrix (nnode=4, space_ndim=3)
     pub gg: Matrix,
 
     /// Holds the B-matrix (6, 12)
