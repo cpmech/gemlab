@@ -1189,7 +1189,6 @@ pub const HEX_EDGE_TO_FACE: [[usize; 2]; 12] = [
 #[cfg(test)]
 mod tests {
     use super::{GeoCase, GeoClass, GeoKind};
-    use crate::StrError;
     use std::collections::HashSet;
 
     #[test]
@@ -1210,12 +1209,12 @@ mod tests {
     }
 
     #[test]
-    fn data_is_consistent() -> Result<(), StrError> {
+    fn data_is_consistent() {
         for kind in GeoKind::VALUES {
             match kind {
                 // Lin
                 GeoKind::Lin2 => {
-                    assert_eq!(GeoKind::from("lin2")?, kind);
+                    assert_eq!(GeoKind::from("lin2").unwrap(), kind);
                     assert_eq!(kind.to_string(), "lin2");
                     assert_eq!(kind.class(), GeoClass::Lin);
                     assert_eq!(kind.ndim(), 1);
@@ -1232,7 +1231,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Lin3 => {
-                    assert_eq!(GeoKind::from("lin3")?, kind);
+                    assert_eq!(GeoKind::from("lin3").unwrap(), kind);
                     assert_eq!(kind.to_string(), "lin3");
                     assert_eq!(kind.class(), GeoClass::Lin);
                     assert_eq!(kind.ndim(), 1);
@@ -1249,7 +1248,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 2);
                 }
                 GeoKind::Lin4 => {
-                    assert_eq!(GeoKind::from("lin4")?, kind);
+                    assert_eq!(GeoKind::from("lin4").unwrap(), kind);
                     assert_eq!(kind.to_string(), "lin4");
                     assert_eq!(kind.class(), GeoClass::Lin);
                     assert_eq!(kind.ndim(), 1);
@@ -1267,7 +1266,7 @@ mod tests {
                     assert_eq!(kind.interior_node(1), 3);
                 }
                 GeoKind::Lin5 => {
-                    assert_eq!(GeoKind::from("lin5")?, kind);
+                    assert_eq!(GeoKind::from("lin5").unwrap(), kind);
                     assert_eq!(kind.to_string(), "lin5");
                     assert_eq!(kind.class(), GeoClass::Lin);
                     assert_eq!(kind.ndim(), 1);
@@ -1288,7 +1287,7 @@ mod tests {
 
                 // Tri
                 GeoKind::Tri3 => {
-                    assert_eq!(GeoKind::from("tri3")?, kind);
+                    assert_eq!(GeoKind::from("tri3").unwrap(), kind);
                     assert_eq!(kind.to_string(), "tri3");
                     assert_eq!(kind.class(), GeoClass::Tri);
                     assert_eq!(kind.ndim(), 2);
@@ -1305,7 +1304,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Tri6 => {
-                    assert_eq!(GeoKind::from("tri6")?, kind);
+                    assert_eq!(GeoKind::from("tri6").unwrap(), kind);
                     assert_eq!(kind.to_string(), "tri6");
                     assert_eq!(kind.class(), GeoClass::Tri);
                     assert_eq!(kind.ndim(), 2);
@@ -1322,7 +1321,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Tri10 => {
-                    assert_eq!(GeoKind::from("tri10")?, kind);
+                    assert_eq!(GeoKind::from("tri10").unwrap(), kind);
                     assert_eq!(kind.to_string(), "tri10");
                     assert_eq!(kind.class(), GeoClass::Tri);
                     assert_eq!(kind.ndim(), 2);
@@ -1339,7 +1338,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 9);
                 }
                 GeoKind::Tri15 => {
-                    assert_eq!(GeoKind::from("tri15")?, kind);
+                    assert_eq!(GeoKind::from("tri15").unwrap(), kind);
                     assert_eq!(kind.to_string(), "tri15");
                     assert_eq!(kind.class(), GeoClass::Tri);
                     assert_eq!(kind.ndim(), 2);
@@ -1360,7 +1359,7 @@ mod tests {
 
                 // Qua
                 GeoKind::Qua4 => {
-                    assert_eq!(GeoKind::from("qua4")?, kind);
+                    assert_eq!(GeoKind::from("qua4").unwrap(), kind);
                     assert_eq!(kind.to_string(), "qua4");
                     assert_eq!(kind.class(), GeoClass::Qua);
                     assert_eq!(kind.ndim(), 2);
@@ -1377,7 +1376,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Qua8 => {
-                    assert_eq!(GeoKind::from("qua8")?, kind);
+                    assert_eq!(GeoKind::from("qua8").unwrap(), kind);
                     assert_eq!(kind.to_string(), "qua8");
                     assert_eq!(kind.class(), GeoClass::Qua);
                     assert_eq!(kind.ndim(), 2);
@@ -1394,7 +1393,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Qua9 => {
-                    assert_eq!(GeoKind::from("qua9")?, kind);
+                    assert_eq!(GeoKind::from("qua9").unwrap(), kind);
                     assert_eq!(kind.to_string(), "qua9");
                     assert_eq!(kind.class(), GeoClass::Qua);
                     assert_eq!(kind.ndim(), 2);
@@ -1411,7 +1410,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 8);
                 }
                 GeoKind::Qua12 => {
-                    assert_eq!(GeoKind::from("qua12")?, kind);
+                    assert_eq!(GeoKind::from("qua12").unwrap(), kind);
                     assert_eq!(kind.to_string(), "qua12");
                     assert_eq!(kind.class(), GeoClass::Qua);
                     assert_eq!(kind.ndim(), 2);
@@ -1428,7 +1427,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Qua16 => {
-                    assert_eq!(GeoKind::from("qua16")?, kind);
+                    assert_eq!(GeoKind::from("qua16").unwrap(), kind);
                     assert_eq!(kind.to_string(), "qua16");
                     assert_eq!(kind.class(), GeoClass::Qua);
                     assert_eq!(kind.ndim(), 2);
@@ -1448,7 +1447,7 @@ mod tests {
                     assert_eq!(kind.interior_node(3), 15);
                 }
                 GeoKind::Qua17 => {
-                    assert_eq!(GeoKind::from("qua17")?, kind);
+                    assert_eq!(GeoKind::from("qua17").unwrap(), kind);
                     assert_eq!(kind.to_string(), "qua17");
                     assert_eq!(kind.class(), GeoClass::Qua);
                     assert_eq!(kind.ndim(), 2);
@@ -1467,7 +1466,7 @@ mod tests {
 
                 // Tet
                 GeoKind::Tet4 => {
-                    assert_eq!(GeoKind::from("tet4")?, kind);
+                    assert_eq!(GeoKind::from("tet4").unwrap(), kind);
                     assert_eq!(kind.to_string(), "tet4");
                     assert_eq!(kind.class(), GeoClass::Tet);
                     assert_eq!(kind.ndim(), 3);
@@ -1484,7 +1483,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Tet10 => {
-                    assert_eq!(GeoKind::from("tet10")?, kind);
+                    assert_eq!(GeoKind::from("tet10").unwrap(), kind);
                     assert_eq!(kind.to_string(), "tet10");
                     assert_eq!(kind.class(), GeoClass::Tet);
                     assert_eq!(kind.ndim(), 3);
@@ -1501,7 +1500,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Tet20 => {
-                    assert_eq!(GeoKind::from("tet20")?, kind);
+                    assert_eq!(GeoKind::from("tet20").unwrap(), kind);
                     assert_eq!(kind.to_string(), "tet20");
                     assert_eq!(kind.class(), GeoClass::Tet);
                     assert_eq!(kind.ndim(), 3);
@@ -1520,7 +1519,7 @@ mod tests {
 
                 // Hex
                 GeoKind::Hex8 => {
-                    assert_eq!(GeoKind::from("hex8")?, kind);
+                    assert_eq!(GeoKind::from("hex8").unwrap(), kind);
                     assert_eq!(kind.to_string(), "hex8");
                     assert_eq!(kind.class(), GeoClass::Hex);
                     assert_eq!(kind.ndim(), 3);
@@ -1537,7 +1536,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Hex20 => {
-                    assert_eq!(GeoKind::from("hex20")?, kind);
+                    assert_eq!(GeoKind::from("hex20").unwrap(), kind);
                     assert_eq!(kind.to_string(), "hex20");
                     assert_eq!(kind.class(), GeoClass::Hex);
                     assert_eq!(kind.ndim(), 3);
@@ -1554,7 +1553,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 0);
                 }
                 GeoKind::Hex32 => {
-                    assert_eq!(GeoKind::from("hex32")?, kind);
+                    assert_eq!(GeoKind::from("hex32").unwrap(), kind);
                     assert_eq!(kind.to_string(), "hex32");
                     assert_eq!(kind.class(), GeoClass::Hex);
                     assert_eq!(kind.ndim(), 3);
@@ -1611,6 +1610,5 @@ mod tests {
                 }
             }
         }
-        Ok(())
     }
 }
