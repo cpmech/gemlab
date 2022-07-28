@@ -250,7 +250,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
 
@@ -274,6 +274,25 @@ mod tests {
         assert_eq!(
             integ::mat_nvg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
+        );
+        // more errors
+        assert_eq!(
+            integ::mat_gvn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            Some("calc_gradient requires that geo_ndim = space_ndim")
+        );
+        assert_eq!(
+            integ::mat_nvg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            Some("calc_gradient requires that geo_ndim = space_ndim")
+        );
+        let mut pad = aux::gen_pad_tri3();
+        assert_eq!(
+            integ::mat_gvn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            Some("stop")
+        );
+        let mut kk = Matrix::new(6, 6);
+        assert_eq!(
+            integ::mat_nvg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            Some("stop")
         );
     }
 
