@@ -80,7 +80,6 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::ONE_BY_3;
-    use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
@@ -101,7 +100,7 @@ mod tests {
     }
 
     #[test]
-    fn calc_coords_works() -> Result<(), StrError> {
+    fn calc_coords_works() {
         // kind, tol, tol_in for the case inside the shape
         let problem = vec![
             (GeoKind::Tri3, 1e-15, 0.35),  // linear maps are inaccurate for the circular wedge
@@ -136,7 +135,7 @@ mod tests {
                 let ksi = kind.reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
-                pad.calc_coords(&mut x, ksi)?;
+                pad.calc_coords(&mut x, ksi).unwrap();
 
                 // compare xᵐ with generated coordinates
                 aux::map_point_coords(&mut x_correct, ksi, ksi_min, ksi_del);
@@ -149,10 +148,9 @@ mod tests {
             } else {
                 vec![0.0; geo_ndim]
             };
-            pad.calc_coords(&mut x, &ksi_in)?;
+            pad.calc_coords(&mut x, &ksi_in).unwrap();
             aux::map_point_coords(&mut x_correct, &ksi_in, ksi_min, ksi_del);
             assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_in);
         }
-        Ok(())
     }
 }

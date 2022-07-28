@@ -138,7 +138,6 @@ mod tests {
     use super::DET_JAC_NOT_AVAILABLE;
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::StrError;
     use russell_chk::assert_deriv_approx_eq;
     use russell_lab::{Matrix, Vector};
 
@@ -177,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn calc_jacobian_works() -> Result<(), StrError> {
+    fn calc_jacobian_works() {
         // kind and tolerances
         let problem = vec![
             // Lin
@@ -219,7 +218,7 @@ mod tests {
             let at_ksi = vec![0.25; geo_ndim];
 
             // compute Jacobian, its inverse, and determinant
-            let det_jac = pad.calc_jacobian(&at_ksi)?;
+            let det_jac = pad.calc_jacobian(&at_ksi).unwrap();
             assert!(det_jac > 0.0);
 
             // set arguments for numerical integration
@@ -242,25 +241,24 @@ mod tests {
                 }
             }
         }
-        Ok(())
     }
 
     #[test]
-    fn calc_jacobian_special_cases_work() -> Result<(), StrError> {
+    fn calc_jacobian_special_cases_work() {
         // CABLE: line in 2d
         let space_ndim = 2;
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin2)?;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin2).unwrap();
         let l = 3.5;
         pad.set_xx(0, 0, 0.0); // node 0
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(1, 0, l); // node 1
         pad.set_xx(1, 1, 0.0);
-        let norm_jac_vec = pad.calc_jacobian(&[0.0])?;
+        let norm_jac_vec = pad.calc_jacobian(&[0.0]).unwrap();
         assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
 
         // SHELL: triangle on a plane diagonal to the y-z plane
         let space_ndim = 3;
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3).unwrap();
         pad.set_xx(0, 0, 0.0); // node 0
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(0, 2, 0.0);
@@ -270,11 +268,9 @@ mod tests {
         pad.set_xx(2, 0, 0.5); // node 2
         pad.set_xx(2, 1, 1.0);
         pad.set_xx(2, 2, 1.0);
-        let norm_jac_vec = pad.calc_jacobian(&[0.0, 0.0])?;
+        let norm_jac_vec = pad.calc_jacobian(&[0.0, 0.0]).unwrap();
         assert_eq!(norm_jac_vec, DET_JAC_NOT_AVAILABLE);
-        if false {
-            pad.draw_shape_simple("/tmp/gemlab/test_jacobian_tri3_in_3d.svg")?;
-        }
-        Ok(())
+        // pad.draw_shape_simple("/tmp/gemlab/test_jacobian_tri3_in_3d.svg")
+        //     .unwrap();
     }
 }

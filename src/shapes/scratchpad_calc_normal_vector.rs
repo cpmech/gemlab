@@ -177,7 +177,6 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::{ONE_BY_3, SQRT_2, SQRT_3};
-    use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
     use russell_lab::{vector_norm, NormVec, Vector};
 
@@ -197,7 +196,7 @@ mod tests {
     }
 
     #[test]
-    fn calc_normal_vector_works_line() -> Result<(), StrError> {
+    fn calc_normal_vector_works_line() {
         // kind, tol_mag, tol_vec
         let problem = vec![
             (GeoKind::Lin2, 1e-15, 1e-15),
@@ -221,16 +220,15 @@ mod tests {
             let mut pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
 
             // check
-            let mag_n = pad.calc_normal_vector(&mut un, ksi)?;
+            let mag_n = pad.calc_normal_vector(&mut un, ksi).unwrap();
             assert_approx_eq!(mag_n, correct_magnitude, tol_mag);
             assert_approx_eq!(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
             assert_vec_approx_eq!(un.as_data(), &correct_normal, tol_vec);
         }
-        Ok(())
     }
 
     #[test]
-    fn calc_normal_vector_works_surface_hex() -> Result<(), StrError> {
+    fn calc_normal_vector_works_surface_hex() {
         // kind, tol_mag, tol_vec
         let problem = vec![
             (GeoKind::Hex8, 1e-15, 1e-15),
@@ -256,51 +254,50 @@ mod tests {
 
             // face # 0
             let mut pad_face = aux::extract_face(0, &pad);
-            pad_face.calc_normal_vector(&mut un, ksi)?;
+            pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert!(un[0] < 0.0);
             assert!(un[1] < 0.0);
             assert_approx_eq!(un[2], 0.0, tol_vec);
 
             // face # 1
             let mut pad_face = aux::extract_face(1, &pad);
-            pad_face.calc_normal_vector(&mut un, ksi)?;
+            pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert!(un[0] > 0.0);
             assert!(un[1] > 0.0);
             assert_approx_eq!(un[2], 0.0, tol_vec);
 
             // face # 2
             let mut pad_face = aux::extract_face(2, &pad);
-            let mag_n = pad_face.calc_normal_vector(&mut un, ksi)?;
+            let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
             assert_approx_eq!(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
             assert_vec_approx_eq!(un.as_data(), &correct_normal_face2, tol_vec);
 
             // face # 3
             let mut pad_face = aux::extract_face(3, &pad);
-            let mag_n = pad_face.calc_normal_vector(&mut un, ksi)?;
+            let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
             assert_approx_eq!(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
             assert_vec_approx_eq!(un.as_data(), &correct_normal_face3, tol_vec);
 
             // face # 4
             let mut pad_face = aux::extract_face(4, &pad);
-            pad_face.calc_normal_vector(&mut un, ksi)?;
+            pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert_approx_eq!(un[0], 0.0, tol_vec);
             assert_approx_eq!(un[1], 0.0, tol_vec);
             assert!(un[2] < 0.0);
 
             // face # 5
             let mut pad_face = aux::extract_face(5, &pad);
-            pad_face.calc_normal_vector(&mut un, ksi)?;
+            pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert_approx_eq!(un[0], 0.0, tol_vec);
             assert_approx_eq!(un[1], 0.0, tol_vec);
             assert!(un[2] > 0.0);
         }
-        Ok(())
     }
 
     #[test]
-    fn normals_are_outward_2d() -> Result<(), StrError> {
+    fn normals_are_outward_2d() {
         // select Tri and Qua
         let kinds = vec![
             // Tri
@@ -351,7 +348,7 @@ mod tests {
             for e in 0..pad.kind.nedge() {
                 for ksi in ksi_values {
                     let mut pad_edge = aux::extract_edge(e, &pad);
-                    let mag_n = pad_edge.calc_normal_vector(&mut un, ksi)?;
+                    let mag_n = pad_edge.calc_normal_vector(&mut un, ksi).unwrap();
                     if pad.kind.is_tri_or_tet() {
                         // check triangle
                         if e == 1 {
@@ -368,11 +365,10 @@ mod tests {
                 }
             }
         }
-        Ok(())
     }
 
     #[test]
-    fn normals_are_outward_3d() -> Result<(), StrError> {
+    fn normals_are_outward_3d() {
         // select Tet and Hex
         let problem = vec![
             // Tet
@@ -434,7 +430,7 @@ mod tests {
             for f in 0..pad.kind.nface() {
                 for ksi in ksi_values {
                     let mut pad_face = aux::extract_face(f, &pad);
-                    let mag_n = pad_face.calc_normal_vector(&mut un, ksi)?;
+                    let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
                     if pad.kind.is_tri_or_tet() {
                         // check tetrahedron
                         if f == 3 {
@@ -451,6 +447,5 @@ mod tests {
                 }
             }
         }
-        Ok(())
     }
 }

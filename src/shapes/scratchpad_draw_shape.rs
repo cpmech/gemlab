@@ -176,11 +176,10 @@ fn draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::GeoKind;
-    use crate::StrError;
     use plotpy::Plot;
 
     #[test]
-    fn draw_shape_works() -> Result<(), StrError> {
+    fn draw_shape_works() {
         // select all kinds
         let kinds = vec![
             // Lin
@@ -218,16 +217,14 @@ mod tests {
                 plot.add(&canvas);
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
-            pad.draw_shape(&mut plot, "", true, true)?;
+            pad.draw_shape(&mut plot, "", true, true).unwrap();
             if space_ndim == 2 {
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
-            if false {
-                plot.set_figure_size_points(600.0, 600.0)
-                    .set_equal_axes(true)
-                    .save(format!("/tmp/gemlab/test_draw_shape_{}.svg", kind.to_string()).as_str())?;
-            }
+            // plot.set_figure_size_points(600.0, 600.0)
+            //     .set_equal_axes(true)
+            //     .save(format!("/tmp/gemlab/test_draw_shape_{}.svg", kind.to_string()).as_str())
+            //     .unwrap();
         }
-        Ok(())
     }
 }

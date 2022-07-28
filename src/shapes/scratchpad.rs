@@ -278,7 +278,6 @@ impl Scratchpad {
 mod tests {
     use super::Scratchpad;
     use crate::shapes::{GeoClass, GeoKind};
-    use crate::StrError;
 
     #[test]
     fn derive_works() {
@@ -300,7 +299,7 @@ mod tests {
     }
 
     #[test]
-    fn new_works() -> Result<(), StrError> {
+    fn new_works() {
         let nnode = [
             2, 3, 4, 5, // Lin
             3, 6, 10, 15, // Tri
@@ -318,7 +317,7 @@ mod tests {
         for i in 0..GeoKind::VALUES.len() {
             let kind = GeoKind::VALUES[i];
             let space_ndim = usize::max(2, kind.ndim());
-            let pad = Scratchpad::new(space_ndim, kind)?;
+            let pad = Scratchpad::new(space_ndim, kind).unwrap();
             assert_eq!(pad.kind, kind);
             assert_eq!(pad.interp.dim(), nnode[i]);
             assert_eq!(pad.deriv.dims(), (nnode[i], geo_ndim[i]));
@@ -335,7 +334,6 @@ mod tests {
             assert_eq!(pad.xmax.len(), space_ndim);
             assert_eq!(pad.ok_xxt, false);
         }
-        Ok(())
     }
 
     #[test]

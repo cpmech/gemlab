@@ -128,7 +128,6 @@ mod tests {
     use crate::shapes::GeoKind;
     use crate::shapes::Scratchpad;
     use crate::util::{ONE_BY_3, SQRT_3};
-    use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Vector;
 
@@ -159,7 +158,7 @@ mod tests {
     }
 
     #[test]
-    fn approximate_ksi_works() -> Result<(), StrError> {
+    fn approximate_ksi_works() {
         // select all kinds, except Lin
         let problem = vec![
             // Tri
@@ -200,10 +199,10 @@ mod tests {
                 let ksi_ref = kind.reference_coords(m);
 
                 // calculate xᵐ(ξᵐ) using the isoparametric formula
-                pad.calc_coords(&mut x, ksi_ref)?;
+                pad.calc_coords(&mut x, ksi_ref).unwrap();
 
                 // compute approximation of the inverse mapping ξᵐ(xᵐ)
-                let nit = pad.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
+                let nit = pad.approximate_ksi(&mut ksi, &x, 10, 1e-14).unwrap();
 
                 // check (linear and bi-linear shapes converge with nit = 1)
                 if kind == GeoKind::Tri3 || kind == GeoKind::Qua4 || kind == GeoKind::Tet4 || kind == GeoKind::Hex8 {
@@ -218,15 +217,14 @@ mod tests {
             } else {
                 vec![0.0; geo_ndim]
             };
-            pad.calc_coords(&mut x, &ksi_in)?;
-            pad.approximate_ksi(&mut ksi, &x, 10, 1e-14)?;
+            pad.calc_coords(&mut x, &ksi_in).unwrap();
+            pad.approximate_ksi(&mut ksi, &x, 10, 1e-14).unwrap();
             assert_vec_approx_eq!(ksi, ksi_in, tol);
         }
-        Ok(())
     }
 
     #[test]
-    fn approximate_ksi_works_outside() -> Result<(), StrError> {
+    fn approximate_ksi_works_outside() {
         // Equilateral triangle
         //
         //           /
@@ -253,7 +251,7 @@ mod tests {
         let (x4, y4) = (x0 + 1.5 * s, y0 + 0.5 * h);
         let (x5, y5) = (x0 + 0.5 * s, y0 + 0.5 * h);
         let space_ndim = 2;
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri6)?;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri6).unwrap();
         pad.set_xx(0, 0, x0);
         pad.set_xx(0, 1, y0);
         pad.set_xx(1, 0, x1);
@@ -286,12 +284,11 @@ mod tests {
             (6, [100.0, 100.0], 1e-12),
         ] {
             let x = Vector::from(x_data);
-            let nit = pad.approximate_ksi(&mut ksi, &x, 30, *tol)?;
+            let nit = pad.approximate_ksi(&mut ksi, &x, 30, *tol).unwrap();
             let mut x_out = Vector::new(2);
-            pad.calc_coords(&mut x_out, &ksi)?;
+            pad.calc_coords(&mut x_out, &ksi).unwrap();
             assert_vec_approx_eq!(x.as_data(), x_out.as_data(), *tol);
             assert_eq!(nit, *nit_correct);
         }
-        Ok(())
     }
 }
