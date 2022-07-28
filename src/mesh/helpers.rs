@@ -40,10 +40,9 @@ mod tests {
     use super::{get_mesh_limits, set_pad_coords};
     use crate::mesh::Samples;
     use crate::shapes::Scratchpad;
-    use crate::StrError;
 
     #[test]
-    fn set_pad_coords_works_2d() -> Result<(), StrError> {
+    fn set_pad_coords_works_2d() {
         //  3--------2--------5
         //  |        |        |
         //  |        |        |
@@ -51,7 +50,7 @@ mod tests {
         //  0--------1--------4
         let mesh = Samples::two_qua4();
         let cell = &mesh.cells[0];
-        let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
+        let mut pad = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
         set_pad_coords(&mut pad, &cell.points, &mesh);
         assert_eq!(
             format!("{}", pad.xxt),
@@ -61,7 +60,7 @@ mod tests {
              └         ┘"
         );
         let cell = &mesh.cells[1];
-        let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
+        let mut pad = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
         set_pad_coords(&mut pad, &cell.points, &mesh);
         assert_eq!(
             format!("{}", pad.xxt),
@@ -70,11 +69,10 @@ mod tests {
              │ 0 0 1 1 │\n\
              └         ┘"
         );
-        Ok(())
     }
 
     #[test]
-    fn set_pad_coords_works_3d() -> Result<(), StrError> {
+    fn set_pad_coords_works_3d() {
         //       8-------------11
         //      /.             /|
         //     / .            / |
@@ -97,7 +95,7 @@ mod tests {
         //  1--------------2
         let mesh = Samples::two_hex8();
         let cell = &mesh.cells[0];
-        let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
+        let mut pad = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
         set_pad_coords(&mut pad, &cell.points, &mesh);
         assert_eq!(
             format!("{}", pad.xxt),
@@ -108,7 +106,7 @@ mod tests {
              └                 ┘"
         );
         let cell = &mesh.cells[1];
-        let mut pad = Scratchpad::new(mesh.ndim, cell.kind)?;
+        let mut pad = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
         set_pad_coords(&mut pad, &cell.points, &mesh);
         assert_eq!(
             format!("{}", pad.xxt),
@@ -118,7 +116,6 @@ mod tests {
              │ 1 1 1 1 2 2 2 2 │\n\
              └                 ┘"
         );
-        Ok(())
     }
 
     #[test]
