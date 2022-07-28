@@ -250,7 +250,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTri3};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
 
@@ -312,6 +312,31 @@ mod tests {
                 Ok(())
             })
             .unwrap();
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn mat_gvn_tet4_works() {
+        let mut pad = aux::gen_pad_tet4();
+        let mut kk = Matrix::new(4, 4);
+        let ana = AnalyticalTet4::new(&pad);
+        let (v0, v1, v2) = (2.0, 3.0, 4.0);
+        let kk_correct = ana.integ_gvn_constant(v0, v1, v2);
+        // println!("{}", kk_correct);
+        let class = pad.kind.class();
+        let tolerances = [1e-15];
+        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_gvn(&mut kk, &mut pad, 0, 0, true, ips, |v, _| {
+                v[0] = v0;
+                v[1] = v1;
+                v[2] = v2;
+                Ok(())
+            })
+            .unwrap();
+            // println!("{}", kk);
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
     }

@@ -214,6 +214,22 @@ impl AnalyticalTet4 {
         ]
     }
 
+    /// Performs the gvn integration with constant vector
+    #[rustfmt::skip]
+    pub fn integ_gvn_constant(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+        let c = self.volume / 4.0;
+        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
+        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
+        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
+        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        Matrix::from(&[
+            [c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2)],
+            [c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2)],
+            [c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2)],
+            [c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2)],
+        ])
+    }
+
     /// Calculates the stiffness matrix
     ///
     /// solution:
