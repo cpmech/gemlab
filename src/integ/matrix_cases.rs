@@ -775,6 +775,33 @@ mod tests {
     }
 
     #[test]
+    fn mat_ntn_tet4_works() {
+        let mut pad = aux::gen_pad_tet4();
+        let mut kk = Matrix::new(4 * 3, 4 * 3);
+        let ana = AnalyticalTet4::new(&pad);
+        #[rustfmt::skip]
+        let sig = Tensor2::from_matrix(&[
+            [1.1, 1.2, 1.3],
+            [1.2, 2.2, 2.3],
+            [1.3, 2.3, 3.3]],
+        true, false).unwrap();
+        let kk_correct = ana.integ_ntn_constant(&sig);
+        // println!("{}", kk_correct);
+        let class = pad.kind.class();
+        let tolerances = [1e-15];
+        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+                copy_vector(&mut tt.vec, &sig.vec)
+            })
+            .unwrap();
+            // println!("{}", kk);
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
     fn mat_gdg_works_tri3_plane_stress() -> Result<(), StrError> {
         // Element # 0 from example 1.6 from [@bhatti] page 32
         // Solid bracket with thickness = 0.25

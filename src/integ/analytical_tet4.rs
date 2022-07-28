@@ -274,6 +274,30 @@ impl AnalyticalTet4 {
         ])
     }
 
+    /// Performs the gtg integration with constant tensor
+    #[rustfmt::skip]
+    pub fn integ_ntn_constant(&self, sig: &Tensor2) -> Matrix {
+        let vv = self.volume;
+        let mat = sig.to_matrix();
+        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
+        let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
+        let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
+        Matrix::from(&[
+            [a00*vv/10.0, a01*vv/10.0, a02*vv/10.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0],
+            [a10*vv/10.0, a11*vv/10.0, a12*vv/10.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0],
+            [a20*vv/10.0, a21*vv/10.0, a22*vv/10.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0],
+            [a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/10.0, a01*vv/10.0, a02*vv/10.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0],
+            [a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/10.0, a11*vv/10.0, a12*vv/10.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0],
+            [a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/10.0, a21*vv/10.0, a22*vv/10.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0],
+            [a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/10.0, a01*vv/10.0, a02*vv/10.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0],
+            [a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/10.0, a11*vv/10.0, a12*vv/10.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0],
+            [a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/10.0, a21*vv/10.0, a22*vv/10.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0],
+            [a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/10.0, a01*vv/10.0, a02*vv/10.0],
+            [a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/10.0, a11*vv/10.0, a12*vv/10.0],
+            [a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/10.0, a21*vv/10.0, a22*vv/10.0],
+        ])
+    }
+
     /// Calculates the stiffness matrix
     ///
     /// solution:
