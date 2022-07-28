@@ -67,7 +67,6 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
 mod tests {
     use super::join_meshes;
     use crate::mesh::{check_ids_and_kind, check_jacobian, Samples};
-    use crate::StrError;
 
     #[test]
     fn join_meshes_handles_errors() {
@@ -77,7 +76,7 @@ mod tests {
     }
 
     #[test]
-    fn join_meshes_works_2d() -> Result<(), StrError> {
+    fn join_meshes_works_2d() {
         //          [#] indicates id
         //      y   (#) indicates attribute_id
         //      ↑
@@ -119,9 +118,9 @@ mod tests {
         //      |           |           |
         // 0.0  0-----------1-----------4  → x
         //     0.0         1.0         2.0
-        let mesh = join_meshes(&a, &b)?;
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        let mesh = join_meshes(&a, &b).unwrap();
+        check_ids_and_kind(&mesh).unwrap();
+        check_jacobian(&mesh).unwrap();
         assert_eq!(mesh.points[0].coords, &[0.0, 0.0]);
         assert_eq!(mesh.points[1].coords, &[1.0, 0.0]);
         assert_eq!(mesh.points[2].coords, &[1.0, 1.0]);
@@ -139,11 +138,10 @@ mod tests {
         assert_eq!(mesh.cells[1].attribute_id, 2);
         assert_eq!(mesh.cells[2].attribute_id, 1);
         assert_eq!(mesh.cells[3].attribute_id, 2);
-        Ok(())
     }
 
     #[test]
-    fn join_meshes_works_3d() -> Result<(), StrError> {
+    fn join_meshes_works_3d() {
         //       8-------------11  2.0          8-------------11  2.0
         //      /.             /|              /.             /|
         //     / .            / |             / .            / |
@@ -193,12 +191,12 @@ mod tests {
         //  |/             |/             |/
         //  1--------------2-------------12   1.0
         // 0.0            1.0            2.0
-        let mesh = join_meshes(&a, &b)?;
+        let mesh = join_meshes(&a, &b).unwrap();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids_and_kind(&mesh)?;
-        check_jacobian(&mesh)?;
+        check_ids_and_kind(&mesh).unwrap();
+        check_jacobian(&mesh).unwrap();
 
         let sample = Samples::four_hex8();
         for i in 0..mesh.cells.len() {
@@ -209,6 +207,5 @@ mod tests {
             assert_eq!(mesh.points[i].id, sample.points[i].id);
             assert_eq!(mesh.points[i].coords, sample.points[i].coords);
         }
-        Ok(())
     }
 }
