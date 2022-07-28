@@ -63,7 +63,6 @@ mod tests {
     use crate::mesh::algorithms::extract_all_2d_edges;
     use crate::mesh::{EdgeKey, Extract, Features, PointId, Samples};
     use crate::util::AsArray2D;
-    use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
 
     fn validate_edges<'a, T>(
@@ -82,7 +81,7 @@ mod tests {
     }
 
     #[test]
-    fn extract_features_2d_works() -> Result<(), StrError> {
+    fn extract_features_2d_works() {
         //  3---------2---------5
         //  |         |         |
         //  |   [0]   |   [1]   |
@@ -99,11 +98,10 @@ mod tests {
         let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5]);
-        Ok(())
     }
 
     #[test]
-    fn extract_features_2d_all_works() -> Result<(), StrError> {
+    fn extract_features_2d_all_works() {
         //  3---------2---------5
         //  |         |         |
         //  |   [0]   |   [1]   |
@@ -120,11 +118,10 @@ mod tests {
         let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5]);
-        Ok(())
     }
 
     #[test]
-    fn extract_features_2d_works_interior() -> Result<(), StrError> {
+    fn extract_features_2d_works_interior() {
         //  3---------2---------5
         //  |         |         |
         //  |   [0]   |   [1]   |
@@ -141,11 +138,10 @@ mod tests {
         let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[1, 2]);
-        Ok(())
     }
 
     #[test]
-    fn extract_features_2d_mixed_works() -> Result<(), StrError> {
+    fn extract_features_2d_mixed_works() {
         //           4---------3
         //           |         |
         //           |   [1]   |
@@ -162,11 +158,10 @@ mod tests {
         let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[1, 2, 3, 4,]); // note that Lin is ignored
-        Ok(())
     }
 
     #[test]
-    fn extract_features_2d_block_works() -> Result<(), StrError> {
+    fn extract_features_2d_block_works() {
         // 29---34----31---28---44---42----40
         //  |               |               |
         // 32   39    38   33   48   47    43
@@ -203,11 +198,10 @@ mod tests {
             points,
             &[0, 1, 3, 4, 7, 8, 11, 16, 17, 18, 19, 21, 22, 28, 29, 31, 32, 34, 35, 40, 41, 42, 43, 44]
         );
-        Ok(())
     }
 
     #[test]
-    fn extract_features_2d_all_block_works() -> Result<(), StrError> {
+    fn extract_features_2d_all_block_works() {
         // 29---34----31---28---44---42----40
         //  |               |               |
         // 32   39    38   33   48   47    43
@@ -264,11 +258,10 @@ mod tests {
                 40, 41, 42, 43, 44
             ]
         );
-        Ok(())
     }
 
     #[test]
-    fn extract_features_2d_ring_works() -> Result<(), StrError> {
+    fn extract_features_2d_ring_works() {
         // 2.0   14---36--,__11
         //        |          `,-..33
         // 1.75  24   [7]   22     `-,
@@ -326,11 +319,10 @@ mod tests {
             points,
             &[0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 13, 14, 15, 16, 23, 24, 25, 27, 28, 30, 31, 33, 34, 36,]
         );
-        Ok(())
     }
 
     #[test]
-    fn extract_features_2d_ring_interior_works() -> Result<(), StrError> {
+    fn extract_features_2d_ring_interior_works() {
         // 2.0   14---36--,__11
         //        |          `,-..33
         // 1.75  24   [7]   22     `-,
@@ -382,6 +374,5 @@ mod tests {
             points,
             &[1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 17, 18, 19, 20, 21, 22, 26, 29, 32, 35]
         );
-        Ok(())
     }
 }
