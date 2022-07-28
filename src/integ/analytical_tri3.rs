@@ -199,13 +199,13 @@ impl AnalyticalTri3 {
 
     /// Performs the gvn integration with constant vector
     #[rustfmt::skip]
-    pub fn integ_gvn_constant(&self, vx: f64, vy: f64) -> Matrix {
+    pub fn integ_gvn_constant(&self, v0: f64, v1: f64) -> Matrix {
         let aa = self.area;
         let g = &self.gg;
         Matrix::from(&[
-            [aa*(g[0][0]*vx + g[0][1]*vy)/3.0, aa*(g[0][0]*vx + g[0][1]*vy)/3.0, aa*(g[0][0]*vx + g[0][1]*vy)/3.0],
-            [aa*(g[1][0]*vx + g[1][1]*vy)/3.0, aa*(g[1][0]*vx + g[1][1]*vy)/3.0, aa*(g[1][0]*vx + g[1][1]*vy)/3.0],
-            [aa*(g[2][0]*vx + g[2][1]*vy)/3.0, aa*(g[2][0]*vx + g[2][1]*vy)/3.0, aa*(g[2][0]*vx + g[2][1]*vy)/3.0],
+            [aa*(g[0][0]*v0 + g[0][1]*v1)/3.0, aa*(g[0][0]*v0 + g[0][1]*v1)/3.0, aa*(g[0][0]*v0 + g[0][1]*v1)/3.0],
+            [aa*(g[1][0]*v0 + g[1][1]*v1)/3.0, aa*(g[1][0]*v0 + g[1][1]*v1)/3.0, aa*(g[1][0]*v0 + g[1][1]*v1)/3.0],
+            [aa*(g[2][0]*v0 + g[2][1]*v1)/3.0, aa*(g[2][0]*v0 + g[2][1]*v1)/3.0, aa*(g[2][0]*v0 + g[2][1]*v1)/3.0],
         ])
     }
 
@@ -223,6 +223,23 @@ impl AnalyticalTri3 {
             [(aa*(2.0*g00*x0 + g00*x1 + g00*x2 + 2.0*g01*y0 + g01*y1 + g01*y2))/12.0,(aa*(g00*x0 + 2.0*g00*x1 + g00*x2 + g01*y0 + 2.0*g01*y1 + g01*y2))/12.0, (aa*(g00*x0 + g00*x1 + 2.0*g00*x2 + g01*y0 + g01*y1 + 2.0*g01*y2))/12.0],
             [(aa*(2.0*g10*x0 + g10*x1 + g10*x2 + 2.0*g11*y0 + g11*y1 + g11*y2))/12.0,(aa*(g10*x0 + 2.0*g10*x1 + g10*x2 + g11*y0 + 2.0*g11*y1 + g11*y2))/12.0, (aa*(g10*x0 + g10*x1 + 2.0*g10*x2 + g11*y0 + g11*y1 + 2.0*g11*y2))/12.0],
             [(aa*(2.0*g20*x0 + g20*x1 + g20*x2 + 2.0*g21*y0 + g21*y1 + g21*y2))/12.0,(aa*(g20*x0 + 2.0*g20*x1 + g20*x2 + g21*y0 + 2.0*g21*y1 + g21*y2))/12.0, (aa*(g20*x0 + g20*x1 + 2.0*g20*x2 + g21*y0 + g21*y1 + 2.0*g21*y2))/12.0],
+        ])
+    }
+
+    /// Performs the nvg integration with constant vector
+    #[rustfmt::skip]
+    pub fn integ_nvg_constant(&self, v0: f64, v1: f64) -> Matrix {
+        let (g00, g01) = (self.gg[0][0], self.gg[0][1]);
+        let (g10, g11) = (self.gg[1][0], self.gg[1][1]);
+        let (g20, g21) = (self.gg[2][0], self.gg[2][1]);
+        let c = self.area / 3.0;
+        Matrix::from(&[
+            [c*g00*v0, c*g01*v0, c*g10*v0, c*g11*v0, c*g20*v0, c*g21*v0],
+            [c*g00*v1, c*g01*v1, c*g10*v1, c*g11*v1, c*g20*v1, c*g21*v1],
+            [c*g00*v0, c*g01*v0, c*g10*v0, c*g11*v0, c*g20*v0, c*g21*v0],
+            [c*g00*v1, c*g01*v1, c*g10*v1, c*g11*v1, c*g20*v1, c*g21*v1],
+            [c*g00*v0, c*g01*v0, c*g10*v0, c*g11*v0, c*g20*v0, c*g21*v0],
+            [c*g00*v1, c*g01*v1, c*g10*v1, c*g11*v1, c*g20*v1, c*g21*v1],
         ])
     }
 
