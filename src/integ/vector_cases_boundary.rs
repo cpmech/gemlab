@@ -232,22 +232,19 @@ mod tests {
             Ok(())
         })
         .unwrap();
-        assert_vec_approx_eq!(
-            b.as_data(),
-            &[
-                0.0,
-                -ll * 7.0 / 90.0, // 0
-                0.0,
-                -ll * 7.0 / 90.0, // 1
-                0.0,
-                -ll * 2.0 / 15.0, // 2
-                0.0,
-                -ll * 16.0 / 45.0, // 3
-                0.0,
-                -ll * 16.0 / 45.0, // 4
-            ],
-            1e-15
-        );
+        let correct = &[
+            0.0,
+            -ll * 7.0 / 90.0, // 0
+            0.0,
+            -ll * 7.0 / 90.0, // 1
+            0.0,
+            -ll * 2.0 / 15.0, // 2
+            0.0,
+            -ll * 16.0 / 45.0, // 3
+            0.0,
+            -ll * 16.0 / 45.0, // 4
+        ];
+        assert_vec_approx_eq!(b.as_data(), correct, 1e-15);
         // triangular (see [@sgm:14]\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
         integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, p, _| {
@@ -257,22 +254,19 @@ mod tests {
             Ok(())
         })
         .unwrap();
-        assert_vec_approx_eq!(
-            b.as_data(),
-            &[
-                0.0,
-                0.0, // 0
-                0.0,
-                -ll * 7.0 / 90.0, // 1
-                0.0,
-                -ll * 1.0 / 15.0, // 2
-                0.0,
-                -ll * 4.0 / 45.0, // 3
-                0.0,
-                -ll * 4.0 / 15.0, // 4
-            ],
-            1e-15
-        );
+        let correct = &[
+            0.0,
+            0.0, // 0
+            0.0,
+            -ll * 7.0 / 90.0, // 1
+            0.0,
+            -ll * 1.0 / 15.0, // 2
+            0.0,
+            -ll * 4.0 / 45.0, // 3
+            0.0,
+            -ll * 4.0 / 15.0, // 4
+        ];
+        assert_vec_approx_eq!(b.as_data(), correct, 1e-15);
     }
 
     #[test]
@@ -302,24 +296,21 @@ mod tests {
         })
         .unwrap();
         let aa = dx * dy;
-        assert_vec_approx_eq!(
-            b.as_data(),
-            &[
-                0.0,
-                0.0,
-                -aa / 4.0, // 0
-                0.0,
-                0.0,
-                -aa / 4.0, // 1
-                0.0,
-                0.0,
-                -aa / 4.0, // 2
-                0.0,
-                0.0,
-                -aa / 4.0, // 3
-            ],
-            1e-15
-        );
+        let correct = &[
+            0.0,
+            0.0,
+            -aa / 4.0, // 0
+            0.0,
+            0.0,
+            -aa / 4.0, // 1
+            0.0,
+            0.0,
+            -aa / 4.0, // 2
+            0.0,
+            0.0,
+            -aa / 4.0, // 3
+        ];
+        assert_vec_approx_eq!(b.as_data(), correct, 1e-15);
 
         // example from [@sgm:14]\page{195}
         // * `sgm:14` -- Smith, Griffiths, Margetts (2014) Programming the Finite Element Method, 5th ed.
@@ -357,36 +348,33 @@ mod tests {
             Ok(())
         })
         .unwrap();
-        assert_vec_approx_eq!(
-            b.as_data(),
-            &[
-                0.0,
-                0.0,
-                aa / 12.0, // 0
-                0.0,
-                0.0,
-                aa / 12.0, // 1
-                0.0,
-                0.0,
-                aa / 12.0, // 2
-                0.0,
-                0.0,
-                aa / 12.0, // 3
-                0.0,
-                0.0,
-                -aa / 3.0, // 4
-                0.0,
-                0.0,
-                -aa / 3.0, // 5
-                0.0,
-                0.0,
-                -aa / 3.0, // 6
-                0.0,
-                0.0,
-                -aa / 3.0, // 7
-            ],
-            1e-15
-        );
+        let correct = &[
+            0.0,
+            0.0,
+            aa / 12.0, // 0
+            0.0,
+            0.0,
+            aa / 12.0, // 1
+            0.0,
+            0.0,
+            aa / 12.0, // 2
+            0.0,
+            0.0,
+            aa / 12.0, // 3
+            0.0,
+            0.0,
+            -aa / 3.0, // 4
+            0.0,
+            0.0,
+            -aa / 3.0, // 5
+            0.0,
+            0.0,
+            -aa / 3.0, // 6
+            0.0,
+            0.0,
+            -aa / 3.0, // 7
+        ];
+        assert_vec_approx_eq!(b.as_data(), correct, 1e-15);
     }
 
     #[test]
@@ -411,14 +399,11 @@ mod tests {
             Ok(())
         })
         .unwrap();
-        assert_vec_approx_eq!(
-            b.as_data(),
-            &[
-                30.4738, 2.85955, // 0
-                2.85955, 30.4738, // 1
-                66.6667, 66.6667, // 2
-            ],
-            1e-4
-        );
+        let correct = &[
+            30.4738, 2.85955, // 0
+            2.85955, 30.4738, // 1
+            66.6667, 66.6667, // 2
+        ];
+        assert_vec_approx_eq!(b.as_data(), correct, 1e-4);
     }
 }
