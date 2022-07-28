@@ -184,6 +184,19 @@ impl AnalyticalTri3 {
         Matrix::from(&[[k00, k01, k02], [k01, k11, k12], [k02, k12, k22]])
     }
 
+    /// Performs the ntn integration
+    pub fn integ_ntn(&self, rho: f64, th: f64) -> Matrix {
+        let c = th * rho * self.area / 12.0;
+        Matrix::from(&[
+            [c * 2.0, c * 0.0, c * 1.0, c * 0.0, c * 1.0, c * 0.0],
+            [c * 0.0, c * 2.0, c * 0.0, c * 1.0, c * 0.0, c * 1.0],
+            [c * 1.0, c * 0.0, c * 2.0, c * 0.0, c * 1.0, c * 0.0],
+            [c * 0.0, c * 1.0, c * 0.0, c * 2.0, c * 0.0, c * 1.0],
+            [c * 1.0, c * 0.0, c * 1.0, c * 0.0, c * 2.0, c * 0.0],
+            [c * 0.0, c * 1.0, c * 0.0, c * 1.0, c * 0.0, c * 2.0],
+        ])
+    }
+
     /// Calculates the stiffness matrix
     ///
     /// solution:
