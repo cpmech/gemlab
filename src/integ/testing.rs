@@ -85,6 +85,12 @@ pub mod aux {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
+
+//
+// NOTE: we don't need the functions below to be activated and making the coverage tool to go crazy.
+// We only use these functions to create the figures that are already saved in data/figures.
+//
 #[cfg(test)]
 mod tests {
     use super::aux;
@@ -142,3 +148,4 @@ mod tests {
         }
     }
 }
+*/
