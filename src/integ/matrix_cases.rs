@@ -569,7 +569,23 @@ mod tests {
             integ::mat_nsn(&mut kk, &mut pad, 0, 1, false, &[], |_| Ok(0.0)).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
+        assert_eq!(
+            integ::mat_gtg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            Some("nrow(K) must be ≥ ii0 + nnode")
+        );
+        assert_eq!(
+            integ::mat_gtg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            Some("ncol(K) must be ≥ jj0 + nnode")
+        );
         let mut kk = Matrix::new(4, 4);
+        assert_eq!(
+            integ::mat_ntn(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
+        );
+        assert_eq!(
+            integ::mat_ntn(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
+        );
         assert_eq!(
             integ::mat_gdg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")

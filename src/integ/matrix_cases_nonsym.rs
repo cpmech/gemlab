@@ -244,3 +244,39 @@ where
     }
     Ok(())
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use crate::integ::testing::aux;
+    use crate::integ::{self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3};
+    use crate::shapes::{GeoKind, Scratchpad};
+    use crate::StrError;
+    use russell_chk::assert_vec_approx_eq;
+    use russell_lab::{copy_matrix, Matrix};
+    use russell_tensor::LinElasticity;
+
+    #[test]
+    fn capture_some_errors() {
+        let mut pad = aux::gen_pad_lin2(1.0);
+        let mut kk = Matrix::new(2, 2);
+        assert_eq!(
+            integ::mat_gvn(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            Some("nrow(K) must be ≥ ii0 + nnode")
+        );
+        assert_eq!(
+            integ::mat_gvn(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            Some("ncol(K) must be ≥ jj0 + nnode")
+        );
+        let mut kk = Matrix::new(4, 4);
+        assert_eq!(
+            integ::mat_nvg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
+        );
+        assert_eq!(
+            integ::mat_nvg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
+        );
+    }
+}
