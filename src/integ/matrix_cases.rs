@@ -101,20 +101,6 @@ where
     Ok(())
 }
 
-/// Implements the gradient(G) dot vector(V) times shape(N) integration case (e.g., compressibility matrix)
-///
-/// Compressibility coefficients:
-///
-/// ```text
-///       ⌠ →    →
-/// Kᵐⁿ = │ Gᵐ ⋅ v Nⁿ dΩ
-///       ⌡
-///       Ωₑ
-/// ```
-pub fn mat_gvn() -> Result<(), StrError> {
-    Err("mat_gvn: TODO")
-}
-
 /// Implements the gradient(G) dot tensor(T) dot gradient(G) integration case (e.g., conductivity matrix)
 ///
 /// Conductivity coefficients:
@@ -198,20 +184,20 @@ where
         let iota = &ips[p];
         let weight = ips[p][3];
 
-        // calculate interpolation functions and Jacobian
+        // calculate Jacobian and gradient
         let det_jac = pad.calc_gradient(iota)?;
 
         // calculate T tensor
         fn_tt(&mut tt, p)?;
 
         // add contribution to K matrix
-        let coef = det_jac * weight;
+        let c = det_jac * weight;
         let g = &pad.gradient;
         let t = &tt.vec;
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + n] += coef
+                    kk[ii0 + m][jj0 + n] += c
                         * (g[n][1] * (t[1] * g[m][1] + (t[3] * g[m][0]) / s)
                             + g[n][0] * (t[0] * g[m][0] + (t[3] * g[m][1]) / s));
                 }
@@ -219,7 +205,7 @@ where
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + n] += coef
+                    kk[ii0 + m][jj0 + n] += c
                         * (g[n][2] * (t[2] * g[m][2] + (t[5] * g[m][0]) / s + (t[4] * g[m][1]) / s)
                             + g[n][1] * (t[1] * g[m][1] + (t[3] * g[m][0]) / s + (t[4] * g[m][2]) / s)
                             + g[n][0] * (t[0] * g[m][0] + (t[3] * g[m][1]) / s + (t[5] * g[m][2]) / s));
@@ -335,6 +321,7 @@ where
                 for n in 0..nnode {
                     kk[ii0 + 0 + m * 2][jj0 + 0 + n * 2] += c * nn[m] * t[0] * nn[n];
                     kk[ii0 + 0 + m * 2][jj0 + 1 + n * 2] += c * nn[m] * t[3] * nn[n] / s;
+
                     kk[ii0 + 1 + m * 2][jj0 + 0 + n * 2] += c * nn[m] * t[3] * nn[n] / s;
                     kk[ii0 + 1 + m * 2][jj0 + 1 + n * 2] += c * nn[m] * t[1] * nn[n];
                 }
@@ -345,9 +332,11 @@ where
                     kk[ii0 + 0 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * t[0] * nn[n];
                     kk[ii0 + 0 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * t[3] * nn[n] / s;
                     kk[ii0 + 0 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * t[5] * nn[n] / s;
+
                     kk[ii0 + 1 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * t[3] * nn[n] / s;
                     kk[ii0 + 1 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * t[1] * nn[n];
                     kk[ii0 + 1 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * t[4] * nn[n] / s;
+
                     kk[ii0 + 2 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * t[5] * nn[n] / s;
                     kk[ii0 + 2 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * t[4] * nn[n] / s;
                     kk[ii0 + 2 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * t[2] * nn[n];
@@ -356,20 +345,6 @@ where
         }
     }
     Ok(())
-}
-
-/// Implements the shape(N) times vector(V) dot gradient(G) integration case (e.g., variable density matrix)
-///
-/// Variable density coefficients:
-///
-/// ```text
-///       ⌠    →   →
-/// Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ dΩ
-/// ▔     ⌡
-///       Ωₑ
-/// ```
-pub fn mat_nvg() -> Result<(), StrError> {
-    Err("mat_nvg: TODO")
 }
 
 /// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case (e.g., stiffness matrix)
