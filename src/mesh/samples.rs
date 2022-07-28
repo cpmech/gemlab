@@ -1563,7 +1563,7 @@ impl Samples {
         }
     }
 
-    /// Returns a mesh of a quarter of a ring with eight Qua8 (radius=1 thickness=1)
+    /// Returns a mesh of a quarter of a ring with eight Qua8 (radius=1)
     ///
     /// ```text
     /// 2.0   14---36--,__11

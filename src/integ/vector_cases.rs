@@ -11,7 +11,7 @@ use russell_tensor::Tensor2;
 ///
 /// ```text
 ///      ⌠    → →     →
-/// aᵐ = │ Nᵐ(x(ξ)) s(x) tₕ dΩ
+/// aᵐ = │ Nᵐ(x(ξ)) s(x) dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -20,7 +20,7 @@ use russell_tensor::Tensor2;
 ///
 /// ```text
 ///      ⌠
-/// aᵐ = │ Nᵐ(ℓ(ξ)) s(ℓ) tₕ dℓ
+/// aᵐ = │ Nᵐ(ℓ(ξ)) s(ℓ) dℓ
 ///      ⌡
 ///      Γₑ
 /// ```
@@ -28,8 +28,8 @@ use russell_tensor::Tensor2;
 /// The numerical integration is:
 ///
 /// ```text
-///      nip-1     →     →          →
-/// aᵐ ≈   Σ    Nᵐ(ιᵖ) s(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+///      nip-1     →     →       →
+/// aᵐ ≈   Σ    Nᵐ(ιᵖ) s(ιᵖ) |J|(ιᵖ) wᵖ
 ///       p=0
 /// ```
 ///
@@ -53,9 +53,8 @@ use russell_tensor::Tensor2;
 /// # Input
 ///
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `ips` -- Integration points (n_integ_point)
-/// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
+/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///
 /// # Examples
@@ -78,7 +77,7 @@ use russell_tensor::Tensor2;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |_| Ok(5.0))?;
+///     integ::vec_a(&mut a, &mut pad, 0, true, ips, |_| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
 ///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
@@ -89,9 +88,8 @@ pub fn vec_a<F>(
     a: &mut Vector,
     pad: &mut Scratchpad,
     ii0: usize,
-    ips: IntegPointData,
-    th: f64,
     clear_a: bool,
+    ips: IntegPointData,
     fn_s: F,
 ) -> Result<(), StrError>
 where
@@ -122,7 +120,7 @@ where
         let s = fn_s(p)?;
 
         // loop over nodes and perform sum
-        let val = s * th * det_jac * weight;
+        let val = s * det_jac * weight;
         for m in 0..nnode {
             a[ii0 + m] += pad.interp[m] * val;
         }
@@ -136,7 +134,7 @@ where
 ///
 /// ```text
 /// →    ⌠    → →   → →
-/// bᵐ = │ Nᵐ(x(ξ)) v(x) tₕ dΩ
+/// bᵐ = │ Nᵐ(x(ξ)) v(x) dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -144,8 +142,8 @@ where
 /// The numerical integration is:
 ///
 /// ```text
-/// →    nip-1     →   → →          →
-/// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+/// →    nip-1     →   → →       →
+/// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) |J|(ιᵖ) wᵖ
 ///       p=0
 /// ```
 ///
@@ -175,9 +173,8 @@ where
 /// # Input
 ///
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `ips` -- Integration points (n_integ_point)
-/// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
+/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_v` -- Function `f(v,p)` that computes `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`.
 ///   The dim of `v` is equal to `space_ndim`.
 ///
@@ -201,7 +198,7 @@ where
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, _| {
+///     integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
 ///         Ok(())
@@ -217,9 +214,8 @@ pub fn vec_b<F>(
     b: &mut Vector,
     pad: &mut Scratchpad,
     ii0: usize,
-    ips: IntegPointData,
-    th: f64,
     clear_b: bool,
+    ips: IntegPointData,
     fn_v: F,
 ) -> Result<(), StrError>
 where
@@ -254,7 +250,7 @@ where
         fn_v(&mut v, p)?;
 
         // add contribution to b vector
-        let coef = th * det_jac * weight;
+        let coef = det_jac * weight;
         let nn = &pad.interp;
         if space_ndim == 2 {
             for m in 0..nnode {
@@ -278,7 +274,7 @@ where
 ///
 /// ```text
 ///      ⌠ → →    →  → →
-/// cᵐ = │ w(x) · Gᵐ(x(ξ)) tₕ dΩ
+/// cᵐ = │ w(x) · Gᵐ(x(ξ)) dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -286,8 +282,8 @@ where
 /// The numerical integration is:
 ///
 /// ```text
-///      nip-1  → →     →  →          →
-/// cᵐ ≈   Σ    w(ιᵖ) · Gᵐ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+///      nip-1  → →     →  →       →
+/// cᵐ ≈   Σ    w(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
 ///       p=0
 /// ```
 ///
@@ -310,9 +306,8 @@ where
 /// # Input
 ///
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `ips` -- Integration points (n_integ_point)
-/// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
+/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_w` -- Function `f(w,p)` that computes `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`.
 ///    The dim of `w` is equal to `space_ndim`.
 ///
@@ -338,7 +333,7 @@ where
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, _| {
+///     integ::vec_c(&mut c, &mut pad, 0, true, ips, |w, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
 ///         Ok(())
@@ -358,9 +353,8 @@ pub fn vec_c<F>(
     c: &mut Vector,
     pad: &mut Scratchpad,
     ii0: usize,
-    ips: IntegPointData,
-    th: f64,
     clear_c: bool,
+    ips: IntegPointData,
     fn_w: F,
 ) -> Result<(), StrError>
 where
@@ -394,7 +388,7 @@ where
         fn_w(&mut w, p)?;
 
         // add contribution to c vector
-        let coef = th * det_jac * weight;
+        let coef = det_jac * weight;
         let g = &pad.gradient;
         if space_ndim == 2 {
             for m in 0..nnode {
@@ -415,7 +409,7 @@ where
 ///
 /// ```text
 /// →    ⌠   →    →  → →
-/// dᵐ = │ σ(x) · Gᵐ(x(ξ)) tₕ dΩ
+/// dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
 ///      ⌡ ▔
 ///      Ωₑ
 /// ```
@@ -423,8 +417,8 @@ where
 /// The numerical integration is:
 ///
 /// ```text
-/// →    nip-1    →     →  →          →
-/// dᵐ ≈   Σ    σ(ιᵖ) · Gᵐ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+/// →    nip-1    →     →  →       →
+/// dᵐ ≈   Σ    σ(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
 ///       p=0   ▔
 /// ```
 ///
@@ -454,9 +448,8 @@ where
 /// # Input
 ///
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `ips` -- Integration points (n_integ_point)
-/// * `th` -- The out-of-plane thickness (`tₕ`) in 2D. Use 1.0 for 3D or for plane-stress models.
 /// * `clear_d` -- Fills `d` vector with zeros, otherwise accumulate values into `d`
+/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_sig` -- Function `f(sig,p)` that computes `σ(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///
 /// # Examples
@@ -479,7 +472,7 @@ where
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_d(&mut d, &mut pad, 0, ips, 1.0, true, |sig, _| {
+///     integ::vec_d(&mut d, &mut pad, 0, true, ips, |sig, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
 ///         sig.sym_set(0, 1, 3.0);
@@ -501,9 +494,8 @@ pub fn vec_d<F>(
     d: &mut Vector,
     pad: &mut Scratchpad,
     ii0: usize,
-    ips: IntegPointData,
-    th: f64,
     clear_d: bool,
+    ips: IntegPointData,
     fn_sig: F,
 ) -> Result<(), StrError>
 where
@@ -538,7 +530,7 @@ where
         fn_sig(&mut sig, index)?;
 
         // add contribution to d vector
-        let coef = th * det_jac * weight;
+        let coef = det_jac * weight;
         let g = &pad.gradient;
         let t = &sig.vec;
         if space_ndim == 2 {
@@ -572,22 +564,22 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut a = Vector::new(2);
         assert_eq!(
-            integ::vec_a(&mut a, &mut pad, 1, &[], 1.0, false, |_| Ok(0.0)).err(),
+            integ::vec_a(&mut a, &mut pad, 1, false, &[], |_| Ok(0.0)).err(),
             Some("a.len() must be ≥ ii0 + nnode")
         );
         let mut b = Vector::new(4);
         assert_eq!(
-            integ::vec_b(&mut b, &mut pad, 1, &[], 1.0, false, |_, _| Ok(())).err(),
+            integ::vec_b(&mut b, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         let mut c = Vector::new(2);
         assert_eq!(
-            integ::vec_c(&mut c, &mut pad, 1, &[], 1.0, false, |_, _| Ok(())).err(),
+            integ::vec_c(&mut c, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
         let mut d = Vector::new(4);
         assert_eq!(
-            integ::vec_d(&mut d, &mut pad, 1, &[], 1.0, false, |_, _| Ok(())).err(),
+            integ::vec_d(&mut d, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
             Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -623,7 +615,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |p| Ok(x_ips[p][0])).unwrap();
+            integ::vec_a(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][0])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
@@ -650,7 +642,7 @@ mod tests {
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |_| Ok(CS)).unwrap();
+            integ::vec_a(&mut a, &mut pad, 0, true, ips, |_| Ok(CS)).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
@@ -680,7 +672,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_a(&mut a, &mut pad, 0, ips, 1.0, true, |p| Ok(x_ips[p][2])).unwrap();
+            integ::vec_a(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][2])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
         Ok(())
@@ -713,7 +705,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, p| {
+            integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, p| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
                 Ok(())
@@ -746,7 +738,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, _| {
+            integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, _| {
                 v[0] = V0;
                 v[1] = V1;
                 Ok(())
@@ -779,7 +771,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_b(&mut b, &mut pad, 0, ips, 1.0, true, |v, _| {
+            integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, _| {
                 v[0] = V0;
                 v[1] = V1;
                 v[2] = V2;
@@ -811,7 +803,7 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, _| {
+            integ::vec_c(&mut c, &mut pad, 0, true, ips, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(())
@@ -841,7 +833,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, p| {
+            integ::vec_c(&mut c, &mut pad, 0, true, ips, |w, p| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(())
@@ -876,7 +868,7 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_c(&mut c, &mut pad, 0, ips, 1.0, true, |w, _| {
+            integ::vec_c(&mut c, &mut pad, 0, true, ips, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;
@@ -917,7 +909,7 @@ mod tests {
         let mut d = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_d(&mut d, &mut pad, 0, ips, 1.0, true, |sig, _| {
+            integ::vec_d(&mut d, &mut pad, 0, true, ips, |sig, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -958,7 +950,7 @@ mod tests {
         let mut d = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_d(&mut d, &mut pad, 0, ips, 1.0, true, |sig, _| {
+            integ::vec_d(&mut d, &mut pad, 0, true, ips, |sig, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);

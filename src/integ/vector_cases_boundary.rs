@@ -9,7 +9,7 @@ use russell_lab::Vector;
 ///
 /// ```text
 /// →    ⌠    → →   → →
-/// bᵐ = │ Nᵐ(x(ξ)) t(x) tₕ dΓ
+/// bᵐ = │ Nᵐ(x(ξ)) t(x) dΓ
 ///      ⌡
 ///      Γₑ
 /// ```
@@ -17,8 +17,8 @@ use russell_lab::Vector;
 /// The numerical integration is:
 ///
 /// ```text
-/// →    nip-1     →   → →        →   →
-/// bᵐ ≈   Σ    Nᵐ(ιᵖ) t(ιᵖ) tₕ ||n||(ιᵖ) wᵖ
+/// →    nip-1     →   → →     →   →
+/// bᵐ ≈   Σ    Nᵐ(ιᵖ) t(ιᵖ) ||n||(ιᵖ) wᵖ
 ///       p=0
 /// ```
 ///
@@ -48,9 +48,8 @@ use russell_lab::Vector;
 /// # Input
 ///
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `ips` -- Integration points (n_integ_point)
-/// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
+/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_t` -- Function `f(t,p,un)` that calculates `t(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///    and given the **unit** normal vector `un(x(ιᵖ))`. The dim of `v` and `n` is equal to `space_ndim`.
 ///
@@ -60,9 +59,8 @@ pub fn vec_b_boundary<F>(
     b: &mut Vector,
     pad: &mut Scratchpad,
     ii0: usize,
-    ips: IntegPointData,
-    th: f64,
     clear_b: bool,
+    ips: IntegPointData,
     fn_t: F,
 ) -> Result<(), StrError>
 where
@@ -98,7 +96,7 @@ where
         fn_t(&mut t, p, &un)?;
 
         // add contribution to b vector
-        let coef = th * mag_n * weight;
+        let coef = mag_n * weight;
         let nn = &pad.interp;
         if space_ndim == 2 {
             for m in 0..nnode {
@@ -144,7 +142,7 @@ mod tests {
         let mut pad = gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
         assert_eq!(
-            integ::vec_b_boundary(&mut b, &mut pad, 1, &[], 1.0, false, |_, _, _| Ok(())).err(),
+            integ::vec_b_boundary(&mut b, &mut pad, 1, false, &[], |_, _, _| Ok(())).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -164,7 +162,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         // uniform
-        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
             Ok(())
@@ -173,7 +171,7 @@ mod tests {
         assert_vec_approx_eq!(b.as_data(), &[0.0, -2.0, 0.0, -2.0], 1e-15);
         // triangular (see [@sgm:14]\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, p, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, p, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
@@ -194,7 +192,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         // uniform
-        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
             Ok(())
@@ -203,7 +201,7 @@ mod tests {
         assert_vec_approx_eq!(b.as_data(), &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
         // triangular (see [@sgm:14]\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, p, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, p, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
@@ -228,7 +226,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         // uniform
-        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
             Ok(())
@@ -252,7 +250,7 @@ mod tests {
         );
         // triangular (see [@sgm:14]\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, p, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, p, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
@@ -296,7 +294,7 @@ mod tests {
         pad.set_xx(3, 2, 0.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
-        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, _, _| {
             t[0] = 0.0;
             t[1] = 0.0;
             t[2] = -1.0;
@@ -352,7 +350,7 @@ mod tests {
         pad.set_xx(7, 2, 0.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
-        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, _| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, _, _| {
             t[0] = 0.0;
             t[1] = 0.0;
             t[2] = -1.0;
@@ -407,7 +405,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         let p = -20.0;
-        integ::vec_b_boundary(&mut b, &mut pad, 0, ips, 1.0, true, |t, _, un| {
+        integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, _, un| {
             t[0] = p * un[0];
             t[1] = p * un[1];
             Ok(())

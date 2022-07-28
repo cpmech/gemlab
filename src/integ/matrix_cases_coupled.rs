@@ -6,7 +6,7 @@ use crate::StrError;
 ///
 /// ```text
 /// →     ⌠       →
-/// Kᵐⁿ = │ NBᵐ s Gⁿ tₕ dΩ
+/// Kᵐⁿ = │ NBᵐ s Gⁿ dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -20,7 +20,7 @@ pub fn mat_coupling_nsg() -> Result<(), StrError> {
 ///
 /// ```text
 /// →     ⌠ →
-/// Kᵐⁿ = │ GBᵐ ⋅ T Nⁿ tₕ dΩ
+/// Kᵐⁿ = │ GBᵐ ⋅ T Nⁿ dΩ
 ///       ⌡       ▔
 ///       Ωₑ
 /// ```
@@ -34,7 +34,7 @@ pub fn mat_coupling_gtn() -> Result<(), StrError> {
 ///
 /// ```text
 /// →     ⌠    →
-/// Kᵐⁿ = │ Nᵐ v NBⁿ tₕ dΩ
+/// Kᵐⁿ = │ Nᵐ v NBⁿ dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -48,7 +48,7 @@ pub fn mat_coupling_nvn() -> Result<(), StrError> {
 ///
 /// ```text
 /// →     ⌠ →
-/// Kᵐⁿ = │ Gᵐ s NBⁿ tₕ dΩ
+/// Kᵐⁿ = │ Gᵐ s NBⁿ dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```

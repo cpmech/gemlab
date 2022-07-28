@@ -11,7 +11,7 @@ use russell_tensor::{Tensor2, Tensor4};
 ///
 /// ```text
 ///       ⌠
-/// Kᵐⁿ = │ Nᵐ s Nⁿ tₕ dΩ
+/// Kᵐⁿ = │ Nᵐ s Nⁿ dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -19,8 +19,8 @@ use russell_tensor::{Tensor2, Tensor4};
 /// The numerical integration is:
 ///
 /// ```text
-///       nip-1    →     →      →          →
-/// Kᵐⁿ ≈   Σ   Nᵐ(ιᵖ) s(ιᵖ) Nⁿ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+///       nip-1    →     →      →       →
+/// Kᵐⁿ ≈   Σ   Nᵐ(ιᵖ) s(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ
 ///        p=0
 /// ```
 ///
@@ -47,18 +47,16 @@ use russell_tensor::{Tensor2, Tensor4};
 ///
 /// * `ii0` -- Stride marking the first row in the output matrix where to add components.
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
-/// * `ips` -- Integration points (n_integ_point)
-/// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
+/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 pub fn mat_nsn<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ii0: usize,
     jj0: usize,
-    ips: IntegPointData,
-    th: f64,
     clear_kk: bool,
+    ips: IntegPointData,
     fn_s: F,
 ) -> Result<(), StrError>
 where
@@ -93,7 +91,7 @@ where
         let s = fn_s(p)?;
 
         // add contribution to K matrix
-        let val = s * th * det_jac * weight;
+        let val = s * det_jac * weight;
         for m in 0..nnode {
             for n in 0..nnode {
                 kk[ii0 + m][jj0 + n] += pad.interp[m] * val * pad.interp[n];
@@ -109,7 +107,7 @@ where
 ///
 /// ```text
 ///       ⌠ →    →
-/// Kᵐⁿ = │ Gᵐ ⋅ v Nⁿ tₕ dΩ
+/// Kᵐⁿ = │ Gᵐ ⋅ v Nⁿ dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -123,7 +121,7 @@ pub fn mat_gvn() -> Result<(), StrError> {
 ///
 /// ```text
 ///       ⌠ →        →
-/// Kᵐⁿ = │ Gᵐ ⋅ T ⋅ Gⁿ tₕ dΩ
+/// Kᵐⁿ = │ Gᵐ ⋅ T ⋅ Gⁿ dΩ
 ///       ⌡      ▔
 ///       Ωₑ
 /// ```
@@ -131,8 +129,8 @@ pub fn mat_gvn() -> Result<(), StrError> {
 /// The numerical integration is:
 ///
 /// ```text
-///       nip-1 →  →       →     →  →          →
-/// Kᵐⁿ ≈   Σ   Gᵐ(ιᵖ) ⋅ T(ιᵖ) ⋅ Gⁿ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+///       nip-1 →  →       →     →  →       →
+/// Kᵐⁿ ≈   Σ   Gᵐ(ιᵖ) ⋅ T(ιᵖ) ⋅ Gⁿ(ιᵖ) |J|(ιᵖ) wᵖ
 ///        p=0           ▔
 /// ```
 ///
@@ -159,18 +157,16 @@ pub fn mat_gvn() -> Result<(), StrError> {
 ///
 /// * `ii0` -- Stride marking the first row in the output matrix where to add components.
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
-/// * `ips` -- Integration points (n_integ_point)
-/// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
+/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_tt` -- Function `f(T,p)` that computes `T(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 pub fn mat_gtg<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ii0: usize,
     jj0: usize,
-    ips: IntegPointData,
-    th: f64,
     clear_kk: bool,
+    ips: IntegPointData,
     fn_tt: F,
 ) -> Result<(), StrError>
 where
@@ -209,7 +205,7 @@ where
         fn_tt(&mut tt, p)?;
 
         // add contribution to K matrix
-        let coef = th * det_jac * weight;
+        let coef = det_jac * weight;
         let g = &pad.gradient;
         let t = &tt.vec;
         if space_ndim == 2 {
@@ -240,7 +236,7 @@ where
 ///
 /// ```text
 ///       ⌠
-/// Kᵐⁿ = │ Nᵐ T Nⁿ tₕ dΩ
+/// Kᵐⁿ = │ Nᵐ T Nⁿ dΩ
 /// ▔     ⌡    ▔
 ///       Ωₑ
 /// ```
@@ -248,8 +244,8 @@ where
 /// The numerical integration is:
 ///
 /// ```text
-///         nip-1    →       →      →          →
-/// Kᵐⁿᵢⱼ ≈   Σ   Nᵐ(ιᵖ) Tᵢⱼ(ιᵖ) Nⁿ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+///         nip-1    →       →      →       →
+/// Kᵐⁿᵢⱼ ≈   Σ   Nᵐ(ιᵖ) Tᵢⱼ(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ
 ///          p=0
 /// ```
 ///
@@ -282,18 +278,16 @@ where
 ///
 /// * `ii0` -- Stride marking the first row in the output matrix where to add components.
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
-/// * `ips` -- Integration points (n_integ_point)
-/// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
+/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_tt` -- Function `f(T,p)` that computes `T(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 pub fn mat_ntn<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ii0: usize,
     jj0: usize,
-    ips: IntegPointData,
-    th: f64,
     clear_kk: bool,
+    ips: IntegPointData,
     fn_tt: F,
 ) -> Result<(), StrError>
 where
@@ -333,7 +327,7 @@ where
         fn_tt(&mut tt, p)?;
 
         // add contribution to K matrix
-        let c = th * det_jac * weight;
+        let c = det_jac * weight;
         let nn = &pad.interp;
         let t = &tt.vec;
         if space_ndim == 2 {
@@ -370,7 +364,7 @@ where
 ///
 /// ```text
 ///       ⌠    →   →
-/// Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ tₕ dΩ
+/// Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ dΩ
 /// ▔     ⌡
 ///       Ωₑ
 /// ```
@@ -384,7 +378,7 @@ pub fn mat_nvg() -> Result<(), StrError> {
 ///
 /// ```text
 ///       ⌠               →    →
-/// Kᵐⁿ = │ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ tₕ dΩ
+/// Kᵐⁿ = │ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
 /// ▔     ⌡
 ///       Ωₑ
 /// ```
@@ -393,7 +387,7 @@ pub fn mat_nvg() -> Result<(), StrError> {
 ///
 /// ```text
 ///         nip-1     →         →       →          →
-/// Kᵐⁿᵢⱼ ≈   Σ   Gᵐₖ(ιᵖ) Dᵢₖⱼₗ(ιᵖ) Gⁿₗ(ιᵖ) tₕ |J|(ιᵖ) wᵖ
+/// Kᵐⁿᵢⱼ ≈   Σ   Gᵐₖ(ιᵖ) Dᵢₖⱼₗ(ιᵖ) Gⁿₗ(ιᵖ) |J|(ιᵖ) wᵖ
 ///          p=0
 /// ```
 ///
@@ -426,9 +420,8 @@ pub fn mat_nvg() -> Result<(), StrError> {
 ///
 /// * `ii0` -- Stride marking the first row in the output matrix where to add components.
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
-/// * `ips` -- Integration points (n_integ_point)
-/// * `th` -- tₕ the out-of-plane thickness in 2D or 1.0 otherwise (e.g., for plane-stress models)
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
+/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_dd` -- Function f(D,p) that computes `D(x(ιᵖ))`
 ///
 /// # Examples
@@ -468,7 +461,7 @@ pub fn mat_nvg() -> Result<(), StrError> {
 ///     let nrow = pad.kind.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let ips = integ::default_points(pad.kind);
-///     integ::mat_gdg(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |dd, _| {
+///     integ::mat_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
 ///         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
 ///     })?;
 ///
@@ -497,9 +490,8 @@ pub fn mat_gdg<F>(
     pad: &mut Scratchpad,
     ii0: usize,
     jj0: usize,
-    ips: IntegPointData,
-    th: f64,
     clear_kk: bool,
+    ips: IntegPointData,
     fn_dd: F,
 ) -> Result<(), StrError>
 where
@@ -537,7 +529,7 @@ where
         fn_dd(&mut dd, p)?;
 
         // add contribution to K matrix
-        let c = det_jac * weight * th;
+        let c = det_jac * weight;
         mat_gdg_add_to_mat_kk(kk, ii0, jj0, &dd, c, pad);
     }
     Ok(())
@@ -595,20 +587,20 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
-            integ::mat_nsn(&mut kk, &mut pad, 1, 0, &[], 1.0, false, |_| Ok(0.0)).err(),
+            integ::mat_nsn(&mut kk, &mut pad, 1, 0, false, &[], |_| Ok(0.0)).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         assert_eq!(
-            integ::mat_nsn(&mut kk, &mut pad, 0, 1, &[], 1.0, false, |_| Ok(0.0)).err(),
+            integ::mat_nsn(&mut kk, &mut pad, 0, 1, false, &[], |_| Ok(0.0)).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_gdg(&mut kk, &mut pad, 1, 0, &[], 1.0, false, |_, _| Ok(())).err(),
+            integ::mat_gdg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_gdg(&mut kk, &mut pad, 0, 1, &[], 1.0, false, |_, _| Ok(())).err(),
+            integ::mat_gdg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
     }
@@ -628,7 +620,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_nsn(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |_| Ok(s)).unwrap();
+            integ::mat_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
@@ -649,7 +641,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_nsn(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |_| Ok(s)).unwrap();
+            integ::mat_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
@@ -667,7 +659,7 @@ mod tests {
         let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_nsn(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |_| Ok(s)).unwrap();
+            integ::mat_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
@@ -684,7 +676,7 @@ mod tests {
         let selection: Vec<_> = [1, 3, 7].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gtg(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |tt, _| {
+            integ::mat_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 tt.sym_set(0, 0, kx);
                 tt.sym_set(1, 1, ky);
                 Ok(())
@@ -707,7 +699,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gtg(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |tt, _| {
+            integ::mat_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 tt.sym_set(0, 0, kx);
                 tt.sym_set(1, 1, ky);
                 Ok(())
@@ -730,7 +722,7 @@ mod tests {
         let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gtg(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |tt, _| {
+            integ::mat_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 tt.sym_set(0, 0, kx);
                 tt.sym_set(1, 1, ky);
                 Ok(())
@@ -753,7 +745,7 @@ mod tests {
         let selection: Vec<_> = [3, 6].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_ntn(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |tt, _| {
+            integ::mat_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 tt.sym_set(0, 0, rho);
                 tt.sym_set(1, 1, rho);
                 Ok(())
@@ -805,8 +797,13 @@ mod tests {
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = integ::points(class, 1)?;
-        integ::mat_gdg(&mut kk, &mut pad, 0, 0, ips, th, true, |dd, _| {
-            copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+        integ::mat_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+            let in_array = model.get_modulus().mat.as_data();
+            let out_array = dd.mat.as_mut_data();
+            for i in 0..in_array.len() {
+                out_array[i] = th * in_array[i];
+            }
+            Ok(())
         })?;
 
         // compare against results from Bhatti's book
@@ -833,8 +830,13 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gdg(&mut kk, &mut pad, 0, 0, ips, th, true, |dd, _| {
-                copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+            integ::mat_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+                let in_array = model.get_modulus().mat.as_data();
+                let out_array = dd.mat.as_mut_data();
+                for i in 0..in_array.len() {
+                    out_array[i] = th * in_array[i];
+                }
+                Ok(())
             })
             .unwrap();
             assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), tol); // 1e-12
@@ -869,7 +871,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gdg(&mut kk, &mut pad, 0, 0, ips, 1.0, true, |dd, _| {
+            integ::mat_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();
