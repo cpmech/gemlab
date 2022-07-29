@@ -553,7 +553,8 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
     use russell_chk::assert_vec_approx_eq;
-    use russell_lab::Vector;
+    use russell_lab::{copy_vector, Vector};
+    use russell_tensor::Tensor2;
 
     #[test]
     fn capture_some_errors() {
@@ -914,18 +915,18 @@ mod tests {
         let mut pad = aux::gen_pad_tet4();
 
         // solution
-        const S00: f64 = 2.0;
-        const S11: f64 = 3.0;
-        const S22: f64 = 4.0;
-        const S01: f64 = 5.0;
-        const S12: f64 = 6.0;
-        const S02: f64 = 7.0;
+        #[rustfmt::skip]
+        let tt = Tensor2::from_matrix(&[
+            [2.0, 5.0, 7.0],
+            [5.0, 3.0, 6.0],
+            [7.0, 6.0, 4.0],
+        ], true, false).unwrap();
         let ana = AnalyticalTet4::new(&pad);
-        let d_correct = ana.integ_vec_d(S00, S11, S22, S01, S12, S02);
+        let d_correct = ana.integ_vec_d(&tt);
 
         // integration points
         let class = pad.kind.class();
-        let tolerances = [1e-14, 1e-14, 1e-13, 1e-14, 1e-14, 1e-13, 1e-13];
+        let tolerances = [1e-14, 1e-14, 1e-13, 1e-14, 1e-13, 1e-13, 1e-13];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
             .map(|n| integ::points(class, *n).unwrap())
@@ -937,13 +938,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_d(&mut d, &mut pad, 0, true, ips, |sig, _| {
-                sig.sym_set(0, 0, S00);
-                sig.sym_set(1, 1, S11);
-                sig.sym_set(2, 2, S22);
-                sig.sym_set(0, 1, S01);
-                sig.sym_set(1, 2, S12);
-                sig.sym_set(0, 2, S02);
-                Ok(())
+                copy_vector(&mut sig.vec, &tt.vec)
             })
             .unwrap();
             assert_vec_approx_eq!(d.as_data(), d_correct, tol);

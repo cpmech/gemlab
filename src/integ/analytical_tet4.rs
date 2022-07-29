@@ -189,37 +189,44 @@ impl AnalyticalTet4 {
         ]
     }
 
-    /// Integrates tensor dot gradient with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
+    /// Integrates tensor dot gradient with constant tensor function σ(x)
     ///
     /// Solution:
     ///
     /// ```text
-    ///    dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁ + σ₀₂ Gᵐ₂) V
-    ///    dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁ + σ₁₂ Gᵐ₂) V
-    ///    dᵐ₂ = (σ₂₀ Gᵐ₀ + σ₂₁ Gᵐ₁ + σ₂₂ Gᵐ₂) V
+    /// σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
+    ///
+    /// dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁ + σ₀₂ Gᵐ₂) V
+    /// dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁ + σ₁₂ Gᵐ₂) V
+    /// dᵐ₂ = (σ₂₀ Gᵐ₀ + σ₂₁ Gᵐ₁ + σ₂₂ Gᵐ₂) V
     /// ```
-    pub fn integ_vec_d(&self, s00: f64, s11: f64, s22: f64, s01: f64, s12: f64, s02: f64) -> Vec<f64> {
+    pub fn integ_vec_d(&self, tt: &Tensor2) -> Vec<f64> {
+        let c = self.volume;
+        let mat = tt.to_matrix();
+        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
+        let (a11, a12) = (mat[1][1], mat[1][2]);
+        let a22 = mat[2][2];
         vec![
-            (s00 * self.gg[0][0] + s01 * self.gg[0][1] + s02 * self.gg[0][2]) * self.volume,
-            (s01 * self.gg[0][0] + s11 * self.gg[0][1] + s12 * self.gg[0][2]) * self.volume,
-            (s02 * self.gg[0][0] + s12 * self.gg[0][1] + s22 * self.gg[0][2]) * self.volume,
-            (s00 * self.gg[1][0] + s01 * self.gg[1][1] + s02 * self.gg[1][2]) * self.volume,
-            (s01 * self.gg[1][0] + s11 * self.gg[1][1] + s12 * self.gg[1][2]) * self.volume,
-            (s02 * self.gg[1][0] + s12 * self.gg[1][1] + s22 * self.gg[1][2]) * self.volume,
-            (s00 * self.gg[2][0] + s01 * self.gg[2][1] + s02 * self.gg[2][2]) * self.volume,
-            (s01 * self.gg[2][0] + s11 * self.gg[2][1] + s12 * self.gg[2][2]) * self.volume,
-            (s02 * self.gg[2][0] + s12 * self.gg[2][1] + s22 * self.gg[2][2]) * self.volume,
-            (s00 * self.gg[3][0] + s01 * self.gg[3][1] + s02 * self.gg[3][2]) * self.volume,
-            (s01 * self.gg[3][0] + s11 * self.gg[3][1] + s12 * self.gg[3][2]) * self.volume,
-            (s02 * self.gg[3][0] + s12 * self.gg[3][1] + s22 * self.gg[3][2]) * self.volume,
+            c * (a00 * self.gg[0][0] + a01 * self.gg[0][1] + a02 * self.gg[0][2]),
+            c * (a01 * self.gg[0][0] + a11 * self.gg[0][1] + a12 * self.gg[0][2]),
+            c * (a02 * self.gg[0][0] + a12 * self.gg[0][1] + a22 * self.gg[0][2]),
+            c * (a00 * self.gg[1][0] + a01 * self.gg[1][1] + a02 * self.gg[1][2]),
+            c * (a01 * self.gg[1][0] + a11 * self.gg[1][1] + a12 * self.gg[1][2]),
+            c * (a02 * self.gg[1][0] + a12 * self.gg[1][1] + a22 * self.gg[1][2]),
+            c * (a00 * self.gg[2][0] + a01 * self.gg[2][1] + a02 * self.gg[2][2]),
+            c * (a01 * self.gg[2][0] + a11 * self.gg[2][1] + a12 * self.gg[2][2]),
+            c * (a02 * self.gg[2][0] + a12 * self.gg[2][1] + a22 * self.gg[2][2]),
+            c * (a00 * self.gg[3][0] + a01 * self.gg[3][1] + a02 * self.gg[3][2]),
+            c * (a01 * self.gg[3][0] + a11 * self.gg[3][1] + a12 * self.gg[3][2]),
+            c * (a02 * self.gg[3][0] + a12 * self.gg[3][1] + a22 * self.gg[3][2]),
         ]
     }
 
     /// Performs the g-t-g integration with constant tensor field
     #[rustfmt::skip]
-    pub fn integ_gtg(&self, sig: &Tensor2) -> Matrix {
+    pub fn integ_gtg(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume;
-        let mat = sig.to_matrix();
+        let mat = tt.to_matrix();
         let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
         let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
         let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
