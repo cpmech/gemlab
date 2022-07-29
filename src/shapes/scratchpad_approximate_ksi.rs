@@ -282,14 +282,14 @@ mod tests {
             (1, [4.25, 6.17], 1e-14),
             (2, [10.0, 10.0], 1e-14),
             (2, [-10.0, -10.0], 1e-13),
-            (6, [100.0, 100.0], 1e-12),
+            (1, [100.0, 100.0], 1e-11),
         ] {
             let x = Vector::from(x_data);
             let nit = pad.approximate_ksi(&mut ksi, &x, 30, *tol).unwrap();
             let mut x_out = Vector::new(2);
             pad.calc_coords(&mut x_out, &ksi).unwrap();
             assert_vec_approx_eq!(x.as_data(), x_out.as_data(), *tol);
-            // assert_eq!(nit, *nit_correct);
+            assert_eq!(nit, *nit_correct);
         }
     }
 }
