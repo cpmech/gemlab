@@ -41,7 +41,7 @@ fn main() -> Result<(), StrError> {
     println!("a =\n{}", a);
 
     // check
-    let a_correct = ana.integ_vec_a_constant(18.0);
+    let a_correct = ana.integ_vec_a(18.0);
     assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
 
     // shape times vector, returns vector 'b'
@@ -72,7 +72,7 @@ fn main() -> Result<(), StrError> {
     println!("b =\n{}", b);
 
     // check
-    let b_correct = ana.integ_vec_b_constant(12.0, 12.0);
+    let b_correct = ana.integ_vec_b(12.0, 12.0);
     assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
 
     // vector dot gradient, returns vector 'c'
@@ -99,7 +99,7 @@ fn main() -> Result<(), StrError> {
     println!("c =\n{}", c);
 
     // check
-    let c_correct = ana.integ_vec_c_constant(-2.0, 4.0);
+    let c_correct = ana.integ_vec_c(-2.0, 4.0);
     assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
 
     // tensor dot gradient, returns vector 'd'
@@ -133,7 +133,7 @@ fn main() -> Result<(), StrError> {
     println!("d =\n{}", d);
 
     // check
-    let d_correct = ana.integ_vec_d_constant(s00, s11, s01);
+    let d_correct = ana.integ_vec_d(s00, s11, s01);
     assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
     Ok(())
 }

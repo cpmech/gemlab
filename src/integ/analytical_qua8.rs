@@ -15,7 +15,7 @@ impl AnalyticalQua8 {
         AnalyticalQua8 { a, b }
     }
 
-    /// Performs the nsn integration with constant s(x) field
+    /// Performs the n-s-n integration with constant s(x) field
     ///
     /// From @bhatti:05\page{348}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
@@ -35,7 +35,7 @@ impl AnalyticalQua8 {
         ])
     }
 
-    /// Performs the gtg integration with constant (and diagonal) stress field
+    /// Performs the g-t-g integration with constant (and diagonal) stress field
     ///
     /// From @bhatti:05\page{348}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.

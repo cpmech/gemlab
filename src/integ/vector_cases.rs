@@ -625,7 +625,7 @@ mod tests {
         // solution
         let ana = AnalyticalTri3::new(&pad);
         const CS: f64 = 3.0;
-        let a_correct = ana.integ_vec_a_constant(CS);
+        let a_correct = ana.integ_vec_a(CS);
 
         // integration points
         let class = pad.kind.class();
@@ -719,7 +719,7 @@ mod tests {
         let ana = AnalyticalTri3::new(&pad);
         const V0: f64 = -3.0;
         const V1: f64 = 8.0;
-        let b_correct = ana.integ_vec_b_constant(V0, V1);
+        let b_correct = ana.integ_vec_b(V0, V1);
 
         // integration points
         let class = pad.kind.class();
@@ -783,7 +783,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
-        let c_correct = ana.integ_vec_c_constant(W0, W1);
+        let c_correct = ana.integ_vec_c(W0, W1);
 
         // integration points
         let class = pad.kind.class();
@@ -882,7 +882,7 @@ mod tests {
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
         let ana = AnalyticalTri3::new(&pad);
-        let d_correct = ana.integ_vec_d_constant(S00, S11, S01);
+        let d_correct = ana.integ_vec_d(S00, S11, S01);
 
         // integration points
         let class = pad.kind.class();

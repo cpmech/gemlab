@@ -301,7 +301,7 @@ mod tests {
         let ana = AnalyticalTri3::new(&pad);
         // constant
         let (v0, v1) = (2.0, 3.0);
-        let kk_correct = ana.integ_gvn_constant(v0, v1);
+        let kk_correct = ana.integ_gvn(v0, v1);
         let class = pad.kind.class();
         let tolerances = [1e-15];
         let selection: Vec<_> = [3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
@@ -365,7 +365,7 @@ mod tests {
         let ana = AnalyticalTri3::new(&pad);
         // constant
         let (v0, v1) = (2.0, 3.0);
-        let kk_correct = ana.integ_nvg_constant(v0, v1);
+        let kk_correct = ana.integ_nvg(v0, v1);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];

@@ -896,7 +896,7 @@ mod tests {
 
         // analytical solution
         let ana = AnalyticalTri3::new(&pad);
-        let kk_correct = ana.integ_stiffness(young, poisson, plane_stress, th).unwrap();
+        let kk_correct = ana.integ_gdg(young, poisson, plane_stress, th).unwrap();
 
         // compare against analytical solution
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-11, 1e-12];

@@ -27,6 +27,7 @@ pub struct AnalyticalTri3 {
 }
 
 impl AnalyticalTri3 {
+    /// Allocates a new instance
     pub fn new(pad: &Scratchpad) -> Self {
         assert_eq!(pad.kind, GeoKind::Tri3);
 
@@ -73,7 +74,7 @@ impl AnalyticalTri3 {
     /// ```text
     /// aᵐ = cₛ A / 3
     /// ```
-    pub fn integ_vec_a_constant(&self, cs: f64) -> Vec<f64> {
+    pub fn integ_vec_a(&self, cs: f64) -> Vec<f64> {
         vec![cs * self.area / 3.0, cs * self.area / 3.0, cs * self.area / 3.0]
     }
 
@@ -93,7 +94,7 @@ impl AnalyticalTri3 {
     ///       │ v1 │
     ///       └    ┘
     /// ```
-    pub fn integ_vec_b_constant(&self, v0: f64, v1: f64) -> Vec<f64> {
+    pub fn integ_vec_b(&self, v0: f64, v1: f64) -> Vec<f64> {
         vec![
             v0 * self.area / 3.0,
             v1 * self.area / 3.0,
@@ -111,7 +112,7 @@ impl AnalyticalTri3 {
     /// ```text
     /// cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
     /// ```
-    pub fn integ_vec_c_constant(&self, w0: f64, w1: f64) -> Vec<f64> {
+    pub fn integ_vec_c(&self, w0: f64, w1: f64) -> Vec<f64> {
         vec![
             (w0 * self.gg[0][0] + w1 * self.gg[0][1]) * self.area,
             (w0 * self.gg[1][0] + w1 * self.gg[1][1]) * self.area,
@@ -155,7 +156,7 @@ impl AnalyticalTri3 {
     /// # Input
     ///
     /// * `s₀₀, s₁₁, s₀₁` -- components of the constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
-    pub fn integ_vec_d_constant(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
+    pub fn integ_vec_d(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
         vec![
             (s00 * self.gg[0][0] + s01 * self.gg[0][1]) * self.area,
             (s01 * self.gg[0][0] + s11 * self.gg[0][1]) * self.area,
@@ -166,13 +167,13 @@ impl AnalyticalTri3 {
         ]
     }
 
-    /// Performs the nsn integration
+    /// Performs the n-s-n integration with constant s(x) field
     pub fn integ_nsn(&self, s: f64, th: f64) -> Matrix {
         let c = th * s * self.area / 12.0;
         Matrix::from(&[[2.0 * c, c, c], [c, 2.0 * c, c], [c, c, 2.0 * c]])
     }
 
-    /// Performs the gtg integration
+    /// Performs the g-t-g integration with constant tensor
     pub fn integ_gtg(&self, kx: f64, ky: f64) -> Matrix {
         let g = &self.gg;
         let k00 = self.area * (g[0][0] * g[0][0] * kx + g[0][1] * g[0][1] * ky);
@@ -184,7 +185,7 @@ impl AnalyticalTri3 {
         Matrix::from(&[[k00, k01, k02], [k01, k11, k12], [k02, k12, k22]])
     }
 
-    /// Performs the ntn integration
+    /// Performs the n-t-n integration with constant tensor field rho*delta
     pub fn integ_ntn(&self, rho: f64, th: f64) -> Matrix {
         let c = th * rho * self.area / 12.0;
         Matrix::from(&[
@@ -197,9 +198,9 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Performs the gvn integration with constant vector
+    /// Performs the g-v-n integration with constant vector
     #[rustfmt::skip]
-    pub fn integ_gvn_constant(&self, v0: f64, v1: f64) -> Matrix {
+    pub fn integ_gvn(&self, v0: f64, v1: f64) -> Matrix {
         let aa = self.area;
         let g = &self.gg;
         Matrix::from(&[
@@ -209,7 +210,7 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Performs the gvn integration with v = {x, y}
+    /// Performs the g-v-n integration with v = {x, y}
     #[rustfmt::skip]
     pub fn integ_gvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
         let aa = self.area;
@@ -226,9 +227,9 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Performs the nvg integration with constant vector
+    /// Performs the n-v-g integration with constant vector
     #[rustfmt::skip]
-    pub fn integ_nvg_constant(&self, v0: f64, v1: f64) -> Matrix {
+    pub fn integ_nvg(&self, v0: f64, v1: f64) -> Matrix {
         let (g00, g01) = (self.gg[0][0], self.gg[0][1]);
         let (g10, g11) = (self.gg[1][0], self.gg[1][1]);
         let (g20, g21) = (self.gg[2][0], self.gg[2][1]);
@@ -243,14 +244,14 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Calculates the stiffness matrix
+    /// Performs the g-d-g integration with constant tensor field (calculates the stiffness matrix)
     ///
     /// solution:
     ///
     /// ```text
     /// K = Bᵀ ⋅ D ⋅ B ⋅ th ⋅ area
     /// ```
-    pub fn integ_stiffness(&self, young: f64, poisson: f64, plane_stress: bool, th: f64) -> Result<Matrix, StrError> {
+    pub fn integ_gdg(&self, young: f64, poisson: f64, plane_stress: bool, th: f64) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, true, plane_stress);
         let dd = ela.get_modulus();
         let dim_dd = 4;
