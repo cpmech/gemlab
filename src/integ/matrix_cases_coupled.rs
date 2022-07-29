@@ -65,7 +65,7 @@ use russell_lab::Matrix;
 ///
 /// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
-pub fn mat_coupling_nbsg<F>(
+pub fn mat_coup_nbsg<F>(
     kk: &mut Matrix,
     pad_b: &mut Scratchpad,
     pad: &mut Scratchpad,
@@ -142,7 +142,7 @@ where
 ///       ⌡       ▔
 ///       Ωₑ
 /// ```
-pub fn mat_coupling_gtn() -> Result<(), StrError> {
+pub fn mat_coup_gtn() -> Result<(), StrError> {
     Err("mat_coupling_gtn: TODO")
 }
 
@@ -156,7 +156,7 @@ pub fn mat_coupling_gtn() -> Result<(), StrError> {
 ///       ⌡
 ///       Ωₑ
 /// ```
-pub fn mat_coupling_nvn() -> Result<(), StrError> {
+pub fn mat_coup_nvn() -> Result<(), StrError> {
     Err("mat_coupling_nvn: TODO")
 }
 
@@ -225,7 +225,7 @@ pub fn mat_coupling_nvn() -> Result<(), StrError> {
 ///
 /// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
-pub fn mat_coupling_gsnb<F>(
+pub fn mat_coup_gsnb<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     pad_b: &mut Scratchpad,
@@ -308,21 +308,42 @@ mod tests {
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
         assert_eq!(
-            integ::mat_coupling_nbsg(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_coup_nbsg(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], |_| Ok(0.0)).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
         assert_eq!(
-            integ::mat_coupling_nbsg(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_coup_nbsg(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], |_| Ok(0.0)).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
         let mut kk = Matrix::new(8 * 2, 4);
         assert_eq!(
-            integ::mat_coupling_gsnb(&mut kk, &mut pad, &mut pad_b, 1, 0, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_coup_gsnb(&mut kk, &mut pad, &mut pad_b, 1, 0, false, &[], |_| Ok(0.0)).err(),
             Some("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_coupling_gsnb(&mut kk, &mut pad, &mut pad_b, 0, 1, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_coup_gsnb(&mut kk, &mut pad, &mut pad_b, 0, 1, false, &[], |_| Ok(0.0)).err(),
             Some("ncol(K) must be ≥ jj0 + pad_b.nnode")
         );
+    }
+
+    #[test]
+    fn mat_coup_nbsg_works() {
+        let (a, b) = (2.0, 3.0);
+        let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
+        let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
+        let mut kk = Matrix::new(4, 8 * 2);
+        let ana = AnalyticalQua8::new(a, b);
+        let s = 9.0;
+        let kk_correct = ana.integ_nbsg(s);
+        // println!("{}", kk_correct);
+        let class = pad.kind.class();
+        let tolerances = [1e-14, 1e-14];
+        let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_coup_nbsg(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            // println!("{:.2}", kk);
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
     }
 }
