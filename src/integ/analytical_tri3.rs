@@ -273,11 +273,8 @@ mod tests {
 
     #[test]
     fn new_works() {
-        // Tri3 # 1 from Figure 1.18, page 29 of [@bhatti]
-        //
-        // [@bhatti] Bhatti, M.A. (2005) Fundamental Finite Element Analysis
-        //          and Applications, Wiley, 700p.
-        //
+        // Tri3 # 1 from Figure 1.18, page 29 of @bhatti
+        // @bhatti Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
         let space_ndim = 2;
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3).unwrap();
         pad.set_xx(0, 0, 0.0);

@@ -16,8 +16,8 @@ impl AnalyticalQua4 {
 
     /// Performs the nsn integration
     ///
-    /// From [@bhatti:05]\page{332}
-    /// [@bhatti:05] Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
+    /// From @bhatti:05\page{332}
+    /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
     pub fn integ_nsn(&self, s: f64, th: f64) -> Matrix {
         let c = th * s * self.a * self.b / 9.0;
         Matrix::from(&[
@@ -30,8 +30,8 @@ impl AnalyticalQua4 {
 
     /// Performs the gtg integration
     ///
-    /// From [@bhatti:05]\page{332}
-    /// [@bhatti:05] Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
+    /// From @bhatti:05\page{332}
+    /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
     #[rustfmt::skip]
     pub fn integ_gtg(&self, kx: f64, ky: f64) -> Matrix {
         let a = self.a;

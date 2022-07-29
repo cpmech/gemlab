@@ -169,7 +169,7 @@ mod tests {
         })
         .unwrap();
         assert_vec_approx_eq!(b.as_data(), &[0.0, -2.0, 0.0, -2.0], 1e-15);
-        // triangular (see [@sgm:14]\page{605})
+        // triangular (see @sgm:14\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
         integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, p, _| {
             let c = x_ips[p][0] / ll;
@@ -180,7 +180,7 @@ mod tests {
         .unwrap();
         assert_vec_approx_eq!(b.as_data(), &[0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
 
-        // example from [@sgm:14]\page{183}
+        // example from @sgm:14\page{183}
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin3).unwrap();
         let ll = 3.0;
         pad.set_xx(0, 0, 0.0);
@@ -199,7 +199,7 @@ mod tests {
         })
         .unwrap();
         assert_vec_approx_eq!(b.as_data(), &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
-        // triangular (see [@sgm:14]\page{605})
+        // triangular (see @sgm:14\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
         integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, p, _| {
             let c = x_ips[p][0] / ll;
@@ -210,7 +210,7 @@ mod tests {
         .unwrap();
         assert_vec_approx_eq!(b.as_data(), &[0.0, 0.0, 0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
 
-        // example from [@sgm:14]\page{183}
+        // example from @sgm:14\page{183}
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin5).unwrap();
         let ll = 4.0;
         pad.set_xx(0, 0, 0.0);
@@ -245,7 +245,7 @@ mod tests {
             -ll * 16.0 / 45.0, // 4
         ];
         assert_vec_approx_eq!(b.as_data(), correct, 1e-15);
-        // triangular (see [@sgm:14]\page{605})
+        // triangular (see @sgm:14\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
         integ::vec_b_boundary(&mut b, &mut pad, 0, true, ips, |t, p, _| {
             let c = x_ips[p][0] / ll;
@@ -312,8 +312,8 @@ mod tests {
         ];
         assert_vec_approx_eq!(b.as_data(), correct, 1e-15);
 
-        // example from [@sgm:14]\page{195}
-        // * `sgm:14` -- Smith, Griffiths, Margetts (2014) Programming the Finite Element Method, 5th ed.
+        // example from @sgm:14\page{195}
+        // @sgm:14 Smith, Griffiths, Margetts (2014) Programming the Finite Element Method, 5th ed.
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua8).unwrap();
         pad.set_xx(0, 0, 0.0);
         pad.set_xx(0, 1, 0.0);
@@ -379,7 +379,7 @@ mod tests {
 
     #[test]
     fn vec_b_boundary_works_arc() {
-        // [@bhatti:05] Example 7.9, page 518
+        // @bhatti:05 Example 7.9, page 518
         // Reference: Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
         let space_ndim = 2;
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin3).unwrap();

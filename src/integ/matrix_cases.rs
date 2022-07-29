@@ -839,7 +839,7 @@ mod tests {
 
     #[test]
     fn mat_gdg_works_tri3_plane_stress() {
-        // Element # 0 from example 1.6 from [@bhatti] page 32
+        // Element # 0 from example 1.6 from @bhatti page 32
         // Solid bracket with thickness = 0.25
         //              1     -10                connectivity:
         // y=2.0 (-100) o'-,__                    eid : vertices
@@ -852,8 +852,7 @@ mod tests {
         // y=0.0 (-100) o----------o---------o    -100 : fixed on x and y
         //              0          2         4
         //             x=0.0     x=2.0     x=4.0
-        // [@bhatti] Bhatti, M.A. (2005) Fundamental Finite Element Analysis
-        //           and Applications, Wiley, 700p.
+        // @bhatti Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
 
         // scratchpad
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
