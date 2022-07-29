@@ -192,7 +192,7 @@ mod tests {
             // Qua
             (GeoKind::Qua4, 1e-11),
             (GeoKind::Qua8, 1e-11),
-            (GeoKind::Qua9, 1e-12),
+            (GeoKind::Qua9, 1e-11),
             (GeoKind::Qua12, 1e-10),
             (GeoKind::Qua16, 1e-10),
             (GeoKind::Qua17, 1e-10),
