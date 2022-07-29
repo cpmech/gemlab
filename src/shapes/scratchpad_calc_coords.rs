@@ -64,7 +64,7 @@ impl Scratchpad {
         if !self.ok_xxt {
             return Err("all components of the coordinates matrix must be set first");
         }
-        let space_ndim = self.xmin.len();
+        let space_ndim = self.jacobian.dims().0;
         if x.dim() != space_ndim {
             return Err("x.dim() must be equal to space_ndim");
         }

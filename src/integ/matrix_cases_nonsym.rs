@@ -62,7 +62,7 @@ where
     F: Fn(&mut Vector, usize) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
+    let (space_ndim, nnode) = pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode {
         return Err("nrow(K) must be ≥ ii0 + nnode");
@@ -72,7 +72,6 @@ where
     }
 
     // allocate auxiliary vector
-    let space_ndim = pad.xmax.len();
     let mut v = Vector::new(space_ndim);
 
     // clear output matrix
@@ -179,8 +178,7 @@ where
     F: Fn(&mut Vector, usize) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim");

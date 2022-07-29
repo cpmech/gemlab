@@ -159,7 +159,7 @@ where
     F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
+    let (space_ndim, nnode) = pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode {
         return Err("nrow(K) must be ≥ ii0 + nnode");
@@ -169,7 +169,6 @@ where
     }
 
     // allocate auxiliary tensor
-    let space_ndim = pad.xmax.len();
     let mut tt = Tensor2::new(true, space_ndim == 2);
 
     // clear output matrix
@@ -280,8 +279,7 @@ where
     F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim");
@@ -473,8 +471,7 @@ where
     F: Fn(&mut Tensor4, usize) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim");
@@ -517,8 +514,7 @@ fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, 
     let s = SQRT_2;
     let g = &pad.gradient;
     let d = &dd.mat;
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     if space_ndim == 2 {
         for m in 0..nnode {
             for n in 0..nnode {
@@ -872,8 +868,7 @@ mod tests {
 
         // stiffness
         let class = pad.kind.class();
-        let nnode = pad.interp.dim();
-        let space_ndim = pad.xmax.len();
+        let (space_ndim, nnode) = pad.xxt.dims();
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = integ::points(class, 1).unwrap();
@@ -940,8 +935,7 @@ mod tests {
 
         // check
         let class = pad.kind.class();
-        let nnode = pad.interp.dim();
-        let space_ndim = pad.xmax.len();
+        let (space_ndim, nnode) = pad.xxt.dims();
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12];

@@ -222,8 +222,7 @@ where
     F: Fn(&mut Vector, usize) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     if b.dim() < ii0 + nnode * space_ndim {
         return Err("b.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
@@ -361,8 +360,7 @@ where
     F: Fn(&mut Vector, usize) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     if c.dim() < ii0 + nnode {
         return Err("c.len() must be ≥ ii0 + nnode");
     }
@@ -502,8 +500,7 @@ where
     F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     if d.dim() < ii0 + nnode * space_ndim {
         return Err("d.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
@@ -696,8 +693,8 @@ mod tests {
         let selection: Vec<_> = [2, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
-        let space_ndim = pad.xmax.len();
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
+        let (space_ndim, nnode) = pad.xxt.dims();
+        let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
@@ -729,8 +726,8 @@ mod tests {
         let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
-        let space_ndim = pad.xmax.len();
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
+        let (space_ndim, nnode) = pad.xxt.dims();
+        let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, _| {
@@ -761,8 +758,8 @@ mod tests {
         let selection: Vec<_> = [1, 4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check
-        let space_ndim = pad.xmax.len();
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
+        let (space_ndim, nnode) = pad.xxt.dims();
+        let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, _| {
@@ -895,8 +892,8 @@ mod tests {
             .collect();
 
         // check
-        let space_ndim = pad.xmax.len();
-        let mut d = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
+        let (space_ndim, nnode) = pad.xxt.dims();
+        let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_d(&mut d, &mut pad, 0, true, ips, |sig, _| {
@@ -935,8 +932,8 @@ mod tests {
             .collect();
 
         // check
-        let space_ndim = pad.xmax.len();
-        let mut d = Vector::filled(pad.kind.nnode() * space_ndim, aux::NOISE);
+        let (space_ndim, nnode) = pad.xxt.dims();
+        let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::vec_d(&mut d, &mut pad, 0, true, ips, |sig, _| {

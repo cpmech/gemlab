@@ -64,7 +64,7 @@ use russell_lab::Vector;
 ///
 /// ```
 pub fn points_coords(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Vec<Vector>, StrError> {
-    let space_ndim = pad.xmax.len();
+    let space_ndim = pad.xxt.dims().0;
     let mut all_coords = Vec::new();
     for iota in integ_points {
         let mut x = Vector::new(space_ndim);

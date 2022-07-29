@@ -82,8 +82,7 @@ where
 {
     // check
     let nnode_b = pad_b.interp.dim();
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode_b {
         return Err("nrow(K) must be ≥ ii0 + pad_b.nnode");
@@ -211,8 +210,7 @@ where
 {
     // check
     let nnode_b = pad_b.interp.dim();
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode_b {
         return Err("nrow(K) must be ≥ ii0 + pad_b.nnode");
@@ -351,9 +349,8 @@ where
     F: Fn(&mut Vector, usize) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
     let nnode_b = pad_b.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim");
@@ -487,9 +484,8 @@ where
     F: Fn(usize) -> Result<f64, StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
     let nnode_b = pad_b.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim");

@@ -86,8 +86,17 @@ impl Scratchpad {
         } else {
             (-1.0, 2.0) // Qua or Hex
         };
+        let mut xmin = vec![f64::MAX; space_ndim];
+        let mut xmax = vec![f64::MIN; space_ndim];
+        let nnode = self.interp.dim();
+        for m in 0..nnode {
+            for j in 0..space_ndim {
+                xmin[j] = f64::min(xmin[j], self.xxt[j][m]);
+                xmax[j] = f64::max(xmax[j], self.xxt[j][m]);
+            }
+        }
         for j in 0..space_ndim {
-            ksi[j] = kmin + kdel * (x[j] - self.xmin[j]) / (self.xmax[j] - self.xmin[j]);
+            ksi[j] = kmin + kdel * (x[j] - xmin[j]) / (xmax[j] - xmin[j]);
         }
 
         // perform iterations

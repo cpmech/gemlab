@@ -67,8 +67,7 @@ where
     F: Fn(&mut Vector, usize, &Vector) -> Result<(), StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
-    let space_ndim = pad.xmax.len();
+    let (space_ndim, nnode) = pad.xxt.dims();
     if b.dim() < ii0 + nnode * space_ndim {
         return Err("b.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }

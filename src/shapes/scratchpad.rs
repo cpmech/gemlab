@@ -103,12 +103,6 @@ pub struct Scratchpad {
     /// You must call `set_xx` to set the components, otherwise calculations will be **incorrect.**
     pub xxt: Matrix,
 
-    /// Minimum coordinates (space_ndim)
-    pub xmin: Vec<f64>,
-
-    /// Maximum coordinates (space_ndim)
-    pub xmax: Vec<f64>,
-
     /// Indicates that all coordinates in the X matrix have been set and the min,max values computed
     pub ok_xxt: bool,
 
@@ -179,8 +173,6 @@ impl Scratchpad {
                 Matrix::new(0, 0)
             },
             xxt: Matrix::new(space_ndim, nnode),
-            xmin: vec![f64::MAX; space_ndim],
-            xmax: vec![f64::MIN; space_ndim],
             ok_xxt: false,
             fn_interp,
             fn_deriv,
@@ -263,8 +255,6 @@ impl Scratchpad {
     pub fn set_xx(&mut self, m: usize, j: usize, value: f64) {
         self.ok_xxt = false;
         self.xxt[j][m] = value;
-        self.xmin[j] = f64::min(self.xmin[j], self.xxt[j][m]);
-        self.xmax[j] = f64::max(self.xmax[j], self.xxt[j][m]);
         let (space_ndim, nnode) = self.xxt.dims();
         if m == nnode - 1 && j == space_ndim - 1 {
             self.ok_xxt = true;
@@ -330,8 +320,6 @@ mod tests {
                 assert_eq!(pad.gradient.dims(), (nnode[i], space_ndim));
             }
             assert_eq!(pad.xxt.dims(), (space_ndim, nnode[i]));
-            assert_eq!(pad.xmin.len(), space_ndim);
-            assert_eq!(pad.xmax.len(), space_ndim);
             assert_eq!(pad.ok_xxt, false);
         }
     }
