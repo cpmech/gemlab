@@ -5,9 +5,13 @@ use russell_lab::Matrix;
 
 /// Implements the shape(Nb) time scalar(S) time gradient(G) integration case with different shapes (e.g., coupling matrix)
 ///
-/// **Note:** `m` ranges over the number of nodes of the lower-order shape specified by `pad_b`,
-/// corresponding to `Nbᵐ`, and `n` ranges over the number of the "driver" shape specified by `pad`,
-/// corresponding to `Gⁿ`. For example, `m ∈ [1,4]` of a `Qua4` and `n ∈ [1,8]` of `Qua8`.
+/// **Notes:**
+///
+/// * `m` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Nbᵐ`)
+/// * `n` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Gⁿ`)
+/// * For example, `1 ≤ m ≤ 4` for a `pad_b→Qua4` and `1 ≤ n ≤ 8` for `pad→Qua8`
+/// * The determinant of the Jacobian is calculated for `pad` (`pad` is the driver of the calculations)
+/// * The number of integration points must consider the nodes of `pad` and the expected order of the whole integrand
 ///
 /// Coupling vectors:
 ///
@@ -47,7 +51,7 @@ use russell_lab::Matrix;
 ///   above (in 2D). `m` and `n` are the indices of the node and `j` corresponds to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + pad_b.nnode` and `ncol(K) ≥ jj0 + pad.nnode ⋅ space_ndim`
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
-/// * `pad` -- "Driver" scratchpad (modified) to compute G
+/// * `pad` -- Driver scratchpad (modified) to compute G
 ///
 /// # Input
 ///
@@ -57,13 +61,10 @@ use russell_lab::Matrix;
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///
-/// # Warning and additional notes
+/// # Warning
 ///
-/// The two [crate::shapes::Scratchpad]s mut be compatible with `pad_b` being the lower-order version of `pad`.
-/// For example, if `pad` corresponds to `Qua8`, then `pad_b` must be a `Qua4`. Otherwise, **calculation errors may occur**.
-///
-/// Note: The determinant of the Jacobian is calculated for `pad`; i.e., `pad` is the **driver** of the calculations.
-/// Also, the number of integration points must be consider the number of nodes of `pad` and the expected order of the whole integrand.
+/// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
+/// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
 pub fn mat_coupling_nbsg<F>(
     kk: &mut Matrix,
     pad_b: &mut Scratchpad,
@@ -161,9 +162,13 @@ pub fn mat_coupling_nvn() -> Result<(), StrError> {
 
 /// Implements the gradient(G) time scalar(S) time shape(Nb) integration case with different shapes (e.g., coupling matrix)
 ///
-/// **Note:** `m` ranges over the number of nodes of the "driver" shape specified by `pad`,
-/// corresponding to `Gᵐ`, and `n` ranges over the number of the lower-order shape specified by `pad_b`,
-/// corresponding to `Nbⁿ`. For example, `m ∈ [1,8]` of a `Qua8` and `n ∈ [1,4]` of `Qua4`.
+/// **Notes:**
+///
+/// * `m` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Gᵐ`)
+/// * `n` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Nbⁿ`)
+/// * For example, `1 ≤ m ≤ 8` for a `pad→Qua8` and `1 ≤ n ≤ 4` for `pad_b→Qua4`
+/// * The determinant of the Jacobian is calculated for `pad` (`pad` is the driver of the calculations)
+/// * The number of integration points must consider the nodes of `pad` and the expected order of the whole integrand
 ///
 /// Coupling vectors:
 ///
@@ -205,7 +210,7 @@ pub fn mat_coupling_nvn() -> Result<(), StrError> {
 /// * `kk` -- A matrix containing all `Kᵐⁿᵢ` values, one after another, and sequentially placed as shown
 ///   above (in 2D). `m` and `n` are the indices of the node and `i` corresponds to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + pad_b.nnode`.
-/// * `pad` -- "Driver" scratchpad (modified) to compute G
+/// * `pad` -- Driver scratchpad (modified) to compute G
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
 ///
 /// # Input
@@ -216,13 +221,10 @@ pub fn mat_coupling_nvn() -> Result<(), StrError> {
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
 ///
-/// # Warning and additional notes
+/// # Warning
 ///
-/// The two [crate::shapes::Scratchpad]s mut be compatible with `pad_b` being the lower-order version of `pad`.
-/// For example, if `pad` corresponds to `Qua8`, then `pad_b` must be a `Qua4`. Otherwise, **calculation errors may occur**.
-///
-/// Note: The determinant of the Jacobian is calculated for `pad`; i.e., `pad` is the **driver** of the calculations.
-/// Also, the number of integration points must be consider the number of nodes of `pad` and the expected order of the whole integrand.
+/// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
+/// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
 pub fn mat_coupling_gsnb<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
