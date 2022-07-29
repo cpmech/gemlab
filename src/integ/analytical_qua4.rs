@@ -14,7 +14,7 @@ impl AnalyticalQua4 {
         AnalyticalQua4 { a, b }
     }
 
-    /// Performs the nsn integration
+    /// Performs the n-s-n integration with constant s(x) field
     ///
     /// From @bhatti:05\page{332}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
@@ -28,7 +28,7 @@ impl AnalyticalQua4 {
         ])
     }
 
-    /// Performs the gtg integration
+    /// Performs the g-t-g integration with constant (and diagonal) tensor field
     ///
     /// From @bhatti:05\page{332}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.

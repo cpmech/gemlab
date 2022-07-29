@@ -339,7 +339,7 @@ mod tests {
         let mut kk = Matrix::new(4, 4);
         let ana = AnalyticalTet4::new(&pad);
         let (v0, v1, v2) = (2.0, 3.0, 4.0);
-        let kk_correct = ana.integ_gvn_constant(v0, v1, v2);
+        let kk_correct = ana.integ_gvn(v0, v1, v2);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];
@@ -390,7 +390,7 @@ mod tests {
         let ana = AnalyticalTet4::new(&pad);
         // constant
         let (v0, v1, v2) = (2.0, 3.0, 4.0);
-        let kk_correct = ana.integ_nvg_constant(v0, v1, v2);
+        let kk_correct = ana.integ_nvg(v0, v1, v2);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];

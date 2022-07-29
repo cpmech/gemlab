@@ -15,7 +15,7 @@ impl AnalyticalQua8 {
         AnalyticalQua8 { a, b }
     }
 
-    /// Performs the nsn integration
+    /// Performs the nsn integration with constant s(x) field
     ///
     /// From @bhatti:05\page{348}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
@@ -35,7 +35,7 @@ impl AnalyticalQua8 {
         ])
     }
 
-    /// Performs the gtg integration
+    /// Performs the gtg integration with constant (and diagonal) stress field
     ///
     /// From @bhatti:05\page{348}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
@@ -56,6 +56,7 @@ impl AnalyticalQua8 {
         ])
     }
 
+    /// Performs the coupled nb-s-g integration with constant s(x) field
     #[rustfmt::skip]
     pub fn integ_nbsg(&self, s: f64) -> Matrix {
         let a = self.a;
@@ -69,6 +70,7 @@ impl AnalyticalQua8 {
         ])
     }
 
+    /// Performs the coupled g-s-nb integration with constant s(x) field
     #[rustfmt::skip]
     pub fn integ_gsnb(&self, s: f64) -> Matrix {
         let a = self.a;
@@ -94,6 +96,7 @@ impl AnalyticalQua8 {
         ])
     }
 
+    /// Performs the coupled gb-t-n integration with constant tensor field
     #[rustfmt::skip]
     pub fn integ_gbtn(&self, tt: &Tensor2) -> Matrix {
         let a = self.a;
@@ -108,6 +111,7 @@ impl AnalyticalQua8 {
         ])
     }
 
+    /// Performs the coupled n-v-nb integration with constant vector field
     #[rustfmt::skip]
     pub fn integ_nvnb(&self, v0: f64, v1: f64) -> Matrix {
         let c = self.a * self.b / 9.0;

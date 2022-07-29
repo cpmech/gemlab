@@ -766,7 +766,7 @@ mod tests {
             [1.2, 2.2, 2.3],
             [1.3, 2.3, 3.3]],
         true, false).unwrap();
-        let kk_correct = ana.integ_gtg_constant(&sig);
+        let kk_correct = ana.integ_gtg(&sig);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14];
@@ -817,7 +817,7 @@ mod tests {
             [1.2, 2.2, 2.3],
             [1.3, 2.3, 3.3]],
         true, false).unwrap();
-        let kk_correct = ana.integ_ntn_constant(&sig);
+        let kk_correct = ana.integ_ntn(&sig);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];
@@ -931,7 +931,7 @@ mod tests {
 
         // analytical solution
         let mut ana = AnalyticalTet4::new(&pad);
-        let kk_correct = ana.integ_stiffness(young, poisson).unwrap();
+        let kk_correct = ana.integ_gdg(young, poisson).unwrap();
 
         // check
         let class = pad.kind.class();

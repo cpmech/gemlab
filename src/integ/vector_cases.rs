@@ -750,7 +750,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTet4::new(&pad);
-        let b_correct = ana.integ_vec_b_constant(V0, V1, V2);
+        let b_correct = ana.integ_vec_b(V0, V1, V2);
 
         // integration points
         let class = pad.kind.class();
@@ -842,7 +842,7 @@ mod tests {
         const W1: f64 = 3.0;
         const W2: f64 = 4.0;
         let ana = AnalyticalTet4::new(&pad);
-        let c_correct = ana.integ_vec_c_constant(W0, W1, W2);
+        let c_correct = ana.integ_vec_c(W0, W1, W2);
 
         // integration points
         let class = pad.kind.class();
@@ -921,7 +921,7 @@ mod tests {
         const S12: f64 = 6.0;
         const S02: f64 = 7.0;
         let ana = AnalyticalTet4::new(&pad);
-        let d_correct = ana.integ_vec_d_constant(S00, S11, S22, S01, S12, S02);
+        let d_correct = ana.integ_vec_d(S00, S11, S22, S01, S12, S02);
 
         // integration points
         let class = pad.kind.class();

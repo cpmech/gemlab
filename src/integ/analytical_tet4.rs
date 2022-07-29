@@ -27,6 +27,7 @@ pub struct AnalyticalTet4 {
 }
 
 impl AnalyticalTet4 {
+    /// Allocates a new instance
     pub fn new(pad: &Scratchpad) -> Self {
         assert_eq!(pad.kind, GeoKind::Tet4);
 
@@ -155,7 +156,7 @@ impl AnalyticalTet4 {
     /// bᵐ₁ = v₁ V / 4
     /// bᵐ₂ = v₂ V / 4
     /// ```
-    pub fn integ_vec_b_constant(&self, v0: f64, v1: f64, v2: f64) -> Vec<f64> {
+    pub fn integ_vec_b(&self, v0: f64, v1: f64, v2: f64) -> Vec<f64> {
         vec![
             v0 * self.volume / 4.0,
             v1 * self.volume / 4.0,
@@ -179,7 +180,7 @@ impl AnalyticalTet4 {
     /// ```text
     /// cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁ + w₂ Gᵐ₂) V
     /// ```
-    pub fn integ_vec_c_constant(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
+    pub fn integ_vec_c(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
         vec![
             (w0 * self.gg[0][0] + w1 * self.gg[0][1] + w2 * self.gg[0][2]) * self.volume,
             (w0 * self.gg[1][0] + w1 * self.gg[1][1] + w2 * self.gg[1][2]) * self.volume,
@@ -197,7 +198,7 @@ impl AnalyticalTet4 {
     ///    dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁ + σ₁₂ Gᵐ₂) V
     ///    dᵐ₂ = (σ₂₀ Gᵐ₀ + σ₂₁ Gᵐ₁ + σ₂₂ Gᵐ₂) V
     /// ```
-    pub fn integ_vec_d_constant(&self, s00: f64, s11: f64, s22: f64, s01: f64, s12: f64, s02: f64) -> Vec<f64> {
+    pub fn integ_vec_d(&self, s00: f64, s11: f64, s22: f64, s01: f64, s12: f64, s02: f64) -> Vec<f64> {
         vec![
             (s00 * self.gg[0][0] + s01 * self.gg[0][1] + s02 * self.gg[0][2]) * self.volume,
             (s01 * self.gg[0][0] + s11 * self.gg[0][1] + s12 * self.gg[0][2]) * self.volume,
@@ -214,9 +215,9 @@ impl AnalyticalTet4 {
         ]
     }
 
-    /// Performs the gtg integration with constant tensor
+    /// Performs the g-t-g integration with constant tensor field
     #[rustfmt::skip]
-    pub fn integ_gtg_constant(&self, sig: &Tensor2) -> Matrix {
+    pub fn integ_gtg(&self, sig: &Tensor2) -> Matrix {
         let c = self.volume;
         let mat = sig.to_matrix();
         let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
@@ -234,9 +235,9 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the gvn integration with constant vector
+    /// Performs the g-v-n integration with constant vector field
     #[rustfmt::skip]
-    pub fn integ_gvn_constant(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+    pub fn integ_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
         let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
         let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
@@ -250,9 +251,9 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the nvg integration with constant vector
+    /// Performs the n-v-g integration with constant vector field
     #[rustfmt::skip]
-    pub fn integ_nvg_constant(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+    pub fn integ_nvg(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
         let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
         let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
@@ -274,9 +275,9 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the gtg integration with constant tensor
+    /// Performs the g-t-g integration with constant tensor field
     #[rustfmt::skip]
-    pub fn integ_ntn_constant(&self, sig: &Tensor2) -> Matrix {
+    pub fn integ_ntn(&self, sig: &Tensor2) -> Matrix {
         let vv = self.volume;
         let mat = sig.to_matrix();
         let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
@@ -298,14 +299,14 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Calculates the stiffness matrix
+    /// Performs the g-d-g integration with constant tensor field (calculates the stiffness matrix)
     ///
     /// solution:
     ///
     /// ```text
     /// K = Bᵀ ⋅ D ⋅ B ⋅ volume
     /// ```
-    pub fn integ_stiffness(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
+    pub fn integ_gdg(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, false, false);
         let dd = ela.get_modulus();
         let dim_dd = 6;
@@ -372,7 +373,7 @@ mod tests {
             [ 0.0,  -nt,  -nt,  0.0, 0.0, 0.0, 0.0,  0.0,  nt, 0.0,  nt,  0.0],
             [-tnu, -tnu, -tnh,  tnu, 0.0, 0.0, 0.0,  tnu, 0.0, 0.0, 0.0,  tnh],
         ]);
-        let kk = tet.integ_stiffness(ee, nu).unwrap();
+        let kk = tet.integ_gdg(ee, nu).unwrap();
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // non-right-angles tet4
@@ -395,7 +396,7 @@ mod tests {
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
         assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
-        let kk = tet.integ_stiffness(ee, nu).unwrap();
+        let kk = tet.integ_gdg(ee, nu).unwrap();
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
             [ 745.0,  540.0, 120.0,  -5.0,  30.0,  60.0,-270.0, -240.0,   0.0,-470.0, -330.0,-180.0],
