@@ -132,34 +132,6 @@ where
     Ok(())
 }
 
-/// Implements the gradient(G) time tensor(T) time shape(N) integration case with different shapes (e.g., coupling matrix)
-///
-/// Coupling vectors:
-///
-/// ```text
-/// →     ⌠ →
-/// Kᵐⁿ = │ GBᵐ ⋅ T Nⁿ dΩ
-///       ⌡       ▔
-///       Ωₑ
-/// ```
-pub fn mat_coup_gtn() -> Result<(), StrError> {
-    Err("mat_coupling_gtn: TODO")
-}
-
-/// Implements the shape(N) time vector(V) time shape(N) integration case with different shapes (e.g., coupling matrix)
-///
-/// Coupling vectors:
-///
-/// ```text
-/// →     ⌠    →
-/// Kᵐⁿ = │ Nᵐ v NBⁿ dΩ
-///       ⌡
-///       Ωₑ
-/// ```
-pub fn mat_coup_nvn() -> Result<(), StrError> {
-    Err("mat_coupling_nvn: TODO")
-}
-
 /// Implements the gradient(G) time scalar(S) time shape(Nb) integration case with different shapes (e.g., coupling matrix)
 ///
 /// **Notes:**
@@ -292,6 +264,34 @@ where
     Ok(())
 }
 
+/// Implements the gradient(G) time tensor(T) time shape(N) integration case with different shapes (e.g., coupling matrix)
+///
+/// Coupling vectors:
+///
+/// ```text
+/// →     ⌠ →
+/// Kᵐⁿ = │ GBᵐ ⋅ T Nⁿ dΩ
+///       ⌡       ▔
+///       Ωₑ
+/// ```
+pub fn mat_coup_gtn() -> Result<(), StrError> {
+    Err("mat_coupling_gtn: TODO")
+}
+
+/// Implements the shape(N) time vector(V) time shape(N) integration case with different shapes (e.g., coupling matrix)
+///
+/// Coupling vectors:
+///
+/// ```text
+/// →     ⌠    →
+/// Kᵐⁿ = │ Nᵐ v NBⁿ dΩ
+///       ⌡
+///       Ωₑ
+/// ```
+pub fn mat_coup_nvn() -> Result<(), StrError> {
+    Err("mat_coupling_nvn: TODO")
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -342,6 +342,27 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_coup_nbsg(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            // println!("{:.2}", kk);
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn mat_coup_gsnb_works() {
+        let (a, b) = (2.0, 3.0);
+        let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
+        let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
+        let mut kk = Matrix::new(8 * 2, 4);
+        let ana = AnalyticalQua8::new(a, b);
+        let s = 9.0;
+        let kk_correct = ana.integ_gsnb(s);
+        // println!("{}", kk_correct);
+        let class = pad.kind.class();
+        let tolerances = [1e-14, 1e-14];
+        let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_coup_gsnb(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |_| Ok(s)).unwrap();
             // println!("{:.2}", kk);
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
