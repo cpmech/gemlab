@@ -150,7 +150,7 @@ mod tests {
             (GeoKind::Qua8, 1e-10),
             (GeoKind::Qua9, 1e-10),
             (GeoKind::Qua12, 1e-10),
-            (GeoKind::Qua16, 1e-10),
+            (GeoKind::Qua16, 1e-9),
             (GeoKind::Qua17, 1e-9),
             // Tet
             (GeoKind::Tet4, 1e-12),
