@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the shape(N) time vector(V) time shape(Nb) integration case with different shapes (e.g., coupling matrix)
+/// Implements the shape(N) time vector(V) time shape(Nb) integration case 06 (e.g., coupling matrix)
 ///
 /// **Notes:**
 ///
@@ -68,7 +68,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
-pub fn mat_coup_nvnb<F>(
+pub fn mat_06_nvn<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     pad_b: &mut Scratchpad,
@@ -154,17 +154,17 @@ mod tests {
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
         assert_eq!(
-            integ::mat_coup_nvnb(&mut kk, &mut pad, &mut pad_b, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 1, 0, false, &[], |_, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_coup_nvnb(&mut kk, &mut pad, &mut pad_b, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + pad_b.nnode")
         );
     }
 
     #[test]
-    fn mat_coup_nvnb_works() {
+    fn mat_06_nvn_works() {
         let (a, b) = (2.0, 3.0);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
@@ -178,7 +178,7 @@ mod tests {
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_coup_nvnb(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |v, _| {
+            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |v, _| {
                 v[0] = v0;
                 v[1] = v1;
                 Ok(())

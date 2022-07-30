@@ -5,7 +5,7 @@ use crate::StrError;
 use russell_lab::Matrix;
 use russell_tensor::Tensor4;
 
-/// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case (e.g., stiffness matrix)
+/// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case 10 (e.g., stiffness matrix)
 ///
 /// Stiffness tensors (assuming an implicit sum over repeated lower indices):
 ///
@@ -94,7 +94,7 @@ use russell_tensor::Tensor4;
 ///     let nrow = pad.kind.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let ips = integ::default_points(pad.kind);
-///     integ::mat_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+///     integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
 ///         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
 ///     })?;
 ///
@@ -118,7 +118,7 @@ use russell_tensor::Tensor4;
 ///     Ok(())
 /// }
 /// ```
-pub fn mat_gdg<F>(
+pub fn mat_10_gdg<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ii0: usize,
@@ -162,7 +162,7 @@ where
 
         // add contribution to K matrix
         let c = det_jac * weight;
-        mat_gdg_add_to_mat_kk(kk, ii0, jj0, &dd, c, pad);
+        mat_10_gdg_add_to_mat_kk(kk, ii0, jj0, &dd, c, pad);
     }
     Ok(())
 }
@@ -170,7 +170,7 @@ where
 /// Adds contribution to the K-matrix in integ_mat_10_gdg
 #[inline]
 #[rustfmt::skip]
-fn mat_gdg_add_to_mat_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, pad: &mut Scratchpad) {
+fn mat_10_gdg_add_to_mat_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, pad: &mut Scratchpad) {
     let s = SQRT_2;
     let g = &pad.gradient;
     let d = &dd.mat;
@@ -217,28 +217,28 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_gdg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_gdg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
         assert_eq!(
-            integ::mat_gdg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         assert_eq!(
-            integ::mat_gdg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
             Some("stop")
         );
     }
 
     #[test]
-    fn mat_gdg_works_tri3_plane_stress() {
+    fn mat_10_gdg_works_tri3_plane_stress() {
         // Element # 0 from example 1.6 from @bhatti page 32
         // Solid bracket with thickness = 0.25
         //              1     -10                connectivity:
@@ -276,7 +276,7 @@ mod tests {
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = integ::points(class, 1).unwrap();
-        integ::mat_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
             let in_array = model.get_modulus().mat.as_data();
             let out_array = dd.mat.as_mut_data();
             for i in 0..in_array.len() {
@@ -310,7 +310,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
                 let in_array = model.get_modulus().mat.as_data();
                 let out_array = dd.mat.as_mut_data();
                 for i in 0..in_array.len() {
@@ -324,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_gdg_works_tet4() {
+    fn mat_10_gdg_works_tet4() {
         // scratchpad
         let mut pad = aux::gen_pad_tet4();
 
@@ -349,7 +349,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();

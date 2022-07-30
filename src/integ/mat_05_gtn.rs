@@ -5,7 +5,7 @@ use crate::StrError;
 use russell_lab::Matrix;
 use russell_tensor::Tensor2;
 
-/// Implements the gradient(Gb) time tensor(T) time shape(N) integration case with different shapes (e.g., coupling matrix)
+/// Implements the gradient(Gb) time tensor(T) time shape(N) integration case 05 (e.g., coupling matrix)
 ///
 /// **Notes:**
 ///
@@ -67,7 +67,7 @@ use russell_tensor::Tensor2;
 ///
 /// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
-pub fn mat_coup_gbtn<F>(
+pub fn mat_05_gtn<F>(
     kk: &mut Matrix,
     pad_b: &mut Scratchpad,
     pad: &mut Scratchpad,
@@ -159,17 +159,17 @@ mod tests {
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
         assert_eq!(
-            integ::mat_coup_gbtn(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
         assert_eq!(
-            integ::mat_coup_gbtn(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
     }
 
     #[test]
-    fn mat_coup_gbtn_works() {
+    fn mat_05_gtn_works() {
         let (a, b) = (2.0, 3.0);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
@@ -188,7 +188,7 @@ mod tests {
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_coup_gbtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _| {
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _| {
                 copy_vector(&mut ten.vec, &tt.vec)
             })
             .unwrap();

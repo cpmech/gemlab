@@ -5,7 +5,7 @@ use crate::StrError;
 use russell_lab::Matrix;
 use russell_tensor::Tensor2;
 
-/// Implements the gradient(G) dot tensor(T) dot gradient(G) integration case (e.g., conductivity matrix)
+/// Implements the gradient(G) dot tensor(T) dot gradient(G) integration case 03 (e.g., conductivity matrix)
 ///
 /// Conductivity coefficients:
 ///
@@ -50,7 +50,7 @@ use russell_tensor::Tensor2;
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_tt` -- Function `f(T,p)` that computes `T(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
-pub fn mat_gtg<F>(
+pub fn mat_03_gtg<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ii0: usize,
@@ -136,28 +136,28 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
-            integ::mat_gtg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         assert_eq!(
-            integ::mat_gtg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         // more errors
         assert_eq!(
-            integ::mat_gtg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_qua4(0.0, 0.0, 1.0, 1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_gtg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
             Some("stop")
         );
     }
 
     #[test]
-    fn mat_gtg_tri3_works() {
+    fn mat_03_gtg_tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
         let ana = AnalyticalTri3::new(&pad);
@@ -168,7 +168,7 @@ mod tests {
         let selection: Vec<_> = [1, 3, 7].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 tt.sym_set(0, 0, kx);
                 tt.sym_set(1, 1, ky);
                 Ok(())
@@ -179,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_gtg_qua4_works() {
+    fn mat_03_gtg_qua4_works() {
         let (a, b) = (2.0, 1.5);
         let mut pad = aux::gen_pad_qua4(2.0, 1.0, a, b);
         let mut kk = Matrix::new(4, 4);
@@ -191,7 +191,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 tt.sym_set(0, 0, kx);
                 tt.sym_set(1, 1, ky);
                 Ok(())
@@ -202,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_gtg_qua8_works() {
+    fn mat_03_gtg_qua8_works() {
         let (a, b) = (2.0, 1.5);
         let mut pad = aux::gen_pad_qua8(2.0, 1.0, a, b);
         let mut kk = Matrix::new(8, 8);
@@ -214,7 +214,7 @@ mod tests {
         let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 tt.sym_set(0, 0, kx);
                 tt.sym_set(1, 1, ky);
                 Ok(())
@@ -225,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_gtg_tet4_works() {
+    fn mat_03_gtg_tet4_works() {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4, 4);
         let ana = AnalyticalTet4::new(&pad);
@@ -242,7 +242,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 copy_vector(&mut tt.vec, &sig.vec)
             })
             .unwrap();

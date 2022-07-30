@@ -5,7 +5,7 @@ use crate::StrError;
 use russell_lab::Matrix;
 use russell_tensor::Tensor2;
 
-/// Implements the shape(N) times tensor(T) times shape(N) integration case (e.g., mass matrix)
+/// Implements the shape(N) times tensor(T) times shape(N) integration case 08 (e.g., mass matrix)
 ///
 /// Mass coefficients:
 ///
@@ -56,7 +56,7 @@ use russell_tensor::Tensor2;
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_tt` -- Function `f(T,p)` that computes `T(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
-pub fn mat_ntn<F>(
+pub fn mat_08_ntn<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ii0: usize,
@@ -150,28 +150,28 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_ntn(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_ntn(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
         assert_eq!(
-            integ::mat_ntn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         assert_eq!(
-            integ::mat_ntn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
             Some("stop")
         );
     }
 
     #[test]
-    fn mat_ntn_tri3_works() {
+    fn mat_08_ntn_tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3 * 2, 3 * 2);
         let ana = AnalyticalTri3::new(&pad);
@@ -183,7 +183,7 @@ mod tests {
         let selection: Vec<_> = [3, 6].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 tt.sym_set(0, 0, rho);
                 tt.sym_set(1, 1, rho);
                 Ok(())
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_ntn_tet4_works() {
+    fn mat_08_ntn_tet4_works() {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4 * 3, 4 * 3);
         let ana = AnalyticalTet4::new(&pad);
@@ -212,7 +212,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
                 copy_vector(&mut tt.vec, &sig.vec)
             })
             .unwrap();

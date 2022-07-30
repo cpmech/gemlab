@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::Matrix;
 
-/// Implements the gradient(G) time scalar(S) time shape(Nb) integration case with different shapes (e.g., coupling matrix)
+/// Implements the gradient(G) time scalar(S) time shape(Nb) integration case 07 (e.g., coupling matrix)
 ///
 /// **Notes:**
 ///
@@ -68,7 +68,7 @@ use russell_lab::Matrix;
 ///
 /// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
-pub fn mat_coup_gsnb<F>(
+pub fn mat_07_gsn<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     pad_b: &mut Scratchpad,
@@ -150,17 +150,17 @@ mod tests {
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
         assert_eq!(
-            integ::mat_coup_gsnb(&mut kk, &mut pad, &mut pad_b, 1, 0, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_07_gsn(&mut kk, &mut pad, &mut pad_b, 1, 0, false, &[], |_| Ok(0.0)).err(),
             Some("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_coup_gsnb(&mut kk, &mut pad, &mut pad_b, 0, 1, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_07_gsn(&mut kk, &mut pad, &mut pad_b, 0, 1, false, &[], |_| Ok(0.0)).err(),
             Some("ncol(K) must be ≥ jj0 + pad_b.nnode")
         );
     }
 
     #[test]
-    fn mat_coup_gsnb_works() {
+    fn mat_07_gsn_works() {
         let (a, b) = (2.0, 3.0);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
@@ -174,7 +174,7 @@ mod tests {
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_coup_gsnb(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            integ::mat_07_gsn(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |_| Ok(s)).unwrap();
             // println!("{:.2}", kk);
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });

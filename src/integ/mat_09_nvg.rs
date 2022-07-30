@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the shape(N) times vector(V) dot gradient(G) integration case (e.g., variable density matrix)
+/// Implements the shape(N) times vector(V) dot gradient(G) integration case 09 (e.g., variable density matrix)
 ///
 /// Variable density coefficients:
 ///
@@ -55,7 +55,7 @@ use russell_lab::{Matrix, Vector};
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_v` -- Function `f(v,p)` that computes `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`.
 ///   The dim of `v` is equal to `space_ndim`.
-pub fn mat_nvg<F>(
+pub fn mat_09_nvg<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ii0: usize,
@@ -147,28 +147,28 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_nvg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_nvg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
         assert_eq!(
-            integ::mat_nvg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         assert_eq!(
-            integ::mat_nvg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
             Some("stop")
         );
     }
 
     #[test]
-    fn mat_nvg_tri3_works() {
+    fn mat_09_nvg_tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3 * 2, 3 * 2);
         let ana = AnalyticalTri3::new(&pad);
@@ -181,7 +181,7 @@ mod tests {
         let selection: Vec<_> = [3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_nvg(&mut kk, &mut pad, 0, 0, true, ips, |v, _| {
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, true, ips, |v, _| {
                 v[0] = v0;
                 v[1] = v1;
                 Ok(())
@@ -193,7 +193,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_nvg_tet4_works() {
+    fn mat_09_nvg_tet4_works() {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4 * 3, 4 * 3);
         let ana = AnalyticalTet4::new(&pad);
@@ -206,7 +206,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_nvg(&mut kk, &mut pad, 0, 0, true, ips, |v, _| {
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, true, ips, |v, _| {
                 v[0] = v0;
                 v[1] = v1;
                 v[2] = v2;
