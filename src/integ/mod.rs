@@ -30,7 +30,9 @@
 //!
 //! # Vector results: Integration of some combinations involving N and G resulting in vectors
 //!
-//! ## VEC 01: Interpolation functions times scalar field [vec_01_ns()]:
+//! ## VEC 01: Interpolation functions times scalar field
+//!
+//! Function [vec_01_ns()]
 //!
 //! ```text
 //!      ⌠    → →     →
@@ -39,7 +41,9 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 02: Interpolation functions times vector field [vec_02_nv()]:
+//! ## VEC 02: Interpolation functions times vector field
+//!
+//! Function [vec_02_nv()]
 //!
 //! ```text
 //! →    ⌠    → →   → →
@@ -48,7 +52,9 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 03: Vector dot gradient [vec_03_vg()]:
+//! ## VEC 03: Vector dot gradient
+//!
+//! Function [vec_03_vg()]
 //!
 //! ```text
 //!      ⌠ → →    →  → →
@@ -57,7 +63,9 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 04: Tensor dot gradient [vec_04_tg()]:
+//! ## VEC 04: Tensor dot gradient
+//!
+//! Function [vec_04_tg()]
 //!
 //! ```text
 //! →    ⌠   →    →  → →
@@ -72,7 +80,7 @@
 //!
 //! ## MAT 01: Shape(N) times scalar(S) times shape(N) (e.g., diffusion matrix)
 //!
-//! [mat_01_nsn()]
+//! Function [mat_01_nsn()]
 //!
 //! ```text
 //!       ⌠
@@ -83,7 +91,7 @@
 //!
 //! ## MAT 02: Gradient(G) dot vector(V) times shape(N) (e.g., compressibility matrix)
 //!
-//! [mat_02_gvn()]
+//! Function [mat_02_gvn()]
 //!
 //! ```text
 //!       ⌠ →    →
@@ -94,7 +102,7 @@
 //!
 //! ## MAT 03: Gradient(G) dot tensor(T) dot gradient(G) (e.g., conductivity matrix)
 //!
-//! [mat_03_gtg()]
+//! Function [mat_03_gtg()]
 //!
 //! ```text
 //!       ⌠ →        →
@@ -105,7 +113,7 @@
 //!
 //! ## MAT 04: shape(Nb) time scalar(S) time gradient(G) (e.g., coupling matrix)
 //!
-//! [mat_04_nsg()]
+//! Function [mat_04_nsg()]
 //!
 //! ```text
 //! →     ⌠       →
@@ -116,7 +124,7 @@
 //!
 //! ## MAT 05: Gradient(Gb) time tensor(T) time shape(N) (e.g., coupling matrix)
 //!
-//! [mat_05_gtn()]
+//! Function [mat_05_gtn()]
 //!
 //! ```text
 //! →     ⌠ →
@@ -127,7 +135,7 @@
 //!
 //! ## MAT 06: Shape(N) time vector(V) time shape(Nb) (e.g., coupling matrix)
 //!
-//! [mat_06_nvn()]
+//! Function [mat_06_nvn()]
 //!
 //! ```text
 //! →     ⌠    →
@@ -138,7 +146,7 @@
 //!
 //! ## MAT 07: Gradient(G) time scalar(S) time shape(Nb) (e.g., coupling matrix)
 //!
-//! [mat_07_gsn()]
+//! Function [mat_07_gsn()]
 //!
 //! ```text
 //! →     ⌠ →
@@ -149,7 +157,7 @@
 //!
 //! ## MAT 08: Shape(N) times tensor(T) times shape(N) (e.g., mass matrix)
 //!
-//! [mat_08_ntn()]
+//! Function [mat_08_ntn()]
 //!
 //! ```text
 //!       ⌠
@@ -160,7 +168,7 @@
 //!
 //! ## MAT 09: Shape(N) times vector(V) dot gradient(G) (e.g., variable density matrix)
 //!
-//! [mat_09_nvg()]
+//! Function [mat_09_nvg()]
 //!
 //! ```text
 //!       ⌠    →   →
@@ -171,7 +179,7 @@
 //!
 //! ## MAT 10: Gradient(G) dot 4th-tensor(D) dot gradient(G) (e.g., stiffness matrix)
 //!
-//! [mat_10_gdg()]
+//! Function [mat_10_gdg()]
 //!
 //! ```text
 //!       ⌠                       →    →
