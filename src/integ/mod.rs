@@ -17,9 +17,7 @@
 //! * G -- Gradients of shape functions (derivatives w.r.t real coordinates x)
 //! * see also the subsection named **Expressions** below
 //!
-//! # Functionality
-//!
-//! ## Integration of scalar field over a geometric shape
+//! # Integration of scalar field over a geometric shape
 //!
 //! Function [scalar_field()]
 //!
@@ -30,9 +28,9 @@
 //!     Ωₑ
 //! ```
 //!
-//! ## Integration of some combinations involving N and G resulting in vectors
+//! # Vector results: Integration of some combinations involving N and G resulting in vectors
 //!
-//! Interpolation functions times scalar field [vec_a()]:
+//! ## VEC 01: Interpolation functions times scalar field [vec_01_ns()]:
 //!
 //! ```text
 //!      ⌠    → →     →
@@ -41,7 +39,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! Interpolation functions times vector field [vec_b()]:
+//! ## VEC 02: Interpolation functions times vector field [vec_02_nv()]:
 //!
 //! ```text
 //! →    ⌠    → →   → →
@@ -50,7 +48,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! Vector dot gradient [vec_c()]:
+//! ## VEC 03: Vector dot gradient [vec_03_vg()]:
 //!
 //! ```text
 //!      ⌠ → →    →  → →
@@ -59,7 +57,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! Tensor dot gradient [vec_d()]:
+//! ## VEC 04: Tensor dot gradient [vec_04_tg()]:
 //!
 //! ```text
 //! →    ⌠   →    →  → →
@@ -68,14 +66,103 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## Integration of some combinations involving N, tensors, and G, resulting in matrices
+//! # Matrix results: Integration of some combinations involving N, tensors, and G, resulting in matrices
 //!
-//! Gradient(G) dot 4th-tensor(D) dot gradient(G) integration (stiffness matrix) [mat_gdg()]:
+//! ![cases](https://github.com/cpmech/gemlab/raw/main/data/figures/integ-matrix-cases.png)
+//!
+//! ## MAT 01: Shape(N) times scalar(S) times shape(N) (e.g., diffusion matrix)
 //!
 //! ```text
-//!       ⌠               →    →
-//! Kᵐⁿ = │ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
+//!       ⌠
+//! Kᵐⁿ = │ Nᵐ s Nⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 02: Gradient(G) dot vector(V) times shape(N) (e.g., compressibility matrix)
+//!
+//! Compressibility coefficients:
+//!
+//! ```text
+//!       ⌠ →    →
+//! Kᵐⁿ = │ Gᵐ ⋅ v Nⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 03: Gradient(G) dot tensor(T) dot gradient(G) (e.g., conductivity matrix)
+//!
+//! Conductivity coefficients:
+//!
+//! ```text
+//!       ⌠ →        →
+//! Kᵐⁿ = │ Gᵐ ⋅ T ⋅ Gⁿ dΩ
+//!       ⌡      ▔
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 04: shape(Nb) time scalar(S) time gradient(G) (e.g., coupling matrix)
+//!
+//! ```text
+//! →     ⌠       →
+//! Kᵐⁿ = │ Nbᵐ s Gⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 05: Gradient(Gb) time tensor(T) time shape(N) (e.g., coupling matrix)
+//!
+//! ```text
+//! →     ⌠ →
+//! Kᵐⁿ = │ Gbᵐ ⋅ T Nⁿ dΩ
+//!       ⌡       ▔
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 06: Shape(N) time vector(V) time shape(Nb) (e.g., coupling matrix)
+//!
+//! ```text
+//! →     ⌠    →
+//! Kᵐⁿ = │ Nᵐ v Nbⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 07: Gradient(G) time scalar(S) time shape(Nb) (e.g., coupling matrix)
+//!
+//! ```text
+//! →     ⌠ →
+//! Kᵐⁿ = │ Gᵐ s Nbⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 08: Shape(N) times tensor(T) times shape(N) (e.g., mass matrix)
+//!
+//! ```text
+//!       ⌠
+//! Kᵐⁿ = │ Nᵐ T Nⁿ dΩ
+//! ▔     ⌡    ▔
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 09: Shape(N) times vector(V) dot gradient(G) (e.g., variable density matrix)
+//!
+//! ```text
+//!       ⌠    →   →
+//! Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ dΩ
 //! ▔     ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 10: Gradient(G) dot 4th-tensor(D) dot gradient(G) (e.g., stiffness matrix)
+//!
+//! [mat_10_gdg()]
+//!
+//! ```text
+//!       ⌠                       →    →
+//! Kᵐⁿ = │ Σ Σ Σ Σ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
+//! ▔     ⌡ i j k l
 //!       Ωₑ
 //! ```
 //!

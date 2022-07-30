@@ -7,21 +7,21 @@ use russell_tensor::Tensor4;
 
 /// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case 10 (e.g., stiffness matrix)
 ///
-/// Stiffness tensors (assuming an implicit sum over repeated lower indices):
+/// Stiffness tensors (note the sum over repeated lower indices):
 ///
 /// ```text
-///       ⌠               →    →
-/// Kᵐⁿ = │ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
-/// ▔     ⌡
+///       ⌠                       →    →
+/// Kᵐⁿ = │ Σ Σ Σ Σ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
+/// ▔     ⌡ i j k l
 ///       Ωₑ
 /// ```
 ///
-/// The numerical integration is (assuming an implicit sum over repeated lower indices):
+/// The numerical integration is (note the sum over repeated lower indices):
 ///
 /// ```text
-///         nip-1     →         →       →          →
-/// Kᵐⁿᵢⱼ ≈   Σ   Gᵐₖ(ιᵖ) Dᵢₖⱼₗ(ιᵖ) Gⁿₗ(ιᵖ) |J|(ιᵖ) wᵖ
-///          p=0
+///         nip-1         →         →       →          →
+/// Kᵐⁿᵢⱼ ≈   Σ   Σ Σ Gᵐₖ(ιᵖ) Dᵢₖⱼₗ(ιᵖ) Gⁿₗ(ιᵖ) |J|(ιᵖ) wᵖ
+///          p=0  k l
 /// ```
 ///
 /// # Output
