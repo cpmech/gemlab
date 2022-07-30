@@ -72,6 +72,8 @@
 //!
 //! ## MAT 01: Shape(N) times scalar(S) times shape(N) (e.g., diffusion matrix)
 //!
+//! [mat_01_nsn()]
+//!
 //! ```text
 //!       ⌠
 //! Kᵐⁿ = │ Nᵐ s Nⁿ dΩ
@@ -81,7 +83,7 @@
 //!
 //! ## MAT 02: Gradient(G) dot vector(V) times shape(N) (e.g., compressibility matrix)
 //!
-//! Compressibility coefficients:
+//! [mat_02_gvn()]
 //!
 //! ```text
 //!       ⌠ →    →
@@ -92,7 +94,7 @@
 //!
 //! ## MAT 03: Gradient(G) dot tensor(T) dot gradient(G) (e.g., conductivity matrix)
 //!
-//! Conductivity coefficients:
+//! [mat_03_gtg()]
 //!
 //! ```text
 //!       ⌠ →        →
@@ -103,6 +105,8 @@
 //!
 //! ## MAT 04: shape(Nb) time scalar(S) time gradient(G) (e.g., coupling matrix)
 //!
+//! [mat_04_nsg()]
+//!
 //! ```text
 //! →     ⌠       →
 //! Kᵐⁿ = │ Nbᵐ s Gⁿ dΩ
@@ -111,6 +115,8 @@
 //! ```
 //!
 //! ## MAT 05: Gradient(Gb) time tensor(T) time shape(N) (e.g., coupling matrix)
+//!
+//! [mat_05_gtn()]
 //!
 //! ```text
 //! →     ⌠ →
@@ -121,6 +127,8 @@
 //!
 //! ## MAT 06: Shape(N) time vector(V) time shape(Nb) (e.g., coupling matrix)
 //!
+//! [mat_06_nvn()]
+//!
 //! ```text
 //! →     ⌠    →
 //! Kᵐⁿ = │ Nᵐ v Nbⁿ dΩ
@@ -129,6 +137,8 @@
 //! ```
 //!
 //! ## MAT 07: Gradient(G) time scalar(S) time shape(Nb) (e.g., coupling matrix)
+//!
+//! [mat_07_gsn()]
 //!
 //! ```text
 //! →     ⌠ →
@@ -139,6 +149,8 @@
 //!
 //! ## MAT 08: Shape(N) times tensor(T) times shape(N) (e.g., mass matrix)
 //!
+//! [mat_08_ntn()]
+//!
 //! ```text
 //!       ⌠
 //! Kᵐⁿ = │ Nᵐ T Nⁿ dΩ
@@ -147,6 +159,8 @@
 //! ```
 //!
 //! ## MAT 09: Shape(N) times vector(V) dot gradient(G) (e.g., variable density matrix)
+//!
+//! [mat_09_nvg()]
 //!
 //! ```text
 //!       ⌠    →   →
