@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::Matrix;
 
-/// Implements the shape(Nb) time scalar(S) time gradient(G) integration case 04 (e.g., coupling matrix)
+/// Implements the shape(Nb) times scalar(S) times gradient(G) integration case 04 (e.g., coupling matrix)
 ///
 /// **Notes:**
 ///

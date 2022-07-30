@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the shape(N) time vector(V) time shape(Nb) integration case 06 (e.g., coupling matrix)
+/// Implements the shape(N) times vector(V) times shape(Nb) integration case 06 (e.g., coupling matrix)
 ///
 /// **Notes:**
 ///

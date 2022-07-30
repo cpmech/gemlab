@@ -5,7 +5,7 @@ use crate::StrError;
 use russell_lab::Matrix;
 use russell_tensor::Tensor2;
 
-/// Implements the gradient(Gb) time tensor(T) time shape(N) integration case 05 (e.g., coupling matrix)
+/// Implements the gradient(Gb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
 ///
 /// **Notes:**
 ///
