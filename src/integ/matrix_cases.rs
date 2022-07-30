@@ -688,6 +688,25 @@ mod tests {
     }
 
     #[test]
+    fn mat_nsn_tet4_works() {
+        let mut pad = aux::gen_pad_tet4();
+        let mut kk = Matrix::new(4, 4);
+        let s = 3.0;
+        let ana = AnalyticalTet4::new(&pad);
+        let kk_correct = ana.integ_nsn(s);
+        // println!("{}", kk_correct);
+        let class = pad.kind.class();
+        let tolerances = [1e-15];
+        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            // println!("{}", kk);
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
     fn mat_gtg_tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);

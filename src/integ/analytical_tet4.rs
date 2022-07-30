@@ -222,6 +222,18 @@ impl AnalyticalTet4 {
         ]
     }
 
+    /// Performs the n-s-n integration with constant scalar function
+    #[rustfmt::skip]
+    pub fn integ_nsn(&self, s: f64) -> Matrix {
+        let c = self.volume / 20.0;
+        Matrix::from(&[
+            [2.0 * s * c, s * c, s * c, s * c],
+            [s * c, 2.0 * s * c, s * c, s * c],
+            [s * c, s * c, 2.0 * s * c, s * c],
+            [s * c, s * c, s * c, 2.0 * s * c],
+        ])
+    }
+
     /// Performs the g-t-g integration with constant tensor field
     #[rustfmt::skip]
     pub fn integ_gtg(&self, tt: &Tensor2) -> Matrix {
