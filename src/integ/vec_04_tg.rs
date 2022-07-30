@@ -74,7 +74,7 @@ use russell_tensor::Tensor2;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_d(&mut d, &mut pad, 0, true, ips, |sig, _| {
+///     integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
 ///         sig.sym_set(0, 1, 3.0);
@@ -92,7 +92,7 @@ use russell_tensor::Tensor2;
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_d<F>(
+pub fn vec_04_tg<F>(
     d: &mut Vector,
     pad: &mut Scratchpad,
     ii0: usize,
@@ -165,7 +165,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut d = Vector::new(4);
         assert_eq!(
-            integ::vec_d(&mut d, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
+            integ::vec_04_tg(&mut d, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
             Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -199,7 +199,7 @@ mod tests {
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_d(&mut d, &mut pad, 0, true, ips, |sig, _| {
+            integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -239,7 +239,7 @@ mod tests {
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_d(&mut d, &mut pad, 0, true, ips, |sig, _| {
+            integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _| {
                 copy_vector(&mut sig.vec, &tt.vec)
             })
             .unwrap();

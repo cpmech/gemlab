@@ -75,14 +75,14 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_a(&mut a, &mut pad, 0, true, ips, |_| Ok(5.0))?;
+///     integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
 ///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_a<F>(
+pub fn vec_01_ns<F>(
     a: &mut Vector,
     pad: &mut Scratchpad,
     ii0: usize,
@@ -140,7 +140,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut a = Vector::new(2);
         assert_eq!(
-            integ::vec_a(&mut a, &mut pad, 1, false, &[], |_| Ok(0.0)).err(),
+            integ::vec_01_ns(&mut a, &mut pad, 1, false, &[], |_| Ok(0.0)).err(),
             Some("a.len() must be ≥ ii0 + nnode")
         );
     }
@@ -176,7 +176,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_a(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][0])).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][0])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
     }
@@ -202,7 +202,7 @@ mod tests {
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            integ::vec_a(&mut a, &mut pad, 0, true, ips, |_| Ok(CS)).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_| Ok(CS)).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
     }
@@ -231,7 +231,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_a(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][2])).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][2])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
     }

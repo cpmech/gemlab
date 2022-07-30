@@ -68,7 +68,7 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_c(&mut c, &mut pad, 0, true, ips, |w, _| {
+///     integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
 ///         Ok(())
@@ -84,7 +84,7 @@ use russell_lab::Vector;
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_c<F>(
+pub fn vec_03_vg<F>(
     c: &mut Vector,
     pad: &mut Scratchpad,
     ii0: usize,
@@ -151,7 +151,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut c = Vector::new(2);
         assert_eq!(
-            integ::vec_c(&mut c, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
+            integ::vec_03_vg(&mut c, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
     }
@@ -176,7 +176,7 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_c(&mut c, &mut pad, 0, true, ips, |w, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(())
@@ -205,7 +205,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_c(&mut c, &mut pad, 0, true, ips, |w, p| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, p| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(())
@@ -239,7 +239,7 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_c(&mut c, &mut pad, 0, true, ips, |w, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;

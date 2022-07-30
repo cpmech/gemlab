@@ -73,7 +73,7 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, _| {
+///     integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
 ///         Ok(())
@@ -85,7 +85,7 @@ use russell_lab::Vector;
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_b<F>(
+pub fn vec_02_nv<F>(
     b: &mut Vector,
     pad: &mut Scratchpad,
     ii0: usize,
@@ -156,7 +156,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
         assert_eq!(
-            integ::vec_b(&mut b, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
+            integ::vec_02_nv(&mut b, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -188,7 +188,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, p| {
+            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, p| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
                 Ok(())
@@ -220,7 +220,7 @@ mod tests {
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, _| {
+            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
                 v[0] = V0;
                 v[1] = V1;
                 Ok(())
@@ -252,7 +252,7 @@ mod tests {
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_b(&mut b, &mut pad, 0, true, ips, |v, _| {
+            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
                 v[0] = V0;
                 v[1] = V1;
                 v[2] = V2;
