@@ -234,6 +234,22 @@ impl AnalyticalTet4 {
         ])
     }
 
+    /// Performs the g-v-n integration with constant vector field
+    #[rustfmt::skip]
+    pub fn integ_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+        let c = self.volume / 4.0;
+        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
+        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
+        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
+        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        Matrix::from(&[
+            [c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2)],
+            [c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2)],
+            [c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2)],
+            [c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2)],
+        ])
+    }
+
     /// Performs the g-t-g integration with constant tensor field
     #[rustfmt::skip]
     pub fn integ_gtg(&self, tt: &Tensor2) -> Matrix {
@@ -251,22 +267,6 @@ impl AnalyticalTet4 {
             [c*g00*(a00*g10 + a10*g11 + a20*g12) + c*g01*(a01*g10 + a11*g11 + a21*g12) + c*g02*(a02*g10 + a12*g11 + a22*g12), c*g10*(a00*g10 + a10*g11 + a20*g12) + c*g11*(a01*g10 + a11*g11 + a21*g12) + c*g12*(a02*g10 + a12*g11 + a22*g12), c*g20*(a00*g10 + a10*g11 + a20*g12) + c*g21*(a01*g10 + a11*g11 + a21*g12) + c*g22*(a02*g10 + a12*g11 + a22*g12), c*g30*(a00*g10 + a10*g11 + a20*g12) + c*g31*(a01*g10 + a11*g11 + a21*g12) + c*g32*(a02*g10 + a12*g11 + a22*g12)],
             [c*g00*(a00*g20 + a10*g21 + a20*g22) + c*g01*(a01*g20 + a11*g21 + a21*g22) + c*g02*(a02*g20 + a12*g21 + a22*g22), c*g10*(a00*g20 + a10*g21 + a20*g22) + c*g11*(a01*g20 + a11*g21 + a21*g22) + c*g12*(a02*g20 + a12*g21 + a22*g22), c*g20*(a00*g20 + a10*g21 + a20*g22) + c*g21*(a01*g20 + a11*g21 + a21*g22) + c*g22*(a02*g20 + a12*g21 + a22*g22), c*g30*(a00*g20 + a10*g21 + a20*g22) + c*g31*(a01*g20 + a11*g21 + a21*g22) + c*g32*(a02*g20 + a12*g21 + a22*g22)],
             [c*g00*(a00*g30 + a10*g31 + a20*g32) + c*g01*(a01*g30 + a11*g31 + a21*g32) + c*g02*(a02*g30 + a12*g31 + a22*g32), c*g10*(a00*g30 + a10*g31 + a20*g32) + c*g11*(a01*g30 + a11*g31 + a21*g32) + c*g12*(a02*g30 + a12*g31 + a22*g32), c*g20*(a00*g30 + a10*g31 + a20*g32) + c*g21*(a01*g30 + a11*g31 + a21*g32) + c*g22*(a02*g30 + a12*g31 + a22*g32), c*g30*(a00*g30 + a10*g31 + a20*g32) + c*g31*(a01*g30 + a11*g31 + a21*g32) + c*g32*(a02*g30 + a12*g31 + a22*g32)],
-        ])
-    }
-
-    /// Performs the g-v-n integration with constant vector field
-    #[rustfmt::skip]
-    pub fn integ_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
-        let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
-        Matrix::from(&[
-            [c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2)],
-            [c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2)],
-            [c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2)],
-            [c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2)],
         ])
     }
 
