@@ -39,9 +39,9 @@ impl Scratchpad {
     ///
     /// # Output
     ///
-    /// * `pad.deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
-    /// * `pad.jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
-    /// * `pad.inv_jacobian` -- If `geo_ndim = space_ndim` (`SOLID` case): inverse Jacobian matrix (space_ndim,space_ndim)
+    /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `inv_jacobian` -- If `geo_ndim = space_ndim` (`SOLID` case): inverse Jacobian matrix (space_ndim,space_ndim)
     /// * Returns one of the following:
     ///     * `CABLE`: (geo_ndim = 1 and space_ndim = 2 or 3), returns the norm of the Jacobian vector
     ///     * `SHELL`: (geo_ndim = 2 and space_ndim = 3), returns [DET_JAC_NOT_AVAILABLE] indicating that the
@@ -138,7 +138,6 @@ mod tests {
     use super::DET_JAC_NOT_AVAILABLE;
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::StrError;
     use russell_chk::assert_deriv_approx_eq;
     use russell_lab::{Matrix, Vector};
 
@@ -177,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn calc_jacobian_works() -> Result<(), StrError> {
+    fn calc_jacobian_works() {
         // kind and tolerances
         let problem = vec![
             // Lin
@@ -193,7 +192,7 @@ mod tests {
             // Qua
             (GeoKind::Qua4, 1e-11),
             (GeoKind::Qua8, 1e-11),
-            (GeoKind::Qua9, 1e-12),
+            (GeoKind::Qua9, 1e-11),
             (GeoKind::Qua12, 1e-10),
             (GeoKind::Qua16, 1e-10),
             (GeoKind::Qua17, 1e-10),
@@ -219,7 +218,7 @@ mod tests {
             let at_ksi = vec![0.25; geo_ndim];
 
             // compute Jacobian, its inverse, and determinant
-            let det_jac = pad.calc_jacobian(&at_ksi)?;
+            let det_jac = pad.calc_jacobian(&at_ksi).unwrap();
             assert!(det_jac > 0.0);
 
             // set arguments for numerical integration
@@ -242,25 +241,24 @@ mod tests {
                 }
             }
         }
-        Ok(())
     }
 
     #[test]
-    fn calc_jacobian_special_cases_work() -> Result<(), StrError> {
+    fn calc_jacobian_special_cases_work() {
         // CABLE: line in 2d
         let space_ndim = 2;
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin2)?;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin2).unwrap();
         let l = 3.5;
         pad.set_xx(0, 0, 0.0); // node 0
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(1, 0, l); // node 1
         pad.set_xx(1, 1, 0.0);
-        let norm_jac_vec = pad.calc_jacobian(&[0.0])?;
+        let norm_jac_vec = pad.calc_jacobian(&[0.0]).unwrap();
         assert_eq!(norm_jac_vec, l / 2.0); // 2.0 = length of shape in the reference space
 
         // SHELL: triangle on a plane diagonal to the y-z plane
         let space_ndim = 3;
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3).unwrap();
         pad.set_xx(0, 0, 0.0); // node 0
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(0, 2, 0.0);
@@ -270,11 +268,9 @@ mod tests {
         pad.set_xx(2, 0, 0.5); // node 2
         pad.set_xx(2, 1, 1.0);
         pad.set_xx(2, 2, 1.0);
-        let norm_jac_vec = pad.calc_jacobian(&[0.0, 0.0])?;
+        let norm_jac_vec = pad.calc_jacobian(&[0.0, 0.0]).unwrap();
         assert_eq!(norm_jac_vec, DET_JAC_NOT_AVAILABLE);
-        if false {
-            pad.draw_shape_simple("/tmp/gemlab/test_jacobian_tri3_in_3d.svg")?;
-        }
-        Ok(())
+        // pad.draw_shape_simple("/tmp/gemlab/test_jacobian_tri3_in_3d.svg")
+        //     .unwrap();
     }
 }

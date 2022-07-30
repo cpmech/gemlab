@@ -23,7 +23,7 @@ impl Scratchpad {
         if !self.ok_xxt {
             return Err("all components of the coordinates matrix must be set first");
         }
-        let space_ndim = self.xmin.len();
+        let (space_ndim, nnode) = self.xxt.dims();
         let mut canvas = Canvas::new();
         if self.kind.ndim() == 1 {
             let mut lin_pad = self.clone();
@@ -97,25 +97,39 @@ impl Scratchpad {
             plot.add(&labels_corner).add(&labels_middle);
         }
         if set_range {
-            let dx = self.xmax[0] - self.xmin[0];
-            let dy = self.xmax[1] - self.xmin[1];
+            let mut xmin = vec![f64::MAX; space_ndim];
+            let mut xmax = vec![f64::MIN; space_ndim];
+            for m in 0..nnode {
+                for j in 0..space_ndim {
+                    xmin[j] = f64::min(xmin[j], self.xxt[j][m]);
+                    xmax[j] = f64::max(xmax[j], self.xxt[j][m]);
+                }
+            }
+            let mut dx = xmax[0] - xmin[0];
+            let mut dy = xmax[1] - xmin[1];
+            if dx <= 0.0 {
+                dx = 1.0
+            }
+            if dy <= 0.0 {
+                dy = 1.0
+            }
             const PCT: f64 = 2.0 / 100.0;
             if space_ndim == 2 {
                 plot.set_range(
-                    self.xmin[0] - dx * PCT,
-                    self.xmax[0] + dx * PCT,
-                    self.xmin[1] - dy * PCT,
-                    self.xmax[1] + dy * PCT,
+                    xmin[0] - dx * PCT,
+                    xmax[0] + dx * PCT,
+                    xmin[1] - dy * PCT,
+                    xmax[1] + dy * PCT,
                 );
             } else {
-                let dz = self.xmax[2] - self.xmin[2];
+                let dz = xmax[2] - xmin[2];
                 plot.set_range_3d(
-                    self.xmin[0] - dx * PCT,
-                    self.xmax[0] + dx * PCT,
-                    self.xmin[1] - dy * PCT,
-                    self.xmax[1] + dy * PCT,
-                    self.xmin[2] - dz * PCT,
-                    self.xmax[2] + dz * PCT,
+                    xmin[0] - dx * PCT,
+                    xmax[0] + dx * PCT,
+                    xmin[1] - dy * PCT,
+                    xmax[1] + dy * PCT,
+                    xmin[2] - dz * PCT,
+                    xmax[2] + dz * PCT,
                 );
             }
         }
@@ -137,7 +151,7 @@ impl Scratchpad {
 fn draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -> Result<(), StrError> {
     const N: usize = 11; // number of points along edge (to handle nonlinear edges)
     let (ksi_min, ksi_del) = (-1.0, 2.0); // all Lin shapes go from -1 to +1
-    let space_ndim = edge_pad.xmax.len();
+    let space_ndim = edge_pad.jacobian.dims().0;
     let mut x = Vector::new(space_ndim);
     canvas.set_face_color("None").set_line_width(3.0);
     if edge_color != "" {
@@ -170,11 +184,10 @@ fn draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::GeoKind;
-    use crate::StrError;
     use plotpy::Plot;
 
     #[test]
-    fn draw_shape_works() -> Result<(), StrError> {
+    fn draw_shape_works() {
         // select all kinds
         let kinds = vec![
             // Lin
@@ -212,16 +225,14 @@ mod tests {
                 plot.add(&canvas);
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
-            pad.draw_shape(&mut plot, "", true, true)?;
+            pad.draw_shape(&mut plot, "", true, true).unwrap();
             if space_ndim == 2 {
                 plot.set_range(1.0, 10.0, 1.0, 10.0);
             }
-            if false {
-                plot.set_figure_size_points(600.0, 600.0)
-                    .set_equal_axes(true)
-                    .save(format!("/tmp/gemlab/test_draw_shape_{}.svg", kind.to_string()).as_str())?;
-            }
+            // plot.set_figure_size_points(600.0, 600.0)
+            //     .set_equal_axes(true)
+            //     .save(format!("/tmp/gemlab/test_draw_shape_{}.svg", kind.to_string()).as_str())
+            //     .unwrap();
         }
-        Ok(())
     }
 }

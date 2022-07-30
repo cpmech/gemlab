@@ -95,7 +95,6 @@ pub fn triangle_interpolation(xa: &[f64], xb: &[f64], xc: &[f64], temp: &[f64], 
 #[cfg(test)]
 mod tests {
     use super::{is_point_inside_triangle, triangle_interpolation, triangle_signed_area};
-    use crate::StrError;
     use plotpy::{Canvas, Plot, PolyCode, Text};
 
     fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
@@ -120,6 +119,18 @@ mod tests {
     }
 
     #[test]
+    fn draw_triangles_works() {
+        let mut plot = Plot::new();
+        const T: [[[f64; 2]; 3]; 1] = [[[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]];
+        draw_triangles(&mut plot, &T);
+        // if false {
+        //     plot.set_equal_axes(true)
+        //         .save("/tmp/gemlab/draw_triangles_works.svg")
+        //         .unwrap();
+        // }
+    }
+
+    #[test]
     #[rustfmt::skip]
     fn is_point_inside_triangle_works_1() {
         assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[0.0, 0.0]));
@@ -138,7 +149,7 @@ mod tests {
     }
 
     #[test]
-    fn is_point_inside_triangle_works_2() -> Result<(), StrError> {
+    fn is_point_inside_triangle_works_2() {
         #[rustfmt::skip]
         const T: [[[f64; 2]; 3]; 12] = [
             [[0.230951,  0.558482], [0.133721,  0.348832],   [0.540745,  0.331184]],   //  0
@@ -163,18 +174,18 @@ mod tests {
         }
         assert!(is_point_inside_triangle(&T[0][0], &T[0][1], &T[0][2], &[0.3, 0.4]));
         assert!(is_point_inside_triangle(&T[8][0], &T[8][1], &T[8][2], &[0.7, 0.7]));
-        if false {
-            let mut plot = Plot::new();
-            draw_triangles(&mut plot, &T);
-            plot.grid_and_labels("x", "y")
-                .set_range(0.0, 1.0, 0.0, 1.0)
-                .set_ticks_x(0.1, 0.5, "")
-                .set_ticks_y(0.1, 0.5, "")
-                .set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .save("/tmp/gemlab/test_is_point_inside_triangle_2.svg")?;
-        }
-        Ok(())
+        // if false {
+        //     let mut plot = Plot::new();
+        //     draw_triangles(&mut plot, &T);
+        //     plot.grid_and_labels("x", "y")
+        //         .set_range(0.0, 1.0, 0.0, 1.0)
+        //         .set_ticks_x(0.1, 0.5, "")
+        //         .set_ticks_y(0.1, 0.5, "")
+        //         .set_equal_axes(true)
+        //         .set_figure_size_points(600.0, 600.0)
+        //         .save("/tmp/gemlab/test_is_point_inside_triangle_2.svg")
+        //         .unwrap();
+        // }
     }
 
     #[test]
@@ -186,7 +197,7 @@ mod tests {
     }
 
     #[test]
-    fn triangle_interpolation_works() -> Result<(), StrError> {
+    fn triangle_interpolation_works() {
         let xa = &[0.0, 0.0];
         let xb = &[1.5, 0.0];
         let xc = &[0.0, 1.0];
@@ -198,6 +209,5 @@ mod tests {
             triangle_interpolation(xa, xb, xc, temp, &[1.0 / 2.0, 1.0 / 4.0]),
             13.0 / 6.0
         );
-        Ok(())
     }
 }

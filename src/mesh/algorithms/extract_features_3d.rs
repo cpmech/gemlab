@@ -95,7 +95,6 @@ mod tests {
     use crate::mesh::algorithms::extract_all_faces;
     use crate::mesh::{EdgeKey, Extract, FaceKey, Features, PointId, Samples};
     use crate::util::AsArray2D;
-    use crate::StrError;
 
     fn validate_edges<'a, T>(
         features: &Features,
@@ -128,7 +127,7 @@ mod tests {
     }
 
     #[test]
-    fn extract_features_3d_works() -> Result<(), StrError> {
+    fn extract_features_3d_works() {
         //      8-------------11
         //     /.             /|
         //    / .            / |
@@ -227,11 +226,10 @@ mod tests {
         let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-        Ok(())
     }
 
     #[test]
-    fn extract_features_3d_all_works() -> Result<(), StrError> {
+    fn extract_features_3d_all_works() {
         //      8-------------11
         //     /.             /|
         //    / .            / |
@@ -332,11 +330,10 @@ mod tests {
         let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-        Ok(())
     }
 
     #[test]
-    fn extract_features_3d_interior_works() -> Result<(), StrError> {
+    fn extract_features_3d_interior_works() {
         //      8-------------11
         //     /.             /|
         //    / .            / |
@@ -371,11 +368,10 @@ mod tests {
         let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[4, 5, 6, 7]);
-        Ok(())
     }
 
     #[test]
-    fn extract_features_3d_mixed_works() -> Result<(), StrError> {
+    fn extract_features_3d_mixed_works() {
         //                       4------------7-----------10
         //                      /.           /|            |
         //                     / .          / |            |
@@ -460,11 +456,10 @@ mod tests {
         let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8]);
-        Ok(())
     }
 
     #[test]
-    fn extract_features_3d_block_works() -> Result<(), StrError> {
+    fn extract_features_3d_block_works() {
         //              51--------58--------54--------74--------71
         //              /.                  /.                  /|
         //             / .                 / .                 / |
@@ -677,11 +672,10 @@ mod tests {
                 60, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80
             ]
         );
-        Ok(())
     }
 
     #[test]
-    fn extract_features_3d_all_block_works() -> Result<(), StrError> {
+    fn extract_features_3d_all_block_works() {
         //              51--------58--------54--------74--------71
         //              /.                  /.                  /|
         //             / .                 / .                 / |
@@ -931,6 +925,5 @@ mod tests {
                 80
             ]
         );
-        Ok(())
     }
 }

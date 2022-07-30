@@ -2,7 +2,7 @@ use crate::shapes::{GeoKind, Scratchpad};
 use crate::util::SQRT_2;
 use crate::StrError;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
-use russell_tensor::LinElasticity;
+use russell_tensor::{LinElasticity, Tensor2};
 
 /// Performs analytical integrations on a Tet4
 pub struct AnalyticalTet4 {
@@ -19,7 +19,7 @@ pub struct AnalyticalTet4 {
     ///           dx
     /// ```
     ///
-    /// Organized as the G matrix (nnode=3, space_ndim=2)
+    /// Organized as the G matrix (nnode=4, space_ndim=3)
     pub gg: Matrix,
 
     /// Holds the B-matrix (6, 12)
@@ -27,6 +27,7 @@ pub struct AnalyticalTet4 {
 }
 
 impl AnalyticalTet4 {
+    /// Allocates a new instance
     pub fn new(pad: &Scratchpad) -> Self {
         assert_eq!(pad.kind, GeoKind::Tet4);
 
@@ -155,7 +156,7 @@ impl AnalyticalTet4 {
     /// bᵐ₁ = v₁ V / 4
     /// bᵐ₂ = v₂ V / 4
     /// ```
-    pub fn integ_vec_b_constant(&self, v0: f64, v1: f64, v2: f64) -> Vec<f64> {
+    pub fn integ_vec_b(&self, v0: f64, v1: f64, v2: f64) -> Vec<f64> {
         vec![
             v0 * self.volume / 4.0,
             v1 * self.volume / 4.0,
@@ -179,7 +180,7 @@ impl AnalyticalTet4 {
     /// ```text
     /// cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁ + w₂ Gᵐ₂) V
     /// ```
-    pub fn integ_vec_c_constant(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
+    pub fn integ_vec_c(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
         vec![
             (w0 * self.gg[0][0] + w1 * self.gg[0][1] + w2 * self.gg[0][2]) * self.volume,
             (w0 * self.gg[1][0] + w1 * self.gg[1][1] + w2 * self.gg[1][2]) * self.volume,
@@ -188,40 +189,143 @@ impl AnalyticalTet4 {
         ]
     }
 
-    /// Integrates tensor dot gradient with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
+    /// Integrates tensor dot gradient with constant tensor function σ(x)
     ///
     /// Solution:
     ///
     /// ```text
-    ///    dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁ + σ₀₂ Gᵐ₂) V
-    ///    dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁ + σ₁₂ Gᵐ₂) V
-    ///    dᵐ₂ = (σ₂₀ Gᵐ₀ + σ₂₁ Gᵐ₁ + σ₂₂ Gᵐ₂) V
+    /// σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
+    ///
+    /// dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁ + σ₀₂ Gᵐ₂) V
+    /// dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁ + σ₁₂ Gᵐ₂) V
+    /// dᵐ₂ = (σ₂₀ Gᵐ₀ + σ₂₁ Gᵐ₁ + σ₂₂ Gᵐ₂) V
     /// ```
-    pub fn integ_vec_d_constant(&self, s00: f64, s11: f64, s22: f64, s01: f64, s12: f64, s02: f64) -> Vec<f64> {
+    pub fn integ_vec_d(&self, tt: &Tensor2) -> Vec<f64> {
+        let c = self.volume;
+        let mat = tt.to_matrix();
+        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
+        let (a11, a12) = (mat[1][1], mat[1][2]);
+        let a22 = mat[2][2];
         vec![
-            (s00 * self.gg[0][0] + s01 * self.gg[0][1] + s02 * self.gg[0][2]) * self.volume,
-            (s01 * self.gg[0][0] + s11 * self.gg[0][1] + s12 * self.gg[0][2]) * self.volume,
-            (s02 * self.gg[0][0] + s12 * self.gg[0][1] + s22 * self.gg[0][2]) * self.volume,
-            (s00 * self.gg[1][0] + s01 * self.gg[1][1] + s02 * self.gg[1][2]) * self.volume,
-            (s01 * self.gg[1][0] + s11 * self.gg[1][1] + s12 * self.gg[1][2]) * self.volume,
-            (s02 * self.gg[1][0] + s12 * self.gg[1][1] + s22 * self.gg[1][2]) * self.volume,
-            (s00 * self.gg[2][0] + s01 * self.gg[2][1] + s02 * self.gg[2][2]) * self.volume,
-            (s01 * self.gg[2][0] + s11 * self.gg[2][1] + s12 * self.gg[2][2]) * self.volume,
-            (s02 * self.gg[2][0] + s12 * self.gg[2][1] + s22 * self.gg[2][2]) * self.volume,
-            (s00 * self.gg[3][0] + s01 * self.gg[3][1] + s02 * self.gg[3][2]) * self.volume,
-            (s01 * self.gg[3][0] + s11 * self.gg[3][1] + s12 * self.gg[3][2]) * self.volume,
-            (s02 * self.gg[3][0] + s12 * self.gg[3][1] + s22 * self.gg[3][2]) * self.volume,
+            c * (a00 * self.gg[0][0] + a01 * self.gg[0][1] + a02 * self.gg[0][2]),
+            c * (a01 * self.gg[0][0] + a11 * self.gg[0][1] + a12 * self.gg[0][2]),
+            c * (a02 * self.gg[0][0] + a12 * self.gg[0][1] + a22 * self.gg[0][2]),
+            c * (a00 * self.gg[1][0] + a01 * self.gg[1][1] + a02 * self.gg[1][2]),
+            c * (a01 * self.gg[1][0] + a11 * self.gg[1][1] + a12 * self.gg[1][2]),
+            c * (a02 * self.gg[1][0] + a12 * self.gg[1][1] + a22 * self.gg[1][2]),
+            c * (a00 * self.gg[2][0] + a01 * self.gg[2][1] + a02 * self.gg[2][2]),
+            c * (a01 * self.gg[2][0] + a11 * self.gg[2][1] + a12 * self.gg[2][2]),
+            c * (a02 * self.gg[2][0] + a12 * self.gg[2][1] + a22 * self.gg[2][2]),
+            c * (a00 * self.gg[3][0] + a01 * self.gg[3][1] + a02 * self.gg[3][2]),
+            c * (a01 * self.gg[3][0] + a11 * self.gg[3][1] + a12 * self.gg[3][2]),
+            c * (a02 * self.gg[3][0] + a12 * self.gg[3][1] + a22 * self.gg[3][2]),
         ]
     }
 
-    /// Calculates the stiffness matrix
+    /// Performs the n-s-n integration with constant scalar function
+    #[rustfmt::skip]
+    pub fn integ_nsn(&self, s: f64) -> Matrix {
+        let c = self.volume / 20.0;
+        Matrix::from(&[
+            [2.0 * s * c, s * c, s * c, s * c],
+            [s * c, 2.0 * s * c, s * c, s * c],
+            [s * c, s * c, 2.0 * s * c, s * c],
+            [s * c, s * c, s * c, 2.0 * s * c],
+        ])
+    }
+
+    /// Performs the g-v-n integration with constant vector field
+    #[rustfmt::skip]
+    pub fn integ_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+        let c = self.volume / 4.0;
+        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
+        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
+        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
+        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        Matrix::from(&[
+            [c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2)],
+            [c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2)],
+            [c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2)],
+            [c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2)],
+        ])
+    }
+
+    /// Performs the g-t-g integration with constant tensor field
+    #[rustfmt::skip]
+    pub fn integ_gtg(&self, tt: &Tensor2) -> Matrix {
+        let c = self.volume;
+        let mat = tt.to_matrix();
+        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
+        let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
+        let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
+        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
+        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
+        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
+        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        Matrix::from(&[
+            [c*g00*(a00*g00 + a10*g01 + a20*g02) + c*g01*(a01*g00 + a11*g01 + a21*g02) + c*g02*(a02*g00 + a12*g01 + a22*g02), c*g10*(a00*g00 + a10*g01 + a20*g02) + c*g11*(a01*g00 + a11*g01 + a21*g02) + c*g12*(a02*g00 + a12*g01 + a22*g02), c*g20*(a00*g00 + a10*g01 + a20*g02) + c*g21*(a01*g00 + a11*g01 + a21*g02) + c*g22*(a02*g00 + a12*g01 + a22*g02), c*g30*(a00*g00 + a10*g01 + a20*g02) + c*g31*(a01*g00 + a11*g01 + a21*g02) + c*g32*(a02*g00 + a12*g01 + a22*g02)],
+            [c*g00*(a00*g10 + a10*g11 + a20*g12) + c*g01*(a01*g10 + a11*g11 + a21*g12) + c*g02*(a02*g10 + a12*g11 + a22*g12), c*g10*(a00*g10 + a10*g11 + a20*g12) + c*g11*(a01*g10 + a11*g11 + a21*g12) + c*g12*(a02*g10 + a12*g11 + a22*g12), c*g20*(a00*g10 + a10*g11 + a20*g12) + c*g21*(a01*g10 + a11*g11 + a21*g12) + c*g22*(a02*g10 + a12*g11 + a22*g12), c*g30*(a00*g10 + a10*g11 + a20*g12) + c*g31*(a01*g10 + a11*g11 + a21*g12) + c*g32*(a02*g10 + a12*g11 + a22*g12)],
+            [c*g00*(a00*g20 + a10*g21 + a20*g22) + c*g01*(a01*g20 + a11*g21 + a21*g22) + c*g02*(a02*g20 + a12*g21 + a22*g22), c*g10*(a00*g20 + a10*g21 + a20*g22) + c*g11*(a01*g20 + a11*g21 + a21*g22) + c*g12*(a02*g20 + a12*g21 + a22*g22), c*g20*(a00*g20 + a10*g21 + a20*g22) + c*g21*(a01*g20 + a11*g21 + a21*g22) + c*g22*(a02*g20 + a12*g21 + a22*g22), c*g30*(a00*g20 + a10*g21 + a20*g22) + c*g31*(a01*g20 + a11*g21 + a21*g22) + c*g32*(a02*g20 + a12*g21 + a22*g22)],
+            [c*g00*(a00*g30 + a10*g31 + a20*g32) + c*g01*(a01*g30 + a11*g31 + a21*g32) + c*g02*(a02*g30 + a12*g31 + a22*g32), c*g10*(a00*g30 + a10*g31 + a20*g32) + c*g11*(a01*g30 + a11*g31 + a21*g32) + c*g12*(a02*g30 + a12*g31 + a22*g32), c*g20*(a00*g30 + a10*g31 + a20*g32) + c*g21*(a01*g30 + a11*g31 + a21*g32) + c*g22*(a02*g30 + a12*g31 + a22*g32), c*g30*(a00*g30 + a10*g31 + a20*g32) + c*g31*(a01*g30 + a11*g31 + a21*g32) + c*g32*(a02*g30 + a12*g31 + a22*g32)],
+        ])
+    }
+
+    /// Performs the n-v-g integration with constant vector field
+    #[rustfmt::skip]
+    pub fn integ_nvg(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+        let c = self.volume / 4.0;
+        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
+        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
+        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
+        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        Matrix::from(&[
+            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
+            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
+            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
+            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
+            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
+            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
+            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
+            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
+            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+        ])
+    }
+
+    /// Performs the g-t-g integration with constant tensor field
+    #[rustfmt::skip]
+    pub fn integ_ntn(&self, sig: &Tensor2) -> Matrix {
+        let vv = self.volume;
+        let mat = sig.to_matrix();
+        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
+        let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
+        let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
+        Matrix::from(&[
+            [a00*vv/10.0, a01*vv/10.0, a02*vv/10.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0],
+            [a10*vv/10.0, a11*vv/10.0, a12*vv/10.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0],
+            [a20*vv/10.0, a21*vv/10.0, a22*vv/10.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0],
+            [a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/10.0, a01*vv/10.0, a02*vv/10.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0],
+            [a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/10.0, a11*vv/10.0, a12*vv/10.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0],
+            [a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/10.0, a21*vv/10.0, a22*vv/10.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0],
+            [a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/10.0, a01*vv/10.0, a02*vv/10.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0],
+            [a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/10.0, a11*vv/10.0, a12*vv/10.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0],
+            [a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/10.0, a21*vv/10.0, a22*vv/10.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0],
+            [a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/10.0, a01*vv/10.0, a02*vv/10.0],
+            [a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/10.0, a11*vv/10.0, a12*vv/10.0],
+            [a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/20.0, a21*vv/20.0, a22*vv/20.0, a20*vv/10.0, a21*vv/10.0, a22*vv/10.0],
+        ])
+    }
+
+    /// Performs the g-d-g integration with constant tensor field (calculates the stiffness matrix)
     ///
     /// solution:
     ///
     /// ```text
     /// K = Bᵀ ⋅ D ⋅ B ⋅ volume
     /// ```
-    pub fn integ_stiffness(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
+    pub fn integ_gdg(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, false, false);
         let dd = ela.get_modulus();
         let dim_dd = 6;
@@ -240,15 +344,14 @@ impl AnalyticalTet4 {
 mod tests {
     use super::AnalyticalTet4;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::StrError;
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
 
     #[test]
-    fn analytical_tet4_works() -> Result<(), StrError> {
+    fn analytical_tet4_works() {
         // unit tet4
         let space_ndim = 3;
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4)?;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4).unwrap();
         pad.set_xx(0, 0, 0.0);
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(0, 2, 0.0);
@@ -262,7 +365,7 @@ mod tests {
         pad.set_xx(3, 1, 0.0);
         pad.set_xx(3, 2, 1.0);
         let mut tet = AnalyticalTet4::new(&pad);
-        pad.calc_gradient(&[0.1, 0.1, 0.1])?;
+        pad.calc_gradient(&[0.1, 0.1, 0.1]).unwrap();
         assert_eq!(tet.volume, 1.0 / 6.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
@@ -289,11 +392,11 @@ mod tests {
             [ 0.0,  -nt,  -nt,  0.0, 0.0, 0.0, 0.0,  0.0,  nt, 0.0,  nt,  0.0],
             [-tnu, -tnu, -tnh,  tnu, 0.0, 0.0, 0.0,  tnu, 0.0, 0.0, 0.0,  tnh],
         ]);
-        let kk = tet.integ_stiffness(ee, nu)?;
+        let kk = tet.integ_gdg(ee, nu).unwrap();
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // non-right-angles tet4
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4)?;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4).unwrap();
         pad.set_xx(0, 0, 2.0);
         pad.set_xx(0, 1, 3.0);
         pad.set_xx(0, 2, 4.0);
@@ -307,12 +410,12 @@ mod tests {
         pad.set_xx(3, 1, 3.0);
         pad.set_xx(3, 2, 6.0);
         let mut tet = AnalyticalTet4::new(&pad);
-        pad.calc_gradient(&[0.1, 0.2, 0.3])?;
+        pad.calc_gradient(&[0.1, 0.2, 0.3]).unwrap();
         assert_eq!(tet.volume, 4.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
         assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
-        let kk = tet.integ_stiffness(ee, nu)?;
+        let kk = tet.integ_gdg(ee, nu).unwrap();
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
             [ 745.0,  540.0, 120.0,  -5.0,  30.0,  60.0,-270.0, -240.0,   0.0,-470.0, -330.0,-180.0],
@@ -329,6 +432,5 @@ mod tests {
             [-180.0, -420.0,-470.0,  60.0,-180.0,-230.0,   0.0,  240.0, 180.0, 120.0,  360.0, 520.0],
         ]);
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-12);
-        Ok(())
     }
 }

@@ -231,17 +231,15 @@ mod tests {
         gen_scratchpad_with_coords_aligned,
     };
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::StrError;
     use russell_chk::{assert_approx_eq, assert_deriv_approx_eq};
 
     #[test]
-    fn draw_point_coords_2d_works() -> Result<(), StrError> {
+    #[allow(unused_variables, unused_mut)]
+    fn draw_point_coords_2d_works() {
         let mut plot = draw_point_coords_2d(0.0, 1.0);
-        if false {
-            plot.set_figure_size_points(1000.0, 600.0)
-                .save("/tmp/gemlab/test_draw_point_coords_2d.svg")?;
-        }
-        Ok(())
+        // plot.set_figure_size_points(1000.0, 600.0)
+        //     .save("/tmp/gemlab/test_draw_point_coords_2d.svg")
+        //     .unwrap();
     }
 
     #[test]
@@ -384,7 +382,7 @@ mod tests {
     }
 
     #[test]
-    fn fn_interp_works() -> Result<(), StrError> {
+    fn fn_interp_works() {
         // loop over shapes
         for kind in GeoKind::VALUES {
             // scratchpad with coordinates
@@ -412,7 +410,6 @@ mod tests {
                 }
             }
         }
-        Ok(())
     }
 
     // Holds arguments for numerical differentiation of N with respect to ξ => L (deriv) matrix
@@ -433,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn calc_deriv_works() -> Result<(), StrError> {
+    fn calc_deriv_works() {
         // kind and tolerances
         let problem = vec![
             // Lin
@@ -495,6 +492,5 @@ mod tests {
                 }
             }
         }
-        Ok(())
     }
 }

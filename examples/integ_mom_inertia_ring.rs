@@ -9,7 +9,7 @@ fn main() -> Result<(), StrError> {
     let mesh = mesh::Structured::quarter_ring_2d(rmin, rmax, 4, 8, kind)?;
 
     // allocate integration points and Scratchpad
-    let ips = integ::default_integ_points(kind);
+    let ips = integ::default_points(kind);
     let mut pad = shapes::Scratchpad::new(2, kind)?;
 
     // sum contribution of all cells
@@ -19,7 +19,7 @@ fn main() -> Result<(), StrError> {
         mesh::set_pad_coords(&mut pad, &cell.points, &mesh);
 
         // calculate the coordinates of the integration points
-        let x_ips = integ::calc_ips_coords(&mut pad, ips)?;
+        let x_ips = integ::points_coords(&mut pad, ips)?;
 
         // perform the integration over the domain of a single cell
         second_mom_inertia += integ::scalar_field(&mut pad, ips, |p| {

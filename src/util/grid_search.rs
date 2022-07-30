@@ -803,9 +803,11 @@ impl fmt::Display for GridSearch {
 mod tests {
     use super::{GridSearch, GS_DEFAULT_TOLERANCE};
     use crate::util::{SQRT_2, SQRT_3};
-    use crate::StrError;
-    use plotpy::{Canvas, Curve, Plot, RayEndpoint, Surface};
+    use plotpy::Plot;
     use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+
+    #[allow(unused_imports)]
+    use plotpy::{Canvas, Curve, RayEndpoint, Surface};
 
     const NOISE: f64 = 1.23456e-5;
     const CIRCLE: ([f64; 2], f64) = ([-0.2, 1.8], 0.45); // [xc,yc],radius
@@ -847,34 +849,32 @@ mod tests {
         [[-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]],   // diagonal
     ];
 
-    fn add_sample_points_to_grid_2d(grid: &mut GridSearch) -> Result<(), StrError> {
+    fn add_sample_points_to_grid_2d(grid: &mut GridSearch) {
         let mut id = 100;
         for x in &POINTS_2D {
-            grid.insert(id, x)?;
+            grid.insert(id, x).unwrap();
             id += 1;
         }
-        Ok(())
     }
 
-    fn add_sample_points_to_grid_3d(grid: &mut GridSearch) -> Result<(), StrError> {
+    fn add_sample_points_to_grid_3d(grid: &mut GridSearch) {
         let mut id = 100;
         for x in &POINTS_3D {
-            grid.insert(id, x)?;
+            grid.insert(id, x).unwrap();
             id += 1;
         }
-        Ok(())
     }
 
-    fn sample_grid_2d() -> Result<GridSearch, StrError> {
-        GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(8), None, Some(0.1))
+    fn sample_grid_2d() -> GridSearch {
+        GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(8), None, Some(0.1)).unwrap()
     }
 
-    fn sample_grid_3d() -> Result<GridSearch, StrError> {
-        GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(2), None, Some(0.1))
+    fn sample_grid_3d() -> GridSearch {
+        GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(2), None, Some(0.1)).unwrap()
     }
 
     #[test]
-    fn new_handles_wrong_input() -> Result<(), StrError> {
+    fn new_handles_wrong_input() {
         assert_eq!(
             GridSearch::new(&[0.0], &[1.0, 1.0], None, None, None).err(),
             Some("xmin.len() = ndim must be 2 or 3")
@@ -926,12 +926,11 @@ mod tests {
             .err(),
             Some("(xmax-xmin)/ndiv must be > 2·tolerance; reduce the tolerance (or ndiv)")
         );
-        Ok(())
     }
 
     #[test]
-    fn new_works() -> Result<(), StrError> {
-        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], None, None, None)?;
+    fn new_works() {
+        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], None, None, None).unwrap();
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.ndiv, [10, 20]);
         assert_approx_eq!(grid.side_length, 0.102, 1e-15);
@@ -945,7 +944,7 @@ mod tests {
         assert_eq!(grid.halo_ncorner, 4);
         assert_eq!(grid.containers.len(), 0);
 
-        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(8), None, Some(0.1))?;
+        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(8), None, Some(0.1)).unwrap();
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.ndiv, [4, 8]);
         assert_approx_eq!(grid.side_length, 0.3, 1e-15);
@@ -959,7 +958,7 @@ mod tests {
         assert_eq!(grid.halo_ncorner, 4);
         assert_eq!(grid.containers.len(), 0);
 
-        let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(2), None, Some(0.1))?;
+        let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(2), None, Some(0.1)).unwrap();
         assert_eq!(grid.ndim, 3);
         assert_eq!(grid.ndiv, [2, 2, 2]);
         assert_approx_eq!(grid.side_length, 1.1, 1e-15);
@@ -972,12 +971,11 @@ mod tests {
         assert_eq!(grid.halo.len(), 8);
         assert_eq!(grid.halo_ncorner, 8);
         assert_eq!(grid.containers.len(), 0);
-        Ok(())
     }
 
     #[test]
-    fn display_trait_works() -> Result<(), StrError> {
-        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(6), None, None)?;
+    fn display_trait_works() {
+        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(6), None, None).unwrap();
         assert_eq!(
             format!("{}", grid),
             "ids = []\n\
@@ -986,7 +984,7 @@ mod tests {
              ndiv = [3, 6]\n"
         );
 
-        let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(3), None, None)?;
+        let grid = GridSearch::new(&[-1.0, -1.0, -1.0], &[1.0, 1.0, 1.0], Some(3), None, None).unwrap();
         assert_eq!(
             format!("{}", grid),
             "ids = []\n\
@@ -994,92 +992,89 @@ mod tests {
              ncontainer = 0\n\
              ndiv = [3, 3, 3]\n"
         );
-        Ok(())
     }
 
     #[test]
-    fn draw_works_2d() -> Result<(), StrError> {
-        let mut grid = sample_grid_2d()?;
-        add_sample_points_to_grid_2d(&mut grid)?;
+    fn draw_works_2d() {
+        let mut grid = sample_grid_2d();
+        add_sample_points_to_grid_2d(&mut grid);
         let mut plot = Plot::new();
-        grid.draw(&mut plot)?;
-        if false {
-            let h = grid.side_length / 2.0;
-            let r = grid.radius;
-            let mut lines = Curve::new();
-            let mut canvas = Canvas::new();
-            // draw rectangle representing the original limits
-            canvas
-                .set_face_color("#00000015")
-                .set_edge_color("None")
-                .draw_polyline(&[[-0.2, -0.2], [0.8, -0.2], [0.8, 1.8], [-0.2, 1.8]], true);
-            // draw circle circumscribing the lower left container
-            canvas
-                .set_face_color("None")
-                .set_edge_color("magenta")
-                .draw_circle(grid.xmin[0] + h, grid.xmin[1] + h, r);
-            // draw lines
-            lines.set_line_color("#fab32f").set_line_width(1.5);
-            for l in &LINES_2D {
-                lines.draw_ray(l[0][0], l[0][1], RayEndpoint::Coords(l[1][0], l[1][1]));
-            }
-            // draw circle used in search
-            canvas
-                .set_edge_color("#05480480")
-                .set_line_width(2.0)
-                .draw_circle(CIRCLE.0[0], CIRCLE.0[1], CIRCLE.1);
-            // setup and save figure
-            plot.add(&lines).add(&canvas);
-            plot.set_equal_axes(true)
-                .set_ticks_x(0.1, 0.0, "")
-                .set_ticks_y(0.1, 0.0, "")
-                .grid_and_labels("x", "y")
-                .set_figure_size_points(500.0, 1000.0);
-            plot.save("/tmp/gemlab/test_plot_grid_search_2d.svg")?;
-        }
-        Ok(())
+        grid.draw(&mut plot).unwrap();
+
+        // let h = grid.side_length / 2.0;
+        // let r = grid.radius;
+        // let mut lines = Curve::new();
+        // let mut canvas = Canvas::new();
+        // // draw rectangle representing the original limits
+        // canvas
+        //     .set_face_color("#00000015")
+        //     .set_edge_color("None")
+        //     .draw_polyline(&[[-0.2, -0.2], [0.8, -0.2], [0.8, 1.8], [-0.2, 1.8]], true);
+        // // draw circle circumscribing the lower left container
+        // canvas
+        //     .set_face_color("None")
+        //     .set_edge_color("magenta")
+        //     .draw_circle(grid.xmin[0] + h, grid.xmin[1] + h, r);
+        // // draw lines
+        // lines.set_line_color("#fab32f").set_line_width(1.5);
+        // for l in &LINES_2D {
+        //     lines.draw_ray(l[0][0], l[0][1], RayEndpoint::Coords(l[1][0], l[1][1]));
+        // }
+        // // draw circle used in search
+        // canvas
+        //     .set_edge_color("#05480480")
+        //     .set_line_width(2.0)
+        //     .draw_circle(CIRCLE.0[0], CIRCLE.0[1], CIRCLE.1);
+        // // setup and save figure
+        // plot.add(&lines).add(&canvas);
+        // plot.set_equal_axes(true)
+        //     .set_ticks_x(0.1, 0.0, "")
+        //     .set_ticks_y(0.1, 0.0, "")
+        //     .grid_and_labels("x", "y")
+        //     .set_figure_size_points(500.0, 1000.0);
+        // plot.save("/tmp/gemlab/test_plot_grid_search_2d.svg").unwrap();
     }
 
     #[test]
-    fn draw_works_3d() -> Result<(), StrError> {
-        let mut grid = sample_grid_3d()?;
-        add_sample_points_to_grid_3d(&mut grid)?;
+    fn draw_works_3d() {
+        let mut grid = sample_grid_3d();
+        add_sample_points_to_grid_3d(&mut grid);
         let mut plot = Plot::new();
-        grid.draw(&mut plot)?;
-        if false {
-            // draw lines
-            let mut canvas = Canvas::new();
-            canvas.set_edge_color("#fab32f").set_line_width(1.5);
-            for l in &LINES_3D {
-                canvas.draw_polyline(l, false);
-            }
-            // draw cylinder used in search
-            let (a, b, r) = CYLINDER;
-            let mut surface = Surface::new();
-            surface
-                .set_with_surface(false)
-                .set_with_wireframe(true)
-                .set_line_color("#3da83b")
-                .draw_cylinder(&a, &b, r, 12, 30)?;
-            // setup and save figure
-            plot.add(&canvas).add(&surface);
-            plot.set_equal_axes(true)
-                .set_figure_size_points(800.0, 800.0)
-                .save("/tmp/gemlab/test_plot_grid_search_3d.svg")?;
-        }
-        Ok(())
+        grid.draw(&mut plot).unwrap();
+
+        // // draw lines
+        // let mut canvas = Canvas::new();
+        // canvas.set_edge_color("#fab32f").set_line_width(1.5);
+        // for l in &LINES_3D {
+        //     canvas.draw_polyline(l, false);
+        // }
+        // // draw cylinder used in search
+        // let (a, b, r) = CYLINDER;
+        // let mut surface = Surface::new();
+        // surface
+        //     .set_with_surface(false)
+        //     .set_with_wireframe(true)
+        //     .set_line_color("#3da83b")
+        //     .draw_cylinder(&a, &b, r, 12, 30)
+        //     .unwrap();
+        // // setup and save figure
+        // plot.add(&canvas).add(&surface);
+        // plot.set_equal_axes(true)
+        //     .set_figure_size_points(800.0, 800.0)
+        //     .save("/tmp/gemlab/test_plot_grid_search_3d.svg")
+        //     .unwrap();
     }
 
     #[test]
-    fn set_halo_works() -> Result<(), StrError> {
-        let mut grid = sample_grid_2d()?;
+    fn set_halo_works() {
+        let mut grid = sample_grid_2d();
         grid.set_halo(&[0.5, 0.5]);
         assert_eq!(grid.halo[0], [0.4999, 0.4999]);
         assert_eq!(grid.halo[1], [0.5001, 0.4999]);
         assert_eq!(grid.halo[2], [0.5001, 0.5001]);
         assert_eq!(grid.halo[3], [0.4999, 0.5001]);
 
-        let mut grid = sample_grid_3d()?;
+        let mut grid = sample_grid_3d();
         grid.set_halo(&[0.5, 0.5, 0.5]);
         assert_eq!(grid.halo[0], [0.4999, 0.4999, 0.4999]);
         assert_eq!(grid.halo[1], [0.5001, 0.4999, 0.4999]);
@@ -1089,12 +1084,11 @@ mod tests {
         assert_eq!(grid.halo[5], [0.5001, 0.4999, 0.5001]);
         assert_eq!(grid.halo[6], [0.5001, 0.5001, 0.5001]);
         assert_eq!(grid.halo[7], [0.4999, 0.5001, 0.5001]);
-        Ok(())
     }
 
     #[test]
-    fn calc_container_key_works() -> Result<(), StrError> {
-        let grid = sample_grid_2d()?;
+    fn calc_container_key_works() {
+        let grid = sample_grid_2d();
         // outside
         assert_eq!(grid.calc_container_key(&[-10.0, 0.0]), None);
         assert_eq!(grid.calc_container_key(&[10.0, 0.0]), None);
@@ -1109,7 +1103,7 @@ mod tests {
         assert_eq!(grid.calc_container_key(&[-0.2, 1.8]), Some(24));
         assert_eq!(grid.calc_container_key(&[0.8, 1.8]), Some(27));
 
-        let grid = sample_grid_3d()?;
+        let grid = sample_grid_3d();
         // outside
         assert_eq!(grid.calc_container_key(&[-10.0, -10.0, -10.0]), None);
         assert_eq!(grid.calc_container_key(&[10.0, -10.0, -10.0]), None);
@@ -1122,28 +1116,26 @@ mod tests {
         // inside
         assert_eq!(grid.calc_container_key(&[-1.0, -1.0, -1.0]), Some(0));
         assert_eq!(grid.calc_container_key(&[1.0, 1.0, 1.0]), Some(7));
-        Ok(())
     }
 
     #[test]
-    fn container_pivot_indices_works() -> Result<(), StrError> {
-        let grid = sample_grid_2d()?;
+    fn container_pivot_indices_works() {
+        let grid = sample_grid_2d();
         assert_eq!(grid.container_pivot_indices(0), (0, 0, 0));
         assert_eq!(grid.container_pivot_indices(3), (3, 0, 0));
         assert_eq!(grid.container_pivot_indices(4), (0, 1, 0));
         assert_eq!(grid.container_pivot_indices(20), (0, 5, 0));
         assert_eq!(grid.container_pivot_indices(27), (3, 6, 0));
 
-        let grid = sample_grid_3d()?;
+        let grid = sample_grid_3d();
         assert_eq!(grid.container_pivot_indices(0), (0, 0, 0));
         assert_eq!(grid.container_pivot_indices(2), (0, 1, 0));
         assert_eq!(grid.container_pivot_indices(7), (1, 1, 1));
-        Ok(())
     }
 
     #[test]
-    fn container_center_works() -> Result<(), StrError> {
-        let grid = sample_grid_2d()?;
+    fn container_center_works() {
+        let grid = sample_grid_2d();
         let mut x = vec![0.0; 2];
         let (xa, ya) = (grid.xmin[0], grid.xmin[1]);
         let (xb, yb) = (grid.xmax[0], grid.xmax[1]);
@@ -1153,7 +1145,7 @@ mod tests {
         grid.container_center(&mut x, grid.ndiv[0] - 1, grid.ndiv[1] - 1, 0);
         assert_vec_approx_eq!(x, &[xb - h, yb - h], 1e-15);
 
-        let grid = sample_grid_3d()?;
+        let grid = sample_grid_3d();
         let mut x = vec![0.0; 3];
         let (xa, ya, za) = (grid.xmin[0], grid.xmin[1], grid.xmin[2]);
         let (xb, yb, zb) = (grid.xmax[0], grid.xmax[1], grid.xmax[2]);
@@ -1162,47 +1154,44 @@ mod tests {
         assert_vec_approx_eq!(x, &[xa + h, ya + h, za + h], 1e-15);
         grid.container_center(&mut x, grid.ndiv[0] - 1, grid.ndiv[1] - 1, grid.ndiv[2] - 1);
         assert_vec_approx_eq!(x, &[xb - h, yb - h, zb - h], 1e-15);
-        Ok(())
     }
 
     #[test]
-    fn is_outside_works() -> Result<(), StrError> {
-        let grid = sample_grid_2d()?;
+    fn is_outside_works() {
+        let grid = sample_grid_2d();
         assert_eq!(grid.is_outside(&[-10.0, 0.0]), true);
         assert_eq!(grid.is_outside(&[10.0, 0.0]), true);
         assert_eq!(grid.is_outside(&[0.0, 10.0]), true);
         assert_eq!(grid.is_outside(&[0.0, -10.0]), true);
         assert_eq!(grid.is_outside(&[0.0, 0.0]), false);
 
-        let grid = sample_grid_3d()?;
+        let grid = sample_grid_3d();
         assert_eq!(grid.is_outside(&[-10.0, 0.0, 0.0]), true);
         assert_eq!(grid.is_outside(&[0.0, -10.0, 0.0]), true);
         assert_eq!(grid.is_outside(&[0.0, 0.0, 0.0]), false);
-        Ok(())
     }
 
     #[test]
-    fn insert_handles_wrong_input() -> Result<(), StrError> {
-        let mut grid = sample_grid_2d()?;
+    fn insert_handles_wrong_input() {
+        let mut grid = sample_grid_2d();
         assert_eq!(grid.insert(0, &[0.0, 0.0, 0.0]), Err("x.len() must equal ndim"));
         assert_eq!(
             grid.insert(1000, &[10.0, 0.0]),
             Err("cannot insert point because its coordinates are outside the grid")
         );
 
-        let mut grid = sample_grid_3d()?;
+        let mut grid = sample_grid_3d();
         assert_eq!(grid.insert(0, &[0.0, 0.0]), Err("x.len() must equal ndim"));
         assert_eq!(
             grid.insert(1000, &[10.0, 0.0, 0.0]),
             Err("cannot insert point because its coordinates are outside the grid")
         );
-        Ok(())
     }
 
     #[test]
-    fn insert_works_2d() -> Result<(), StrError> {
-        let mut grid = sample_grid_2d()?;
-        add_sample_points_to_grid_2d(&mut grid)?;
+    fn insert_works_2d() {
+        let mut grid = sample_grid_2d();
+        add_sample_points_to_grid_2d(&mut grid);
         assert_eq!(
             format!("{}", grid),
             "0: [100, 101]\n\
@@ -1230,13 +1219,12 @@ mod tests {
              ncontainer = 20\n\
              ndiv = [4, 8]\n"
         );
-        Ok(())
     }
 
     #[test]
-    fn insert_works_3d() -> Result<(), StrError> {
-        let mut grid = sample_grid_3d()?;
-        add_sample_points_to_grid_3d(&mut grid)?;
+    fn insert_works_3d() {
+        let mut grid = sample_grid_3d();
+        add_sample_points_to_grid_3d(&mut grid);
         assert_eq!(
             format!("{}", grid),
             "0: [100, 101, 103]\n\
@@ -1252,199 +1240,189 @@ mod tests {
              ncontainer = 8\n\
              ndiv = [2, 2, 2]\n"
         );
-        Ok(())
     }
 
     #[test]
-    fn find_handles_wrong_input() -> Result<(), StrError> {
-        let grid = sample_grid_2d()?;
+    fn find_handles_wrong_input() {
+        let grid = sample_grid_2d();
         assert_eq!(grid.find(&[0.0, 0.0, 0.0]), Err("x.len() must equal ndim"));
         assert_eq!(
             grid.find(&[10.0, 0.0]),
             Err("cannot find point because the coordinates are outside the grid")
         );
 
-        let grid = sample_grid_3d()?;
+        let grid = sample_grid_3d();
         assert_eq!(grid.find(&[0.0, 0.0]), Err("x.len() must equal ndim"));
         assert_eq!(
             grid.find(&[10.0, 0.0, 0.0]),
             Err("cannot find point because the coordinates are outside the grid")
         );
-        Ok(())
     }
 
     #[test]
-    fn find_works() -> Result<(), StrError> {
+    fn find_works() {
         const NOISE: f64 = 1e-4 / 2.0;
 
-        let mut grid = sample_grid_2d()?;
-        add_sample_points_to_grid_2d(&mut grid)?;
+        let mut grid = sample_grid_2d();
+        add_sample_points_to_grid_2d(&mut grid);
         let mut id = 100;
         for x in &POINTS_2D {
             let mut y = x.clone();
             y[0] += NOISE;
             y[1] -= NOISE;
-            assert_eq!(grid.find(&y)?, Some(id));
+            assert_eq!(grid.find(&y).unwrap(), Some(id));
             id += 1;
         }
-        assert_eq!(grid.find(&[-0.2, 0.7])?, None);
+        assert_eq!(grid.find(&[-0.2, 0.7]).unwrap(), None);
 
-        let mut grid = sample_grid_3d()?;
-        add_sample_points_to_grid_3d(&mut grid)?;
+        let mut grid = sample_grid_3d();
+        add_sample_points_to_grid_3d(&mut grid);
         let mut id = 100;
         for x in &POINTS_3D {
             let mut y = x.clone();
             y[0] += NOISE;
             y[1] -= NOISE;
             y[2] += NOISE;
-            assert_eq!(grid.find(&y)?, Some(id));
+            assert_eq!(grid.find(&y).unwrap(), Some(id));
             id += 1;
         }
-        assert_eq!(grid.find(&[-0.9, 0.9, 0.9])?, None);
-        Ok(())
+        assert_eq!(grid.find(&[-0.9, 0.9, 0.9]).unwrap(), None);
     }
 
     #[test]
-    fn containers_near_line_works_2d() -> Result<(), StrError> {
-        let mut grid = sample_grid_2d()?;
-        add_sample_points_to_grid_2d(&mut grid)?;
+    fn containers_near_line_works_2d() {
+        let mut grid = sample_grid_2d();
+        add_sample_points_to_grid_2d(&mut grid);
 
         // vertical line
-        let mut indices = grid.containers_near_line(&LINES_2D[0][0], &LINES_2D[0][1])?;
+        let mut indices = grid.containers_near_line(&LINES_2D[0][0], &LINES_2D[0][1]).unwrap();
         indices.sort();
         assert_eq!(indices, &[2, 3, 6, 7, 10, 22, 23, 26, 27, 31]);
 
         // horizontal line
-        let mut indices = grid.containers_near_line(&LINES_2D[1][0], &LINES_2D[1][1])?;
+        let mut indices = grid.containers_near_line(&LINES_2D[1][0], &LINES_2D[1][1]).unwrap();
         indices.sort();
         assert_eq!(indices, &[25, 26, 27, 29, 31]);
 
         // semi-diagonal line
-        let mut indices = grid.containers_near_line(&LINES_2D[2][0], &LINES_2D[2][1])?;
+        let mut indices = grid.containers_near_line(&LINES_2D[2][0], &LINES_2D[2][1]).unwrap();
         indices.sort();
         assert_eq!(indices, &[0, 1, 2, 3, 6, 7]);
-        Ok(())
     }
 
     #[test]
-    fn containers_near_line_works_3d() -> Result<(), StrError> {
-        let mut grid = sample_grid_3d()?;
-        add_sample_points_to_grid_3d(&mut grid)?;
+    fn containers_near_line_works_3d() {
+        let mut grid = sample_grid_3d();
+        add_sample_points_to_grid_3d(&mut grid);
 
         // line parallel to x
-        let mut indices = grid.containers_near_line(&LINES_3D[0][0], &LINES_3D[0][1])?;
+        let mut indices = grid.containers_near_line(&LINES_3D[0][0], &LINES_3D[0][1]).unwrap();
         indices.sort();
         assert_eq!(indices, &[0, 1]);
 
         // diagonal line
-        let mut indices = grid.containers_near_line(&LINES_3D[1][0], &LINES_3D[1][1])?;
+        let mut indices = grid.containers_near_line(&LINES_3D[1][0], &LINES_3D[1][1]).unwrap();
         indices.sort();
         assert_eq!(indices, &[0, 1, 2, 3, 4, 5, 6, 7]);
-        Ok(())
     }
 
     #[test]
-    fn find_on_line_handles_wrong_input() -> Result<(), StrError> {
-        let grid = sample_grid_2d()?;
+    fn find_on_line_handles_wrong_input() {
+        let grid = sample_grid_2d();
         assert_eq!(grid.find_on_line(&[0.0], &[1.0, 1.0]), Err("a.len() must equal ndim"));
         assert_eq!(grid.find_on_line(&[0.0, 0.0], &[1.0]), Err("b.len() must equal ndim"));
-        Ok(())
     }
 
     #[test]
-    fn find_on_line_works_2d() -> Result<(), StrError> {
-        let mut grid = sample_grid_2d()?;
-        add_sample_points_to_grid_2d(&mut grid)?;
+    fn find_on_line_works_2d() {
+        let mut grid = sample_grid_2d();
+        add_sample_points_to_grid_2d(&mut grid);
 
         // vertical line
-        let res = grid.find_on_line(&LINES_2D[0][0], &LINES_2D[0][1])?;
+        let res = grid.find_on_line(&LINES_2D[0][0], &LINES_2D[0][1]).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [103, 108]);
 
         // horizontal line
-        let res = grid.find_on_line(&LINES_2D[1][0], &LINES_2D[1][1])?;
+        let res = grid.find_on_line(&LINES_2D[1][0], &LINES_2D[1][1]).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [107, 110]);
 
         // semi-diagonal line
-        let res = grid.find_on_line(&LINES_2D[2][0], &LINES_2D[2][1])?;
+        let res = grid.find_on_line(&LINES_2D[2][0], &LINES_2D[2][1]).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [103]);
-        Ok(())
     }
 
     #[test]
-    fn find_on_line_works_3d() -> Result<(), StrError> {
-        let mut grid = sample_grid_3d()?;
-        add_sample_points_to_grid_3d(&mut grid)?;
+    fn find_on_line_works_3d() {
+        let mut grid = sample_grid_3d();
+        add_sample_points_to_grid_3d(&mut grid);
 
         // line parallel to x
-        let res = grid.find_on_line(&LINES_3D[0][0], &LINES_3D[0][1])?;
+        let res = grid.find_on_line(&LINES_3D[0][0], &LINES_3D[0][1]).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 104]);
 
         // diagonal
-        let res = grid.find_on_line(&LINES_3D[1][0], &LINES_3D[1][1])?;
+        let res = grid.find_on_line(&LINES_3D[1][0], &LINES_3D[1][1]).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 101, 102]);
-        Ok(())
     }
 
     #[test]
-    fn containers_near_circle_works() -> Result<(), StrError> {
-        let mut grid = sample_grid_2d()?;
-        add_sample_points_to_grid_2d(&mut grid)?;
+    fn containers_near_circle_works() {
+        let mut grid = sample_grid_2d();
+        add_sample_points_to_grid_2d(&mut grid);
 
-        let mut indices = grid.containers_near_circle(&CIRCLE.0, CIRCLE.1)?;
+        let mut indices = grid.containers_near_circle(&CIRCLE.0, CIRCLE.1).unwrap();
         indices.sort();
         assert_eq!(indices, &[20, 21, 25, 29]);
-        Ok(())
     }
 
     #[test]
-    fn find_on_circle_fails_on_wrong_input() -> Result<(), StrError> {
-        let grid = sample_grid_2d()?;
+    fn find_on_circle_fails_on_wrong_input() {
+        let grid = sample_grid_2d();
         assert_eq!(grid.find_on_circle(&[-0.2], 0.3), Err("center.len() must equal ndim"));
 
-        let grid = sample_grid_3d()?;
+        let grid = sample_grid_3d();
         assert_eq!(
             grid.find_on_circle(&[0.0, 0.0, 0.0], 1.0),
             Err("find_on_circle works in 2D only")
         );
-        Ok(())
     }
 
     #[test]
-    fn find_on_circle_works() -> Result<(), StrError> {
-        let mut grid = sample_grid_2d()?;
-        add_sample_points_to_grid_2d(&mut grid)?;
+    fn find_on_circle_works() {
+        let mut grid = sample_grid_2d();
+        add_sample_points_to_grid_2d(&mut grid);
 
-        let res = grid.find_on_circle(&CIRCLE.0, CIRCLE.1)?;
+        let res = grid.find_on_circle(&CIRCLE.0, CIRCLE.1).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [109, 110, 111]);
-        Ok(())
     }
 
     #[test]
-    fn containers_near_cylinder_works() -> Result<(), StrError> {
-        let mut grid = sample_grid_3d()?;
-        add_sample_points_to_grid_3d(&mut grid)?;
+    fn containers_near_cylinder_works() {
+        let mut grid = sample_grid_3d();
+        add_sample_points_to_grid_3d(&mut grid);
 
-        let mut indices = grid.containers_near_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2)?;
+        let mut indices = grid
+            .containers_near_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2)
+            .unwrap();
         indices.sort();
         assert_eq!(indices, &[1, 3]);
-        Ok(())
     }
 
     #[test]
-    fn find_on_cylinder_fails_on_wrong_input() -> Result<(), StrError> {
-        let grid = sample_grid_3d()?;
+    fn find_on_cylinder_fails_on_wrong_input() {
+        let grid = sample_grid_3d();
         assert_eq!(
             grid.find_on_cylinder(&[0.0, 0.0], &[1.0, 0.0, 0.0], 1.0),
             Err("a.len() must equal ndim")
@@ -1454,30 +1432,28 @@ mod tests {
             Err("b.len() must equal ndim")
         );
 
-        let grid = sample_grid_2d()?;
+        let grid = sample_grid_2d();
         assert_eq!(
             grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0),
             Err("find_on_cylinder works in 3D only")
         );
-        Ok(())
     }
 
     #[test]
-    fn find_on_cylinder_works() -> Result<(), StrError> {
-        let mut grid = sample_grid_3d()?;
-        add_sample_points_to_grid_3d(&mut grid)?;
+    fn find_on_cylinder_works() {
+        let mut grid = sample_grid_3d();
+        add_sample_points_to_grid_3d(&mut grid);
 
-        let res = grid.find_on_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2)?;
+        let res = grid.find_on_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [104, 105, 106, 107]);
-        Ok(())
     }
 
     #[test]
-    fn containers_near_plane_works() -> Result<(), StrError> {
-        let mut grid = sample_grid_3d()?;
-        add_sample_points_to_grid_3d(&mut grid)?;
+    fn containers_near_plane_works() {
+        let mut grid = sample_grid_3d();
+        add_sample_points_to_grid_3d(&mut grid);
 
         let mut indices = grid.containers_near_plane(0, -1.0);
         indices.sort();
@@ -1506,37 +1482,34 @@ mod tests {
         let mut indices = grid.containers_near_plane(2, 0.0);
         indices.sort();
         assert_eq!(indices, &[0, 1, 2, 3, 4, 5, 6, 7]);
-        Ok(())
     }
 
     #[test]
-    fn find_on_plane_fails_on_wrong_input() -> Result<(), StrError> {
-        let grid = sample_grid_2d()?;
+    fn find_on_plane_fails_on_wrong_input() {
+        let grid = sample_grid_2d();
         assert_eq!(grid.find_on_plane_xy(-1.0), Err("find_on_plane_xy works in 3D only"));
         assert_eq!(grid.find_on_plane_yz(-1.0), Err("find_on_plane_yz works in 3D only"));
         assert_eq!(grid.find_on_plane_xz(-1.0), Err("find_on_plane_xz works in 3D only"));
-        Ok(())
     }
 
     #[test]
-    fn find_on_plane_works() -> Result<(), StrError> {
-        let mut grid = sample_grid_3d()?;
-        add_sample_points_to_grid_3d(&mut grid)?;
+    fn find_on_plane_works() {
+        let mut grid = sample_grid_3d();
+        add_sample_points_to_grid_3d(&mut grid);
 
-        let res = grid.find_on_plane_xy(-1.0)?;
+        let res = grid.find_on_plane_xy(-1.0).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 103, 104, 106]);
 
-        let res = grid.find_on_plane_yz(-1.0)?;
+        let res = grid.find_on_plane_yz(-1.0).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100]);
 
-        let res = grid.find_on_plane_xz(-1.0)?;
+        let res = grid.find_on_plane_xz(-1.0).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 104, 105]);
-        Ok(())
     }
 }

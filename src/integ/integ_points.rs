@@ -21,13 +21,13 @@ pub type IntegPointData = &'static [[f64; 4]];
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ::default_integ_points;
+/// use gemlab::integ;
 /// use gemlab::shapes::GeoKind;
 ///
-/// let ips = default_integ_points(GeoKind::Tet4);
-/// assert_eq!(ips, [[0.25, 0.25, 0.25, 1.0/6.0]]);
+/// let ips = integ::default_points(GeoKind::Tet4);
+/// assert_eq!(ips.len(), 4);
 /// ```
-pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
+pub fn default_points(kind: GeoKind) -> IntegPointData {
     match kind {
         // Lin
         GeoKind::Lin2 => &IP_LIN_LEGENDRE_2,
@@ -35,8 +35,8 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
         GeoKind::Lin4 => &IP_LIN_LEGENDRE_4,
         GeoKind::Lin5 => &IP_LIN_LEGENDRE_5,
         // Tri
-        GeoKind::Tri3 => &IP_TRI_INTERNAL_1,
-        GeoKind::Tri6 => &IP_TRI_INTERNAL_4,
+        GeoKind::Tri3 => &IP_TRI_INTERNAL_3,
+        GeoKind::Tri6 => &IP_TRI_FELIPPA_7,
         GeoKind::Tri10 => &IP_TRI_INTERNAL_12,
         GeoKind::Tri15 => &IP_TRI_INTERNAL_16,
         // Qua
@@ -47,7 +47,7 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
         GeoKind::Qua16 => &IP_QUA_LEGENDRE_16,
         GeoKind::Qua17 => &IP_QUA_LEGENDRE_16,
         // Tet
-        GeoKind::Tet4 => &IP_TET_INTERNAL_1,
+        GeoKind::Tet4 => &IP_TET_INTERNAL_4,
         GeoKind::Tet10 => &IP_TET_FELIPPA_14,
         GeoKind::Tet20 => &IP_TET_FELIPPA_24,
         // Hex
@@ -78,8 +78,9 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
 ///
 /// * `1` -- Internal integration points and weights
 /// * `3` -- Internal integration points and weights
-/// * `1_003` -- Edge integration points and weights
 /// * `4` -- Internal integration points and weights
+/// * `6` -- Internal integration points and weights (based on Felippa's code)
+/// * `7` -- Internal integration points and weights (based on Felippa's code)
 /// * `12` -- Internal integration points and weights
 /// * `16` -- Internal integration points and weights
 ///
@@ -87,10 +88,6 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
 ///
 /// * `1` -- Conventional Legendre integration points and weights
 /// * `4` -- Conventional Legendre integration points and weights
-/// * `5` -- Wilson's integration points and weights. "Corner" version
-/// * `1_005` -- 5 points. Wilson's integration points and weights. "Stable" version version with w0=0.004 and wa=0.999 to mimic 4-point rule
-///              **Warning:** This set performs poorly with functions such as ∫∫(x²+y²) dx dy
-/// * `8` -- Wilson's integration points and weights.
 /// * `9` -- Conventional Legendre integration points and weights
 /// * `16` -- Conventional Legendre integration points and weights
 ///
@@ -108,9 +105,6 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
 ///
 /// * `6` -- Iron's integration points and weights
 /// * `8` -- Conventional Legendre integration points and weights, degree 3
-/// * `9` -- Wilson's integration points and weights. "Corner" version
-/// * `1_009` -- Wilson's integration points and weights. "Stable" version
-///              **Warning:** This set performs poorly with functions such as ∫∫∫(x²+y²+z²) dx dy dz
 /// * `14` -- Iron's integration points and weights
 /// * `27` -- Conventional Legendre integration points and weights, degree 5
 /// * `64` -- Conventional Legendre integration points and weights, degree 7
@@ -118,17 +112,17 @@ pub fn default_integ_points(kind: GeoKind) -> IntegPointData {
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ::select_integ_points;
+/// use gemlab::integ;
 /// use gemlab::shapes::GeoClass;
 /// use gemlab::StrError;
 ///
 /// fn main() -> Result<(), StrError> {
-///     let ips = select_integ_points(GeoClass::Tet, 1)?;
+///     let ips = integ::points(GeoClass::Tet, 1)?;
 ///     assert_eq!(ips, [[0.25, 0.25, 0.25, 1.0/6.0]]);
 ///     Ok(())
 /// }
 /// ```
-pub fn select_integ_points(class: GeoClass, n_integ_point: usize) -> Result<IntegPointData, StrError> {
+pub fn points(class: GeoClass, n_integ_point: usize) -> Result<IntegPointData, StrError> {
     let ips: IntegPointData = match class {
         // Lin
         GeoClass::Lin => match n_integ_point {
@@ -143,8 +137,9 @@ pub fn select_integ_points(class: GeoClass, n_integ_point: usize) -> Result<Inte
         GeoClass::Tri => match n_integ_point {
             1 => &IP_TRI_INTERNAL_1,
             3 => &IP_TRI_INTERNAL_3,
-            1_003 => &IP_TRI_EDGE_3,
             4 => &IP_TRI_INTERNAL_4,
+            6 => &IP_TRI_FELIPPA_6,
+            7 => &IP_TRI_FELIPPA_7,
             12 => &IP_TRI_INTERNAL_12,
             16 => &IP_TRI_INTERNAL_16,
             _ => return Err("desired number of integration points is not available for Tri class"),
@@ -153,9 +148,6 @@ pub fn select_integ_points(class: GeoClass, n_integ_point: usize) -> Result<Inte
         GeoClass::Qua => match n_integ_point {
             1 => &IP_QUA_LEGENDRE_1,
             4 => &IP_QUA_LEGENDRE_4,
-            5 => &IP_QUA_WILSON_CORNER_5,
-            1_005 => &IP_QUA_WILSON_STABLE_5,
-            8 => &IP_QUA_WILSON_8,
             9 => &IP_QUA_LEGENDRE_9,
             16 => &IP_QUA_LEGENDRE_16,
             _ => return Err("desired number of integration points is not available for Qua class"),
@@ -175,8 +167,6 @@ pub fn select_integ_points(class: GeoClass, n_integ_point: usize) -> Result<Inte
         GeoClass::Hex => match n_integ_point {
             6 => &IP_HEX_IRONS_6,
             8 => &IP_HEX_LEGENDRE_8,
-            9 => &IP_HEX_WILSON_CORNER_9,
-            1_009 => &IP_HEX_WILSON_STABLE_9,
             14 => &IP_HEX_IRONS_14,
             27 => &IP_HEX_LEGENDRE_27,
             64 => &IP_HEX_LEGENDRE_64,
@@ -252,14 +242,6 @@ pub const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
     [1.0 / 6.0, 2.0 / 3.0, 0.0, 1.0 / 6.0],
 ];
 
-/// Edge integration points and weights
-#[rustfmt::skip]
-pub const IP_TRI_EDGE_3: [[f64; 4]; 3] = [
-    [0.5, 0.5, 0.0, 1.0 / 6.0],
-    [0.0, 0.5, 0.0, 1.0 / 6.0],
-    [0.5, 0.0, 0.0, 1.0 / 6.0],
-];
-
 /// Internal integration points and weights
 #[rustfmt::skip]
 pub const IP_TRI_INTERNAL_4: [[f64; 4]; 4] = [
@@ -267,6 +249,29 @@ pub const IP_TRI_INTERNAL_4: [[f64; 4]; 4] = [
     [1.0 / 5.0, 1.0 / 5.0, 0.0,  25.0 / 96.0],
     [3.0 / 5.0, 1.0 / 5.0, 0.0,  25.0 / 96.0],
     [1.0 / 5.0, 3.0 / 5.0, 0.0,  25.0 / 96.0],
+];
+
+/// Internal integration points and weights, 6 points
+#[rustfmt::skip]
+pub const IP_TRI_FELIPPA_6: [[f64; 4]; 6] = [
+    [0.44594849091596488632,  0.44594849091596488632,  0.0, 0.11169079483900573285 ],
+    [0.10810301816807022736,  0.44594849091596488632,  0.0, 0.11169079483900573285 ],
+    [0.44594849091596488632,  0.10810301816807022736,  0.0, 0.11169079483900573285 ],
+    [0.091576213509770743460, 0.091576213509770743460, 0.0, 0.054975871827660933819],
+    [0.81684757298045851308,  0.091576213509770743460, 0.0, 0.054975871827660933819],
+    [0.091576213509770743460, 0.81684757298045851308,  0.0, 0.054975871827660933819],
+];
+
+/// Internal integration points and weights, 7 points
+#[rustfmt::skip]
+pub const IP_TRI_FELIPPA_7: [[f64; 4]; 7] = [
+    [0.10128650732345633880,  0.10128650732345633880,  0.0, 0.062969590272413576298],
+    [0.79742698535308732240,  0.10128650732345633880,  0.0, 0.062969590272413576298],
+    [0.10128650732345633880,  0.79742698535308732240,  0.0, 0.062969590272413576298],
+    [0.47014206410511508977,  0.47014206410511508977,  0.0, 0.066197076394253090369],
+    [0.059715871789769820459, 0.47014206410511508977,  0.0, 0.066197076394253090369],
+    [0.47014206410511508977,  0.059715871789769820459, 0.0, 0.066197076394253090369],
+    [0.33333333333333333333,  0.33333333333333333333,  0.0, 0.11250000000000000000 ],
 ];
 
 /// Internal integration points and weights
@@ -324,43 +329,6 @@ pub const IP_QUA_LEGENDRE_4: [[f64; 4]; 4] = [
     [ 0.5773502691896257, -0.5773502691896257, 0.0, 1.0],
     [-0.5773502691896257,  0.5773502691896257, 0.0, 1.0],
     [ 0.5773502691896257,  0.5773502691896257, 0.0, 1.0],
-];
-
-/// Wilson's integration points and weights. "Corner" version
-#[rustfmt::skip]
-pub const IP_QUA_WILSON_CORNER_5: [[f64; 4]; 5] = [
-    [-1.0, -1.0, 0.0, 0.3333333333333333],
-    [ 1.0, -1.0, 0.0, 0.3333333333333333],
-    [ 0.0,  0.0, 0.0, 2.6666666666666665],
-    [-1.0,  1.0, 0.0, 0.3333333333333333],
-    [ 1.0,  1.0, 0.0, 0.3333333333333333],
-];
-
-/// Wilson's integration points and weights. "Stable" version version with w0=0.004 and wa=0.999 to mimic 4-point rule
-/// 
-/// # Warning
-/// 
-/// This set performs poorly with functions such as ∫∫(x²+y²) dx dy
-#[rustfmt::skip]
-pub const IP_QUA_WILSON_STABLE_5: [[f64; 4]; 5] = [
-    [-0.5776391000000000, -0.5776391000000000, 0.0, 0.999],
-    [ 0.5776391000000000, -0.5776391000000000, 0.0, 0.999],
-    [ 0.0000000000000000,  0.0000000000000000, 0.0, 0.004],
-    [-0.5776391000000000,  0.5776391000000000, 0.0, 0.999],
-    [ 0.5776391000000000,  0.5776391000000000, 0.0, 0.999],
-];
-
-/// Wilson's integration points and weights.
-#[rustfmt::skip]
-pub const IP_QUA_WILSON_8: [[f64; 4]; 8] = [
-    [-0.8819171036881969, -0.8819171036881969, 0.0, 0.1836734693877551],
-    [ 0.0000000000000000, -0.6831300510639732, 0.0, 0.8163265306122449],
-    [ 0.8819171036881969, -0.8819171036881969, 0.0, 0.1836734693877551],
-    [-0.6831300510639732,  0.0000000000000000, 0.0, 0.8163265306122449],
-    [ 0.6831300510639732,  0.0000000000000000, 0.0, 0.8163265306122449],
-    [-0.8819171036881969,  0.8819171036881969, 0.0, 0.1836734693877551],
-    [ 0.0000000000000000,  0.6831300510639732, 0.0, 0.8163265306122449],
-    [ 0.8819171036881969,  0.8819171036881969, 0.0, 0.1836734693877551],
 ];
 
 /// Conventional Legendre integration points and weights
@@ -557,38 +525,6 @@ pub const IP_HEX_LEGENDRE_8: [[f64; 4]; 8] = [
     [ 0.5773502691896257,  0.5773502691896257,  0.5773502691896257, 1.0],
 ];
 
-/// Wilson's integration points and weights. "Corner" version, 9 points
-#[rustfmt::skip]
-pub const IP_HEX_WILSON_CORNER_9: [[f64; 4]; 9] = [
-    [-1.0, -1.0, -1.0,  0.3333333333333333],
-    [ 1.0, -1.0, -1.0,  0.3333333333333333],
-    [-1.0,  1.0, -1.0,  0.3333333333333333],
-    [ 1.0,  1.0, -1.0,  0.3333333333333333],
-    [ 0.0,  0.0,  0.0,  5.3333333333333330],
-    [-1.0, -1.0,  1.0,  0.3333333333333333],
-    [ 1.0, -1.0,  1.0,  0.3333333333333333],
-    [-1.0,  1.0,  1.0,  0.3333333333333333],
-    [ 1.0,  1.0,  1.0,  0.3333333333333333],
-];
-
-/// Wilson's integration points and weights. "Stable" version, 9 points
-/// 
-/// # Warning
-/// 
-/// This set performs poorly with functions such as ∫∫∫(x²+y²+z²) dx dy dz
-#[rustfmt::skip]
-pub const IP_HEX_WILSON_STABLE_9: [[f64; 4]; 9] = [
-    [-0.5776391, -0.5776391, -0.5776391000000000,  0.999],
-    [ 0.5776391, -0.5776391, -0.5776391000000000,  0.999],
-    [-0.5776391,  0.5776391, -0.5776391000000000,  0.999],
-    [ 0.5776391,  0.5776391, -0.5776391000000000,  0.999],
-    [ 0.0000000,  0.0000000,  0.0000000000000000,  0.008],
-    [-0.5776391, -0.5776391,  0.5776391000000000,  0.999],
-    [ 0.5776391, -0.5776391,  0.5776391000000000,  0.999],
-    [-0.5776391,  0.5776391,  0.5776391000000000,  0.999],
-    [ 0.5776391,  0.5776391,  0.5776391000000000,  0.999],
-];
-
 /// Iron's integration points and weights, 14 points
 #[rustfmt::skip]
 pub const IP_HEX_IRONS_14: [[f64; 4]; 14] = [
@@ -713,96 +649,88 @@ pub const IP_HEX_LEGENDRE_64: [[f64; 4]; 64] = [
 
 #[cfg(test)]
 mod tests {
-    use super::{default_integ_points, select_integ_points};
+    use super::{default_points, points};
     use crate::shapes::{GeoClass, GeoKind};
-    use crate::StrError;
 
     #[test]
-    fn default_integ_points_works() {
+    fn default_points_works() {
         // Lin
-        assert_eq!(default_integ_points(GeoKind::Lin2).len(), 2);
-        assert_eq!(default_integ_points(GeoKind::Lin3).len(), 3);
-        assert_eq!(default_integ_points(GeoKind::Lin4).len(), 4);
-        assert_eq!(default_integ_points(GeoKind::Lin5).len(), 5);
+        assert_eq!(default_points(GeoKind::Lin2).len(), 2);
+        assert_eq!(default_points(GeoKind::Lin3).len(), 3);
+        assert_eq!(default_points(GeoKind::Lin4).len(), 4);
+        assert_eq!(default_points(GeoKind::Lin5).len(), 5);
         // Tri
-        assert_eq!(default_integ_points(GeoKind::Tri3).len(), 1);
-        assert_eq!(default_integ_points(GeoKind::Tri6).len(), 4);
-        assert_eq!(default_integ_points(GeoKind::Tri10).len(), 12);
-        assert_eq!(default_integ_points(GeoKind::Tri15).len(), 16);
+        assert_eq!(default_points(GeoKind::Tri3).len(), 3);
+        assert_eq!(default_points(GeoKind::Tri6).len(), 7);
+        assert_eq!(default_points(GeoKind::Tri10).len(), 12);
+        assert_eq!(default_points(GeoKind::Tri15).len(), 16);
         // Qua
-        assert_eq!(default_integ_points(GeoKind::Qua4).len(), 4);
-        assert_eq!(default_integ_points(GeoKind::Qua8).len(), 9);
-        assert_eq!(default_integ_points(GeoKind::Qua9).len(), 9);
-        assert_eq!(default_integ_points(GeoKind::Qua12).len(), 16);
-        assert_eq!(default_integ_points(GeoKind::Qua16).len(), 16);
-        assert_eq!(default_integ_points(GeoKind::Qua17).len(), 16);
+        assert_eq!(default_points(GeoKind::Qua4).len(), 4);
+        assert_eq!(default_points(GeoKind::Qua8).len(), 9);
+        assert_eq!(default_points(GeoKind::Qua9).len(), 9);
+        assert_eq!(default_points(GeoKind::Qua12).len(), 16);
+        assert_eq!(default_points(GeoKind::Qua16).len(), 16);
+        assert_eq!(default_points(GeoKind::Qua17).len(), 16);
         // Tet
-        assert_eq!(default_integ_points(GeoKind::Tet4).len(), 1);
-        assert_eq!(default_integ_points(GeoKind::Tet10).len(), 14);
-        assert_eq!(default_integ_points(GeoKind::Tet20).len(), 24);
+        assert_eq!(default_points(GeoKind::Tet4).len(), 4);
+        assert_eq!(default_points(GeoKind::Tet10).len(), 14);
+        assert_eq!(default_points(GeoKind::Tet20).len(), 24);
         // Hex
-        assert_eq!(default_integ_points(GeoKind::Hex8).len(), 8);
-        assert_eq!(default_integ_points(GeoKind::Hex20).len(), 27);
-        assert_eq!(default_integ_points(GeoKind::Hex32).len(), 64);
+        assert_eq!(default_points(GeoKind::Hex8).len(), 8);
+        assert_eq!(default_points(GeoKind::Hex20).len(), 27);
+        assert_eq!(default_points(GeoKind::Hex32).len(), 64);
     }
 
     #[test]
-    fn select_integ_points_works() -> Result<(), StrError> {
+    fn get_points_works() {
         // Lin
         for n_integ_point in [1, 2, 3, 4, 5] {
-            let ips = select_integ_points(GeoClass::Lin, n_integ_point)?;
+            let ips = points(GeoClass::Lin, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
         assert_eq!(
-            select_integ_points(GeoClass::Lin, 100).err(),
+            points(GeoClass::Lin, 100).err(),
             Some("desired number of integration points is not available for Lin class")
         );
 
         // Tri
-        for n_integ_point in [1, 3, 4, 12, 16] {
-            let ips = select_integ_points(GeoClass::Tri, n_integ_point)?;
+        for n_integ_point in [1, 3, 4, 6, 7, 12, 16] {
+            let ips = points(GeoClass::Tri, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
-        let ips = select_integ_points(GeoClass::Tri, 1_003)?;
-        assert_eq!(ips.len(), 3);
         assert_eq!(
-            select_integ_points(GeoClass::Tri, 100).err(),
+            points(GeoClass::Tri, 100).err(),
             Some("desired number of integration points is not available for Tri class")
         );
 
         // Qua
-        for n_integ_point in [1, 4, 5, 8, 9, 16] {
-            let ips = select_integ_points(GeoClass::Qua, n_integ_point)?;
+        for n_integ_point in [1, 4, 9, 16] {
+            let ips = points(GeoClass::Qua, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
-        let ips = select_integ_points(GeoClass::Qua, 1_005)?;
-        assert_eq!(ips.len(), 5);
         assert_eq!(
-            select_integ_points(GeoClass::Qua, 100).err(),
+            points(GeoClass::Qua, 100).err(),
             Some("desired number of integration points is not available for Qua class")
         );
 
         // Tet
-        for n_integ_point in [1, 4, 5, 8, 14] {
-            let ips = select_integ_points(GeoClass::Tet, n_integ_point)?;
+        for n_integ_point in [1, 4, 5, 8, 14, 15, 24] {
+            let ips = points(GeoClass::Tet, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
         assert_eq!(
-            select_integ_points(GeoClass::Tet, 100).err(),
+            points(GeoClass::Tet, 100).err(),
             Some("desired number of integration points is not available for Tet class")
         );
 
         // Hex
-        for n_integ_point in [6, 8, 9, 14, 27] {
-            let ips = select_integ_points(GeoClass::Hex, n_integ_point)?;
+        for n_integ_point in [6, 8, 14, 27, 64] {
+            let ips = points(GeoClass::Hex, n_integ_point).unwrap();
             assert_eq!(ips.len(), n_integ_point);
         }
-        let ips = select_integ_points(GeoClass::Hex, 1_009)?;
-        assert_eq!(ips.len(), 9);
         assert_eq!(
-            select_integ_points(GeoClass::Hex, 100).err(),
+            points(GeoClass::Hex, 100).err(),
             Some("desired number of integration points is not available for Hex class")
         );
-        Ok(())
     }
 }

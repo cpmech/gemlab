@@ -294,35 +294,33 @@ mod tests {
     use crate::mesh::algorithms::{extract_all_2d_edges, extract_all_faces, extract_features_2d, extract_features_3d};
     use crate::mesh::{At, Extract, Samples};
     use crate::util::SQRT_2;
-    use crate::StrError;
-    use plotpy::Plot;
     use std::collections::HashSet;
 
-    #[allow(dead_code)]
-    fn plot_grid_two_qua4(find: &Find) -> Result<(), StrError> {
-        let mut plot = Plot::new();
-        find.grid.draw(&mut plot)?;
-        plot.set_equal_axes(true).set_figure_size_points(800.0, 400.0);
-        plot.save("/tmp/gemlab/test_find_with_two_qua4.svg")
-    }
+    #[allow(unused_imports)]
+    use plotpy::Plot;
 
-    #[allow(dead_code)]
-    fn plot_grid_two_hex8(find: &Find) -> Result<(), StrError> {
-        let mut plot = Plot::new();
-        find.grid.draw(&mut plot)?;
-        plot.set_equal_axes(true).set_figure_size_points(2048.0, 2048.0);
-        plot.save("/tmp/gemlab/test_find_with_two_hex8.svg")
-    }
+    // DO NOT DELETE the following lines
+    // fn plot_grid_two_qua4(find: &Find) {
+    //     let mut plot = Plot::new();
+    //     find.grid.draw(&mut plot).unwrap();
+    //     plot.set_equal_axes(true).set_figure_size_points(800.0, 400.0);
+    //     plot.save("/tmp/gemlab/test_find_with_two_qua4.svg").unwrap();
+    // }
+
+    // DO NOT DELETE the following lines
+    // fn plot_grid_two_hex8(find: &Find) {
+    //     let mut plot = Plot::new();
+    //     find.grid.draw(&mut plot).unwrap();
+    //     plot.set_equal_axes(true).set_figure_size_points(2048.0, 2048.0);
+    //     plot.save("/tmp/gemlab/test_find_with_two_hex8.svg").unwrap();
+    // }
 
     #[test]
-    fn new_works() -> Result<(), StrError> {
+    fn new_works() {
         let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
-        if false {
-            plot_grid_two_qua4(&find)?;
-        }
+        let find = Find::new(&mesh, &boundary).unwrap();
         assert_eq!(
             format!("{}", find.grid),
             "0: [0]\n\
@@ -336,16 +334,16 @@ mod tests {
              ncontainer = 6\n\
              ndiv = [20, 10]\n"
         );
-        Ok(())
+        // plot_grid_two_qua4(&find).unwrap();
     }
 
     #[test]
-    fn find_points_fails_on_wrong_input() -> Result<(), StrError> {
+    fn find_points_fails_on_wrong_input() {
         // 2d
         let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
+        let find = Find::new(&mesh, &boundary).unwrap();
         assert_eq!(find.points(At::Z(0.0)).err(), Some("At::Z works in 3D only"));
         assert_eq!(find.points(At::YZ(0.0, 0.0)).err(), Some("At::YZ works in 3D only"));
         assert_eq!(find.points(At::XZ(0.0, 0.0)).err(), Some("At::XZ works in 3D only"));
@@ -362,12 +360,11 @@ mod tests {
         let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
+        let find = Find::new(&mesh, &boundary).unwrap();
         assert_eq!(
             find.points(At::Circle(0.0, 0.0, 0.0)).err(),
             Some("At::Circle works in 2D only")
         );
-        Ok(())
     }
 
     fn check<T>(found: &HashSet<T>, correct: &[T])
@@ -380,7 +377,7 @@ mod tests {
     }
 
     #[test]
-    fn find_points_works_2d() -> Result<(), StrError> {
+    fn find_points_works_2d() {
         // `.       `.
         //   3--------2--------5
         //   | `.     | `.     |
@@ -391,21 +388,20 @@ mod tests {
         let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
-        check(&find.points(At::XY(0.0, 0.0))?, &[0]);
-        check(&find.points(At::XY(2.0, 1.0))?, &[5]);
+        let find = Find::new(&mesh, &boundary).unwrap();
+        check(&find.points(At::XY(0.0, 0.0)).unwrap(), &[0]);
+        check(&find.points(At::XY(2.0, 1.0)).unwrap(), &[5]);
         assert_eq!(
             find.points(At::XY(10.0, 0.0)).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
-        check(&find.points(At::Circle(0.0, 0.0, 1.0))?, &[1, 3]);
-        check(&find.points(At::Circle(0.0, 0.0, SQRT_2))?, &[2]);
-        check(&find.points(At::Circle(0.0, 0.0, 10.0))?, &[]);
-        Ok(())
+        check(&find.points(At::Circle(0.0, 0.0, 1.0)).unwrap(), &[1, 3]);
+        check(&find.points(At::Circle(0.0, 0.0, SQRT_2)).unwrap(), &[2]);
+        check(&find.points(At::Circle(0.0, 0.0, 10.0)).unwrap(), &[]);
     }
 
     #[test]
-    fn find_points_works_3d() -> Result<(), StrError> {
+    fn find_points_works_3d() {
         //      8-----------11  2.0
         //     /.           /|
         //    / .          / |
@@ -427,46 +423,48 @@ mod tests {
         let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
-        // plot_grid_two_cubes_vertical(&find)?;
-        check(&find.points(At::X(0.0))?, &[0, 3, 4, 7, 8, 11]);
-        check(&find.points(At::X(1.0))?, &[1, 2, 5, 6, 9, 10]);
-        check(&find.points(At::X(10.0))?, &[]);
-        check(&find.points(At::Y(0.0))?, &[0, 1, 4, 5, 8, 9]);
-        check(&find.points(At::Y(1.0))?, &[2, 3, 6, 7, 10, 11]);
-        check(&find.points(At::Y(10.0))?, &[]);
-        check(&find.points(At::Z(0.0))?, &[0, 1, 2, 3]);
-        check(&find.points(At::Z(1.0))?, &[4, 5, 6, 7]);
-        check(&find.points(At::Z(2.0))?, &[8, 9, 10, 11]);
-        check(&find.points(At::Z(10.0))?, &[]);
-        check(&find.points(At::XY(0.0, 0.0))?, &[0, 4, 8]);
-        check(&find.points(At::XY(1.0, 1.0))?, &[2, 6, 10]);
-        check(&find.points(At::XY(10.0, 10.0))?, &[]);
-        check(&find.points(At::YZ(0.0, 0.0))?, &[0, 1]);
-        check(&find.points(At::YZ(1.0, 1.0))?, &[6, 7]);
-        check(&find.points(At::XZ(0.0, 0.0))?, &[0, 3]);
-        check(&find.points(At::XZ(1.0, 0.0))?, &[1, 2]);
-        check(&find.points(At::XZ(1.0, 2.0))?, &[9, 10]);
-        check(&find.points(At::XYZ(0.0, 0.0, 0.0))?, &[0]);
-        check(&find.points(At::XYZ(1.0, 1.0, 2.0))?, &[10]);
+        let find = Find::new(&mesh, &boundary).unwrap();
+        // plot_grid_two_cubes_vertical(&find).unwrap();
+        check(&find.points(At::X(0.0)).unwrap(), &[0, 3, 4, 7, 8, 11]);
+        check(&find.points(At::X(1.0)).unwrap(), &[1, 2, 5, 6, 9, 10]);
+        check(&find.points(At::X(10.0)).unwrap(), &[]);
+        check(&find.points(At::Y(0.0)).unwrap(), &[0, 1, 4, 5, 8, 9]);
+        check(&find.points(At::Y(1.0)).unwrap(), &[2, 3, 6, 7, 10, 11]);
+        check(&find.points(At::Y(10.0)).unwrap(), &[]);
+        check(&find.points(At::Z(0.0)).unwrap(), &[0, 1, 2, 3]);
+        check(&find.points(At::Z(1.0)).unwrap(), &[4, 5, 6, 7]);
+        check(&find.points(At::Z(2.0)).unwrap(), &[8, 9, 10, 11]);
+        check(&find.points(At::Z(10.0)).unwrap(), &[]);
+        check(&find.points(At::XY(0.0, 0.0)).unwrap(), &[0, 4, 8]);
+        check(&find.points(At::XY(1.0, 1.0)).unwrap(), &[2, 6, 10]);
+        check(&find.points(At::XY(10.0, 10.0)).unwrap(), &[]);
+        check(&find.points(At::YZ(0.0, 0.0)).unwrap(), &[0, 1]);
+        check(&find.points(At::YZ(1.0, 1.0)).unwrap(), &[6, 7]);
+        check(&find.points(At::XZ(0.0, 0.0)).unwrap(), &[0, 3]);
+        check(&find.points(At::XZ(1.0, 0.0)).unwrap(), &[1, 2]);
+        check(&find.points(At::XZ(1.0, 2.0)).unwrap(), &[9, 10]);
+        check(&find.points(At::XYZ(0.0, 0.0, 0.0)).unwrap(), &[0]);
+        check(&find.points(At::XYZ(1.0, 1.0, 2.0)).unwrap(), &[10]);
         assert_eq!(
             find.points(At::XYZ(10.0, 0.0, 0.0)).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
         check(
-            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
+            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0)).unwrap(),
             &[1, 3, 5, 7, 9, 11],
         );
         check(
-            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?,
+            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2)).unwrap(),
             &[2, 6, 10],
         );
-        check(&find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
-        Ok(())
+        check(
+            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0)).unwrap(),
+            &[],
+        );
     }
 
     #[test]
-    fn find_edges_works_2d() -> Result<(), StrError> {
+    fn find_edges_works_2d() {
         // 3--------2--------5
         // |        |        |
         // |        |        |
@@ -475,18 +473,17 @@ mod tests {
         let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
-        check(&find.edges(At::Y(0.0))?, &[(0, 1), (1, 4)]);
-        check(&find.edges(At::X(2.0))?, &[(4, 5)]);
-        check(&find.edges(At::Y(1.0))?, &[(2, 3), (2, 5)]);
-        check(&find.edges(At::X(0.0))?, &[(0, 3)]);
-        check(&find.edges(At::X(1.0))?, &[]); // internal
-        check(&find.edges(At::X(10.0))?, &[]); // far away
-        Ok(())
+        let find = Find::new(&mesh, &boundary).unwrap();
+        check(&find.edges(At::Y(0.0)).unwrap(), &[(0, 1), (1, 4)]);
+        check(&find.edges(At::X(2.0)).unwrap(), &[(4, 5)]);
+        check(&find.edges(At::Y(1.0)).unwrap(), &[(2, 3), (2, 5)]);
+        check(&find.edges(At::X(0.0)).unwrap(), &[(0, 3)]);
+        check(&find.edges(At::X(1.0)).unwrap(), &[]); // internal
+        check(&find.edges(At::X(10.0)).unwrap(), &[]); // far away
     }
 
     #[test]
-    fn find_edges_works_3d() -> Result<(), StrError> {
+    fn find_edges_works_3d() {
         //      8-----------11  2.0
         //     /.           /|
         //    / .          / |
@@ -508,57 +505,59 @@ mod tests {
         let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
+        let find = Find::new(&mesh, &boundary).unwrap();
         check(
-            &find.edges(At::X(0.0))?,
+            &find.edges(At::X(0.0)).unwrap(),
             &[(0, 3), (0, 4), (3, 7), (4, 7), (4, 8), (7, 11), (8, 11)],
         );
         check(
-            &find.edges(At::X(1.0))?,
+            &find.edges(At::X(1.0)).unwrap(),
             &[(1, 2), (1, 5), (2, 6), (5, 6), (5, 9), (6, 10), (9, 10)],
         );
-        check(&find.edges(At::X(10.0))?, &[]);
+        check(&find.edges(At::X(10.0)).unwrap(), &[]);
         check(
-            &find.edges(At::Y(0.0))?,
+            &find.edges(At::Y(0.0)).unwrap(),
             &[(0, 1), (0, 4), (1, 5), (4, 5), (4, 8), (5, 9), (8, 9)],
         );
         check(
-            &find.edges(At::Y(1.0))?,
+            &find.edges(At::Y(1.0)).unwrap(),
             &[(2, 3), (2, 6), (3, 7), (6, 7), (6, 10), (7, 11), (10, 11)],
         );
-        check(&find.edges(At::Y(10.0))?, &[]);
-        check(&find.edges(At::Z(0.0))?, &[(0, 1), (0, 3), (1, 2), (2, 3)]);
-        check(&find.edges(At::Z(2.0))?, &[(8, 9), (8, 11), (9, 10), (10, 11)]);
-        check(&find.edges(At::Z(10.0))?, &[]);
-        check(&find.edges(At::XY(0.0, 0.0))?, &[(0, 4), (4, 8)]);
-        check(&find.edges(At::XY(1.0, 1.0))?, &[(2, 6), (6, 10)]);
-        check(&find.edges(At::XY(10.0, 10.0))?, &[]);
-        check(&find.edges(At::YZ(0.0, 0.0))?, &[(0, 1)]);
-        check(&find.edges(At::YZ(1.0, 1.0))?, &[(6, 7)]);
-        check(&find.edges(At::YZ(10.0, 10.0))?, &[]);
-        check(&find.edges(At::XZ(0.0, 0.0))?, &[(0, 3)]);
-        check(&find.edges(At::XZ(1.0, 0.0))?, &[(1, 2)]);
-        check(&find.edges(At::XZ(1.0, 2.0))?, &[(9, 10)]);
-        check(&find.edges(At::XZ(10.0, 10.0))?, &[]);
-        check(&find.edges(At::XYZ(0.0, 0.0, 0.0))?, &[]);
+        check(&find.edges(At::Y(10.0)).unwrap(), &[]);
+        check(&find.edges(At::Z(0.0)).unwrap(), &[(0, 1), (0, 3), (1, 2), (2, 3)]);
+        check(&find.edges(At::Z(2.0)).unwrap(), &[(8, 9), (8, 11), (9, 10), (10, 11)]);
+        check(&find.edges(At::Z(10.0)).unwrap(), &[]);
+        check(&find.edges(At::XY(0.0, 0.0)).unwrap(), &[(0, 4), (4, 8)]);
+        check(&find.edges(At::XY(1.0, 1.0)).unwrap(), &[(2, 6), (6, 10)]);
+        check(&find.edges(At::XY(10.0, 10.0)).unwrap(), &[]);
+        check(&find.edges(At::YZ(0.0, 0.0)).unwrap(), &[(0, 1)]);
+        check(&find.edges(At::YZ(1.0, 1.0)).unwrap(), &[(6, 7)]);
+        check(&find.edges(At::YZ(10.0, 10.0)).unwrap(), &[]);
+        check(&find.edges(At::XZ(0.0, 0.0)).unwrap(), &[(0, 3)]);
+        check(&find.edges(At::XZ(1.0, 0.0)).unwrap(), &[(1, 2)]);
+        check(&find.edges(At::XZ(1.0, 2.0)).unwrap(), &[(9, 10)]);
+        check(&find.edges(At::XZ(10.0, 10.0)).unwrap(), &[]);
+        check(&find.edges(At::XYZ(0.0, 0.0, 0.0)).unwrap(), &[]);
         assert_eq!(
             find.edges(At::XYZ(10.0, 0.0, 0.0)).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
         check(
-            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?,
+            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0)).unwrap(),
             &[(1, 5), (3, 7), (5, 9), (7, 11)],
         );
         check(
-            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?,
+            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2)).unwrap(),
             &[(2, 6), (6, 10)],
         );
-        check(&find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
-        Ok(())
+        check(
+            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0)).unwrap(),
+            &[],
+        );
     }
 
     #[test]
-    fn find_faces_returns_empty_in_2d() -> Result<(), StrError> {
+    fn find_faces_returns_empty_in_2d() {
         // 3--------2--------5
         // |        |        |
         // |        |        |
@@ -567,13 +566,12 @@ mod tests {
         let mesh = Samples::two_qua4();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
-        assert_eq!(find.faces(At::X(0.0))?.len(), 0);
-        Ok(())
+        let find = Find::new(&mesh, &boundary).unwrap();
+        assert_eq!(find.faces(At::X(0.0)).unwrap().len(), 0);
     }
 
     #[test]
-    fn find_faces_works() -> Result<(), StrError> {
+    fn find_faces_works() {
         //      8-----------11  2.0
         //     /.           /|
         //    / .          / |
@@ -595,39 +593,47 @@ mod tests {
         let mesh = Samples::two_hex8();
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
-        check(&find.faces(At::X(0.0))?, &[(0, 3, 4, 7), (4, 7, 8, 11)]);
-        check(&find.faces(At::X(1.0))?, &[(1, 2, 5, 6), (5, 6, 9, 10)]);
-        check(&find.faces(At::X(10.0))?, &[]);
-        check(&find.faces(At::Y(0.0))?, &[(0, 1, 4, 5), (4, 5, 8, 9)]);
-        check(&find.faces(At::Y(1.0))?, &[(2, 3, 6, 7), (6, 7, 10, 11)]);
-        check(&find.faces(At::Y(10.0))?, &[]);
-        check(&find.faces(At::Z(0.0))?, &[(0, 1, 2, 3)]);
-        check(&find.faces(At::Z(2.0))?, &[(8, 9, 10, 11)]);
-        check(&find.faces(At::Z(10.0))?, &[]);
-        check(&find.faces(At::XY(0.0, 0.0))?, &[]);
-        check(&find.faces(At::XY(1.0, 1.0))?, &[]);
-        check(&find.faces(At::XY(10.0, 10.0))?, &[]);
-        check(&find.faces(At::YZ(0.0, 0.0))?, &[]);
-        check(&find.faces(At::YZ(1.0, 1.0))?, &[]);
-        check(&find.faces(At::YZ(10.0, 10.0))?, &[]);
-        check(&find.faces(At::XZ(0.0, 0.0))?, &[]);
-        check(&find.faces(At::XZ(1.0, 0.0))?, &[]);
-        check(&find.faces(At::XZ(1.0, 2.0))?, &[]);
-        check(&find.faces(At::XZ(10.0, 10.0))?, &[]);
-        check(&find.faces(At::XYZ(0.0, 0.0, 0.0))?, &[]);
+        let find = Find::new(&mesh, &boundary).unwrap();
+        check(&find.faces(At::X(0.0)).unwrap(), &[(0, 3, 4, 7), (4, 7, 8, 11)]);
+        check(&find.faces(At::X(1.0)).unwrap(), &[(1, 2, 5, 6), (5, 6, 9, 10)]);
+        check(&find.faces(At::X(10.0)).unwrap(), &[]);
+        check(&find.faces(At::Y(0.0)).unwrap(), &[(0, 1, 4, 5), (4, 5, 8, 9)]);
+        check(&find.faces(At::Y(1.0)).unwrap(), &[(2, 3, 6, 7), (6, 7, 10, 11)]);
+        check(&find.faces(At::Y(10.0)).unwrap(), &[]);
+        check(&find.faces(At::Z(0.0)).unwrap(), &[(0, 1, 2, 3)]);
+        check(&find.faces(At::Z(2.0)).unwrap(), &[(8, 9, 10, 11)]);
+        check(&find.faces(At::Z(10.0)).unwrap(), &[]);
+        check(&find.faces(At::XY(0.0, 0.0)).unwrap(), &[]);
+        check(&find.faces(At::XY(1.0, 1.0)).unwrap(), &[]);
+        check(&find.faces(At::XY(10.0, 10.0)).unwrap(), &[]);
+        check(&find.faces(At::YZ(0.0, 0.0)).unwrap(), &[]);
+        check(&find.faces(At::YZ(1.0, 1.0)).unwrap(), &[]);
+        check(&find.faces(At::YZ(10.0, 10.0)).unwrap(), &[]);
+        check(&find.faces(At::XZ(0.0, 0.0)).unwrap(), &[]);
+        check(&find.faces(At::XZ(1.0, 0.0)).unwrap(), &[]);
+        check(&find.faces(At::XZ(1.0, 2.0)).unwrap(), &[]);
+        check(&find.faces(At::XZ(10.0, 10.0)).unwrap(), &[]);
+        check(&find.faces(At::XYZ(0.0, 0.0, 0.0)).unwrap(), &[]);
         assert_eq!(
             find.faces(At::XYZ(10.0, 0.0, 0.0)).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
-        check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0))?, &[]);
-        check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))?, &[]);
-        check(&find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))?, &[]);
-        Ok(())
+        check(
+            &find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0)).unwrap(),
+            &[],
+        );
+        check(
+            &find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2)).unwrap(),
+            &[],
+        );
+        check(
+            &find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0)).unwrap(),
+            &[],
+        );
     }
 
     #[test]
-    fn find_works_with_ring() -> Result<(), StrError> {
+    fn find_works_with_ring() {
         // 2.0   14---36--,__11
         //        |          `,-..33
         // 1.75  24   [7]   22     `-,
@@ -648,38 +654,37 @@ mod tests {
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary)?;
+        let find = Find::new(&mesh, &boundary).unwrap();
         let (r, rr) = (1.0, 2.0);
-        check(&find.points(At::XY(1.00, 0.00))?, &[0]);
-        check(&find.points(At::XY(1.25, 0.00))?, &[15]);
-        check(&find.points(At::XY(1.50, 0.00))?, &[1]);
-        check(&find.points(At::XY(1.75, 0.00))?, &[16]);
-        check(&find.points(At::XY(2.00, 0.00))?, &[2]);
-        check(&find.points(At::XY(0.00, 1.00))?, &[12]);
-        check(&find.points(At::XY(0.00, 1.25))?, &[23]);
-        check(&find.points(At::XY(0.00, 1.75))?, &[24]);
-        check(&find.points(At::XY(0.00, 1.50))?, &[13]);
-        check(&find.points(At::XY(0.00, 2.00))?, &[14]);
-        check(&find.points(At::XY(SQRT_2 / 2.0, SQRT_2 / 2.0))?, &[6]);
-        check(&find.points(At::XY(SQRT_2, SQRT_2))?, &[8]);
+        check(&find.points(At::XY(1.00, 0.00)).unwrap(), &[0]);
+        check(&find.points(At::XY(1.25, 0.00)).unwrap(), &[15]);
+        check(&find.points(At::XY(1.50, 0.00)).unwrap(), &[1]);
+        check(&find.points(At::XY(1.75, 0.00)).unwrap(), &[16]);
+        check(&find.points(At::XY(2.00, 0.00)).unwrap(), &[2]);
+        check(&find.points(At::XY(0.00, 1.00)).unwrap(), &[12]);
+        check(&find.points(At::XY(0.00, 1.25)).unwrap(), &[23]);
+        check(&find.points(At::XY(0.00, 1.75)).unwrap(), &[24]);
+        check(&find.points(At::XY(0.00, 1.50)).unwrap(), &[13]);
+        check(&find.points(At::XY(0.00, 2.00)).unwrap(), &[14]);
+        check(&find.points(At::XY(SQRT_2 / 2.0, SQRT_2 / 2.0)).unwrap(), &[6]);
+        check(&find.points(At::XY(SQRT_2, SQRT_2)).unwrap(), &[8]);
         check(
-            &find.points(At::Circle(0.0, 0.0, r))?,
+            &find.points(At::Circle(0.0, 0.0, r)).unwrap(),
             &[0, 3, 6, 9, 12, 25, 28, 31, 34],
         );
         check(
-            &find.points(At::Circle(0.0, 0.0, rr))?,
+            &find.points(At::Circle(0.0, 0.0, rr)).unwrap(),
             &[2, 5, 8, 11, 14, 27, 30, 33, 36],
         );
-        check(&find.edges(At::Y(0.0))?, &[(0, 1), (1, 2)]);
-        check(&find.edges(At::X(0.0))?, &[(12, 13), (13, 14)]);
+        check(&find.edges(At::Y(0.0)).unwrap(), &[(0, 1), (1, 2)]);
+        check(&find.edges(At::X(0.0)).unwrap(), &[(12, 13), (13, 14)]);
         check(
-            &find.edges(At::Circle(0.0, 0.0, r))?,
+            &find.edges(At::Circle(0.0, 0.0, r)).unwrap(),
             &[(0, 3), (3, 6), (6, 9), (9, 12)],
         );
         check(
-            &find.edges(At::Circle(0.0, 0.0, rr))?,
+            &find.edges(At::Circle(0.0, 0.0, rr)).unwrap(),
             &[(2, 5), (5, 8), (8, 11), (11, 14)],
         );
-        Ok(())
     }
 }

@@ -17,9 +17,7 @@
 //! * G -- Gradients of shape functions (derivatives w.r.t real coordinates x)
 //! * see also the subsection named **Expressions** below
 //!
-//! # Functionality
-//!
-//! ## Integration of scalar field over a geometric shape
+//! # Integration of scalar field over a geometric shape
 //!
 //! Function [scalar_field()]
 //!
@@ -30,52 +28,163 @@
 //!     Ωₑ
 //! ```
 //!
-//! ## Integration of some combinations involving N and G resulting in vectors
+//! # Vector results: Integration of some combinations involving N and G resulting in vectors
 //!
-//! Interpolation functions times scalar field [vec_a_shape_times_scalar()]:
+//! ## VEC 01: Interpolation functions times scalar field
+//!
+//! Function [vec_01_ns()]
 //!
 //! ```text
 //!      ⌠    → →     →
-//! aᵐ = │ Nᵐ(x(ξ)) s(x) tₕ dΩ
+//! aᵐ = │ Nᵐ(x(ξ)) s(x) dΩ
 //!      ⌡
 //!      Ωₑ
 //! ```
 //!
-//! Interpolation functions times vector field [vec_b_shape_times_vector()]:
+//! ## VEC 02: Interpolation functions times vector field
+//!
+//! Function [vec_02_nv()]
 //!
 //! ```text
 //! →    ⌠    → →   → →
-//! bᵐ = │ Nᵐ(x(ξ)) v(x) tₕ dΩ
+//! bᵐ = │ Nᵐ(x(ξ)) v(x) dΩ
 //!      ⌡
 //!      Ωₑ
 //! ```
 //!
-//! Vector dot gradient [vec_c_vector_dot_gradient()]:
+//! ## VEC 03: Vector dot gradient
+//!
+//! Function [vec_03_vg()]
 //!
 //! ```text
 //!      ⌠ → →    →  → →
-//! cᵐ = │ w(x) · Gᵐ(x(ξ)) tₕ dΩ
+//! cᵐ = │ w(x) · Gᵐ(x(ξ)) dΩ
 //!      ⌡
 //!      Ωₑ
 //! ```
 //!
-//! Tensor dot gradient [vec_d_tensor_dot_gradient()]:
+//! ## VEC 04: Tensor dot gradient
+//!
+//! Function [vec_04_tg()]
 //!
 //! ```text
 //! →    ⌠   →    →  → →
-//! dᵐ = │ σ(x) · Gᵐ(x(ξ)) tₕ dΩ
+//! dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
 //!      ⌡ ▔
 //!      Ωₑ
 //! ```
 //!
-//! ## Integration of some combinations involving N, tensors, and G, resulting in matrices
+//! # Matrix results: Integration of some combinations involving N, tensors, and G, resulting in matrices
 //!
-//! Gradient(G) dot 4th-tensor(D) dot gradient(G) integration (stiffness matrix) [mat_gdg_stiffness()]:
+//! ![cases](https://github.com/cpmech/gemlab/raw/main/data/figures/integ-matrix-cases.png)
+//!
+//! ## MAT 01: Shape(N) times scalar(S) times shape(N) (e.g., diffusion matrix)
+//!
+//! Function [mat_01_nsn()]
 //!
 //! ```text
-//!       ⌠               →    →
-//! Kᵐⁿ = │ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ tₕ dΩ
+//!       ⌠
+//! Kᵐⁿ = │ Nᵐ s Nⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 02: Gradient(G) dot vector(V) times shape(N) (e.g., compressibility matrix)
+//!
+//! Function [mat_02_gvn()]
+//!
+//! ```text
+//!       ⌠ →    →
+//! Kᵐⁿ = │ Gᵐ ⋅ v Nⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 03: Gradient(G) dot tensor(T) dot gradient(G) (e.g., conductivity matrix)
+//!
+//! Function [mat_03_gtg()]
+//!
+//! ```text
+//!       ⌠ →        →
+//! Kᵐⁿ = │ Gᵐ ⋅ T ⋅ Gⁿ dΩ
+//!       ⌡      ▔
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 04: shape(Nb) time scalar(S) time gradient(G) (e.g., coupling matrix)
+//!
+//! Function [mat_04_nsg()]
+//!
+//! ```text
+//! →     ⌠       →
+//! Kᵐⁿ = │ Nbᵐ s Gⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 05: Gradient(Gb) time tensor(T) time shape(N) (e.g., coupling matrix)
+//!
+//! Function [mat_05_gtn()]
+//!
+//! ```text
+//! →     ⌠ →
+//! Kᵐⁿ = │ Gbᵐ ⋅ T Nⁿ dΩ
+//!       ⌡       ▔
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 06: Shape(N) time vector(V) time shape(Nb) (e.g., coupling matrix)
+//!
+//! Function [mat_06_nvn()]
+//!
+//! ```text
+//! →     ⌠    →
+//! Kᵐⁿ = │ Nᵐ v Nbⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 07: Gradient(G) time scalar(S) time shape(Nb) (e.g., coupling matrix)
+//!
+//! Function [mat_07_gsn()]
+//!
+//! ```text
+//! →     ⌠ →
+//! Kᵐⁿ = │ Gᵐ s Nbⁿ dΩ
+//!       ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 08: Shape(N) times tensor(T) times shape(N) (e.g., mass matrix)
+//!
+//! Function [mat_08_ntn()]
+//!
+//! ```text
+//!       ⌠
+//! Kᵐⁿ = │ Nᵐ T Nⁿ dΩ
+//! ▔     ⌡    ▔
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 09: Shape(N) times vector(V) dot gradient(G) (e.g., variable density matrix)
+//!
+//! Function [mat_09_nvg()]
+//!
+//! ```text
+//!       ⌠    →   →
+//! Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ dΩ
 //! ▔     ⌡
+//!       Ωₑ
+//! ```
+//!
+//! ## MAT 10: Gradient(G) dot 4th-tensor(D) dot gradient(G) (e.g., stiffness matrix)
+//!
+//! Function [mat_10_gdg()]
+//!
+//! ```text
+//!       ⌠                       →    →
+//! Kᵐⁿ = │ Σ Σ Σ Σ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
+//! ▔     ⌡ i j k l
 //!       Ωₑ
 //! ```
 //!
@@ -170,17 +279,48 @@
 //! G is an (nnode,space_ndim) matrix
 //! ```
 
+mod analytical_qua4;
+mod analytical_qua8;
 mod analytical_tet4;
 mod analytical_tri3;
-mod calc_ips_coords;
 mod integ_points;
-mod matrix_cases;
+mod mat_01_nsn;
+mod mat_02_gvn;
+mod mat_03_gtg;
+mod mat_04_nsg;
+mod mat_05_gtn;
+mod mat_06_nvn;
+mod mat_07_gsn;
+mod mat_08_ntn;
+mod mat_09_nvg;
+mod mat_10_gdg;
+mod point_coords;
 mod scalar_field;
-mod vector_cases;
+mod testing;
+mod vec_01_ns;
+mod vec_02_nv;
+mod vec_03_vg;
+mod vec_04_tg;
+mod vector_cases_boundary;
+pub use crate::integ::analytical_qua4::*;
+pub use crate::integ::analytical_qua8::*;
 pub use crate::integ::analytical_tet4::*;
 pub use crate::integ::analytical_tri3::*;
-pub use crate::integ::calc_ips_coords::*;
 pub use crate::integ::integ_points::*;
-pub use crate::integ::matrix_cases::*;
+pub use crate::integ::mat_01_nsn::*;
+pub use crate::integ::mat_02_gvn::*;
+pub use crate::integ::mat_03_gtg::*;
+pub use crate::integ::mat_04_nsg::*;
+pub use crate::integ::mat_05_gtn::*;
+pub use crate::integ::mat_06_nvn::*;
+pub use crate::integ::mat_07_gsn::*;
+pub use crate::integ::mat_08_ntn::*;
+pub use crate::integ::mat_09_nvg::*;
+pub use crate::integ::mat_10_gdg::*;
+pub use crate::integ::point_coords::*;
 pub use crate::integ::scalar_field::*;
-pub use crate::integ::vector_cases::*;
+pub use crate::integ::vec_01_ns::*;
+pub use crate::integ::vec_02_nv::*;
+pub use crate::integ::vec_03_vg::*;
+pub use crate::integ::vec_04_tg::*;
+pub use crate::integ::vector_cases_boundary::*;

@@ -491,7 +491,6 @@ impl fmt::Display for GridSearchTri {
 mod tests {
     use super::GridSearchTri;
     use crate::util::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
-    use crate::StrError;
     use plotpy::Plot;
     use russell_chk::assert_approx_eq;
 
@@ -526,12 +525,12 @@ mod tests {
     }
 
     #[test]
-    fn new_works_1() -> Result<(), StrError> {
+    fn new_works_1() {
         let coordinates = &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
         let triangles = &[[0, 1, 3], [1, 2, 3]];
         let tolerance = 1e-3;
         let border_tol = 0.1;
-        let grid = GridSearchTri::new(coordinates, triangles, Some(tolerance), Some(border_tol))?;
+        let grid = GridSearchTri::new(coordinates, triangles, Some(tolerance), Some(border_tol)).unwrap();
         let max_len = 1.0;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         let xmin = &[-0.1, -0.1];
@@ -568,40 +567,39 @@ mod tests {
         let (mi, ma) = grid.limits();
         assert_eq!(mi, xmin);
         assert_eq!(ma, xmax);
-        if false {
-            let mut plot = Plot::new();
-            grid.draw(&mut plot, coordinates, triangles, true)?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .grid_and_labels("x", "y")
-                .set_ticks_x(0.2, 0.0, "")
-                .set_ticks_y(0.2, 0.0, "")
-                .save("/tmp/gemlab/test_grid_search_tri_new_1.svg")?;
-        }
+
+        // let mut plot = Plot::new();
+        // grid.draw(&mut plot, coordinates, triangles, true).unwrap();
+        // plot.set_equal_axes(true)
+        //     .set_figure_size_points(600.0, 600.0)
+        //     .grid_and_labels("x", "y")
+        //     .set_ticks_x(0.2, 0.0, "")
+        //     .set_ticks_y(0.2, 0.0, "")
+        //     .save("/tmp/gemlab/test_grid_search_tri_new_1.svg")
+        //     .unwrap();
+
         // with zero border
-        let grid = GridSearchTri::new(coordinates, triangles, None, Some(0.0))?;
+        let grid = GridSearchTri::new(coordinates, triangles, None, Some(0.0)).unwrap();
         let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE;
         assert_eq!(grid.xmin, &[0.0, 0.0]);
         assert_eq!(grid.ndiv, &[1, 1]);
         assert_eq!(grid.xmax, &[sl, sl]);
-        Ok(())
     }
 
     #[test]
-    fn draw_works() -> Result<(), StrError> {
+    fn draw_works() {
         let coordinates = &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
         let triangles = &[[0, 1, 3], [1, 2, 3]];
-        let grid = GridSearchTri::new(coordinates, triangles, None, None)?;
+        let grid = GridSearchTri::new(coordinates, triangles, None, None).unwrap();
         let mut plot = Plot::new();
-        grid.draw(&mut plot, coordinates, triangles, false)?;
-        Ok(())
+        grid.draw(&mut plot, coordinates, triangles, true).unwrap();
     }
 
     #[test]
-    fn find_triangle_handles_errors() -> Result<(), StrError> {
+    fn find_triangle_handles_errors() {
         let coordinates = &[[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]];
         let triangles = &[[0, 1, 2]];
-        let grid = GridSearchTri::new(coordinates, triangles, None, None)?;
+        let grid = GridSearchTri::new(coordinates, triangles, None, None).unwrap();
         let y = vec![10.0, 0.0];
         assert_eq!(
             grid.find_triangle(&y, coordinates, triangles).err(),
@@ -616,11 +614,10 @@ mod tests {
             grid.find_triangle_and_interpolate(&y, coordinates, triangles).err(),
             Some("coordinates must contain a third column with the temperature values")
         );
-        Ok(())
     }
 
     #[test]
-    fn find_triangle_works() -> Result<(), StrError> {
+    fn find_triangle_works() {
         #[rustfmt::skip]
         let coordinates = &[
             [0.0307942, 0.459123  ], // 0
@@ -648,7 +645,7 @@ mod tests {
             [7, 9, 1], // 10
             [6, 3, 5], // 11
         ];
-        let grid = GridSearchTri::new(coordinates, triangles, None, None)?;
+        let grid = GridSearchTri::new(coordinates, triangles, None, None).unwrap();
         let max_len = coordinates[9][0] - coordinates[1][0];
         let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE; // because the bbox is expanded
         let g = GS_DEFAULT_BORDER_TOL;
@@ -679,36 +676,46 @@ mod tests {
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
         );
-        assert_eq!(grid.find_triangle(&[0.4, 0.2], coordinates, triangles)?, Some(11));
-        assert_eq!(grid.find_triangle(&[0.6, 0.3], coordinates, triangles)?, Some(7));
-        assert_eq!(grid.find_triangle(&[0.1, 0.7], coordinates, triangles)?, Some(2));
-        assert_eq!(grid.find_triangle(&[0.8, 0.8], coordinates, triangles)?, Some(8));
-        let res = grid.find_triangle(&coordinates[5], coordinates, triangles)?;
+        assert_eq!(
+            grid.find_triangle(&[0.4, 0.2], coordinates, triangles).unwrap(),
+            Some(11)
+        );
+        assert_eq!(
+            grid.find_triangle(&[0.6, 0.3], coordinates, triangles).unwrap(),
+            Some(7)
+        );
+        assert_eq!(
+            grid.find_triangle(&[0.1, 0.7], coordinates, triangles).unwrap(),
+            Some(2)
+        );
+        assert_eq!(
+            grid.find_triangle(&[0.8, 0.8], coordinates, triangles).unwrap(),
+            Some(8)
+        );
+        let res = grid.find_triangle(&coordinates[5], coordinates, triangles).unwrap();
         if res != Some(7) {
             assert_eq!(res, Some(11));
         }
-        assert_eq!(grid.find_triangle(&[0.1, 0.1], coordinates, triangles)?, None);
-        assert_eq!(grid.find_triangle(&[0.6, 0.2], coordinates, triangles)?, None);
-        assert_eq!(grid.find_triangle(&[0.4, 1.0], coordinates, triangles)?, None);
+        assert_eq!(grid.find_triangle(&[0.1, 0.1], coordinates, triangles).unwrap(), None);
+        assert_eq!(grid.find_triangle(&[0.6, 0.2], coordinates, triangles).unwrap(), None);
+        assert_eq!(grid.find_triangle(&[0.4, 1.0], coordinates, triangles).unwrap(), None);
         assert_eq!(
             grid.find_triangle(&[10.0, 1.0], coordinates, triangles).err(),
             Some("given point coordinates are outside the grid")
         );
-        if false {
-            let mut plot = Plot::new();
-            grid.draw(&mut plot, coordinates, triangles, true)?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .grid_and_labels("x", "y")
-                .set_ticks_x(0.2, 0.0, "")
-                .set_ticks_y(0.2, 0.0, "")
-                .save("/tmp/gemlab/test_grid_search_tri_find_works.svg")?;
-        }
-        Ok(())
+        // let mut plot = Plot::new();
+        // grid.draw(&mut plot, coordinates, triangles, true).unwrap();
+        // plot.set_equal_axes(true)
+        //     .set_figure_size_points(600.0, 600.0)
+        //     .grid_and_labels("x", "y")
+        //     .set_ticks_x(0.2, 0.0, "")
+        //     .set_ticks_y(0.2, 0.0, "")
+        //     .save("/tmp/gemlab/test_grid_search_tri_find_works.svg")
+        //     .unwrap();
     }
 
     #[test]
-    fn find_triangle_and_interpolate_works() -> Result<(), StrError> {
+    fn find_triangle_and_interpolate_works() {
         let coordinates = &[
             [0.0, 0.0, 0.0], // last column is the temperature
             [0.5, 0.85, 0.986154146165801],
@@ -730,37 +737,38 @@ mod tests {
             [3, 4, 6],
             [6, 7, 8],
         ];
-        let grid = GridSearchTri::new(coordinates, triangles, None, None)?;
+        let grid = GridSearchTri::new(coordinates, triangles, None, None).unwrap();
         for x_y_tt in coordinates {
             assert_eq!(
-                grid.find_triangle_and_interpolate(x_y_tt, coordinates, triangles)?,
+                grid.find_triangle_and_interpolate(x_y_tt, coordinates, triangles)
+                    .unwrap(),
                 Some(x_y_tt[2])
             );
             let tt = f64::sqrt(x_y_tt[0] * x_y_tt[0] + x_y_tt[1] * x_y_tt[1]);
             assert_eq!(
-                grid.find_triangle_and_interpolate(x_y_tt, coordinates, triangles)?,
+                grid.find_triangle_and_interpolate(x_y_tt, coordinates, triangles)
+                    .unwrap(),
                 Some(tt)
             );
         }
         let temp = grid
-            .find_triangle_and_interpolate(&[1.5, 1.0], coordinates, triangles)?
+            .find_triangle_and_interpolate(&[1.5, 1.0], coordinates, triangles)
+            .unwrap()
             .unwrap();
         assert_approx_eq!(temp, f64::sqrt(1.5 * 1.5 + 1.0 * 1.0), 0.025);
-        if false {
-            let mut plot = Plot::new();
-            grid.draw(&mut plot, coordinates, triangles, true)?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .grid_and_labels("x", "y")
-                .set_ticks_x(0.2, 0.0, "")
-                .set_ticks_y(0.2, 0.0, "")
-                .save("/tmp/gemlab/test_grid_search_tri_interpolate_works.svg")?;
-        }
-        Ok(())
+        // let mut plot = Plot::new();
+        // grid.draw(&mut plot, coordinates, triangles, true).unwrap();
+        // plot.set_equal_axes(true)
+        //     .set_figure_size_points(600.0, 600.0)
+        //     .grid_and_labels("x", "y")
+        //     .set_ticks_x(0.2, 0.0, "")
+        //     .set_ticks_y(0.2, 0.0, "")
+        //     .save("/tmp/gemlab/test_grid_search_tri_interpolate_works.svg")
+        //     .unwrap();
     }
 
     #[test]
-    fn find_triangle_works_2d_particles() -> Result<(), StrError> {
+    fn find_triangle_works_2d_particles() {
         #[rustfmt::skip]
         let coordinates = &[
             [0.0, 0.0, 10.0], [1.0, 0.0, 10.0], [0.5, 0.85, 10.0],
@@ -768,25 +776,43 @@ mod tests {
             [1.0, 1.0, 10.0], [2.0, 1.0, 10.0], [1.5, 1.85, 10.0],
         ];
         let triangles = &[[0, 1, 2], [3, 4, 5], [6, 7, 8]];
-        let grid = GridSearchTri::new(coordinates, triangles, None, None)?;
-        assert_eq!(grid.find_triangle(&[0.4, 0.2], coordinates, triangles)?, Some(0));
-        assert_eq!(grid.find_triangle(&[3.0, 0.0], coordinates, triangles)?, Some(1));
-        assert_eq!(grid.find_triangle(&[1.5, 1.4], coordinates, triangles)?, Some(2));
-        assert_eq!(grid.find_triangle(&[0.5, 1.6], coordinates, triangles)?, None);
-        assert_eq!(grid.find_triangle(&[1.5, 0.5], coordinates, triangles)?, None);
-        assert_eq!(grid.find_triangle(&[2.5, 1.6], coordinates, triangles)?, None);
-        assert_eq!(grid.find_triangle(&[2.5, 1.6], coordinates, triangles)?, None);
-        let (c, t) = (coordinates, triangles);
-        assert_eq!(grid.find_triangle_and_interpolate(&[0.4, 0.2], c, t)?, Some(10.0));
-        assert_eq!(grid.find_triangle_and_interpolate(&[3.0, 0.0], c, t)?, Some(10.0));
-        assert_eq!(grid.find_triangle_and_interpolate(&[1.5, 1.4], c, t)?, Some(10.0));
-        assert_eq!(grid.find_triangle_and_interpolate(&[0.5, 1.6], c, t)?, None);
-        assert_eq!(grid.find_triangle_and_interpolate(&[1.5, 0.5], c, t)?, None);
-        assert_eq!(grid.find_triangle_and_interpolate(&[2.5, 1.6], c, t)?, None);
+        let grid = GridSearchTri::new(coordinates, triangles, None, None).unwrap();
         assert_eq!(
-            grid.find_triangle_and_interpolate(&[2.5, 1.6], coordinates, triangles)?,
+            grid.find_triangle(&[0.4, 0.2], coordinates, triangles).unwrap(),
+            Some(0)
+        );
+        assert_eq!(
+            grid.find_triangle(&[3.0, 0.0], coordinates, triangles).unwrap(),
+            Some(1)
+        );
+        assert_eq!(
+            grid.find_triangle(&[1.5, 1.4], coordinates, triangles).unwrap(),
+            Some(2)
+        );
+        assert_eq!(grid.find_triangle(&[0.5, 1.6], coordinates, triangles).unwrap(), None);
+        assert_eq!(grid.find_triangle(&[1.5, 0.5], coordinates, triangles).unwrap(), None);
+        assert_eq!(grid.find_triangle(&[2.5, 1.6], coordinates, triangles).unwrap(), None);
+        assert_eq!(grid.find_triangle(&[2.5, 1.6], coordinates, triangles).unwrap(), None);
+        let (c, t) = (coordinates, triangles);
+        assert_eq!(
+            grid.find_triangle_and_interpolate(&[0.4, 0.2], c, t).unwrap(),
+            Some(10.0)
+        );
+        assert_eq!(
+            grid.find_triangle_and_interpolate(&[3.0, 0.0], c, t).unwrap(),
+            Some(10.0)
+        );
+        assert_eq!(
+            grid.find_triangle_and_interpolate(&[1.5, 1.4], c, t).unwrap(),
+            Some(10.0)
+        );
+        assert_eq!(grid.find_triangle_and_interpolate(&[0.5, 1.6], c, t).unwrap(), None);
+        assert_eq!(grid.find_triangle_and_interpolate(&[1.5, 0.5], c, t).unwrap(), None);
+        assert_eq!(grid.find_triangle_and_interpolate(&[2.5, 1.6], c, t).unwrap(), None);
+        assert_eq!(
+            grid.find_triangle_and_interpolate(&[2.5, 1.6], coordinates, triangles)
+                .unwrap(),
             None
         );
-        Ok(())
     }
 }

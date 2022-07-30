@@ -1,4 +1,4 @@
-use gemlab::mesh::{check_2d_edge_normals, check_face_normals, EdgeKey, Extract, FaceKey, Region, Samples};
+use gemlab::mesh::{check_2d_edge_normals, check_face_normals, Extract, Region, Samples};
 use gemlab::StrError;
 use std::collections::HashMap;
 
@@ -10,20 +10,20 @@ fn test_normal_vectors_2d() -> Result<(), StrError> {
     //  |         |         |
     //  0---------1---------4
     let mesh = Samples::two_qua4();
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
     let l = 0.5; // magnitude of normal vector
 
     // edge keys and correct normal vectors (solutions)
-    let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
-        ((0, 1), [0.0, -l]), // bottom
-        ((1, 4), [0.0, -l]), // bottom
-        ((4, 5), [l, 0.0]),  // right
-        ((2, 3), [0.0, l]),  // top
-        ((2, 5), [0.0, l]),  // top
-        ((0, 3), [-l, 0.0]), // left
+    let solutions = HashMap::from([
+        ((0, 1), (l, [0.0, -1.0])), // bottom
+        ((1, 4), (l, [0.0, -1.0])), // bottom
+        ((4, 5), (l, [1.0, 0.0])),  // right
+        ((2, 3), (l, [0.0, 1.0])),  // top
+        ((2, 5), (l, [0.0, 1.0])),  // top
+        ((0, 3), (l, [-1.0, 0.0])), // left
     ]);
 
     // check if the normal vectors at boundary are outward
@@ -47,22 +47,22 @@ fn test_normal_vectors_2d_qua8() -> Result<(), StrError> {
     //  |               |               |
     //  0-------4-------1------10-------8
     let mesh = Samples::block_2d_four_qua8();
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
     let l = 0.5; // magnitude of normal vector
 
     // edge keys and correct normal vectors (solutions)
-    let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
-        ((0, 1), [0.0, -l]),  // bottom
-        ((1, 8), [0.0, -l]),  // bottom
-        ((8, 9), [l, 0.0]),   // right
-        ((9, 18), [l, 0.0]),  // right
-        ((13, 14), [0.0, l]), // top
-        ((13, 18), [0.0, l]), // top
-        ((0, 3), [-l, 0.0]),  // left
-        ((3, 14), [-l, 0.0]), // left
+    let solutions = HashMap::from([
+        ((0, 1), (l, [0.0, -1.0])),  // bottom
+        ((1, 8), (l, [0.0, -1.0])),  // bottom
+        ((8, 9), (l, [1.0, 0.0])),   // right
+        ((9, 18), (l, [1.0, 0.0])),  // right
+        ((13, 14), (l, [0.0, 1.0])), // top
+        ((13, 18), (l, [0.0, 1.0])), // top
+        ((0, 3), (l, [-1.0, 0.0])),  // left
+        ((3, 14), (l, [-1.0, 0.0])), // left
     ]);
 
     // check if the normal vectors at boundary are outward
@@ -86,22 +86,22 @@ fn test_normal_vectors_2d_qua9() -> Result<(), StrError> {
     //  |               |               |
     //  0-------4-------1------11-------9
     let mesh = Samples::block_2d_four_qua9();
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
     let l = 0.5; // magnitude of normal vector
 
     // edge keys and correct normal vectors (solutions)
-    let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
-        ((0, 1), [0.0, -l]),  // bottom
-        ((1, 9), [0.0, -l]),  // bottom
-        ((9, 10), [l, 0.0]),  // right
-        ((10, 21), [l, 0.0]), // right
-        ((15, 16), [0.0, l]), // top
-        ((15, 21), [0.0, l]), // top
-        ((0, 3), [-l, 0.0]),  // left
-        ((3, 16), [-l, 0.0]), // left
+    let solutions = HashMap::from([
+        ((0, 1), (l, [0.0, -1.0])),  // bottom
+        ((1, 9), (l, [0.0, -1.0])),  // bottom
+        ((9, 10), (l, [1.0, 0.0])),  // right
+        ((10, 21), (l, [1.0, 0.0])), // right
+        ((15, 16), (l, [0.0, 1.0])), // top
+        ((15, 21), (l, [0.0, 1.0])), // top
+        ((0, 3), (l, [-1.0, 0.0])),  // left
+        ((3, 16), (l, [-1.0, 0.0])), // left
     ]);
 
     // check if the normal vectors at boundary are outward
@@ -125,22 +125,22 @@ fn test_normal_vectors_2d_qua12() -> Result<(), StrError> {
     //  |               |               |
     //  0----4-----8----1---14---17----12
     let mesh = Samples::block_2d_four_qua12();
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.75 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
     let l = 0.75; // magnitude of normal vector
 
     // edge keys and correct normal vectors (solutions)
-    let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
-        ((0, 1), [0.0, -l]),  // bottom
-        ((1, 12), [0.0, -l]), // bottom
-        ((12, 13), [l, 0.0]), // right
-        ((13, 28), [l, 0.0]), // right
-        ((20, 21), [0.0, l]), // top
-        ((20, 28), [0.0, l]), // top
-        ((0, 3), [-l, 0.0]),  // left
-        ((3, 21), [-l, 0.0]), // left
+    let solutions = HashMap::from([
+        ((0, 1), (l, [0.0, -1.0])),  // bottom
+        ((1, 12), (l, [0.0, -1.0])), // bottom
+        ((12, 13), (l, [1.0, 0.0])), // right
+        ((13, 28), (l, [1.0, 0.0])), // right
+        ((20, 21), (l, [0.0, 1.0])), // top
+        ((20, 28), (l, [0.0, 1.0])), // top
+        ((0, 3), (l, [-1.0, 0.0])),  // left
+        ((3, 21), (l, [-1.0, 0.0])), // left
     ]);
 
     // check if the normal vectors at boundary are outward
@@ -164,22 +164,22 @@ fn test_normal_vectors_2d_qua16() -> Result<(), StrError> {
     //  |               |               |
     //  0----4-----8----1---18---21----16
     let mesh = Samples::block_2d_four_qua16();
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.75 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
     let l = 0.75; // magnitude of normal vector
 
     // edge keys and correct normal vectors (solutions)
-    let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
-        ((0, 1), [0.0, -l]),  // bottom
-        ((1, 16), [0.0, -l]), // bottom
-        ((16, 17), [l, 0.0]), // right
-        ((17, 40), [l, 0.0]), // right
-        ((28, 29), [0.0, l]), // top
-        ((28, 40), [0.0, l]), // top
-        ((0, 3), [-l, 0.0]),  // left
-        ((3, 29), [-l, 0.0]), // left
+    let solutions = HashMap::from([
+        ((0, 1), (l, [0.0, -1.0])),  // bottom
+        ((1, 16), (l, [0.0, -1.0])), // bottom
+        ((16, 17), (l, [1.0, 0.0])), // right
+        ((17, 40), (l, [1.0, 0.0])), // right
+        ((28, 29), (l, [0.0, 1.0])), // top
+        ((28, 40), (l, [0.0, 1.0])), // top
+        ((0, 3), (l, [-1.0, 0.0])),  // left
+        ((3, 29), (l, [-1.0, 0.0])), // left
     ]);
 
     // check if the normal vectors at boundary are outward
@@ -207,22 +207,22 @@ fn test_normal_vectors_2d_qua17() -> Result<(), StrError> {
     //  |                   |                   |
     //  0----4----8---12----1---19---22---25---17
     let mesh = Samples::block_2d_four_qua17();
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to
     // 1.0 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
     let l = 1.0; // magnitude of normal vector
 
     // edge keys and correct normal vectors (solutions)
-    let solutions: HashMap<EdgeKey, [f64; 2]> = HashMap::from([
-        ((0, 1), [0.0, -l]),  // bottom
-        ((1, 17), [0.0, -l]), // bottom
-        ((17, 18), [l, 0.0]), // right
-        ((18, 41), [l, 0.0]), // right
-        ((29, 30), [0.0, l]), // top
-        ((29, 41), [0.0, l]), // top
-        ((0, 3), [-l, 0.0]),  // left
-        ((3, 30), [-l, 0.0]), // left
+    let solutions = HashMap::from([
+        ((0, 1), (l, [0.0, -1.0])),  // bottom
+        ((1, 17), (l, [0.0, -1.0])), // bottom
+        ((17, 18), (l, [1.0, 0.0])), // right
+        ((18, 41), (l, [1.0, 0.0])), // right
+        ((29, 30), (l, [0.0, 1.0])), // top
+        ((29, 41), (l, [0.0, 1.0])), // top
+        ((0, 3), (l, [-1.0, 0.0])),  // left
+        ((3, 30), (l, [-1.0, 0.0])), // left
     ]);
 
     // check if the normal vectors at boundary are outward
@@ -253,24 +253,24 @@ fn test_normal_vectors_3d() -> Result<(), StrError> {
     // |/             |/
     // 1--------------2
     let mesh = Samples::two_hex8();
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.25 = face_area / 4.0 where 4.0 corresponds to the face_area in the reference system
     let l = 0.25; // magnitude of normal vector
 
     // face keys and correct normal vectors (solutions)
-    let solutions: HashMap<FaceKey, [f64; 3]> = HashMap::from([
-        ((0, 3, 4, 7), [-l, 0.0, 0.0]),  // behind
-        ((4, 7, 8, 11), [-l, 0.0, 0.0]), // behind
-        ((1, 2, 5, 6), [l, 0.0, 0.0]),   // front
-        ((5, 6, 9, 10), [l, 0.0, 0.0]),  // front
-        ((0, 1, 4, 5), [0.0, -l, 0.0]),  // left
-        ((4, 5, 8, 9), [0.0, -l, 0.0]),  // left
-        ((2, 3, 6, 7), [0.0, l, 0.0]),   // right
-        ((6, 7, 10, 11), [0.0, l, 0.0]), // right
-        ((0, 1, 2, 3), [0.0, 0.0, -l]),  // bottom
-        ((8, 9, 10, 11), [0.0, 0.0, l]), // top
+    let solutions = HashMap::from([
+        ((0, 3, 4, 7), (l, [-1.0, 0.0, 0.0])),  // behind
+        ((4, 7, 8, 11), (l, [-1.0, 0.0, 0.0])), // behind
+        ((1, 2, 5, 6), (l, [1.0, 0.0, 0.0])),   // front
+        ((5, 6, 9, 10), (l, [1.0, 0.0, 0.0])),  // front
+        ((0, 1, 4, 5), (l, [0.0, -1.0, 0.0])),  // left
+        ((4, 5, 8, 9), (l, [0.0, -1.0, 0.0])),  // left
+        ((2, 3, 6, 7), (l, [0.0, 1.0, 0.0])),   // right
+        ((6, 7, 10, 11), (l, [0.0, 1.0, 0.0])), // right
+        ((0, 1, 2, 3), (l, [0.0, 0.0, -1.0])),  // bottom
+        ((8, 9, 10, 11), (l, [0.0, 0.0, 1.0])), // top
     ]);
 
     // check if the normal vectors at boundary are outward
@@ -324,17 +324,17 @@ fn test_normal_vectors_3d_hex20() -> Result<(), StrError> {
     //   |/                  |/                  |/
     //  20========25========21========46========44
     let mesh = Samples::block_3d_eight_hex20();
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // the magnitude (l) of the normal vector should be equal to
     // face_area / 4.0 where 4.0 corresponds to the face_area in the reference system
 
     // face keys and correct normal vectors (solutions)
-    let solutions: HashMap<FaceKey, [f64; 3]> = HashMap::from([
-        ((0, 1, 2, 3), [0.0, 0.0, -1.0 / 4.0]),
-        ((52, 53, 63, 64), [0.0, 0.0, 1.0 / 4.0]),
-        ((4, 7, 51, 54), [-2.0 / 4.0, 0.0, 0.0]),
-        ((34, 45, 70, 77), [0.0, 2.0 / 4.0, 0.0]),
+    let solutions = HashMap::from([
+        ((0, 1, 2, 3), (0.25, [0.0, 0.0, -1.0])),
+        ((52, 53, 63, 64), (0.25, [0.0, 0.0, 1.0])),
+        ((4, 7, 51, 54), (0.5, [-1.0, 0.0, 0.0])),
+        ((34, 45, 70, 77), (0.5, [0.0, 1.0, 0.0])),
     ]);
 
     // check if the normal vectors at boundary are outward

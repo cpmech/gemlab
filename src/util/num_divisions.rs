@@ -82,7 +82,6 @@ pub fn num_divisions(ndiv_min: usize, ndiv_long: usize, xmin: &[f64], xmax: &[f6
 #[cfg(test)]
 mod tests {
     use super::num_divisions;
-    use crate::StrError;
 
     #[test]
     fn num_divisions_fails_on_errors() {
@@ -106,21 +105,20 @@ mod tests {
     }
 
     #[test]
-    fn num_divisions_works() -> Result<(), StrError> {
-        assert_eq!(num_divisions(1, 10, &[0.0, 0.0], &[1.0, 1.0])?, &[10, 10]);
-        assert_eq!(num_divisions(2, 10, &[0.0, 0.0], &[1.0, 1.0])?, &[10, 10]);
-        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[100.0, 100.0])?, &[20, 20]);
-        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[1.0, 2.0])?, &[10, 20]);
-        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[2.0, 1.0])?, &[20, 10]);
-        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[1.0, 4.0])?, &[5, 20]);
-        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[1.0, 5.0])?, &[4, 20]);
-        assert_eq!(num_divisions(2, 20, &[0.0, 0.0], &[1.0, 10.0])?, &[2, 20]);
-        assert_eq!(num_divisions(1, 20, &[0.0, 0.0], &[1.0, 100.0])?, &[1, 20]);
-        assert_eq!(num_divisions(2, 20, &[0.0, 0.0], &[1.0, 100.0])?, &[2, 20]);
-        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[10000.0, 1.0])?, &[20, 3]);
-        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[10.0, 3.0])?, &[20, 6]);
-        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[10.0, 3.5])?, &[20, 7]);
-        assert_eq!(num_divisions(3, 20, &[-1.0, -2.0], &[1.0, 2.0])?, &[10, 20]);
-        Ok(())
+    fn num_divisions_works() {
+        assert_eq!(num_divisions(1, 10, &[0.0, 0.0], &[1.0, 1.0]).unwrap(), &[10, 10]);
+        assert_eq!(num_divisions(2, 10, &[0.0, 0.0], &[1.0, 1.0]).unwrap(), &[10, 10]);
+        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[100.0, 100.0]).unwrap(), &[20, 20]);
+        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[1.0, 2.0]).unwrap(), &[10, 20]);
+        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[2.0, 1.0]).unwrap(), &[20, 10]);
+        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[1.0, 4.0]).unwrap(), &[5, 20]);
+        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[1.0, 5.0]).unwrap(), &[4, 20]);
+        assert_eq!(num_divisions(2, 20, &[0.0, 0.0], &[1.0, 10.0]).unwrap(), &[2, 20]);
+        assert_eq!(num_divisions(1, 20, &[0.0, 0.0], &[1.0, 100.0]).unwrap(), &[1, 20]);
+        assert_eq!(num_divisions(2, 20, &[0.0, 0.0], &[1.0, 100.0]).unwrap(), &[2, 20]);
+        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[10000.0, 1.0]).unwrap(), &[20, 3]);
+        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[10.0, 3.0]).unwrap(), &[20, 6]);
+        assert_eq!(num_divisions(3, 20, &[0.0, 0.0], &[10.0, 3.5]).unwrap(), &[20, 7]);
+        assert_eq!(num_divisions(3, 20, &[-1.0, -2.0], &[1.0, 2.0]).unwrap(), &[10, 20]);
     }
 }

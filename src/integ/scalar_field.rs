@@ -58,16 +58,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::scalar_field;
-    use crate::integ::{calc_ips_coords, select_integ_points};
+    use crate::integ;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::StrError;
     use russell_chk::assert_approx_eq;
 
     #[allow(unused_imports)]
     use plotpy::Plot;
 
     #[test]
-    fn scalar_fields_over_rotated_square() -> Result<(), StrError> {
+    fn scalar_fields_over_rotated_square() {
         //       y         (1,1)
         //                   2
         //       ^        .'   `.
@@ -95,14 +94,14 @@ mod tests {
 
         // integration points
         let class = pad.kind.class();
-        let selection: Vec<_> = [1, 4, 5, 1_005, 8, 9, 16]
+        let selection: Vec<_> = [1, 4, 9, 16]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
 
         // s(x) is constant = 1; i.e., the integral will result in the area of the "diamond" shape
         let ii_correct = 2.0;
-        let tolerances = [1e-15, 1e-15, 1e-15, 1e-15, 1e-15, 1e-15, 1e-14];
+        let tolerances = [1e-15, 1e-15, 1e-15, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let ii = scalar_field(&mut pad, ips, |_| Ok(1.0)).unwrap();
@@ -110,12 +109,11 @@ mod tests {
         });
 
         // ∫∫(x²+y²) dx dy
-        //                   1      4      5 1_005      8      9     16
-        let tolerances = [0.67, 1e-15, 1e-15, 1e-6, 1e-15, 1e-15, 1e-14];
+        let tolerances = [0.67, 1e-15, 1e-15, 1e-14];
         let ii_correct = 8.0 / 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -126,12 +124,11 @@ mod tests {
         });
 
         // ∫∫(x³+y³) dx dy
-        //                   1      4      5 1_005      8      9     16
-        let tolerances = [1.01, 1e-15, 1e-15, 1e-6, 1e-15, 1e-15, 1e-15];
+        let tolerances = [1.01, 1e-15, 1e-15, 1e-15];
         let ii_correct = 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -150,11 +147,10 @@ mod tests {
         //     (* returns 8/3 *)
         // Integrate[x^3 + y^3, {x, y} \[Element] region]
         //     (* returns 3 *)
-        Ok(())
     }
 
     #[test]
-    fn scalar_fields_over_slanted_hex8() -> Result<(), StrError> {
+    fn scalar_fields_over_slanted_hex8() {
         let mut pad = Scratchpad::new(3, GeoKind::Hex8).unwrap();
         // node 0
         pad.set_xx(0, 0, 0.0);
@@ -191,22 +187,23 @@ mod tests {
 
         if false {
             let mut plot = Plot::new();
-            pad.draw_shape(&mut plot, "", true, true)?;
+            pad.draw_shape(&mut plot, "", true, true).unwrap();
             plot.set_equal_axes(true)
                 .set_figure_size_points(400.0, 400.0)
-                .save("/tmp/gemlab/test_scalar_fields_over_slanted_hex8.svg")?;
+                .save("/tmp/gemlab/test_scalar_fields_over_slanted_hex8.svg")
+                .unwrap();
         }
 
         // integration points
         let class = pad.kind.class();
-        let selection: Vec<_> = [6, 8, 9, 1_009, 14, 27, 64]
+        let selection: Vec<_> = [6, 8, 14, 27, 64]
             .iter()
-            .map(|n| select_integ_points(class, *n).unwrap())
+            .map(|n| integ::points(class, *n).unwrap())
             .collect();
 
         // s(x) is constant = 1; i.e., the integral will result in the volume
         let ii_correct = 1.0;
-        let tolerances = [1e-15, 1e-15, 1e-15, 1e-15, 1e-15, 1e-15, 1e-15];
+        let tolerances = [1e-15, 1e-15, 1e-15, 1e-15, 1e-15];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let ii = scalar_field(&mut pad, ips, |_| Ok(1.0)).unwrap();
@@ -215,11 +212,10 @@ mod tests {
 
         // ∫∫∫(x²+y²+z²) dx dy dz
         let ii_correct = 11.0 / 6.0;
-        //                    6      8      9 1_009     14     27     64
-        let tolerances = [1e-15, 1e-15, 1e-15, 1e-7, 1e-15, 1e-14, 1e-15];
+        let tolerances = [1e-15, 1e-15, 1e-15, 1e-14, 1e-15];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -232,11 +228,10 @@ mod tests {
 
         // ∫∫∫(x³+y³+z³) dx dy dz
         let ii_correct = 2.0;
-        //                    6      8      9 1_009     14     27     64
-        let tolerances = [1e-15, 1e-15, 1e-15, 1e-6, 1e-15, 1e-15, 1e-14];
+        let tolerances = [1e-15, 1e-15, 1e-15, 1e-15, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = calc_ips_coords(&mut pad, ips).unwrap();
+            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -256,6 +251,5 @@ mod tests {
         //     (* returns 11/6 *)
         // Integrate[x^3 + y^3 + z^3, {x, y, z} \[Element] region]
         //     (* returns 2 *)
-        Ok(())
     }
 }

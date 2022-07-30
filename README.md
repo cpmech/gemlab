@@ -30,7 +30,7 @@ gemlab = "*"
 ## Examples
 
 ```rust
-use gemlab::integ::default_integ_points;
+use gemlab::integ;
 use gemlab::mesh::{set_pad_coords, At, Extract, Mesh, Region};
 use gemlab::shapes::Scratchpad;
 use gemlab::StrError;
@@ -54,7 +54,7 @@ fn main() -> Result<(), StrError> {
     //     0.0     0.5     1.0
     let path = "./data/meshes/four_tri3_one_qua4.msh";
     let mesh = Mesh::from_text_file(path)?;
-    let region = Region::with(&mesh, Extract::Boundary)?;
+    let region = Region::new(&mesh, Extract::Boundary)?;
 
     // Find entities along the boundary of the mesh
     // by giving coordinates. The `At` enum provides
@@ -69,7 +69,7 @@ fn main() -> Result<(), StrError> {
     let cell_2 = &mesh.cells[2];
     let mut pad = Scratchpad::new(ndim, cell_2.kind)?;
     set_pad_coords(&mut pad, &cell_2.points, &mesh);
-    let ips = default_integ_points(cell_2.kind);
+    let ips = integ::default_points(cell_2.kind);
     let mut area = 0.0;
     for p in 0..ips.len() {
         let iota = &ips[p];

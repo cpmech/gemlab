@@ -10,7 +10,7 @@ fn main() -> Result<(), StrError> {
     let mesh_2 = mesh::Structured::quarter_disk_2d_b(r / 2.0, r, 3, 3, kind)?;
 
     // allocate integration points and Scratchpad
-    let ips = integ::default_integ_points(kind);
+    let ips = integ::default_points(kind);
     let mut pad = shapes::Scratchpad::new(2, kind)?;
 
     // mesh 1: sum contribution of all cells
@@ -20,7 +20,7 @@ fn main() -> Result<(), StrError> {
         mesh::set_pad_coords(&mut pad, &cell.points, &mesh_1);
 
         // calculate the coordinates of the integration points
-        let x_ips = integ::calc_ips_coords(&mut pad, ips)?;
+        let x_ips = integ::points_coords(&mut pad, ips)?;
 
         // perform the integration over the domain of a single cell
         second_mom_inertia_mesh_1 += integ::scalar_field(&mut pad, ips, |p| {
@@ -37,7 +37,7 @@ fn main() -> Result<(), StrError> {
         mesh::set_pad_coords(&mut pad, &cell.points, &mesh_2);
 
         // calculate the coordinates of the integration points
-        let x_ips = integ::calc_ips_coords(&mut pad, ips)?;
+        let x_ips = integ::points_coords(&mut pad, ips)?;
 
         // perform the integration over the domain of a single cell
         second_mom_inertia_mesh_2 += integ::scalar_field(&mut pad, ips, |p| {

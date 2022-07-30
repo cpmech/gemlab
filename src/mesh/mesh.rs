@@ -183,11 +183,10 @@ impl fmt::Display for Mesh {
 #[cfg(test)]
 mod tests {
     use crate::mesh::{Mesh, Samples};
-    use crate::StrError;
     use serde_json;
 
     #[test]
-    fn read_and_write_capture_errors() -> Result<(), StrError> {
+    fn read_and_write_capture_errors() {
         assert_eq!(Mesh::read("/tmp/not_found").err(), Some("file not found"));
         assert_eq!(
             Mesh::read("./data/meshes/two_quads_horizontal.msh").err(),
@@ -199,11 +198,10 @@ mod tests {
             cells: Vec::new(),
         };
         assert_eq!(mesh.write("/tmp/").err(), Some("cannot create file"));
-        Ok(())
     }
 
     #[test]
-    fn read_and_write_work() -> Result<(), StrError> {
+    fn read_and_write_work() {
         //
         //  3--------2--------5
         //  |        |        |
@@ -229,15 +227,15 @@ mod tests {
             # id att kind point_ids...
                0   1 qua4 0 1 2 3
                1   0 qua4 1 4 5 2",
-        )?;
-        mesh.write("/tmp/gemlab/test.msh")?;
-        let mesh_read = Mesh::read("/tmp/gemlab/test.msh")?;
+        )
+        .unwrap();
+        mesh.write("/tmp/gemlab/test.msh").unwrap();
+        let mesh_read = Mesh::read("/tmp/gemlab/test.msh").unwrap();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", mesh_read));
-        Ok(())
     }
 
     #[test]
-    fn derive_works() -> Result<(), StrError> {
+    fn derive_works() {
         let mesh = Samples::two_qua4();
         let mesh_clone = mesh.clone();
         let correct ="Mesh { ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute_id: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute_id: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
@@ -250,7 +248,6 @@ mod tests {
         // deserialize
         let mesh_read: Mesh = serde_json::from_str(&mesh_json).unwrap();
         assert_eq!(format!("{:?}", mesh_read), correct);
-        Ok(())
     }
 
     #[test]

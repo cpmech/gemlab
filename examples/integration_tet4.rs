@@ -1,4 +1,4 @@
-use gemlab::integ::{default_integ_points, mat_gdg_stiffness};
+use gemlab::integ;
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
 use russell_lab::{copy_matrix, Matrix};
@@ -32,8 +32,8 @@ fn main() -> Result<(), StrError> {
     let nnode = pad.kind.nnode();
     let nrow = nnode * space_ndim;
     let mut kk = Matrix::new(nrow, nrow);
-    let ips = default_integ_points(pad.kind);
-    mat_gdg_stiffness(&mut kk, &mut pad, ips, 1.0, true, |dd, _| {
+    let ips = integ::default_points(pad.kind);
+    integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
     })?;
 

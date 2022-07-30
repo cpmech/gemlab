@@ -411,10 +411,9 @@ impl Mesh {
 mod tests {
     use super::DataForReadTextMesh;
     use crate::mesh::{Mesh, Samples};
-    use crate::StrError;
 
     #[test]
-    fn parse_sizes_captures_errors() -> Result<(), StrError> {
+    fn parse_sizes_captures_errors() {
         let mut data = DataForReadTextMesh::new();
 
         assert_eq!(
@@ -439,11 +438,10 @@ mod tests {
             data.parse_sizes(&String::from(" 2 4  wrong")).err(),
             Some("cannot parse ncell")
         );
-        Ok(())
     }
 
     #[test]
-    fn parse_point_captures_errors() -> Result<(), StrError> {
+    fn parse_point_captures_errors() {
         let mut data = DataForReadTextMesh::new();
         data.ndim = 3;
         data.npoint = 2;
@@ -491,11 +489,10 @@ mod tests {
             data.parse_point(&mut mesh, &String::from(" 0  0.0 0.0 wrong")).err(),
             Some("cannot parse point z coordinate")
         );
-        Ok(())
     }
 
     #[test]
-    fn parse_cell_captures_errors() -> Result<(), StrError> {
+    fn parse_cell_captures_errors() {
         let mut data = DataForReadTextMesh::new();
         data.ndim = 3;
         data.npoint = 2;
@@ -553,11 +550,10 @@ mod tests {
                 .err(),
             Some("cell data contains extra values")
         );
-        Ok(())
     }
 
     #[test]
-    fn from_text_file_captures_errors() -> Result<(), StrError> {
+    fn from_text_file_captures_errors() {
         assert_eq!(
             Mesh::from_text_file(&String::from("__wrong__")).err(),
             Some("cannot open file")
@@ -590,31 +586,29 @@ mod tests {
             Mesh::from_text_file(&String::from("./data/meshes/bad_wrong_cell_kind.msh")).err(),
             Some("string representation of GeoKind is incorrect")
         );
-        Ok(())
     }
 
     #[test]
-    fn from_text_file_works() -> Result<(), StrError> {
-        let mesh = Mesh::from_text_file("./data/meshes/two_quads_horizontal.msh")?;
+    fn from_text_file_works() {
+        let mesh = Mesh::from_text_file("./data/meshes/two_quads_horizontal.msh").unwrap();
         let sample = Samples::two_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
-        let mesh = Mesh::from_text_file("./data/meshes/two_cubes_vertical.msh")?;
+        let mesh = Mesh::from_text_file("./data/meshes/two_cubes_vertical.msh").unwrap();
         let sample = Samples::two_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
-        let mesh = Mesh::from_text_file("./data/meshes/mixed_shapes_2d.msh")?;
+        let mesh = Mesh::from_text_file("./data/meshes/mixed_shapes_2d.msh").unwrap();
         let sample = Samples::mixed_shapes_2d();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
-        let mesh = Mesh::from_text_file("./data/meshes/mixed_shapes_3d.msh")?;
+        let mesh = Mesh::from_text_file("./data/meshes/mixed_shapes_3d.msh").unwrap();
         let sample = Samples::mixed_shapes_3d();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
-        Ok(())
     }
 
     #[test]
-    fn from_text_captures_errors() -> Result<(), StrError> {
+    fn from_text_captures_errors() {
         assert_eq!(
             Mesh::from_text(
                 "# header\n\
@@ -717,11 +711,10 @@ mod tests {
             .err(),
             Some("string representation of GeoKind is incorrect")
         );
-        Ok(())
     }
 
     #[test]
-    fn from_text_works() -> Result<(), StrError> {
+    fn from_text_works() {
         let mesh = Mesh::from_text(
             r"# header
             # ndim npoint ncell
@@ -740,7 +733,8 @@ mod tests {
             # id att kind  point_ids...
                0   1 qua4  0 1 2 3
                1   2 qua4  1 4 5 2",
-        )?;
+        )
+        .unwrap();
         let sample = Samples::two_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
@@ -768,9 +762,9 @@ mod tests {
             # id att kind  point_ids...
                0   1 hex8  0 1 2 3 4 5  6  7
                1   2 hex8  4 5 6 7 8 9 10 11",
-        )?;
+        )
+        .unwrap();
         let sample = Samples::two_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
-        Ok(())
     }
 }

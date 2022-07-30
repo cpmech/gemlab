@@ -99,7 +99,6 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::ONE_BY_3;
-    use crate::StrError;
     use russell_chk::assert_deriv_approx_eq;
     use russell_lab::{copy_vector, Vector};
 
@@ -138,7 +137,7 @@ mod tests {
     }
 
     #[test]
-    fn calc_gradient_works() -> Result<(), StrError> {
+    fn calc_gradient_works() {
         // kind (except Lin) and tolerances
         let problem = vec![
             // Tri
@@ -151,7 +150,7 @@ mod tests {
             (GeoKind::Qua8, 1e-10),
             (GeoKind::Qua9, 1e-10),
             (GeoKind::Qua12, 1e-10),
-            (GeoKind::Qua16, 1e-10),
+            (GeoKind::Qua16, 1e-9),
             (GeoKind::Qua17, 1e-9),
             // Tet
             (GeoKind::Tet4, 1e-12),
@@ -175,10 +174,10 @@ mod tests {
 
             // compute x corresponding to ξ using the isoparametric formula
             let mut at_x = Vector::new(space_ndim);
-            pad.calc_coords(&mut at_x, &at_ksi)?;
+            pad.calc_coords(&mut at_x, &at_ksi).unwrap();
 
             // compute gradient
-            let det_jac = pad.calc_gradient(&at_ksi)?;
+            let det_jac = pad.calc_gradient(&at_ksi).unwrap();
             assert!(det_jac > 0.0);
 
             // set arguments for numerical integration
@@ -201,6 +200,5 @@ mod tests {
                 }
             }
         }
-        Ok(())
     }
 }

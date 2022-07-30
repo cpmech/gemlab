@@ -40,6 +40,41 @@ impl Samples {
         }
     }
 
+    /// Returns a mesh with every kind of Lin cell in 2D
+    ///
+    /// ![lin_cells_3d](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin_3d.svg)
+    #[rustfmt::skip]
+    pub fn lin_cells_3d() -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0, 0.0] }, // 0
+                Point { id: 1, coords: vec![1.2, 1.2, 1.2] }, // 1
+
+                Point { id: 2, coords: vec![1.4+0.0, 0.0, 0.0] }, // 0
+                Point { id: 3, coords: vec![1.4+1.2, 1.2, 1.2] }, // 1
+                Point { id: 4, coords: vec![1.4+0.3, 0.6, 0.6] }, // 2
+
+                Point { id: 5, coords: vec![2.8+0.0, 0.0, 0.0] }, // 0
+                Point { id: 6, coords: vec![2.8+1.2, 1.2, 1.2] }, // 1
+                Point { id: 7, coords: vec![2.8+0.3, 0.4, 0.4] }, // 2
+                Point { id: 8, coords: vec![2.8+0.6, 0.8, 0.8] }, // 3
+
+                Point { id:  9, coords: vec![4.2+0.0, 0.0, 0.0] }, // 0
+                Point { id: 10, coords: vec![4.2+1.2, 1.2, 1.2] }, // 1
+                Point { id: 11, coords: vec![4.2+0.3, 0.6, 0.6] }, // 2
+                Point { id: 12, coords: vec![4.2+0.0, 0.3, 0.3] }, // 3
+                Point { id: 13, coords: vec![4.2+0.6, 0.9, 0.9] }, // 4
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 2, kind: GeoKind::Lin2, points: vec![0, 1] },
+                Cell { id: 1, attribute_id: 3, kind: GeoKind::Lin3, points: vec![2, 3, 4] },
+                Cell { id: 2, attribute_id: 4, kind: GeoKind::Lin4, points: vec![5, 6, 7, 8] },
+                Cell { id: 3, attribute_id: 5, kind: GeoKind::Lin5, points: vec![9, 10, 11, 12, 13] },
+            ],
+        }
+    }
+
     /// Returns a mesh with every kind of Tri cell
     ///
     /// ![tri_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
@@ -1563,7 +1598,7 @@ impl Samples {
         }
     }
 
-    /// Returns a mesh of a quarter of a ring with eight Qua8 (radius=1 thickness=1)
+    /// Returns a mesh of a quarter of a ring with eight Qua8 (radius=1)
     ///
     /// ```text
     /// 2.0   14---36--,__11
@@ -1648,256 +1683,215 @@ impl Samples {
 #[cfg(test)]
 mod tests {
     use super::Samples;
-    use crate::mesh::{check_all, draw_mesh};
-    use crate::StrError;
+    use crate::mesh::check_all;
+
+    #[allow(unused_imports)]
+    use crate::mesh::draw_mesh;
 
     #[test]
-    fn samples_work() -> Result<(), StrError> {
+    fn samples_work() {
         let mesh = Samples::lin_cells();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
+        check_all(&mesh).unwrap();
+
+        let mesh = Samples::lin_cells_3d();
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 14);
+        assert_eq!(mesh.cells.len(), 4);
+        check_all(&mesh).unwrap();
 
         let mesh = Samples::tri_cells();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 34);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
+        check_all(&mesh).unwrap();
 
         let mesh = Samples::qua_cells();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 66);
         assert_eq!(mesh.cells.len(), 6);
-        check_all(&mesh)?;
+        check_all(&mesh).unwrap();
 
         let mesh = Samples::tet_cells();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 34);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh)?;
+        check_all(&mesh).unwrap();
 
         let mesh = Samples::hex_cells();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 60);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh)?;
+        check_all(&mesh).unwrap();
 
         let mesh = Samples::one_lin2();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 2);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_lin2.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_lin2.svg").unwrap();
 
         let mesh = Samples::one_tri3();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 3);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_tri3.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_tri3.svg").unwrap();
 
         let mesh = Samples::one_tri6();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_tri6.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_tri6.svg").unwrap();
 
         let mesh = Samples::one_qua4();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 4);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_qua4.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_qua4.svg").unwrap();
 
         let mesh = Samples::two_tri3();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 4);
         assert_eq!(mesh.cells.len(), 2);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_tri3.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_tri3.svg").unwrap();
 
         let mesh = Samples::three_tri3();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 5);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_three_tri3.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_three_tri3.svg").unwrap();
 
         let mesh = Samples::two_tri3_one_qua4();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_tri3_one_qua4.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_tri3_one_qua4.svg").unwrap();
 
         let mesh = Samples::one_qua8();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 8);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_qua8.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_qua8.svg").unwrap();
 
         let mesh = Samples::two_qua4();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 2);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_qua4.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_qua4.svg").unwrap();
 
         let mesh = Samples::qua8_tri6_lin2();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 11);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_qua8_tri6_lin2.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_qua8_tri6_lin2.svg").unwrap();
 
         let mesh = Samples::one_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 8);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_hex8.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_hex8.svg").unwrap();
 
         let mesh = Samples::two_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 12);
         assert_eq!(mesh.cells.len(), 2);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_hex8.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_two_hex8.svg").unwrap();
 
         let mesh = Samples::four_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_four_hex8.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_four_hex8.svg").unwrap();
 
         let mesh = Samples::mixed_shapes_2d();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_mixed_shapes_2d.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_mixed_shapes_2d.svg").unwrap();
 
         let mesh = Samples::mixed_shapes_3d();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 13);
         assert_eq!(mesh.cells.len(), 5);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_mixed_shapes_3d.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_mixed_shapes_3d.svg").unwrap();
 
         let mesh = Samples::block_2d_four_qua4();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua4.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua4.svg").unwrap();
 
         let mesh = Samples::block_2d_four_qua8();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 21);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua8.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua8.svg").unwrap();
 
         let mesh = Samples::block_2d_four_qua9();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua9.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua9.svg").unwrap();
 
         let mesh = Samples::block_2d_four_qua12();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua12.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua12.svg").unwrap();
 
         let mesh = Samples::block_2d_four_qua16();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua16.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua16.svg").unwrap();
 
         let mesh = Samples::block_2d_four_qua17();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua17.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_2d_four_qua17.svg").unwrap();
 
         let mesh = Samples::block_3d_eight_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex8.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex8.svg").unwrap();
 
         let mesh = Samples::block_3d_eight_hex20();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 81);
         assert_eq!(mesh.cells.len(), 8);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex20.svg")?;
-        }
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex20.svg").unwrap();
 
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 8);
-        check_all(&mesh)?;
-        if false {
-            draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_ring_eight_qua8_rad1_thick1.svg")?;
-        }
-        Ok(())
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_ring_eight_qua8_rad1_thick1.svg").unwrap();
     }
 }

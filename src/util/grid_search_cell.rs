@@ -469,39 +469,43 @@ mod tests {
     use super::GridSearchCell;
     use crate::geometry::is_point_inside_triangle;
     use crate::util::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
-    use crate::StrError;
-    use plotpy::{Canvas, Plot, PolyCode};
+    use plotpy::Plot;
 
-    fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
-        let mut canvas = Canvas::new();
-        canvas.set_face_color("#fefddc").set_edge_color("#fcb827");
-        for t in 0..triangles.len() {
-            canvas.polycurve_begin();
-            for m in 0..3 {
-                let code = if m == 0 { PolyCode::MoveTo } else { PolyCode::LineTo };
-                canvas.polycurve_add(&triangles[t][m][0], &triangles[t][m][1], code);
-            }
-            canvas.polycurve_end(true);
-        }
-        plot.add(&canvas);
-    }
+    #[allow(unused_imports)]
+    use plotpy::{Canvas, PolyCode};
 
-    fn draw_tetrahedra(plot: &mut Plot, tets: &[[[f64; 3]; 4]]) {
-        const EDGES: [(usize, usize); 6] = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
-        let mut canvas = Canvas::new();
-        canvas.set_face_color("None").set_edge_color("#fcb827");
-        for t in 0..tets.len() {
-            for (ma, mb) in &EDGES {
-                let xa = &tets[t][*ma];
-                let xb = &tets[t][*mb];
-                canvas.polyline_3d_begin();
-                canvas.polyline_3d_add(xa[0], xa[1], xa[2]);
-                canvas.polyline_3d_add(xb[0], xb[1], xb[2]);
-                canvas.polyline_3d_end();
-            }
-        }
-        plot.add(&canvas);
-    }
+    // DO NOT DELETE the lines below
+    // fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
+    //     let mut canvas = Canvas::new();
+    //     canvas.set_face_color("#fefddc").set_edge_color("#fcb827");
+    //     for t in 0..triangles.len() {
+    //         canvas.polycurve_begin();
+    //         for m in 0..3 {
+    //             let code = if m == 0 { PolyCode::MoveTo } else { PolyCode::LineTo };
+    //             canvas.polycurve_add(&triangles[t][m][0], &triangles[t][m][1], code);
+    //         }
+    //         canvas.polycurve_end(true);
+    //     }
+    //     plot.add(&canvas);
+    // }
+
+    // DO NOT DELETE the lines below
+    // fn draw_tetrahedra(plot: &mut Plot, tets: &[[[f64; 3]; 4]]) {
+    //     const EDGES: [(usize, usize); 6] = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
+    //     let mut canvas = Canvas::new();
+    //     canvas.set_face_color("None").set_edge_color("#fcb827");
+    //     for t in 0..tets.len() {
+    //         for (ma, mb) in &EDGES {
+    //             let xa = &tets[t][*ma];
+    //             let xb = &tets[t][*mb];
+    //             canvas.polyline_3d_begin();
+    //             canvas.polyline_3d_add(xa[0], xa[1], xa[2]);
+    //             canvas.polyline_3d_add(xb[0], xb[1], xb[2]);
+    //             canvas.polyline_3d_end();
+    //         }
+    //     }
+    //     plot.add(&canvas);
+    // }
 
     #[test]
     fn new_handles_errors() {
@@ -536,7 +540,7 @@ mod tests {
     }
 
     #[test]
-    fn new_works_1() -> Result<(), StrError> {
+    fn new_works_1() {
         const TRIS: [[[f64; 2]; 3]; 2] = [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
             [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
@@ -545,7 +549,7 @@ mod tests {
         let border_tol = 0.1;
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
-        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol)).unwrap();
         let max_len = 1.0;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         let xmin = &[-0.1, -0.1];
@@ -583,47 +587,46 @@ mod tests {
         let (mi, ma) = grid.limits();
         assert_eq!(mi, xmin);
         assert_eq!(ma, xmax);
-        if false {
-            let mut plot = Plot::new();
-            draw_triangles(&mut plot, &TRIS);
-            grid.draw(&mut plot, true)?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .grid_and_labels("x", "y")
-                .set_ticks_x(0.2, 0.0, "")
-                .set_ticks_y(0.2, 0.0, "")
-                .save("/tmp/gemlab/test_grid_search_cell_new_1.svg")?;
-        }
+
+        // let mut plot = Plot::new();
+        // draw_triangles(&mut plot, &TRIS);
+        // grid.draw(&mut plot, true).unwrap();
+        // plot.set_equal_axes(true)
+        //     .set_figure_size_points(600.0, 600.0)
+        //     .grid_and_labels("x", "y")
+        //     .set_ticks_x(0.2, 0.0, "")
+        //     .set_ticks_y(0.2, 0.0, "")
+        //     .save("/tmp/gemlab/test_grid_search_cell_new_1.svg")
+        //     .unwrap();
+
         // with zero border
-        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, Some(0.0))?;
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, Some(0.0)).unwrap();
         let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE;
         assert_eq!(grid.xmin, &[0.0, 0.0]);
         assert_eq!(grid.ndiv, &[1, 1]);
         assert_eq!(grid.xmax, &[sl, sl]);
-        Ok(())
     }
 
     #[test]
-    fn draw_works() -> Result<(), StrError> {
+    fn draw_works() {
         const TRIS: [[[f64; 2]; 3]; 2] = [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
             [[1.0, 0.0], [1.2, 1.5], [0.0, 1.0]],
         ];
         let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
-        let grid = GridSearchCell::new(2, 1, |_| Ok(3), get_x, None, None)?;
+        let grid = GridSearchCell::new(2, 1, |_| Ok(3), get_x, None, None).unwrap();
         let mut plot = Plot::new();
-        grid.draw(&mut plot, true)?;
+        grid.draw(&mut plot, true).unwrap();
 
         const TETS: [[[f64; 3]; 4]; 1] = [[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]];
         let get_x = |t: usize, m: usize| Ok(&TETS[t][m][..]);
-        let grid = GridSearchCell::new(3, 1, |_| Ok(4), get_x, None, None)?;
+        let grid = GridSearchCell::new(3, 1, |_| Ok(4), get_x, None, None).unwrap();
         let mut plot = Plot::new();
-        grid.draw(&mut plot, true)?;
-        Ok(())
+        grid.draw(&mut plot, true).unwrap();
     }
 
     #[test]
-    fn new_works_2() -> Result<(), StrError> {
+    fn new_works_2() {
         const TRIS: [[[f64; 2]; 3]; 2] = [
             [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
             [[1.0, 0.0], [1.2, 1.5], [0.0, 1.0]],
@@ -632,7 +635,7 @@ mod tests {
         let border_tol = 0.1;
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
-        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol)).unwrap();
         let max_len = 1.5;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 2);
@@ -658,28 +661,26 @@ mod tests {
              ncontainer = 2\n\
              ndiv = [1, 2]\n"
         );
-        if false {
-            let mut plot = Plot::new();
-            draw_triangles(&mut plot, &TRIS);
-            grid.draw(&mut plot, true)?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .grid_and_labels("x", "y")
-                .set_ticks_x(0.2, 0.0, "")
-                .set_ticks_y(0.2, 0.0, "")
-                .save("/tmp/gemlab/test_grid_search_cell_new_2.svg")?;
-        }
-        Ok(())
+        // let mut plot = Plot::new();
+        // draw_triangles(&mut plot, &TRIS);
+        // grid.draw(&mut plot, true).unwrap();
+        // plot.set_equal_axes(true)
+        //     .set_figure_size_points(600.0, 600.0)
+        //     .grid_and_labels("x", "y")
+        //     .set_ticks_x(0.2, 0.0, "")
+        //     .set_ticks_y(0.2, 0.0, "")
+        //     .save("/tmp/gemlab/test_grid_search_cell_new_2.svg")
+        //     .unwrap();
     }
 
     #[test]
-    fn new_works_3() -> Result<(), StrError> {
+    fn new_works_3() {
         const TETS: [[[f64; 3]; 4]; 1] = [[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]];
         let tolerance = 1e-3;
         let border_tol = 0.1;
         let get_nnode = |_| Ok(4);
         let get_x = |t: usize, m: usize| Ok(&TETS[t][m][..]);
-        let grid = GridSearchCell::new(3, TETS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol))?;
+        let grid = GridSearchCell::new(3, TETS.len(), get_nnode, get_x, Some(tolerance), Some(border_tol)).unwrap();
         let max_len = 1.0;
         let sl = max_len + 2.0 * tolerance; // because the bbox is expanded
         assert_eq!(grid.ndim, 3);
@@ -705,31 +706,28 @@ mod tests {
              ncontainer = 8\n\
              ndiv = [2, 2, 2]\n"
         );
-        if false {
-            let mut plot = Plot::new();
-            draw_tetrahedra(&mut plot, &TETS);
-            grid.draw(&mut plot, true)?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .save("/tmp/gemlab/test_grid_search_cell_new_3.svg")?;
-        }
-        Ok(())
+        // let mut plot = Plot::new();
+        // draw_tetrahedra(&mut plot, &TETS);
+        // grid.draw(&mut plot, true).unwrap();
+        // plot.set_equal_axes(true)
+        //     .set_figure_size_points(600.0, 600.0)
+        //     .save("/tmp/gemlab/test_grid_search_cell_new_3.svg")
+        //     .unwrap();
     }
 
     #[test]
-    fn find_cell_handles_errors() -> Result<(), StrError> {
+    fn find_cell_handles_errors() {
         let x = vec![0.0, 0.0];
-        let grid = GridSearchCell::new(2, 1, |_| Ok(3), |_, _| Ok(&x), None, None)?;
+        let grid = GridSearchCell::new(2, 1, |_| Ok(3), |_, _| Ok(&x), None, None).unwrap();
         let y = vec![10.0, 0.0];
         assert_eq!(
             grid.find_cell(&y, |_, _| Ok(true)).err(),
             Some("given point coordinates are outside the grid")
         );
-        Ok(())
     }
 
     #[test]
-    fn find_cell_works_2d() -> Result<(), StrError> {
+    fn find_cell_works_2d() {
         // [num_triangle][nnode=3][ndim=2]
         #[rustfmt::skip]
         const TRIS: [[[f64; 2]; 3]; 12] = [
@@ -748,7 +746,7 @@ mod tests {
         ];
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
-        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, None)?;
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, None).unwrap();
         let max_len = TRIS[10][1][0] - TRIS[10][2][0];
         let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE; // because the bbox is expanded
         let g = GS_DEFAULT_BORDER_TOL;
@@ -778,37 +776,35 @@ mod tests {
              ndiv = [2, 2]\n"
         );
         let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
-        assert_eq!(grid.find_cell(&[0.4, 0.2], is_in_cell)?, Some(11));
-        assert_eq!(grid.find_cell(&[0.6, 0.3], is_in_cell)?, Some(7));
-        assert_eq!(grid.find_cell(&[0.1, 0.7], is_in_cell)?, Some(2));
-        assert_eq!(grid.find_cell(&[0.8, 0.8], is_in_cell)?, Some(8));
-        let res = grid.find_cell(&TRIS[7][1], is_in_cell)?;
+        assert_eq!(grid.find_cell(&[0.4, 0.2], is_in_cell).unwrap(), Some(11));
+        assert_eq!(grid.find_cell(&[0.6, 0.3], is_in_cell).unwrap(), Some(7));
+        assert_eq!(grid.find_cell(&[0.1, 0.7], is_in_cell).unwrap(), Some(2));
+        assert_eq!(grid.find_cell(&[0.8, 0.8], is_in_cell).unwrap(), Some(8));
+        let res = grid.find_cell(&TRIS[7][1], is_in_cell).unwrap();
         if res != Some(7) {
             assert_eq!(res, Some(11));
         }
-        assert_eq!(grid.find_cell(&[0.1, 0.1], is_in_cell)?, None);
-        assert_eq!(grid.find_cell(&[0.6, 0.2], is_in_cell)?, None);
-        assert_eq!(grid.find_cell(&[0.4, 1.0], is_in_cell)?, None);
+        assert_eq!(grid.find_cell(&[0.1, 0.1], is_in_cell).unwrap(), None);
+        assert_eq!(grid.find_cell(&[0.6, 0.2], is_in_cell).unwrap(), None);
+        assert_eq!(grid.find_cell(&[0.4, 1.0], is_in_cell).unwrap(), None);
         assert_eq!(
             grid.find_cell(&[10.0, 1.0], is_in_cell).err(),
             Some("given point coordinates are outside the grid")
         );
-        if false {
-            let mut plot = Plot::new();
-            draw_triangles(&mut plot, &TRIS);
-            grid.draw(&mut plot, true)?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .grid_and_labels("x", "y")
-                .set_ticks_x(0.2, 0.0, "")
-                .set_ticks_y(0.2, 0.0, "")
-                .save("/tmp/gemlab/test_grid_search_cell_find_works_2d.svg")?;
-        }
-        Ok(())
+        // let mut plot = Plot::new();
+        // draw_triangles(&mut plot, &TRIS);
+        // grid.draw(&mut plot, true).unwrap();
+        // plot.set_equal_axes(true)
+        //     .set_figure_size_points(600.0, 600.0)
+        //     .grid_and_labels("x", "y")
+        //     .set_ticks_x(0.2, 0.0, "")
+        //     .set_ticks_y(0.2, 0.0, "")
+        //     .save("/tmp/gemlab/test_grid_search_cell_find_works_2d.svg")
+        //     .unwrap();
     }
 
     #[test]
-    fn find_cell_works_2d_particles() -> Result<(), StrError> {
+    fn find_cell_works_2d_particles() {
         // [num_triangle][nnode=3][ndim=2]
         #[rustfmt::skip]
         const TRIS: [[[f64; 2]; 3]; 3] = [
@@ -818,25 +814,23 @@ mod tests {
         ];
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
-        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, None)?;
+        let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, None).unwrap();
         let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
-        assert_eq!(grid.find_cell(&[0.4, 0.2], is_in_cell)?, Some(0));
-        assert_eq!(grid.find_cell(&[3.0, 0.0], is_in_cell)?, Some(1));
-        assert_eq!(grid.find_cell(&[1.5, 1.4], is_in_cell)?, Some(2));
-        assert_eq!(grid.find_cell(&[0.5, 1.6], is_in_cell)?, None);
-        assert_eq!(grid.find_cell(&[1.5, 0.5], is_in_cell)?, None);
-        assert_eq!(grid.find_cell(&[2.5, 1.6], is_in_cell)?, None);
-        if false {
-            let mut plot = Plot::new();
-            draw_triangles(&mut plot, &TRIS);
-            grid.draw(&mut plot, true)?;
-            plot.set_equal_axes(true)
-                .set_figure_size_points(600.0, 600.0)
-                .grid_and_labels("x", "y")
-                .set_ticks_x(0.2, 0.0, "")
-                .set_ticks_y(0.2, 0.0, "")
-                .save("/tmp/gemlab/test_grid_search_cell_find_works_2d_particles.svg")?;
-        }
-        Ok(())
+        assert_eq!(grid.find_cell(&[0.4, 0.2], is_in_cell).unwrap(), Some(0));
+        assert_eq!(grid.find_cell(&[3.0, 0.0], is_in_cell).unwrap(), Some(1));
+        assert_eq!(grid.find_cell(&[1.5, 1.4], is_in_cell).unwrap(), Some(2));
+        assert_eq!(grid.find_cell(&[0.5, 1.6], is_in_cell).unwrap(), None);
+        assert_eq!(grid.find_cell(&[1.5, 0.5], is_in_cell).unwrap(), None);
+        assert_eq!(grid.find_cell(&[2.5, 1.6], is_in_cell).unwrap(), None);
+        // let mut plot = Plot::new();
+        // draw_triangles(&mut plot, &TRIS);
+        // grid.draw(&mut plot, true).unwrap();
+        // plot.set_equal_axes(true)
+        //     .set_figure_size_points(600.0, 600.0)
+        //     .grid_and_labels("x", "y")
+        //     .set_ticks_x(0.2, 0.0, "")
+        //     .set_ticks_y(0.2, 0.0, "")
+        //     .save("/tmp/gemlab/test_grid_search_cell_find_works_2d_particles.svg")
+        //     .unwrap();
     }
 }
