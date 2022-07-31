@@ -167,7 +167,7 @@ mod tests {
         let mut kk = Matrix::new(8 * 2, 4);
         let ana = AnalyticalQua8::new(a, b);
         let s = 9.0;
-        let kk_correct = ana.integ_gsnb(s);
+        let kk_correct = ana.mat_07_gsn(s);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];

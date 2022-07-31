@@ -208,7 +208,7 @@ mod tests {
         let mut kk = Matrix::new(8, 8);
         let ana = AnalyticalQua8::new(a, b);
         let (kx, ky) = (2.5, 3.8);
-        let kk_correct = ana.integ_gtg(kx, ky);
+        let kk_correct = ana.mat_03_gtg(kx, ky);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();

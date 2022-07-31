@@ -20,7 +20,7 @@ impl AnalyticalQua8 {
     /// From @bhatti:05\page{348}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
     #[rustfmt::skip]
-    pub fn integ_nsn(&self, s: f64, th: f64) -> Matrix {
+    pub fn mat_01_nsn(&self, s: f64, th: f64) -> Matrix {
         let c = -th * s * self.a * self.b;
         Matrix::from(&[
             [(-(2.0/15.0))*c , (-(2.0/45.0))*c , (-(1.0/15.0))*c , (-(2.0/45.0))*c , (2.0*c)/15.0     , (8.0*c)/45.0     , (8.0*c)/45.0     , (2.0*c)/15.0]     , // bh1
@@ -40,7 +40,7 @@ impl AnalyticalQua8 {
     /// From @bhatti:05\page{348}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
     #[rustfmt::skip]
-    pub fn integ_gtg(&self, kx: f64, ky: f64) -> Matrix {
+    pub fn mat_03_gtg(&self, kx: f64, ky: f64) -> Matrix {
         let a = self.a;
         let b = self.b;
         Matrix::from(&[
@@ -56,9 +56,9 @@ impl AnalyticalQua8 {
         ])
     }
 
-    /// Performs the coupled nb-s-g integration with constant s(x) field
+    /// Performs the coupled n-s-g integration with constant s(x) field
     #[rustfmt::skip]
-    pub fn integ_nbsg(&self, s: f64) -> Matrix {
+    pub fn mat_04_nsg(&self, s: f64) -> Matrix {
         let a = self.a;
         let b = self.b;
         let c = s / 18.0;
@@ -70,9 +70,48 @@ impl AnalyticalQua8 {
         ])
     }
 
-    /// Performs the coupled g-s-nb integration with constant s(x) field
+    /// Performs the coupled g-t-n integration with constant tensor field
     #[rustfmt::skip]
-    pub fn integ_gsnb(&self, s: f64) -> Matrix {
+    pub fn mat_05_gtn(&self, tt: &Tensor2) -> Matrix {
+        let a = self.a;
+        let b = self.b;
+        let (t00,t01) = (tt.get(0,0), tt.get(0,1));
+        let (t10,t11) = (tt.get(1,0), tt.get(1,1));
+        Matrix::from(&[
+            [(b*t00 + a*t10)/18.,(b*t01 + a*t11)/18.,(b*t00 + 2.*a*t10)/18.,(b*t01 + 2.*a*t11)/18.,(b*t00 + a*t10)/9.,(b*t01 + a*t11)/9.,(2.*b*t00 + a*t10)/18.,(2.*b*t01 + a*t11)/18., (-4.*b*t00 - 3.*a*t10)/9.,(-4.*b*t01 - 3.*a*t11)/9.,(-3.*b*t00 - 2.*a*t10)/9.,(-3.*b*t01 - 2.*a*t11)/9.,(-2.*b*t00 - 3.*a*t10)/9.,(-2.*b*t01 - 3.*a*t11)/9.,(-3.*b*t00 - 4.*a*t10)/9., (-3.*b*t01 - 4.*a*t11)/9.],
+            [(-(b*t00) + 2.*a*t10)/18.,(-(b*t01) + 2.*a*t11)/18.,(-(b*t00) + a*t10)/18.,(-(b*t01) + a*t11)/18.,(-2.*b*t00 + a*t10)/18.,(-2.*b*t01 + a*t11)/18., (-(b*t00) + a*t10)/9.,(-(b*t01) + a*t11)/9.,(4.*b*t00 - 3.*a*t10)/9.,(4.*b*t01 - 3.*a*t11)/9.,(3.*b*t00 - 4.*a*t10)/9.,(3.*b*t01 - 4.*a*t11)/9.,(2.*b*t00 - 3.*a*t10)/9.,(2.*b*t01 - 3.*a*t11)/9., (3.*b*t00 - 2.*a*t10)/9.,(3.*b*t01 - 2.*a*t11)/9.],
+            [(-(b*t00) - a*t10)/9.,(-(b*t01) - a*t11)/9.,(-2.*b*t00 - a*t10)/18.,(-2.*b*t01 - a*t11)/18.,(-(b*t00) - a*t10)/18.,(-(b*t01) - a*t11)/18., (-(b*t00) - 2.*a*t10)/18.,(-(b*t01) - 2.*a*t11)/18.,(2.*b*t00 + 3.*a*t10)/9.,(2.*b*t01 + 3.*a*t11)/9.,(3.*b*t00 + 4.*a*t10)/9.,(3.*b*t01 + 4.*a*t11)/9.,(4.*b*t00 + 3.*a*t10)/9.,(4.*b*t01 + 3.*a*t11)/9., (3.*b*t00 + 2.*a*t10)/9.,(3.*b*t01 + 2.*a*t11)/9.],
+            [(2.*b*t00 - a*t10)/18.,(2.*b*t01 - a*t11)/18.,(b*t00 - a*t10)/9.,(b*t01 - a*t11)/9.,(b*t00 - 2.*a*t10)/18.,(b*t01 - 2.*a*t11)/18., (b*t00 - a*t10)/18.,(b*t01 - a*t11)/18.,(-2.*b*t00 + 3.*a*t10)/9.,(-2.*b*t01 + 3.*a*t11)/9.,(-3.*b*t00 + 2.*a*t10)/9.,(-3.*b*t01 + 2.*a*t11)/9.,(-4.*b*t00 + 3.*a*t10)/9.,(-4.*b*t01 + 3.*a*t11)/9., (-3.*b*t00 + 4.*a*t10)/9.,(-3.*b*t01 + 4.*a*t11)/9.],
+        ])
+    }
+
+    /// Performs the coupled n-v-n integration with constant vector field
+    #[rustfmt::skip]
+    pub fn mat_06_nvn(&self, v0: f64, v1: f64) -> Matrix {
+        let c = self.a * self.b / 9.0;
+        Matrix::from(&[
+            [     0.0,    -v0*c,    -v0*c,    -v0*c],
+            [     0.0,    -v1*c,    -v1*c,    -v1*c],
+            [   -v0*c,      0.0,    -v0*c,    -v0*c],
+            [   -v1*c,      0.0,    -v1*c,    -v1*c],
+            [   -v0*c,    -v0*c,      0.0,    -v0*c],
+            [   -v1*c,    -v1*c,      0.0,    -v1*c],
+            [   -v0*c,    -v0*c,    -v0*c,      0.0],
+            [   -v1*c,    -v1*c,    -v1*c,      0.0],
+            [4.0*v0*c, 4.0*v0*c, 2.0*v0*c, 2.0*v0*c],
+            [4.0*v1*c, 4.0*v1*c, 2.0*v1*c, 2.0*v1*c],
+            [2.0*v0*c, 4.0*v0*c, 4.0*v0*c, 2.0*v0*c],
+            [2.0*v1*c, 4.0*v1*c, 4.0*v1*c, 2.0*v1*c],
+            [2.0*v0*c, 2.0*v0*c, 4.0*v0*c, 4.0*v0*c],
+            [2.0*v1*c, 2.0*v1*c, 4.0*v1*c, 4.0*v1*c],
+            [4.0*v0*c, 2.0*v0*c, 2.0*v0*c, 4.0*v0*c],
+            [4.0*v1*c, 2.0*v1*c, 2.0*v1*c, 4.0*v1*c],
+        ])
+    }
+
+    /// Performs the coupled g-s-n integration with constant s(x) field
+    #[rustfmt::skip]
+    pub fn mat_07_gsn(&self, s: f64) -> Matrix {
         let a = self.a;
         let b = self.b;
         let c = s / 18.0;
@@ -93,45 +132,6 @@ impl AnalyticalQua8 {
             [ 6.0*a*c,  6.0*a*c,  6.0*a*c,  6.0*a*c],
             [-6.0*b*c, -6.0*b*c, -6.0*b*c, -6.0*b*c],
             [ 8.0*a*c,  4.0*a*c, -4.0*a*c, -8.0*a*c]
-        ])
-    }
-
-    /// Performs the coupled gb-t-n integration with constant tensor field
-    #[rustfmt::skip]
-    pub fn integ_gbtn(&self, tt: &Tensor2) -> Matrix {
-        let a = self.a;
-        let b = self.b;
-        let (t00,t01) = (tt.get(0,0), tt.get(0,1));
-        let (t10,t11) = (tt.get(1,0), tt.get(1,1));
-        Matrix::from(&[
-            [(b*t00 + a*t10)/18.,(b*t01 + a*t11)/18.,(b*t00 + 2.*a*t10)/18.,(b*t01 + 2.*a*t11)/18.,(b*t00 + a*t10)/9.,(b*t01 + a*t11)/9.,(2.*b*t00 + a*t10)/18.,(2.*b*t01 + a*t11)/18., (-4.*b*t00 - 3.*a*t10)/9.,(-4.*b*t01 - 3.*a*t11)/9.,(-3.*b*t00 - 2.*a*t10)/9.,(-3.*b*t01 - 2.*a*t11)/9.,(-2.*b*t00 - 3.*a*t10)/9.,(-2.*b*t01 - 3.*a*t11)/9.,(-3.*b*t00 - 4.*a*t10)/9., (-3.*b*t01 - 4.*a*t11)/9.],
-            [(-(b*t00) + 2.*a*t10)/18.,(-(b*t01) + 2.*a*t11)/18.,(-(b*t00) + a*t10)/18.,(-(b*t01) + a*t11)/18.,(-2.*b*t00 + a*t10)/18.,(-2.*b*t01 + a*t11)/18., (-(b*t00) + a*t10)/9.,(-(b*t01) + a*t11)/9.,(4.*b*t00 - 3.*a*t10)/9.,(4.*b*t01 - 3.*a*t11)/9.,(3.*b*t00 - 4.*a*t10)/9.,(3.*b*t01 - 4.*a*t11)/9.,(2.*b*t00 - 3.*a*t10)/9.,(2.*b*t01 - 3.*a*t11)/9., (3.*b*t00 - 2.*a*t10)/9.,(3.*b*t01 - 2.*a*t11)/9.],
-            [(-(b*t00) - a*t10)/9.,(-(b*t01) - a*t11)/9.,(-2.*b*t00 - a*t10)/18.,(-2.*b*t01 - a*t11)/18.,(-(b*t00) - a*t10)/18.,(-(b*t01) - a*t11)/18., (-(b*t00) - 2.*a*t10)/18.,(-(b*t01) - 2.*a*t11)/18.,(2.*b*t00 + 3.*a*t10)/9.,(2.*b*t01 + 3.*a*t11)/9.,(3.*b*t00 + 4.*a*t10)/9.,(3.*b*t01 + 4.*a*t11)/9.,(4.*b*t00 + 3.*a*t10)/9.,(4.*b*t01 + 3.*a*t11)/9., (3.*b*t00 + 2.*a*t10)/9.,(3.*b*t01 + 2.*a*t11)/9.],
-            [(2.*b*t00 - a*t10)/18.,(2.*b*t01 - a*t11)/18.,(b*t00 - a*t10)/9.,(b*t01 - a*t11)/9.,(b*t00 - 2.*a*t10)/18.,(b*t01 - 2.*a*t11)/18., (b*t00 - a*t10)/18.,(b*t01 - a*t11)/18.,(-2.*b*t00 + 3.*a*t10)/9.,(-2.*b*t01 + 3.*a*t11)/9.,(-3.*b*t00 + 2.*a*t10)/9.,(-3.*b*t01 + 2.*a*t11)/9.,(-4.*b*t00 + 3.*a*t10)/9.,(-4.*b*t01 + 3.*a*t11)/9., (-3.*b*t00 + 4.*a*t10)/9.,(-3.*b*t01 + 4.*a*t11)/9.],
-        ])
-    }
-
-    /// Performs the coupled n-v-nb integration with constant vector field
-    #[rustfmt::skip]
-    pub fn integ_nvnb(&self, v0: f64, v1: f64) -> Matrix {
-        let c = self.a * self.b / 9.0;
-        Matrix::from(&[
-            [     0.0,    -v0*c,    -v0*c,    -v0*c],
-            [     0.0,    -v1*c,    -v1*c,    -v1*c],
-            [   -v0*c,      0.0,    -v0*c,    -v0*c],
-            [   -v1*c,      0.0,    -v1*c,    -v1*c],
-            [   -v0*c,    -v0*c,      0.0,    -v0*c],
-            [   -v1*c,    -v1*c,      0.0,    -v1*c],
-            [   -v0*c,    -v0*c,    -v0*c,      0.0],
-            [   -v1*c,    -v1*c,    -v1*c,      0.0],
-            [4.0*v0*c, 4.0*v0*c, 2.0*v0*c, 2.0*v0*c],
-            [4.0*v1*c, 4.0*v1*c, 2.0*v1*c, 2.0*v1*c],
-            [2.0*v0*c, 4.0*v0*c, 4.0*v0*c, 2.0*v0*c],
-            [2.0*v1*c, 4.0*v1*c, 4.0*v1*c, 2.0*v1*c],
-            [2.0*v0*c, 2.0*v0*c, 4.0*v0*c, 4.0*v0*c],
-            [2.0*v1*c, 2.0*v1*c, 4.0*v1*c, 4.0*v1*c],
-            [4.0*v0*c, 2.0*v0*c, 2.0*v0*c, 4.0*v0*c],
-            [4.0*v1*c, 2.0*v1*c, 2.0*v1*c, 4.0*v1*c],
         ])
     }
 }

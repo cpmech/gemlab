@@ -171,7 +171,7 @@ mod tests {
         let mut kk = Matrix::new(8 * 2, 4);
         let ana = AnalyticalQua8::new(a, b);
         let (v0, v1) = (4.0, 5.0);
-        let kk_correct = ana.integ_nvnb(v0, v1);
+        let kk_correct = ana.mat_06_nvn(v0, v1);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
