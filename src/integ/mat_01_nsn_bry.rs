@@ -62,11 +62,15 @@ where
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
-    if space_ndim == 2 && pad.kind.ndim() != 1 {
-        return Err("in 2D, geometry ndim must be 1 (a line)");
-    }
-    if space_ndim == 3 && pad.kind.ndim() != 2 {
-        return Err("in 3D, geometry ndim must be 2 (a surface)");
+    let geo_ndim = pad.deriv.dims().1;
+    if space_ndim == 2 {
+        if geo_ndim != 1 {
+            return Err("in 2D, geometry ndim must be equal to 1 (a line)");
+        }
+    } else {
+        if geo_ndim != 2 {
+            return Err("in 3D, geometry ndim must be equal to 2 (a surface)");
+        }
     }
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode {
@@ -125,13 +129,13 @@ mod tests {
         let mut kk = Matrix::new(3, 3);
         assert_eq!(
             integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_| Ok(0.0)).err(),
-            Some("in 2D, geometry ndim must be 1 (a line)")
+            Some("in 2D, geometry ndim must be equal to 1 (a line)")
         );
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
             integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_| Ok(0.0)).err(),
-            Some("in 3D, geometry ndim must be 2 (a surface)")
+            Some("in 3D, geometry ndim must be equal to 2 (a surface)")
         );
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);

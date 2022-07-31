@@ -68,6 +68,16 @@ where
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
+    let geo_ndim = pad.deriv.dims().1;
+    if space_ndim == 2 {
+        if geo_ndim != 1 {
+            return Err("in 2D, geometry ndim must be equal to 1 (a line)");
+        }
+    } else {
+        if geo_ndim != 2 {
+            return Err("in 3D, geometry ndim must be equal to 2 (a surface)");
+        }
+    }
     if b.dim() < ii0 + nnode * space_ndim {
         return Err("b.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
@@ -118,6 +128,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ;
+    use crate::integ::testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::SQRT_2;
     use russell_chk::assert_vec_approx_eq;
@@ -126,19 +137,21 @@ mod tests {
     // to test if variables are cleared before sum
     const NOISE: f64 = 1234.56;
 
-    // generates pad Lin2 for tests
-    fn gen_pad_lin2(l: f64) -> Scratchpad {
-        let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
-        pad.set_xx(0, 0, 3.0);
-        pad.set_xx(0, 1, 4.0);
-        pad.set_xx(1, 0, 3.0 + l);
-        pad.set_xx(1, 1, 4.0);
-        pad
-    }
-
     #[test]
     fn capture_some_errors() {
-        let mut pad = gen_pad_lin2(1.0);
+        let mut pad = aux::gen_pad_tri3();
+        let mut b = Vector::new(6);
+        assert_eq!(
+            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], |_, _, _| Ok(())).err(),
+            Some("in 2D, geometry ndim must be equal to 1 (a line)")
+        );
+        let mut pad = aux::gen_pad_tet4();
+        let mut b = Vector::new(8);
+        assert_eq!(
+            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], |_, _, _| Ok(())).err(),
+            Some("in 3D, geometry ndim must be equal to 2 (a surface)")
+        );
+        let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
         assert_eq!(
             integ::vec_02_nv_bry(&mut b, &mut pad, 1, false, &[], |_, _, _| Ok(())).err(),
