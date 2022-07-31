@@ -147,7 +147,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua8};
+    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::{copy_vector, Matrix};
     use russell_tensor::Tensor2;
@@ -169,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_05_gtn_works() {
+    fn mat_05_gtn_qua4_qua8_works() {
         let (a, b) = (2.0, 3.0);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
@@ -186,6 +186,34 @@ mod tests {
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _| {
+                copy_vector(&mut ten.vec, &tt.vec)
+            })
+            .unwrap();
+            // println!("{}", kk);
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn mat_05_gtn_tet4_tet4_works() {
+        let mut pad_b = aux::gen_pad_tet4();
+        let mut pad = pad_b.clone();
+        let mut kk = Matrix::new(4, 4 * 3);
+        let ana = AnalyticalTet4::new(&pad);
+        #[rustfmt::skip]
+        let tt = Tensor2::from_matrix(&[
+            [1.0, 4.0, 6.0],
+            [4.0, 2.0, 5.0],
+            [6.0, 5.0, 3.0]],
+        true, false).unwrap();
+        let kk_correct = ana.mat_05_gtn(&tt);
+        // println!("{}", kk_correct);
+        let class = pad.kind.class();
+        let tolerances = [1e-14];
+        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _| {
