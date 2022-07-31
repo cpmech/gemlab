@@ -114,13 +114,25 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
+    use crate::integ::{self, AnalyticalTri3, IP_TRI_INTERNAL_1};
     use crate::shapes::{GeoClass, GeoKind, Scratchpad};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
 
     #[test]
     fn capture_some_errors() {
+        let mut pad = aux::gen_pad_tri3();
+        let mut kk = Matrix::new(3, 3);
+        assert_eq!(
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_| Ok(0.0)).err(),
+            Some("in 2D, geometry ndim must be 1 (a line)")
+        );
+        let mut pad = aux::gen_pad_tet4();
+        let mut kk = Matrix::new(4, 4);
+        assert_eq!(
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_| Ok(0.0)).err(),
+            Some("in 3D, geometry ndim must be 2 (a surface)")
+        );
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
@@ -131,13 +143,6 @@ mod tests {
             integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 1, false, &[], |_| Ok(0.0)).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
-        // more errors
-        assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_| Ok(0.0)).err(),
-            Some("calc_gradient requires that geo_ndim = space_ndim")
-        );
-        let mut pad = aux::gen_pad_tri3();
-        let mut kk = Matrix::new(3, 3);
         assert_eq!(
             integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_| Err("stop")).err(),
             Some("stop")
