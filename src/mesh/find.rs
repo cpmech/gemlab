@@ -477,10 +477,15 @@ mod tests {
         assert_eq!(&find.edge_keys(At::X(1.0)).unwrap(), empty); // internal
         assert_eq!(&find.edge_keys(At::X(10.0)).unwrap(), empty); // far away
 
+        // high-level function
         let res = find.edges(At::Y(0.0)).unwrap();
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].points, &[1, 0]);
         assert_eq!(res[1].points, &[4, 1]);
+        assert_eq!(
+            find.edges(At::XYZ(0.0, 0.0, 0.0)).err(),
+            Some("At::XYZ works in 3D only")
+        );
     }
 
     #[test]
@@ -563,6 +568,7 @@ mod tests {
             empty,
         );
 
+        // high-level function
         let res = find.edges(At::XY(0.0, 0.0)).unwrap();
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].points, &[0, 4]);
@@ -647,9 +653,14 @@ mod tests {
             empty,
         );
 
+        // high-level function
         let res = find.faces(At::Z(0.0)).unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].points, &[0, 3, 2, 1]);
+        assert_eq!(
+            find.faces(At::Circle(0.0, 0.0, 1.0)).err(),
+            Some("At::Circle works in 2D only")
+        );
     }
 
     #[test]
