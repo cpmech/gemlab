@@ -24,6 +24,9 @@ pub struct AnalyticalTri3 {
 
     /// Holds the B-matrix (4, 6)
     pub bb: Matrix,
+
+    // Holds the lengths of each edge
+    pub ll: Vec<f64>,
 }
 
 impl AnalyticalTri3 {
@@ -63,8 +66,15 @@ impl AnalyticalTri3 {
             [b0/s, a0/s, b1/s, a1/s, b2/s, a2/s],
         ]);
 
+        // edges lengths
+        let ll = vec![
+            f64::sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1)), // L01
+            f64::sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)), // L12
+            f64::sqrt((x2 - x0) * (x2 - x0) + (y2 - y0) * (y2 - y0)), // L20
+        ];
+
         // results
-        AnalyticalTri3 { area, gg, bb }
+        AnalyticalTri3 { area, gg, bb, ll }
     }
 
     /// Integrates shape times scalar with constant function s(x) = cₛ
@@ -74,7 +84,7 @@ impl AnalyticalTri3 {
     /// ```text
     /// aᵐ = cₛ A / 3
     /// ```
-    pub fn integ_vec_a(&self, cs: f64) -> Vec<f64> {
+    pub fn vec_01_ns(&self, cs: f64) -> Vec<f64> {
         vec![cs * self.area / 3.0, cs * self.area / 3.0, cs * self.area / 3.0]
     }
 
@@ -94,7 +104,7 @@ impl AnalyticalTri3 {
     ///       │ v1 │
     ///       └    ┘
     /// ```
-    pub fn integ_vec_b(&self, v0: f64, v1: f64) -> Vec<f64> {
+    pub fn vec_02_nv(&self, v0: f64, v1: f64) -> Vec<f64> {
         vec![
             v0 * self.area / 3.0,
             v1 * self.area / 3.0,
@@ -112,7 +122,7 @@ impl AnalyticalTri3 {
     /// ```text
     /// cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
     /// ```
-    pub fn integ_vec_c(&self, w0: f64, w1: f64) -> Vec<f64> {
+    pub fn vec_03_vg(&self, w0: f64, w1: f64) -> Vec<f64> {
         vec![
             (w0 * self.gg[0][0] + w1 * self.gg[0][1]) * self.area,
             (w0 * self.gg[1][0] + w1 * self.gg[1][1]) * self.area,
@@ -132,7 +142,7 @@ impl AnalyticalTri3 {
     ///
     /// * `pad` -- The same shape used in `new` because we need the nodal coordinates here
     ///            Do not change the coordinates, otherwise the values will be wrong.
-    pub fn integ_vec_c_bilinear(&self, pad: &Scratchpad) -> Vec<f64> {
+    pub fn vec_03_vg_bilinear(&self, pad: &Scratchpad) -> Vec<f64> {
         let (x0, x1, x2) = (pad.xxt[0][0], pad.xxt[0][1], pad.xxt[0][2]);
         let (y0, y1, y2) = (pad.xxt[1][0], pad.xxt[1][1], pad.xxt[1][2]);
         vec![
@@ -156,7 +166,7 @@ impl AnalyticalTri3 {
     /// # Input
     ///
     /// * `s₀₀, s₁₁, s₀₁` -- components of the constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
-    pub fn integ_vec_d(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
+    pub fn vec_04_tg(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
         vec![
             (s00 * self.gg[0][0] + s01 * self.gg[0][1]) * self.area,
             (s01 * self.gg[0][0] + s11 * self.gg[0][1]) * self.area,
@@ -168,39 +178,26 @@ impl AnalyticalTri3 {
     }
 
     /// Performs the n-s-n integration with constant s(x) field
-    pub fn integ_nsn(&self, s: f64, th: f64) -> Matrix {
+    pub fn mat_01_nsn(&self, s: f64, th: f64) -> Matrix {
         let c = th * s * self.area / 12.0;
         Matrix::from(&[[2.0 * c, c, c], [c, 2.0 * c, c], [c, c, 2.0 * c]])
     }
 
-    /// Performs the g-t-g integration with constant tensor
-    pub fn integ_gtg(&self, kx: f64, ky: f64) -> Matrix {
-        let g = &self.gg;
-        let k00 = self.area * (g[0][0] * g[0][0] * kx + g[0][1] * g[0][1] * ky);
-        let k11 = self.area * (g[1][0] * g[1][0] * kx + g[1][1] * g[1][1] * ky);
-        let k01 = self.area * (g[0][0] * g[1][0] * kx + g[0][1] * g[1][1] * ky);
-        let k12 = self.area * (g[1][0] * g[2][0] * kx + g[1][1] * g[2][1] * ky);
-        let k02 = self.area * (g[0][0] * g[2][0] * kx + g[0][1] * g[2][1] * ky);
-        let k22 = self.area * (g[2][0] * g[2][0] * kx + g[2][1] * g[2][1] * ky);
-        Matrix::from(&[[k00, k01, k02], [k01, k11, k12], [k02, k12, k22]])
-    }
-
-    /// Performs the n-t-n integration with constant tensor field rho*delta
-    pub fn integ_ntn(&self, rho: f64, th: f64) -> Matrix {
-        let c = th * rho * self.area / 12.0;
+    /// Performs the n-s-n integration with constant s(x) field (boundary integral version)
+    /// 
+    /// **Important:** `side` must be 0, 1, or 2
+    #[rustfmt::skip]
+    pub fn mat_01_nsn_bry(&self, side: usize, s: f64) -> Matrix {
+        let c = s * self.ll[side] / 6.0;
         Matrix::from(&[
-            [c * 2.0, c * 0.0, c * 1.0, c * 0.0, c * 1.0, c * 0.0],
-            [c * 0.0, c * 2.0, c * 0.0, c * 1.0, c * 0.0, c * 1.0],
-            [c * 1.0, c * 0.0, c * 2.0, c * 0.0, c * 1.0, c * 0.0],
-            [c * 0.0, c * 1.0, c * 0.0, c * 2.0, c * 0.0, c * 1.0],
-            [c * 1.0, c * 0.0, c * 1.0, c * 0.0, c * 2.0, c * 0.0],
-            [c * 0.0, c * 1.0, c * 0.0, c * 1.0, c * 0.0, c * 2.0],
+            [2.0*c,     c], 
+            [    c, 2.0*c], 
         ])
     }
 
     /// Performs the g-v-n integration with constant vector
     #[rustfmt::skip]
-    pub fn integ_gvn(&self, v0: f64, v1: f64) -> Matrix {
+    pub fn mat_02_gvn(&self, v0: f64, v1: f64) -> Matrix {
         let aa = self.area;
         let g = &self.gg;
         Matrix::from(&[
@@ -212,7 +209,7 @@ impl AnalyticalTri3 {
 
     /// Performs the g-v-n integration with v = {x, y}
     #[rustfmt::skip]
-    pub fn integ_gvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
+    pub fn mat_02_gvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
         let aa = self.area;
         let (g00, g01) = (self.gg[0][0], self.gg[0][1]);
         let (g10, g11) = (self.gg[1][0], self.gg[1][1]);
@@ -227,9 +224,34 @@ impl AnalyticalTri3 {
         ])
     }
 
+    /// Performs the g-t-g integration with constant tensor
+    pub fn mat_03_gtg(&self, kx: f64, ky: f64) -> Matrix {
+        let g = &self.gg;
+        let k00 = self.area * (g[0][0] * g[0][0] * kx + g[0][1] * g[0][1] * ky);
+        let k11 = self.area * (g[1][0] * g[1][0] * kx + g[1][1] * g[1][1] * ky);
+        let k01 = self.area * (g[0][0] * g[1][0] * kx + g[0][1] * g[1][1] * ky);
+        let k12 = self.area * (g[1][0] * g[2][0] * kx + g[1][1] * g[2][1] * ky);
+        let k02 = self.area * (g[0][0] * g[2][0] * kx + g[0][1] * g[2][1] * ky);
+        let k22 = self.area * (g[2][0] * g[2][0] * kx + g[2][1] * g[2][1] * ky);
+        Matrix::from(&[[k00, k01, k02], [k01, k11, k12], [k02, k12, k22]])
+    }
+
+    /// Performs the n-t-n integration with constant tensor field rho*delta
+    pub fn mat_08_ntn(&self, rho: f64, th: f64) -> Matrix {
+        let c = th * rho * self.area / 12.0;
+        Matrix::from(&[
+            [c * 2.0, c * 0.0, c * 1.0, c * 0.0, c * 1.0, c * 0.0],
+            [c * 0.0, c * 2.0, c * 0.0, c * 1.0, c * 0.0, c * 1.0],
+            [c * 1.0, c * 0.0, c * 2.0, c * 0.0, c * 1.0, c * 0.0],
+            [c * 0.0, c * 1.0, c * 0.0, c * 2.0, c * 0.0, c * 1.0],
+            [c * 1.0, c * 0.0, c * 1.0, c * 0.0, c * 2.0, c * 0.0],
+            [c * 0.0, c * 1.0, c * 0.0, c * 1.0, c * 0.0, c * 2.0],
+        ])
+    }
+
     /// Performs the n-v-g integration with constant vector
     #[rustfmt::skip]
-    pub fn integ_nvg(&self, v0: f64, v1: f64) -> Matrix {
+    pub fn mat_09_nvg(&self, v0: f64, v1: f64) -> Matrix {
         let (g00, g01) = (self.gg[0][0], self.gg[0][1]);
         let (g10, g11) = (self.gg[1][0], self.gg[1][1]);
         let (g20, g21) = (self.gg[2][0], self.gg[2][1]);
@@ -251,7 +273,7 @@ impl AnalyticalTri3 {
     /// ```text
     /// K = Bᵀ ⋅ D ⋅ B ⋅ th ⋅ area
     /// ```
-    pub fn integ_gdg(&self, young: f64, poisson: f64, plane_stress: bool, th: f64) -> Result<Matrix, StrError> {
+    pub fn mat_10_gdg(&self, young: f64, poisson: f64, plane_stress: bool, th: f64) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, true, plane_stress);
         let dd = ela.get_modulus();
         let dim_dd = 4;

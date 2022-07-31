@@ -30,7 +30,7 @@
 //!
 //! # Vector results: Integration of some combinations involving N and G resulting in vectors
 //!
-//! ## VEC 01: Interpolation functions times scalar field
+//! ## VEC 01: Shape(N) times scalar(S)
 //!
 //! Function [vec_01_ns()]
 //!
@@ -41,7 +41,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 02: Interpolation functions times vector field
+//! ## VEC 02: Shape(N) times vector(V)
 //!
 //! Function [vec_02_nv()]
 //!
@@ -52,7 +52,18 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 03: Vector dot gradient
+//! ## VEC 02(bry): Shape(N) times vector(V) (boundary integral version)
+//!
+//! Function [vec_02_nv_bry()]
+//!
+//! ```text
+//! →    ⌠    → →   → →
+//! bᵐ = │ Nᵐ(x(ξ)) v(x) dΓ
+//!      ⌡
+//!      Γₑ
+//! ```
+//!
+//! ## VEC 03: Vector(V) dot gradient(G)
 //!
 //! Function [vec_03_vg()]
 //!
@@ -63,7 +74,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 04: Tensor dot gradient
+//! ## VEC 04: Tensor(T) dot gradient(G)
 //!
 //! Function [vec_04_tg()]
 //!
@@ -111,7 +122,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 04: shape(Nb) time scalar(S) time gradient(G) (e.g., coupling matrix)
+//! ## MAT 04: shape(Nb) times scalar(S) times gradient(G) (e.g., coupling matrix)
 //!
 //! Function [mat_04_nsg()]
 //!
@@ -122,7 +133,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 05: Gradient(Gb) time tensor(T) time shape(N) (e.g., coupling matrix)
+//! ## MAT 05: Gradient(Gb) times tensor(T) times shape(N) (e.g., coupling matrix)
 //!
 //! Function [mat_05_gtn()]
 //!
@@ -133,7 +144,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 06: Shape(N) time vector(V) time shape(Nb) (e.g., coupling matrix)
+//! ## MAT 06: Shape(N) times vector(V) times shape(Nb) (e.g., coupling matrix)
 //!
 //! Function [mat_06_nvn()]
 //!
@@ -144,7 +155,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 07: Gradient(G) time scalar(S) time shape(Nb) (e.g., coupling matrix)
+//! ## MAT 07: Gradient(G) times scalar(S) times shape(Nb) (e.g., coupling matrix)
 //!
 //! Function [mat_07_gsn()]
 //!
@@ -285,6 +296,7 @@ mod analytical_tet4;
 mod analytical_tri3;
 mod integ_points;
 mod mat_01_nsn;
+mod mat_01_nsn_bry;
 mod mat_02_gvn;
 mod mat_03_gtg;
 mod mat_04_nsg;
@@ -299,15 +311,16 @@ mod scalar_field;
 mod testing;
 mod vec_01_ns;
 mod vec_02_nv;
+mod vec_02_nv_bry;
 mod vec_03_vg;
 mod vec_04_tg;
-mod vector_cases_boundary;
 pub use crate::integ::analytical_qua4::*;
 pub use crate::integ::analytical_qua8::*;
 pub use crate::integ::analytical_tet4::*;
 pub use crate::integ::analytical_tri3::*;
 pub use crate::integ::integ_points::*;
 pub use crate::integ::mat_01_nsn::*;
+pub use crate::integ::mat_01_nsn_bry::*;
 pub use crate::integ::mat_02_gvn::*;
 pub use crate::integ::mat_03_gtg::*;
 pub use crate::integ::mat_04_nsg::*;
@@ -321,6 +334,6 @@ pub use crate::integ::point_coords::*;
 pub use crate::integ::scalar_field::*;
 pub use crate::integ::vec_01_ns::*;
 pub use crate::integ::vec_02_nv::*;
+pub use crate::integ::vec_02_nv_bry::*;
 pub use crate::integ::vec_03_vg::*;
 pub use crate::integ::vec_04_tg::*;
-pub use crate::integ::vector_cases_boundary::*;

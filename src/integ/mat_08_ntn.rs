@@ -176,7 +176,7 @@ mod tests {
         let mut kk = Matrix::new(3 * 2, 3 * 2);
         let ana = AnalyticalTri3::new(&pad);
         let (rho, th) = (2.7, 1.0);
-        let kk_correct = ana.integ_ntn(rho, th);
+        let kk_correct = ana.mat_08_ntn(rho, th);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15, 1e-15];
@@ -205,7 +205,7 @@ mod tests {
             [1.2, 2.2, 2.3],
             [1.3, 2.3, 3.3]],
         true, false).unwrap();
-        let kk_correct = ana.integ_ntn(&sig);
+        let kk_correct = ana.mat_08_ntn(&sig);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];

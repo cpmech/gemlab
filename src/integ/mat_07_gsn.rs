@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::Matrix;
 
-/// Implements the gradient(G) time scalar(S) time shape(Nb) integration case 07 (e.g., coupling matrix)
+/// Implements the gradient(G) times scalar(S) times shape(Nb) integration case 07 (e.g., coupling matrix)
 ///
 /// **Notes:**
 ///
@@ -139,7 +139,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua8};
+    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
 
@@ -160,14 +160,14 @@ mod tests {
     }
 
     #[test]
-    fn mat_07_gsn_works() {
+    fn mat_07_gsn_qua4_qua8_works() {
         let (a, b) = (2.0, 3.0);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
         let ana = AnalyticalQua8::new(a, b);
         let s = 9.0;
-        let kk_correct = ana.integ_gsnb(s);
+        let kk_correct = ana.mat_07_gsn(s);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
@@ -176,6 +176,26 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_07_gsn(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |_| Ok(s)).unwrap();
             // println!("{:.2}", kk);
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn mat_07_gsn_tet4_tet8_works() {
+        let mut pad_b = aux::gen_pad_tet4();
+        let mut pad = pad_b.clone();
+        let mut kk = Matrix::new(4 * 3, 4);
+        let ana = AnalyticalTet4::new(&pad);
+        let s = 9.0;
+        let kk_correct = ana.mat_07_gsn(s);
+        // println!("{}", kk_correct);
+        let class = pad.kind.class();
+        let tolerances = [1e-15];
+        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_07_gsn(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            // println!("{}", kk);
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
     }

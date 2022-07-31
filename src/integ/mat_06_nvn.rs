@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the shape(N) time vector(V) time shape(Nb) integration case 06 (e.g., coupling matrix)
+/// Implements the shape(N) times vector(V) times shape(Nb) integration case 06 (e.g., coupling matrix)
 ///
 /// **Notes:**
 ///
@@ -143,7 +143,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua8};
+    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
 
@@ -164,14 +164,14 @@ mod tests {
     }
 
     #[test]
-    fn mat_06_nvn_works() {
+    fn mat_06_nvn_qua4_qua8_works() {
         let (a, b) = (2.0, 3.0);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
         let ana = AnalyticalQua8::new(a, b);
         let (v0, v1) = (4.0, 5.0);
-        let kk_correct = ana.integ_nvnb(v0, v1);
+        let kk_correct = ana.mat_06_nvn(v0, v1);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
@@ -181,6 +181,32 @@ mod tests {
             integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |v, _| {
                 v[0] = v0;
                 v[1] = v1;
+                Ok(())
+            })
+            .unwrap();
+            // println!("{}", kk);
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn mat_06_nvn_tet4_tet4_works() {
+        let mut pad_b = aux::gen_pad_tet4();
+        let mut pad = pad_b.clone();
+        let mut kk = Matrix::new(4 * 3, 4);
+        let ana = AnalyticalTet4::new(&pad);
+        let (v0, v1, v2) = (4.0, 5.0, 6.0);
+        let kk_correct = ana.mat_06_nvn(v0, v1, v2);
+        // println!("{}", kk_correct);
+        let class = pad.kind.class();
+        let tolerances = [1e-15];
+        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |v, _| {
+                v[0] = v0;
+                v[1] = v1;
+                v[2] = v2;
                 Ok(())
             })
             .unwrap();

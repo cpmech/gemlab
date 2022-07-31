@@ -208,7 +208,7 @@ mod tests {
         let ana = AnalyticalTri3::new(&pad);
         const V0: f64 = -3.0;
         const V1: f64 = 8.0;
-        let b_correct = ana.integ_vec_b(V0, V1);
+        let b_correct = ana.vec_02_nv(V0, V1);
 
         // integration points
         let class = pad.kind.class();
@@ -240,7 +240,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTet4::new(&pad);
-        let b_correct = ana.integ_vec_b(V0, V1, V2);
+        let b_correct = ana.vec_02_nv(V0, V1, V2);
 
         // integration points
         let class = pad.kind.class();

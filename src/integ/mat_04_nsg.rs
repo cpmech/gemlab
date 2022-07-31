@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::Matrix;
 
-/// Implements the shape(Nb) time scalar(S) time gradient(G) integration case 04 (e.g., coupling matrix)
+/// Implements the shape(Nb) times scalar(S) times gradient(G) integration case 04 (e.g., coupling matrix)
 ///
 /// **Notes:**
 ///
@@ -136,7 +136,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua8};
+    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
     use russell_chk::assert_vec_approx_eq;
     use russell_lab::Matrix;
 
@@ -157,18 +157,38 @@ mod tests {
     }
 
     #[test]
-    fn mat_04_nsg_works() {
+    fn mat_04_nsg_qua4_qua8_works() {
         let (a, b) = (2.0, 3.0);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
         let ana = AnalyticalQua8::new(a, b);
         let s = 9.0;
-        let kk_correct = ana.integ_nbsg(s);
+        let kk_correct = ana.mat_04_nsg(s);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            // println!("{:.2}", kk);
+            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn mat_04_nsg_tet4_tet4_works() {
+        let mut pad_b = aux::gen_pad_tet4();
+        let mut pad = pad_b.clone();
+        let mut kk = Matrix::new(4, 4 * 3);
+        let ana = AnalyticalTet4::new(&pad);
+        let s = 9.0;
+        let kk_correct = ana.mat_04_nsg(s);
+        // println!("{}", kk_correct);
+        let class = pad.kind.class();
+        let tolerances = [1e-14];
+        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();

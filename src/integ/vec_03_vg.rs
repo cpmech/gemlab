@@ -165,7 +165,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
-        let c_correct = ana.integ_vec_c(W0, W1);
+        let c_correct = ana.vec_03_vg(W0, W1);
 
         // integration points
         let class = pad.kind.class();
@@ -193,7 +193,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
-        let c_correct = ana.integ_vec_c_bilinear(&pad);
+        let c_correct = ana.vec_03_vg_bilinear(&pad);
 
         // integration points
         let class = pad.kind.class();
@@ -225,7 +225,7 @@ mod tests {
         const W1: f64 = 3.0;
         const W2: f64 = 4.0;
         let ana = AnalyticalTet4::new(&pad);
-        let c_correct = ana.integ_vec_c(W0, W1, W2);
+        let c_correct = ana.vec_03_vg(W0, W1, W2);
 
         // integration points
         let class = pad.kind.class();

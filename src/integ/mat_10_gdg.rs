@@ -300,7 +300,7 @@ mod tests {
 
         // analytical solution
         let ana = AnalyticalTri3::new(&pad);
-        let kk_correct = ana.integ_gdg(young, poisson, plane_stress, th).unwrap();
+        let kk_correct = ana.mat_10_gdg(young, poisson, plane_stress, th).unwrap();
 
         // compare against analytical solution
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-11, 1e-12];
@@ -335,7 +335,7 @@ mod tests {
 
         // analytical solution
         let mut ana = AnalyticalTet4::new(&pad);
-        let kk_correct = ana.integ_gdg(young, poisson).unwrap();
+        let kk_correct = ana.mat_10_gdg(young, poisson).unwrap();
 
         // check
         let class = pad.kind.class();
