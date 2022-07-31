@@ -63,14 +63,11 @@ where
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
     let geo_ndim = pad.deriv.dims().1;
-    if space_ndim == 2 {
-        if geo_ndim != 1 {
-            return Err("in 2D, geometry ndim must be equal to 1 (a line)");
-        }
-    } else {
-        if geo_ndim != 2 {
-            return Err("in 3D, geometry ndim must be equal to 2 (a surface)");
-        }
+    if space_ndim == 2 && geo_ndim != 1 {
+        return Err("in 2D, geometry ndim must be equal to 1 (a line)");
+    }
+    if space_ndim == 3 && geo_ndim != 2 {
+        return Err("in 3D, geometry ndim must be equal to 2 (a surface)");
     }
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < ii0 + nnode {
