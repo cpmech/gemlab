@@ -223,25 +223,6 @@ impl<'a> Find<'a> {
         Ok(keys)
     }
 
-    /// Finds edges
-    ///
-    /// Returns an array such that the edge keys are **sorted**
-    pub fn edges(&self, at: At) -> Result<Vec<&Edge>, StrError> {
-        let results: Result<Vec<_>, _> = self
-            .edge_keys(at)?
-            .iter()
-            .map(|key| {
-                let r = self
-                    .features
-                    .edges
-                    .get(key)
-                    .ok_or("features.edges data is inconsistent");
-                r
-            })
-            .collect();
-        results
-    }
-
     /// Finds face keys
     ///
     /// Returns a **sorted** array of face keys
@@ -276,6 +257,23 @@ impl<'a> Find<'a> {
         Ok(keys)
     }
 
+    /// Finds edges
+    ///
+    /// Returns an array such that the edge keys are **sorted**
+    pub fn edges(&self, at: At) -> Result<Vec<&Edge>, StrError> {
+        let results: Result<Vec<_>, _> = self
+            .edge_keys(at)?
+            .iter()
+            .map(|key| {
+                self.features
+                    .edges
+                    .get(key)
+                    .ok_or("INTERNAL ERROR: features.edges data is inconsistent")
+            })
+            .collect();
+        results
+    }
+
     /// Finds faces
     ///
     /// Returns an array such that the face keys are **sorted**
@@ -284,12 +282,10 @@ impl<'a> Find<'a> {
             .face_keys(at)?
             .iter()
             .map(|key| {
-                let r = self
-                    .features
+                self.features
                     .faces
                     .get(key)
-                    .ok_or("features.faces data is inconsistent");
-                r
+                    .ok_or("INTERNAL ERROR: features.faces data is inconsistent")
             })
             .collect();
         results
@@ -481,8 +477,10 @@ mod tests {
         assert_eq!(&find.edge_keys(At::X(1.0)).unwrap(), empty); // internal
         assert_eq!(&find.edge_keys(At::X(10.0)).unwrap(), empty); // far away
 
-        let res = find.edges(At::Y(0.0));
-        println!("{:?}", res);
+        let res = find.edges(At::Y(0.0)).unwrap();
+        assert_eq!(res.len(), 2);
+        assert_eq!(res[0].points, &[1, 0]);
+        assert_eq!(res[1].points, &[4, 1]);
     }
 
     #[test]
@@ -564,6 +562,11 @@ mod tests {
                 .unwrap(),
             empty,
         );
+
+        let res = find.edges(At::XY(0.0, 0.0)).unwrap();
+        assert_eq!(res.len(), 2);
+        assert_eq!(res[0].points, &[0, 4]);
+        assert_eq!(res[1].points, &[4, 8]);
     }
 
     #[test]
@@ -643,6 +646,10 @@ mod tests {
                 .unwrap(),
             empty,
         );
+
+        let res = find.faces(At::Z(0.0)).unwrap();
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].points, &[0, 3, 2, 1]);
     }
 
     #[test]
