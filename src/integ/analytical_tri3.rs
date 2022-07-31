@@ -24,6 +24,9 @@ pub struct AnalyticalTri3 {
 
     /// Holds the B-matrix (4, 6)
     pub bb: Matrix,
+
+    // Holds the lengths of each edge
+    pub ll: Vec<f64>,
 }
 
 impl AnalyticalTri3 {
@@ -63,8 +66,15 @@ impl AnalyticalTri3 {
             [b0/s, a0/s, b1/s, a1/s, b2/s, a2/s],
         ]);
 
+        // edges lengths
+        let ll = vec![
+            f64::sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1)), // L01
+            f64::sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)), // L12
+            f64::sqrt((x2 - x0) * (x2 - x0) + (y2 - y0) * (y2 - y0)), // L20
+        ];
+
         // results
-        AnalyticalTri3 { area, gg, bb }
+        AnalyticalTri3 { area, gg, bb, ll }
     }
 
     /// Integrates shape times scalar with constant function s(x) = cₛ
@@ -171,6 +181,18 @@ impl AnalyticalTri3 {
     pub fn mat_01_nsn(&self, s: f64, th: f64) -> Matrix {
         let c = th * s * self.area / 12.0;
         Matrix::from(&[[2.0 * c, c, c], [c, 2.0 * c, c], [c, c, 2.0 * c]])
+    }
+
+    /// Performs the n-s-n integration with constant s(x) field (boundary integral version)
+    /// 
+    /// **Important:** `side` must be 0, 1, or 2
+    #[rustfmt::skip]
+    pub fn mat_01_nsn_bry(&self, side: usize, s: f64) -> Matrix {
+        let c = s * self.ll[side] / 6.0;
+        Matrix::from(&[
+            [2.0*c,     c], 
+            [    c, 2.0*c], 
+        ])
     }
 
     /// Performs the g-v-n integration with constant vector
