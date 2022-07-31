@@ -100,22 +100,10 @@ impl Find {
         })
     }
 
-    /// Finds points
+    /// Finds points ids
     ///
-    /// # Input
-    ///
-    /// * `at` -- the location constraint
-    ///
-    /// # Output
-    ///
-    /// * Returns a set of point ids.
-    ///   You may sort point ids using the following code snippet:
-    ///
-    /// ``` text
-    /// let mut ids: Vec<_> = point_ids.iter().copied().collect();
-    /// ids.sort();
-    /// ```
-    pub fn points(&self, at: At) -> Result<HashSet<PointId>, StrError> {
+    /// Returns a **sorted** array of point ids
+    pub fn point_ids(&self, at: At) -> Result<Vec<PointId>, StrError> {
         let mut point_ids: HashSet<PointId> = HashSet::new();
         match at {
             At::X(x) => {
@@ -206,28 +194,18 @@ impl Find {
                 }
             }
         }
-        Ok(point_ids)
+        let mut ids: Vec<_> = point_ids.iter().copied().collect();
+        ids.sort();
+        Ok(ids)
     }
 
-    /// Finds edges
+    /// Finds edge keys
     ///
-    /// # Input
-    ///
-    /// * `at` -- the location constraint
-    ///
-    /// # Output
-    ///
-    /// * Returns a set of edge keys.
-    ///   You may sort the edge keys using the following code snippet:
-    ///
-    /// ``` text
-    /// let mut keys: Vec<_> = edge_keys.iter().copied().collect();
-    /// keys.sort();
-    /// ```
-    pub fn edges(&self, at: At) -> Result<HashSet<EdgeKey>, StrError> {
+    /// Returns a **sorted** array of edge keys
+    pub fn edge_keys(&self, at: At) -> Result<Vec<EdgeKey>, StrError> {
         let mut edge_keys: HashSet<EdgeKey> = HashSet::new();
         // find all points constrained by "at"
-        let point_ids = self.points(at)?;
+        let point_ids = self.point_ids(at)?;
         for point_id in &point_ids {
             // select all edges connected to the found points
             let edges = self.point_to_edges.get(point_id).unwrap(); // unwrap here because there should be no hanging edges
@@ -238,31 +216,21 @@ impl Find {
                 }
             }
         }
-        Ok(edge_keys)
+        let mut keys: Vec<_> = edge_keys.iter().copied().collect();
+        keys.sort();
+        Ok(keys)
     }
 
-    /// Finds faces
+    /// Finds face keys
     ///
-    /// # Input
-    ///
-    /// * `at` -- the location constraint
-    ///
-    /// # Output
-    ///
-    /// * Returns a set of face keys.
-    ///   You may sort the face keys using the following code snippet:
-    ///
-    /// ``` text
-    /// let mut keys: Vec<_> = face_keys.iter().copied().collect();
-    /// keys.sort();
-    /// ```
-    pub fn faces(&self, at: At) -> Result<HashSet<FaceKey>, StrError> {
-        let mut face_keys: HashSet<FaceKey> = HashSet::new();
+    /// Returns a **sorted** array of face keys
+    pub fn face_keys(&self, at: At) -> Result<Vec<FaceKey>, StrError> {
         if self.space_ndim != 3 {
-            return Ok(face_keys);
+            return Ok(Vec::new());
         }
+        let mut face_keys: HashSet<FaceKey> = HashSet::new();
         // find all points constrained by "at"
-        let point_ids = self.points(at)?;
+        let point_ids = self.point_ids(at)?;
         for point_id in &point_ids {
             // select all faces connected to the found points
             let faces = self.point_to_faces.get(point_id).unwrap(); // unwrap here because there should be no hanging faces
@@ -282,7 +250,9 @@ impl Find {
                 }
             }
         }
-        Ok(face_keys)
+        let mut keys: Vec<_> = face_keys.iter().copied().collect();
+        keys.sort();
+        Ok(keys)
     }
 }
 
@@ -292,9 +262,8 @@ impl Find {
 mod tests {
     use super::Find;
     use crate::mesh::algorithms::{extract_all_2d_edges, extract_all_faces, extract_features_2d, extract_features_3d};
-    use crate::mesh::{At, Extract, Samples};
+    use crate::mesh::{At, EdgeKey, Extract, FaceKey, Samples};
     use crate::util::SQRT_2;
-    use std::collections::HashSet;
 
     #[allow(unused_imports)]
     use plotpy::Plot;
@@ -344,15 +313,15 @@ mod tests {
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary).unwrap();
-        assert_eq!(find.points(At::Z(0.0)).err(), Some("At::Z works in 3D only"));
-        assert_eq!(find.points(At::YZ(0.0, 0.0)).err(), Some("At::YZ works in 3D only"));
-        assert_eq!(find.points(At::XZ(0.0, 0.0)).err(), Some("At::XZ works in 3D only"));
+        assert_eq!(find.point_ids(At::Z(0.0)).err(), Some("At::Z works in 3D only"));
+        assert_eq!(find.point_ids(At::YZ(0.0, 0.0)).err(), Some("At::YZ works in 3D only"));
+        assert_eq!(find.point_ids(At::XZ(0.0, 0.0)).err(), Some("At::XZ works in 3D only"));
         assert_eq!(
-            find.points(At::XYZ(0.0, 0.0, 0.0)).err(),
+            find.point_ids(At::XYZ(0.0, 0.0, 0.0)).err(),
             Some("At::XYZ works in 3D only")
         );
         assert_eq!(
-            find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)).err(),
+            find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)).err(),
             Some("At::Cylinder works in 3D only")
         );
 
@@ -362,18 +331,9 @@ mod tests {
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary).unwrap();
         assert_eq!(
-            find.points(At::Circle(0.0, 0.0, 0.0)).err(),
+            find.point_ids(At::Circle(0.0, 0.0, 0.0)).err(),
             Some("At::Circle works in 2D only")
         );
-    }
-
-    fn check<T>(found: &HashSet<T>, correct: &[T])
-    where
-        T: Copy + Ord + std::fmt::Debug,
-    {
-        let mut ids: Vec<T> = found.iter().copied().collect();
-        ids.sort();
-        assert_eq!(ids, correct);
     }
 
     #[test]
@@ -389,15 +349,16 @@ mod tests {
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary).unwrap();
-        check(&find.points(At::XY(0.0, 0.0)).unwrap(), &[0]);
-        check(&find.points(At::XY(2.0, 1.0)).unwrap(), &[5]);
+        let empty: &[usize] = &[];
+        assert_eq!(&find.point_ids(At::XY(0.0, 0.0)).unwrap(), &[0]);
+        assert_eq!(&find.point_ids(At::XY(2.0, 1.0)).unwrap(), &[5]);
         assert_eq!(
-            find.points(At::XY(10.0, 0.0)).err(),
+            find.point_ids(At::XY(10.0, 0.0)).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
-        check(&find.points(At::Circle(0.0, 0.0, 1.0)).unwrap(), &[1, 3]);
-        check(&find.points(At::Circle(0.0, 0.0, SQRT_2)).unwrap(), &[2]);
-        check(&find.points(At::Circle(0.0, 0.0, 10.0)).unwrap(), &[]);
+        assert_eq!(&find.point_ids(At::Circle(0.0, 0.0, 1.0)).unwrap(), &[1, 3]);
+        assert_eq!(&find.point_ids(At::Circle(0.0, 0.0, SQRT_2)).unwrap(), &[2]);
+        assert_eq!(&find.point_ids(At::Circle(0.0, 0.0, 10.0)).unwrap(), empty);
     }
 
     #[test]
@@ -425,41 +386,46 @@ mod tests {
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary).unwrap();
         // plot_grid_two_cubes_vertical(&find).unwrap();
-        check(&find.points(At::X(0.0)).unwrap(), &[0, 3, 4, 7, 8, 11]);
-        check(&find.points(At::X(1.0)).unwrap(), &[1, 2, 5, 6, 9, 10]);
-        check(&find.points(At::X(10.0)).unwrap(), &[]);
-        check(&find.points(At::Y(0.0)).unwrap(), &[0, 1, 4, 5, 8, 9]);
-        check(&find.points(At::Y(1.0)).unwrap(), &[2, 3, 6, 7, 10, 11]);
-        check(&find.points(At::Y(10.0)).unwrap(), &[]);
-        check(&find.points(At::Z(0.0)).unwrap(), &[0, 1, 2, 3]);
-        check(&find.points(At::Z(1.0)).unwrap(), &[4, 5, 6, 7]);
-        check(&find.points(At::Z(2.0)).unwrap(), &[8, 9, 10, 11]);
-        check(&find.points(At::Z(10.0)).unwrap(), &[]);
-        check(&find.points(At::XY(0.0, 0.0)).unwrap(), &[0, 4, 8]);
-        check(&find.points(At::XY(1.0, 1.0)).unwrap(), &[2, 6, 10]);
-        check(&find.points(At::XY(10.0, 10.0)).unwrap(), &[]);
-        check(&find.points(At::YZ(0.0, 0.0)).unwrap(), &[0, 1]);
-        check(&find.points(At::YZ(1.0, 1.0)).unwrap(), &[6, 7]);
-        check(&find.points(At::XZ(0.0, 0.0)).unwrap(), &[0, 3]);
-        check(&find.points(At::XZ(1.0, 0.0)).unwrap(), &[1, 2]);
-        check(&find.points(At::XZ(1.0, 2.0)).unwrap(), &[9, 10]);
-        check(&find.points(At::XYZ(0.0, 0.0, 0.0)).unwrap(), &[0]);
-        check(&find.points(At::XYZ(1.0, 1.0, 2.0)).unwrap(), &[10]);
+        let empty: &[usize] = &[];
+        assert_eq!(&find.point_ids(At::X(0.0)).unwrap(), &[0, 3, 4, 7, 8, 11]);
+        assert_eq!(&find.point_ids(At::X(1.0)).unwrap(), &[1, 2, 5, 6, 9, 10]);
+        assert_eq!(&find.point_ids(At::X(10.0)).unwrap(), empty);
+        assert_eq!(&find.point_ids(At::Y(0.0)).unwrap(), &[0, 1, 4, 5, 8, 9]);
+        assert_eq!(&find.point_ids(At::Y(1.0)).unwrap(), &[2, 3, 6, 7, 10, 11]);
+        assert_eq!(&find.point_ids(At::Y(10.0)).unwrap(), empty);
+        assert_eq!(&find.point_ids(At::Z(0.0)).unwrap(), &[0, 1, 2, 3]);
+        assert_eq!(&find.point_ids(At::Z(1.0)).unwrap(), &[4, 5, 6, 7]);
+        assert_eq!(&find.point_ids(At::Z(2.0)).unwrap(), &[8, 9, 10, 11]);
+        assert_eq!(&find.point_ids(At::Z(10.0)).unwrap(), empty);
+        assert_eq!(&find.point_ids(At::XY(0.0, 0.0)).unwrap(), &[0, 4, 8]);
+        assert_eq!(&find.point_ids(At::XY(1.0, 1.0)).unwrap(), &[2, 6, 10]);
+        assert_eq!(&find.point_ids(At::XY(10.0, 10.0)).unwrap(), empty);
+        assert_eq!(&find.point_ids(At::YZ(0.0, 0.0)).unwrap(), &[0, 1]);
+        assert_eq!(&find.point_ids(At::YZ(1.0, 1.0)).unwrap(), &[6, 7]);
+        assert_eq!(&find.point_ids(At::XZ(0.0, 0.0)).unwrap(), &[0, 3]);
+        assert_eq!(&find.point_ids(At::XZ(1.0, 0.0)).unwrap(), &[1, 2]);
+        assert_eq!(&find.point_ids(At::XZ(1.0, 2.0)).unwrap(), &[9, 10]);
+        assert_eq!(&find.point_ids(At::XYZ(0.0, 0.0, 0.0)).unwrap(), &[0]);
+        assert_eq!(&find.point_ids(At::XYZ(1.0, 1.0, 2.0)).unwrap(), &[10]);
         assert_eq!(
-            find.points(At::XYZ(10.0, 0.0, 0.0)).err(),
+            find.point_ids(At::XYZ(10.0, 0.0, 0.0)).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
-        check(
-            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0)).unwrap(),
+        assert_eq!(
+            &find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0)).unwrap(),
             &[1, 3, 5, 7, 9, 11],
         );
-        check(
-            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2)).unwrap(),
+        assert_eq!(
+            &find
+                .point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))
+                .unwrap(),
             &[2, 6, 10],
         );
-        check(
-            &find.points(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0)).unwrap(),
-            &[],
+        assert_eq!(
+            &find
+                .point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))
+                .unwrap(),
+            empty,
         );
     }
 
@@ -474,12 +440,13 @@ mod tests {
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary).unwrap();
-        check(&find.edges(At::Y(0.0)).unwrap(), &[(0, 1), (1, 4)]);
-        check(&find.edges(At::X(2.0)).unwrap(), &[(4, 5)]);
-        check(&find.edges(At::Y(1.0)).unwrap(), &[(2, 3), (2, 5)]);
-        check(&find.edges(At::X(0.0)).unwrap(), &[(0, 3)]);
-        check(&find.edges(At::X(1.0)).unwrap(), &[]); // internal
-        check(&find.edges(At::X(10.0)).unwrap(), &[]); // far away
+        let empty: &[EdgeKey] = &[];
+        assert_eq!(&find.edge_keys(At::Y(0.0)).unwrap(), &[(0, 1), (1, 4)]);
+        assert_eq!(&find.edge_keys(At::X(2.0)).unwrap(), &[(4, 5)]);
+        assert_eq!(&find.edge_keys(At::Y(1.0)).unwrap(), &[(2, 3), (2, 5)]);
+        assert_eq!(&find.edge_keys(At::X(0.0)).unwrap(), &[(0, 3)]);
+        assert_eq!(&find.edge_keys(At::X(1.0)).unwrap(), empty); // internal
+        assert_eq!(&find.edge_keys(At::X(10.0)).unwrap(), empty); // far away
     }
 
     #[test]
@@ -506,53 +473,61 @@ mod tests {
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary).unwrap();
-        check(
-            &find.edges(At::X(0.0)).unwrap(),
+        let empty: &[EdgeKey] = &[];
+        assert_eq!(
+            &find.edge_keys(At::X(0.0)).unwrap(),
             &[(0, 3), (0, 4), (3, 7), (4, 7), (4, 8), (7, 11), (8, 11)],
         );
-        check(
-            &find.edges(At::X(1.0)).unwrap(),
+        assert_eq!(
+            &find.edge_keys(At::X(1.0)).unwrap(),
             &[(1, 2), (1, 5), (2, 6), (5, 6), (5, 9), (6, 10), (9, 10)],
         );
-        check(&find.edges(At::X(10.0)).unwrap(), &[]);
-        check(
-            &find.edges(At::Y(0.0)).unwrap(),
+        assert_eq!(&find.edge_keys(At::X(10.0)).unwrap(), empty);
+        assert_eq!(
+            &find.edge_keys(At::Y(0.0)).unwrap(),
             &[(0, 1), (0, 4), (1, 5), (4, 5), (4, 8), (5, 9), (8, 9)],
         );
-        check(
-            &find.edges(At::Y(1.0)).unwrap(),
+        assert_eq!(
+            &find.edge_keys(At::Y(1.0)).unwrap(),
             &[(2, 3), (2, 6), (3, 7), (6, 7), (6, 10), (7, 11), (10, 11)],
         );
-        check(&find.edges(At::Y(10.0)).unwrap(), &[]);
-        check(&find.edges(At::Z(0.0)).unwrap(), &[(0, 1), (0, 3), (1, 2), (2, 3)]);
-        check(&find.edges(At::Z(2.0)).unwrap(), &[(8, 9), (8, 11), (9, 10), (10, 11)]);
-        check(&find.edges(At::Z(10.0)).unwrap(), &[]);
-        check(&find.edges(At::XY(0.0, 0.0)).unwrap(), &[(0, 4), (4, 8)]);
-        check(&find.edges(At::XY(1.0, 1.0)).unwrap(), &[(2, 6), (6, 10)]);
-        check(&find.edges(At::XY(10.0, 10.0)).unwrap(), &[]);
-        check(&find.edges(At::YZ(0.0, 0.0)).unwrap(), &[(0, 1)]);
-        check(&find.edges(At::YZ(1.0, 1.0)).unwrap(), &[(6, 7)]);
-        check(&find.edges(At::YZ(10.0, 10.0)).unwrap(), &[]);
-        check(&find.edges(At::XZ(0.0, 0.0)).unwrap(), &[(0, 3)]);
-        check(&find.edges(At::XZ(1.0, 0.0)).unwrap(), &[(1, 2)]);
-        check(&find.edges(At::XZ(1.0, 2.0)).unwrap(), &[(9, 10)]);
-        check(&find.edges(At::XZ(10.0, 10.0)).unwrap(), &[]);
-        check(&find.edges(At::XYZ(0.0, 0.0, 0.0)).unwrap(), &[]);
+        assert_eq!(&find.edge_keys(At::Y(10.0)).unwrap(), empty);
+        assert_eq!(&find.edge_keys(At::Z(0.0)).unwrap(), &[(0, 1), (0, 3), (1, 2), (2, 3)]);
         assert_eq!(
-            find.edges(At::XYZ(10.0, 0.0, 0.0)).err(),
+            &find.edge_keys(At::Z(2.0)).unwrap(),
+            &[(8, 9), (8, 11), (9, 10), (10, 11)],
+        );
+        assert_eq!(&find.edge_keys(At::Z(10.0)).unwrap(), empty);
+        assert_eq!(&find.edge_keys(At::XY(0.0, 0.0)).unwrap(), &[(0, 4), (4, 8)]);
+        assert_eq!(&find.edge_keys(At::XY(1.0, 1.0)).unwrap(), &[(2, 6), (6, 10)]);
+        assert_eq!(&find.edge_keys(At::XY(10.0, 10.0)).unwrap(), empty);
+        assert_eq!(&find.edge_keys(At::YZ(0.0, 0.0)).unwrap(), &[(0, 1)]);
+        assert_eq!(&find.edge_keys(At::YZ(1.0, 1.0)).unwrap(), &[(6, 7)]);
+        assert_eq!(&find.edge_keys(At::YZ(10.0, 10.0)).unwrap(), empty);
+        assert_eq!(&find.edge_keys(At::XZ(0.0, 0.0)).unwrap(), &[(0, 3)]);
+        assert_eq!(&find.edge_keys(At::XZ(1.0, 0.0)).unwrap(), &[(1, 2)]);
+        assert_eq!(&find.edge_keys(At::XZ(1.0, 2.0)).unwrap(), &[(9, 10)]);
+        assert_eq!(&find.edge_keys(At::XZ(10.0, 10.0)).unwrap(), empty);
+        assert_eq!(&find.edge_keys(At::XYZ(0.0, 0.0, 0.0)).unwrap(), empty);
+        assert_eq!(
+            find.edge_keys(At::XYZ(10.0, 0.0, 0.0)).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
-        check(
-            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0)).unwrap(),
+        assert_eq!(
+            &find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0)).unwrap(),
             &[(1, 5), (3, 7), (5, 9), (7, 11)],
         );
-        check(
-            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2)).unwrap(),
+        assert_eq!(
+            &find
+                .edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))
+                .unwrap(),
             &[(2, 6), (6, 10)],
         );
-        check(
-            &find.edges(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0)).unwrap(),
-            &[],
+        assert_eq!(
+            &find
+                .edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))
+                .unwrap(),
+            empty,
         );
     }
 
@@ -567,7 +542,7 @@ mod tests {
         let edges = extract_all_2d_edges(&mesh);
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary).unwrap();
-        assert_eq!(find.faces(At::X(0.0)).unwrap().len(), 0);
+        assert_eq!(find.face_keys(At::X(0.0)).unwrap().len(), 0);
     }
 
     #[test]
@@ -594,41 +569,46 @@ mod tests {
         let faces = extract_all_faces(&mesh);
         let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
         let find = Find::new(&mesh, &boundary).unwrap();
-        check(&find.faces(At::X(0.0)).unwrap(), &[(0, 3, 4, 7), (4, 7, 8, 11)]);
-        check(&find.faces(At::X(1.0)).unwrap(), &[(1, 2, 5, 6), (5, 6, 9, 10)]);
-        check(&find.faces(At::X(10.0)).unwrap(), &[]);
-        check(&find.faces(At::Y(0.0)).unwrap(), &[(0, 1, 4, 5), (4, 5, 8, 9)]);
-        check(&find.faces(At::Y(1.0)).unwrap(), &[(2, 3, 6, 7), (6, 7, 10, 11)]);
-        check(&find.faces(At::Y(10.0)).unwrap(), &[]);
-        check(&find.faces(At::Z(0.0)).unwrap(), &[(0, 1, 2, 3)]);
-        check(&find.faces(At::Z(2.0)).unwrap(), &[(8, 9, 10, 11)]);
-        check(&find.faces(At::Z(10.0)).unwrap(), &[]);
-        check(&find.faces(At::XY(0.0, 0.0)).unwrap(), &[]);
-        check(&find.faces(At::XY(1.0, 1.0)).unwrap(), &[]);
-        check(&find.faces(At::XY(10.0, 10.0)).unwrap(), &[]);
-        check(&find.faces(At::YZ(0.0, 0.0)).unwrap(), &[]);
-        check(&find.faces(At::YZ(1.0, 1.0)).unwrap(), &[]);
-        check(&find.faces(At::YZ(10.0, 10.0)).unwrap(), &[]);
-        check(&find.faces(At::XZ(0.0, 0.0)).unwrap(), &[]);
-        check(&find.faces(At::XZ(1.0, 0.0)).unwrap(), &[]);
-        check(&find.faces(At::XZ(1.0, 2.0)).unwrap(), &[]);
-        check(&find.faces(At::XZ(10.0, 10.0)).unwrap(), &[]);
-        check(&find.faces(At::XYZ(0.0, 0.0, 0.0)).unwrap(), &[]);
+        let empty: &[FaceKey] = &[];
+        assert_eq!(&find.face_keys(At::X(0.0)).unwrap(), &[(0, 3, 4, 7), (4, 7, 8, 11)]);
+        assert_eq!(&find.face_keys(At::X(1.0)).unwrap(), &[(1, 2, 5, 6), (5, 6, 9, 10)]);
+        assert_eq!(&find.face_keys(At::X(10.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::Y(0.0)).unwrap(), &[(0, 1, 4, 5), (4, 5, 8, 9)]);
+        assert_eq!(&find.face_keys(At::Y(1.0)).unwrap(), &[(2, 3, 6, 7), (6, 7, 10, 11)]);
+        assert_eq!(&find.face_keys(At::Y(10.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::Z(0.0)).unwrap(), &[(0, 1, 2, 3)]);
+        assert_eq!(&find.face_keys(At::Z(2.0)).unwrap(), &[(8, 9, 10, 11)]);
+        assert_eq!(&find.face_keys(At::Z(10.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::XY(0.0, 0.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::XY(1.0, 1.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::XY(10.0, 10.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::YZ(0.0, 0.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::YZ(1.0, 1.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::YZ(10.0, 10.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::XZ(0.0, 0.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::XZ(1.0, 0.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::XZ(1.0, 2.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::XZ(10.0, 10.0)).unwrap(), empty);
+        assert_eq!(&find.face_keys(At::XYZ(0.0, 0.0, 0.0)).unwrap(), empty);
         assert_eq!(
-            find.faces(At::XYZ(10.0, 0.0, 0.0)).err(),
+            find.face_keys(At::XYZ(10.0, 0.0, 0.0)).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
-        check(
-            &find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0)).unwrap(),
-            &[],
+        assert_eq!(
+            &find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0)).unwrap(),
+            empty,
         );
-        check(
-            &find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2)).unwrap(),
-            &[],
+        assert_eq!(
+            &find
+                .face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2))
+                .unwrap(),
+            empty,
         );
-        check(
-            &find.faces(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0)).unwrap(),
-            &[],
+        assert_eq!(
+            &find
+                .face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0))
+                .unwrap(),
+            empty,
         );
     }
 
@@ -656,34 +636,34 @@ mod tests {
         let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
         let find = Find::new(&mesh, &boundary).unwrap();
         let (r, rr) = (1.0, 2.0);
-        check(&find.points(At::XY(1.00, 0.00)).unwrap(), &[0]);
-        check(&find.points(At::XY(1.25, 0.00)).unwrap(), &[15]);
-        check(&find.points(At::XY(1.50, 0.00)).unwrap(), &[1]);
-        check(&find.points(At::XY(1.75, 0.00)).unwrap(), &[16]);
-        check(&find.points(At::XY(2.00, 0.00)).unwrap(), &[2]);
-        check(&find.points(At::XY(0.00, 1.00)).unwrap(), &[12]);
-        check(&find.points(At::XY(0.00, 1.25)).unwrap(), &[23]);
-        check(&find.points(At::XY(0.00, 1.75)).unwrap(), &[24]);
-        check(&find.points(At::XY(0.00, 1.50)).unwrap(), &[13]);
-        check(&find.points(At::XY(0.00, 2.00)).unwrap(), &[14]);
-        check(&find.points(At::XY(SQRT_2 / 2.0, SQRT_2 / 2.0)).unwrap(), &[6]);
-        check(&find.points(At::XY(SQRT_2, SQRT_2)).unwrap(), &[8]);
-        check(
-            &find.points(At::Circle(0.0, 0.0, r)).unwrap(),
+        assert_eq!(&find.point_ids(At::XY(1.00, 0.00)).unwrap(), &[0]);
+        assert_eq!(&find.point_ids(At::XY(1.25, 0.00)).unwrap(), &[15]);
+        assert_eq!(&find.point_ids(At::XY(1.50, 0.00)).unwrap(), &[1]);
+        assert_eq!(&find.point_ids(At::XY(1.75, 0.00)).unwrap(), &[16]);
+        assert_eq!(&find.point_ids(At::XY(2.00, 0.00)).unwrap(), &[2]);
+        assert_eq!(&find.point_ids(At::XY(0.00, 1.00)).unwrap(), &[12]);
+        assert_eq!(&find.point_ids(At::XY(0.00, 1.25)).unwrap(), &[23]);
+        assert_eq!(&find.point_ids(At::XY(0.00, 1.75)).unwrap(), &[24]);
+        assert_eq!(&find.point_ids(At::XY(0.00, 1.50)).unwrap(), &[13]);
+        assert_eq!(&find.point_ids(At::XY(0.00, 2.00)).unwrap(), &[14]);
+        assert_eq!(&find.point_ids(At::XY(SQRT_2 / 2.0, SQRT_2 / 2.0)).unwrap(), &[6]);
+        assert_eq!(&find.point_ids(At::XY(SQRT_2, SQRT_2)).unwrap(), &[8]);
+        assert_eq!(
+            &find.point_ids(At::Circle(0.0, 0.0, r)).unwrap(),
             &[0, 3, 6, 9, 12, 25, 28, 31, 34],
         );
-        check(
-            &find.points(At::Circle(0.0, 0.0, rr)).unwrap(),
+        assert_eq!(
+            &find.point_ids(At::Circle(0.0, 0.0, rr)).unwrap(),
             &[2, 5, 8, 11, 14, 27, 30, 33, 36],
         );
-        check(&find.edges(At::Y(0.0)).unwrap(), &[(0, 1), (1, 2)]);
-        check(&find.edges(At::X(0.0)).unwrap(), &[(12, 13), (13, 14)]);
-        check(
-            &find.edges(At::Circle(0.0, 0.0, r)).unwrap(),
+        assert_eq!(&find.edge_keys(At::Y(0.0)).unwrap(), &[(0, 1), (1, 2)]);
+        assert_eq!(&find.edge_keys(At::X(0.0)).unwrap(), &[(12, 13), (13, 14)]);
+        assert_eq!(
+            &find.edge_keys(At::Circle(0.0, 0.0, r)).unwrap(),
             &[(0, 3), (3, 6), (6, 9), (9, 12)],
         );
-        check(
-            &find.edges(At::Circle(0.0, 0.0, rr)).unwrap(),
+        assert_eq!(
+            &find.edge_keys(At::Circle(0.0, 0.0, rr)).unwrap(),
             &[(2, 5), (5, 8), (8, 11), (11, 14)],
         );
     }

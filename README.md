@@ -60,8 +60,8 @@ fn main() -> Result<(), StrError> {
     // by giving coordinates. The `At` enum provides
     // an easy way to define the type of the constraint
     // such as line, plane, circle, etc.
-    check(&region.find.points(At::Y(0.5))?, &[3, 4]);
-    check(&region.find.edges(At::X(1.0))?, &[(2, 4), (4, 7)]);
+    assert_eq!(&region.find.point_ids(At::Y(0.5))?, &[3, 4]);
+    assert_eq!(&region.find.edge_keys(At::X(1.0))?, &[(2, 4), (4, 7)]);
 
     // Perform numerical integration to compute
     // the area of cell # 2
@@ -79,15 +79,6 @@ fn main() -> Result<(), StrError> {
     }
     assert_eq!(area, 0.5);
     Ok(())
-}
-
-fn check<T>(found: &HashSet<T>, correct: &[T])
-where
-    T: Copy + Ord + std::fmt::Debug,
-{
-    let mut ids: Vec<T> = found.iter().copied().collect();
-    ids.sort();
-    assert_eq!(ids, correct);
 }
 ```
 

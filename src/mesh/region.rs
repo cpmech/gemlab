@@ -58,15 +58,8 @@ use crate::StrError;
 ///     assert_eq!(edges, [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)]);
 ///
 ///     // find features
-///
-///     let mut points: Vec<_> = region.find.points(At::X(2.0))?.iter().copied().collect();
-///     points.sort();
-///     assert_eq!(points, &[4, 5]);
-///
-///     let mut edges: Vec<_> = region.find.edges(At::Y(1.0))?.iter().copied().collect();
-///     edges.sort();
-///     assert_eq!(edges, &[(2, 3), (2, 5)]);
-///
+///     assert_eq!(region.find.point_ids(At::X(2.0))?, &[4, 5]);
+///     assert_eq!(region.find.edge_keys(At::Y(1.0))?, &[(2, 3), (2, 5)]);
 ///     Ok(())
 /// }
 /// ```
@@ -145,18 +138,9 @@ use crate::StrError;
 ///     );
 ///
 ///     // find features
-///
-///     let mut points: Vec<_> = region.find.points(At::XY(1.0, 1.0))?.iter().copied().collect();
-///     points.sort();
-///     assert_eq!(points, &[2, 6]);
-///
-///     let mut edges: Vec<_> = region.find.edges(At::YZ(1.0, 1.0))?.iter().copied().collect();
-///     edges.sort();
-///     assert_eq!(edges, &[(6, 7)]);
-///
-///     let mut faces: Vec<_> = region.find.faces(At::Y(1.0))?.iter().copied().collect();
-///     faces.sort();
-///     assert_eq!(faces, &[(2, 3, 6, 7)]);
+///     assert_eq!(region.find.point_ids(At::XY(1.0, 1.0))?, &[2, 6]);
+///     assert_eq!(region.find.edge_keys(At::YZ(1.0, 1.0))?, &[(6, 7)]);
+///     assert_eq!(region.find.face_keys(At::Y(1.0))?, &[(2, 3, 6, 7)]);
 ///     Ok(())
 /// }
 /// ```
@@ -226,6 +210,6 @@ mod tests {
         assert_eq!(region.features.points.len(), 6);
         assert_eq!(region.features.edges.len(), 6);
         assert_eq!(region.features.faces.len(), 0);
-        assert_eq!(region.find.points(At::XY(0.0, 0.0)).unwrap().len(), 1);
+        assert_eq!(region.find.point_ids(At::XY(0.0, 0.0)).unwrap().len(), 1);
     }
 }

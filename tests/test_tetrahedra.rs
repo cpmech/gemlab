@@ -1,15 +1,6 @@
 use gemlab::mesh::{check_face_normals, At, Extract, Mesh, Region};
 use gemlab::StrError;
-use std::collections::{HashMap, HashSet};
-
-fn check<T>(found: &HashSet<T>, correct: &[T])
-where
-    T: Copy + Ord + std::fmt::Debug,
-{
-    let mut ids: Vec<T> = found.iter().copied().collect();
-    ids.sort();
-    assert_eq!(ids, correct);
-}
+use std::collections::HashMap;
 
 #[test]
 fn test_tetrahedra() -> Result<(), StrError> {
@@ -84,29 +75,29 @@ fn test_tetrahedra() -> Result<(), StrError> {
     check_face_normals(&region.mesh, &region.features.faces, &solutions, 1e-15).expect("ok");
 
     // find points
-    let points = region.find.points(At::X(0.0))?;
-    check(&points, &[0, 3, 4, 7]);
-    let points = region.find.points(At::Y(2.0))?;
-    check(&points, &[2, 3, 6, 7]);
+    let points = region.find.point_ids(At::X(0.0))?;
+    assert_eq!(&points, &[0, 3, 4, 7]);
+    let points = region.find.point_ids(At::Y(2.0))?;
+    assert_eq!(&points, &[2, 3, 6, 7]);
 
     // find edges
-    let edges = region.find.edges(At::Z(0.0))?;
-    check(&edges, &[(0, 1), (0, 2), (0, 3), (1, 2), (2, 3)]);
-    let edges = region.find.edges(At::Y(2.0))?;
-    check(&edges, &[(2, 3), (2, 6), (2, 7), (3, 7), (6, 7)]);
+    let edges = region.find.edge_keys(At::Z(0.0))?;
+    assert_eq!(&edges, &[(0, 1), (0, 2), (0, 3), (1, 2), (2, 3)]);
+    let edges = region.find.edge_keys(At::Y(2.0))?;
+    assert_eq!(&edges, &[(2, 3), (2, 6), (2, 7), (3, 7), (6, 7)]);
 
     // find faces
-    let faces = region.find.faces(At::X(0.0))?;
-    check(&faces, &[(0, 3, 7, npoint), (0, 4, 7, npoint)]);
-    let faces = region.find.faces(At::X(2.0))?;
-    check(&faces, &[(1, 2, 5, npoint), (2, 5, 6, npoint)]);
-    let faces = region.find.faces(At::Y(0.0))?;
-    check(&faces, &[(0, 1, 5, npoint), (0, 4, 5, npoint)]);
-    let faces = region.find.faces(At::Y(2.0))?;
-    check(&faces, &[(2, 3, 7, npoint), (2, 6, 7, npoint)]);
-    let faces = region.find.faces(At::Z(0.0))?;
-    check(&faces, &[(0, 1, 2, npoint), (0, 2, 3, npoint)]);
-    let faces = region.find.faces(At::Z(2.0))?;
-    check(&faces, &[(4, 5, 7, npoint), (5, 6, 7, npoint)]);
+    let faces = region.find.face_keys(At::X(0.0))?;
+    assert_eq!(&faces, &[(0, 3, 7, npoint), (0, 4, 7, npoint)]);
+    let faces = region.find.face_keys(At::X(2.0))?;
+    assert_eq!(&faces, &[(1, 2, 5, npoint), (2, 5, 6, npoint)]);
+    let faces = region.find.face_keys(At::Y(0.0))?;
+    assert_eq!(&faces, &[(0, 1, 5, npoint), (0, 4, 5, npoint)]);
+    let faces = region.find.face_keys(At::Y(2.0))?;
+    assert_eq!(&faces, &[(2, 3, 7, npoint), (2, 6, 7, npoint)]);
+    let faces = region.find.face_keys(At::Z(0.0))?;
+    assert_eq!(&faces, &[(0, 1, 2, npoint), (0, 2, 3, npoint)]);
+    let faces = region.find.face_keys(At::Z(2.0))?;
+    assert_eq!(&faces, &[(4, 5, 7, npoint), (5, 6, 7, npoint)]);
     Ok(())
 }
