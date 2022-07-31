@@ -214,7 +214,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTet4::new(&pad);
-        let a_correct = ana.integ_vec_a_linear_along_z(&pad);
+        let a_correct = ana.vec_01_ns_linear_along_z(&pad);
 
         // integration points
         // Note that the tolerance is high for n_integ_point = 1

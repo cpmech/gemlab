@@ -137,7 +137,7 @@ impl AnalyticalTet4 {
     ///
     /// * `pad` -- The same pad used in `new` because we need the nodal coordinates here.
     ///            Do not change the coordinates, otherwise the values will be wrong.
-    pub fn integ_vec_a_linear_along_z(&self, pad: &Scratchpad) -> Vec<f64> {
+    pub fn vec_01_ns_linear_along_z(&self, pad: &Scratchpad) -> Vec<f64> {
         let (z1, z2, z3, z4) = (pad.xxt[2][0], pad.xxt[2][1], pad.xxt[2][2], pad.xxt[2][3]);
         vec![
             (self.volume * (2.0 * z1 + z2 + z3 + z4)) / 20.0,
@@ -156,7 +156,7 @@ impl AnalyticalTet4 {
     /// bᵐ₁ = v₁ V / 4
     /// bᵐ₂ = v₂ V / 4
     /// ```
-    pub fn integ_vec_b(&self, v0: f64, v1: f64, v2: f64) -> Vec<f64> {
+    pub fn vec_02_nv(&self, v0: f64, v1: f64, v2: f64) -> Vec<f64> {
         vec![
             v0 * self.volume / 4.0,
             v1 * self.volume / 4.0,
@@ -180,7 +180,7 @@ impl AnalyticalTet4 {
     /// ```text
     /// cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁ + w₂ Gᵐ₂) V
     /// ```
-    pub fn integ_vec_c(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
+    pub fn vec_03_vg(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
         vec![
             (w0 * self.gg[0][0] + w1 * self.gg[0][1] + w2 * self.gg[0][2]) * self.volume,
             (w0 * self.gg[1][0] + w1 * self.gg[1][1] + w2 * self.gg[1][2]) * self.volume,
@@ -200,7 +200,7 @@ impl AnalyticalTet4 {
     /// dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁ + σ₁₂ Gᵐ₂) V
     /// dᵐ₂ = (σ₂₀ Gᵐ₀ + σ₂₁ Gᵐ₁ + σ₂₂ Gᵐ₂) V
     /// ```
-    pub fn integ_vec_d(&self, tt: &Tensor2) -> Vec<f64> {
+    pub fn vec_04_tg(&self, tt: &Tensor2) -> Vec<f64> {
         let c = self.volume;
         let mat = tt.to_matrix();
         let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
@@ -224,7 +224,7 @@ impl AnalyticalTet4 {
 
     /// Performs the n-s-n integration with constant scalar function
     #[rustfmt::skip]
-    pub fn integ_nsn(&self, s: f64) -> Matrix {
+    pub fn mat_01_nsn(&self, s: f64) -> Matrix {
         let c = self.volume / 20.0;
         Matrix::from(&[
             [2.0 * s * c, s * c, s * c, s * c],
@@ -236,7 +236,7 @@ impl AnalyticalTet4 {
 
     /// Performs the g-v-n integration with constant vector field
     #[rustfmt::skip]
-    pub fn integ_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+    pub fn mat_02_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
         let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
         let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
@@ -252,7 +252,7 @@ impl AnalyticalTet4 {
 
     /// Performs the g-t-g integration with constant tensor field
     #[rustfmt::skip]
-    pub fn integ_gtg(&self, tt: &Tensor2) -> Matrix {
+    pub fn mat_03_gtg(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume;
         let mat = tt.to_matrix();
         let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
@@ -270,33 +270,9 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the n-v-g integration with constant vector field
+    /// Performs the n-t-n integration with constant tensor field
     #[rustfmt::skip]
-    pub fn integ_nvg(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
-        let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
-        Matrix::from(&[
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-        ])
-    }
-
-    /// Performs the g-t-g integration with constant tensor field
-    #[rustfmt::skip]
-    pub fn integ_ntn(&self, sig: &Tensor2) -> Matrix {
+    pub fn mat_08_ntn(&self, sig: &Tensor2) -> Matrix {
         let vv = self.volume;
         let mat = sig.to_matrix();
         let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
@@ -318,6 +294,30 @@ impl AnalyticalTet4 {
         ])
     }
 
+    /// Performs the n-v-g integration with constant vector field
+    #[rustfmt::skip]
+    pub fn mat_09_nvg(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+        let c = self.volume / 4.0;
+        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
+        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
+        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
+        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        Matrix::from(&[
+            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
+            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
+            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
+            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
+            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
+            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
+            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
+            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
+            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+        ])
+    }
+
     /// Performs the g-d-g integration with constant tensor field (calculates the stiffness matrix)
     ///
     /// solution:
@@ -325,7 +325,7 @@ impl AnalyticalTet4 {
     /// ```text
     /// K = Bᵀ ⋅ D ⋅ B ⋅ volume
     /// ```
-    pub fn integ_gdg(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
+    pub fn mat_10_gdg(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, false, false);
         let dd = ela.get_modulus();
         let dim_dd = 6;
@@ -392,7 +392,7 @@ mod tests {
             [ 0.0,  -nt,  -nt,  0.0, 0.0, 0.0, 0.0,  0.0,  nt, 0.0,  nt,  0.0],
             [-tnu, -tnu, -tnh,  tnu, 0.0, 0.0, 0.0,  tnu, 0.0, 0.0, 0.0,  tnh],
         ]);
-        let kk = tet.integ_gdg(ee, nu).unwrap();
+        let kk = tet.mat_10_gdg(ee, nu).unwrap();
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // non-right-angles tet4
@@ -415,7 +415,7 @@ mod tests {
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
         assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
-        let kk = tet.integ_gdg(ee, nu).unwrap();
+        let kk = tet.mat_10_gdg(ee, nu).unwrap();
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
             [ 745.0,  540.0, 120.0,  -5.0,  30.0,  60.0,-270.0, -240.0,   0.0,-470.0, -330.0,-180.0],

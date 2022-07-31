@@ -224,7 +224,7 @@ mod tests {
             [7.0, 6.0, 4.0],
         ], true, false).unwrap();
         let ana = AnalyticalTet4::new(&pad);
-        let d_correct = ana.integ_vec_d(&tt);
+        let d_correct = ana.vec_04_tg(&tt);
 
         // integration points
         let class = pad.kind.class();

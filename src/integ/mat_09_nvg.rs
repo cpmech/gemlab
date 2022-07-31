@@ -199,7 +199,7 @@ mod tests {
         let ana = AnalyticalTet4::new(&pad);
         // constant
         let (v0, v1, v2) = (2.0, 3.0, 4.0);
-        let kk_correct = ana.integ_nvg(v0, v1, v2);
+        let kk_correct = ana.mat_09_nvg(v0, v1, v2);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];

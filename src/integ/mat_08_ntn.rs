@@ -205,7 +205,7 @@ mod tests {
             [1.2, 2.2, 2.3],
             [1.3, 2.3, 3.3]],
         true, false).unwrap();
-        let kk_correct = ana.integ_ntn(&sig);
+        let kk_correct = ana.mat_08_ntn(&sig);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];

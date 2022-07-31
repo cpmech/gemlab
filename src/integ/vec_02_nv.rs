@@ -240,7 +240,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTet4::new(&pad);
-        let b_correct = ana.integ_vec_b(V0, V1, V2);
+        let b_correct = ana.vec_02_nv(V0, V1, V2);
 
         // integration points
         let class = pad.kind.class();

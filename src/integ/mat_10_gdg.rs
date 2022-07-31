@@ -335,7 +335,7 @@ mod tests {
 
         // analytical solution
         let mut ana = AnalyticalTet4::new(&pad);
-        let kk_correct = ana.integ_gdg(young, poisson).unwrap();
+        let kk_correct = ana.mat_10_gdg(young, poisson).unwrap();
 
         // check
         let class = pad.kind.class();
