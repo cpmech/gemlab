@@ -4,16 +4,7 @@ use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
 use russell_chk::assert_approx_eq;
-use std::collections::{HashMap, HashSet};
-
-fn check<T>(found: &HashSet<T>, correct: &[T])
-where
-    T: Copy + Ord + std::fmt::Debug,
-{
-    let mut ids: Vec<T> = found.iter().copied().collect();
-    ids.sort();
-    assert_eq!(ids, correct);
-}
+use std::collections::HashMap;
 
 #[test]
 fn test_column_distorted_tris_quads() -> Result<(), StrError> {
@@ -71,19 +62,19 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-15).expect("ok");
 
     // find points
-    let points = region.find.points(At::X(0.0))?;
-    check(&points, &[0, 1, 2, 3, 4, 5, 6]);
-    let points = region.find.points(At::X(1.0))?;
-    check(&points, &[7, 8, 9, 10, 11, 12]);
+    let points = region.find.point_ids(At::X(0.0))?;
+    assert_eq!(&points, &[0, 1, 2, 3, 4, 5, 6]);
+    let points = region.find.point_ids(At::X(1.0))?;
+    assert_eq!(&points, &[7, 8, 9, 10, 11, 12]);
 
     // find edges
-    let edges = region.find.edges(At::X(0.0))?;
-    check(&edges, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6)]);
-    let edges = region.find.edges(At::X(1.0))?;
-    check(&edges, &[(7, 8), (8, 9), (9, 10), (10, 11), (11, 12)]);
+    let edges = region.find.edge_keys(At::X(0.0))?;
+    assert_eq!(&edges, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6)]);
+    let edges = region.find.edge_keys(At::X(1.0))?;
+    assert_eq!(&edges, &[(7, 8), (8, 9), (9, 10), (10, 11), (11, 12)]);
 
     // find faces
-    let faces = region.find.faces(At::X(0.0))?;
+    let faces = region.find.face_keys(At::X(0.0))?;
     assert_eq!(faces.len(), 0);
     Ok(())
 }
@@ -114,10 +105,10 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-17).expect("ok");
 
     // find edges
-    let edges = region.find.edges(At::X(0.0))?;
-    check(&edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
-    let edges = region.find.edges(At::X(4.0))?;
-    check(&edges, &[(2, 6), (6, 9), (9, 13)]);
+    let edges = region.find.edge_keys(At::X(0.0))?;
+    assert_eq!(&edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
+    let edges = region.find.edge_keys(At::X(4.0))?;
+    assert_eq!(&edges, &[(2, 6), (6, 9), (9, 13)]);
 
     // edge (7,11)
     let space_ndim = region.mesh.ndim;
