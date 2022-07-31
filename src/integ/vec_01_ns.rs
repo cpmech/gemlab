@@ -189,7 +189,7 @@ mod tests {
         // solution
         let ana = AnalyticalTri3::new(&pad);
         const CS: f64 = 3.0;
-        let a_correct = ana.integ_vec_a(CS);
+        let a_correct = ana.vec_01_ns(CS);
 
         // integration points
         let class = pad.kind.class();

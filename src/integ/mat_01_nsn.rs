@@ -141,7 +141,7 @@ mod tests {
         let mut kk = Matrix::new(3, 3);
         let s = 12.0;
         let ana = AnalyticalTri3::new(&pad);
-        let kk_correct = ana.integ_nsn(s, 1.0);
+        let kk_correct = ana.mat_01_nsn(s, 1.0);
         let class = pad.kind.class();
         let tolerances = [8.34, 1e-14, 1e-14, 1e-14, 1e-12, 1e-13]; // note how bad rule-1 integ is here
         let selection: Vec<_> = [1, 3, 6, 7, 12, 16]

@@ -174,7 +174,7 @@ mod tests {
         let ana = AnalyticalTri3::new(&pad);
         // constant
         let (v0, v1) = (2.0, 3.0);
-        let kk_correct = ana.integ_nvg(v0, v1);
+        let kk_correct = ana.mat_09_nvg(v0, v1);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];

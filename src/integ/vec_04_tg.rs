@@ -184,7 +184,7 @@ mod tests {
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
         let ana = AnalyticalTri3::new(&pad);
-        let d_correct = ana.integ_vec_d(S00, S11, S01);
+        let d_correct = ana.vec_04_tg(S00, S11, S01);
 
         // integration points
         let class = pad.kind.class();
