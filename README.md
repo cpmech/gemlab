@@ -31,16 +31,14 @@ gemlab = "*"
 
 ```rust
 use gemlab::integ;
-use gemlab::mesh::{set_pad_coords, At, Extract, Mesh, Region};
+use gemlab::mesh::{set_pad_coords, At, Extract, Features, Find, Mesh};
 use gemlab::shapes::Scratchpad;
 use gemlab::StrError;
 use std::collections::HashSet;
 
 fn main() -> Result<(), StrError> {
-    // Input the raw mesh data using a text file
-    // and compute all derived information such as shapes,
-    // and boundary entities. These data area stored in a
-    // Region for the sake of convenience.
+    // Input the raw mesh data using a text file and compute all
+    // derived information such boundary edges and faces.
     //
     // 1.0  5------,6.------7
     //      | [3],'   `.[4] |
@@ -54,14 +52,14 @@ fn main() -> Result<(), StrError> {
     //     0.0     0.5     1.0
     let path = "./data/meshes/four_tri3_one_qua4.msh";
     let mesh = Mesh::from_text_file(path)?;
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
-    // Find entities along the boundary of the mesh
-    // by giving coordinates. The `At` enum provides
-    // an easy way to define the type of the constraint
-    // such as line, plane, circle, etc.
-    assert_eq!(&region.find.point_ids(At::Y(0.5))?, &[3, 4]);
-    assert_eq!(&region.find.edge_keys(At::X(1.0))?, &[(2, 4), (4, 7)]);
+    // Find entities along the boundary of the mesh with coordinates.
+    // The `At` enum provides an easy way to define the type of the
+    // constraint such as line, plane, circle, etc.
+    let find = Find::new(&mesh, &features)?;
+    assert_eq!(&find.point_ids(At::Y(0.5))?, &[3, 4]);
+    assert_eq!(&find.edge_keys(At::X(1.0))?, &[(2, 4), (4, 7)]);
 
     // Perform numerical integration to compute
     // the area of cell # 2

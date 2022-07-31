@@ -1,4 +1,4 @@
-use super::{EdgeKey, FaceKey, Features, Mesh, PointId};
+use super::{Edge, EdgeKey, Face, FaceKey, Features, Mesh, PointId};
 use crate::util::GridSearch;
 use crate::StrError;
 use std::collections::{HashMap, HashSet};
@@ -36,7 +36,10 @@ pub enum At {
 }
 
 /// Implements functions to find mesh features (points, edges, faces)
-pub struct Find {
+pub struct Find<'a> {
+    /// Keep a reference to Features
+    features: &'a Features,
+
     /// Space number of dimension (needed for the find functions)
     space_ndim: usize,
 
@@ -53,15 +56,13 @@ pub struct Find {
     point_to_faces: HashMap<PointId, HashSet<FaceKey>>,
 }
 
-impl Find {
+impl<'a> Find<'a> {
     /// Allocates a new instance
-    ///
-    /// **Note:** This function is to be used by [Region] and not by the end-user.
     ///
     /// # Panics
     ///
     /// If the `features` does not correspond to `mesh`, a panic will occur.
-    pub(crate) fn new(mesh: &Mesh, features: &Features) -> Result<Self, StrError> {
+    pub fn new(mesh: &Mesh, features: &'a Features) -> Result<Self, StrError> {
         // add point ids to grid
         let mut grid = GridSearch::new(&features.min, &features.max, None, None, None)?;
         for point_id in &features.points {
@@ -92,6 +93,7 @@ impl Find {
 
         // done
         Ok(Find {
+            features,
             space_ndim: mesh.ndim,
             num_points: mesh.points.len(),
             grid,
@@ -221,6 +223,25 @@ impl Find {
         Ok(keys)
     }
 
+    /// Finds edges
+    ///
+    /// Returns an array such that the edge keys are **sorted**
+    pub fn edges(&self, at: At) -> Result<Vec<&Edge>, StrError> {
+        let results: Result<Vec<_>, _> = self
+            .edge_keys(at)?
+            .iter()
+            .map(|key| {
+                let r = self
+                    .features
+                    .edges
+                    .get(key)
+                    .ok_or("features.edges data is inconsistent");
+                r
+            })
+            .collect();
+        results
+    }
+
     /// Finds face keys
     ///
     /// Returns a **sorted** array of face keys
@@ -254,6 +275,25 @@ impl Find {
         keys.sort();
         Ok(keys)
     }
+
+    /// Finds faces
+    ///
+    /// Returns an array such that the face keys are **sorted**
+    pub fn faces(&self, at: At) -> Result<Vec<&Face>, StrError> {
+        let results: Result<Vec<_>, _> = self
+            .face_keys(at)?
+            .iter()
+            .map(|key| {
+                let r = self
+                    .features
+                    .faces
+                    .get(key)
+                    .ok_or("features.faces data is inconsistent");
+                r
+            })
+            .collect();
+        results
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -261,8 +301,7 @@ impl Find {
 #[cfg(test)]
 mod tests {
     use super::Find;
-    use crate::mesh::algorithms::{extract_all_2d_edges, extract_all_faces, extract_features_2d, extract_features_3d};
-    use crate::mesh::{At, EdgeKey, Extract, FaceKey, Samples};
+    use crate::mesh::{At, EdgeKey, Extract, FaceKey, Features, Samples};
     use crate::util::SQRT_2;
 
     #[allow(unused_imports)]
@@ -287,9 +326,8 @@ mod tests {
     #[test]
     fn new_works() {
         let mesh = Samples::two_qua4();
-        let edges = extract_all_2d_edges(&mesh);
-        let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         assert_eq!(
             format!("{}", find.grid),
             "0: [0]\n\
@@ -310,9 +348,8 @@ mod tests {
     fn find_points_fails_on_wrong_input() {
         // 2d
         let mesh = Samples::two_qua4();
-        let edges = extract_all_2d_edges(&mesh);
-        let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         assert_eq!(find.point_ids(At::Z(0.0)).err(), Some("At::Z works in 3D only"));
         assert_eq!(find.point_ids(At::YZ(0.0, 0.0)).err(), Some("At::YZ works in 3D only"));
         assert_eq!(find.point_ids(At::XZ(0.0, 0.0)).err(), Some("At::XZ works in 3D only"));
@@ -327,9 +364,8 @@ mod tests {
 
         // 3d
         let mesh = Samples::two_hex8();
-        let faces = extract_all_faces(&mesh);
-        let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         assert_eq!(
             find.point_ids(At::Circle(0.0, 0.0, 0.0)).err(),
             Some("At::Circle works in 2D only")
@@ -346,9 +382,8 @@ mod tests {
         //   0--------1--------4
         //           circle
         let mesh = Samples::two_qua4();
-        let edges = extract_all_2d_edges(&mesh);
-        let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         let empty: &[usize] = &[];
         assert_eq!(&find.point_ids(At::XY(0.0, 0.0)).unwrap(), &[0]);
         assert_eq!(&find.point_ids(At::XY(2.0, 1.0)).unwrap(), &[5]);
@@ -382,9 +417,8 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_hex8();
-        let faces = extract_all_faces(&mesh);
-        let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         // plot_grid_two_cubes_vertical(&find).unwrap();
         let empty: &[usize] = &[];
         assert_eq!(&find.point_ids(At::X(0.0)).unwrap(), &[0, 3, 4, 7, 8, 11]);
@@ -437,9 +471,8 @@ mod tests {
         // |        |        |
         // 0--------1--------4
         let mesh = Samples::two_qua4();
-        let edges = extract_all_2d_edges(&mesh);
-        let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         let empty: &[EdgeKey] = &[];
         assert_eq!(&find.edge_keys(At::Y(0.0)).unwrap(), &[(0, 1), (1, 4)]);
         assert_eq!(&find.edge_keys(At::X(2.0)).unwrap(), &[(4, 5)]);
@@ -447,6 +480,9 @@ mod tests {
         assert_eq!(&find.edge_keys(At::X(0.0)).unwrap(), &[(0, 3)]);
         assert_eq!(&find.edge_keys(At::X(1.0)).unwrap(), empty); // internal
         assert_eq!(&find.edge_keys(At::X(10.0)).unwrap(), empty); // far away
+
+        let res = find.edges(At::Y(0.0));
+        println!("{:?}", res);
     }
 
     #[test]
@@ -470,9 +506,8 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_hex8();
-        let faces = extract_all_faces(&mesh);
-        let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         let empty: &[EdgeKey] = &[];
         assert_eq!(
             &find.edge_keys(At::X(0.0)).unwrap(),
@@ -539,9 +574,8 @@ mod tests {
         // |        |        |
         // 0--------1--------4
         let mesh = Samples::two_qua4();
-        let edges = extract_all_2d_edges(&mesh);
-        let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         assert_eq!(find.face_keys(At::X(0.0)).unwrap().len(), 0);
     }
 
@@ -566,9 +600,8 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_hex8();
-        let faces = extract_all_faces(&mesh);
-        let boundary = extract_features_3d(&mesh, &faces, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         let empty: &[FaceKey] = &[];
         assert_eq!(&find.face_keys(At::X(0.0)).unwrap(), &[(0, 3, 4, 7), (4, 7, 8, 11)]);
         assert_eq!(&find.face_keys(At::X(1.0)).unwrap(), &[(1, 2, 5, 6), (5, 6, 9, 10)]);
@@ -632,9 +665,8 @@ mod tests {
         //
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let edges = extract_all_2d_edges(&mesh);
-        let boundary = extract_features_2d(&mesh, &edges, Extract::Boundary);
-        let find = Find::new(&mesh, &boundary).unwrap();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let find = Find::new(&mesh, &features).unwrap();
         let (r, rr) = (1.0, 2.0);
         assert_eq!(&find.point_ids(At::XY(1.00, 0.00)).unwrap(), &[0]);
         assert_eq!(&find.point_ids(At::XY(1.25, 0.00)).unwrap(), &[15]);

@@ -1,5 +1,5 @@
 use gemlab::integ;
-use gemlab::mesh::{check_2d_edge_normals, At, Extract, Mesh, Region};
+use gemlab::mesh::{check_2d_edge_normals, At, Extract, Features, Find, Mesh};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
@@ -10,27 +10,27 @@ use std::collections::HashMap;
 fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/column_distorted_tris_quads.msh")?;
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // check sizes
-    assert_eq!(region.mesh.points.len(), 13);
-    assert_eq!(region.mesh.cells.len(), 7);
+    assert_eq!(mesh.points.len(), 13);
+    assert_eq!(mesh.cells.len(), 7);
 
     // check cells
-    assert_eq!(region.mesh.cells[0].points, &[0, 7, 8, 1]);
-    assert_eq!(region.mesh.cells[1].points, &[1, 8, 9, 2]);
-    assert_eq!(region.mesh.cells[2].points, &[2, 9, 10, 3]);
-    assert_eq!(region.mesh.cells[3].points, &[3, 10, 4]);
-    assert_eq!(region.mesh.cells[4].points, &[4, 10, 11]);
-    assert_eq!(region.mesh.cells[5].points, &[4, 11, 5]);
-    assert_eq!(region.mesh.cells[6].points, &[5, 11, 12, 6]);
+    assert_eq!(mesh.cells[0].points, &[0, 7, 8, 1]);
+    assert_eq!(mesh.cells[1].points, &[1, 8, 9, 2]);
+    assert_eq!(mesh.cells[2].points, &[2, 9, 10, 3]);
+    assert_eq!(mesh.cells[3].points, &[3, 10, 4]);
+    assert_eq!(mesh.cells[4].points, &[4, 10, 11]);
+    assert_eq!(mesh.cells[5].points, &[4, 11, 5]);
+    assert_eq!(mesh.cells[6].points, &[5, 11, 12, 6]);
 
     // check edges
-    let edge = region.features.edges.get(&(0, 1)).unwrap();
+    let edge = features.edges.get(&(0, 1)).unwrap();
     assert_eq!(edge.points, &[0, 1]);
-    let edge = region.features.edges.get(&(9, 10)).unwrap();
+    let edge = features.edges.get(&(9, 10)).unwrap();
     assert_eq!(edge.points, &[10, 9]);
-    let edge = region.features.edges.get(&(3, 4)).unwrap();
+    let edge = features.edges.get(&(3, 4)).unwrap();
     assert_eq!(edge.points, &[3, 4]);
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
@@ -59,22 +59,23 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-15).expect("ok");
+    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
 
     // find points
-    let points = region.find.point_ids(At::X(0.0))?;
+    let find = Find::new(&mesh, &features)?;
+    let points = find.point_ids(At::X(0.0))?;
     assert_eq!(&points, &[0, 1, 2, 3, 4, 5, 6]);
-    let points = region.find.point_ids(At::X(1.0))?;
+    let points = find.point_ids(At::X(1.0))?;
     assert_eq!(&points, &[7, 8, 9, 10, 11, 12]);
 
     // find edges
-    let edges = region.find.edge_keys(At::X(0.0))?;
+    let edges = find.edge_keys(At::X(0.0))?;
     assert_eq!(&edges, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6)]);
-    let edges = region.find.edge_keys(At::X(1.0))?;
+    let edges = find.edge_keys(At::X(1.0))?;
     assert_eq!(&edges, &[(7, 8), (8, 9), (9, 10), (10, 11), (11, 12)]);
 
     // find faces
-    let faces = region.find.face_keys(At::X(0.0))?;
+    let faces = find.face_keys(At::X(0.0))?;
     assert_eq!(faces.len(), 0);
     Ok(())
 }
@@ -83,7 +84,7 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
 fn test_rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
     // for both tris or quas where 2.0 corresponds to the edge_length in the reference system
@@ -102,17 +103,18 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-17).expect("ok");
+    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-17).expect("ok");
 
     // find edges
-    let edges = region.find.edge_keys(At::X(0.0))?;
+    let find = Find::new(&mesh, &features)?;
+    let edges = find.edge_keys(At::X(0.0))?;
     assert_eq!(&edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
-    let edges = region.find.edge_keys(At::X(4.0))?;
+    let edges = find.edge_keys(At::X(4.0))?;
     assert_eq!(&edges, &[(2, 6), (6, 9), (9, 13)]);
 
     // edge (7,11)
-    let space_ndim = region.mesh.ndim;
-    let p = &region.mesh.points;
+    let space_ndim = mesh.ndim;
+    let p = &mesh.points;
     let mut pad_edge_7_11 = Scratchpad::new(space_ndim, GeoKind::Lin2)?;
     pad_edge_7_11.set_xx(0, 0, p[7].coords[0]);
     pad_edge_7_11.set_xx(0, 1, p[7].coords[1]);
@@ -129,7 +131,7 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     assert_approx_eq!(length_numerical, SQRT_2, 1e-14);
 
     // TODO: numerical area of cell 5
-    let cell = &region.mesh.cells[5];
+    let cell = &mesh.cells[5];
     let mut pad_cell_5 = Scratchpad::new(2, cell.kind)?;
     for m in 0..cell.points.len() {
         for j in 0..space_ndim {
