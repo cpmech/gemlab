@@ -1,4 +1,4 @@
-use crate::mesh::{Edge, EdgeKey, Extract, Face, Features, MapFaceToCells, Mesh};
+use crate::mesh::{Edge, EdgeKey, Extract, Face, FaceKey, MapFaceToCells, Mesh, PointId};
 use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
@@ -8,25 +8,33 @@ use std::collections::{HashMap, HashSet};
 ///
 /// 1. It panics if `mesh.space != 3` (i.e., this function works in 3D only)
 /// 2. It panics if the mesh data is invalid, e.g., the cell points array doesn't contain enough points
-pub(crate) fn extract_features_3d(mesh: &Mesh, faces: &MapFaceToCells, extract: Extract) -> Features {
+pub(crate) fn extract_features_3d(
+    mesh: &Mesh,
+    all_faces: &MapFaceToCells,
+    extract: Extract,
+) -> (
+    HashSet<PointId>,
+    HashMap<EdgeKey, Edge>,
+    HashMap<FaceKey, Face>,
+    Vec<f64>,
+    Vec<f64>,
+) {
     assert_eq!(mesh.ndim, 3);
 
-    // output
-    let mut features = Features {
-        points: HashSet::new(),
-        edges: HashMap::new(),
-        faces: HashMap::new(),
-        min: vec![f64::MAX; mesh.ndim],
-        max: vec![f64::MIN; mesh.ndim],
-    };
+    // results
+    let mut points = HashSet::new();
+    let mut edges = HashMap::new();
+    let mut faces = HashMap::new();
+    let mut min = vec![f64::MAX; mesh.ndim];
+    let mut max = vec![f64::MIN; mesh.ndim];
 
     // sort face keys just so the next loop is deterministic
-    let mut face_keys: Vec<_> = faces.keys().collect();
+    let mut face_keys: Vec<_> = all_faces.keys().collect();
     face_keys.sort();
 
     // loop over all faces
     for face_key in face_keys {
-        let shared_by = faces.get(face_key).unwrap();
+        let shared_by = all_faces.get(face_key).unwrap();
 
         // accept feature?
         let accept = match extract {
@@ -49,10 +57,10 @@ pub(crate) fn extract_features_3d(mesh: &Mesh, faces: &MapFaceToCells, extract: 
         // process points on face
         for i in 0..face.points.len() {
             face.points[i] = cell.points[cell.kind.face_node_id(f, i)];
-            features.points.insert(face.points[i]);
+            points.insert(face.points[i]);
             for j in 0..mesh.ndim {
-                features.min[j] = f64::min(features.min[j], mesh.points[face.points[i]].coords[j]);
-                features.max[j] = f64::max(features.max[j], mesh.points[face.points[i]].coords[j]);
+                min[j] = f64::min(min[j], mesh.points[face.points[i]].coords[j]);
+                max[j] = f64::max(max[j], mesh.points[face.points[i]].coords[j]);
             }
         }
 
@@ -66,7 +74,7 @@ pub(crate) fn extract_features_3d(mesh: &Mesh, faces: &MapFaceToCells, extract: 
             sort2(&mut edge_key);
 
             // skip already handled edge
-            if features.edges.contains_key(&edge_key) {
+            if edges.contains_key(&edge_key) {
                 continue;
             }
 
@@ -78,13 +86,15 @@ pub(crate) fn extract_features_3d(mesh: &Mesh, faces: &MapFaceToCells, extract: 
             for i in 0..edge.points.len() {
                 edge.points[i] = face.points[face.kind.edge_node_id(e, i)];
             }
-            features.edges.insert(edge_key, edge);
+            edges.insert(edge_key, edge);
         }
 
         // new face
-        features.faces.insert(*face_key, face);
+        faces.insert(*face_key, face);
     }
-    features
+
+    // done
+    (points, edges, faces, min, max)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -93,36 +103,37 @@ pub(crate) fn extract_features_3d(mesh: &Mesh, faces: &MapFaceToCells, extract: 
 mod tests {
     use super::extract_features_3d;
     use crate::mesh::algorithms::extract_all_faces;
-    use crate::mesh::{EdgeKey, Extract, FaceKey, Features, PointId, Samples};
+    use crate::mesh::{Edge, EdgeKey, Extract, Face, FaceKey, PointId, Samples};
     use crate::util::AsArray2D;
+    use std::collections::HashMap;
 
     fn validate_edges<'a, T>(
-        features: &Features,
+        edges: &HashMap<EdgeKey, Edge>,
         correct_keys: &[EdgeKey], // sorted
         correct_points: &'a T,
     ) where
         T: AsArray2D<'a, PointId>,
     {
-        let mut keys: Vec<_> = features.edges.keys().map(|k| *k).collect();
+        let mut keys: Vec<_> = edges.keys().map(|k| *k).collect();
         keys.sort();
         assert_eq!(keys, correct_keys);
         for i in 0..keys.len() {
-            assert_eq!(features.edges.get(&keys[i]).unwrap().points, correct_points.row(i));
+            assert_eq!(edges.get(&keys[i]).unwrap().points, correct_points.row(i));
         }
     }
 
     fn validate_faces<'a, T>(
-        features: &Features,
+        faces: &HashMap<FaceKey, Face>,
         correct_keys: &[FaceKey], // sorted
         correct_points: &'a T,
     ) where
         T: AsArray2D<'a, PointId>,
     {
-        let mut keys: Vec<_> = features.faces.keys().map(|k| *k).collect();
+        let mut keys: Vec<_> = faces.keys().map(|k| *k).collect();
         keys.sort();
         assert_eq!(keys, correct_keys);
         for i in 0..keys.len() {
-            assert_eq!(features.faces.get(&keys[i]).unwrap().points, correct_points.row(i));
+            assert_eq!(faces.get(&keys[i]).unwrap().points, correct_points.row(i));
         }
     }
 
@@ -149,8 +160,8 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_hex8();
-        let faces = extract_all_faces(&mesh);
-        let features = extract_features_3d(&mesh, &faces, Extract::Boundary);
+        let all_faces = extract_all_faces(&mesh);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::Boundary);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -195,7 +206,7 @@ mod tests {
             [9, 10],
             [10, 11],
         ];
-        validate_edges(&features, &correct_edge_keys, &correct_edge_points);
+        validate_edges(&edges, &correct_edge_keys, &correct_edge_points);
         let correct_face_keys = [
             (0, 1, 2, 3),
             (0, 1, 4, 5),
@@ -220,10 +231,10 @@ mod tests {
             [6, 7, 11, 10],
             [8, 9, 10, 11],
         ];
-        validate_faces(&features, &correct_face_keys, &correct_face_points);
-        assert_eq!(features.min, &[0.0, 0.0, 0.0]);
-        assert_eq!(features.max, &[1.0, 1.0, 2.0]);
-        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
+        validate_faces(&faces, &correct_face_keys, &correct_face_points);
+        assert_eq!(min, &[0.0, 0.0, 0.0]);
+        assert_eq!(max, &[1.0, 1.0, 2.0]);
+        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     }
@@ -251,8 +262,8 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_hex8();
-        let faces = extract_all_faces(&mesh);
-        let features = extract_features_3d(&mesh, &faces, Extract::All);
+        let all_faces = extract_all_faces(&mesh);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::All);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -297,7 +308,7 @@ mod tests {
             [9, 10],
             [10, 11],
         ];
-        validate_edges(&features, &correct_edge_keys, &correct_edge_points);
+        validate_edges(&edges, &correct_edge_keys, &correct_edge_points);
         let correct_face_keys = [
             (0, 1, 2, 3),
             (0, 1, 4, 5),
@@ -324,10 +335,10 @@ mod tests {
             [6, 7, 11, 10],
             [8, 9, 10, 11],
         ];
-        validate_faces(&features, &correct_face_keys, &correct_face_points);
-        assert_eq!(features.min, &[0.0, 0.0, 0.0]);
-        assert_eq!(features.max, &[1.0, 1.0, 2.0]);
-        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
+        validate_faces(&faces, &correct_face_keys, &correct_face_points);
+        assert_eq!(min, &[0.0, 0.0, 0.0]);
+        assert_eq!(max, &[1.0, 1.0, 2.0]);
+        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     }
@@ -355,17 +366,17 @@ mod tests {
         // |/             |/
         // 1--------------2
         let mesh = Samples::two_hex8();
-        let faces = extract_all_faces(&mesh);
-        let features = extract_features_3d(&mesh, &faces, Extract::Interior);
+        let all_faces = extract_all_faces(&mesh);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::Interior);
         let correct_edge_keys = [(4, 5), (4, 7), (5, 6), (6, 7)];
         let correct_edge_points = [[5, 4], [4, 7], [6, 5], [7, 6]];
-        validate_edges(&features, &correct_edge_keys, &correct_edge_points);
+        validate_edges(&edges, &correct_edge_keys, &correct_edge_points);
         let correct_face_keys = [(4, 5, 6, 7)];
         let correct_face_points = [[4, 5, 6, 7]];
-        validate_faces(&features, &correct_face_keys, &correct_face_points);
-        assert_eq!(features.min, &[0.0, 0.0, 1.0]);
-        assert_eq!(features.max, &[1.0, 1.0, 1.0]);
-        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
+        validate_faces(&faces, &correct_face_keys, &correct_face_points);
+        assert_eq!(min, &[0.0, 0.0, 1.0]);
+        assert_eq!(max, &[1.0, 1.0, 1.0]);
+        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[4, 5, 6, 7]);
     }
@@ -387,8 +398,8 @@ mod tests {
         //  12-----11-------1------------2------------8
         //
         let mesh = Samples::mixed_shapes_3d();
-        let faces = extract_all_faces(&mesh);
-        let features = extract_features_3d(&mesh, &faces, Extract::Boundary);
+        let all_faces = extract_all_faces(&mesh);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::Boundary);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -425,7 +436,7 @@ mod tests {
             [6, 7],
             [6, 8],
         ];
-        validate_edges(&features, &correct_edge_keys, &correct_edge_points);
+        validate_edges(&edges, &correct_edge_keys, &correct_edge_points);
         let correct_face_keys = [
             (0, 1, 2, 3),
             (0, 1, 4, 5),
@@ -450,10 +461,10 @@ mod tests {
             &[8, 3, 6],
             &[4, 5, 6, 7],
         ];
-        validate_faces(&features, &correct_face_keys, &correct_face_points);
-        assert_eq!(features.min, &[0.0, 0.0, 0.0]);
-        assert_eq!(features.max, &[1.0, 2.0, 1.0]);
-        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
+        validate_faces(&faces, &correct_face_keys, &correct_face_points);
+        assert_eq!(min, &[0.0, 0.0, 0.0]);
+        assert_eq!(max, &[1.0, 2.0, 1.0]);
+        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8]);
     }
@@ -504,8 +515,8 @@ mod tests {
         //   |/                  |/                  |/
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
-        let faces = extract_all_faces(&mesh);
-        let features = extract_features_3d(&mesh, &faces, Extract::Boundary);
+        let all_faces = extract_all_faces(&mesh);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::Boundary);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -606,7 +617,7 @@ mod tests {
             [70, 71, 73],
             [77, 70, 79],
         ];
-        validate_edges(&features, &correct_edge_keys, &correct_edge_points);
+        validate_edges(&edges, &correct_edge_keys, &correct_edge_points);
         let correct_face_keys = [
             (0, 1, 2, 3),
             (0, 1, 4, 5),
@@ -659,10 +670,10 @@ mod tests {
             [54, 53, 70, 71, 57, 72, 73, 74],
             [53, 64, 77, 70, 67, 78, 79, 72],
         ];
-        validate_faces(&features, &correct_face_keys, &correct_face_points);
-        assert_eq!(features.min, &[0.0, 0.0, 0.0]);
-        assert_eq!(features.max, &[2.0, 2.0, 4.0]);
-        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
+        validate_faces(&faces, &correct_face_keys, &correct_face_points);
+        assert_eq!(min, &[0.0, 0.0, 0.0]);
+        assert_eq!(max, &[2.0, 2.0, 4.0]);
+        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(
             points,
@@ -720,8 +731,8 @@ mod tests {
         //   |/                  |/                  |/
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
-        let faces = extract_all_faces(&mesh);
-        let features = extract_features_3d(&mesh, &faces, Extract::All);
+        let all_faces = extract_all_faces(&mesh);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::All);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -834,7 +845,7 @@ mod tests {
             [70, 71, 73],
             [77, 70, 79],
         ];
-        validate_edges(&features, &correct_edge_keys, &correct_edge_points);
+        validate_edges(&edges, &correct_edge_keys, &correct_edge_points);
         let correct_face_keys = [
             (0, 1, 2, 3),
             (0, 1, 4, 5),
@@ -911,10 +922,10 @@ mod tests {
             [54, 53, 70, 71, 57, 72, 73, 74],
             [53, 64, 77, 70, 67, 78, 79, 72],
         ];
-        validate_faces(&features, &correct_face_keys, &correct_face_points);
-        assert_eq!(features.min, &[0.0, 0.0, 0.0]);
-        assert_eq!(features.max, &[2.0, 2.0, 4.0]);
-        let mut points: Vec<_> = features.points.iter().map(|id| *id).collect();
+        validate_faces(&faces, &correct_face_keys, &correct_face_points);
+        assert_eq!(min, &[0.0, 0.0, 0.0]);
+        assert_eq!(max, &[2.0, 2.0, 4.0]);
+        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(
             points,

@@ -1,4 +1,4 @@
-use gemlab::mesh::{check_2d_edge_normals, check_face_normals, Extract, Region, Samples};
+use gemlab::mesh::{check_2d_edge_normals, check_face_normals, Extract, Features, Samples};
 use gemlab::StrError;
 use std::collections::HashMap;
 
@@ -10,7 +10,7 @@ fn test_normal_vectors_2d() -> Result<(), StrError> {
     //  |         |         |
     //  0---------1---------4
     let mesh = Samples::two_qua4();
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -27,7 +27,7 @@ fn test_normal_vectors_2d() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-15).expect("ok");
+    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
     Ok(())
 }
 
@@ -47,7 +47,7 @@ fn test_normal_vectors_2d_qua8() -> Result<(), StrError> {
     //  |               |               |
     //  0-------4-------1------10-------8
     let mesh = Samples::block_2d_four_qua8();
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -66,7 +66,7 @@ fn test_normal_vectors_2d_qua8() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-15).expect("ok");
+    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
     Ok(())
 }
 
@@ -86,7 +86,7 @@ fn test_normal_vectors_2d_qua9() -> Result<(), StrError> {
     //  |               |               |
     //  0-------4-------1------11-------9
     let mesh = Samples::block_2d_four_qua9();
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.5 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -105,7 +105,7 @@ fn test_normal_vectors_2d_qua9() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-15).expect("ok");
+    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
     Ok(())
 }
 
@@ -125,7 +125,7 @@ fn test_normal_vectors_2d_qua12() -> Result<(), StrError> {
     //  |               |               |
     //  0----4-----8----1---14---17----12
     let mesh = Samples::block_2d_four_qua12();
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.75 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -144,7 +144,7 @@ fn test_normal_vectors_2d_qua12() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-15).expect("ok");
+    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
     Ok(())
 }
 
@@ -164,7 +164,7 @@ fn test_normal_vectors_2d_qua16() -> Result<(), StrError> {
     //  |               |               |
     //  0----4-----8----1---18---21----16
     let mesh = Samples::block_2d_four_qua16();
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.75 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -183,7 +183,7 @@ fn test_normal_vectors_2d_qua16() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-15).expect("ok");
+    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
     Ok(())
 }
 
@@ -207,7 +207,7 @@ fn test_normal_vectors_2d_qua17() -> Result<(), StrError> {
     //  |                   |                   |
     //  0----4----8---12----1---19---22---25---17
     let mesh = Samples::block_2d_four_qua17();
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // the magnitude (l) of the normal vector should be equal to
     // 1.0 = edge_length / 2.0 where 2.0 corresponds to the edge_length in the reference system
@@ -226,7 +226,7 @@ fn test_normal_vectors_2d_qua17() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&region.mesh, &region.features.edges, &solutions, 1e-15).expect("ok");
+    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
     Ok(())
 }
 
@@ -253,7 +253,7 @@ fn test_normal_vectors_3d() -> Result<(), StrError> {
     // |/             |/
     // 1--------------2
     let mesh = Samples::two_hex8();
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // the magnitude (l) of the normal vector should be equal to
     // 0.25 = face_area / 4.0 where 4.0 corresponds to the face_area in the reference system
@@ -274,7 +274,7 @@ fn test_normal_vectors_3d() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_face_normals(&region.mesh, &region.features.faces, &solutions, 1e-15).expect("ok");
+    check_face_normals(&mesh, &features.faces, &solutions, 1e-15).expect("ok");
     Ok(())
 }
 
@@ -324,7 +324,7 @@ fn test_normal_vectors_3d_hex20() -> Result<(), StrError> {
     //   |/                  |/                  |/
     //  20========25========21========46========44
     let mesh = Samples::block_3d_eight_hex20();
-    let region = Region::new(&mesh, Extract::Boundary)?;
+    let features = Features::new(&mesh, Extract::Boundary);
 
     // the magnitude (l) of the normal vector should be equal to
     // face_area / 4.0 where 4.0 corresponds to the face_area in the reference system
@@ -338,6 +338,6 @@ fn test_normal_vectors_3d_hex20() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_face_normals(&region.mesh, &region.features.faces, &solutions, 1e-15).expect("ok");
+    check_face_normals(&mesh, &features.faces, &solutions, 1e-15).expect("ok");
     Ok(())
 }

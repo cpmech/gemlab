@@ -54,7 +54,141 @@ pub type MapEdge2dToCells = HashMap<EdgeKey, Vec<(CellId, usize)>>;
 pub type MapFaceToCells = HashMap<FaceKey, Vec<(CellId, usize)>>;
 
 /// Holds points, edges and faces on the mesh boundary or interior
+///
+/// # Examples
+///
+/// ## Two-dimensions
+///
+/// ```
+/// use gemlab::mesh::{At, Cell, Extract, Features, Mesh, Point};
+/// use gemlab::shapes::GeoKind;
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3---------2---------5
+///     //  |         |         |
+///     //  |   [0]   |   [1]   |
+///     //  |         |         |
+///     //  0---------1---------4
+///     let mesh = Mesh {
+///         ndim: 2,
+///         #[rustfmt::skip]
+///          points: vec![
+///              Point { id: 0, coords: vec![0.0, 0.0] },
+///              Point { id: 1, coords: vec![1.0, 0.0] },
+///              Point { id: 2, coords: vec![1.0, 1.0] },
+///              Point { id: 3, coords: vec![0.0, 1.0] },
+///              Point { id: 4, coords: vec![2.0, 0.0] },
+///              Point { id: 5, coords: vec![2.0, 1.0] },
+///          ],
+///         cells: vec![
+///             Cell {
+///                 id: 0,
+///                 attribute_id: 1,
+///                 kind: GeoKind::Qua4,
+///                 points: vec![0, 1, 2, 3],
+///             },
+///             Cell {
+///                 id: 1,
+///                 attribute_id: 2,
+///                 kind: GeoKind::Qua4,
+///                 points: vec![1, 4, 5, 2],
+///             },
+///         ],
+///     };
+///     let features = Features::new(&mesh, Extract::Boundary);
+///
+///     let mut points: Vec<_> = features.points.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, [0, 1, 2, 3, 4, 5]);
+///
+///     let mut edges: Vec<_> = features.edges.keys().copied().collect();
+///     edges.sort();
+///     assert_eq!(edges, [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)]);
+///     Ok(())
+/// }
+/// ```
+///
+/// ## Three-dimensions
+///
+/// ```
+/// use gemlab::mesh::{At, Cell, Extract, Features, Mesh, Point};
+/// use gemlab::shapes::GeoKind;
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //          .4--------------7
+///     //        ,' |            ,'|
+///     //      ,'              ,'  |
+///     //    ,'     |        ,'    |
+///     //  5'==============6'      |
+///     //  |               |       |
+///     //  |        |      |       |
+///     //  |       ,0- - - | - - - 3
+///     //  |     ,'        |     ,'
+///     //  |   ,'          |   ,'
+///     //  | ,'            | ,'
+///     //  1'--------------2'
+///     #[rustfmt::skip]
+///      let mesh = Mesh {
+///          ndim: 3,
+///          points: vec![
+///              Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
+///              Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
+///              Point { id: 2, coords: vec![1.0, 1.0, 0.0] },
+///              Point { id: 3, coords: vec![0.0, 1.0, 0.0] },
+///              Point { id: 4, coords: vec![0.0, 0.0, 1.0] },
+///              Point { id: 5, coords: vec![1.0, 0.0, 1.0] },
+///              Point { id: 6, coords: vec![1.0, 1.0, 1.0] },
+///              Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
+///          ],
+///          cells: vec![
+///              Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8,
+///                                  points: vec![0,1,2,3, 4,5,6,7] },
+///          ],
+///      };
+///
+///     let features = Features::new(&mesh, Extract::Boundary);
+///
+///     let mut points: Vec<_> = features.points.iter().copied().collect();
+///     points.sort();
+///     assert_eq!(points, (0..8).collect::<Vec<_>>());
+///
+///     let mut edges: Vec<_> = features.edges.keys().copied().collect();
+///     edges.sort();
+///     #[rustfmt::skip]
+///     assert_eq!(
+///         edges,
+///         [
+///             (0, 1), (0, 3), (0, 4), (1, 2),
+///             (1, 5), (2, 3), (2, 6), (3, 7),
+///             (4, 5), (4, 7), (5, 6), (6, 7)
+///         ]
+///     );
+///
+///     let mut faces: Vec<_> = features.faces.keys().copied().collect();
+///     faces.sort();
+///     assert_eq!(
+///         faces,
+///         [
+///             (0, 1, 2, 3),
+///             (0, 1, 4, 5),
+///             (0, 3, 4, 7),
+///             (1, 2, 5, 6),
+///             (2, 3, 6, 7),
+///             (4, 5, 6, 7),
+///         ]
+///     );
+///     Ok(())
+/// }
+/// ```
 pub struct Features {
+    /// Maps all edge keys to cells sharing the edge (2D only)
+    pub all_2d_edges: Option<MapEdge2dToCells>,
+
+    /// Maps all face keys to cells sharing the face (3D only)
+    pub all_faces: Option<MapFaceToCells>,
+
     /// Set of points on the boundary edges/faces, on the interior edges/faces, or both boundary and interior
     ///
     /// **Notes:**
@@ -105,18 +239,16 @@ pub enum Extract {
 impl Features {
     /// Extracts features
     ///
-    /// **Notes:**
+    /// # Notes
     ///
-    /// 1. This function is to be used by [Region] and not by the end-user.
-    /// 2. The points of rods or shells are only extracted when either the All or Boundary option is selected.
+    /// * The points of rods or shells are only extracted when either the All or Boundary option is selected
+    /// * You may want to call [check_all()] to capture (some) errors of the mesh first
     ///
     /// # Panics
     ///
-    /// 1. This function works in 2D or 3D only; otherwise, it will panic.
-    /// 2. This function will panic if the mesh data is invalid,
-    ///    e.g., the cell points array doesn't contain enough points or the indices are incorrect
-    /// 3. You may want to call [check_all()] to capture (some) errors
-    pub(crate) fn new(mesh: &Mesh, extract: Extract) -> (Option<MapEdge2dToCells>, Option<MapFaceToCells>, Features) {
+    /// * This function will panic if the mesh data is invalid. For instance, when
+    ///   the cell points array doesn't contain enough points or the indices are incorrect
+    pub fn new(mesh: &Mesh, extract: Extract) -> Self {
         assert!(mesh.ndim >= 2 && mesh.ndim <= 3);
         let two_dim = if mesh.ndim == 2 { true } else { false };
         let do_rods_and_shells = match extract {
@@ -124,19 +256,35 @@ impl Features {
             Extract::Boundary => true,
             Extract::Interior => false,
         };
-        let (edges, faces, mut features) = if two_dim {
-            let edges = algorithms::extract_all_2d_edges(mesh);
-            let features = algorithms::extract_features_2d(mesh, &edges, extract);
-            (Some(edges), None, features)
+        let mut features = if two_dim {
+            let all_2d_edges = algorithms::extract_all_2d_edges(mesh);
+            let (points, edges, min, max) = algorithms::extract_features_2d(mesh, &all_2d_edges, extract);
+            Features {
+                all_2d_edges: Some(all_2d_edges),
+                all_faces: None,
+                points,
+                edges,
+                faces: HashMap::new(),
+                min,
+                max,
+            }
         } else {
-            let faces = algorithms::extract_all_faces(mesh);
-            let features = algorithms::extract_features_3d(mesh, &faces, extract);
-            (None, Some(faces), features)
+            let all_faces = algorithms::extract_all_faces(mesh);
+            let (points, edges, faces, min, max) = algorithms::extract_features_3d(mesh, &all_faces, extract);
+            Features {
+                all_2d_edges: None,
+                all_faces: Some(all_faces),
+                points,
+                edges,
+                faces,
+                min,
+                max,
+            }
         };
         if do_rods_and_shells {
             algorithms::extract_rods_and_shells(mesh, &mut features);
         }
-        (edges, faces, features)
+        features
     }
 }
 
