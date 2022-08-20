@@ -7,9 +7,6 @@
 //! A [Mesh] is composed of [Point]s and [Cell]s whereas the secondary features are [Edge]
 //! and [Face]. The structure [Features] holds the (secondary) features.
 //!
-//! The structure [Region] holds a [Mesh], [Features], [Find], and optionally collections
-//! of edges and faces that can be used for computing neighbors.
-//!
 //! Below are some example of [Cell]s, classified according to [super::shapes::GeoClass].
 //! The numbers are the local numbers of the cell points (nodes).
 //!
