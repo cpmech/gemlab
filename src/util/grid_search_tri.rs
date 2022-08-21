@@ -1,5 +1,6 @@
 use super::{calc_container_key, AsArray2D, GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
 use crate::geometry::{is_point_inside_triangle, triangle_interpolation};
+use crate::mesh::CellId;
 use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
 use russell_stat::Histogram;
@@ -27,6 +28,24 @@ const I_MIN: usize = 0;
 const I_MAX: usize = 1;
 type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
 
+/// Defines a bounding-box ratio coefficient in [0,1] to mark cells as "large" cells compared the others
+///
+/// Example: If a cell has a max(bounding box length) / largest >= 0.75,
+///          Then this cell is put into the large_cells list
+///
+/// This constant enables the strategy of putting some cells in a selected list of large cells.
+/// The other constant [GS_LARGE_CELLS_MAX_RATIO] also influences the algorithm by enabling or disabling this strategy.
+const GS_LARGE_CELLS_CUTOFF: f64 = 0.75;
+
+/// Controls the count percentage in [0,1] of large cells allowed in the selected array of large cells.
+///
+/// Example: If 20% of cells are too large, put them in a separated list of large cells;
+///          otherwise, the mesh is homogeneous enough so put all cells in the containers.
+///
+/// If the actual ratio is greater than this constant (i.e., many cells are large such as in a homogeneous mesh),
+/// the "strategy" of selecting large cells is abandoned. The other constant [GS_LARGE_CELLS_CUTOFF] also influences the algorithm.
+const GS_LARGE_CELLS_MAX_COUNT_PCT: f64 = 0.2;
+
 /// Defines a tool to search the triangle where a point is located within a mesh
 ///
 /// **Note::* This is a specialization of [super::GridSearchCell] for the 2D case using triangles.
@@ -34,12 +53,13 @@ type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
 /// See [super::GridSearchCell] for more details.
 ///
 pub struct GridSearchTri {
-    ndiv: Vec<usize>,                // (NDIM) number of divisions along each direction
-    xmin: Vec<f64>,                  // (NDIM) min values
-    xmax: Vec<f64>,                  // (NDIM) max values
-    side_length: f64,                // side length of a container
-    bounding_boxes: Vec<BboxMinMax>, // (ntriangle) bounding boxes
-    containers: Containers,          // structure to hold all items
+    ndiv: Vec<usize>,                 // (NDIM) number of divisions along each direction
+    xmin: Vec<f64>,                   // (NDIM) min values
+    xmax: Vec<f64>,                   // (NDIM) max values
+    side_length: f64,                 // side length of a container
+    bounding_boxes: Vec<BboxMinMax>,  // (ntriangle) bounding boxes
+    containers: Containers,           // structure to hold all items
+    large_triangles: HashSet<CellId>, // holds the CellId of large triangles
 }
 
 impl GridSearchTri {
@@ -99,7 +119,7 @@ impl GridSearchTri {
         let mut xmin = vec![f64::MAX; NDIM];
         let mut xmax = vec![f64::MIN; NDIM];
         let mut x_min_max = vec![vec![0.0; N_MIN_MAX]; NDIM];
-        let mut bbox_large = vec![f64::MIN; NDIM];
+        let mut bbox_largest = vec![f64::MIN; NDIM];
         let mut bounding_boxes = Vec::new();
         let mut x = vec![0.0; NDIM];
         for cell_id in 0..ntriangle {
@@ -125,17 +145,44 @@ impl GridSearchTri {
             }
             // largest triangle
             for i in 0..NDIM {
-                bbox_large[i] = f64::max(bbox_large[i], x_min_max[i][I_MAX] - x_min_max[i][I_MIN]);
+                bbox_largest[i] = f64::max(bbox_largest[i], x_min_max[i][I_MAX] - x_min_max[i][I_MIN]);
             }
             // add to bounding box maps
             bounding_boxes.push(x_min_max.clone());
         }
 
-        // make the side_length equal to the largest bounding box dimension
-        let mut side_length = bbox_large[0];
+        // compute largest length of largest bounding box
+        let mut bbox_largest_length = bbox_largest[0];
         for i in 1..NDIM {
-            side_length = f64::max(side_length, bbox_large[i]);
+            bbox_largest_length = f64::max(bbox_largest_length, bbox_largest[i]);
         }
+
+        // handle large triangles
+        let mut bbox_large_length = f64::MIN; // largest length among the not very large triangles
+        let mut large_triangles = HashSet::new();
+        for cell_id in 0..ntriangle {
+            let x_min_max = &bounding_boxes[cell_id];
+            let mut tri_largest_length = x_min_max[0][I_MAX] - x_min_max[0][I_MIN];
+            for i in 1..NDIM {
+                tri_largest_length = f64::max(tri_largest_length, x_min_max[i][I_MAX] - x_min_max[i][I_MIN]);
+            }
+            if tri_largest_length >= GS_LARGE_CELLS_CUTOFF * bbox_largest_length {
+                large_triangles.insert(cell_id);
+            } else {
+                for i in 0..NDIM {
+                    bbox_large_length = f64::max(bbox_large_length, x_min_max[i][I_MAX] - x_min_max[i][I_MIN]);
+                }
+            }
+        }
+
+        // make the side_length equal to the largest bounding box dimension
+        let pct = (large_triangles.len() as f64) / (ntriangle as f64);
+        let mut side_length = if pct <= GS_LARGE_CELLS_MAX_COUNT_PCT {
+            bbox_large_length // use the largest length among the not very large triangles
+        } else {
+            large_triangles.clear(); // abandon the large triangles strategy
+            bbox_largest_length // use the largest length among them all
+        };
 
         // expand side_length by two times the tolerance (left and right)
         side_length += 2.0 * tolerance;
@@ -164,6 +211,9 @@ impl GridSearchTri {
         let mut containers = HashMap::new();
         let mut x = vec![0.0; NDIM];
         for cell_id in 0..ntriangle {
+            if large_triangles.contains(&cell_id) {
+                continue; // skip large triangles
+            }
             let x_min_max = &bounding_boxes[cell_id];
             for r in 0..N_MIN_MAX {
                 for s in 0..N_MIN_MAX {
@@ -184,6 +234,7 @@ impl GridSearchTri {
             side_length,
             bounding_boxes,
             containers,
+            large_triangles,
         })
     }
 
@@ -219,6 +270,35 @@ impl GridSearchTri {
             }
         }
 
+        // auxiliary
+        let mut xa = vec![0.0; NDIM];
+        let mut xb = vec![0.0; NDIM];
+        let mut xc = vec![0.0; NDIM];
+
+        // check if the point is in a large triangle
+        for cell_id in &self.large_triangles {
+            let x_min_max = &self.bounding_boxes[*cell_id];
+            let a = triangles.at(*cell_id, 0);
+            let b = triangles.at(*cell_id, 1);
+            let c = triangles.at(*cell_id, 2);
+            let mut outside_bbox = false;
+            for i in 0..NDIM {
+                if x[i] < x_min_max[i][I_MIN] || x[i] > x_min_max[i][I_MAX] {
+                    outside_bbox = true; // outside the bounding box
+                    break;
+                }
+                xa[i] = coordinates.at(a, i);
+                xb[i] = coordinates.at(b, i);
+                xc[i] = coordinates.at(c, i);
+            }
+            if outside_bbox {
+                continue; // don't even bother calling is_point_inside_triangle
+            }
+            if is_point_inside_triangle(&xa, &xb, &xc, x) {
+                return Ok(Some(*cell_id));
+            }
+        }
+
         // get the container where `x` falls in
         let key = calc_container_key(NDIM, self.side_length, &self.ndiv, &self.xmin, x);
         let container = match self.containers.get(&key) {
@@ -227,26 +307,23 @@ impl GridSearchTri {
         };
 
         // find the triangle where the point falls in
-        let mut xa = vec![0.0; NDIM];
-        let mut xb = vec![0.0; NDIM];
-        let mut xc = vec![0.0; NDIM];
         for cell_id in container {
             let x_min_max = &self.bounding_boxes[*cell_id];
             let a = triangles.at(*cell_id, 0);
             let b = triangles.at(*cell_id, 1);
             let c = triangles.at(*cell_id, 2);
-            let mut outside = false;
+            let mut outside_bbox = false;
             for i in 0..NDIM {
                 if x[i] < x_min_max[i][I_MIN] || x[i] > x_min_max[i][I_MAX] {
-                    outside = true; // outside the bounding box
+                    outside_bbox = true; // outside the bounding box
                     break;
                 }
                 xa[i] = coordinates.at(a, i);
                 xb[i] = coordinates.at(b, i);
                 xc[i] = coordinates.at(c, i);
             }
-            if outside {
-                continue;
+            if outside_bbox {
+                continue; // don't even bother calling is_point_inside_triangle
             }
             if is_point_inside_triangle(&xa, &xb, &xc, x) {
                 return Ok(Some(*cell_id));
@@ -297,6 +374,40 @@ impl GridSearchTri {
             return Err("coordinates must contain a third column with the temperature values");
         }
 
+        // auxiliary
+        let mut xa = vec![0.0; NDIM];
+        let mut xb = vec![0.0; NDIM];
+        let mut xc = vec![0.0; NDIM];
+        let mut temp = vec![0.0; 3]; // 3 nodes
+
+        // check if the point is in a large triangle
+        for cell_id in &self.large_triangles {
+            let x_min_max = &self.bounding_boxes[*cell_id];
+            let a = triangles.at(*cell_id, 0);
+            let b = triangles.at(*cell_id, 1);
+            let c = triangles.at(*cell_id, 2);
+            let mut outside_bbox = false;
+            for i in 0..NDIM {
+                if x[i] < x_min_max[i][I_MIN] || x[i] > x_min_max[i][I_MAX] {
+                    outside_bbox = true; // outside the bounding box
+                    break;
+                }
+                xa[i] = coordinates.at(a, i);
+                xb[i] = coordinates.at(b, i);
+                xc[i] = coordinates.at(c, i);
+            }
+            if outside_bbox {
+                continue; // don't even bother calling is_point_inside_triangle
+            }
+            if is_point_inside_triangle(&xa, &xb, &xc, x) {
+                temp[0] = coordinates.at(a, 2);
+                temp[1] = coordinates.at(b, 2);
+                temp[2] = coordinates.at(c, 2);
+                let res = triangle_interpolation(&xa, &xb, &xc, &temp, x);
+                return Ok(Some(res));
+            }
+        }
+
         // get the container where `x` falls in
         let key = calc_container_key(NDIM, self.side_length, &self.ndiv, &self.xmin, x);
         let container = match self.containers.get(&key) {
@@ -305,27 +416,23 @@ impl GridSearchTri {
         };
 
         // find the triangle where the point falls in
-        let mut xa = vec![0.0; NDIM];
-        let mut xb = vec![0.0; NDIM];
-        let mut xc = vec![0.0; NDIM];
-        let mut temp = vec![0.0; 3]; // 3 nodes
         for cell_id in container {
             let x_min_max = &self.bounding_boxes[*cell_id];
             let a = triangles.at(*cell_id, 0);
             let b = triangles.at(*cell_id, 1);
             let c = triangles.at(*cell_id, 2);
-            let mut outside = false;
+            let mut outside_bbox = false;
             for i in 0..NDIM {
                 if x[i] < x_min_max[i][I_MIN] || x[i] > x_min_max[i][I_MAX] {
-                    outside = true; // outside the bounding box
+                    outside_bbox = true; // outside the bounding box
                     break;
                 }
                 xa[i] = coordinates.at(a, i);
                 xb[i] = coordinates.at(b, i);
                 xc[i] = coordinates.at(c, i);
             }
-            if outside {
-                continue;
+            if outside_bbox {
+                continue; // don't even bother calling is_point_inside_triangle
             }
             if is_point_inside_triangle(&xa, &xb, &xc, x) {
                 temp[0] = coordinates.at(a, 2);
@@ -359,9 +466,16 @@ impl GridSearchTri {
     {
         // draw triangles
         let mut tri_canvas = Canvas::new();
-        tri_canvas.set_face_color("#fefddc").set_edge_color("#fcb827");
+        let color = "#fefddc";
+        let color_large = "#fffca3";
+        tri_canvas.set_face_color(color).set_edge_color("#fcb827");
         let ntriangle = triangles.size().0;
         for t in 0..ntriangle {
+            if self.large_triangles.contains(&t) {
+                tri_canvas.set_face_color(color_large);
+            } else {
+                tri_canvas.set_face_color(color);
+            }
             tri_canvas.polycurve_begin();
             for m in 0..3 {
                 let code = if m == 0 { PolyCode::MoveTo } else { PolyCode::LineTo };
@@ -407,15 +521,13 @@ impl GridSearchTri {
             let mut ids = Text::new();
             ids.set_color("#cd0000");
             let mut xcen = vec![0.0; NDIM];
-            for container in self.containers.values() {
-                for t in container {
-                    let x_min_max = &self.bounding_boxes[*t];
-                    let txt = format!("{}", t);
-                    for i in 0..NDIM {
-                        xcen[i] = (x_min_max[i][I_MIN] + x_min_max[i][I_MAX]) / 2.0;
-                    }
-                    ids.draw(xcen[0], xcen[1], &txt);
+            for t in 0..ntriangle {
+                let x_min_max = &self.bounding_boxes[t];
+                let txt = format!("{}", t);
+                for i in 0..NDIM {
+                    xcen[i] = (x_min_max[i][I_MIN] + x_min_max[i][I_MAX]) / 2.0;
                 }
+                ids.draw(xcen[0], xcen[1], &txt);
             }
             plot.add(&ids);
         }
@@ -476,9 +588,12 @@ impl fmt::Display for GridSearchTri {
             }
         }
         // summary
+        let mut large_ids: Vec<_> = self.large_triangles.iter().collect();
         let mut ids: Vec<_> = unique_items.iter().collect();
+        large_ids.sort();
         ids.sort();
-        write!(f, "ntriangle = {}\n", unique_items.len()).unwrap();
+        write!(f, "large_triangles = {:?}\n", large_ids).unwrap();
+        write!(f, "ntriangle = {}\n", unique_items.len() + self.large_triangles.len()).unwrap();
         write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();
         write!(f, "ndiv = {:?}\n", self.ndiv).unwrap();
         Ok(())
@@ -559,6 +674,7 @@ mod tests {
              1: [0, 1]\n\
              2: [0, 1]\n\
              3: [0, 1]\n\
+             large_triangles = []\n\
              ntriangle = 2\n\
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
@@ -634,19 +750,19 @@ mod tests {
         let triangles = &[
             [4, 2, 6], //  0
             [3, 2, 0], //  1
-            [0, 4, 1], //  2
+            [0, 4, 1], //  2 << large on y
             [4, 0, 2], //  3
             [1, 4, 7], //  4
             [2, 3, 6], //  5
             [6, 7, 4], //  6
             [6, 5, 8], //  7
-            [7, 8, 9], //  8
+            [7, 8, 9], //  8 << very large
             [8, 7, 6], //  9
-            [7, 9, 1], // 10
+            [7, 9, 1], // 10 << very large
             [6, 3, 5], // 11
         ];
         let grid = GridSearchTri::new(coordinates, triangles, None, None).unwrap();
-        let max_len = coordinates[9][0] - coordinates[1][0];
+        let max_len = coordinates[1][1] - coordinates[0][1];
         let sl = max_len + 2.0 * GS_DEFAULT_TOLERANCE; // because the bbox is expanded
         let g = GS_DEFAULT_BORDER_TOL;
         assert_eq!(grid.side_length, sl);
@@ -668,10 +784,11 @@ mod tests {
         );
         assert_eq!(
             format!("{}", grid),
-            "0: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
-             1: [8, 10]\n\
-             2: [2, 4, 8, 10]\n\
-             3: [8, 10]\n\
+            "0: [0, 1, 2, 3, 5, 6, 7, 9, 11]\n\
+             1: [6, 7, 9]\n\
+             2: [0, 2, 3, 4, 6, 9]\n\
+             3: [4, 6, 9]\n\
+             large_triangles = [8, 10]\n\
              ntriangle = 12\n\
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
@@ -703,15 +820,17 @@ mod tests {
             grid.find_triangle(&[10.0, 1.0], coordinates, triangles).err(),
             Some("given point coordinates are outside the grid")
         );
-        // let mut plot = Plot::new();
-        // grid.draw(&mut plot, coordinates, triangles, true).unwrap();
-        // plot.set_equal_axes(true)
-        //     .set_figure_size_points(600.0, 600.0)
-        //     .grid_and_labels("x", "y")
-        //     .set_ticks_x(0.2, 0.0, "")
-        //     .set_ticks_y(0.2, 0.0, "")
-        //     .save("/tmp/gemlab/test_grid_search_tri_find_works.svg")
-        //     .unwrap();
+        // if true {
+        //     let mut plot = Plot::new();
+        //     grid.draw(&mut plot, coordinates, triangles, true).unwrap();
+        //     plot.set_equal_axes(true)
+        //         .set_figure_size_points(600.0, 600.0)
+        //         .grid_and_labels("x", "y")
+        //         .set_ticks_x(0.2, 0.0, "")
+        //         .set_ticks_y(0.2, 0.0, "")
+        //         .save("/tmp/gemlab/test_grid_search_tri_find_works.svg")
+        //         .unwrap();
+        // }
     }
 
     #[test]
