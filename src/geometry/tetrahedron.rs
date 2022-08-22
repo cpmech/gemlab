@@ -46,6 +46,14 @@ pub fn tetrahedron_coords(zeta: &mut [f64], xa: &[f64], xb: &[f64], xc: &[f64], 
 /// Indicates if a point is inside a tetrahedron by looking at its tetrahedron coordinates (zeta)
 ///
 /// Note: the point is inside (or on a face) if all zeta are positive (or zero)
+///
+/// # Input
+///
+/// * `zeta` -- the tetrahedron coordinates (len = 4)
+///
+/// # Panics
+///
+/// This function will panic if the array sizes are incorrect
 #[inline]
 pub fn in_tetrahedron(zeta: &[f64]) -> bool {
     if zeta[0] < 0.0 || zeta[1] < 0.0 || zeta[2] < 0.0 || zeta[3] < 0.0 {
