@@ -190,10 +190,8 @@ impl GridSearchCell {
                     xmax[i] = f64::max(xmax[i], x[i]);
                     // bounding box
                     if m == 0 {
-                        for i in 0..ndim {
-                            x_min_max[i][I_MIN] = x[i];
-                            x_min_max[i][I_MAX] = x[i];
-                        }
+                        x_min_max[i][I_MIN] = x[i];
+                        x_min_max[i][I_MAX] = x[i];
                     } else {
                         x_min_max[i][I_MIN] = f64::min(x_min_max[i][I_MIN], x[i]);
                         x_min_max[i][I_MAX] = f64::max(x_min_max[i][I_MAX], x[i]);
