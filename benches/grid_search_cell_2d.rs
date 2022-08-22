@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode, Throughput};
-use gemlab::geometry::is_point_inside_triangle;
+use gemlab::geometry::{in_triangle, triangle_coords};
 use gemlab::util::GridSearchCell;
 use russell_lab::{generate2d, Matrix, StrError};
 use std::collections::HashMap;
@@ -63,12 +63,9 @@ fn bench_grid_vs_brute(crit: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("Grid", size), size, |b, &size| {
             let ana = analyses.get(&size).unwrap();
             let is_in_cell = |t: usize, x: &[f64]| {
-                Ok(is_point_inside_triangle(
-                    &ana.tris[t][0],
-                    &ana.tris[t][1],
-                    &ana.tris[t][2],
-                    x,
-                ))
+                let mut zeta = vec![0.0; 3];
+                triangle_coords(&mut zeta, &ana.tris[t][0], &ana.tris[t][1], &ana.tris[t][2], x);
+                Ok(in_triangle(&zeta))
             };
             b.iter(|| {
                 for i in 0..NP {
@@ -101,9 +98,11 @@ criterion_group!(
 criterion_main!(benches);
 
 fn brute_force_search(triangles: &Vec<Vec<Vec<f64>>>, x: &[f64]) -> Option<usize> {
+    let mut zeta = vec![0.0; 3]; // 3 triangle coords
     for i in 0..triangles.len() {
         let t = &triangles[i];
-        if is_point_inside_triangle(&t[0], &t[1], &t[2], x) {
+        triangle_coords(&mut zeta, &t[0], &t[1], &t[2], x);
+        if in_triangle(&zeta) {
             return Some(i);
         }
     }

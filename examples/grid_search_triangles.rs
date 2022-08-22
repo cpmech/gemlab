@@ -1,4 +1,4 @@
-use gemlab::geometry::is_point_inside_triangle;
+use gemlab::geometry::{in_triangle, triangle_coords};
 use gemlab::util::GridSearchCell;
 use gemlab::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
@@ -6,9 +6,11 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 fn brute_force_search(triangles: &Vec<Vec<Vec<f64>>>, x: &[f64]) -> Option<usize> {
+    let mut zeta = vec![0.0; 3]; // 3 triangle coords
     for i in 0..triangles.len() {
         let t = &triangles[i];
-        if is_point_inside_triangle(&t[0], &t[1], &t[2], x) {
+        triangle_coords(&mut zeta, &t[0], &t[1], &t[2], x);
+        if in_triangle(&zeta) {
             return Some(i);
         }
     }
@@ -36,7 +38,11 @@ fn main() -> Result<(), StrError> {
     grid.print_stat();
 
     // closure that tells whether the point is in the cell or not
-    let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&tris[t][0], &tris[t][1], &tris[t][2], x));
+    let is_in_cell = |t: usize, x: &[f64]| {
+        let mut zeta = vec![0.0; 3];
+        triangle_coords(&mut zeta, &tris[t][0], &tris[t][1], &tris[t][2], x);
+        Ok(in_triangle(&zeta))
+    };
 
     // find triangle given coords
     let x = &[1.0, 0.5];

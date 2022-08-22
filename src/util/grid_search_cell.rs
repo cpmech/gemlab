@@ -65,7 +65,7 @@ type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
 /// # Examples
 ///
 /// ```
-/// use gemlab::geometry::is_point_inside_triangle;
+/// use gemlab::geometry::{in_triangle, triangle_coords};
 /// use gemlab::util::GridSearchCell;
 /// use gemlab::StrError;
 ///
@@ -94,7 +94,11 @@ type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
 ///     let grid = GridSearchCell::new(ndim, TRIS.len(), get_nnode, get_x, None, None)?;
 ///
 ///     // closure that tells whether the point is in the cell or not
-///     let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
+///     let is_in_cell = |t: usize, x: &[f64]| {
+///         let mut zeta = vec![0.0; 3];
+///         triangle_coords(&mut zeta, &TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x);
+///         Ok(in_triangle(&zeta))
+///     };
 ///
 ///     // find triangle given coords
 ///     assert_eq!(grid.find_cell(&[1.0, 0.5], is_in_cell)?, Some(2));
@@ -467,7 +471,7 @@ impl fmt::Display for GridSearchCell {
 #[cfg(test)]
 mod tests {
     use super::GridSearchCell;
-    use crate::geometry::is_point_inside_triangle;
+    use crate::geometry::{in_triangle, triangle_coords};
     use crate::util::{GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
     use plotpy::Plot;
 
@@ -775,7 +779,11 @@ mod tests {
              ncontainer = 4\n\
              ndiv = [2, 2]\n"
         );
-        let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
+        let is_in_cell = |t: usize, x: &[f64]| {
+            let mut zeta = vec![0.0; 3];
+            triangle_coords(&mut zeta, &TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x);
+            Ok(in_triangle(&zeta))
+        };
         assert_eq!(grid.find_cell(&[0.4, 0.2], is_in_cell).unwrap(), Some(11));
         assert_eq!(grid.find_cell(&[0.6, 0.3], is_in_cell).unwrap(), Some(7));
         assert_eq!(grid.find_cell(&[0.1, 0.7], is_in_cell).unwrap(), Some(2));
@@ -815,7 +823,11 @@ mod tests {
         let get_nnode = |_| Ok(3);
         let get_x = |t: usize, m: usize| Ok(&TRIS[t][m][..]);
         let grid = GridSearchCell::new(2, TRIS.len(), get_nnode, get_x, None, None).unwrap();
-        let is_in_cell = |t: usize, x: &[f64]| Ok(is_point_inside_triangle(&TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x));
+        let is_in_cell = |t: usize, x: &[f64]| {
+            let mut zeta = vec![0.0; 3];
+            triangle_coords(&mut zeta, &TRIS[t][0], &TRIS[t][1], &TRIS[t][2], x);
+            Ok(in_triangle(&zeta))
+        };
         assert_eq!(grid.find_cell(&[0.4, 0.2], is_in_cell).unwrap(), Some(0));
         assert_eq!(grid.find_cell(&[3.0, 0.0], is_in_cell).unwrap(), Some(1));
         assert_eq!(grid.find_cell(&[1.5, 1.4], is_in_cell).unwrap(), Some(2));

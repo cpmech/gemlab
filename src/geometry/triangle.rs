@@ -1,100 +1,49 @@
-/// Returns true if the sign of the cross product vector is negative, including -0.0
+/// Calculates the triangle (three) coordinates
 ///
-/// Specifically, returns true if the sign of the component of the out-of-plane vector,
-/// resulting from the cross product between u and v is negative
+/// # Output
+///
+/// * `zeta` -- the triangle coordinates (len = 3)
+///
+/// # Input
+///
+/// * `xa,xb,xc` -- corners (each has len = 2)
+/// * `xp` -- the point to calculate the coordinates (len = 2)
+///
+/// # Panics
+///
+/// This function will panic if the array sizes are incorrect
+pub fn triangle_coords(zeta: &mut [f64], xa: &[f64], xb: &[f64], xc: &[f64], xp: &[f64]) {
+    let a2 = xa[0] * (xb[1] - xc[1]) + xb[0] * (xc[1] - xa[1]) + xc[0] * (xa[1] - xb[1]);
+    zeta[0] = (xp[0] * (xb[1] - xc[1]) + xb[0] * (xc[1] - xp[1]) + xc[0] * (xp[1] - xb[1])) / a2;
+    zeta[1] = (xa[0] * (xp[1] - xc[1]) + xp[0] * (xc[1] - xa[1]) + xc[0] * (xa[1] - xp[1])) / a2;
+    zeta[2] = (xa[0] * (xb[1] - xp[1]) + xb[0] * (xp[1] - xa[1]) + xp[0] * (xa[1] - xb[1])) / a2;
+}
+
+/// Indicates if a point is inside a triangle by looking at its triangle coordinates (zeta)
+///
+/// Note: the point is inside (or on an edge) if all zeta are positive (or zero)
+///
+/// # Input
+///
+/// * `zeta` -- the triangle coordinates (len = 3)
+///
+/// # Panics
+///
+/// This function will panic if the array sizes are incorrect
 #[inline]
-fn cross_is_negative(u0: f64, u1: f64, v0: f64, v1: f64) -> bool {
-    f64::is_sign_negative(u0 * v1 - u1 * v0)
-}
-
-/// Checks whether a point is inside a triangle or not
-///
-/// ```text
-/// →   →    →    →   →    →    →   →    →
-/// a = AB × AP;  b = BC × BP;  c = CA × CP
-///
-/// The point is inside iff:
-///     sign(a[2]) == sign(b[2]) == sign(c[2])
-///
-/// A,                      A, -------P   OUTSIDE
-/// |\',                    | ',     / |
-/// | \ ',                  |   ',  /    .  
-/// |  \  ',                |     ',      .   
-/// |   \   ',              |     / ',     .
-/// |    P.   ',            |    /    ',    |
-/// |   /  '.   ',          |   /       ',   .
-/// |  /     `-.  ',        |  /          ',  |
-/// | /  INSIDE `-. ',      | /             ', .
-/// |/             `-.',    |/                ',|
-/// C-------------------B   C-------------------B
-/// ```
-///
-/// # Input
-///
-/// `xa,xb,xc` -- are the coordinates of the triangle vertices (each: len = 2 = ndim)
-/// `temp` -- are the known values at the triangle vertices; e.g., the temperatures (len = 3)
-///
-/// # Output
-///
-/// Returns true if the point is inside the triangle.
-/// Note: this function also returns true if the point is on any boundary or coincides with any vertex.
-///
-/// # Panics
-///
-/// This function will panic if the array sizes are incorrect
-pub fn is_point_inside_triangle(xa: &[f64], xb: &[f64], xc: &[f64], xp: &[f64]) -> bool {
-    if (xp[0] == xa[0] && xp[1] == xa[1]) || (xp[0] == xb[0] && xp[1] == xb[1]) || (xp[0] == xc[0] && xp[1] == xc[1]) {
-        return true;
+pub fn in_triangle(zeta: &[f64]) -> bool {
+    if zeta[0] < 0.0 || zeta[1] < 0.0 || zeta[2] < 0.0 {
+        false
+    } else {
+        true
     }
-    let na = cross_is_negative(xb[0] - xa[0], xb[1] - xa[1], xp[0] - xa[0], xp[1] - xa[1]);
-    let nb = cross_is_negative(xc[0] - xb[0], xc[1] - xb[1], xp[0] - xb[0], xp[1] - xb[1]);
-    let nc = cross_is_negative(xa[0] - xc[0], xa[1] - xc[1], xp[0] - xc[0], xp[1] - xc[1]);
-    (na && nb && nc) || (!na && !nb && !nc)
-}
-
-/// Computes the signed area of a triangle given its vertices
-/// 
-/// The sign is positive if the vertices are given in counter-clockwise order.
-/// Otherwise, the area is negative (clockwise order).
-#[rustfmt::skip]
-pub fn triangle_signed_area(xa: &[f64], xb: &[f64], xc: &[f64]) -> f64 {
-    (   xa[0] * (xb[1] - xc[1])
-      + xb[0] * (xc[1] - xa[1])
-      + xc[0] * (xa[1] - xb[1])
-    ) / 2.0
-}
-
-/// Interpolates a value at a given point over a triangle
-/// 
-/// See file data/derivations/interpolation-over-triangle.pdf
-/// 
-/// # Input
-/// 
-/// `xa,xb,xc` -- are the coordinates of the triangle vertices (each: len = 2 = ndim)
-/// `temp` -- are the known values at the triangle vertices; e.g., the temperatures (len = 3)
-/// `xp` -- are the coordinates of the point of interest (len = ndim)
-/// 
-/// # Output
-/// 
-/// Returns the "temperature" `T @ x`
-/// 
-/// # Panics
-/// 
-/// This function will panic if the array sizes are incorrect
-#[rustfmt::skip]
-pub fn triangle_interpolation(xa: &[f64], xb: &[f64], xc: &[f64], temp: &[f64], xp: &[f64]) -> f64 {
-    let aa2    =  xa[0] * (xb[1] - xc[1]) + xb[0] * (xc[1] - xa[1]) + xc[0] * (xa[1] - xb[1]);
-    let zeta_0 = (xp[0] * (xb[1] - xc[1]) + xb[0] * (xc[1] - xp[1]) + xc[0] * (xp[1] - xb[1])) / aa2;
-    let zeta_1 = (xa[0] * (xp[1] - xc[1]) + xp[0] * (xc[1] - xa[1]) + xc[0] * (xa[1] - xp[1])) / aa2;
-    let zeta_2 = (xa[0] * (xb[1] - xp[1]) + xb[0] * (xp[1] - xa[1]) + xp[0] * (xa[1] - xb[1])) / aa2;
-    zeta_0 * temp[0] + zeta_1 * temp[1] + zeta_2 * temp[2]
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{is_point_inside_triangle, triangle_interpolation, triangle_signed_area};
+    use super::{in_triangle, triangle_coords};
     use plotpy::{Canvas, Plot, PolyCode, Text};
 
     fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
@@ -131,25 +80,48 @@ mod tests {
     }
 
     #[test]
-    #[rustfmt::skip]
-    fn is_point_inside_triangle_works_1() {
-        assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[0.0, 0.0]));
-        assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[1.0, 0.0]));
-        assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[0.0, 1.0]));
-        assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[0.5, 0.5]));
-        assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[0.5, 0.0]));
-        assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[0.0, 0.5]));
-        assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[0.3, 0.3]));
-        assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[1e-15, 1e-15]));
-        // assert!(is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[1e-15, -1e-15])); // imprecision is not accepted
-        assert!(!is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[1.1, 0.0]));
-        assert!(!is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[0.0, 1.1]));
-        assert!(!is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[1.0, 1.0]));
-        assert!(!is_point_inside_triangle(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0], &[-1e-15, -1e-15]));
+    fn triangle_coords_works() {
+        let xa = &[0.0, 0.0];
+        let xb = &[1.0, 0.0];
+        let xc = &[0.0, 1.0];
+        let mut zeta = vec![0.0; 3];
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.0, 0.0]);
+        assert_eq!(zeta, &[1.0, 0.0, 0.0]);
+        triangle_coords(&mut zeta, xa, xb, xc, &[1.0, 0.0]);
+        assert_eq!(zeta, &[0.0, 1.0, 0.0]);
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.0, 1.0]);
+        assert_eq!(zeta, &[0.0, 0.0, 1.0]);
+
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.5, 0.5]);
+        assert_eq!(zeta, &[0.0, 0.5, 0.5]);
+        triangle_coords(&mut zeta, xa, xb, xc, &[1.0, 1.0]);
+        assert_eq!(zeta, &[-1.0, 1.0, 1.0]);
     }
 
     #[test]
-    fn is_point_inside_triangle_works_2() {
+    #[rustfmt::skip]
+    fn in_triangle_works_1() {
+        let xa = &[0.0, 0.0];
+        let xb = &[1.0, 0.0];
+        let xc = &[0.0, 1.0];
+        let mut zeta = vec![0.0; 3];
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.0, 0.0]); assert!(in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[1.0, 0.0]); assert!(in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.0, 1.0]); assert!(in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.5, 0.5]); assert!(in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.5, 0.0]); assert!(in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.0, 0.5]); assert!(in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.3, 0.3]); assert!(in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[1e-15, 1e-15]); assert!(in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[1e-15, -1e-15]); assert!(!in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[1.1, 0.0]); assert!(!in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[0.0, 1.1]); assert!(!in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[1.0, 1.0]); assert!(!in_triangle(&zeta));
+        triangle_coords(&mut zeta, xa, xb, xc, &[-1e-15, -1e-15]); assert!(!in_triangle(&zeta));
+    }
+
+    #[test]
+    fn in_triangle_works_2() {
         #[rustfmt::skip]
         const T: [[[f64; 2]; 3]; 12] = [
             [[0.230951,  0.558482], [0.133721,  0.348832],   [0.540745,  0.331184]],   //  0
@@ -165,15 +137,21 @@ mod tests {
             [[0.578587,  0.760349], [0.903726,  0.975904],   [0.0980015, 0.981755]],   // 10
             [[0.540745,  0.331184], [0.13928,   0.180603],   [0.478554,  0.00869692]], // 11
         ];
+        let mut zeta = vec![0.0; 3];
         for tri in &T {
             for m in 0..3 {
-                assert!(is_point_inside_triangle(&tri[0], &tri[1], &tri[2], &tri[m]));
+                triangle_coords(&mut zeta, &tri[0], &tri[1], &tri[2], &tri[m]);
+                assert!(in_triangle(&zeta));
             }
-            assert!(!is_point_inside_triangle(&tri[0], &tri[1], &tri[2], &[0.1, 0.1]));
-            assert!(!is_point_inside_triangle(&tri[0], &tri[1], &tri[2], &[0.6, 0.2]));
+            triangle_coords(&mut zeta, &tri[0], &tri[1], &tri[2], &[0.1, 0.1]);
+            assert!(!in_triangle(&zeta));
+            triangle_coords(&mut zeta, &tri[0], &tri[1], &tri[2], &[0.6, 0.2]);
+            assert!(!in_triangle(&zeta));
         }
-        assert!(is_point_inside_triangle(&T[0][0], &T[0][1], &T[0][2], &[0.3, 0.4]));
-        assert!(is_point_inside_triangle(&T[8][0], &T[8][1], &T[8][2], &[0.7, 0.7]));
+        triangle_coords(&mut zeta, &T[0][0], &T[0][1], &T[0][2], &[0.3, 0.4]);
+        assert!(in_triangle(&zeta));
+        triangle_coords(&mut zeta, &T[8][0], &T[8][1], &T[8][2], &[0.7, 0.7]);
+        assert!(in_triangle(&zeta));
         // if false {
         //     let mut plot = Plot::new();
         //     draw_triangles(&mut plot, &T);
@@ -186,28 +164,5 @@ mod tests {
         //         .save("/tmp/gemlab/test_is_point_inside_triangle_2.svg")
         //         .unwrap();
         // }
-    }
-
-    #[test]
-    fn triangle_signed_area_works() {
-        assert_eq!(triangle_signed_area(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0]), 0.5);
-        assert_eq!(triangle_signed_area(&[1.0, 0.0], &[0.0, 0.0], &[0.0, 1.0]), -0.5);
-        assert_eq!(triangle_signed_area(&[-1.0, 2.0], &[4.0, -3.0], &[2.0, 3.0]), 10.0);
-        assert_eq!(triangle_signed_area(&[-2.0, 3.0], &[-3.0, -1.0], &[3.0, -2.0]), 12.5);
-    }
-
-    #[test]
-    fn triangle_interpolation_works() {
-        let xa = &[0.0, 0.0];
-        let xb = &[1.5, 0.0];
-        let xc = &[0.0, 1.0];
-        let temp = &[3.0, 2.0, 1.0];
-        assert_eq!(triangle_interpolation(xa, xb, xc, temp, xa), temp[0]);
-        assert_eq!(triangle_interpolation(xa, xb, xc, temp, xb), temp[1]);
-        assert_eq!(triangle_interpolation(xa, xb, xc, temp, xc), temp[2]);
-        assert_eq!(
-            triangle_interpolation(xa, xb, xc, temp, &[1.0 / 2.0, 1.0 / 4.0]),
-            13.0 / 6.0
-        );
     }
 }

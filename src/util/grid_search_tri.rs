@@ -1,5 +1,5 @@
 use super::{calc_container_key, AsArray2D, GS_DEFAULT_BORDER_TOL, GS_DEFAULT_TOLERANCE};
-use crate::geometry::{is_point_inside_triangle, triangle_interpolation};
+use crate::geometry::{in_triangle, triangle_coords};
 use crate::mesh::CellId;
 use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
@@ -274,6 +274,7 @@ impl GridSearchTri {
         let mut xa = vec![0.0; NDIM];
         let mut xb = vec![0.0; NDIM];
         let mut xc = vec![0.0; NDIM];
+        let mut zeta = vec![0.0; 3]; // 3 triangle coords
 
         // check if the point is in a large triangle
         for cell_id in &self.large_triangles {
@@ -292,9 +293,10 @@ impl GridSearchTri {
                 xc[i] = coordinates.at(c, i);
             }
             if outside_bbox {
-                continue; // don't even bother calling is_point_inside_triangle
+                continue; // don't even bother calling in_triangle
             }
-            if is_point_inside_triangle(&xa, &xb, &xc, x) {
+            triangle_coords(&mut zeta, &xa, &xb, &xc, x);
+            if in_triangle(&zeta) {
                 return Ok(Some(*cell_id));
             }
         }
@@ -323,9 +325,10 @@ impl GridSearchTri {
                 xc[i] = coordinates.at(c, i);
             }
             if outside_bbox {
-                continue; // don't even bother calling is_point_inside_triangle
+                continue; // don't even bother calling in_triangle
             }
-            if is_point_inside_triangle(&xa, &xb, &xc, x) {
+            triangle_coords(&mut zeta, &xa, &xb, &xc, x);
+            if in_triangle(&zeta) {
                 return Ok(Some(*cell_id));
             }
         }
@@ -379,6 +382,7 @@ impl GridSearchTri {
         let mut xb = vec![0.0; NDIM];
         let mut xc = vec![0.0; NDIM];
         let mut temp = vec![0.0; 3]; // 3 nodes
+        let mut zeta = vec![0.0; 3]; // 3 triangle coords
 
         // check if the point is in a large triangle
         for cell_id in &self.large_triangles {
@@ -397,14 +401,14 @@ impl GridSearchTri {
                 xc[i] = coordinates.at(c, i);
             }
             if outside_bbox {
-                continue; // don't even bother calling is_point_inside_triangle
+                continue; // don't even bother calling in_triangle
             }
-            if is_point_inside_triangle(&xa, &xb, &xc, x) {
+            triangle_coords(&mut zeta, &xa, &xb, &xc, x);
+            if in_triangle(&zeta) {
                 temp[0] = coordinates.at(a, 2);
                 temp[1] = coordinates.at(b, 2);
                 temp[2] = coordinates.at(c, 2);
-                let res = triangle_interpolation(&xa, &xb, &xc, &temp, x);
-                return Ok(Some(res));
+                return Ok(Some(zeta[0] * temp[0] + zeta[1] * temp[1] + zeta[2] * temp[2]));
             }
         }
 
@@ -432,14 +436,14 @@ impl GridSearchTri {
                 xc[i] = coordinates.at(c, i);
             }
             if outside_bbox {
-                continue; // don't even bother calling is_point_inside_triangle
+                continue; // don't even bother calling in_triangle
             }
-            if is_point_inside_triangle(&xa, &xb, &xc, x) {
+            triangle_coords(&mut zeta, &xa, &xb, &xc, x);
+            if in_triangle(&zeta) {
                 temp[0] = coordinates.at(a, 2);
                 temp[1] = coordinates.at(b, 2);
                 temp[2] = coordinates.at(c, 2);
-                let res = triangle_interpolation(&xa, &xb, &xc, &temp, x);
-                return Ok(Some(res));
+                return Ok(Some(zeta[0] * temp[0] + zeta[1] * temp[1] + zeta[2] * temp[2]));
             }
         }
 
