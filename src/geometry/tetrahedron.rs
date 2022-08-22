@@ -43,16 +43,29 @@ pub fn tetrahedron_coords(zeta: &mut [f64], xa: &[f64], xb: &[f64], xc: &[f64], 
         / v6;
 }
 
+/// Indicates if a point is inside a tetrahedron by looking at its tetrahedron coordinates (zeta)
+///
+/// Note: the point is inside (or on a face) if all zeta are positive (or zero)
+#[inline]
+pub fn in_tetrahedron(zeta: &[f64]) -> bool {
+    for v in zeta {
+        if *v < 0.0 {
+            return false;
+        }
+    }
+    return true;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::tetrahedron_coords;
+    use super::{in_tetrahedron, tetrahedron_coords};
     use crate::util::ONE_BY_3;
     use russell_chk::assert_vec_approx_eq;
 
     #[test]
-    fn tet_nat_coords_works() {
+    fn tetrahedron_coords_works() {
         let xa = &[0.0, 0.0, 0.0];
         let xb = &[1.0, 0.0, 0.0];
         let xc = &[0.0, 1.0, 0.0];
@@ -75,5 +88,14 @@ mod tests {
         assert_eq!(zeta, &[-2.0, 1.0, 1.0, 1.0]);
         tetrahedron_coords(&mut zeta, xa, xb, xc, xd, &[ONE_BY_3, ONE_BY_3, ONE_BY_3]);
         assert_vec_approx_eq!(zeta, &[0.0, ONE_BY_3, ONE_BY_3, ONE_BY_3], 1e-15);
+    }
+
+    #[test]
+    fn in_tetrahedron_works() {
+        assert_eq!(in_tetrahedron(&[-1.0, 0.0, 0.0, 0.0]), false);
+        assert_eq!(in_tetrahedron(&[0.0, -1.0, 0.0, 0.0]), false);
+        assert_eq!(in_tetrahedron(&[0.0, 0.0, -1.0, 0.0]), false);
+        assert_eq!(in_tetrahedron(&[0.0, 0.0, 0.0, -1.0]), false);
+        assert_eq!(in_tetrahedron(&[0.0, 0.0, 0.0, 0.0]), true);
     }
 }
