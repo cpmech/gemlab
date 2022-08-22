@@ -48,12 +48,11 @@ pub fn tetrahedron_coords(zeta: &mut [f64], xa: &[f64], xb: &[f64], xc: &[f64], 
 /// Note: the point is inside (or on a face) if all zeta are positive (or zero)
 #[inline]
 pub fn in_tetrahedron(zeta: &[f64]) -> bool {
-    for v in zeta {
-        if *v < 0.0 {
-            return false;
-        }
+    if zeta[0] < 0.0 || zeta[1] < 0.0 || zeta[2] < 0.0 || zeta[3] < 0.0 {
+        false
+    } else {
+        true
     }
-    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
