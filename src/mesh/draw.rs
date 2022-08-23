@@ -164,7 +164,7 @@ fn add_curve(
 
 /// Draws cell
 #[rustfmt::skip]
-fn draw_cell(
+pub fn draw_cell(
     canvas: &mut Canvas,
     mesh: &Mesh,
     cell_kind: GeoKind,
