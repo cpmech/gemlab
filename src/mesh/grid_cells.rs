@@ -1,4 +1,4 @@
-use super::{draw_cell, Mesh};
+use super::{draw_cell, Cell, Mesh};
 use crate::util::calc_container_key;
 use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
@@ -214,6 +214,9 @@ impl<'a> GridCells<'a> {
         // insert (not large) cells into containers
         let mut containers = HashMap::new();
         for cell_id in 0..ncell {
+            if large_cells.contains(&cell_id) {
+                continue; // skip large cells
+            }
             let x_min_max = &bounding_boxes[cell_id];
             for r in 0..N_MIN_MAX {
                 for s in 0..N_MIN_MAX {
@@ -268,19 +271,58 @@ impl<'a> GridCells<'a> {
 
     /// Draws grid and items
     pub fn draw(&self, plot: &mut Plot, with_ids: bool) -> Result<(), StrError> {
-        // draw cells
+        // define function to draw ids
+        let mut ids = Text::new();
+        ids.set_color("#f16100");
+        let ndim = self.mesh.ndim;
+        let mut xcen = vec![0.0; ndim];
+        let mut draw_ids = |cell: &Cell| {
+            let txt = format!("{}", cell.id);
+            for m in 0..cell.points.len() {
+                let x = &self.mesh.points[cell.points[m]].coords;
+                for i in 0..ndim {
+                    if m == 0 {
+                        xcen[i] = x[i];
+                    } else {
+                        xcen[i] += x[i];
+                    }
+                }
+            }
+            for i in 0..ndim {
+                xcen[i] /= cell.points.len() as f64;
+            }
+            if ndim == 2 {
+                ids.draw(xcen[0], xcen[1], &txt);
+            } else {
+                ids.draw_3d(xcen[0], xcen[1], xcen[2], &txt);
+            }
+        };
+
+        // draw cells and ids
         let mut canvas_cells = Canvas::new();
-        let color = "#fefddc";
-        let color_large = "#fffca3";
-        canvas_cells.set_face_color(color).set_edge_color("#fcb827");
+        canvas_cells.set_edge_color("#fcb827").set_face_color("#fefddc");
         let mut pads = HashMap::new();
         for container in self.containers.values() {
             for cell_id in container {
                 let cell = &self.mesh.cells[*cell_id];
                 draw_cell(&mut canvas_cells, self.mesh, cell.kind, &cell.points, &mut pads)?;
+                if with_ids {
+                    draw_ids(cell);
+                }
+            }
+        }
+        canvas_cells.set_face_color("#fffca3");
+        for cell_id in &self.large_cells {
+            let cell = &self.mesh.cells[*cell_id];
+            draw_cell(&mut canvas_cells, self.mesh, cell.kind, &cell.points, &mut pads)?;
+            if with_ids {
+                draw_ids(cell);
             }
         }
         plot.add(&canvas_cells);
+        if with_ids {
+            plot.add(&ids);
+        }
 
         // draw grid
         let ndim = self.mesh.ndim;
@@ -345,28 +387,6 @@ impl<'a> GridCells<'a> {
             }
         }
         plot.add(&bbox);
-
-        // draw ids
-        if with_ids {
-            let mut ids = Text::new();
-            ids.set_color("#cd0000");
-            let mut xcen = vec![0.0; ndim];
-            for container in self.containers.values() {
-                for cell_id in container {
-                    let x_min_max = &self.bounding_boxes[*cell_id];
-                    let txt = format!("{}", cell_id);
-                    for i in 0..ndim {
-                        xcen[i] = (x_min_max[i][I_MIN] + x_min_max[i][I_MAX]) / 2.0;
-                    }
-                    if ndim == 2 {
-                        ids.draw(xcen[0], xcen[1], &txt);
-                    } else {
-                        ids.draw_3d(xcen[0], xcen[1], xcen[2], &txt);
-                    }
-                }
-            }
-            plot.add(&ids);
-        }
         Ok(())
     }
 
@@ -440,7 +460,7 @@ impl<'a> fmt::Display for GridCells<'a> {
 mod tests {
     use super::GridCells;
     use crate::geometry::{in_triangle, triangle_coords};
-    use crate::mesh::{Cell, Mesh, Point, Samples, GRID_CELLS_TOLERANCE};
+    use crate::mesh::{Cell, Mesh, Point, Samples, GRID_CELLS_BORDER_TOL, GRID_CELLS_TOLERANCE};
     use crate::shapes::GeoKind;
 
     #[allow(unused_imports)]
@@ -675,6 +695,57 @@ mod tests {
         //     plot.set_equal_axes(true)
         //         .set_figure_size_points(600.0, 600.0)
         //         .save("/tmp/gemlab/test_grid_cells_new_works_3.svg")
+        //         .unwrap();
+        // }
+    }
+
+    #[test]
+    fn new_works_large_cells() {
+        let mesh = Samples::tri3_from_delaunay();
+        let grid = GridCells::new(&mesh, None, None, None, None).unwrap();
+        let max_len = mesh.points[1].coords[1] - mesh.points[0].coords[1];
+        let sl = max_len + 2.0 * GRID_CELLS_TOLERANCE; // because the bbox is expanded
+        let g = GRID_CELLS_BORDER_TOL;
+        assert_eq!(grid.side_length, sl);
+        assert_eq!(grid.ndiv, &[2, 2]);
+        assert_eq!(grid.xmin, &[mesh.points[0].coords[0] - g, mesh.points[5].coords[1] - g]);
+        assert_eq!(
+            grid.xmax,
+            &[
+                mesh.points[0].coords[0] - g + sl * 2.0,
+                mesh.points[5].coords[1] - g + sl * 2.0
+            ]
+        );
+        assert_eq!(grid.bounding_boxes.len(), mesh.cells.len());
+        assert_eq!(grid.containers.len(), 4);
+        let bbox_0 = &grid.bounding_boxes[0];
+        assert_eq!(
+            bbox_0,
+            &[
+                [mesh.points[2].coords[0], mesh.points[6].coords[0]],
+                [mesh.points[6].coords[1], mesh.points[4].coords[1]]
+            ]
+        );
+        assert_eq!(
+            format!("{}", grid),
+            "0: [0, 1, 2, 3, 5, 6, 7, 9, 11]\n\
+             1: [6, 7, 9]\n\
+             2: [0, 2, 3, 4, 6, 9]\n\
+             3: [4, 6, 9]\n\
+             large_cells = [8, 10]\n\
+             ncell = 12\n\
+             ncontainer = 4\n\
+             ndiv = [2, 2]\n"
+        );
+        let mut plot = Plot::new();
+        grid.draw(&mut plot, true).unwrap();
+        // if true {
+        //     plot.set_equal_axes(true)
+        //         .grid_and_labels("x", "y")
+        //         .set_ticks_x(0.1, 0.0, "")
+        //         .set_ticks_y(0.1, 0.0, "")
+        //         .set_figure_size_points(600.0, 600.0)
+        //         .save("/tmp/gemlab/test_grid_cells_new_works_large_cells.svg")
         //         .unwrap();
         // }
     }

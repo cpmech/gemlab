@@ -1676,6 +1676,42 @@ impl Samples {
             ],
         }
     }
+
+    /// Returns a mesh of resulting from a Delaunay triangulations
+    ///
+    /// ![tri3_from_delaunay](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_tri3_from_delaunay.svg)
+    #[rustfmt::skip]
+    pub fn tri3_from_delaunay() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, coords: vec![0.0307942, 0.459123  ] },
+                Point { id: 1, coords: vec![0.0980015, 0.981755  ] },
+                Point { id: 2, coords: vec![0.133721,  0.348832  ] },
+                Point { id: 3, coords: vec![0.13928,   0.180603  ] },
+                Point { id: 4, coords: vec![0.230951,  0.558482  ] },
+                Point { id: 5, coords: vec![0.478554,  0.00869692] },
+                Point { id: 6, coords: vec![0.540745,  0.331184  ] },
+                Point { id: 7, coords: vec![0.578587,  0.760349  ] },
+                Point { id: 8, coords: vec![0.648071,  0.369534  ] },
+                Point { id: 9, coords: vec![0.903726,  0.975904  ] },
+            ],
+            cells: vec![
+                Cell { id:  0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![4, 2, 6] },
+                Cell { id:  1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![3, 2, 0] },
+                Cell { id:  2, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 4, 1] }, // << large on y
+                Cell { id:  3, attribute_id: 1, kind: GeoKind::Tri3, points: vec![4, 0, 2] },
+                Cell { id:  4, attribute_id: 1, kind: GeoKind::Tri3, points: vec![1, 4, 7] },
+                Cell { id:  5, attribute_id: 1, kind: GeoKind::Tri3, points: vec![2, 3, 6] },
+                Cell { id:  6, attribute_id: 1, kind: GeoKind::Tri3, points: vec![6, 7, 4] },
+                Cell { id:  7, attribute_id: 1, kind: GeoKind::Tri3, points: vec![6, 5, 8] },
+                Cell { id:  8, attribute_id: 1, kind: GeoKind::Tri3, points: vec![7, 8, 9] }, // << very large
+                Cell { id:  9, attribute_id: 1, kind: GeoKind::Tri3, points: vec![8, 7, 6] },
+                Cell { id: 10, attribute_id: 1, kind: GeoKind::Tri3, points: vec![7, 9, 1] }, // << very large
+                Cell { id: 11, attribute_id: 1, kind: GeoKind::Tri3, points: vec![6, 3, 5] },
+            ],
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1893,5 +1929,12 @@ mod tests {
         assert_eq!(mesh.cells.len(), 8);
         check_all(&mesh).unwrap();
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_ring_eight_qua8_rad1_thick1.svg").unwrap();
+
+        let mesh = Samples::tri3_from_delaunay();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 10);
+        assert_eq!(mesh.cells.len(), 12);
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_tri3_from_delaunay.svg").unwrap();
     }
 }
