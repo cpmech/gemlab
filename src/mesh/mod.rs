@@ -7,9 +7,6 @@
 //! A [Mesh] is composed of [Point]s and [Cell]s whereas the secondary features are [Edge]
 //! and [Face]. The structure [Features] holds the (secondary) features.
 //!
-//! The structure [Region] holds a [Mesh], [Features], [Find], and optionally collections
-//! of edges and faces that can be used for computing neighbors.
-//!
 //! Below are some example of [Cell]s, classified according to [super::shapes::GeoClass].
 //! The numbers are the local numbers of the cell points (nodes).
 //!
@@ -42,6 +39,7 @@ mod features;
 mod find;
 mod generators;
 mod generators_tri;
+mod grid_cells;
 mod helpers;
 mod join_meshes;
 mod mesh;
@@ -54,6 +52,7 @@ pub use crate::mesh::features::*;
 pub use crate::mesh::find::*;
 pub use crate::mesh::generators::*;
 pub use crate::mesh::generators_tri::*;
+pub use crate::mesh::grid_cells::*;
 pub use crate::mesh::helpers::*;
 pub use crate::mesh::join_meshes::*;
 pub use crate::mesh::mesh::*;

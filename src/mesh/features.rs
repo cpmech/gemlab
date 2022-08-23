@@ -242,7 +242,7 @@ impl Features {
     /// # Notes
     ///
     /// * The points of rods or shells are only extracted when either the All or Boundary option is selected
-    /// * You may want to call [check_all()] to capture (some) errors of the mesh first
+    /// * You may want to call [super::check_all()] to capture (some) errors of the mesh first
     ///
     /// # Panics
     ///
