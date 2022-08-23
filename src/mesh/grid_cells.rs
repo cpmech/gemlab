@@ -1,4 +1,6 @@
 use super::{draw_cell, Cell, Mesh};
+use crate::geometry::{in_tetrahedron, in_triangle, tetrahedron_coords, triangle_coords};
+use crate::shapes::GeoKind;
 use crate::util::calc_container_key;
 use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
@@ -247,21 +249,84 @@ impl<'a> GridCells<'a> {
         })
     }
 
-    /// Find the cell (e.g., triangle or tetrahedron) where the given coordinate falls in
-    ///
-    /// # Output
-    ///
-    /// * Returns the CellId or None if no cell contains the point
+    /// Checks whether point is in cell or not
+    fn in_cell(&self, ksi_or_zeta: &mut [f64], x: &[f64], cell_id: CellId) -> bool {
+        let x_min_max = &self.bounding_boxes[cell_id];
+        for i in 0..self.mesh.ndim {
+            if x[i] < x_min_max[i][I_MIN] || x[i] > x_min_max[i][I_MAX] {
+                return false; // outside the bounding box
+            }
+        }
+        let cell = &self.mesh.cells[cell_id];
+        if cell.kind == GeoKind::Tri3 {
+            let xa = &self.mesh.points[cell.points[0]].coords;
+            let xb = &self.mesh.points[cell.points[1]].coords;
+            let xc = &self.mesh.points[cell.points[2]].coords;
+            triangle_coords(ksi_or_zeta, xa, xb, xc, x);
+            return in_triangle(&ksi_or_zeta);
+        }
+        if cell.kind == GeoKind::Tet4 {
+            let xa = &self.mesh.points[cell.points[0]].coords;
+            let xb = &self.mesh.points[cell.points[1]].coords;
+            let xc = &self.mesh.points[cell.points[2]].coords;
+            let xd = &self.mesh.points[cell.points[3]].coords;
+            tetrahedron_coords(ksi_or_zeta, xa, xb, xc, xd, x);
+            return in_tetrahedron(&ksi_or_zeta);
+        }
+        return false; // TODO
+    }
+
+    /// Finds the cell where the given point falls in
     ///
     /// # Input
     ///
-    /// * `in_cell` is a function(cell_id, x) that tells whether the point is in the cell or not.
-    ///     - If None and the cells are Triangle of Tetrahedron, the proper function is selected automatically
-    pub fn find_cell<F>(&self, _x: &[f64], _in_cell: Option<F>) -> Result<Option<CellId>, StrError>
-    where
-        F: Fn(usize, &[f64]) -> Result<bool, StrError>,
-    {
-        Err("")
+    /// * `x` -- (ndim) the point coordinates
+    ///
+    /// # Output
+    ///
+    /// * `ksi_or_zeta` -- (len = 4) If Tri3 or Tet4, returns zeta; Otherwise returns ksi.
+    ///   `ksi` are the natural coordinates (ndim) and `zeta` are the triangle/tetrahedron coordinates (ndim+1)
+    /// * returns the index of the cell or None if no cell contains the point
+    pub fn find(&self, ksi_or_zeta: &mut [f64], x: &[f64]) -> Result<Option<CellId>, StrError> {
+        // check
+        if ksi_or_zeta.len() != 4 {
+            return Err("length of ksi_or_zeta must be equal to 4");
+        }
+        if x.len() != self.mesh.ndim {
+            return Err("length of x must be equal to ndim");
+        }
+
+        // check if the point is out-of-bounds
+        let ndim = self.mesh.ndim;
+        for i in 0..ndim {
+            if x[i] < self.xmin[i] || x[i] > self.xmax[i] {
+                return Err("given point coordinates are outside the grid");
+            }
+        }
+
+        // check if the point is in a large cell
+        for cell_id in &self.large_cells {
+            if self.in_cell(ksi_or_zeta, x, *cell_id) {
+                return Ok(Some(*cell_id));
+            }
+        }
+
+        // get the container where `x` falls in
+        let key = calc_container_key(ndim, self.side_length, &self.ndiv, &self.xmin, x);
+        let container = match self.containers.get(&key) {
+            Some(c) => c,
+            None => return Ok(None), // no container with triangles in it
+        };
+
+        // find the triangle where the point falls in
+        for cell_id in container {
+            if self.in_cell(ksi_or_zeta, x, *cell_id) {
+                return Ok(Some(*cell_id));
+            }
+        }
+
+        // not found
+        Ok(None)
     }
 
     /// Returns the grid limits (xmin,xmax)
@@ -459,7 +524,6 @@ impl<'a> fmt::Display for GridCells<'a> {
 #[cfg(test)]
 mod tests {
     use super::GridCells;
-    use crate::geometry::{in_triangle, triangle_coords};
     use crate::mesh::{Cell, Mesh, Point, Samples, GRID_CELLS_BORDER_TOL, GRID_CELLS_TOLERANCE};
     use crate::shapes::GeoKind;
 
@@ -648,19 +712,7 @@ mod tests {
 
     #[test]
     fn new_works_3() {
-        #[rustfmt::skip]
-        let mesh = Mesh {
-            ndim: 3,
-            points: vec![
-                Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
-                Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
-                Point { id: 2, coords: vec![0.0, 1.0, 0.0] },
-                Point { id: 3, coords: vec![0.0, 0.0, 1.0] },
-            ],
-            cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tet4, points: vec![0, 1, 2, 3] },
-            ],
-        };
+        let mesh = Samples::one_tet4();
         let tolerance = 1e-3;
         let border_tol = 0.1;
         let grid = GridCells::new(&mesh, Some(tolerance), Some(border_tol), None, None).unwrap();
@@ -746,6 +798,148 @@ mod tests {
         //         .set_ticks_y(0.1, 0.0, "")
         //         .set_figure_size_points(600.0, 600.0)
         //         .save("/tmp/gemlab/test_grid_cells_new_works_large_cells.svg")
+        //         .unwrap();
+        // }
+    }
+
+    #[test]
+    fn find_works_1() {
+        let mesh = Samples::three_tri3();
+        let grid = GridCells::new(&mesh, None, None, None, None).unwrap();
+        assert_eq!(
+            format!("{}", grid),
+            "0: [0, 1, 2]\n\
+             1: [1, 2]\n\
+             large_cells = []\n\
+             ncell = 3\n\
+             ncontainer = 2\n\
+             ndiv = [2, 1]\n"
+        );
+        let mut ksi_or_zeta = vec![0.0; 4];
+
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.0, 0.2]).unwrap(), Some(0));
+        assert_eq!(ksi_or_zeta, &[1.0, 0.0, 0.0, 0.0]);
+
+        match grid.find(&mut ksi_or_zeta, &[1.2, 0.0]).unwrap() {
+            Some(cell_id) => match cell_id {
+                0 => assert_eq!(ksi_or_zeta, &[0.0, 1.0, 0.0, 0.0]),
+                1 => assert_eq!(ksi_or_zeta, &[1.0, 0.0, 0.0, 0.0]),
+                2 => assert_eq!(ksi_or_zeta, &[1.0, 0.0, 0.0, 0.0]),
+                _ => panic!("found wrong cell_id"),
+            },
+            None => panic!("cannot find cell_id"),
+        }
+
+        // if true {
+        //     let mut plot = Plot::new();
+        //     grid.draw(&mut plot, true).unwrap();
+        //     plot.set_equal_axes(true)
+        //         .grid_and_labels("x", "y")
+        //         .set_ticks_x(0.1, 0.0, "")
+        //         .set_ticks_y(0.1, 0.0, "")
+        //         .set_figure_size_points(600.0, 600.0)
+        //         .save("/tmp/gemlab/test_grid_cells_find_works_1.svg")
+        //         .unwrap();
+        // }
+    }
+
+    #[test]
+    fn find_handles_errors() {
+        let mesh = Samples::one_tri3();
+        let grid = GridCells::new(&mesh, None, None, None, None).unwrap();
+        assert_eq!(
+            grid.find(&mut [0.0], &[0.0]).err(),
+            Some("length of ksi_or_zeta must be equal to 4")
+        );
+        assert_eq!(
+            grid.find(&mut [0.0, 0.0, 0.0, 0.0], &[0.0]).err(),
+            Some("length of x must be equal to ndim")
+        );
+        assert_eq!(
+            grid.find(&mut [0.0, 0.0, 0.0, 0.0], &[10.0, 10.0]).err(),
+            Some("given point coordinates are outside the grid")
+        );
+    }
+
+    #[test]
+    fn find_works_2() {
+        let mesh = Samples::tri3_from_delaunay();
+        let grid = GridCells::new(&mesh, None, None, None, None).unwrap();
+        assert_eq!(
+            format!("{}", grid),
+            "0: [0, 1, 2, 3, 5, 6, 7, 9, 11]\n\
+             1: [6, 7, 9]\n\
+             2: [0, 2, 3, 4, 6, 9]\n\
+             3: [4, 6, 9]\n\
+             large_cells = [8, 10]\n\
+             ncell = 12\n\
+             ncontainer = 4\n\
+             ndiv = [2, 2]\n"
+        );
+        let mut ksi_or_zeta = vec![0.0; 4];
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.4, 0.2]).unwrap(), Some(11));
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.6, 0.3]).unwrap(), Some(7));
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.1, 0.7]).unwrap(), Some(2));
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.8, 0.8]).unwrap(), Some(8));
+        let res = grid.find(&mut ksi_or_zeta, &mesh.points[5].coords).unwrap();
+        if res != Some(7) {
+            assert_eq!(res, Some(11));
+        }
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.1, 0.1]).unwrap(), None);
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.6, 0.2]).unwrap(), None);
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.4, 1.0]).unwrap(), None);
+        assert_eq!(
+            grid.find(&mut ksi_or_zeta, &[10.0, 1.0]).err(),
+            Some("given point coordinates are outside the grid")
+        );
+    }
+
+    #[test]
+    fn find_works_3() {
+        let mesh = Samples::one_tet4();
+        let grid = GridCells::new(&mesh, None, None, None, None).unwrap();
+        assert_eq!(
+            format!("{}", grid),
+            "0: [0]\n\
+             1: [0]\n\
+             2: [0]\n\
+             3: [0]\n\
+             4: [0]\n\
+             5: [0]\n\
+             6: [0]\n\
+             7: [0]\n\
+             large_cells = []\n\
+             ncell = 1\n\
+             ncontainer = 8\n\
+             ndiv = [2, 2, 2]\n"
+        );
+        let mut ksi_or_zeta = vec![0.0; 4];
+
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.0, 0.0, 0.0]).unwrap(), Some(0));
+        assert_eq!(ksi_or_zeta, &[1.0, 0.0, 0.0, 0.0]);
+
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[1.0, 0.0, 0.0]).unwrap(), Some(0));
+        assert_eq!(ksi_or_zeta, &[0.0, 1.0, 0.0, 0.0]);
+
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.0, 1.0, 0.0]).unwrap(), Some(0));
+        assert_eq!(ksi_or_zeta, &[0.0, 0.0, 1.0, 0.0]);
+
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.0, 0.0, 1.0]).unwrap(), Some(0));
+        assert_eq!(ksi_or_zeta, &[0.0, 0.0, 0.0, 1.0]);
+
+        assert_eq!(grid.find(&mut ksi_or_zeta, &[1.0, 1.0, 1.0]).ok(), Some(None));
+
+        assert_eq!(
+            grid.find(&mut ksi_or_zeta, &[10.0, 1.0, 1.0]).err(),
+            Some("given point coordinates are outside the grid")
+        );
+
+        // if true {
+        //     let mut plot = Plot::new();
+        //     grid.draw(&mut plot, true).unwrap();
+        //     plot.set_equal_axes(true)
+        //         .set_figure_size_points(600.0, 600.0)
+        //         .save("/tmp/gemlab/test_grid_cells_find_works_3.svg")
         //         .unwrap();
         // }
     }

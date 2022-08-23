@@ -669,6 +669,25 @@ impl Samples {
         }
     }
 
+    /// Returns a mesh with one Tet4
+    ///
+    /// ![one_tet4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_tet4.svg)
+    #[rustfmt::skip]
+    pub fn one_tet4() -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id: 0, coords: vec![0.0, 0.0, 0.0] },
+                Point { id: 1, coords: vec![1.0, 0.0, 0.0] },
+                Point { id: 2, coords: vec![0.0, 1.0, 0.0] },
+                Point { id: 3, coords: vec![0.0, 0.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tet4, points: vec![0, 1, 2, 3] },
+            ],
+        }
+    }
+
     /// Returns a mesh with one Hex8
     ///
     /// ```text
@@ -1831,6 +1850,13 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh).unwrap();
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_qua8_tri6_lin2.svg").unwrap();
+
+        let mesh = Samples::one_tet4();
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 4);
+        assert_eq!(mesh.cells.len(), 1);
+        check_all(&mesh).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_mesh_one_tet4.svg").unwrap();
 
         let mesh = Samples::one_hex8();
         assert_eq!(mesh.ndim, 3);

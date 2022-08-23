@@ -477,19 +477,19 @@ mod tests {
     use plotpy::{Canvas, PolyCode};
 
     // DO NOT DELETE the lines below
-    // fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
-    //     let mut canvas = Canvas::new();
-    //     canvas.set_face_color("#fefddc").set_edge_color("#fcb827");
-    //     for t in 0..triangles.len() {
-    //         canvas.polycurve_begin();
-    //         for m in 0..3 {
-    //             let code = if m == 0 { PolyCode::MoveTo } else { PolyCode::LineTo };
-    //             canvas.polycurve_add(&triangles[t][m][0], &triangles[t][m][1], code);
-    //         }
-    //         canvas.polycurve_end(true);
-    //     }
-    //     plot.add(&canvas);
-    // }
+    fn draw_triangles(plot: &mut Plot, triangles: &[[[f64; 2]; 3]]) {
+        let mut canvas = Canvas::new();
+        canvas.set_face_color("#fefddc").set_edge_color("#fcb827");
+        for t in 0..triangles.len() {
+            canvas.polycurve_begin();
+            for m in 0..3 {
+                let code = if m == 0 { PolyCode::MoveTo } else { PolyCode::LineTo };
+                canvas.polycurve_add(&triangles[t][m][0], &triangles[t][m][1], code);
+            }
+            canvas.polycurve_end(true);
+        }
+        plot.add(&canvas);
+    }
 
     // DO NOT DELETE the lines below
     // fn draw_tetrahedra(plot: &mut Plot, tets: &[[[f64; 3]; 4]]) {
@@ -797,16 +797,16 @@ mod tests {
             grid.find_cell(&[10.0, 1.0], is_in_cell).err(),
             Some("given point coordinates are outside the grid")
         );
-        // let mut plot = Plot::new();
-        // draw_triangles(&mut plot, &TRIS);
-        // grid.draw(&mut plot, true).unwrap();
-        // plot.set_equal_axes(true)
-        //     .set_figure_size_points(600.0, 600.0)
-        //     .grid_and_labels("x", "y")
-        //     .set_ticks_x(0.2, 0.0, "")
-        //     .set_ticks_y(0.2, 0.0, "")
-        //     .save("/tmp/gemlab/test_grid_search_cell_find_works_2d.svg")
-        //     .unwrap();
+        let mut plot = Plot::new();
+        draw_triangles(&mut plot, &TRIS);
+        grid.draw(&mut plot, true).unwrap();
+        plot.set_equal_axes(true)
+            .set_figure_size_points(600.0, 600.0)
+            .grid_and_labels("x", "y")
+            .set_ticks_x(0.2, 0.0, "")
+            .set_ticks_y(0.2, 0.0, "")
+            .save("/tmp/gemlab/test_grid_search_cell_find_works_2d.svg")
+            .unwrap();
     }
 
     #[test]
