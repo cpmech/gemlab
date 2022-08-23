@@ -315,10 +315,10 @@ impl<'a> GridCells<'a> {
         let key = calc_container_key(ndim, self.side_length, &self.ndiv, &self.xmin, x);
         let container = match self.containers.get(&key) {
             Some(c) => c,
-            None => return Ok(None), // no container with triangles in it
+            None => return Ok(None), // no container with cells in it
         };
 
-        // find the triangle where the point falls in
+        // find the cell where the point falls in
         for cell_id in container {
             if self.in_cell(ksi_or_zeta, x, *cell_id) {
                 return Ok(Some(*cell_id));
