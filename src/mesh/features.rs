@@ -17,23 +17,16 @@ pub type EdgeKey = (usize, usize);
 /// "corners" first, the middle points don't matter.
 pub type FaceKey = (usize, usize, usize, usize);
 
-/// Holds the point ids of an edge (an entity belonging to a solid cell in 2D or a face in 3D)
+/// Holds the point ids of an edge or a face
+///
+/// * An edge is an entity belonging to a solid cell in 2D or a face in 3D
+/// * A face is an entity belonging to a solid cell in 3D
 #[derive(Clone, Debug)]
-pub struct Edge {
+pub struct Feature {
     /// Geometry kind
     pub kind: GeoKind,
 
     /// List of points defining this edge; in the right order (unsorted)
-    pub points: Vec<PointId>,
-}
-
-/// Holds the point ids of a face (an entity belonging to a solid cell in 3D)
-#[derive(Clone, Debug)]
-pub struct Face {
-    /// Geometry kind
-    pub kind: GeoKind,
-
-    /// List of points defining this face; in the right order (unsorted)
     pub points: Vec<PointId>,
 }
 
@@ -207,7 +200,7 @@ pub struct Features {
     /// 2. In 3D, a boundary edge belongs to a boundary face
     /// 3. In 2D, an interior edge is such that it is shared by **more** than one 2D cell (1D cells are ignored)
     /// 4. In 3D, an interior edge belongs to an interior face
-    pub edges: HashMap<EdgeKey, Edge>,
+    pub edges: HashMap<EdgeKey, Feature>,
 
     /// Set of faces on the mesh boundary, interior, or both boundary and interior
     ///
@@ -215,7 +208,7 @@ pub struct Features {
     ///
     /// 1. A boundary face is such that it is shared by one 3D cell only (2D cells are ignored)
     /// 2. An interior face is such that it is shared by **more** than one 3D cell (2D cells are ignored)
-    pub faces: HashMap<FaceKey, Face>,
+    pub faces: HashMap<FaceKey, Feature>,
 
     /// The minimum coordinates of the points (space_ndim)
     pub min: Vec<f64>,
@@ -292,23 +285,23 @@ impl Features {
 
 #[cfg(test)]
 mod tests {
-    use super::{Edge, Face};
+    use super::Feature;
     use crate::shapes::GeoKind;
 
     #[test]
     fn derive_works() {
-        let edge = Edge {
+        let edge = Feature {
             kind: GeoKind::Lin3,
             points: vec![10, 20, 33],
         };
-        let face = Face {
+        let face = Feature {
             kind: GeoKind::Qua4,
             points: vec![1, 2, 3, 4],
         };
         let edge_clone = edge.clone();
         let face_clone = face.clone();
-        assert_eq!(format!("{:?}", edge), "Edge { kind: Lin3, points: [10, 20, 33] }");
-        assert_eq!(format!("{:?}", face), "Face { kind: Qua4, points: [1, 2, 3, 4] }");
+        assert_eq!(format!("{:?}", edge), "Feature { kind: Lin3, points: [10, 20, 33] }");
+        assert_eq!(format!("{:?}", face), "Feature { kind: Qua4, points: [1, 2, 3, 4] }");
         assert_eq!(edge_clone.points.len(), 3);
         assert_eq!(face_clone.points.len(), 4);
     }

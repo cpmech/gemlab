@@ -1,4 +1,4 @@
-use super::{Edge, EdgeKey, Face, FaceKey, Features, Mesh, PointId};
+use super::{EdgeKey, FaceKey, Feature, Features, Mesh, PointId};
 use crate::util::GridSearch;
 use crate::StrError;
 use std::collections::{HashMap, HashSet};
@@ -260,7 +260,7 @@ impl<'a> Find<'a> {
     /// Finds edges
     ///
     /// Returns an array such that the edge keys are **sorted**
-    pub fn edges(&self, at: At) -> Result<Vec<&Edge>, StrError> {
+    pub fn edges(&self, at: At) -> Result<Vec<&Feature>, StrError> {
         let results: Result<Vec<_>, _> = self
             .edge_keys(at)?
             .iter()
@@ -277,7 +277,7 @@ impl<'a> Find<'a> {
     /// Finds faces
     ///
     /// Returns an array such that the face keys are **sorted**
-    pub fn faces(&self, at: At) -> Result<Vec<&Face>, StrError> {
+    pub fn faces(&self, at: At) -> Result<Vec<&Feature>, StrError> {
         let results: Result<Vec<_>, _> = self
             .face_keys(at)?
             .iter()
