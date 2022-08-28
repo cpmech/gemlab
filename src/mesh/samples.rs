@@ -640,6 +640,16 @@ impl Samples {
 
     /// Returns a mesh with one Qua8, one Tri6, and two Lin2
     ///
+    /// ```text
+    /// 8------7------6._
+    /// |       [3](3)|  '-.5
+    /// |  [0]        |     '-._
+    /// 9  (1)       10  [1]    '4
+    /// |             |  (2)  .-'
+    /// |       [2](3)|   _.3'
+    /// 0------1------2.-'
+    /// ```
+    ///
     /// ![qua8_tri6_lin2](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_qua8_tri6_lin2.svg)
     #[rustfmt::skip]
     pub fn qua8_tri6_lin2() -> Mesh {
