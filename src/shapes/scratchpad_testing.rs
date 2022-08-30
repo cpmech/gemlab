@@ -82,8 +82,14 @@ pub mod aux {
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = 1.0;
                 map_point_coords(&mut x, &ksi_aux, ksi_min, ksi_del);
+            } else if geo_ndim == 1 && space_ndim == 3 {
+                // CABLE in 3D
+                ksi_aux[0] = ksi[0];
+                ksi_aux[1] = 1.0;
+                ksi_aux[2] = 1.0;
+                map_point_coords(&mut x, &ksi_aux, ksi_min, ksi_del);
             } else {
-                // CABLE or SHELL in 3D
+                // SHELL in 3D
                 ksi_aux[0] = ksi[0];
                 ksi_aux[1] = ksi[1];
                 ksi_aux[2] = 1.0;
@@ -289,6 +295,15 @@ mod tests {
         assert_approx_eq!(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
         assert_approx_eq!(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
         assert_approx_eq!(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+
+        // CABLE in 3D
+        let pad = gen_scratchpad_with_coords(3, GeoKind::Lin2);
+        assert_approx_eq!(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[2][0], aux::ZMAX, 1e-15);
+        assert_approx_eq!(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+        assert_approx_eq!(pad.xxt[2][1], aux::ZMAX, 1e-15);
 
         // SHELL in 3D
         let pad = gen_scratchpad_with_coords(3, GeoKind::Tri3);
