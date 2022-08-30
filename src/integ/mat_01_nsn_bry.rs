@@ -9,9 +9,9 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///       ⌠
-/// Kᵐⁿ = │ Nᵐ s Nⁿ dΩ
+/// Kᵐⁿ = │ Nᵐ s Nⁿ dΓ
 ///       ⌡
-///       Ωₑ
+///       Γₑ
 /// ```
 ///
 /// The numerical integration is:
