@@ -7,10 +7,10 @@ impl Scratchpad {
     ///
     /// **Important:** This function only works with:
     ///
-    /// * `CABLE` case (geo_ndim = 1 and space_ndim = 2) -- e.g., line in 2D, or
-    /// * `SHELL` case (geo_ndim = 2 and space_ndim = 3) -- e.g., surface in 3D.
+    /// * `CABLE` in 2D case (geo_ndim = 1 and space_ndim = 2) -- e.g., line in 2D, or
+    /// * `SHELL` in 3D case (geo_ndim = 2 and space_ndim = 3) -- e.g., surface in 3D.
     ///
-    /// i.e., `geo_ndim < space_ndim`.
+    /// The case `CABLE` in 3D is **not** available because we don't know the direction of the normal vector.
     ///
     /// # Output
     ///
@@ -111,11 +111,14 @@ impl Scratchpad {
     pub fn calc_normal_vector(&mut self, un: &mut Vector, ksi: &[f64]) -> Result<f64, StrError> {
         // check
         let (space_ndim, geo_ndim) = self.jacobian.dims();
-        if geo_ndim >= space_ndim {
-            return Err("calc_normal_vector requires that geo_ndim must be smaller than space_ndim");
+        if space_ndim == 2 && geo_ndim != 1 {
+            return Err("calc_normal_vector requires geo_ndim = 1 in 2D (CABLE in 2D)");
+        }
+        if space_ndim == 3 && geo_ndim != 2 {
+            return Err("calc_normal_vector requires geo_ndim = 2 in 3D (SHELL in 3D)");
         }
         if un.dim() != space_ndim {
-            return Err("n.dim() must be equal to space_ndim");
+            return Err("un.dim() must be equal to space_ndim");
         }
 
         // matrix L: dNᵐ/dξ
@@ -124,7 +127,7 @@ impl Scratchpad {
         // matrix J: dx/dξ
         mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv)?;
 
-        // CABLE: line in 2D (geo_ndim = 1 and self.space_ndim = 2)
+        // CABLE: line in 2D (geo_ndim = 1 and space_ndim = 2)
         //          →
         //         dx
         // g₁(ξ) = —— = Xᵀ · L = first_column(J)
@@ -182,16 +185,21 @@ mod tests {
 
     #[test]
     fn calc_normal_vector_handles_errors() {
-        let mut n = Vector::new(1);
+        let mut un = Vector::new(1);
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         assert_eq!(
-            pad.calc_normal_vector(&mut n, &[0.0, 0.0]).err(),
-            Some("calc_normal_vector requires that geo_ndim must be smaller than space_ndim")
+            pad.calc_normal_vector(&mut un, &[0.0, 0.0]).err(),
+            Some("calc_normal_vector requires geo_ndim = 1 in 2D (CABLE in 2D)")
+        );
+        let mut pad = Scratchpad::new(3, GeoKind::Lin2).unwrap();
+        assert_eq!(
+            pad.calc_normal_vector(&mut un, &[0.0, 0.0]).err(),
+            Some("calc_normal_vector requires geo_ndim = 2 in 3D (SHELL in 3D)")
         );
         let mut pad = Scratchpad::new(3, GeoKind::Tri3).unwrap();
         assert_eq!(
-            pad.calc_normal_vector(&mut n, &[0.0, 0.0]).err(),
-            Some("n.dim() must be equal to space_ndim")
+            pad.calc_normal_vector(&mut un, &[0.0, 0.0]).err(),
+            Some("un.dim() must be equal to space_ndim")
         );
     }
 
