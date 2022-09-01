@@ -73,10 +73,10 @@ pub fn mat_04_nsg<F>(
     jj0: usize,
     clear_kk: bool,
     ips: IntegPointData,
-    fn_s: F,
+    mut fn_s: F,
 ) -> Result<(), StrError>
 where
-    F: Fn(usize) -> Result<f64, StrError>,
+    F: FnMut(usize) -> Result<f64, StrError>,
 {
     // check
     let nnode_b = pad_b.interp.dim();

@@ -63,10 +63,10 @@ pub fn mat_08_ntn<F>(
     jj0: usize,
     clear_kk: bool,
     ips: IntegPointData,
-    fn_tt: F,
+    mut fn_tt: F,
 ) -> Result<(), StrError>
 where
-    F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2, usize) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();

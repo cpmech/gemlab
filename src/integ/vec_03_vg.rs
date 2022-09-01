@@ -90,10 +90,10 @@ pub fn vec_03_vg<F>(
     ii0: usize,
     clear_c: bool,
     ips: IntegPointData,
-    fn_w: F,
+    mut fn_w: F,
 ) -> Result<(), StrError>
 where
-    F: Fn(&mut Vector, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();

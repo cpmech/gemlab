@@ -98,10 +98,10 @@ pub fn vec_04_tg<F>(
     ii0: usize,
     clear_d: bool,
     ips: IntegPointData,
-    fn_sig: F,
+    mut fn_sig: F,
 ) -> Result<(), StrError>
 where
-    F: Fn(&mut Tensor2, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2, usize) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();

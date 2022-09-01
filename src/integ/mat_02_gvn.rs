@@ -56,10 +56,10 @@ pub fn mat_02_gvn<F>(
     jj0: usize,
     clear_kk: bool,
     ips: IntegPointData,
-    fn_v: F,
+    mut fn_v: F,
 ) -> Result<(), StrError>
 where
-    F: Fn(&mut Vector, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();

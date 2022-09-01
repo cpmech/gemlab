@@ -125,10 +125,10 @@ pub fn mat_10_gdg<F>(
     jj0: usize,
     clear_kk: bool,
     ips: IntegPointData,
-    fn_dd: F,
+    mut fn_dd: F,
 ) -> Result<(), StrError>
 where
-    F: Fn(&mut Tensor4, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor4, usize) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();

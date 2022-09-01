@@ -76,10 +76,10 @@ pub fn mat_06_nvn<F>(
     jj0: usize,
     clear_kk: bool,
     ips: IntegPointData,
-    fn_v: F,
+    mut fn_v: F,
 ) -> Result<(), StrError>
 where
-    F: Fn(&mut Vector, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize) -> Result<(), StrError>,
 {
     // check
     let nnode_b = pad_b.interp.dim();

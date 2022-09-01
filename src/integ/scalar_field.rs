@@ -28,9 +28,9 @@ use crate::StrError;
 /// # Output
 ///
 /// * Returns `I`, the result of integration.
-pub fn scalar_field<F>(pad: &mut Scratchpad, ips: IntegPointData, fn_s: F) -> Result<f64, StrError>
+pub fn scalar_field<F>(pad: &mut Scratchpad, ips: IntegPointData, mut fn_s: F) -> Result<f64, StrError>
 where
-    F: Fn(usize) -> Result<f64, StrError>,
+    F: FnMut(usize) -> Result<f64, StrError>,
 {
     // result from integration
     let mut ii = 0.0;
