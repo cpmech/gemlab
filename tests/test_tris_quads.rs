@@ -62,7 +62,7 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
 
     // find points
-    let find = Find::new(&mesh, &features)?;
+    let find = Find::new(&mesh, None);
     let points = find.point_ids(At::X(0.0))?;
     assert_eq!(&points, &[0, 1, 2, 3, 4, 5, 6]);
     let points = find.point_ids(At::X(1.0))?;
@@ -106,7 +106,7 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-17).expect("ok");
 
     // find edges
-    let find = Find::new(&mesh, &features)?;
+    let find = Find::new(&mesh, None);
     let edges = find.edge_keys(At::X(0.0))?;
     assert_eq!(&edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
     let edges = find.edge_keys(At::X(4.0))?;

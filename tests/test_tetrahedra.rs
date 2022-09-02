@@ -75,7 +75,7 @@ fn test_tetrahedra() -> Result<(), StrError> {
     check_face_normals(&mesh, &features.faces, &solutions, 1e-15).expect("ok");
 
     // find points
-    let find = Find::new(&mesh, &features)?;
+    let find = Find::new(&mesh, None);
     let points = find.point_ids(At::X(0.0))?;
     assert_eq!(&points, &[0, 3, 4, 7]);
     let points = find.point_ids(At::Y(2.0))?;
