@@ -55,7 +55,8 @@ use russell_tensor::Tensor4;
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_dd` -- Function f(D,p) that computes `D(x(ιᵖ))`
+/// * `fn_dd` -- Function f(D,p,G) that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`
+///   and gradients G(ιᵖ). `D` is **minor-symmetric** and set for `space_ndim`.
 ///
 /// # Examples
 ///
@@ -94,7 +95,7 @@ use russell_tensor::Tensor4;
 ///     let nrow = pad.kind.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let ips = integ::default_points(pad.kind);
-///     integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+///     integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _| {
 ///         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
 ///     })?;
 ///
@@ -128,7 +129,7 @@ pub fn mat_10_gdg<F>(
     mut fn_dd: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor4, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor4, usize, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -155,10 +156,11 @@ where
         let weight = ips[p][3];
 
         // calculate Jacobian and Gradient
-        let det_jac = pad.calc_gradient(iota)?;
+        let det_jac = pad.calc_gradient(iota)?; // G
 
         // calculate D tensor
-        fn_dd(&mut dd, p)?;
+        let gg = &pad.gradient;
+        fn_dd(&mut dd, p, gg)?;
 
         // add contribution to K matrix
         let c = det_jac * weight;
@@ -217,22 +219,25 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _| Ok(())).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _| Err(
+                "stop"
+            ))
+            .err(),
             Some("stop")
         );
     }
@@ -276,7 +281,7 @@ mod tests {
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = integ::points(class, 1).unwrap();
-        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _| {
             let in_array = model.get_modulus().mat.as_data();
             let out_array = dd.mat.as_mut_data();
             for i in 0..in_array.len() {
@@ -310,7 +315,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _| {
                 let in_array = model.get_modulus().mat.as_data();
                 let out_array = dd.mat.as_mut_data();
                 for i in 0..in_array.len() {
@@ -349,7 +354,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _| {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();

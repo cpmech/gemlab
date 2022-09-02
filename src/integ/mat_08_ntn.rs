@@ -2,7 +2,7 @@ use super::IntegPointData;
 use crate::shapes::Scratchpad;
 use crate::util::SQRT_2;
 use crate::StrError;
-use russell_lab::Matrix;
+use russell_lab::{Matrix, Vector};
 use russell_tensor::Tensor2;
 
 /// Implements the shape(N) times tensor(T) times shape(N) integration case 08 (e.g., mass matrix)
@@ -55,7 +55,8 @@ use russell_tensor::Tensor2;
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_tt` -- Function `f(T,p)` that computes `T(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_tt` -- Function `f(T,p,N,G)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients G(ιᵖ). `T` is set for `space_ndim`.
 pub fn mat_08_ntn<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
@@ -66,7 +67,7 @@ pub fn mat_08_ntn<F>(
     mut fn_tt: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -94,15 +95,16 @@ where
         let weight = ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota);
-        let det_jac = pad.calc_gradient(iota)?;
+        (pad.fn_interp)(&mut pad.interp, iota); // N
+        let det_jac = pad.calc_gradient(iota)?; // G
 
         // calculate T tensor
-        fn_tt(&mut tt, p)?;
+        let nn = &pad.interp;
+        let gg = &pad.gradient;
+        fn_tt(&mut tt, p, nn, gg)?;
 
         // add contribution to K matrix
         let c = det_jac * weight;
-        let nn = &pad.interp;
         let t = &tt.vec;
         if space_ndim == 2 {
             for m in 0..nnode {
@@ -150,22 +152,25 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _, _| Ok(())).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _, _| Err(
+                "stop"
+            ))
+            .err(),
             Some("stop")
         );
     }
@@ -183,7 +188,7 @@ mod tests {
         let selection: Vec<_> = [3, 6].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _, _, _| {
                 tt.sym_set(0, 0, rho);
                 tt.sym_set(1, 1, rho);
                 Ok(())
@@ -212,7 +217,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _, _, _| {
                 copy_vector(&mut tt.vec, &sig.vec)
             })
             .unwrap();

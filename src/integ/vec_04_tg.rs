@@ -2,7 +2,7 @@ use super::IntegPointData;
 use crate::shapes::Scratchpad;
 use crate::util::SQRT_2;
 use crate::StrError;
-use russell_lab::Vector;
+use russell_lab::{Matrix, Vector};
 use russell_tensor::Tensor2;
 
 /// Implements the tensor(T) dot gradient(G) integration case 04
@@ -52,7 +52,8 @@ use russell_tensor::Tensor2;
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `clear_d` -- Fills `d` vector with zeros, otherwise accumulate values into `d`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_sig` -- Function `f(sig,p)` that computes `σ(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_sig` -- Function `f(sig,p,G)` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   and the gradients G(ιᵖ). `T` is set for `space_ndim`.
 ///
 /// # Examples
 ///
@@ -74,7 +75,7 @@ use russell_tensor::Tensor2;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _| {
+///     integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
 ///         sig.sym_set(0, 1, 3.0);
@@ -101,7 +102,7 @@ pub fn vec_04_tg<F>(
     mut fn_sig: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2, usize, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -125,25 +126,25 @@ where
         let weight = ips[index][3];
 
         // calculate Jacobian and Gradient
-        let det_jac = pad.calc_gradient(iota)?;
+        let det_jac = pad.calc_gradient(iota)?; // G
 
         // calculate σ tensor
-        fn_sig(&mut sig, index)?;
+        let gg = &pad.gradient;
+        fn_sig(&mut sig, index, gg)?;
 
         // add contribution to d vector
         let coef = det_jac * weight;
-        let g = &pad.gradient;
         let t = &sig.vec;
         if space_ndim == 2 {
             for m in 0..nnode {
-                d[ii0 + 0 + m * 2] += coef * (t[0] * g[m][0] + t[3] * g[m][1] / s);
-                d[ii0 + 1 + m * 2] += coef * (t[3] * g[m][0] / s + t[1] * g[m][1]);
+                d[ii0 + 0 + m * 2] += coef * (t[0] * gg[m][0] + t[3] * gg[m][1] / s);
+                d[ii0 + 1 + m * 2] += coef * (t[3] * gg[m][0] / s + t[1] * gg[m][1]);
             }
         } else {
             for m in 0..nnode {
-                d[ii0 + 0 + m * 3] += coef * (t[0] * g[m][0] + t[3] * g[m][1] / s + t[5] * g[m][2] / s);
-                d[ii0 + 1 + m * 3] += coef * (t[3] * g[m][0] / s + t[1] * g[m][1] + t[4] * g[m][2] / s);
-                d[ii0 + 2 + m * 3] += coef * (t[5] * g[m][0] / s + t[4] * g[m][1] / s + t[2] * g[m][2]);
+                d[ii0 + 0 + m * 3] += coef * (t[0] * gg[m][0] + t[3] * gg[m][1] / s + t[5] * gg[m][2] / s);
+                d[ii0 + 1 + m * 3] += coef * (t[3] * gg[m][0] / s + t[1] * gg[m][1] + t[4] * gg[m][2] / s);
+                d[ii0 + 2 + m * 3] += coef * (t[5] * gg[m][0] / s + t[4] * gg[m][1] / s + t[2] * gg[m][2]);
             }
         }
     }
@@ -165,7 +166,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut d = Vector::new(4);
         assert_eq!(
-            integ::vec_04_tg(&mut d, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
+            integ::vec_04_tg(&mut d, &mut pad, 1, false, &[], |_, _, _| Ok(())).err(),
             Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -199,7 +200,7 @@ mod tests {
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _| {
+            integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -239,7 +240,7 @@ mod tests {
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _| {
+            integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _, _| {
                 copy_vector(&mut sig.vec, &tt.vec)
             })
             .unwrap();

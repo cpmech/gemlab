@@ -1,7 +1,7 @@
 use super::IntegPointData;
 use crate::shapes::Scratchpad;
 use crate::StrError;
-use russell_lab::Vector;
+use russell_lab::{Matrix, Vector};
 
 /// Implements the vector(V) dot gradient(G) integration case 03
 ///
@@ -43,8 +43,8 @@ use russell_lab::Vector;
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `clear_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_w` -- Function `f(w,p)` that computes `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`.
-///    The dim of `w` is equal to `space_ndim`.
+/// * `fn_w` -- Function `f(w,p,G)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   and gradients G(ιᵖ). `w.dim() = space_ndim`.
 ///
 /// # Examples
 ///
@@ -68,7 +68,7 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
+///     integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
 ///         Ok(())
@@ -93,7 +93,7 @@ pub fn vec_03_vg<F>(
     mut fn_w: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -119,18 +119,18 @@ where
         let det_jac = pad.calc_gradient(iota)?;
 
         // calculate w
-        fn_w(&mut w, p)?;
+        let gg = &pad.gradient;
+        fn_w(&mut w, p, &pad.gradient)?;
 
         // add contribution to c vector
         let coef = det_jac * weight;
-        let g = &pad.gradient;
         if space_ndim == 2 {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * g[m][0] + w[1] * g[m][1]);
+                c[ii0 + m] += coef * (w[0] * gg[m][0] + w[1] * gg[m][1]);
             }
         } else {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * g[m][0] + w[1] * g[m][1] + w[2] * g[m][2]);
+                c[ii0 + m] += coef * (w[0] * gg[m][0] + w[1] * gg[m][1] + w[2] * gg[m][2]);
             }
         }
     }
@@ -151,7 +151,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut c = Vector::new(2);
         assert_eq!(
-            integ::vec_03_vg(&mut c, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
+            integ::vec_03_vg(&mut c, &mut pad, 1, false, &[], |_, _, _| Ok(())).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
     }
@@ -176,7 +176,7 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(())
@@ -205,7 +205,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, p| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, p, _| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(())
@@ -239,7 +239,7 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;

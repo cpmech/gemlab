@@ -49,7 +49,8 @@ use russell_tensor::Tensor2;
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_tt` -- Function `f(T,p)` that computes `T(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_tt` -- Function `f(T,p,G)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients G(ιᵖ). `T` is set for `space_ndim`.
 pub fn mat_03_gtg<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
@@ -60,7 +61,7 @@ pub fn mat_03_gtg<F>(
     mut fn_tt: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2, usize, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -88,30 +89,30 @@ where
         let weight = ips[p][3];
 
         // calculate Jacobian and gradient
-        let det_jac = pad.calc_gradient(iota)?;
+        let det_jac = pad.calc_gradient(iota)?; // G
 
         // calculate T tensor
-        fn_tt(&mut tt, p)?;
+        let gg = &pad.gradient;
+        fn_tt(&mut tt, p, gg)?;
 
         // add contribution to K matrix
         let c = det_jac * weight;
-        let g = &pad.gradient;
         let t = &tt.vec;
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
                     kk[ii0 + m][jj0 + n] += c
-                        * (g[n][1] * (t[1] * g[m][1] + (t[3] * g[m][0]) / s)
-                            + g[n][0] * (t[0] * g[m][0] + (t[3] * g[m][1]) / s));
+                        * (gg[n][1] * (t[1] * gg[m][1] + (t[3] * gg[m][0]) / s)
+                            + gg[n][0] * (t[0] * gg[m][0] + (t[3] * gg[m][1]) / s));
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
                     kk[ii0 + m][jj0 + n] += c
-                        * (g[n][2] * (t[2] * g[m][2] + (t[5] * g[m][0]) / s + (t[4] * g[m][1]) / s)
-                            + g[n][1] * (t[1] * g[m][1] + (t[3] * g[m][0]) / s + (t[4] * g[m][2]) / s)
-                            + g[n][0] * (t[0] * g[m][0] + (t[3] * g[m][1]) / s + (t[5] * g[m][2]) / s));
+                        * (gg[n][2] * (t[2] * gg[m][2] + (t[5] * gg[m][0]) / s + (t[4] * gg[m][1]) / s)
+                            + gg[n][1] * (t[1] * gg[m][1] + (t[3] * gg[m][0]) / s + (t[4] * gg[m][2]) / s)
+                            + gg[n][0] * (t[0] * gg[m][0] + (t[3] * gg[m][1]) / s + (t[5] * gg[m][2]) / s));
                 }
             }
         }
@@ -136,22 +137,25 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         // more errors
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _| Ok(())).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _| Ok(())).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_qua4(0.0, 0.0, 1.0, 1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _| Err("stop")).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _| Err(
+                "stop"
+            ))
+            .err(),
             Some("stop")
         );
     }
@@ -168,7 +172,7 @@ mod tests {
         let selection: Vec<_> = [1, 3, 7].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _, _| {
                 tt.sym_set(0, 0, kx);
                 tt.sym_set(1, 1, ky);
                 Ok(())
@@ -191,7 +195,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _, _| {
                 tt.sym_set(0, 0, kx);
                 tt.sym_set(1, 1, ky);
                 Ok(())
@@ -214,7 +218,7 @@ mod tests {
         let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _, _| {
                 tt.sym_set(0, 0, kx);
                 tt.sym_set(1, 1, ky);
                 Ok(())
@@ -242,7 +246,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _| {
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, true, ips, |tt, _, _| {
                 copy_vector(&mut tt.vec, &sig.vec)
             })
             .unwrap();

@@ -53,7 +53,8 @@ use russell_lab::Vector;
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `clear_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_s` -- Function `f(p,N)` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   and shape functions N(ιᵖ).
 ///
 /// # Examples
 ///
@@ -75,7 +76,7 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_| Ok(5.0))?;
+///     integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_, _| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
 ///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
@@ -91,7 +92,7 @@ pub fn vec_01_ns<F>(
     mut fn_s: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(usize) -> Result<f64, StrError>,
+    F: FnMut(usize, &Vector) -> Result<f64, StrError>,
 {
     // check
     let nnode = pad.interp.dim();
@@ -111,16 +112,17 @@ where
         let weight = ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota);
+        (pad.fn_interp)(&mut pad.interp, iota); // N
         let det_jac = pad.calc_jacobian(iota)?;
 
         // calculate s
-        let s = fn_s(p)?;
+        let nn = &pad.interp;
+        let s = fn_s(p, nn)?;
 
         // loop over nodes and perform sum
         let val = s * det_jac * weight;
         for m in 0..nnode {
-            a[ii0 + m] += pad.interp[m] * val;
+            a[ii0 + m] += nn[m] * val;
         }
     }
     Ok(())
@@ -140,7 +142,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut a = Vector::new(2);
         assert_eq!(
-            integ::vec_01_ns(&mut a, &mut pad, 1, false, &[], |_| Ok(0.0)).err(),
+            integ::vec_01_ns(&mut a, &mut pad, 1, false, &[], |_, _| Ok(0.0)).err(),
             Some("a.len() must be ≥ ii0 + nnode")
         );
     }
@@ -176,7 +178,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][0])).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p, _| Ok(x_ips[p][0])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
     }
@@ -202,7 +204,7 @@ mod tests {
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_| Ok(CS)).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_, _| Ok(CS)).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
     }
@@ -231,7 +233,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][2])).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p, _| Ok(x_ips[p][2])).unwrap();
             assert_vec_approx_eq!(a.as_data(), a_correct, tol);
         });
     }

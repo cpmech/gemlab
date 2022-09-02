@@ -1,7 +1,7 @@
 use super::IntegPointData;
 use crate::shapes::Scratchpad;
 use crate::StrError;
-use russell_lab::Matrix;
+use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(N) times scalar(S) times shape(N) integration case 01 (e.g., diffusion matrix)
 ///
@@ -47,7 +47,8 @@ use russell_lab::Matrix;
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_s` -- Function `f(p,N,G)` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients G(ιᵖ).
 pub fn mat_01_nsn<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
@@ -58,7 +59,7 @@ pub fn mat_01_nsn<F>(
     mut fn_s: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(usize) -> Result<f64, StrError>,
+    F: FnMut(usize, &Vector, &Matrix) -> Result<f64, StrError>,
 {
     // check
     let nnode = pad.interp.dim();
@@ -82,17 +83,19 @@ where
         let weight = ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota);
-        let det_jac = pad.calc_gradient(iota)?;
+        (pad.fn_interp)(&mut pad.interp, iota); // N
+        let det_jac = pad.calc_gradient(iota)?; // G
 
         // calculate s
-        let s = fn_s(p)?;
+        let nn = &pad.interp;
+        let gg = &pad.gradient;
+        let s = fn_s(p, nn, gg)?;
 
         // add contribution to K matrix
         let val = s * det_jac * weight;
         for m in 0..nnode {
             for n in 0..nnode {
-                kk[ii0 + m][jj0 + n] += pad.interp[m] * val * pad.interp[n];
+                kk[ii0 + m][jj0 + n] += nn[m] * val * nn[n];
             }
         }
     }
@@ -115,22 +118,25 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
-            integ::mat_01_nsn(&mut kk, &mut pad, 1, 0, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_01_nsn(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _| Ok(0.0)).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         assert_eq!(
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 1, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _| Ok(0.0)).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         // more errors
         assert_eq!(
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_| Ok(0.0)).err(),
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _| Ok(0.0)).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
         assert_eq!(
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_| Err("stop")).err(),
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _| Err(
+                "stop"
+            ))
+            .err(),
             Some("stop")
         );
     }
@@ -150,7 +156,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
@@ -171,7 +177,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
@@ -189,7 +195,7 @@ mod tests {
         let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
@@ -207,7 +213,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_| Ok(s)).unwrap();
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
             // println!("{}", kk);
             assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
         });

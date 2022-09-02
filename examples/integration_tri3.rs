@@ -37,7 +37,7 @@ fn main() -> Result<(), StrError> {
     let nnode = pad.kind.nnode();
     let ips = integ::default_points(pad.kind);
     let mut a = Vector::filled(nnode, 0.0);
-    integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_| Ok(18.0))?;
+    integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_, _| Ok(18.0))?;
     println!("a =\n{}", a);
 
     // check
@@ -64,7 +64,7 @@ fn main() -> Result<(), StrError> {
     //          └   ┘   └    ┘
     // ```
     let mut b = Vector::filled(nnode * space_ndim, 0.0);
-    integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
+    integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _, _| {
         v[0] = 12.0;
         v[1] = 12.0;
         Ok(())
@@ -91,7 +91,7 @@ fn main() -> Result<(), StrError> {
     //     │  6 │
     //     └    ┘
     let mut c = Vector::filled(nnode, 0.0);
-    integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
+    integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _| {
         w[0] = -2.0;
         w[1] = 4.0;
         Ok(())
@@ -124,7 +124,7 @@ fn main() -> Result<(), StrError> {
     //     └     ┘
     let (s00, s11, s01) = (6.0, 4.0, 2.0);
     let mut d = Vector::filled(nnode * space_ndim, 0.0);
-    integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _| {
+    integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _, _| {
         sig.sym_set(0, 0, s00);
         sig.sym_set(1, 1, s11);
         sig.sym_set(0, 1, s01);

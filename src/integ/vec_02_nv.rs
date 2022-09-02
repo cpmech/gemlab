@@ -50,8 +50,8 @@ use russell_lab::Vector;
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_v` -- Function `f(v,p)` that computes `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`.
-///   The dim of `v` is equal to `space_ndim`.
+/// * `fn_v` -- Function `f(v,p,N)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   and shape functions N(ιᵖ). `v.dim() = space_ndim`.
 ///
 /// # Examples
 ///
@@ -73,7 +73,7 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
+///     integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
 ///         Ok(())
@@ -94,7 +94,7 @@ pub fn vec_02_nv<F>(
     mut fn_v: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Vector) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -117,15 +117,15 @@ where
         let weight = ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota);
+        (pad.fn_interp)(&mut pad.interp, iota); // N
         let det_jac = pad.calc_jacobian(iota)?;
 
         // calculate v
-        fn_v(&mut v, p)?;
+        let nn = &pad.interp;
+        fn_v(&mut v, p, nn)?;
 
         // add contribution to b vector
         let coef = det_jac * weight;
-        let nn = &pad.interp;
         if space_ndim == 2 {
             for m in 0..nnode {
                 b[ii0 + 0 + m * 2] += coef * nn[m] * v[0];
@@ -156,7 +156,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
         assert_eq!(
-            integ::vec_02_nv(&mut b, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
+            integ::vec_02_nv(&mut b, &mut pad, 1, false, &[], |_, _, _| Ok(())).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -188,7 +188,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, p| {
+            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, p, _| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
                 Ok(())
@@ -220,7 +220,7 @@ mod tests {
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
+            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _, _| {
                 v[0] = V0;
                 v[1] = V1;
                 Ok(())
@@ -252,7 +252,7 @@ mod tests {
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
+            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _, _| {
                 v[0] = V0;
                 v[1] = V1;
                 v[2] = V2;

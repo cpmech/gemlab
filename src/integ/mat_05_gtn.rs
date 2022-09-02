@@ -2,7 +2,7 @@ use super::IntegPointData;
 use crate::shapes::Scratchpad;
 use crate::util::SQRT_2;
 use crate::StrError;
-use russell_lab::Matrix;
+use russell_lab::{Matrix, Vector};
 use russell_tensor::Tensor2;
 
 /// Implements the gradient(Gb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
@@ -61,7 +61,8 @@ use russell_tensor::Tensor2;
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_tt` -- Function `f(T,p)` that computes `T(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_tt` -- Function `f(T,p,Gb,N,G)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   the gradients Gb(ιᵖ), shape functions N(ιᵖ), and gradients G(ιᵖ). `T` is set for `space_ndim`.
 ///
 /// # Warning
 ///
@@ -78,7 +79,7 @@ pub fn mat_05_gtn<F>(
     mut fn_tt: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2, usize, &Matrix, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let nnode_b = pad_b.interp.dim();
@@ -107,34 +108,35 @@ where
         let weight = ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota); // N
         pad_b.calc_gradient(iota)?; // Gb
-        let det_jac = pad.calc_gradient(iota)?;
+        (pad.fn_interp)(&mut pad.interp, iota); // N
+        let det_jac = pad.calc_gradient(iota)?; // G
 
         // calculate T tensor
-        fn_tt(&mut tt, p)?;
+        let ggb = &pad_b.gradient;
+        let nn = &pad.interp;
+        let gg = &pad.gradient;
+        fn_tt(&mut tt, p, ggb, nn, gg)?;
 
         // add contribution to K matrix
         let c = det_jac * weight;
-        let gb = &pad_b.gradient;
-        let nn = &pad.interp;
         let t = &tt.vec;
         if space_ndim == 2 {
             for m in 0..nnode_b {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + 0 + n * 2] += c * (gb[m][0] * t[0] + gb[m][1] * t[3] / s) * nn[n];
-                    kk[ii0 + m][jj0 + 1 + n * 2] += c * (gb[m][0] * t[3] / s + gb[m][1] * t[1]) * nn[n];
+                    kk[ii0 + m][jj0 + 0 + n * 2] += c * (ggb[m][0] * t[0] + ggb[m][1] * t[3] / s) * nn[n];
+                    kk[ii0 + m][jj0 + 1 + n * 2] += c * (ggb[m][0] * t[3] / s + ggb[m][1] * t[1]) * nn[n];
                 }
             }
         } else {
             for m in 0..nnode_b {
                 for n in 0..nnode {
                     kk[ii0 + m][jj0 + 0 + n * 3] +=
-                        c * (gb[m][0] * t[0] + gb[m][1] * t[3] / s + gb[m][2] * t[5] / s) * nn[n];
+                        c * (ggb[m][0] * t[0] + ggb[m][1] * t[3] / s + ggb[m][2] * t[5] / s) * nn[n];
                     kk[ii0 + m][jj0 + 1 + n * 3] +=
-                        c * (gb[m][0] * t[3] / s + gb[m][1] * t[1] + gb[m][2] * t[4] / s) * nn[n];
+                        c * (ggb[m][0] * t[3] / s + ggb[m][1] * t[1] + ggb[m][2] * t[4] / s) * nn[n];
                     kk[ii0 + m][jj0 + 2 + n * 3] +=
-                        c * (gb[m][0] * t[5] / s + gb[m][1] * t[4] / s + gb[m][2] * t[2]) * nn[n];
+                        c * (ggb[m][0] * t[5] / s + ggb[m][1] * t[4] / s + ggb[m][2] * t[2]) * nn[n];
                 }
             }
         }
@@ -159,11 +161,11 @@ mod tests {
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
         assert_eq!(
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], |_, _| Ok(())).err(),
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], |_, _, _, _, _| Ok(())).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
         assert_eq!(
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], |_, _| Ok(())).err(),
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], |_, _, _, _, _| Ok(())).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
     }
@@ -188,7 +190,7 @@ mod tests {
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _| {
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _, _, _, _| {
                 copy_vector(&mut ten.vec, &tt.vec)
             })
             .unwrap();
@@ -216,7 +218,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _| {
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _, _, _, _| {
                 copy_vector(&mut ten.vec, &tt.vec)
             })
             .unwrap();

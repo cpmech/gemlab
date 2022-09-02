@@ -47,7 +47,8 @@ use russell_lab::{Matrix, Vector};
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `fn_s` -- Function `f(p,un,N)` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   the **unit** normal vector `un(x(ιᵖ))`, and shape functions N(ιᵖ).
 pub fn mat_01_nsn_bry<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
@@ -58,7 +59,7 @@ pub fn mat_01_nsn_bry<F>(
     mut fn_s: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(usize) -> Result<f64, StrError>,
+    F: FnMut(usize, &Vector, &Vector) -> Result<f64, StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -92,15 +93,15 @@ where
         let weight = ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota);
-        let mag_n = pad.calc_normal_vector(&mut un, iota)?;
+        (pad.fn_interp)(&mut pad.interp, iota); // N
+        let mag_n = pad.calc_normal_vector(&mut un, iota)?; // un
 
         // calculate s
-        let s = fn_s(p)?;
+        let nn = &pad.interp;
+        let s = fn_s(p, &un, nn)?;
 
         // add contribution to K matrix
         let val = s * mag_n * weight;
-        let nn = &pad.interp;
         for m in 0..nnode {
             for n in 0..nnode {
                 kk[ii0 + m][jj0 + n] += nn[m] * val * nn[n];
@@ -125,27 +126,30 @@ mod tests {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_, _, _| Ok(0.0)).err(),
             Some("in 2D, geometry ndim must be equal to 1 (a line)")
         );
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_, _, _| Ok(0.0)).err(),
             Some("in 3D, geometry ndim must be equal to 2 (a surface)")
         );
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 1, 0, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _| Ok(0.0)).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 1, false, &[], |_| Ok(0.0)).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _| Ok(0.0)).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_| Err("stop")).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _| Err(
+                "stop"
+            ))
+            .err(),
             Some("stop")
         );
     }
@@ -174,19 +178,19 @@ mod tests {
         let mut pad_side = tri3_extract_pad_side(&pad, 0);
         let kk_correct = ana.mat_01_nsn_bry(0, s);
         let mut kk = Matrix::new(2, 2);
-        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, true, ips, |_| Ok(s)).unwrap();
+        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-15);
 
         // side # 1
         let mut pad_side = tri3_extract_pad_side(&pad, 1);
         let kk_correct = ana.mat_01_nsn_bry(1, s);
-        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, true, ips, |_| Ok(s)).unwrap();
+        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // side # 2
         let mut pad_side = tri3_extract_pad_side(&pad, 2);
         let kk_correct = ana.mat_01_nsn_bry(2, s);
-        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, true, ips, |_| Ok(s)).unwrap();
+        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
         assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
     }
 }
