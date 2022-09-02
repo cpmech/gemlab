@@ -5,6 +5,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(N) times scalar(S) times shape(N) integration case 01 (boundary integral version)
 ///
+/// Callback function: `s ← f(p, un, N)`
+///
 /// Diffusion coefficients:
 ///
 /// ```text

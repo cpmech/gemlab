@@ -7,6 +7,8 @@ use russell_tensor::Tensor2;
 
 /// Implements the gradient(Gb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
 ///
+/// Callback function: `f(T, p, Gb, N, G)`
+///
 /// **Notes:**
 ///
 /// * `m` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Gbᵐ`)

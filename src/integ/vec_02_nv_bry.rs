@@ -5,6 +5,8 @@ use russell_lab::Vector;
 
 /// Implements the the shape(N) times vector(V) integration case 02 (boundary integral version)
 ///
+/// Callback function: `f(v, p, un, N)`
+///
 /// Interpolation functions times vector field:
 ///
 /// ```text

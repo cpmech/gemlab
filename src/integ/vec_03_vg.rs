@@ -5,6 +5,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the vector(V) dot gradient(G) integration case 03
 ///
+/// Callback function: `f(w, p, G)`
+///
 /// Vector dot gradient:
 ///
 /// ```text

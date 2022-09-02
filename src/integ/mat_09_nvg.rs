@@ -5,6 +5,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(N) times vector(V) dot gradient(G) integration case 09 (e.g., variable density matrix)
 ///
+/// Callback function: `f(v, p, N, G)`
+///
 /// Variable density coefficients:
 ///
 /// ```text

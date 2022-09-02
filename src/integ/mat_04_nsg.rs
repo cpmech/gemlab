@@ -5,6 +5,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(Nb) times scalar(S) times gradient(G) integration case 04 (e.g., coupling matrix)
 ///
+/// Callback function: `f(p, Nb, G)`
+///
 /// **Notes:**
 ///
 /// * `m` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Nbᵐ`)

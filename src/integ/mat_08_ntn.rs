@@ -7,6 +7,8 @@ use russell_tensor::Tensor2;
 
 /// Implements the shape(N) times tensor(T) times shape(N) integration case 08 (e.g., mass matrix)
 ///
+/// Callback function: `f(T, p, N, G)`
+///
 /// Mass coefficients:
 ///
 /// ```text

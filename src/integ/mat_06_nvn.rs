@@ -5,6 +5,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(N) times vector(V) times shape(Nb) integration case 06 (e.g., coupling matrix)
 ///
+/// Callback function: `f(v, p, N, G, Nb)`
+///
 /// **Notes:**
 ///
 /// * `m` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Nᵐ`)

@@ -5,6 +5,8 @@ use russell_lab::Vector;
 
 /// Implements the shape(N) times scalar(S) integration case 01
 ///
+/// Callback function: `s ← f(p, N)`
+///
 /// Interpolation functions times scalar field:
 ///
 /// ```text

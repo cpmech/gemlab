@@ -7,6 +7,8 @@ use russell_tensor::Tensor2;
 
 /// Implements the tensor(T) dot gradient(G) integration case 04
 ///
+/// Callback function: `f(σ, p, G)`
+///
 /// Tensor dot gradient:
 ///
 /// ```text
@@ -52,8 +54,8 @@ use russell_tensor::Tensor2;
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `clear_d` -- Fills `d` vector with zeros, otherwise accumulate values into `d`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_sig` -- Function `f(sig,p,G)` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   and the gradients G(ιᵖ). `T` is set for `space_ndim`.
+/// * `fn_sig` -- Function `f(σ,p,G)` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   and the gradients G(ιᵖ). `σ` is set for `space_ndim`.
 ///
 /// # Examples
 ///

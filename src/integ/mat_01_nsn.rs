@@ -5,6 +5,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(N) times scalar(S) times shape(N) integration case 01 (e.g., diffusion matrix)
 ///
+/// Callback function: `s ← f(p, N, G)`
+///
 /// Diffusion coefficients:
 ///
 /// ```text

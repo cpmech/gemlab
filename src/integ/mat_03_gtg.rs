@@ -7,6 +7,8 @@ use russell_tensor::Tensor2;
 
 /// Implements the gradient(G) dot tensor(T) dot gradient(G) integration case 03 (e.g., conductivity matrix)
 ///
+/// Callback function: `f(T, p, G)`
+///
 /// Conductivity coefficients:
 ///
 /// ```text

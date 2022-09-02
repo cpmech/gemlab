@@ -5,6 +5,8 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the gradient(G) dot vector(V) times shape(N) integration case 02 (e.g., compressibility matrix)
 ///
+/// Callback function: `f(v, p, N, G)`
+///
 /// Compressibility coefficients:
 ///
 /// ```text

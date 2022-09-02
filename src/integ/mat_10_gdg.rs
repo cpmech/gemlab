@@ -7,6 +7,8 @@ use russell_tensor::Tensor4;
 
 /// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case 10 (e.g., stiffness matrix)
 ///
+/// Callback function: `f(D, p, G)`
+///
 /// Stiffness tensors (note the sum over repeated lower indices):
 ///
 /// ```text
@@ -55,7 +57,7 @@ use russell_tensor::Tensor4;
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_dd` -- Function f(D,p,G) that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`
+/// * `fn_dd` -- Function `f(D,p,G)` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`
 ///   and gradients G(ιᵖ). `D` is **minor-symmetric** and set for `space_ndim`.
 ///
 /// # Examples

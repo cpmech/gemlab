@@ -14,16 +14,18 @@ pub const GRID_CELLS_TOLERANCE: f64 = 1e-4;
 /// Default border tolerance to handle imprecision near the borders
 pub const GRID_CELLS_BORDER_TOL: f64 = 1e-2;
 
-/// Defines a bounding-box ratio in [0,1] to mark cells as "large" compared others
+/// Defines a bounding-box ratio in to mark cells as "large" compared others
 ///
 /// Example: If a cell has a max(bounding_box_length) / largest >= 0.75,
 ///          Then this cell is put into the large_cells list
 ///
 /// This constant enables the strategy of putting some cells in a selected list of large cells.
 /// The other constant [GRID_CELLS_LARGE_PCT] also influences the algorithm by enabling or disabling this strategy.
-const GRID_CELLS_LARGE_CUTOFF: f64 = 0.75;
+///
+/// The value must be from zero to one.
+pub const GRID_CELLS_LARGE_CUTOFF: f64 = 0.75;
 
-/// Controls the count percentage in [0,1] of large cells allowed.
+/// Controls the count percentage of large cells allowed.
 ///
 /// Example: If 20% of cells are too large, then we put them in a separated list of large cells;
 ///          otherwise, the mesh is homogeneous enough so put all cells in the containers.
@@ -31,7 +33,9 @@ const GRID_CELLS_LARGE_CUTOFF: f64 = 0.75;
 /// If the actual ratio is greater than this constant (i.e., many cells are large such as
 /// in a homogeneous mesh), the "strategy" of selecting large cells is abandoned.
 /// The other constant [GRID_CELLS_LARGE_CUTOFF] also influences the algorithm.
-const GRID_CELLS_LARGE_PCT: f64 = 0.2;
+///
+/// The value must be from zero to one.
+pub const GRID_CELLS_LARGE_PCT: f64 = 0.2;
 
 /// Specifies the key of containers (or bins in the grid)
 type ContainerKey = usize;
