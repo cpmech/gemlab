@@ -148,7 +148,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::Matrix;
 
     #[test]
@@ -189,7 +189,7 @@ mod tests {
             })
             .unwrap();
             // println!("{}", kk);
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 
@@ -215,7 +215,7 @@ mod tests {
             })
             .unwrap();
             // println!("{}", kk);
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 }

@@ -180,7 +180,7 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::{ONE_BY_3, SQRT_2, SQRT_3};
-    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+    use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::{vector_norm, NormVec, Vector};
 
     #[test]
@@ -229,9 +229,9 @@ mod tests {
 
             // check
             let mag_n = pad.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(mag_n, correct_magnitude, tol_mag);
-            assert_approx_eq!(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
-            assert_vec_approx_eq!(un.as_data(), &correct_normal, tol_vec);
+            approx_eq(mag_n, correct_magnitude, tol_mag);
+            approx_eq(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
+            vec_approx_eq(un.as_data(), &correct_normal, tol_vec);
         }
     }
 
@@ -265,41 +265,41 @@ mod tests {
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert!(un[0] < 0.0);
             assert!(un[1] < 0.0);
-            assert_approx_eq!(un[2], 0.0, tol_vec);
+            approx_eq(un[2], 0.0, tol_vec);
 
             // face # 1
             let mut pad_face = aux::extract_face(1, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert!(un[0] > 0.0);
             assert!(un[1] > 0.0);
-            assert_approx_eq!(un[2], 0.0, tol_vec);
+            approx_eq(un[2], 0.0, tol_vec);
 
             // face # 2
             let mut pad_face = aux::extract_face(2, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
-            assert_approx_eq!(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
-            assert_vec_approx_eq!(un.as_data(), &correct_normal_face2, tol_vec);
+            approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
+            approx_eq(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
+            vec_approx_eq(un.as_data(), &correct_normal_face2, tol_vec);
 
             // face # 3
             let mut pad_face = aux::extract_face(3, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
-            assert_approx_eq!(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
-            assert_vec_approx_eq!(un.as_data(), &correct_normal_face3, tol_vec);
+            approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
+            approx_eq(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
+            vec_approx_eq(un.as_data(), &correct_normal_face3, tol_vec);
 
             // face # 4
             let mut pad_face = aux::extract_face(4, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(un[0], 0.0, tol_vec);
-            assert_approx_eq!(un[1], 0.0, tol_vec);
+            approx_eq(un[0], 0.0, tol_vec);
+            approx_eq(un[1], 0.0, tol_vec);
             assert!(un[2] < 0.0);
 
             // face # 5
             let mut pad_face = aux::extract_face(5, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(un[0], 0.0, tol_vec);
-            assert_approx_eq!(un[1], 0.0, tol_vec);
+            approx_eq(un[0], 0.0, tol_vec);
+            approx_eq(un[1], 0.0, tol_vec);
             assert!(un[2] > 0.0);
         }
     }
@@ -360,15 +360,15 @@ mod tests {
                     if pad.kind.is_tri_or_tet() {
                         // check triangle
                         if e == 1 {
-                            assert_approx_eq!(mag_n, SQRT_2, 1e-15);
+                            approx_eq(mag_n, SQRT_2, 1e-15);
                         } else {
-                            assert_approx_eq!(mag_n, 1.0, 1e-15);
+                            approx_eq(mag_n, 1.0, 1e-15);
                         }
-                        assert_vec_approx_eq!(un.as_data(), tri_correct[e], 1e-15);
+                        vec_approx_eq(un.as_data(), tri_correct[e], 1e-15);
                     } else {
                         // check quadrilateral
-                        assert_approx_eq!(mag_n, 1.0, 1e-15);
-                        assert_vec_approx_eq!(un.as_data(), qua_correct[e], 1e-15);
+                        approx_eq(mag_n, 1.0, 1e-15);
+                        vec_approx_eq(un.as_data(), qua_correct[e], 1e-15);
                     }
                 }
             }
@@ -442,15 +442,15 @@ mod tests {
                     if pad.kind.is_tri_or_tet() {
                         // check tetrahedron
                         if f == 3 {
-                            assert_approx_eq!(mag_n, 4.0 * SQRT_3, tol);
+                            approx_eq(mag_n, 4.0 * SQRT_3, tol);
                         } else {
-                            assert_approx_eq!(mag_n, 4.0, tol);
+                            approx_eq(mag_n, 4.0, tol);
                         }
-                        assert_vec_approx_eq!(un.as_data(), tet_correct[f], tol);
+                        vec_approx_eq(un.as_data(), tet_correct[f], tol);
                     } else {
                         // check hexahedron
-                        assert_approx_eq!(mag_n, 1.0, tol);
-                        assert_vec_approx_eq!(un.as_data(), hex_correct[f], tol);
+                        approx_eq(mag_n, 1.0, tol);
+                        vec_approx_eq(un.as_data(), hex_correct[f], tol);
                     }
                 }
             }

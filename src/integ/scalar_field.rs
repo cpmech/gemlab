@@ -60,7 +60,7 @@ mod tests {
     use super::scalar_field;
     use crate::integ;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::assert_approx_eq;
+    use russell_chk::approx_eq;
 
     #[allow(unused_imports)]
     use plotpy::Plot;
@@ -105,7 +105,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let ii = scalar_field(&mut pad, ips, |_| Ok(1.0)).unwrap();
-            assert_approx_eq!(ii, ii_correct, tol);
+            approx_eq(ii, ii_correct, tol);
         });
 
         // ∫∫(x²+y²) dx dy
@@ -120,7 +120,7 @@ mod tests {
                 Ok(x * x + y * y)
             })
             .unwrap();
-            assert_approx_eq!(ii, ii_correct, tol);
+            approx_eq(ii, ii_correct, tol);
         });
 
         // ∫∫(x³+y³) dx dy
@@ -135,7 +135,7 @@ mod tests {
                 Ok(x * x * x + y * y * y)
             })
             .unwrap();
-            assert_approx_eq!(ii, ii_correct, tol);
+            approx_eq(ii, ii_correct, tol);
         });
 
         // Mathematica code:
@@ -207,7 +207,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let ii = scalar_field(&mut pad, ips, |_| Ok(1.0)).unwrap();
-            assert_approx_eq!(ii, ii_correct, tol);
+            approx_eq(ii, ii_correct, tol);
         });
 
         // ∫∫∫(x²+y²+z²) dx dy dz
@@ -223,7 +223,7 @@ mod tests {
                 Ok(x * x + y * y + z * z)
             })
             .unwrap();
-            assert_approx_eq!(ii, ii_correct, tol);
+            approx_eq(ii, ii_correct, tol);
         });
 
         // ∫∫∫(x³+y³+z³) dx dy dz
@@ -239,7 +239,7 @@ mod tests {
                 Ok(x * x * x + y * y * y + z * z * z)
             })
             .unwrap();
-            assert_approx_eq!(ii, ii_correct, tol);
+            approx_eq(ii, ii_correct, tol);
         });
 
         // mathematica code:

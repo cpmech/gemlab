@@ -57,7 +57,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::assert_approx_eq;
+    /// use russell_chk::approx_eq;
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //  3-------------2         ξ₀   ξ₁
@@ -81,7 +81,7 @@ impl Scratchpad {
     ///     pad.set_xx(3, 1, a);
     ///
     ///     let det_jac = pad.calc_jacobian(&[0.0, 0.0])?;
-    ///     assert_approx_eq!(det_jac, a * a / 2.0, 1e-15);
+    ///     approx_eq(det_jac, a * a / 2.0, 1e-15);
     ///
     ///     // the solution is
     ///     //  ┌         ┐
@@ -138,7 +138,7 @@ mod tests {
     use super::DET_JAC_NOT_AVAILABLE;
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::assert_deriv_approx_eq;
+    use russell_chk::deriv_approx_eq;
     use russell_lab::{Matrix, Vector};
 
     #[test]
@@ -237,7 +237,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Jᵢⱼ := dxᵢ/dξⱼ
-                    assert_deriv_approx_eq!(pad.jacobian[i][j], args.at_ksi[j], x_given_ksi, args, tol);
+                    deriv_approx_eq(pad.jacobian[i][j], args.at_ksi[j], x_given_ksi, args, tol);
                 }
             }
         }

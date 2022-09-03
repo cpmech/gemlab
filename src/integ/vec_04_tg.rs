@@ -63,7 +63,7 @@ use russell_tensor::Tensor2;
 /// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
-/// use russell_chk::assert_vec_approx_eq;
+/// use russell_chk::vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -91,7 +91,7 @@ use russell_tensor::Tensor2;
 ///     // G = │  ¼  0 │
 ///     //     │  0  ⅓ │
 ///     //     └       ┘
-///     assert_vec_approx_eq!(d.as_data(), &[-7.5, -8.5, 1.5, 4.5, 6.0, 4.0], 1e-14);
+///     vec_approx_eq(d.as_data(), &[-7.5, -8.5, 1.5, 4.5, 6.0, 4.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
@@ -159,7 +159,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::{copy_vector, Vector};
     use russell_tensor::Tensor2;
 
@@ -210,7 +210,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(d.as_data(), d_correct, tol);
+            vec_approx_eq(d.as_data(), &d_correct, tol);
         });
     }
 
@@ -246,7 +246,7 @@ mod tests {
                 copy_vector(&mut sig.vec, &tt.vec)
             })
             .unwrap();
-            assert_vec_approx_eq!(d.as_data(), d_correct, tol);
+            vec_approx_eq(d.as_data(), &d_correct, tol);
         });
     }
 }

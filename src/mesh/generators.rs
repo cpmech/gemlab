@@ -767,7 +767,7 @@ mod tests {
     use crate::geometry::point_point_distance;
     use crate::mesh::check_overlapping_points;
     use crate::shapes::GeoKind;
-    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+    use russell_chk::{approx_eq, vec_approx_eq};
 
     #[allow(unused_imports)]
     use crate::mesh::draw_mesh;
@@ -788,19 +788,19 @@ mod tests {
         assert_eq!(mesh.cells.len(), 1);
         for p in [0, 11, 7, 3] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 3.0, 1e-15);
+            approx_eq(d, 3.0, 1e-15);
         }
         for p in [4, 12, 15, 10] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 4.0, 1e-15);
+            approx_eq(d, 4.0, 1e-15);
         }
         for p in [8, 13, 14, 6] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 5.0, 1e-15);
+            approx_eq(d, 5.0, 1e-15);
         }
         for p in [1, 5, 9, 2] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_ring_2d.svg").unwrap();
     }
@@ -821,11 +821,11 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         for p in [0, 15, 14, 3, 41, 40, 33] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 3.0, 1e-15);
+            approx_eq(d, 3.0, 1e-15);
         }
         for p in [1, 10, 11, 2, 36, 37, 32] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_ring_3d.svg").unwrap();
     }
@@ -838,7 +838,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         for p in [8, 11, 9, 14, 13] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8.svg").unwrap();
     }
@@ -851,7 +851,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 27);
         for p in [50, 53, 51, 62, 61, 71, 70, 99, 96, 98, 91, 94, 92] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8_finer.svg").unwrap();
     }
@@ -864,7 +864,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         for p in [16, 19, 22, 17, 29, 31, 28] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua16.svg").unwrap();
     }
@@ -885,7 +885,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         for p in [8, 11, 9, 14, 13] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8.svg").unwrap();
     }
@@ -898,7 +898,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 27);
         for p in [50, 53, 51, 62, 61, 71, 70, 99, 96, 98, 91, 94, 92] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8_finer.svg").unwrap();
     }
@@ -911,7 +911,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         for p in [16, 19, 22, 17, 29, 31, 28] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua16.svg").unwrap();
     }
@@ -928,7 +928,7 @@ mod tests {
             34, 44, 45, 35, 58, 59, 53, // z-max
         ] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_3d_a_hex32.svg").unwrap();
     }
@@ -953,7 +953,7 @@ mod tests {
             34, 44, 45, 35, 58, 59, 53, // z-max
         ] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_3d_b_hex32.svg").unwrap();
     }
@@ -966,11 +966,11 @@ mod tests {
         check_overlapping_points(&mesh, 0.18).unwrap();
         for p in [0, 11, 7, 3, 19, 16, 13] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 1.0, 1e-15);
+            approx_eq(d, 1.0, 1e-15);
         }
         for p in [1, 5, 9, 2, 14, 17, 12] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 2.0, 1e-15);
+            approx_eq(d, 2.0, 1e-15);
         }
         assert_eq!(mesh.points[21].coords, &[3.0, 3.0]);
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_2d.svg").unwrap();
@@ -993,16 +993,16 @@ mod tests {
         // hole/inner
         for p in [0, 15, 14, 3, 41, 40, 33] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 1.0, 1e-15);
+            approx_eq(d, 1.0, 1e-15);
         }
         // hole/outer (ring)
         for p in [1, 10, 11, 2, 36, 37, 32] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 2.0, 1e-15);
+            approx_eq(d, 2.0, 1e-15);
         }
-        assert_vec_approx_eq!(mesh.points[26].coords, &[2.0, 0.0, 0.5], 1e-15);
-        assert_vec_approx_eq!(mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
-        assert_vec_approx_eq!(mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
+        vec_approx_eq(&mesh.points[26].coords, &[2.0, 0.0, 0.5], 1e-15);
+        vec_approx_eq(&mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
+        vec_approx_eq(&mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_3d.svg").unwrap();
     }
 }

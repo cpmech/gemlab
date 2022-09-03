@@ -29,7 +29,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_chk::vec_approx_eq;
     /// use russell_lab::Vector;
     ///
     /// fn main() -> Result<(), StrError> {
@@ -56,7 +56,7 @@ impl Scratchpad {
     ///
     ///     let mut x = Vector::new(2);
     ///     pad.calc_coords(&mut x, &[0.0, 0.0])?;
-    ///     assert_vec_approx_eq!(x.as_data(), &[x0 + w / 2.0, y0 + h / 2.0], 1e-15);
+    ///     vec_approx_eq(x.as_data(), &[x0 + w / 2.0, y0 + h / 2.0], 1e-15);
     ///     Ok(())
     /// }
     /// ```
@@ -80,7 +80,7 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::ONE_BY_3;
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::Vector;
 
     #[test]
@@ -139,7 +139,7 @@ mod tests {
 
                 // compare xᵐ with generated coordinates
                 aux::map_point_coords(&mut x_correct, ksi, ksi_min, ksi_del);
-                assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol);
+                vec_approx_eq(x.as_data(), x_correct.as_data(), tol);
             }
 
             // test again inside the reference domain
@@ -150,7 +150,7 @@ mod tests {
             };
             pad.calc_coords(&mut x, &ksi_in).unwrap();
             aux::map_point_coords(&mut x_correct, &ksi_in, ksi_min, ksi_del);
-            assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_in);
+            vec_approx_eq(x.as_data(), x_correct.as_data(), tol_in);
         }
     }
 }

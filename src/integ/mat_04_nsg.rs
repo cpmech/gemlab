@@ -140,7 +140,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::Matrix;
 
     #[test]
@@ -176,7 +176,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
             // println!("{:.2}", kk);
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 
@@ -196,7 +196,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
             // println!("{:.2}", kk);
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 }

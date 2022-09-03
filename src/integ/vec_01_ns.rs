@@ -64,7 +64,7 @@ use russell_lab::Vector;
 /// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
-/// use russell_chk::assert_vec_approx_eq;
+/// use russell_chk::vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -81,7 +81,7 @@ use russell_lab::Vector;
 ///     integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_, _| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
-///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
+///     vec_approx_eq(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
@@ -136,7 +136,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::Vector;
 
     #[test]
@@ -181,7 +181,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p, _| Ok(x_ips[p][0])).unwrap();
-            assert_vec_approx_eq!(a.as_data(), a_correct, tol);
+            vec_approx_eq(a.as_data(), a_correct, tol);
         });
     }
 
@@ -207,7 +207,7 @@ mod tests {
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_, _| Ok(CS)).unwrap();
-            assert_vec_approx_eq!(a.as_data(), a_correct, tol);
+            vec_approx_eq(a.as_data(), &a_correct, tol);
         });
     }
 
@@ -236,7 +236,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
             integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p, _| Ok(x_ips[p][2])).unwrap();
-            assert_vec_approx_eq!(a.as_data(), a_correct, tol);
+            vec_approx_eq(a.as_data(), &a_correct, tol);
         });
     }
 }

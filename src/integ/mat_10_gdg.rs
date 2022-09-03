@@ -212,7 +212,7 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::{copy_matrix, Matrix};
     use russell_tensor::LinElasticity;
 
@@ -303,7 +303,7 @@ mod tests {
             [  0.000000000000000e+00, -5.208333333333334e+02, -6.944444444444445e+02,  5.208333333333334e+02,  6.944444444444445e+02,  0.000000000000000e+00],
             [ -2.604166666666667e+02,  0.000000000000000e+00,  2.604166666666667e+02, -1.736111111111111e+03,  0.000000000000000e+00,  1.736111111111111e+03],
         ]);
-        assert_vec_approx_eq!(kk.as_data(), kk_bhatti.as_data(), 1e-12);
+        vec_approx_eq(kk.as_data(), kk_bhatti.as_data(), 1e-12);
 
         // analytical solution
         let ana = AnalyticalTri3::new(&pad);
@@ -326,7 +326,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(kk_correct.as_data(), kk.as_data(), tol); // 1e-12
+            vec_approx_eq(kk_correct.as_data(), kk.as_data(), tol); // 1e-12
         });
     }
 
@@ -360,7 +360,7 @@ mod tests {
                 copy_matrix(&mut dd.mat, &model.get_modulus().mat)
             })
             .unwrap();
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol); //1e-12
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol); //1e-12
         });
     }
 }

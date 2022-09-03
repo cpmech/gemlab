@@ -292,7 +292,7 @@ impl AnalyticalTri3 {
 mod tests {
     use super::AnalyticalTri3;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::assert_approx_eq;
+    use russell_chk::approx_eq;
 
     #[test]
     fn new_works() {
@@ -307,7 +307,7 @@ mod tests {
         pad.set_xx(2, 0, 0.1);
         pad.set_xx(2, 1, 0.1);
         let ana = AnalyticalTri3::new(&pad);
-        assert_approx_eq!(ana.area, 0.01, 1e-15);
+        approx_eq(ana.area, 0.01, 1e-15);
         // a = [-0.1, 0.1, 0.0]
         // b = [-0.1, -0.1, 0.2]
         // A = 0.01, Gmi = ai/(2 A) = -0.1 / 0.02 = -5

@@ -424,7 +424,7 @@ impl AnalyticalTet4 {
 mod tests {
     use super::AnalyticalTet4;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::Matrix;
 
     #[test]
@@ -449,7 +449,7 @@ mod tests {
         assert_eq!(tet.volume, 1.0 / 6.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
+        vec_approx_eq(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
         let ee = 480.0;
         let nu = 1.0 / 3.0;
         let eb = ee / (12.0 * (1.0 - 2.0 * nu) * (1.0 + nu));
@@ -473,7 +473,7 @@ mod tests {
             [-tnu, -tnu, -tnh,  tnu, 0.0, 0.0, 0.0,  tnu, 0.0, 0.0, 0.0,  tnh],
         ]);
         let kk = tet.mat_10_gdg(ee, nu).unwrap();
-        assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
+        vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // non-right-angles tet4
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4).unwrap();
@@ -494,7 +494,7 @@ mod tests {
         assert_eq!(tet.volume, 4.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
+        vec_approx_eq(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
         let kk = tet.mat_10_gdg(ee, nu).unwrap();
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
@@ -511,6 +511,6 @@ mod tests {
             [-330.0,-1160.0,-300.0,  90.0,-380.0,-180.0,  60.0,  720.0, 120.0, 180.0,  820.0, 360.0],
             [-180.0, -420.0,-470.0,  60.0,-180.0,-230.0,   0.0,  240.0, 180.0, 120.0,  360.0, 520.0],
         ]);
-        assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-12);
+        vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-12);
     }
 }

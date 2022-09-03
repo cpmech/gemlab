@@ -81,7 +81,7 @@ mod tests {
     use super::points_coords;
     use crate::integ::IP_QUA_LEGENDRE_4;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::assert_approx_eq;
+    use russell_chk::approx_eq;
 
     #[test]
     pub fn points_coords_works() {
@@ -107,13 +107,13 @@ mod tests {
 
         let x_ips = points_coords(&mut pad, &IP_QUA_LEGENDRE_4).unwrap();
 
-        assert_approx_eq!(x_ips[0][0], w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        assert_approx_eq!(x_ips[0][1], h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        assert_approx_eq!(x_ips[1][0], w * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        assert_approx_eq!(x_ips[1][1], h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        assert_approx_eq!(x_ips[2][0], w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        assert_approx_eq!(x_ips[2][1], h * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        assert_approx_eq!(x_ips[3][0], w * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        assert_approx_eq!(x_ips[3][1], h * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[0][0], w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[0][1], h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[1][0], w * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[1][1], h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[2][0], w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[2][1], h * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[3][0], w * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[3][1], h * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
     }
 }

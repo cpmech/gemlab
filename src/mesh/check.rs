@@ -3,7 +3,7 @@ use crate::shapes::DET_JAC_NOT_AVAILABLE;
 use crate::shapes::{geo_case, GeoCase, Scratchpad};
 use crate::util::{GridSearch, ONE_BY_3};
 use crate::StrError;
-use russell_chk::assert_approx_eq;
+use russell_chk::approx_eq;
 use russell_lab::Vector;
 use std::collections::HashMap;
 
@@ -80,7 +80,7 @@ pub fn check_2d_edge_normals(
         let mut pad = Scratchpad::new(mesh.ndim, edge.kind)?;
         set_pad_coords(&mut pad, &edge.points, mesh);
         let mag_n = pad.calc_normal_vector(&mut un, ksi)?;
-        assert_approx_eq!(mag_n, correct_mag_n, tolerance);
+        approx_eq(mag_n, *correct_mag_n, tolerance);
         for i in 0..mesh.ndim {
             if f64::abs(un[i] - correct_un[i]) > tolerance {
                 return Err("wrong 2d edge unit normal vector found");
@@ -106,7 +106,7 @@ pub fn check_face_normals(
         let mut pad = Scratchpad::new(mesh.ndim, face.kind)?;
         set_pad_coords(&mut pad, &face.points, mesh);
         let mag_n = pad.calc_normal_vector(&mut un, ksi)?;
-        assert_approx_eq!(mag_n, correct_mag_n, tolerance);
+        approx_eq(mag_n, *correct_mag_n, tolerance);
         for i in 0..mesh.ndim {
             if f64::abs(un[i] - correct_un[i]) > tolerance {
                 return Err("wrong face unit normal vector found");

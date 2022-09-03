@@ -112,7 +112,7 @@ mod tests {
     use crate::integ::{
         self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1,
     };
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::Matrix;
 
     #[test]
@@ -159,7 +159,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 
@@ -180,7 +180,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 
@@ -198,7 +198,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 
@@ -217,7 +217,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
             // println!("{}", kk);
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 }

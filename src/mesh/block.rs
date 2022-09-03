@@ -978,7 +978,7 @@ mod tests {
     use crate::shapes::GeoKind;
     use crate::util::{PI, SQRT_2};
     use plotpy::Plot;
-    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+    use russell_chk::{approx_eq, vec_approx_eq};
 
     #[allow(unused_imports)]
     use crate::mesh::draw_mesh;
@@ -1465,7 +1465,7 @@ mod tests {
         assert_eq!(mesh.points.len(), correct.points.len());
         assert_eq!(mesh.cells.len(), correct.cells.len());
         for point in &correct.points {
-            assert_vec_approx_eq!(point.coords, correct.points[point.id].coords, 1e-15);
+            vec_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-15);
         }
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
@@ -1500,7 +1500,7 @@ mod tests {
         assert_eq!(mesh.points.len(), correct.points.len());
         assert_eq!(mesh.cells.len(), correct.cells.len());
         for point in &correct.points {
-            assert_vec_approx_eq!(point.coords, correct.points[point.id].coords, 1e-15);
+            vec_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-15);
         }
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
@@ -1695,13 +1695,13 @@ mod tests {
             }
             radius = f64::sqrt(radius);
             if [0, 3, 7].contains(&point.id) {
-                assert_approx_eq!(radius, block.args_ring.rmin, 1e-15);
+                approx_eq(radius, block.args_ring.rmin, 1e-15);
             }
             if [1, 2, 6].contains(&point.id) {
-                assert_approx_eq!(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
+                approx_eq(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
             }
             if [4, 5, 8].contains(&point.id) {
-                assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
+                approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
         }
         // draw_ring_and_mesh(
@@ -1739,13 +1739,13 @@ mod tests {
             }
             radius = f64::sqrt(radius);
             if [0, 11, 7, 3, 35, 32, 29].contains(&point.id) {
-                assert_approx_eq!(radius, block.args_ring.rmin, 1e-15);
+                approx_eq(radius, block.args_ring.rmin, 1e-15);
             }
             if [1, 5, 9, 2, 30, 33, 28].contains(&point.id) {
-                assert_approx_eq!(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
+                approx_eq(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
             }
             if [16, 19, 22, 17, 41, 43, 40].contains(&point.id) {
-                assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
+                approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
         }
         // draw_ring_and_mesh(
@@ -1787,26 +1787,26 @@ mod tests {
             }
             radius = f64::sqrt(radius);
             if [0, 3, 4, 7, 13, 15, 18, 21, 25].contains(&point.id) {
-                assert_approx_eq!(radius, block.args_ring.rmin, 1e-15);
+                approx_eq(radius, block.args_ring.rmin, 1e-15);
             }
             if [1, 2, 5, 6, 12, 14, 19, 20, 24].contains(&point.id) {
-                assert_approx_eq!(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
+                approx_eq(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
             }
             if [8, 9, 10, 11, 16, 17, 22, 23, 26].contains(&point.id) {
-                assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
+                approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
             if [0, 1, 2, 3, 8, 9, 12, 13, 16].contains(&point.id) {
-                assert_approx_eq!(point.coords[2], block.args_ring.zmin, 1e-15);
+                approx_eq(point.coords[2], block.args_ring.zmin, 1e-15);
             }
             if [4, 5, 6, 7, 10, 11, 14, 15, 17].contains(&point.id) {
-                assert_approx_eq!(
+                approx_eq(
                     point.coords[2],
                     (block.args_ring.zmin + block.args_ring.zmax) / 2.0,
-                    1e-15
+                    1e-15,
                 );
             }
             if [18, 19, 20, 21, 22, 23, 24, 25, 26].contains(&point.id) {
-                assert_approx_eq!(point.coords[2], block.args_ring.zmax, 1e-15);
+                approx_eq(point.coords[2], block.args_ring.zmax, 1e-15);
             }
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
@@ -1837,13 +1837,13 @@ mod tests {
             }
             radius = f64::sqrt(radius);
             if [0, 15, 14, 3, 61, 60, 53, 24, 25, 4, 7, 67, 66, 55, 123, 122, 71, 94].contains(&point.id) {
-                assert_approx_eq!(radius, block.args_ring.rmin, 1e-15);
+                approx_eq(radius, block.args_ring.rmin, 1e-15);
             }
             if [90, 91, 118, 62, 56, 63, 57, 119, 5, 27, 1].contains(&point.id) {
-                assert_approx_eq!(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
+                approx_eq(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
             }
             if [32, 48, 49, 72, 130, 78, 109, 44, 39, 38].contains(&point.id) {
-                assert_approx_eq!(radius, block.args_ring.rmax, 1e-17);
+                approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg").unwrap();
@@ -1885,7 +1885,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [0, 3, 7] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 1.0, 1e-15);
+            approx_eq(d, 1.0, 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -1904,7 +1904,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [0, 3, 7] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 0.5, 1e-15);
+            approx_eq(d, 0.5, 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -1939,13 +1939,13 @@ mod tests {
         // side 3
         for p in [0, 3, 7, 14, 17] {
             let d = point_point_distance(&mesh.points[p].coords, &[xc, xc]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // middle nodes
         for (a, mid, b) in [(3, 6, 2)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -1991,22 +1991,22 @@ mod tests {
         // side 0
         for p in [0, 4, 1, 10, 8] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, cen_minus]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // side 1
         for p in [8, 11, 9, 19, 18] {
             let d = point_point_distance(&mesh.points[p].coords, &[cen_plus, 0.0]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // side 2
         for p in [14, 16, 13, 20, 18] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, cen_plus]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // side 3
         for p in [0, 7, 3, 17, 14] {
             let d = point_point_distance(&mesh.points[p].coords, &[cen_minus, 0.0]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // center vertical line
         for p in [5, 2, 15] {
@@ -2020,7 +2020,7 @@ mod tests {
         for (a, mid, b) in [(3, 6, 2), (2, 12, 9), (1, 5, 2), (2, 15, 13)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -2084,7 +2084,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
             let d = point_point_distance(x, &[cen_minus, 0.0]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // face 1
         for p in [
@@ -2096,7 +2096,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
             let d = point_point_distance(x, &[cen_plus, 0.0]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // face 2
         for p in [
@@ -2108,7 +2108,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
             let d = point_point_distance(x, &[0.0, cen_minus]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // face 3
         for p in [
@@ -2120,7 +2120,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
             let d = point_point_distance(x, &[0.0, cen_plus]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // vertical line at center
         for p in [2, 18, 6, 61, 53] {
@@ -2145,7 +2145,7 @@ mod tests {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
-            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -2212,7 +2212,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[1], mesh.points[p].coords[2]];
             let d = point_point_distance(x, &[0.0, cen_minus]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // face 3
         for p in [
@@ -2224,7 +2224,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[2]];
             let d = point_point_distance(x, &[0.0, cen_plus]).unwrap();
-            assert_approx_eq!(d, r, 1e-15);
+            approx_eq(d, r, 1e-15);
         }
         // vertical line at center
         for p in [2, 18, 6, 61, 53] {
@@ -2243,7 +2243,7 @@ mod tests {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
-            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -2277,11 +2277,11 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [6, 7, 11, 15] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         for p in [13, 12, 14] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -2308,12 +2308,12 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         for p in [13, 16, 14, 27, 26, 38, 37] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, radius, 1e-15);
+            approx_eq(d, radius, 1e-15);
         }
         for (a, mid, b) in [(23, 28, 26), (9, 17, 14)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -2340,12 +2340,12 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua9).unwrap();
         for p in [15, 18, 16, 32, 31, 46, 45] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, radius, 1e-15);
+            approx_eq(d, radius, 1e-15);
         }
         for (a, mid, b) in [(42, 48, 46), (27, 33, 31), (28, 34, 32), (10, 19, 16), (12, 20, 18)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -2386,8 +2386,8 @@ mod tests {
             let yc = mesh.points[a].coords[1] + ly / 3.0;
             let xd = mesh.points[a].coords[0] + 2.0 * lx / 3.0;
             let yd = mesh.points[a].coords[1] + 2.0 * ly / 3.0;
-            assert_vec_approx_eq!(mesh.points[c].coords, &[xc, yc], 1e-14);
-            assert_vec_approx_eq!(mesh.points[d].coords, &[xd, yd], 1e-15);
+            vec_approx_eq(&mesh.points[c].coords, &[xc, yc], 1e-14);
+            vec_approx_eq(&mesh.points[d].coords, &[xd, yd], 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -2415,7 +2415,7 @@ mod tests {
         for (a, mid, b) in [(82, 92, 90), (54, 64, 62), (20, 34, 32)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();
@@ -2456,13 +2456,13 @@ mod tests {
             22, 28, 23, 48, 45, // z-max
         ] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0, mesh.points[p].coords[2]]).unwrap();
-            assert_approx_eq!(d, radius, 1e-15);
+            approx_eq(d, radius, 1e-15);
         }
         for (a, mid, b) in [(2, 26, 21), (6, 29, 23)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
-            assert_vec_approx_eq!(mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         // if true {
         //     let mut plot = Plot::new();

@@ -69,7 +69,7 @@ pub fn in_tetrahedron(zeta: &[f64]) -> bool {
 mod tests {
     use super::{in_tetrahedron, tetrahedron_coords};
     use crate::util::ONE_BY_3;
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
 
     #[test]
     fn tetrahedron_coords_works() {
@@ -94,7 +94,7 @@ mod tests {
         tetrahedron_coords(&mut zeta, xa, xb, xc, xd, &[1.0, 1.0, 1.0]);
         assert_eq!(zeta, &[-2.0, 1.0, 1.0, 1.0]);
         tetrahedron_coords(&mut zeta, xa, xb, xc, xd, &[ONE_BY_3, ONE_BY_3, ONE_BY_3]);
-        assert_vec_approx_eq!(zeta, &[0.0, ONE_BY_3, ONE_BY_3, ONE_BY_3], 1e-15);
+        vec_approx_eq(&zeta, &[0.0, ONE_BY_3, ONE_BY_3, ONE_BY_3], 1e-15);
     }
 
     #[test]

@@ -1,7 +1,7 @@
 use gemlab::integ;
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
-use russell_chk::assert_vec_approx_eq;
+use russell_chk::vec_approx_eq;
 use russell_lab::Vector;
 
 fn main() -> Result<(), StrError> {
@@ -42,7 +42,7 @@ fn main() -> Result<(), StrError> {
 
     // check
     let a_correct = ana.vec_01_ns(18.0);
-    assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
+    vec_approx_eq(a.as_data(), &a_correct, 1e-14);
 
     // shape times vector, returns vector 'b'
     //
@@ -73,7 +73,7 @@ fn main() -> Result<(), StrError> {
 
     // check
     let b_correct = ana.vec_02_nv(12.0, 12.0);
-    assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
+    vec_approx_eq(b.as_data(), &b_correct, 1e-14);
 
     // vector dot gradient, returns vector 'c'
     //
@@ -100,7 +100,7 @@ fn main() -> Result<(), StrError> {
 
     // check
     let c_correct = ana.vec_03_vg(-2.0, 4.0);
-    assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
+    vec_approx_eq(c.as_data(), &c_correct, 1e-15);
 
     // tensor dot gradient, returns vector 'd'
     //
@@ -134,6 +134,6 @@ fn main() -> Result<(), StrError> {
 
     // check
     let d_correct = ana.vec_04_tg(s00, s11, s01);
-    assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
+    vec_approx_eq(d.as_data(), &d_correct, 1e-15);
     Ok(())
 }

@@ -61,7 +61,7 @@ use russell_lab::Vector;
 /// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
-/// use russell_chk::assert_vec_approx_eq;
+/// use russell_chk::vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -83,7 +83,7 @@ use russell_lab::Vector;
 ///     // solution (A = 6):
 ///     // bᵐ₀ = v₀ A / 3
 ///     // bᵐ₁ = v₁ A / 3
-///     assert_vec_approx_eq!(b.as_data(), &[2.0, 4.0, 2.0, 4.0, 2.0, 4.0], 1e-14);
+///     vec_approx_eq(b.as_data(), &[2.0, 4.0, 2.0, 4.0, 2.0, 4.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
@@ -150,7 +150,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::Vector;
 
     #[test]
@@ -196,7 +196,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(b.as_data(), b_correct, tol);
+            vec_approx_eq(b.as_data(), b_correct, tol);
         });
     }
 
@@ -228,7 +228,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(b.as_data(), b_correct, tol);
+            vec_approx_eq(b.as_data(), &b_correct, tol);
         });
     }
 
@@ -261,7 +261,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(b.as_data(), b_correct, tol);
+            vec_approx_eq(b.as_data(), &b_correct, tol);
         });
     }
 }

@@ -121,7 +121,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::Matrix;
 
     #[test]
@@ -171,7 +171,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
         // bilinear
         let kk_correct = ana.mat_02_gvn_bilinear(&pad);
@@ -187,7 +187,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 
@@ -212,7 +212,7 @@ mod tests {
             })
             .unwrap();
             // println!("{}", kk);
-            assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), tol);
+            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
 }

@@ -3,7 +3,7 @@ use gemlab::mesh::{check_2d_edge_normals, At, Extract, Features, Find, Mesh};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::SQRT_2;
 use gemlab::StrError;
-use russell_chk::assert_approx_eq;
+use russell_chk::approx_eq;
 use std::collections::HashMap;
 
 #[test]
@@ -128,7 +128,7 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
         let det_jac = pad_edge_7_11.calc_jacobian(iota)?;
         length_numerical += weight * det_jac;
     }
-    assert_approx_eq!(length_numerical, SQRT_2, 1e-14);
+    approx_eq(length_numerical, SQRT_2, 1e-14);
 
     // TODO: numerical area of cell 5
     let cell = &mesh.cells[5];
@@ -146,6 +146,6 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
         let det_jac = pad_cell_5.calc_jacobian(iota)?;
         area_numerical += weight * det_jac;
     }
-    assert_approx_eq!(area_numerical, 2.0, 1e-15);
+    approx_eq(area_numerical, 2.0, 1e-15);
     Ok(())
 }

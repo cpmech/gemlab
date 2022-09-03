@@ -1,6 +1,6 @@
 use gemlab::StrError;
 use gemlab::{integ, mesh, shapes, util};
-use russell_chk::assert_approx_eq;
+use russell_chk::approx_eq;
 
 fn main() -> Result<(), StrError> {
     // generate mesh
@@ -39,7 +39,7 @@ fn main() -> Result<(), StrError> {
         correct,
         f64::abs(second_mom_inertia - correct),
     );
-    assert_approx_eq!(second_mom_inertia, correct, 1e-7);
+    approx_eq(second_mom_inertia, correct, 1e-7);
 
     // draw mesh
     mesh::draw_mesh(&mesh, false, "/tmp/gemlab/example_mom_inertia_ring.svg")

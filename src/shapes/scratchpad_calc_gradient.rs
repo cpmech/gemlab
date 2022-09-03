@@ -40,7 +40,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_chk::vec_approx_eq;
     /// use russell_lab::Matrix;
     ///
     /// fn main() -> Result<(), StrError> {
@@ -72,7 +72,7 @@ impl Scratchpad {
     ///         [1.0 / (4.0 * a), 1.0 / (2.0 * a)],
     ///         [-1.0 / (4.0 * a), 1.0 / (2.0 * a)],
     ///     ]);
-    ///     assert_vec_approx_eq!(pad.gradient.as_data(), correct_gg.as_data(), 1e-15);
+    ///     vec_approx_eq(pad.gradient.as_data(), correct_gg.as_data(), 1e-15);
     ///     Ok(())
     /// }
     /// ```
@@ -99,7 +99,7 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::util::ONE_BY_3;
-    use russell_chk::assert_deriv_approx_eq;
+    use russell_chk::deriv_approx_eq;
     use russell_lab::{copy_vector, Vector};
 
     #[test]
@@ -196,7 +196,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Gᵐⱼ := dNᵐ/dxⱼ
-                    assert_deriv_approx_eq!(pad.gradient[m][j], args.at_x[j], nn_given_x, args, tol);
+                    deriv_approx_eq(pad.gradient[m][j], args.at_x[j], nn_given_x, args, tol);
                 }
             }
         }
