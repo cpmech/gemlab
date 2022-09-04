@@ -131,6 +131,22 @@ impl AnalyticalTet4 {
         }
     }
 
+    /// Integrates shape times scalar with constant function s(x) = cₛ
+    ///
+    /// solution:
+    ///
+    /// ```text
+    /// aᵐ = cₛ V / 4
+    /// ```
+    pub fn vec_01_ns(&self, cs: f64) -> Vec<f64> {
+        vec![
+            cs * self.volume / 4.0,
+            cs * self.volume / 4.0,
+            cs * self.volume / 4.0,
+            cs * self.volume / 4.0,
+        ]
+    }
+
     /// Integrates shape times scalar with linear scalar function s(x) = x₂ = z
     ///
     /// # Input

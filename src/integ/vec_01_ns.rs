@@ -212,6 +212,32 @@ mod tests {
     }
 
     #[test]
+    fn vec_01_ns_works_tet4_constant() {
+        // tet 4 with a constant source term s(x) = cs
+        let mut pad = aux::gen_pad_tet4();
+
+        // solution
+        const CS: f64 = 120.0;
+        let ana = AnalyticalTet4::new(&pad);
+        let a_correct = ana.vec_01_ns(CS);
+
+        // integration points
+        // Note that the tolerance is high for n_integ_point = 1
+        // because the numerical integration performs poorly with few IPs
+        let class = pad.kind.class();
+        let tolerances = [1e-13, 1e-13];
+        let selection: Vec<_> = [1, 4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+
+        // check
+        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_, _| Ok(CS)).unwrap();
+            vec_approx_eq(a.as_data(), &a_correct, tol);
+        });
+    }
+
+    #[test]
     fn vec_01_ns_works_tet4_linear() {
         // tet 4 with a linear source term s(x) = z = x₂
         let mut pad = aux::gen_pad_tet4();
