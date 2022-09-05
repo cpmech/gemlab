@@ -6,6 +6,7 @@ pub type StrError = &'static str;
 pub mod geometry;
 pub mod integ;
 pub mod mesh;
+pub mod prelude;
 pub mod shapes;
 pub mod util;
 
