@@ -7,4 +7,3 @@ pub use crate::mesh::{
     check_all, draw_mesh, Block, Cell, CellAttributeId, CellId, Draw, Feature, Find, Mesh, Point, PointId,
 };
 pub use crate::shapes::{GeoClass, GeoKind};
-pub use crate::StrError;
