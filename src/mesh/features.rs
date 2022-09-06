@@ -279,14 +279,64 @@ impl Features {
         }
         features
     }
+
+    /// Returns an edge or panics
+    pub fn get_edge(&self, a: usize, b: usize) -> &Feature {
+        self.edges.get(&(a, b)).expect("cannot find edge with given key")
+    }
+
+    /// Returns an face or panics
+    pub fn get_face(&self, a: usize, b: usize, c: usize, d: usize) -> &Feature {
+        self.faces.get(&(a, b, c, d)).expect("cannot find face with given key")
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::Feature;
+    use super::{Extract, Feature, Features};
+    use crate::mesh::Samples;
     use crate::shapes::GeoKind;
+
+    #[test]
+    fn new_and_get_methods_work() {
+        //      4--------------7  1.0
+        //     /.             /|
+        //    / .            / |    [#] indicates id
+        //   /  .           /  |    (#) indicates attribute_id
+        //  /   .          /   |
+        // 5--------------6    |          z
+        // |    .         |    |          ↑
+        // |    0---------|----3  0.0     o → y
+        // |   /  [0]     |   /          ↙
+        // |  /   (1)     |  /          x
+        // | /            | /
+        // |/             |/
+        // 1--------------2   1.0
+        let mesh = Samples::one_hex8();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let edge = features.get_edge(4, 5);
+        let face = features.get_face(0, 1, 4, 5);
+        assert_eq!(edge.points, &[4, 5]);
+        assert_eq!(face.points, &[0, 1, 5, 4]);
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot find edge with given key")]
+    fn get_edge_panics_on_error() {
+        let mesh = Samples::one_tri3();
+        let features = Features::new(&mesh, Extract::Boundary);
+        features.get_edge(4, 5);
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot find face with given key")]
+    fn get_face_panics_on_error() {
+        let mesh = Samples::one_tet4();
+        let features = Features::new(&mesh, Extract::Boundary);
+        features.get_face(4, 5, 6, 100);
+    }
 
     #[test]
     fn derive_works() {
