@@ -1,9 +1,9 @@
 #[cfg(test)]
 pub mod aux {
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::util::PI;
     use plotpy::{Canvas, Curve, Plot};
     use russell_lab::generate2d;
+    use russell_lab::math::PI;
     use russell_lab::Vector;
 
     pub const RMIN: f64 = 5.0;

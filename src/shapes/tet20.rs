@@ -1,4 +1,4 @@
-use crate::util::{ONE_BY_3, TWO_BY_3};
+use russell_lab::math::{ONE_BY_3, TWO_BY_3};
 use russell_lab::{Matrix, Vector};
 
 /// Defines a tetrahedron with 20 nodes (cubic faces)

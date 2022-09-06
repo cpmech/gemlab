@@ -136,8 +136,8 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::GeoKind;
     use crate::shapes::Scratchpad;
-    use crate::util::{ONE_BY_3, SQRT_3};
     use russell_chk::vec_approx_eq;
+    use russell_lab::math::{ONE_BY_3, SQRT_3};
     use russell_lab::Vector;
 
     #[test]

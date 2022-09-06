@@ -130,8 +130,8 @@ mod tests {
     use crate::integ;
     use crate::integ::testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::util::SQRT_2;
     use russell_chk::vec_approx_eq;
+    use russell_lab::math::SQRT_2;
     use russell_lab::Vector;
 
     // to test if variables are cleared before sum

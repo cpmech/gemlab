@@ -1,6 +1,7 @@
 use gemlab::StrError;
-use gemlab::{integ, mesh, shapes, util};
+use gemlab::{integ, mesh, shapes};
 use russell_chk::approx_eq;
+use russell_lab::math::PI;
 
 fn main() -> Result<(), StrError> {
     // generate mesh
@@ -48,7 +49,7 @@ fn main() -> Result<(), StrError> {
     second_mom_inertia_mesh_2 *= 4.0; // multiply by to obtain the 2nd moment of the whole disk
 
     // compare with analytical solution
-    let correct = f64::powf(r, 4.0) * util::PI / 4.0; // analytical solution
+    let correct = f64::powf(r, 4.0) * PI / 4.0; // analytical solution
     println!(
         "mesh 1: second_mom_inertia = {} ({}): err = {:.2e}",
         second_mom_inertia_mesh_1,

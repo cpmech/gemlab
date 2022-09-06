@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod aux {
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::util::SQRT_2;
+    use russell_lab::math::SQRT_2;
 
     // to test if variables are cleared before sum
     pub const NOISE: f64 = 1234.56;

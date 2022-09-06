@@ -68,8 +68,8 @@ pub fn in_tetrahedron(zeta: &[f64]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{in_tetrahedron, tetrahedron_coords};
-    use crate::util::ONE_BY_3;
     use russell_chk::vec_approx_eq;
+    use russell_lab::math::ONE_BY_3;
 
     #[test]
     fn tetrahedron_coords_works() {

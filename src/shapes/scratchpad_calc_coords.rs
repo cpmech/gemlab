@@ -79,8 +79,8 @@ impl Scratchpad {
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::util::ONE_BY_3;
     use russell_chk::vec_approx_eq;
+    use russell_lab::math::ONE_BY_3;
     use russell_lab::Vector;
 
     #[test]

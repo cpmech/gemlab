@@ -1,8 +1,7 @@
-#![allow(unused)]
-
 use super::{Cell, Mesh, Point};
 use crate::shapes::GeoKind;
-use crate::{util::PI, StrError};
+use crate::StrError;
+use russell_lab::math::PI;
 use tritet::Triangle;
 
 /// Groups generators of unstructured meshes (Tri and Tet only)
@@ -107,7 +106,7 @@ impl Unstructured {
         tri.set_segment(index - 1, index - 1, 0)?;
 
         // region
-        tri.set_region(0, rmin + 1e-4, 1e-4, 1, None);
+        tri.set_region(0, rmin + 1e-4, 1e-4, 1, None)?;
 
         // generate mesh
         tri.generate_mesh(false, o2, global_max_area, None)?;
@@ -158,7 +157,6 @@ impl Unstructured {
 #[cfg(test)]
 mod tests {
     use super::Unstructured;
-    use crate::StrError;
 
     #[allow(unused_imports)]
     use crate::mesh::draw_mesh;

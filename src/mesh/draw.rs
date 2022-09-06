@@ -1,8 +1,8 @@
 use super::{Features, Mesh, PointId};
 use crate::shapes::{GeoKind, Scratchpad};
-use crate::util::ONE_BY_3;
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
+use russell_lab::math::ONE_BY_3;
 use russell_lab::Vector;
 use std::collections::HashMap;
 

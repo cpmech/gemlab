@@ -1,7 +1,7 @@
 use super::IntegPointData;
 use crate::shapes::Scratchpad;
-use crate::util::SQRT_2;
 use crate::StrError;
+use russell_lab::math::SQRT_2;
 use russell_lab::Matrix;
 use russell_tensor::Tensor4;
 

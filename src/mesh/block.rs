@@ -1,9 +1,10 @@
 use super::{Cell, Mesh, Point};
 use crate::mesh::{set_pad_coords, PointId};
 use crate::shapes::{GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
-use crate::util::{AsArray2D, GridSearch, PI};
+use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
+use russell_lab::math::PI;
 use russell_lab::Vector;
 use std::collections::HashMap;
 
@@ -976,9 +977,9 @@ mod tests {
     use crate::geometry::point_point_distance;
     use crate::mesh::{check_all, Samples};
     use crate::shapes::GeoKind;
-    use crate::util::{PI, SQRT_2};
     use plotpy::Plot;
     use russell_chk::{approx_eq, vec_approx_eq};
+    use russell_lab::math::{PI, SQRT_2};
 
     #[allow(unused_imports)]
     use crate::mesh::draw_mesh;

@@ -314,7 +314,7 @@ impl Find {
 mod tests {
     use super::Find;
     use crate::mesh::{At, EdgeKey, Extract, FaceKey, Samples};
-    use crate::util::SQRT_2;
+    use russell_lab::math::SQRT_2;
 
     #[allow(unused_imports)]
     use plotpy::Plot;

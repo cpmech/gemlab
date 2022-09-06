@@ -1,9 +1,10 @@
 use super::{get_mesh_limits, set_pad_coords, EdgeKey, FaceKey, Feature, Mesh};
 use crate::shapes::DET_JAC_NOT_AVAILABLE;
 use crate::shapes::{geo_case, GeoCase, Scratchpad};
-use crate::util::{GridSearch, ONE_BY_3};
+use crate::util::GridSearch;
 use crate::StrError;
 use russell_chk::approx_eq;
+use russell_lab::math::ONE_BY_3;
 use russell_lab::Vector;
 use std::collections::HashMap;
 

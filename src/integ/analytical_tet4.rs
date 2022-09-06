@@ -1,6 +1,6 @@
 use crate::shapes::{GeoKind, Scratchpad};
-use crate::util::SQRT_2;
 use crate::StrError;
+use russell_lab::math::SQRT_2;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
 use russell_tensor::{LinElasticity, Tensor2};
 

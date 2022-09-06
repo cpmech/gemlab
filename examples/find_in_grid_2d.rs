@@ -1,7 +1,8 @@
 use gemlab::geometry::Circle;
-use gemlab::util::{GridSearch, PI};
+use gemlab::util::GridSearch;
 use gemlab::StrError;
 use plotpy::Plot;
+use russell_lab::math::PI;
 use std::collections::HashSet;
 
 struct Segment {

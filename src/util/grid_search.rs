@@ -1,7 +1,8 @@
-use super::{num_divisions, SQRT_2, SQRT_3};
+use super::num_divisions;
 use crate::geometry::{point_circle_distance, point_cylinder_distance, point_line_distance, point_point_distance};
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, Text};
+use russell_lab::math::{SQRT_2, SQRT_3};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -58,9 +59,10 @@ type Containers = HashMap<ContainerKey, Container>;
 /// # Examples
 ///
 /// ```
-/// use gemlab::util::{GridSearch, SQRT_2};
+/// use gemlab::util::GridSearch;
 /// use gemlab::StrError;
 /// use plotpy::Plot;
+/// use russell_lab::math::SQRT_2;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let xmin = &[0.0, 0.0];
@@ -802,9 +804,9 @@ impl fmt::Display for GridSearch {
 #[cfg(test)]
 mod tests {
     use super::{GridSearch, GS_DEFAULT_TOLERANCE};
-    use crate::util::{SQRT_2, SQRT_3};
     use plotpy::Plot;
     use russell_chk::{approx_eq, vec_approx_eq};
+    use russell_lab::math::{SQRT_2, SQRT_3};
 
     #[allow(unused_imports)]
     use plotpy::{Canvas, Curve, RayEndpoint, Surface};
