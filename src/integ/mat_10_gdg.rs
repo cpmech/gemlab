@@ -2,18 +2,18 @@ use super::IntegPointData;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
-use russell_lab::Matrix;
+use russell_lab::{Matrix, Vector};
 use russell_tensor::Tensor4;
 
 /// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case 10 (e.g., stiffness matrix)
 ///
-/// Callback function: `f(D, p, G)`
+/// Callback function: `α ← f(D, p, N, G)`
 ///
 /// Stiffness tensors (note the sum over repeated lower indices):
 ///
 /// ```text
 ///       ⌠                       →    →
-/// Kᵐⁿ = │ Σ Σ Σ Σ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
+/// Kᵐⁿ = │ Σ Σ Σ Σ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ α dΩ
 /// ▔     ⌡ i j k l
 ///       Ωₑ
 /// ```
@@ -21,8 +21,8 @@ use russell_tensor::Tensor4;
 /// The numerical integration is (note the sum over repeated lower indices):
 ///
 /// ```text
-///         nip-1         →         →       →          →
-/// Kᵐⁿᵢⱼ ≈   Σ   Σ Σ Gᵐₖ(ιᵖ) Dᵢₖⱼₗ(ιᵖ) Gⁿₗ(ιᵖ) |J|(ιᵖ) wᵖ
+///         nip-1         →         →       →       →
+/// Kᵐⁿᵢⱼ ≈   Σ   Σ Σ Gᵐₖ(ιᵖ) Dᵢₖⱼₗ(ιᵖ) Gⁿₗ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///          p=0  k l
 /// ```
 ///
@@ -57,8 +57,9 @@ use russell_tensor::Tensor4;
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_dd` -- Function `f(D,p,G)` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`
-///   and gradients G(ιᵖ). `D` is **minor-symmetric** and set for `space_ndim`.
+/// * `fn_dd` -- Function `f(D,p,N,G)→α` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients G(ιᵖ). `D` is **minor-symmetric** and set for `space_ndim`.
+///   `fn_dd` returns α that can accommodate plane-strain or axisymmetric simulations.
 ///
 /// # Examples
 ///
@@ -66,8 +67,8 @@ use russell_tensor::Tensor4;
 /// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
-/// use russell_lab::{copy_matrix, Matrix};
-/// use russell_tensor::LinElasticity;
+/// use russell_lab::Matrix;
+/// use russell_tensor::{copy_tensor4, LinElasticity};
 ///
 /// fn main() -> Result<(), StrError> {
 ///     // shape and state
@@ -97,8 +98,9 @@ use russell_tensor::Tensor4;
 ///     let nrow = pad.kind.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let ips = integ::default_points(pad.kind);
-///     integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _| {
-///         copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+///     integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _, _| {
+///         copy_tensor4(dd, model.get_modulus())?;
+///         Ok(1.0)
 ///     })?;
 ///
 ///     // check
@@ -131,7 +133,7 @@ pub fn mat_10_gdg<F>(
     mut fn_dd: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor4, usize, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor4, usize, &Vector, &Matrix) -> Result<f64, StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -158,14 +160,16 @@ where
         let weight = ips[p][3];
 
         // calculate Jacobian and Gradient
+        (pad.fn_interp)(&mut pad.interp, iota); // N
         let det_jac = pad.calc_gradient(iota)?; // G
 
         // calculate D tensor
+        let nn = &pad.interp;
         let gg = &pad.gradient;
-        fn_dd(&mut dd, p, gg)?;
+        let alpha = fn_dd(&mut dd, p, nn, gg)?;
 
         // add contribution to K matrix
-        let c = det_jac * weight;
+        let c = alpha * det_jac * weight;
         mat_10_gdg_add_to_mat_kk(kk, ii0, jj0, &dd, c, pad);
     }
     Ok(())
@@ -213,30 +217,30 @@ mod tests {
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_chk::vec_approx_eq;
-    use russell_lab::{copy_matrix, Matrix};
-    use russell_tensor::LinElasticity;
+    use russell_lab::Matrix;
+    use russell_tensor::{copy_tensor4, LinElasticity};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _| Ok(())).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _| Ok(())).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _| Ok(())).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _, _| Ok(1.0)).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _| Err(
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _, _| Err(
                 "stop"
             ))
             .err(),
@@ -273,7 +277,7 @@ mod tests {
         // constants
         let young = 10_000.0;
         let poisson = 0.2;
-        let th = 0.25; // thickness
+        let thickness = 0.25;
         let plane_stress = true;
         let model = LinElasticity::new(young, poisson, true, plane_stress);
 
@@ -283,13 +287,9 @@ mod tests {
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = integ::points(class, 1).unwrap();
-        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _| {
-            let in_array = model.get_modulus().mat.as_data();
-            let out_array = dd.mat.as_mut_data();
-            for i in 0..in_array.len() {
-                out_array[i] = th * in_array[i];
-            }
-            Ok(())
+        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _, _| {
+            copy_tensor4(dd, model.get_modulus())?;
+            Ok(thickness)
         })
         .unwrap();
 
@@ -307,7 +307,7 @@ mod tests {
 
         // analytical solution
         let ana = AnalyticalTri3::new(&pad);
-        let kk_correct = ana.mat_10_gdg(young, poisson, plane_stress, th).unwrap();
+        let kk_correct = ana.mat_10_gdg(young, poisson, plane_stress, thickness).unwrap();
 
         // compare against analytical solution
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-11, 1e-12];
@@ -317,13 +317,9 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _| {
-                let in_array = model.get_modulus().mat.as_data();
-                let out_array = dd.mat.as_mut_data();
-                for i in 0..in_array.len() {
-                    out_array[i] = th * in_array[i];
-                }
-                Ok(())
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _, _| {
+                copy_tensor4(dd, model.get_modulus())?;
+                Ok(thickness)
             })
             .unwrap();
             vec_approx_eq(kk_correct.as_data(), kk.as_data(), tol); // 1e-12
@@ -356,8 +352,9 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _| {
-                copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _, _| {
+                copy_tensor4(dd, model.get_modulus())?;
+                Ok(1.0)
             })
             .unwrap();
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol); //1e-12

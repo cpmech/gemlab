@@ -5,13 +5,13 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the vector(V) dot gradient(G) integration case 03
 ///
-/// Callback function: `f(w, p, G)`
+/// Callback function: `α ← f(w, p, N, G)`
 ///
 /// Vector dot gradient:
 ///
 /// ```text
 ///      ⌠ → →    →  → →
-/// cᵐ = │ w(x) · Gᵐ(x(ξ)) dΩ
+/// cᵐ = │ w(x) · Gᵐ(x(ξ)) α dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -20,7 +20,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///      nip-1  → →     →  →       →
-/// cᵐ ≈   Σ    w(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
+/// cᵐ ≈   Σ    w(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///       p=0
 /// ```
 ///
@@ -45,8 +45,9 @@ use russell_lab::{Matrix, Vector};
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `clear_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_w` -- Function `f(w,p,G)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   and gradients G(ιᵖ). `w.dim() = space_ndim`.
+/// * `fn_w` -- Function `f(w,p,N,G)→α` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients G(ιᵖ). `w.dim() = space_ndim`.
+///   `fn_w` returns α that can accommodate plane-strain or axisymmetric simulations.
 ///
 /// # Examples
 ///
@@ -70,10 +71,10 @@ use russell_lab::{Matrix, Vector};
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _| {
+///     integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
-///         Ok(())
+///         Ok(1.0)
 ///     })?;
 ///     // solution (A = 6):
 ///     // cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
@@ -95,7 +96,7 @@ pub fn vec_03_vg<F>(
     mut fn_w: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<f64, StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -118,14 +119,16 @@ where
         let weight = ips[p][3];
 
         // calculate Jacobian and Gradient
-        let det_jac = pad.calc_gradient(iota)?;
+        (pad.fn_interp)(&mut pad.interp, iota); // N
+        let det_jac = pad.calc_gradient(iota)?; // G
 
         // calculate w
+        let nn = &pad.interp;
         let gg = &pad.gradient;
-        fn_w(&mut w, p, &pad.gradient)?;
+        let alpha = fn_w(&mut w, p, nn, gg)?;
 
         // add contribution to c vector
-        let coef = det_jac * weight;
+        let coef = alpha * det_jac * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 c[ii0 + m] += coef * (w[0] * gg[m][0] + w[1] * gg[m][1]);
@@ -153,7 +156,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut c = Vector::new(2);
         assert_eq!(
-            integ::vec_03_vg(&mut c, &mut pad, 1, false, &[], |_, _, _| Ok(())).err(),
+            integ::vec_03_vg(&mut c, &mut pad, 1, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
     }
@@ -178,10 +181,10 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             vec_approx_eq(c.as_data(), &c_correct, tol);
@@ -207,10 +210,10 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, p, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, p, _, _| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             vec_approx_eq(c.as_data(), &c_correct, tol);
@@ -241,11 +244,11 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             vec_approx_eq(c.as_data(), &c_correct, tol);

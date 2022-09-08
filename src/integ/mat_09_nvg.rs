@@ -5,13 +5,13 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(N) times vector(V) dot gradient(G) integration case 09 (e.g., variable density matrix)
 ///
-/// Callback function: `f(v, p, N, G)`
+/// Callback function: `α ← f(v, p, N, G)`
 ///
 /// Variable density coefficients:
 ///
 /// ```text
 ///       ⌠    →   →
-/// Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ dΩ
+/// Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ α dΩ
 /// ▔     ⌡
 ///       Ωₑ
 /// ```
@@ -20,7 +20,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///         nip-1    →   →  →   →   →       →
-/// Kᵐⁿᵢⱼ ≈   Σ   Nᵐ(ιᵖ) vᵢ(ιᵖ) Gⁿⱼ(ιᵖ) |J|(ιᵖ) wᵖ
+/// Kᵐⁿᵢⱼ ≈   Σ   Nᵐ(ιᵖ) vᵢ(ιᵖ) Gⁿⱼ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///          p=0
 /// ```
 ///
@@ -55,8 +55,9 @@ use russell_lab::{Matrix, Vector};
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_v` -- Function `f(v,p,N,G)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_v` -- Function `f(v,p,N,G)→α` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients G(ιᵖ). `v.dim() = space_ndim`.
+///   `fn_v` returns α that can accommodate plane-strain or axisymmetric simulations.
 pub fn mat_09_nvg<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
@@ -67,7 +68,7 @@ pub fn mat_09_nvg<F>(
     mut fn_v: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<f64, StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -100,10 +101,10 @@ where
         // calculate v
         let nn = &pad.interp;
         let gg = &pad.gradient;
-        fn_v(&mut v, p, nn, gg)?;
+        let alpha = fn_v(&mut v, p, nn, gg)?;
 
         // add contribution to K matrix
-        let c = det_jac * weight;
+        let c = alpha * det_jac * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
@@ -149,16 +150,16 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _, _| Ok(())).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _, _| Ok(())).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _, _| Ok(())).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _, _| Ok(1.0)).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
@@ -189,7 +190,7 @@ mod tests {
             integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, true, ips, |v, _, _, _| {
                 v[0] = v0;
                 v[1] = v1;
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             // println!("{}", kk);
@@ -215,7 +216,7 @@ mod tests {
                 v[0] = v0;
                 v[1] = v1;
                 v[2] = v2;
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             // println!("{}", kk);

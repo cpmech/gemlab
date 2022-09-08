@@ -5,13 +5,13 @@ use russell_lab::Vector;
 
 /// Implements the the shape(N) times vector(V) integration case 02 (boundary integral version)
 ///
-/// Callback function: `f(v, p, un, N)`
+/// Callback function: `α ← f(v, p, un, N)`
 ///
 /// Interpolation functions times vector field:
 ///
 /// ```text
 /// →    ⌠    → →   → →
-/// bᵐ = │ Nᵐ(x(ξ)) v(x) dΓ
+/// bᵐ = │ Nᵐ(x(ξ)) v(x) α dΓ
 ///      ⌡
 ///      Γₑ
 /// ```
@@ -20,7 +20,7 @@ use russell_lab::Vector;
 ///
 /// ```text
 /// →    nip-1     →   → →     →   →
-/// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) ||n||(ιᵖ) wᵖ
+/// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) ||n||(ιᵖ) wᵖ α
 ///       p=0
 /// ```
 ///
@@ -52,9 +52,10 @@ use russell_lab::Vector;
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_v` -- Function `f(v,p,un,N)` that calculates `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_v` -- Function `f(v,p,un,N)→α` that calculates `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   the **unit** normal vector `un(x(ιᵖ))`, and shape functions N(ιᵖ).
 ///   `v.dim() = space_ndim` and `un.dim() = space_ndim`.
+///   `fn_v` returns α that can accommodate plane-strain or axisymmetric simulations.
 ///
 /// # Examples
 ///
@@ -67,7 +68,7 @@ pub fn vec_02_nv_bry<F>(
     mut fn_v: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Vector) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Vector, &Vector) -> Result<f64, StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -103,10 +104,10 @@ where
 
         // calculate t
         let nn = &pad.interp;
-        fn_v(&mut v, p, &un, nn)?;
+        let alpha = fn_v(&mut v, p, &un, nn)?;
 
         // add contribution to b vector
-        let coef = mag_n * weight;
+        let coef = alpha * mag_n * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 b[ii0 + 0 + m * 2] += coef * nn[m] * v[0];
@@ -142,19 +143,19 @@ mod tests {
         let mut pad = aux::gen_pad_tri3();
         let mut b = Vector::new(6);
         assert_eq!(
-            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], |_, _, _, _| Ok(())).err(),
+            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("in 2D, geometry ndim must be equal to 1 (a line)")
         );
         let mut pad = aux::gen_pad_tet4();
         let mut b = Vector::new(8);
         assert_eq!(
-            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], |_, _, _, _| Ok(())).err(),
+            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("in 3D, geometry ndim must be equal to 2 (a surface)")
         );
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
         assert_eq!(
-            integ::vec_02_nv_bry(&mut b, &mut pad, 1, false, &[], |_, _, _, _| Ok(())).err(),
+            integ::vec_02_nv_bry(&mut b, &mut pad, 1, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -177,7 +178,7 @@ mod tests {
         integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
-            Ok(())
+            Ok(1.0)
         })
         .unwrap();
         vec_approx_eq(b.as_data(), &[0.0, -2.0, 0.0, -2.0], 1e-15);
@@ -187,7 +188,7 @@ mod tests {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
-            Ok(())
+            Ok(1.0)
         })
         .unwrap();
         vec_approx_eq(b.as_data(), &[0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
@@ -207,7 +208,7 @@ mod tests {
         integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
-            Ok(())
+            Ok(1.0)
         })
         .unwrap();
         vec_approx_eq(b.as_data(), &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
@@ -217,7 +218,7 @@ mod tests {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
-            Ok(())
+            Ok(1.0)
         })
         .unwrap();
         vec_approx_eq(b.as_data(), &[0.0, 0.0, 0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
@@ -241,7 +242,7 @@ mod tests {
         integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
-            Ok(())
+            Ok(1.0)
         })
         .unwrap();
         let correct = &[
@@ -263,7 +264,7 @@ mod tests {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
-            Ok(())
+            Ok(1.0)
         })
         .unwrap();
         let correct = &[
@@ -304,7 +305,7 @@ mod tests {
             t[0] = 0.0;
             t[1] = 0.0;
             t[2] = -1.0;
-            Ok(())
+            Ok(1.0)
         })
         .unwrap();
         let aa = dx * dy;
@@ -357,7 +358,7 @@ mod tests {
             t[0] = 0.0;
             t[1] = 0.0;
             t[2] = -1.0;
-            Ok(())
+            Ok(1.0)
         })
         .unwrap();
         let correct = &[
@@ -408,7 +409,7 @@ mod tests {
         integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, un, _| {
             t[0] = p * un[0];
             t[1] = p * un[1];
-            Ok(())
+            Ok(1.0)
         })
         .unwrap();
         let correct = &[

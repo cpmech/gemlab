@@ -5,13 +5,13 @@ use russell_lab::Vector;
 
 /// Implements the the shape(N) times vector(V) integration case 02
 ///
-/// Callback function: `f(v, p, N)`
+/// Callback function: `α ← f(v, p, N)`
 ///
 /// Interpolation functions times vector field:
 ///
 /// ```text
 /// →    ⌠    → →   → →
-/// bᵐ = │ Nᵐ(x(ξ)) v(x) dΩ
+/// bᵐ = │ Nᵐ(x(ξ)) v(x) α dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -20,7 +20,7 @@ use russell_lab::Vector;
 ///
 /// ```text
 /// →    nip-1     →   → →       →
-/// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) |J|(ιᵖ) wᵖ
+/// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) |J|(ιᵖ) wᵖ α
 ///       p=0
 /// ```
 ///
@@ -52,8 +52,9 @@ use russell_lab::Vector;
 /// * `ii0` -- Stride marking the first row in the output vector where to add components
 /// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_v` -- Function `f(v,p,N)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_v` -- Function `f(v,p,N)→α` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   and shape functions N(ιᵖ). `v.dim() = space_ndim`.
+///   `fn_v` returns α that can accommodate plane-strain or axisymmetric simulations.
 ///
 /// # Examples
 ///
@@ -78,7 +79,7 @@ use russell_lab::Vector;
 ///     integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
-///         Ok(())
+///         Ok(1.0)
 ///     })?;
 ///     // solution (A = 6):
 ///     // bᵐ₀ = v₀ A / 3
@@ -96,7 +97,7 @@ pub fn vec_02_nv<F>(
     mut fn_v: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Vector) -> Result<f64, StrError>,
 {
     // check
     let (space_ndim, nnode) = pad.xxt.dims();
@@ -124,10 +125,10 @@ where
 
         // calculate v
         let nn = &pad.interp;
-        fn_v(&mut v, p, nn)?;
+        let alpha = fn_v(&mut v, p, nn)?;
 
         // add contribution to b vector
-        let coef = det_jac * weight;
+        let coef = alpha * det_jac * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 b[ii0 + 0 + m * 2] += coef * nn[m] * v[0];
@@ -158,7 +159,7 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
         assert_eq!(
-            integ::vec_02_nv(&mut b, &mut pad, 1, false, &[], |_, _, _| Ok(())).err(),
+            integ::vec_02_nv(&mut b, &mut pad, 1, false, &[], |_, _, _| Ok(1.0)).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -193,7 +194,7 @@ mod tests {
             integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, p, _| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             vec_approx_eq(b.as_data(), b_correct, tol);
@@ -225,7 +226,7 @@ mod tests {
             integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _, _| {
                 v[0] = V0;
                 v[1] = V1;
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             vec_approx_eq(b.as_data(), &b_correct, tol);
@@ -258,7 +259,7 @@ mod tests {
                 v[0] = V0;
                 v[1] = V1;
                 v[2] = V2;
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             vec_approx_eq(b.as_data(), &b_correct, tol);

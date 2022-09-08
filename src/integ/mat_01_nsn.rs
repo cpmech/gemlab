@@ -49,7 +49,7 @@ use russell_lab::{Matrix, Vector};
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_s` -- Function `f(p,N,G)` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_s` -- Function `f(p,N,G)→s` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients G(ιᵖ).
 pub fn mat_01_nsn<F>(
     kk: &mut Matrix,

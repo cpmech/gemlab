@@ -7,7 +7,7 @@ use russell_tensor::Tensor2;
 
 /// Implements the gradient(Gb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
 ///
-/// Callback function: `f(T, p, Gb, N, G)`
+/// Callback function: `α ← f(T, p, Gb, N, G)`
 ///
 /// **Notes:**
 ///
@@ -21,7 +21,7 @@ use russell_tensor::Tensor2;
 ///
 /// ```text
 /// →     ⌠ →
-/// Kᵐⁿ = │ Gbᵐ ⋅ T Nⁿ dΩ
+/// Kᵐⁿ = │ Gbᵐ ⋅ T Nⁿ α dΩ
 ///       ⌡       ▔
 ///       Ωₑ
 /// ```
@@ -30,7 +30,7 @@ use russell_tensor::Tensor2;
 ///
 /// ```text
 ///        nip-1      →       →      →       →
-/// Kᵐⁿⱼ ≈   Σ   Gbᵐᵢ(ιᵖ) Tᵢⱼ(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ
+/// Kᵐⁿⱼ ≈   Σ   Gbᵐᵢ(ιᵖ) Tᵢⱼ(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///         p=0
 /// ```
 ///
@@ -63,8 +63,9 @@ use russell_tensor::Tensor2;
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_tt` -- Function `f(T,p,Gb,N,G)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_tt` -- Function `f(T,p,Gb,N,G)→α` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   the gradients Gb(ιᵖ), shape functions N(ιᵖ), and gradients G(ιᵖ). `T` is set for `space_ndim`.
+///   `fn_tt` returns α that can accommodate plane-strain or axisymmetric simulations.
 ///
 /// # Warning
 ///
@@ -81,7 +82,7 @@ pub fn mat_05_gtn<F>(
     mut fn_tt: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize, &Matrix, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2, usize, &Matrix, &Vector, &Matrix) -> Result<f64, StrError>,
 {
     // check
     let nnode_b = pad_b.interp.dim();
@@ -118,10 +119,10 @@ where
         let ggb = &pad_b.gradient;
         let nn = &pad.interp;
         let gg = &pad.gradient;
-        fn_tt(&mut tt, p, ggb, nn, gg)?;
+        let alpha = fn_tt(&mut tt, p, ggb, nn, gg)?;
 
         // add contribution to K matrix
-        let c = det_jac * weight;
+        let c = alpha * det_jac * weight;
         let t = &tt.vec;
         if space_ndim == 2 {
             for m in 0..nnode_b {
@@ -153,8 +154,8 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
     use russell_chk::vec_approx_eq;
-    use russell_lab::{copy_vector, Matrix};
-    use russell_tensor::Tensor2;
+    use russell_lab::Matrix;
+    use russell_tensor::{copy_tensor2, Tensor2};
 
     #[test]
     fn capture_some_errors() {
@@ -163,11 +164,11 @@ mod tests {
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
         assert_eq!(
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], |_, _, _, _, _| Ok(())).err(),
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], |_, _, _, _, _| Ok(1.0)).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
         assert_eq!(
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], |_, _, _, _, _| Ok(())).err(),
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], |_, _, _, _, _| Ok(1.0)).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
     }
@@ -193,7 +194,8 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _, _, _, _| {
-                copy_vector(&mut ten.vec, &tt.vec)
+                copy_tensor2(ten, &tt)?;
+                Ok(1.0)
             })
             .unwrap();
             // println!("{}", kk);
@@ -221,7 +223,8 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |ten, _, _, _, _| {
-                copy_vector(&mut ten.vec, &tt.vec)
+                copy_tensor2(ten, &tt)?;
+                Ok(1.0)
             })
             .unwrap();
             // println!("{}", kk);

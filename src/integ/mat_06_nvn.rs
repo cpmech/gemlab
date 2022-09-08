@@ -5,7 +5,7 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(N) times vector(V) times shape(Nb) integration case 06 (e.g., coupling matrix)
 ///
-/// Callback function: `f(v, p, N, G, Nb)`
+/// Callback function: `α ← f(v, p, N, G, Nb)`
 ///
 /// **Notes:**
 ///
@@ -19,7 +19,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 /// →     ⌠    →
-/// Kᵐⁿ = │ Nᵐ v Nbⁿ dΩ
+/// Kᵐⁿ = │ Nᵐ v Nbⁿ α dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -28,7 +28,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///        nip-1     →     →       →       →
-/// Kᵐⁿᵢ ≈   Σ   Nᵐ(ιᵖ) vᵢ(ιᵖ) Nbⁿ(ιᵖ) |J|(ιᵖ) wᵖ
+/// Kᵐⁿᵢ ≈   Σ   Nᵐ(ιᵖ) vᵢ(ιᵖ) Nbⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///         p=0
 /// ```
 ///
@@ -64,8 +64,9 @@ use russell_lab::{Matrix, Vector};
 /// * `jj0` -- Stride marking the first column in the output matrix where to add components.
 /// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
 /// * `ips` -- Integration points (n_integ_point)
-/// * `fn_v` -- Function `f(v,p,N,G,Nb)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_v` -- Function `f(v,p,N,G,Nb)→α` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), gradients G(ιᵖ), and shape functions Nb(ιᵖ). `v.dim() = space_ndim`.
+///   `fn_v` returns α that can accommodate plane-strain or axisymmetric simulations.
 ///
 /// # Warning
 ///
@@ -82,7 +83,7 @@ pub fn mat_06_nvn<F>(
     mut fn_v: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Matrix, &Vector) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Vector, &Matrix, &Vector) -> Result<f64, StrError>,
 {
     // check
     let nnode_b = pad_b.interp.dim();
@@ -118,10 +119,10 @@ where
         let nn = &pad.interp;
         let gg = &pad.gradient;
         let nnb = &pad_b.interp;
-        fn_v(&mut v, p, nn, gg, nnb)?;
+        let alpha = fn_v(&mut v, p, nn, gg, nnb)?;
 
         // add contribution to K matrix
-        let c = det_jac * weight;
+        let c = alpha * det_jac * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode_b {
@@ -158,11 +159,11 @@ mod tests {
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
         assert_eq!(
-            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 1, 0, false, &[], |_, _, _, _, _| Ok(())).err(),
+            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 1, 0, false, &[], |_, _, _, _, _| Ok(1.0)).err(),
             Some("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 1, false, &[], |_, _, _, _, _| Ok(())).err(),
+            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 1, false, &[], |_, _, _, _, _| Ok(1.0)).err(),
             Some("ncol(K) must be ≥ jj0 + pad_b.nnode")
         );
     }
@@ -185,7 +186,7 @@ mod tests {
             integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |v, _, _, _, _| {
                 v[0] = v0;
                 v[1] = v1;
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             // println!("{}", kk);
@@ -211,7 +212,7 @@ mod tests {
                 v[0] = v0;
                 v[1] = v1;
                 v[2] = v2;
-                Ok(())
+                Ok(1.0)
             })
             .unwrap();
             // println!("{}", kk);
