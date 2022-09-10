@@ -174,7 +174,7 @@ where
     Ok(())
 }
 
-/// Adds contribution to the K-matrix in integ_mat_10_gdg
+/// Adds contribution to the K-matrix in mat_10_gdg
 #[inline]
 #[rustfmt::skip]
 fn add_to_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, pad: &mut Scratchpad) {
@@ -208,7 +208,7 @@ fn add_to_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, pad:
     }
 }
 
-/// Adds contribution to the K-matrix in integ_mat_10_gdg (axisymmetric case)
+/// Adds contribution to the K-matrix in mat_10_gdg (axisymmetric case)
 #[inline]
 #[rustfmt::skip]
 fn add_to_kk_axisymmetric(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, r: f64, pad: &mut Scratchpad) {
