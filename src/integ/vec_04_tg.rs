@@ -101,6 +101,9 @@ where
     if d.dim() < ii0 + nnode * space_ndim {
         return Err("d.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
+    if args.axisymmetric && space_ndim != 2 {
+        return Err("axisymmetric requires space_ndim = 2");
+    }
 
     // allocate auxiliary tensor
     let mut sig = Tensor2::new(true, space_ndim == 2);
@@ -111,7 +114,6 @@ where
     }
 
     // loop over integration points
-    let s = SQRT_2;
     for index in 0..args.ips.len() {
         // ksi coordinates and weight
         let iota = &args.ips[index];
@@ -126,33 +128,54 @@ where
         let gg = &args.pad.gradient;
         fn_sig(&mut sig, index, nn, gg)?;
 
-        // calculate coefficient
-        let coef = if args.axisymmetric {
+        // add contribution to d vector
+        let c = det_jac * weight * args.alpha;
+        if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
                 r += nn[m] * args.pad.xxt[0][m];
             }
-            det_jac * weight * args.alpha * r
+            add_to_d_axisymmetric(d, nnode, c, r, &sig, args);
         } else {
-            det_jac * weight * args.alpha
-        };
-
-        // add contribution to d vector
-        let t = &sig.vec;
-        if space_ndim == 2 {
-            for m in 0..nnode {
-                d[ii0 + 0 + m * 2] += coef * (t[0] * gg[m][0] + t[3] * gg[m][1] / s);
-                d[ii0 + 1 + m * 2] += coef * (t[3] * gg[m][0] / s + t[1] * gg[m][1]);
-            }
-        } else {
-            for m in 0..nnode {
-                d[ii0 + 0 + m * 3] += coef * (t[0] * gg[m][0] + t[3] * gg[m][1] / s + t[5] * gg[m][2] / s);
-                d[ii0 + 1 + m * 3] += coef * (t[3] * gg[m][0] / s + t[1] * gg[m][1] + t[4] * gg[m][2] / s);
-                d[ii0 + 2 + m * 3] += coef * (t[5] * gg[m][0] / s + t[4] * gg[m][1] / s + t[2] * gg[m][2]);
-            }
+            add_to_d(d, space_ndim, nnode, c, &sig, args);
         }
     }
     Ok(())
+}
+
+/// Adds contribution to the d-vector in vec_04_tg
+#[inline]
+fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, args: &mut CommonArgs) {
+    let t = &sig.vec;
+    let s = SQRT_2;
+    let gg = &args.pad.gradient;
+    let ii0 = args.ii0;
+    if ndim == 2 {
+        for m in 0..nnode {
+            d[ii0 + 0 + m * 2] += c * (t[0] * gg[m][0] + t[3] * gg[m][1] / s);
+            d[ii0 + 1 + m * 2] += c * (t[3] * gg[m][0] / s + t[1] * gg[m][1]);
+        }
+    } else {
+        for m in 0..nnode {
+            d[ii0 + 0 + m * 3] += c * (t[0] * gg[m][0] + t[3] * gg[m][1] / s + t[5] * gg[m][2] / s);
+            d[ii0 + 1 + m * 3] += c * (t[3] * gg[m][0] / s + t[1] * gg[m][1] + t[4] * gg[m][2] / s);
+            d[ii0 + 2 + m * 3] += c * (t[5] * gg[m][0] / s + t[4] * gg[m][1] / s + t[2] * gg[m][2]);
+        }
+    }
+}
+
+/// Adds contribution to the d-vector in vec_04_tg (axisymmetric case)
+#[inline]
+fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Tensor2, args: &mut CommonArgs) {
+    let t = &sig.vec;
+    let s = SQRT_2;
+    let nn = &args.pad.interp;
+    let gg = &args.pad.gradient;
+    let ii0 = args.ii0;
+    for m in 0..nnode {
+        d[ii0 + 0 + m * 2] += c * r * (t[0] * gg[m][0] + t[3] * gg[m][1] / s) + nn[m] * t[2];
+        d[ii0 + 1 + m * 2] += c * r * (t[3] * gg[m][0] / s + t[1] * gg[m][1]);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
