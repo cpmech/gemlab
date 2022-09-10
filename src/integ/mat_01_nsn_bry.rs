@@ -96,7 +96,7 @@ where
 
         // calculate interpolation functions and Jacobian
         (pad.fn_interp)(&mut pad.interp, iota); // N
-        let mag_n = pad.calc_normal_vector(&mut un, iota)?; // un
+        let mag_n = pad.calc_normal_vector(&mut un, iota).unwrap(); // un
 
         // calculate s
         let nn = &pad.interp;
@@ -121,30 +121,34 @@ mod tests {
     use crate::integ::{self, AnalyticalTri3, IP_TRI_INTERNAL_1};
     use crate::shapes::{GeoClass, GeoKind, Scratchpad};
     use russell_chk::vec_approx_eq;
-    use russell_lab::Matrix;
+    use russell_lab::{Matrix, Vector};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
+        let un = Vector::new(0);
+        let nn = Vector::new(0);
+        let f = |_, _: &Vector, _: &Vector| Ok(0.0);
+        assert_eq!(f(0, &un, &nn).unwrap(), 0.0);
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_, _, _| Ok(0.0)).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], f).err(),
             Some("in 2D, geometry ndim must be equal to 1 (a line)")
         );
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], |_, _, _| Ok(0.0)).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], f).err(),
             Some("in 3D, geometry ndim must be equal to 2 (a surface)")
         );
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _| Ok(0.0)).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 1, 0, false, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _| Ok(0.0)).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 1, false, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         assert_eq!(
