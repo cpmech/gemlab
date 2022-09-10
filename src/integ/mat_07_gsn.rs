@@ -19,7 +19,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 /// →     ⌠ →
-/// Kᵐⁿ = │ Gᵐ s Nbⁿ dΩ
+/// Kᵐⁿ = │ Gᵐ s Nbⁿ α dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -28,7 +28,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///        nip-1     →     →       →       →
-/// Kᵐⁿᵢ ≈   Σ   Gᵐᵢ(ιᵖ) s(ιᵖ) Nbⁿ(ιᵖ) |J|(ιᵖ) wᵖ
+/// Kᵐⁿᵢ ≈   Σ   Gᵐᵢ(ιᵖ) s(ιᵖ) Nbⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///         p=0
 /// ```
 ///
