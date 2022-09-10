@@ -1,5 +1,4 @@
 use super::CommonArgs;
-use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
@@ -125,11 +124,10 @@ where
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
-    let (ii0, jj0) = (args.ii0, args.jj0);
-    if nrow_kk < ii0 + nnode * space_ndim {
+    if nrow_kk < args.ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim");
     }
-    if ncol_kk < jj0 + nnode * space_ndim {
+    if ncol_kk < args.jj0 + nnode * space_ndim {
         return Err("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim");
     }
     if args.axisymmetric && space_ndim != 2 {
@@ -166,9 +164,9 @@ where
             for m in 0..nnode {
                 r += nn[m] * args.pad.xxt[0][m];
             }
-            add_to_kk_axisymmetric(kk, ii0, jj0, &dd, c, r, args.pad);
+            add_to_kk_axisymmetric(kk, nnode, c, r, &dd, args);
         } else {
-            add_to_kk(kk, ii0, jj0, &dd, c, args.pad);
+            add_to_kk(kk, space_ndim, nnode, c, &dd, args);
         }
     }
     Ok(())
@@ -177,12 +175,12 @@ where
 /// Adds contribution to the K-matrix in mat_10_gdg
 #[inline]
 #[rustfmt::skip]
-fn add_to_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, pad: &mut Scratchpad) {
+fn add_to_kk(kk: &mut Matrix, ndim: usize, nnode: usize, c: f64, dd: &Tensor4, args: &mut CommonArgs) {
     let s = SQRT_2;
-    let g = &pad.gradient;
+    let g = &args.pad.gradient;
     let d = &dd.mat;
-    let (space_ndim, nnode) = pad.xxt.dims();
-    if space_ndim == 2 {
+    let (ii0, jj0) = (args.ii0, args.jj0);
+    if ndim == 2 {
         for m in 0..nnode {
             for n in 0..nnode {
                 kk[ii0+0+m*2][jj0+0+n*2] += c * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0;
@@ -211,12 +209,12 @@ fn add_to_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, pad:
 /// Adds contribution to the K-matrix in mat_10_gdg (axisymmetric case)
 #[inline]
 #[rustfmt::skip]
-fn add_to_kk_axisymmetric(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, r: f64, pad: &mut Scratchpad) {
+fn add_to_kk_axisymmetric(kk: &mut Matrix, nnode: usize, c: f64, r: f64, dd: &Tensor4, args: &mut CommonArgs) {
     let s = SQRT_2;
-    let g = &pad.gradient;
     let d = &dd.mat;
-    let nn = &pad.interp;
-    let (_, nnode) = pad.xxt.dims();
+    let nn = &args.pad.interp;
+    let g = &args.pad.gradient;
+    let (ii0, jj0) = (args.ii0, args.jj0);
     for m in 0..nnode {
         for n in 0..nnode {
             kk[ii0+0+m*2][jj0+0+n*2] += c * r * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0 +

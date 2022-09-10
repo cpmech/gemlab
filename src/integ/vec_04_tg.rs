@@ -97,8 +97,7 @@ where
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
-    let ii0 = args.ii0;
-    if d.dim() < ii0 + nnode * space_ndim {
+    if d.dim() < args.ii0 + nnode * space_ndim {
         return Err("d.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
     if args.axisymmetric && space_ndim != 2 {
