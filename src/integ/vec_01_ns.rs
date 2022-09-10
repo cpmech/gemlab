@@ -143,8 +143,11 @@ mod tests {
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut a = Vector::new(2);
+        let nn = Vector::new(0);
+        let f = |_: usize, _: &Vector| Ok(0.0);
+        assert_eq!(f(0, &nn).unwrap(), 0.0);
         assert_eq!(
-            integ::vec_01_ns(&mut a, &mut pad, 1, false, &[], |_, _| Ok(0.0)).err(),
+            integ::vec_01_ns(&mut a, &mut pad, 1, false, &[], f).err(),
             Some("a.len() must be ≥ ii0 + nnode")
         );
     }

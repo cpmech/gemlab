@@ -149,20 +149,25 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
     use russell_chk::vec_approx_eq;
-    use russell_lab::Vector;
+    use russell_lab::{Matrix, Vector};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut c = Vector::new(2);
+        let mut w = Vector::new(0);
+        let nn = Vector::new(0);
+        let gg = Matrix::new(0, 0);
+        let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(1.0);
+        assert_eq!(f(&mut w, 0, &nn, &gg).unwrap(), 1.0);
         assert_eq!(
-            integ::vec_03_vg(&mut c, &mut pad, 1, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::vec_03_vg(&mut c, &mut pad, 1, false, &[], f).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
     }
 
     #[test]
-    fn vec_03_vg_works_tri3_constant() {
+    fn tri3_constant_works() {
         // constant vector function: w(x) = {w₀, w₁}
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
@@ -192,7 +197,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_03_vg_works_tri3_bilinear() {
+    fn tri3_bilinear_works() {
         // bilinear vector function: w(x) = {x, y}
         let mut pad = aux::gen_pad_tri3();
 
@@ -221,7 +226,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_03_vg_works_tet4_constant() {
+    fn tet4_constant_works() {
         // tet 4 with constant vector  w(x) = {w0, w1, w2}
         let mut pad = aux::gen_pad_tet4();
 

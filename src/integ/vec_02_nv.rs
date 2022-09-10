@@ -158,14 +158,18 @@ mod tests {
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
+        let mut v = Vector::new(0);
+        let nn = Vector::new(0);
+        let f = |_v: &mut Vector, _p: usize, _nn: &Vector| Ok(1.0);
+        assert_eq!(f(&mut v, 0, &nn).unwrap(), 1.0);
         assert_eq!(
-            integ::vec_02_nv(&mut b, &mut pad, 1, false, &[], |_, _, _| Ok(1.0)).err(),
+            integ::vec_02_nv(&mut b, &mut pad, 1, false, &[], f).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
 
     #[test]
-    fn vec_02_nv_works_lin2_linear() {
+    fn lin2_linear_works() {
         // This test is similar to the shape_times_scalar with lin2
         const L: f64 = 6.0;
         let mut pad = aux::gen_pad_lin2(L);
@@ -202,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_02_nv_works_tri3_constant() {
+    fn tri3_constant_works() {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let mut pad = aux::gen_pad_tri3();
@@ -234,7 +238,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_02_nv_works_tet4_constant() {
+    fn tet4_constant_works() {
         // tet 4 with constant vector
         const V0: f64 = 2.0;
         const V1: f64 = 3.0;

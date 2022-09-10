@@ -253,25 +253,30 @@ mod tests {
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TET_INTERNAL_1, IP_TRI_INTERNAL_1};
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_chk::vec_approx_eq;
-    use russell_lab::{mat_approx_eq, Matrix};
-    use russell_tensor::{copy_tensor4, LinElasticity};
+    use russell_lab::{mat_approx_eq, Matrix, Vector};
+    use russell_tensor::{copy_tensor4, LinElasticity, Tensor4};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
+        let mut dd = Tensor4::new(true, true);
+        let nn = Vector::new(0);
+        let gg = Matrix::new(0, 0);
+        let f = |_: &mut Tensor4, _: usize, _: &Vector, _: &Matrix| Ok(0.0);
+        assert_eq!(f(&mut dd, 0, &nn, &gg).unwrap(), 0.0);
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, false, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, false, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
         let ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, false, ips, |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, false, ips, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
@@ -286,7 +291,7 @@ mod tests {
         let mut kk = Matrix::new(12, 12);
         let ips = &IP_TET_INTERNAL_1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, true, ips, |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, true, ips, f).err(),
             Some("axisymmetric requires space_ndim = 2")
         );
     }

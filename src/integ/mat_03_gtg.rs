@@ -134,24 +134,29 @@ mod tests {
         self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1,
     };
     use russell_chk::vec_approx_eq;
-    use russell_lab::Matrix;
+    use russell_lab::{Matrix, Vector};
     use russell_tensor::{copy_tensor2, Tensor2};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
+        let mut tt = Tensor2::new(true, true);
+        let nn = Vector::new(0);
+        let gg = Matrix::new(0, 0);
+        let f = |_tt: &mut Tensor2, _p: usize, _nn: &Vector, _gg: &Matrix| Ok(1.0);
+        assert_eq!(f(&mut tt, 0, &nn, &gg).unwrap(), 1.0);
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 1, 0, false, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 1, false, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         // more errors
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_03_gtg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_qua4(0.0, 0.0, 1.0, 1.0);
@@ -166,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_03_gtg_tri3_works() {
+    fn tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
         let ana = AnalyticalTri3::new(&pad);
@@ -188,7 +193,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_03_gtg_qua4_works() {
+    fn qua4_works() {
         let (a, b) = (2.0, 1.5);
         let mut pad = aux::gen_pad_qua4(2.0, 1.0, a, b);
         let mut kk = Matrix::new(4, 4);
@@ -211,7 +216,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_03_gtg_qua8_works() {
+    fn qua8_works() {
         let (a, b) = (2.0, 1.5);
         let mut pad = aux::gen_pad_qua8(2.0, 1.0, a, b);
         let mut kk = Matrix::new(8, 8);
@@ -234,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_03_gtg_tet4_works() {
+    fn tet4_works() {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4, 4);
         let ana = AnalyticalTet4::new(&pad);

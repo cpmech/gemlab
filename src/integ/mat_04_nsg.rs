@@ -143,7 +143,7 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
     use russell_chk::vec_approx_eq;
-    use russell_lab::Matrix;
+    use russell_lab::{Matrix, Vector};
 
     #[test]
     fn capture_some_errors() {
@@ -151,18 +151,23 @@ mod tests {
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
+        let nnb = Vector::new(0);
+        let nn = Vector::new(0);
+        let gg = Matrix::new(0, 0);
+        let f = |_p: usize, _nnb: &Vector, _nn: &Vector, _gg: &Matrix| Ok(0.0);
+        assert_eq!(f(0, &nnb, &nn, &gg).unwrap(), 0.0);
         assert_eq!(
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], |_, _, _, _| Ok(0.0)).err(),
+            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
         assert_eq!(
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], |_, _, _, _| Ok(0.0)).err(),
+            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
     }
 
     #[test]
-    fn mat_04_nsg_qua4_qua8_works() {
+    fn qua4_qua8_works() {
         let (a, b) = (2.0, 3.0);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
@@ -183,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_04_nsg_tet4_tet4_works() {
+    fn tet4_tet4_works() {
         let mut pad_b = aux::gen_pad_tet4();
         let mut pad = pad_b.clone();
         let mut kk = Matrix::new(4, 4 * 3);

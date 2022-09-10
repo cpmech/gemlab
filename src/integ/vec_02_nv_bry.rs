@@ -142,20 +142,25 @@ mod tests {
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_tri3();
         let mut b = Vector::new(6);
+        let mut v = Vector::new(0);
+        let un = Vector::new(0);
+        let nn = Vector::new(0);
+        let f = |_: &mut Vector, _: usize, _: &Vector, _: &Vector| Ok(0.0);
+        assert_eq!(f(&mut v, 0, &un, &nn).unwrap(), 0.0);
         assert_eq!(
-            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], f).err(),
             Some("in 2D, geometry ndim must be equal to 1 (a line)")
         );
         let mut pad = aux::gen_pad_tet4();
         let mut b = Vector::new(8);
         assert_eq!(
-            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], f).err(),
             Some("in 3D, geometry ndim must be equal to 2 (a surface)")
         );
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
         assert_eq!(
-            integ::vec_02_nv_bry(&mut b, &mut pad, 1, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::vec_02_nv_bry(&mut b, &mut pad, 1, false, &[], f).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }

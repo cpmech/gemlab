@@ -163,21 +163,26 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
     use russell_chk::vec_approx_eq;
-    use russell_lab::Vector;
+    use russell_lab::{Matrix, Vector};
     use russell_tensor::{copy_tensor2, Tensor2};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut d = Vector::new(4);
+        let mut sig = Tensor2::new(true, true);
+        let nn = Vector::new(0);
+        let gg = Matrix::new(0, 0);
+        let f = |_: &mut Tensor2, _, _: &Vector, _: &Matrix| Ok(1.0);
+        assert_eq!(f(&mut sig, 0, &nn, &gg).unwrap(), 1.0);
         assert_eq!(
-            integ::vec_04_tg(&mut d, &mut pad, 1, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::vec_04_tg(&mut d, &mut pad, 1, false, &[], f).err(),
             Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
 
     #[test]
-    fn vec_04_tri3_works_constant() {
+    fn tri3_constant_works() {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
         // solution:
         //    dᵐ₀ = ½ (σ₀₀ bₘ + σ₀₁ cₘ)
@@ -218,7 +223,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_04_tet4_works_constant() {
+    fn tet4_constant_works() {
         // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
         let mut pad = aux::gen_pad_tet4();
 
