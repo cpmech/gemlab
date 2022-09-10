@@ -59,7 +59,8 @@ use russell_tensor::Tensor4;
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_dd` -- Function `f(D,p,N,G)→α` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients G(ιᵖ). `D` is **minor-symmetric** and set for `space_ndim`.
-///   `fn_dd` returns α that can accommodate plane-strain or axisymmetric simulations.
+///   `fn_dd` returns α that can accommodate plane-strain simulations.
+///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Examples
 ///
@@ -98,7 +99,7 @@ use russell_tensor::Tensor4;
 ///     let nrow = pad.kind.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let ips = integ::default_points(pad.kind);
-///     integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _, _| {
+///     integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, false, ips, |dd, _, _, _| {
 ///         copy_tensor4(dd, model.get_modulus())?;
 ///         Ok(1.0)
 ///     })?;
@@ -129,6 +130,7 @@ pub fn mat_10_gdg<F>(
     ii0: usize,
     jj0: usize,
     clear_kk: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_dd: F,
 ) -> Result<(), StrError>
@@ -143,6 +145,9 @@ where
     }
     if ncol_kk < jj0 + nnode * space_ndim {
         return Err("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim");
+    }
+    if axisymmetric && space_ndim != 2 {
+        return Err("axisymmetric requires space_ndim = 2");
     }
 
     // allocate auxiliary tensor
@@ -169,8 +174,17 @@ where
         let alpha = fn_dd(&mut dd, p, nn, gg)?;
 
         // add contribution to K matrix
-        let c = alpha * det_jac * weight;
-        mat_10_gdg_add_to_mat_kk(kk, ii0, jj0, &dd, c, pad);
+        if axisymmetric {
+            let mut r = 0.0; // radius @ ip
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            let c = det_jac * weight;
+            add_to_kk_axisymmetric(kk, ii0, jj0, &dd, c, r, pad);
+        } else {
+            let c = alpha * det_jac * weight;
+            add_to_kk(kk, ii0, jj0, &dd, c, pad);
+        }
     }
     Ok(())
 }
@@ -178,7 +192,7 @@ where
 /// Adds contribution to the K-matrix in integ_mat_10_gdg
 #[inline]
 #[rustfmt::skip]
-fn mat_10_gdg_add_to_mat_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, pad: &mut Scratchpad) {
+fn add_to_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, pad: &mut Scratchpad) {
     let s = SQRT_2;
     let g = &pad.gradient;
     let d = &dd.mat;
@@ -209,15 +223,37 @@ fn mat_10_gdg_add_to_mat_kk(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor
     }
 }
 
+/// Adds contribution to the K-matrix in integ_mat_10_gdg (axisymmetric case)
+#[inline]
+#[rustfmt::skip]
+fn add_to_kk_axisymmetric(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4, c: f64, r: f64, pad: &mut Scratchpad) {
+    let s = SQRT_2;
+    let g = &pad.gradient;
+    let d = &dd.mat;
+    let nn = &pad.interp;
+    let (_, nnode) = pad.xxt.dims();
+    for m in 0..nnode {
+        for n in 0..nnode {
+            kk[ii0+0+m*2][jj0+0+n*2] += c * r * (g[m][1]*g[n][1]*d[3][3] + s*g[m][1]*g[n][0]*d[3][0] + s*g[m][0]*g[n][1]*d[0][3] + 2.0*g[m][0]*g[n][0]*d[0][0]) / 2.0 +
+                                        c * (r*nn[n]*(2.0*d[0][2]*g[m][0] + s*d[3][2]*g[m][1]) + nn[m]*(2.0*nn[n]*d[2][2] + 2.0*r*d[2][0]*g[n][0] + s*r*d[2][3]*g[n][1])) / (2.0*r);
+            kk[ii0+0+m*2][jj0+1+n*2] += c * r * (g[m][1]*g[n][0]*d[3][3] + s*g[m][1]*g[n][1]*d[3][1] + s*g[m][0]*g[n][0]*d[0][3] + 2.0*g[m][0]*g[n][1]*d[0][1]) / 2.0 +
+                                        c * (nn[m]*(s*d[2][3]*g[n][0] + 2.0*d[2][1]*g[n][1])) / 2.0;
+            kk[ii0+1+m*2][jj0+0+n*2] += c * r * (g[m][0]*g[n][1]*d[3][3] + s*g[m][0]*g[n][0]*d[3][0] + s*g[m][1]*g[n][1]*d[1][3] + 2.0*g[m][1]*g[n][0]*d[1][0]) / 2.0 +
+                                        c * (nn[n]*(s*d[3][2]*g[m][0] + 2.0*d[1][2]*g[m][1])) / 2.0;
+            kk[ii0+1+m*2][jj0+1+n*2] += c * r * (g[m][0]*g[n][0]*d[3][3] + s*g[m][0]*g[n][1]*d[3][1] + s*g[m][1]*g[n][0]*d[1][3] + 2.0*g[m][1]*g[n][1]*d[1][1]) / 2.0;
+        }
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TET_INTERNAL_1, IP_TRI_INTERNAL_1};
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_chk::vec_approx_eq;
-    use russell_lab::Matrix;
+    use russell_lab::{mat_approx_eq, Matrix};
     use russell_tensor::{copy_tensor4, LinElasticity};
 
     #[test]
@@ -225,31 +261,38 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, &[], |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, false, &[], |_, _, _, _| Ok(1.0)).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
+        let ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, |_, _, _, _| Ok(1.0)).err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, false, ips, |_, _, _, _| Ok(1.0)).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
+        let ips = &IP_TRI_INTERNAL_1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _, _| Err(
-                "stop"
-            ))
-            .err(),
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, false, ips, |_, _, _, _| Err("stop")).err(),
             Some("stop")
+        );
+        // check axisymmetric flag
+        let mut pad = aux::gen_pad_tet4();
+        let mut kk = Matrix::new(12, 12);
+        let ips = &IP_TET_INTERNAL_1;
+        assert_eq!(
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, true, ips, |_, _, _, _| Ok(1.0)).err(),
+            Some("axisymmetric requires space_ndim = 2")
         );
     }
 
     #[test]
-    fn mat_10_gdg_works_tri3_plane_stress() {
+    fn tri3_plane_stress_works() {
         // Element # 0 from example 1.6 from @bhatti page 32
         // Solid bracket with thickness = 0.25
         //              1     -10                connectivity:
@@ -287,7 +330,7 @@ mod tests {
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = integ::points(class, 1).unwrap();
-        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _, _| {
+        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, false, ips, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
             Ok(thickness)
         })
@@ -317,7 +360,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _, _| {
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, false, ips, |dd, _, _, _| {
                 copy_tensor4(dd, model.get_modulus())?;
                 Ok(thickness)
             })
@@ -327,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn mat_10_gdg_works_tet4() {
+    fn tet4_works() {
         // scratchpad
         let mut pad = aux::gen_pad_tet4();
 
@@ -352,12 +395,108 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _, _| {
+            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, false, ips, |dd, _, _, _| {
                 copy_tensor4(dd, model.get_modulus())?;
                 Ok(1.0)
             })
             .unwrap();
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol); //1e-12
         });
+    }
+
+    #[test]
+    fn axisymmetric_works() {
+        // scratchpad
+        let (w, h) = (4.0, 2.0);
+        let mut pad = aux::gen_pad_qua4(w / 2.0, h / 2.0, w / 2.0, h / 2.0);
+
+        // constants
+        let young = 96.0;
+        let poisson = 1.0 / 3.0;
+        let model = LinElasticity::new(young, poisson, true, false);
+
+        // allocate K matrix
+        let class = pad.kind.class();
+        let (space_ndim, nnode) = pad.xxt.dims();
+        let nrow = nnode * space_ndim;
+        let mut kk = Matrix::new(nrow, nrow);
+
+        // compare with Felippa's results (A-FEM page 12-9)
+        #[rustfmt::skip]
+        let felippa_1x1 = Matrix::from(&[
+            [ 72.0,   18.0,  36.0,  -18.0, -36.0,  -18.0,   0.0,   18.0],
+            [ 18.0,  153.0, -54.0,  135.0, -90.0, -153.0, -18.0, -135.0],
+            [ 36.0,  -54.0, 144.0,  -90.0,  72.0,   54.0, -36.0,   90.0],
+            [-18.0,  135.0, -90.0,  153.0, -54.0, -135.0,  18.0, -153.0],
+            [-36.0,  -90.0,  72.0,  -54.0, 144.0,   90.0,  36.0,   54.0],
+            [-18.0, -153.0,  54.0, -135.0,  90.0,  153.0,  18.0,  135.0],
+            [  0.0,  -18.0, -36.0,   18.0,  36.0,   18.0,  72.0,  -18.0],
+            [ 18.0, -135.0,  90.0, -153.0,  54.0,  135.0, -18.0,  153.0],
+        ]);
+        #[rustfmt::skip]
+        let felippa_2x2 = Matrix::from(&[
+            [168.0,  -12.0,   24.0,   12.0, -24.0,  -36.0,  48.0,   36.0],
+            [-12.0,  108.0,  -24.0,   84.0, -72.0, -102.0, -36.0,  -90.0],
+            [ 24.0,  -24.0,  216.0, -120.0,   0.0,   72.0, -24.0,   72.0],
+            [ 12.0,   84.0, -120.0,  300.0, -72.0, -282.0,  36.0, -102.0],
+            [-24.0,  -72.0,    0.0,  -72.0, 216.0,  120.0,  24.0,   24.0],
+            [-36.0, -102.0,   72.0, -282.0, 120.0,  300.0, -12.0,   84.0],
+            [ 48.0,  -36.0,  -24.0,   36.0,  24.0,  -12.0, 168.0,   12.0],
+            [ 36.0,  -90.0,   72.0, -102.0,  24.0,   84.0,  12.0,  108.0],
+        ]);
+        #[rustfmt::skip]
+        let felippa_3x3 = Matrix::from(&[
+            [232.0,  -12.0,   24.0,   12.0, -24.0,  -36.0,  80.0,   36.0],
+            [-12.0,  108.0,  -24.0,   84.0, -72.0, -102.0, -36.0,  -90.0],
+            [ 24.0,  -24.0,  216.0, -120.0,   0.0,   72.0, -24.0,   72.0],
+            [ 12.0,   84.0, -120.0,  300.0, -72.0, -282.0,  36.0, -102.0],
+            [-24.0,  -72.0,    0.0,  -72.0, 216.0,  120.0,  24.0,   24.0],
+            [-36.0, -102.0,   72.0, -282.0, 120.0,  300.0, -12.0,   84.0],
+            [ 80.0,  -36.0,  -24.0,   36.0,  24.0,  -12.0, 232.0,   12.0],
+            [ 36.0,  -90.0,   72.0, -102.0,  24.0,   84.0,  12.0,  108.0],
+        ]);
+        #[rustfmt::skip]
+        let felippa_4x4 = Matrix::from(&[
+            [280.0,  -12.0,   24.0,   12.0, -24.0,  -36.0, 104.0,   36.0],
+            [-12.0,  108.0,  -24.0,   84.0, -72.0, -102.0, -36.0,  -90.0],
+            [ 24.0,  -24.0,  216.0, -120.0,   0.0,   72.0, -24.0,   72.0],
+            [ 12.0,   84.0, -120.0,  300.0, -72.0, -282.0,  36.0, -102.0],
+            [-24.0,  -72.0,    0.0,  -72.0, 216.0,  120.0,  24.0,   24.0],
+            [-36.0, -102.0,   72.0, -282.0, 120.0,  300.0, -12.0,   84.0],
+            [104.0,  -36.0,  -24.0,   36.0,  24.0,  -12.0, 280.0,   12.0],
+            [ 36.0,  -90.0,   72.0, -102.0,  24.0,   84.0,  12.0,  108.0],
+        ]);
+
+        let ips = integ::points(class, 1).unwrap();
+        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, true, ips, |dd, _, _, _| {
+            copy_tensor4(dd, model.get_modulus())?;
+            Ok(1.0)
+        })
+        .unwrap();
+        mat_approx_eq(&kk, &felippa_1x1, 1e-13);
+
+        let ips = integ::points(class, 4).unwrap();
+        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, true, ips, |dd, _, _, _| {
+            copy_tensor4(dd, model.get_modulus())?;
+            Ok(1.0)
+        })
+        .unwrap();
+        mat_approx_eq(&kk, &felippa_2x2, 1e-13);
+
+        let ips = integ::points(class, 9).unwrap();
+        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, true, ips, |dd, _, _, _| {
+            copy_tensor4(dd, model.get_modulus())?;
+            Ok(1.0)
+        })
+        .unwrap();
+        mat_approx_eq(&kk, &felippa_3x3, 1e-13);
+
+        let ips = integ::points(class, 16).unwrap();
+        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, true, ips, |dd, _, _, _| {
+            copy_tensor4(dd, model.get_modulus())?;
+            Ok(1.0)
+        })
+        .unwrap();
+        mat_approx_eq(&kk, &felippa_4x4, 1e-12);
     }
 }

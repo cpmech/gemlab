@@ -33,7 +33,7 @@ fn main() -> Result<(), StrError> {
     let nrow = nnode * space_ndim;
     let mut kk = Matrix::new(nrow, nrow);
     let ips = integ::default_points(pad.kind);
-    integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _, _, _| {
+    integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, false, ips, |dd, _, _, _| {
         copy_tensor4(dd, model.get_modulus()).unwrap();
         Ok(1.0)
     })?;

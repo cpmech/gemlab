@@ -28,7 +28,7 @@ pub mod aux {
         pad
     }
 
-    /// Generates pad Qua4 for tests
+    /// Generates pad Qua4 for tests (a and b are half widths)
     pub fn gen_pad_qua4(xc: f64, yc: f64, a: f64, b: f64) -> Scratchpad {
         let mut pad = Scratchpad::new(2, GeoKind::Qua4).unwrap();
         pad.set_xx(0, 0, xc - a);
@@ -42,7 +42,7 @@ pub mod aux {
         pad
     }
 
-    /// Generates pad Qua8 for tests
+    /// Generates pad Qua8 for tests (a and b are half widths)
     pub fn gen_pad_qua8(xc: f64, yc: f64, a: f64, b: f64) -> Scratchpad {
         let mut pad = Scratchpad::new(2, GeoKind::Qua8).unwrap();
         pad.set_xx(0, 0, xc - a);
