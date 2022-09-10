@@ -1,11 +1,10 @@
-use super::IntegPointData;
-use crate::shapes::Scratchpad;
+use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
 /// Implements the vector(V) dot gradient(G) integration case 03
 ///
-/// Callback function: `α ← f(w, p, N, G)`
+/// Callback function: `f(w, p, N, G)`
 ///
 /// Vector dot gradient:
 ///
@@ -24,7 +23,7 @@ use russell_lab::{Matrix, Vector};
 ///       p=0
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌     ┐
@@ -36,19 +35,13 @@ use russell_lab::{Matrix, Vector};
 ///     └     ┘
 /// ```
 ///
+/// # Arguments
+///
 /// * `c` -- A vector containing all `cᵐ` values, one after another, and sequentially placed as shown above.
 ///   `m` is the index of the node. The length must be `c.len() ≥ ii0 + nnode`.
-/// * `pad` -- Some members of the scratchpad will be modified
-///
-/// # Input
-///
-/// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `clear_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
-/// * `ips` -- Integration points (n_integ_point)
-/// * `fn_w` -- Function `f(w,p,N,G)→α` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `args` --- Common arguments
+/// * `fn_w` -- Function `f(w,p,N,G)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients G(ιᵖ). `w.dim() = space_ndim`.
-///   `fn_w` returns α that can accommodate plane-strain simulations.
-///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Examples
 ///
@@ -72,11 +65,11 @@ use russell_lab::{Matrix, Vector};
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     let (clear, axis) = (true, false);
-///     integ::vec_03_vg(&mut c, &mut pad, 0, clear, axis, ips, |w, _, _, _| {
+///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     integ::vec_03_vg(&mut c, &mut args, |w, _, _, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
-///         Ok(1.0)
+///         Ok(())
 ///     })?;
 ///     // solution (A = 6):
 ///     // cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
@@ -89,20 +82,13 @@ use russell_lab::{Matrix, Vector};
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_03_vg<F>(
-    c: &mut Vector,
-    pad: &mut Scratchpad,
-    ii0: usize,
-    clear_c: bool,
-    axisymmetric: bool,
-    ips: IntegPointData,
-    mut fn_w: F,
-) -> Result<(), StrError>
+pub fn vec_03_vg<F>(c: &mut Vector, args: &mut CommonArgs, mut fn_w: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<f64, StrError>,
+    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = pad.xxt.dims();
+    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let ii0 = args.ii0;
     if c.dim() < ii0 + nnode {
         return Err("c.len() must be ≥ ii0 + nnode");
     }
@@ -111,34 +97,34 @@ where
     let mut w = Vector::new(space_ndim);
 
     // clear output vector
-    if clear_c {
+    if args.clear {
         c.fill(0.0);
     }
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..args.ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &args.ips[p];
+        let weight = args.ips[p][3];
 
         // calculate Jacobian and Gradient
-        (pad.fn_interp)(&mut pad.interp, iota); // N
-        let det_jac = pad.calc_gradient(iota)?; // G
+        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
+        let det_jac = args.pad.calc_gradient(iota)?; // G
 
         // calculate w
-        let nn = &pad.interp;
-        let gg = &pad.gradient;
-        let alpha = fn_w(&mut w, p, nn, gg)?;
+        let nn = &args.pad.interp;
+        let gg = &args.pad.gradient;
+        fn_w(&mut w, p, nn, gg)?;
 
         // calculate coefficient
-        let coef = if axisymmetric {
+        let coef = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt[0][m];
             }
-            r * det_jac * weight
+            det_jac * weight * args.alpha * r
         } else {
-            alpha * det_jac * weight
+            det_jac * weight * args.alpha
         };
 
         // add contribution to c vector
@@ -160,7 +146,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
     use russell_chk::vec_approx_eq;
     use russell_lab::{Matrix, Vector};
 
@@ -171,11 +157,12 @@ mod tests {
         let mut w = Vector::new(0);
         let nn = Vector::new(0);
         let gg = Matrix::new(0, 0);
-        let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(1.0);
-        assert_eq!(f(&mut w, 0, &nn, &gg).unwrap(), 1.0);
-        let (clear, axis) = (true, false);
+        let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(());
+        f(&mut w, 0, &nn, &gg).unwrap();
+        let mut args = CommonArgs::new(&mut pad, &[]);
+        args.ii0 = 1;
         assert_eq!(
-            integ::vec_03_vg(&mut c, &mut pad, 1, clear, axis, &[], f).err(),
+            integ::vec_03_vg(&mut c, &mut args, f).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
     }
@@ -198,13 +185,13 @@ mod tests {
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
-        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, clear, axis, ips, |w, _, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_03_vg(&mut c, &mut args, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(c.as_data(), &c_correct, tol);
@@ -227,14 +214,14 @@ mod tests {
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
-        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_03_vg(&mut c, &mut pad, 0, clear, axis, ips, |w, p, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            integ::vec_03_vg(&mut c, &mut args, |w, p, _, _| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(c.as_data(), &c_correct, tol);
@@ -263,14 +250,14 @@ mod tests {
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
-        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, clear, axis, ips, |w, _, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_03_vg(&mut c, &mut args, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(c.as_data(), &c_correct, tol);

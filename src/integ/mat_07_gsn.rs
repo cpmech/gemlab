@@ -1,4 +1,4 @@
-use super::IntegPointData;
+use super::CommonArgs;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
@@ -32,7 +32,7 @@ use russell_lab::{Matrix, Vector};
 ///         p=0
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌                         ┐
@@ -52,18 +52,13 @@ use russell_lab::{Matrix, Vector};
 /// i = ii % space_ndim
 /// ```
 ///
+/// # Arguments
+///
 /// * `kk` -- A matrix containing all `Kᵐⁿᵢ` values, one after another, and sequentially placed as shown
 ///   above (in 2D). `m` and `n` are the indices of the node and `i` corresponds to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + pad_b.nnode`.
-/// * `pad` -- Driver scratchpad (modified) to compute G
+/// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute G)
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
-///
-/// # Input
-///
-/// * `ii0` -- Stride marking the first row in the output matrix where to add components.
-/// * `jj0` -- Stride marking the first column in the output matrix where to add components.
-/// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
-/// * `ips` -- Integration points (n_integ_point)
 /// * `fn_s` -- Function `f(p,N,G,Nb)→s` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), gradients G(ιᵖ), and shape functions Nb(ιᵖ).
 ///
@@ -73,13 +68,8 @@ use russell_lab::{Matrix, Vector};
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
 pub fn mat_07_gsn<F>(
     kk: &mut Matrix,
-    pad: &mut Scratchpad,
+    args: &mut CommonArgs,
     pad_b: &mut Scratchpad,
-    ii0: usize,
-    jj0: usize,
-    clear_kk: bool,
-    axisymmetric: bool,
-    ips: IntegPointData,
     mut fn_s: F,
 ) -> Result<(), StrError>
 where
@@ -87,8 +77,9 @@ where
 {
     // check
     let nnode_b = pad_b.interp.dim();
-    let (space_ndim, nnode) = pad.xxt.dims();
+    let (space_ndim, nnode) = args.pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
+    let (ii0, jj0) = (args.ii0, args.jj0);
     if nrow_kk < ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim");
     }
@@ -97,36 +88,36 @@ where
     }
 
     // clear output matrix
-    if clear_kk {
+    if args.clear {
         kk.fill(0.0);
     }
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..args.ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &args.ips[p];
+        let weight = args.ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota); // N
-        let det_jac = pad.calc_gradient(iota)?; // G
+        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
+        let det_jac = args.pad.calc_gradient(iota)?; // G
         (pad_b.fn_interp)(&mut pad_b.interp, iota); // Nb
 
         // calculate s
-        let nn = &pad.interp;
-        let gg = &pad.gradient;
+        let nn = &args.pad.interp;
+        let gg = &args.pad.gradient;
         let nnb = &pad_b.interp;
         let s = fn_s(p, nn, gg, nnb)?;
 
         // calculate coefficient
-        let c = if axisymmetric {
+        let c = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt[0][m];
             }
-            r * s * det_jac * weight
+            s * det_jac * weight * args.alpha * r
         } else {
-            s * det_jac * weight
+            s * det_jac * weight * args.alpha
         };
 
         // add contribution to K matrix
@@ -155,7 +146,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
+    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs};
     use russell_chk::vec_approx_eq;
     use russell_lab::{Matrix, Vector};
 
@@ -170,13 +161,16 @@ mod tests {
         let nnb = Vector::new(0);
         let f = |_p: usize, _nn: &Vector, _gg: &Matrix, _nnb: &Vector| Ok(0.0);
         assert_eq!(f(0, &nn, &gg, &nnb).unwrap(), 0.0);
-        let (clear, axis) = (true, false);
+        let mut args = CommonArgs::new(&mut pad, &[]);
+        args.ii0 = 1;
         assert_eq!(
-            integ::mat_07_gsn(&mut kk, &mut pad, &mut pad_b, 1, 0, clear, axis, &[], f).err(),
+            integ::mat_07_gsn(&mut kk, &mut args, &mut pad_b, f).err(),
             Some("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim")
         );
+        args.ii0 = 0;
+        args.jj0 = 1;
         assert_eq!(
-            integ::mat_07_gsn(&mut kk, &mut pad, &mut pad_b, 0, 1, clear, axis, &[], f).err(),
+            integ::mat_07_gsn(&mut kk, &mut args, &mut pad_b, f).err(),
             Some("ncol(K) must be ≥ jj0 + pad_b.nnode")
         );
     }
@@ -187,7 +181,6 @@ mod tests {
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
-        let (clear, axis) = (true, false);
         let ana = AnalyticalQua8::new(a, b);
         let s = 9.0;
         let kk_correct = ana.mat_07_gsn(s);
@@ -197,10 +190,8 @@ mod tests {
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_07_gsn(&mut kk, &mut pad, &mut pad_b, 0, 0, clear, axis, ips, |_, _, _, _| {
-                Ok(s)
-            })
-            .unwrap();
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::mat_07_gsn(&mut kk, &mut args, &mut pad_b, |_, _, _, _| Ok(s)).unwrap();
             // println!("{:.2}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
@@ -211,7 +202,6 @@ mod tests {
         let mut pad_b = aux::gen_pad_tet4();
         let mut pad = pad_b.clone();
         let mut kk = Matrix::new(4 * 3, 4);
-        let (clear, axis) = (true, false);
         let ana = AnalyticalTet4::new(&pad);
         let s = 9.0;
         let kk_correct = ana.mat_07_gsn(s);
@@ -221,10 +211,8 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_07_gsn(&mut kk, &mut pad, &mut pad_b, 0, 0, clear, axis, ips, |_, _, _, _| {
-                Ok(s)
-            })
-            .unwrap();
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::mat_07_gsn(&mut kk, &mut args, &mut pad_b, |_, _, _, _| Ok(s)).unwrap();
             // println!("{}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });

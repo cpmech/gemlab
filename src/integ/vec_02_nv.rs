@@ -1,11 +1,10 @@
-use super::IntegPointData;
-use crate::shapes::Scratchpad;
+use super::CommonArgs;
 use crate::StrError;
 use russell_lab::Vector;
 
 /// Implements the the shape(N) times vector(V) integration case 02
 ///
-/// Callback function: `α ← f(v, p, N)`
+/// Callback function: `f(v, p, N)`
 ///
 /// Interpolation functions times vector field:
 ///
@@ -24,7 +23,7 @@ use russell_lab::Vector;
 ///       p=0
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌     ┐
@@ -42,20 +41,14 @@ use russell_lab::Vector;
 /// i = ii % space_ndim
 /// ```
 ///
+/// # Arguments
+///
 /// * `b` -- A vector containing all `bᵐᵢ` values, one after another, and sequentially placed
 ///   as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
 ///   The length must be `b.len() ≥ ii0 + nnode ⋅ space_ndim`
-/// * `pad` -- Some members of the scratchpad will be modified
-///
-/// # Input
-///
-/// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
-/// * `ips` -- Integration points (n_integ_point)
-/// * `fn_v` -- Function `f(v,p,N)→α` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `args` --- Common arguments
+/// * `fn_v` -- Function `f(v,p,N)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   and shape functions N(ιᵖ). `v.dim() = space_ndim`.
-///   `fn_v` returns α that can accommodate plane-strain simulations.
-///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Examples
 ///
@@ -77,11 +70,11 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     let (clear, axis) = (true, false);
-///     integ::vec_02_nv(&mut b, &mut pad, 0, clear, axis, ips, |v, _, _| {
+///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
-///         Ok(1.0)
+///         Ok(())
 ///     })?;
 ///     // solution (A = 6):
 ///     // bᵐ₀ = v₀ A / 3
@@ -90,20 +83,13 @@ use russell_lab::Vector;
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_02_nv<F>(
-    b: &mut Vector,
-    pad: &mut Scratchpad,
-    ii0: usize,
-    clear_b: bool,
-    axisymmetric: bool,
-    ips: IntegPointData,
-    mut fn_v: F,
-) -> Result<(), StrError>
+pub fn vec_02_nv<F>(b: &mut Vector, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector) -> Result<f64, StrError>,
+    F: FnMut(&mut Vector, usize, &Vector) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = pad.xxt.dims();
+    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let ii0 = args.ii0;
     if b.dim() < ii0 + nnode * space_ndim {
         return Err("b.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
@@ -112,33 +98,33 @@ where
     let mut v = Vector::new(space_ndim);
 
     // clear output vector
-    if clear_b {
+    if args.clear {
         b.fill(0.0);
     }
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..args.ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &args.ips[p];
+        let weight = args.ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota); // N
-        let det_jac = pad.calc_jacobian(iota)?;
+        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
+        let det_jac = args.pad.calc_jacobian(iota)?;
 
         // calculate v
-        let nn = &pad.interp;
-        let alpha = fn_v(&mut v, p, nn)?;
+        let nn = &args.pad.interp;
+        fn_v(&mut v, p, nn)?;
 
         // calculate coefficient
-        let coef = if axisymmetric {
+        let coef = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt[0][m];
             }
-            r * det_jac * weight
+            det_jac * weight * args.alpha * r
         } else {
-            alpha * det_jac * weight
+            det_jac * weight * args.alpha
         };
 
         // add contribution to b vector
@@ -163,7 +149,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
     use russell_chk::vec_approx_eq;
     use russell_lab::Vector;
 
@@ -173,11 +159,12 @@ mod tests {
         let mut b = Vector::new(4);
         let mut v = Vector::new(0);
         let nn = Vector::new(0);
-        let f = |_v: &mut Vector, _p: usize, _nn: &Vector| Ok(1.0);
-        assert_eq!(f(&mut v, 0, &nn).unwrap(), 1.0);
-        let (clear, axis) = (true, false);
+        let f = |_v: &mut Vector, _p: usize, _nn: &Vector| Ok(());
+        f(&mut v, 0, &nn).unwrap();
+        let mut args = CommonArgs::new(&mut pad, &[]);
+        args.ii0 = 1;
         assert_eq!(
-            integ::vec_02_nv(&mut b, &mut pad, 1, clear, axis, &[], f).err(),
+            integ::vec_02_nv(&mut b, &mut args, f).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -206,14 +193,14 @@ mod tests {
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
-        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_02_nv(&mut b, &mut pad, 0, clear, axis, ips, |v, p, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_02_nv(&mut b, &mut args, |v, p, _| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(b.as_data(), b_correct, tol);
@@ -240,13 +227,13 @@ mod tests {
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
-        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_02_nv(&mut b, &mut pad, 0, clear, axis, ips, |v, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
                 v[0] = V0;
                 v[1] = V1;
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(b.as_data(), &b_correct, tol);
@@ -273,14 +260,14 @@ mod tests {
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
-        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_02_nv(&mut b, &mut pad, 0, clear, axis, ips, |v, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
                 v[0] = V0;
                 v[1] = V1;
                 v[2] = V2;
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(b.as_data(), &b_correct, tol);

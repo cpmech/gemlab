@@ -1,4 +1,4 @@
-use super::IntegPointData;
+use super::CommonArgs;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
@@ -7,7 +7,7 @@ use russell_tensor::Tensor2;
 
 /// Implements the gradient(Gb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
 ///
-/// Callback function: `α ← f(T, p, Gb, N, G)`
+/// Callback function: `f(T, p, Gb, N, G)`
 ///
 /// **Notes:**
 ///
@@ -34,7 +34,7 @@ use russell_tensor::Tensor2;
 ///         p=0
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌                                        ┐
@@ -51,22 +51,15 @@ use russell_tensor::Tensor2;
 /// j = jj % space_ndim
 /// ```
 ///
+/// # Arguments
+///
 /// * `kk` -- A matrix containing all `Kᵐⁿⱼ` values, one after another, and sequentially placed as shown
 ///   above (in 2D). `m` and `n` are the indices of the node and `j` corresponds to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + pad_b.nnode` and `ncol(K) ≥ jj0 + pad.nnode ⋅ space_ndim`
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
-/// * `pad` -- Driver scratchpad (modified) to compute G
-///
-/// # Input
-///
-/// * `ii0` -- Stride marking the first row in the output matrix where to add components.
-/// * `jj0` -- Stride marking the first column in the output matrix where to add components.
-/// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
-/// * `ips` -- Integration points (n_integ_point)
-/// * `fn_tt` -- Function `f(T,p,Gb,N,G)→α` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute G)
+/// * `fn_tt` -- Function `f(T,p,Gb,N,G)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   the gradients Gb(ιᵖ), shape functions N(ιᵖ), and gradients G(ιᵖ). `T` is set for `space_ndim`.
-///   `fn_tt` returns α that can accommodate plane-strain simulations.
-///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Warning
 ///
@@ -75,21 +68,17 @@ use russell_tensor::Tensor2;
 pub fn mat_05_gtn<F>(
     kk: &mut Matrix,
     pad_b: &mut Scratchpad,
-    pad: &mut Scratchpad,
-    ii0: usize,
-    jj0: usize,
-    clear_kk: bool,
-    axisymmetric: bool,
-    ips: IntegPointData,
+    args: &mut CommonArgs,
     mut fn_tt: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize, &Matrix, &Vector, &Matrix) -> Result<f64, StrError>,
+    F: FnMut(&mut Tensor2, usize, &Matrix, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let nnode_b = pad_b.interp.dim();
-    let (space_ndim, nnode) = pad.xxt.dims();
+    let (space_ndim, nnode) = args.pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
+    let (ii0, jj0) = (args.ii0, args.jj0);
     if nrow_kk < ii0 + nnode_b {
         return Err("nrow(K) must be ≥ ii0 + pad_b.nnode");
     }
@@ -101,37 +90,37 @@ where
     let mut tt = Tensor2::new(true, space_ndim == 2);
 
     // clear output matrix
-    if clear_kk {
+    if args.clear {
         kk.fill(0.0);
     }
 
     // loop over integration points
     let s = SQRT_2;
-    for p in 0..ips.len() {
+    for p in 0..args.ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &args.ips[p];
+        let weight = args.ips[p][3];
 
         // calculate interpolation functions and Jacobian
         pad_b.calc_gradient(iota)?; // Gb
-        (pad.fn_interp)(&mut pad.interp, iota); // N
-        let det_jac = pad.calc_gradient(iota)?; // G
+        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
+        let det_jac = args.pad.calc_gradient(iota)?; // G
 
         // calculate T tensor
         let ggb = &pad_b.gradient;
-        let nn = &pad.interp;
-        let gg = &pad.gradient;
-        let alpha = fn_tt(&mut tt, p, ggb, nn, gg)?;
+        let nn = &args.pad.interp;
+        let gg = &args.pad.gradient;
+        fn_tt(&mut tt, p, ggb, nn, gg)?;
 
         // calculate coefficient
-        let c = if axisymmetric {
+        let c = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt[0][m];
             }
-            r * det_jac * weight
+            det_jac * weight * args.alpha * r
         } else {
-            alpha * det_jac * weight
+            det_jac * weight * args.alpha
         };
 
         // add contribution to K matrix
@@ -164,7 +153,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4};
+    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs};
     use russell_chk::vec_approx_eq;
     use russell_lab::{Matrix, Vector};
     use russell_tensor::{copy_tensor2, Tensor2};
@@ -179,15 +168,18 @@ mod tests {
         let ggb = Matrix::new(0, 0);
         let nn = Vector::new(0);
         let gg = Matrix::new(0, 0);
-        let f = |_tt: &mut Tensor2, _p: usize, _ggb: &Matrix, _nn: &Vector, _gg: &Matrix| Ok(1.0);
-        assert_eq!(f(&mut tt, 0, &ggb, &nn, &gg).unwrap(), 1.0);
-        let (clear, axis) = (true, false);
+        let f = |_tt: &mut Tensor2, _p: usize, _ggb: &Matrix, _nn: &Vector, _gg: &Matrix| Ok(());
+        f(&mut tt, 0, &ggb, &nn, &gg).unwrap();
+        let mut args = CommonArgs::new(&mut pad, &[]);
+        args.ii0 = 1;
         assert_eq!(
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 1, 0, clear, axis, &[], f).err(),
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
+        args.ii0 = 0;
+        args.jj0 = 1;
         assert_eq!(
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut pad, 0, 1, clear, axis, &[], f).err(),
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
     }
@@ -198,7 +190,6 @@ mod tests {
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
-        let (clear, axis) = (true, false);
         let ana = AnalyticalQua8::new(a, b);
         #[rustfmt::skip]
         let tt = Tensor2::from_matrix(&[
@@ -213,20 +204,11 @@ mod tests {
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_05_gtn(
-                &mut kk,
-                &mut pad_b,
-                &mut pad,
-                0,
-                0,
-                clear,
-                axis,
-                ips,
-                |ten, _, _, _, _| {
-                    copy_tensor2(ten, &tt)?;
-                    Ok(1.0)
-                },
-            )
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
+                copy_tensor2(ten, &tt)?;
+                Ok(())
+            })
             .unwrap();
             // println!("{}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
@@ -238,7 +220,6 @@ mod tests {
         let mut pad_b = aux::gen_pad_tet4();
         let mut pad = pad_b.clone();
         let mut kk = Matrix::new(4, 4 * 3);
-        let (clear, axis) = (true, false);
         let ana = AnalyticalTet4::new(&pad);
         #[rustfmt::skip]
         let tt = Tensor2::from_matrix(&[
@@ -253,20 +234,11 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_05_gtn(
-                &mut kk,
-                &mut pad_b,
-                &mut pad,
-                0,
-                0,
-                clear,
-                axis,
-                ips,
-                |ten, _, _, _, _| {
-                    copy_tensor2(ten, &tt)?;
-                    Ok(1.0)
-                },
-            )
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
+                copy_tensor2(ten, &tt)?;
+                Ok(())
+            })
             .unwrap();
             // println!("{}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);

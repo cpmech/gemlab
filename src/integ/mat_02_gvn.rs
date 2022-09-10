@@ -1,11 +1,10 @@
-use super::IntegPointData;
-use crate::shapes::Scratchpad;
+use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
 /// Implements the gradient(G) dot vector(V) times shape(N) integration case 02 (e.g., compressibility matrix)
 ///
-/// Callback function: `α ← f(v, p, N, G)`
+/// Callback function: `f(v, p, N, G)`
 ///
 /// Compressibility coefficients:
 ///
@@ -24,7 +23,7 @@ use russell_lab::{Matrix, Vector};
 ///        p=0
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌                     ┐
@@ -38,37 +37,22 @@ use russell_lab::{Matrix, Vector};
 ///       jj0               jj
 /// ```
 ///
+/// # Arguments
+///
 /// * `kk` -- A matrix containing all `Kᵐⁿ` values, one after another, and
 ///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
-/// * `pad` -- Some members of the scratchpad will be modified.
-///
-/// # Input
-///
-/// * `ii0` -- Stride marking the first row in the output matrix where to add components.
-/// * `jj0` -- Stride marking the first column in the output matrix where to add components.
-/// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
-/// * `ips` -- Integration points (n_integ_point)
-/// * `fn_v` -- Function `f(v,p,N,G)→α` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `args` --- Common arguments
+/// * `fn_v` -- Function `f(v,p,N,G)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients G(ιᵖ). `v.dim() = space_ndim`.
-///   `fn_v` returns α that can accommodate plane-strain simulations.
-///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
-pub fn mat_02_gvn<F>(
-    kk: &mut Matrix,
-    pad: &mut Scratchpad,
-    ii0: usize,
-    jj0: usize,
-    clear_kk: bool,
-    axisymmetric: bool,
-    ips: IntegPointData,
-    mut fn_v: F,
-) -> Result<(), StrError>
+pub fn mat_02_gvn<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<f64, StrError>,
+    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = pad.xxt.dims();
+    let (space_ndim, nnode) = args.pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
+    let (ii0, jj0) = (args.ii0, args.jj0);
     if nrow_kk < ii0 + nnode {
         return Err("nrow(K) must be ≥ ii0 + nnode");
     }
@@ -80,34 +64,34 @@ where
     let mut v = Vector::new(space_ndim);
 
     // clear output matrix
-    if clear_kk {
+    if args.clear {
         kk.fill(0.0);
     }
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..args.ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &args.ips[p];
+        let weight = args.ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota); // N
-        let det_jac = pad.calc_gradient(iota)?; // G
+        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
+        let det_jac = args.pad.calc_gradient(iota)?; // G
 
         // calculate v
-        let nn = &pad.interp;
-        let gg = &pad.gradient;
-        let alpha = fn_v(&mut v, p, nn, gg)?;
+        let nn = &args.pad.interp;
+        let gg = &args.pad.gradient;
+        fn_v(&mut v, p, nn, gg)?;
 
         // calculate coefficient
-        let c = if axisymmetric {
+        let c = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt[0][m];
             }
-            r * det_jac * weight
+            det_jac * weight * args.alpha * r
         } else {
-            alpha * det_jac * weight
+            det_jac * weight * args.alpha
         };
 
         // add contribution to K matrix
@@ -133,7 +117,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
     use russell_chk::vec_approx_eq;
     use russell_lab::{Matrix, Vector};
 
@@ -144,28 +128,32 @@ mod tests {
         let mut v = Vector::new(0);
         let nn = Vector::new(0);
         let gg = Matrix::new(0, 0);
-        let f = |_v: &mut Vector, _p: usize, _nn: &Vector, _gg: &Matrix| Ok(1.0);
-        assert_eq!(f(&mut v, 0, &nn, &gg).unwrap(), 1.0);
-        let (clear, axis) = (true, false);
+        let f = |_v: &mut Vector, _p: usize, _nn: &Vector, _gg: &Matrix| Ok(());
+        f(&mut v, 0, &nn, &gg).unwrap();
+        let mut args = CommonArgs::new(&mut pad, &[]);
+        args.ii0 = 1;
         assert_eq!(
-            integ::mat_02_gvn(&mut kk, &mut pad, 1, 0, clear, axis, &[], f).err(),
+            integ::mat_02_gvn(&mut kk, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
+        args.ii0 = 0;
+        args.jj0 = 1;
         assert_eq!(
-            integ::mat_02_gvn(&mut kk, &mut pad, 0, 1, clear, axis, &[], f).err(),
+            integ::mat_02_gvn(&mut kk, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
+        args.jj0 = 0;
         // more errors
-        let ips = &IP_LIN_LEGENDRE_1;
+        args.ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
-            integ::mat_02_gvn(&mut kk, &mut pad, 0, 0, clear, axis, ips, f).err(),
+            integ::mat_02_gvn(&mut kk, &mut args, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_qua4(0.0, 0.0, 1.0, 1.0);
         let mut kk = Matrix::new(4, 4);
-        let ips = &IP_TRI_INTERNAL_1;
+        let mut args = CommonArgs::new(&mut pad, &IP_TRI_INTERNAL_1);
         assert_eq!(
-            integ::mat_02_gvn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |_, _, _, _| Err("stop")).err(),
+            integ::mat_02_gvn(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
             Some("stop")
         );
     }
@@ -174,7 +162,6 @@ mod tests {
     fn tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
-        let (clear, axis) = (true, false);
         let ana = AnalyticalTri3::new(&pad);
         // constant
         let (v0, v1) = (2.0, 3.0);
@@ -184,10 +171,11 @@ mod tests {
         let selection: Vec<_> = [3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_02_gvn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |v, _, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::mat_02_gvn(&mut kk, &mut args, |v, _, _, _| {
                 v[0] = v0;
                 v[1] = v1;
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
@@ -199,11 +187,12 @@ mod tests {
         let selection: Vec<_> = [3, 6].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::mat_02_gvn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |v, p, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            integ::mat_02_gvn(&mut kk, &mut args, |v, p, _, _| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][1];
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
@@ -214,7 +203,6 @@ mod tests {
     fn tet4_works() {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4, 4);
-        let (clear, axis) = (true, false);
         let ana = AnalyticalTet4::new(&pad);
         let (v0, v1, v2) = (2.0, 3.0, 4.0);
         let kk_correct = ana.mat_02_gvn(v0, v1, v2);
@@ -224,11 +212,12 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_02_gvn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |v, _, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::mat_02_gvn(&mut kk, &mut args, |v, _, _, _| {
                 v[0] = v0;
                 v[1] = v1;
                 v[2] = v2;
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             // println!("{}", kk);

@@ -1,4 +1,4 @@
-use super::IntegPointData;
+use super::CommonArgs;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
@@ -7,7 +7,7 @@ use russell_tensor::Tensor4;
 
 /// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case 10 (e.g., stiffness matrix)
 ///
-/// Callback function: `α ← f(D, p, N, G)`
+/// Callback function: `f(D, p, N, G)`
 ///
 /// Stiffness tensors (note the sum over repeated lower indices):
 ///
@@ -26,7 +26,7 @@ use russell_tensor::Tensor4;
 ///          p=0  k l
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌                                               ┐
@@ -46,21 +46,14 @@ use russell_tensor::Tensor4;
 /// i = ii % space_ndim    j = jj % space_ndim
 /// ```
 ///
+/// # Arguments
+///
 /// * `kk` -- A matrix containing all `Kᵐⁿᵢⱼ` values, one after another, and sequentially placed as shown
 ///   above (in 2D). `m` and `n` are the indices of the node and `i` and `j` correspond to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + nnode ⋅ space_ndim`.
-/// * `pad` -- Some members of the scratchpad will be modified.
-///
-/// # Input
-///
-/// * `ii0` -- Stride marking the first row in the output matrix where to add components.
-/// * `jj0` -- Stride marking the first column in the output matrix where to add components.
-/// * `clear_kk` -- Fills `kk` matrix with zeros, otherwise accumulate values into `kk`
-/// * `ips` -- Integration points (n_integ_point)
-/// * `fn_dd` -- Function `f(D,p,N,G)→α` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `args` --- Common arguments
+/// * `fn_dd` -- Function `f(D,p,N,G)` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients G(ιᵖ). `D` is **minor-symmetric** and set for `space_ndim`.
-///   `fn_dd` returns α that can accommodate plane-strain simulations.
-///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Examples
 ///
@@ -99,9 +92,10 @@ use russell_tensor::Tensor4;
 ///     let nrow = pad.kind.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let ips = integ::default_points(pad.kind);
-///     integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, false, ips, |dd, _, _, _| {
+///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
 ///         copy_tensor4(dd, model.get_modulus())?;
-///         Ok(1.0)
+///         Ok(())
 ///     })?;
 ///
 ///     // check
@@ -124,29 +118,21 @@ use russell_tensor::Tensor4;
 ///     Ok(())
 /// }
 /// ```
-pub fn mat_10_gdg<F>(
-    kk: &mut Matrix,
-    pad: &mut Scratchpad,
-    ii0: usize,
-    jj0: usize,
-    clear_kk: bool,
-    axisymmetric: bool,
-    ips: IntegPointData,
-    mut fn_dd: F,
-) -> Result<(), StrError>
+pub fn mat_10_gdg<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_dd: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor4, usize, &Vector, &Matrix) -> Result<f64, StrError>,
+    F: FnMut(&mut Tensor4, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = pad.xxt.dims();
+    let (space_ndim, nnode) = args.pad.xxt.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
+    let (ii0, jj0) = (args.ii0, args.jj0);
     if nrow_kk < ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim");
     }
     if ncol_kk < jj0 + nnode * space_ndim {
         return Err("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim");
     }
-    if axisymmetric && space_ndim != 2 {
+    if args.axisymmetric && space_ndim != 2 {
         return Err("axisymmetric requires space_ndim = 2");
     }
 
@@ -154,36 +140,35 @@ where
     let mut dd = Tensor4::new(true, space_ndim == 2);
 
     // clear output matrix
-    if clear_kk {
+    if args.clear {
         kk.fill(0.0);
     }
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..args.ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &args.ips[p];
+        let weight = args.ips[p][3];
 
         // calculate Jacobian and Gradient
-        (pad.fn_interp)(&mut pad.interp, iota); // N
-        let det_jac = pad.calc_gradient(iota)?; // G
+        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
+        let det_jac = args.pad.calc_gradient(iota)?; // G
 
         // calculate D tensor
-        let nn = &pad.interp;
-        let gg = &pad.gradient;
-        let alpha = fn_dd(&mut dd, p, nn, gg)?;
+        let nn = &args.pad.interp;
+        let gg = &args.pad.gradient;
+        fn_dd(&mut dd, p, nn, gg)?;
 
         // add contribution to K matrix
-        if axisymmetric {
+        let c = det_jac * weight * args.alpha;
+        if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt[0][m];
             }
-            let c = det_jac * weight;
-            add_to_kk_axisymmetric(kk, ii0, jj0, &dd, c, r, pad);
+            add_to_kk_axisymmetric(kk, ii0, jj0, &dd, c, r, args.pad);
         } else {
-            let c = alpha * det_jac * weight;
-            add_to_kk(kk, ii0, jj0, &dd, c, pad);
+            add_to_kk(kk, ii0, jj0, &dd, c, args.pad);
         }
     }
     Ok(())
@@ -250,7 +235,9 @@ fn add_to_kk_axisymmetric(kk: &mut Matrix, ii0: usize, jj0: usize, dd: &Tensor4,
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, IP_LIN_LEGENDRE_1, IP_TET_INTERNAL_1, IP_TRI_INTERNAL_1};
+    use crate::integ::{
+        self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TET_INTERNAL_1, IP_TRI_INTERNAL_1,
+    };
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_chk::vec_approx_eq;
     use russell_lab::{mat_approx_eq, Matrix, Vector};
@@ -263,35 +250,42 @@ mod tests {
         let mut dd = Tensor4::new(true, true);
         let nn = Vector::new(0);
         let gg = Matrix::new(0, 0);
-        let f = |_: &mut Tensor4, _: usize, _: &Vector, _: &Matrix| Ok(0.0);
-        assert_eq!(f(&mut dd, 0, &nn, &gg).unwrap(), 0.0);
+        let f = |_: &mut Tensor4, _: usize, _: &Vector, _: &Matrix| Ok(());
+        f(&mut dd, 0, &nn, &gg).unwrap();
+        let mut args = CommonArgs::new(&mut pad, &[]);
+        args.ii0 = 1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 1, 0, false, false, &[], f).err(),
+            integ::mat_10_gdg(&mut kk, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
+        args.ii0 = 0;
+        args.jj0 = 1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 1, false, false, &[], f).err(),
+            integ::mat_10_gdg(&mut kk, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
+        args.jj0 = 0;
         // more errors
-        let ips = &IP_LIN_LEGENDRE_1;
+        args.ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, false, ips, f).err(),
+            integ::mat_10_gdg(&mut kk, &mut args, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
-        let ips = &IP_TRI_INTERNAL_1;
+        let mut args = CommonArgs::new(&mut pad, &IP_TRI_INTERNAL_1);
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, false, ips, |_, _, _, _| Err("stop")).err(),
+            integ::mat_10_gdg(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
             Some("stop")
         );
         // check axisymmetric flag
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(12, 12);
         let ips = &IP_TET_INTERNAL_1;
+        let mut args = CommonArgs::new(&mut pad, ips);
+        args.axisymmetric = true;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, false, true, ips, f).err(),
+            integ::mat_10_gdg(&mut kk, &mut args, f).err(),
             Some("axisymmetric requires space_ndim = 2")
         );
     }
@@ -335,9 +329,11 @@ mod tests {
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let ips = integ::points(class, 1).unwrap();
-        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, false, ips, |dd, _, _, _| {
+        let mut args = CommonArgs::new(&mut pad, ips);
+        args.alpha = thickness;
+        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
-            Ok(thickness)
+            Ok(())
         })
         .unwrap();
 
@@ -365,9 +361,11 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, false, ips, |dd, _, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            args.alpha = thickness;
+            integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
                 copy_tensor4(dd, model.get_modulus())?;
-                Ok(thickness)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(kk_correct.as_data(), kk.as_data(), tol); // 1e-12
@@ -400,9 +398,10 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, false, ips, |dd, _, _, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
                 copy_tensor4(dd, model.get_modulus())?;
-                Ok(1.0)
+                Ok(())
             })
             .unwrap();
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol); //1e-12
@@ -473,33 +472,41 @@ mod tests {
         ]);
 
         let ips = integ::points(class, 1).unwrap();
-        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, true, ips, |dd, _, _, _| {
+        let mut args = CommonArgs::new(&mut pad, ips);
+        args.axisymmetric = true;
+        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
-            Ok(1.0)
+            Ok(())
         })
         .unwrap();
         mat_approx_eq(&kk, &felippa_1x1, 1e-13);
 
         let ips = integ::points(class, 4).unwrap();
-        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, true, ips, |dd, _, _, _| {
+        let mut args = CommonArgs::new(&mut pad, ips);
+        args.axisymmetric = true;
+        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
-            Ok(1.0)
+            Ok(())
         })
         .unwrap();
         mat_approx_eq(&kk, &felippa_2x2, 1e-13);
 
         let ips = integ::points(class, 9).unwrap();
-        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, true, ips, |dd, _, _, _| {
+        let mut args = CommonArgs::new(&mut pad, ips);
+        args.axisymmetric = true;
+        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
-            Ok(1.0)
+            Ok(())
         })
         .unwrap();
         mat_approx_eq(&kk, &felippa_3x3, 1e-13);
 
         let ips = integ::points(class, 16).unwrap();
-        integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, true, ips, |dd, _, _, _| {
+        let mut args = CommonArgs::new(&mut pad, ips);
+        args.axisymmetric = true;
+        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
-            Ok(1.0)
+            Ok(())
         })
         .unwrap();
         mat_approx_eq(&kk, &felippa_4x4, 1e-12);

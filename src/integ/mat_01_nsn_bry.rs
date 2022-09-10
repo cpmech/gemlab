@@ -10,7 +10,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///       ⌠
-/// Kᵐⁿ = │ Nᵐ s Nⁿ dΓ
+/// Kᵐⁿ = │ Nᵐ s Nⁿ α dΓ
 ///       ⌡
 ///       Γₑ
 /// ```
@@ -19,11 +19,11 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///       nip-1    →     →      →       →
-/// Kᵐⁿ ≈   Σ   Nᵐ(ιᵖ) s(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ
+/// Kᵐⁿ ≈   Σ   Nᵐ(ιᵖ) s(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///        p=0
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌                     ┐
@@ -37,12 +37,11 @@ use russell_lab::{Matrix, Vector};
 ///       jj0               jj
 /// ```
 ///
+/// # Arguments
+///
 /// * `kk` -- A matrix containing all `Kᵐⁿ` values, one after another, and
 ///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
-///
-/// # Input
-///
 /// * `args` --- Common arguments
 /// * `fn_s` -- Function `f(p,un,N)→s` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   the **unit** normal vector `un(x(ιᵖ))`, and shape functions N(ιᵖ).
@@ -60,10 +59,11 @@ where
         return Err("in 3D, geometry ndim must be equal to 2 (a surface)");
     }
     let (nrow_kk, ncol_kk) = kk.dims();
-    if nrow_kk < args.ii0 + nnode {
+    let (ii0, jj0) = (args.ii0, args.jj0);
+    if nrow_kk < ii0 + nnode {
         return Err("nrow(K) must be ≥ ii0 + nnode");
     }
-    if ncol_kk < args.jj0 + nnode {
+    if ncol_kk < jj0 + nnode {
         return Err("ncol(K) must be ≥ jj0 + nnode");
     }
 
@@ -95,13 +95,12 @@ where
             for m in 0..nnode {
                 r += nn[m] * args.pad.xxt[0][m];
             }
-            r * s * mag_n * weight
+            s * mag_n * weight * args.alpha * r
         } else {
-            s * mag_n * weight
+            s * mag_n * weight * args.alpha
         };
 
         // add contribution to K matrix
-        let (ii0, jj0) = (args.ii0, args.jj0);
         for m in 0..nnode {
             for n in 0..nnode {
                 kk[ii0 + m][jj0 + n] += nn[m] * c * nn[n];

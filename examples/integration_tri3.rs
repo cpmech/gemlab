@@ -37,9 +37,16 @@ fn main() -> Result<(), StrError> {
     let nnode = pad.kind.nnode();
     let ips = integ::default_points(pad.kind);
     let mut a = Vector::filled(nnode, 0.0);
-    let (clear, axis) = (true, false);
-    integ::vec_01_ns(&mut a, &mut pad, 0, clear, axis, ips, |_, _| Ok(18.0))?;
-    println!("a =\n{}", a);
+    let mut args = integ::CommonArgs::new(&mut pad, ips);
+    integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(18.0))?;
+    assert_eq!(
+        format!("{:.1}", a),
+        "┌      ┐\n\
+         │ 36.0 │\n\
+         │ 36.0 │\n\
+         │ 36.0 │\n\
+         └      ┘"
+    );
 
     // check
     let a_correct = ana.vec_01_ns(18.0);
@@ -65,12 +72,22 @@ fn main() -> Result<(), StrError> {
     //          └   ┘   └    ┘
     // ```
     let mut b = Vector::filled(nnode * space_ndim, 0.0);
-    integ::vec_02_nv(&mut b, &mut pad, 0, clear, axis, ips, |v, _, _| {
+    integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
         v[0] = 12.0;
         v[1] = 12.0;
-        Ok(1.0)
+        Ok(())
     })?;
-    println!("b =\n{}", b);
+    assert_eq!(
+        format!("{}", b),
+        "┌    ┐\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         └    ┘"
+    );
 
     // check
     let b_correct = ana.vec_02_nv(12.0, 12.0);
@@ -92,12 +109,19 @@ fn main() -> Result<(), StrError> {
     //     │  6 │
     //     └    ┘
     let mut c = Vector::filled(nnode, 0.0);
-    integ::vec_03_vg(&mut c, &mut pad, 0, clear, axis, ips, |w, _, _, _| {
+    integ::vec_03_vg(&mut c, &mut args, |w, _, _, _| {
         w[0] = -2.0;
         w[1] = 4.0;
-        Ok(1.0)
+        Ok(())
     })?;
-    println!("c =\n{}", c);
+    assert_eq!(
+        format!("{}", c),
+        "┌    ┐\n\
+         │ -2 │\n\
+         │ -4 │\n\
+         │  6 │\n\
+         └    ┘"
+    );
 
     // check
     let c_correct = ana.vec_03_vg(-2.0, 4.0);
@@ -125,13 +149,23 @@ fn main() -> Result<(), StrError> {
     //     └     ┘
     let (s00, s11, s01) = (6.0, 4.0, 2.0);
     let mut d = Vector::filled(nnode * space_ndim, 0.0);
-    integ::vec_04_tg(&mut d, &mut pad, 0, clear, axis, ips, |sig, _, _, _| {
+    integ::vec_04_tg(&mut d, &mut args, |sig, _, _, _| {
         sig.sym_set(0, 0, s00);
         sig.sym_set(1, 1, s11);
         sig.sym_set(0, 1, s01);
-        Ok(1.0)
+        Ok(())
     })?;
-    println!("d =\n{}", d);
+    assert_eq!(
+        format!("{}", d),
+        "┌     ┐\n\
+         │ -15 │\n\
+         │ -10 │\n\
+         │  12 │\n\
+         │   4 │\n\
+         │   3 │\n\
+         │   6 │\n\
+         └     ┘"
+    );
 
     // check
     let d_correct = ana.vec_04_tg(s00, s11, s01);
