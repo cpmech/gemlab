@@ -125,7 +125,7 @@ impl Scratchpad {
         (self.fn_deriv)(&mut self.deriv, ksi);
 
         // matrix J: dx/dξ
-        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv)?;
+        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv).unwrap();
 
         // CABLE: line in 2D (geo_ndim = 1 and space_ndim = 2)
         //          →

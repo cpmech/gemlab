@@ -69,7 +69,8 @@ impl Scratchpad {
             return Err("x.dim() must be equal to space_ndim");
         }
         (self.fn_interp)(&mut self.interp, ksi);
-        mat_vec_mul(x, 1.0, &self.xxt, &self.interp)
+        mat_vec_mul(x, 1.0, &self.xxt, &self.interp).unwrap();
+        Ok(())
     }
 }
 
