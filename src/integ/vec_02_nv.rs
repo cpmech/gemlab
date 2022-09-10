@@ -54,7 +54,8 @@ use russell_lab::Vector;
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_v` -- Function `f(v,p,N)→α` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   and shape functions N(ιᵖ). `v.dim() = space_ndim`.
-///   `fn_v` returns α that can accommodate plane-strain or axisymmetric simulations.
+///   `fn_v` returns α that can accommodate plane-strain simulations.
+///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Examples
 ///
@@ -76,7 +77,8 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _, _| {
+///     let (clear, axis) = (true, false);
+///     integ::vec_02_nv(&mut b, &mut pad, 0, clear, axis, ips, |v, _, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
 ///         Ok(1.0)
@@ -93,6 +95,7 @@ pub fn vec_02_nv<F>(
     pad: &mut Scratchpad,
     ii0: usize,
     clear_b: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_v: F,
 ) -> Result<(), StrError>
@@ -127,8 +130,18 @@ where
         let nn = &pad.interp;
         let alpha = fn_v(&mut v, p, nn)?;
 
+        // calculate coefficient
+        let coef = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * det_jac * weight
+        } else {
+            alpha * det_jac * weight
+        };
+
         // add contribution to b vector
-        let coef = alpha * det_jac * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 b[ii0 + 0 + m * 2] += coef * nn[m] * v[0];
@@ -162,8 +175,9 @@ mod tests {
         let nn = Vector::new(0);
         let f = |_v: &mut Vector, _p: usize, _nn: &Vector| Ok(1.0);
         assert_eq!(f(&mut v, 0, &nn).unwrap(), 1.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::vec_02_nv(&mut b, &mut pad, 1, false, &[], f).err(),
+            integ::vec_02_nv(&mut b, &mut pad, 1, clear, axis, &[], f).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -192,10 +206,11 @@ mod tests {
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, p, _| {
+            integ::vec_02_nv(&mut b, &mut pad, 0, clear, axis, ips, |v, p, _| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
                 Ok(1.0)
@@ -225,9 +240,10 @@ mod tests {
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _, _| {
+            integ::vec_02_nv(&mut b, &mut pad, 0, clear, axis, ips, |v, _, _| {
                 v[0] = V0;
                 v[1] = V1;
                 Ok(1.0)
@@ -257,9 +273,10 @@ mod tests {
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _, _| {
+            integ::vec_02_nv(&mut b, &mut pad, 0, clear, axis, ips, |v, _, _| {
                 v[0] = V0;
                 v[1] = V1;
                 v[2] = V2;

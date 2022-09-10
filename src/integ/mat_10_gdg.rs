@@ -175,7 +175,7 @@ where
 
         // add contribution to K matrix
         if axisymmetric {
-            let mut r = 0.0; // radius @ ip
+            let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
                 r += nn[m] * pad.xxt[0][m];
             }

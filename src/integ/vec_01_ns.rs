@@ -78,7 +78,8 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_, _| Ok(5.0))?;
+///     let (clear, axis) = (true, false);
+///     integ::vec_01_ns(&mut a, &mut pad, 0, clear, axis, ips, |_, _| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
 ///     vec_approx_eq(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
@@ -90,6 +91,7 @@ pub fn vec_01_ns<F>(
     pad: &mut Scratchpad,
     ii0: usize,
     clear_a: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_s: F,
 ) -> Result<(), StrError>
@@ -121,10 +123,20 @@ where
         let nn = &pad.interp;
         let s = fn_s(p, nn)?;
 
+        // calculate coefficient
+        let coef = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * s * det_jac * weight
+        } else {
+            s * det_jac * weight
+        };
+
         // loop over nodes and perform sum
-        let val = s * det_jac * weight;
         for m in 0..nnode {
-            a[ii0 + m] += nn[m] * val;
+            a[ii0 + m] += nn[m] * coef;
         }
     }
     Ok(())
@@ -146,8 +158,9 @@ mod tests {
         let nn = Vector::new(0);
         let f = |_: usize, _: &Vector| Ok(0.0);
         assert_eq!(f(0, &nn).unwrap(), 0.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::vec_01_ns(&mut a, &mut pad, 1, false, &[], f).err(),
+            integ::vec_01_ns(&mut a, &mut pad, 1, clear, axis, &[], f).err(),
             Some("a.len() must be ≥ ii0 + nnode")
         );
     }
@@ -180,10 +193,11 @@ mod tests {
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p, _| Ok(x_ips[p][0])).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, clear, axis, ips, |p, _| Ok(x_ips[p][0])).unwrap();
             vec_approx_eq(a.as_data(), a_correct, tol);
         });
     }
@@ -208,8 +222,9 @@ mod tests {
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_, _| Ok(CS)).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, clear, axis, ips, |_, _| Ok(CS)).unwrap();
             vec_approx_eq(a.as_data(), &a_correct, tol);
         });
     }
@@ -233,9 +248,10 @@ mod tests {
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_, _| Ok(CS)).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, clear, axis, ips, |_, _| Ok(CS)).unwrap();
             vec_approx_eq(a.as_data(), &a_correct, tol);
         });
     }
@@ -261,10 +277,11 @@ mod tests {
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p, _| Ok(x_ips[p][2])).unwrap();
+            integ::vec_01_ns(&mut a, &mut pad, 0, clear, axis, ips, |p, _| Ok(x_ips[p][2])).unwrap();
             vec_approx_eq(a.as_data(), &a_correct, tol);
         });
     }

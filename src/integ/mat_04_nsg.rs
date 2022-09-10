@@ -75,6 +75,7 @@ pub fn mat_04_nsg<F>(
     ii0: usize,
     jj0: usize,
     clear_kk: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_s: F,
 ) -> Result<(), StrError>
@@ -114,21 +115,31 @@ where
         let gg = &pad.gradient;
         let s = fn_s(p, nnb, nn, gg)?;
 
+        // calculate coefficient
+        let c = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * s * det_jac * weight
+        } else {
+            s * det_jac * weight
+        };
+
         // add contribution to K matrix
-        let val = s * det_jac * weight;
         if space_ndim == 2 {
             for m in 0..nnode_b {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + 0 + n * 2] += nnb[m] * val * gg[n][0];
-                    kk[ii0 + m][jj0 + 1 + n * 2] += nnb[m] * val * gg[n][1];
+                    kk[ii0 + m][jj0 + 0 + n * 2] += nnb[m] * c * gg[n][0];
+                    kk[ii0 + m][jj0 + 1 + n * 2] += nnb[m] * c * gg[n][1];
                 }
             }
         } else {
             for m in 0..nnode_b {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + 0 + n * 3] += nnb[m] * val * gg[n][0];
-                    kk[ii0 + m][jj0 + 1 + n * 3] += nnb[m] * val * gg[n][1];
-                    kk[ii0 + m][jj0 + 2 + n * 3] += nnb[m] * val * gg[n][2];
+                    kk[ii0 + m][jj0 + 0 + n * 3] += nnb[m] * c * gg[n][0];
+                    kk[ii0 + m][jj0 + 1 + n * 3] += nnb[m] * c * gg[n][1];
+                    kk[ii0 + m][jj0 + 2 + n * 3] += nnb[m] * c * gg[n][2];
                 }
             }
         }
@@ -156,12 +167,13 @@ mod tests {
         let gg = Matrix::new(0, 0);
         let f = |_p: usize, _nnb: &Vector, _nn: &Vector, _gg: &Matrix| Ok(0.0);
         assert_eq!(f(0, &nnb, &nn, &gg).unwrap(), 0.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 1, 0, false, &[], f).err(),
+            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 1, 0, clear, axis, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
         assert_eq!(
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 1, false, &[], f).err(),
+            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 1, clear, axis, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
     }
@@ -172,6 +184,7 @@ mod tests {
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
+        let (clear, axis) = (true, false);
         let ana = AnalyticalQua8::new(a, b);
         let s = 9.0;
         let kk_correct = ana.mat_04_nsg(s);
@@ -181,7 +194,10 @@ mod tests {
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |_, _, _, _| Ok(s)).unwrap();
+            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 0, clear, axis, ips, |_, _, _, _| {
+                Ok(s)
+            })
+            .unwrap();
             // println!("{:.2}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
@@ -192,6 +208,7 @@ mod tests {
         let mut pad_b = aux::gen_pad_tet4();
         let mut pad = pad_b.clone();
         let mut kk = Matrix::new(4, 4 * 3);
+        let (clear, axis) = (true, false);
         let ana = AnalyticalTet4::new(&pad);
         let s = 9.0;
         let kk_correct = ana.mat_04_nsg(s);
@@ -201,7 +218,10 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 0, true, ips, |_, _, _, _| Ok(s)).unwrap();
+            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut pad, 0, 0, clear, axis, ips, |_, _, _, _| {
+                Ok(s)
+            })
+            .unwrap();
             // println!("{:.2}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });

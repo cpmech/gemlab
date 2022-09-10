@@ -56,7 +56,8 @@ use russell_tensor::Tensor2;
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_sig` -- Function `f(σ,p,N,G)→α` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and the gradients G(ιᵖ). `σ` is set for `space_ndim`.
-///   `fn_sig` returns α that can accommodate plane-strain or axisymmetric simulations.
+///   `fn_sig` returns α that can accommodate plane-strain simulations.
+///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Examples
 ///
@@ -78,7 +79,8 @@ use russell_tensor::Tensor2;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _, _, _| {
+///     let (clear, axis) = (true, false);
+///     integ::vec_04_tg(&mut d, &mut pad, 0, clear, axis, ips, |sig, _, _, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
 ///         sig.sym_set(0, 1, 3.0);
@@ -101,6 +103,7 @@ pub fn vec_04_tg<F>(
     pad: &mut Scratchpad,
     ii0: usize,
     clear_d: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_sig: F,
 ) -> Result<(), StrError>
@@ -137,8 +140,18 @@ where
         let gg = &pad.gradient;
         let alpha = fn_sig(&mut sig, index, nn, gg)?;
 
+        // calculate coefficient
+        let coef = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * det_jac * weight
+        } else {
+            alpha * det_jac * weight
+        };
+
         // add contribution to d vector
-        let coef = alpha * det_jac * weight;
         let t = &sig.vec;
         if space_ndim == 2 {
             for m in 0..nnode {
@@ -175,8 +188,9 @@ mod tests {
         let gg = Matrix::new(0, 0);
         let f = |_: &mut Tensor2, _, _: &Vector, _: &Matrix| Ok(1.0);
         assert_eq!(f(&mut sig, 0, &nn, &gg).unwrap(), 1.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::vec_04_tg(&mut d, &mut pad, 1, false, &[], f).err(),
+            integ::vec_04_tg(&mut d, &mut pad, 1, clear, axis, &[], f).err(),
             Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -208,9 +222,10 @@ mod tests {
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _, _, _| {
+            integ::vec_04_tg(&mut d, &mut pad, 0, clear, axis, ips, |sig, _, _, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -248,9 +263,10 @@ mod tests {
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _, _, _| {
+            integ::vec_04_tg(&mut d, &mut pad, 0, clear, axis, ips, |sig, _, _, _| {
                 copy_tensor2(sig, &tt).unwrap();
                 Ok(1.0)
             })

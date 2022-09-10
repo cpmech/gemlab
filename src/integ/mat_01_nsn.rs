@@ -57,6 +57,7 @@ pub fn mat_01_nsn<F>(
     ii0: usize,
     jj0: usize,
     clear_kk: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_s: F,
 ) -> Result<(), StrError>
@@ -93,11 +94,21 @@ where
         let gg = &pad.gradient;
         let s = fn_s(p, nn, gg)?;
 
+        // calculate coefficient
+        let c = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * s * det_jac * weight
+        } else {
+            s * det_jac * weight
+        };
+
         // add contribution to K matrix
-        let val = s * det_jac * weight;
         for m in 0..nnode {
             for n in 0..nnode {
-                kk[ii0 + m][jj0 + n] += nn[m] * val * nn[n];
+                kk[ii0 + m][jj0 + n] += nn[m] * c * nn[n];
             }
         }
     }
@@ -123,23 +134,24 @@ mod tests {
         let gg = Matrix::new(0, 0);
         let f = |_p: usize, _nn: &Vector, _gg: &Matrix| Ok(0.0);
         assert_eq!(f(0, &nn, &gg).unwrap(), 0.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::mat_01_nsn(&mut kk, &mut pad, 1, 0, false, &[], f).err(),
+            integ::mat_01_nsn(&mut kk, &mut pad, 1, 0, clear, axis, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         assert_eq!(
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 1, false, &[], f).err(),
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 1, clear, axis, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         // more errors
         assert_eq!(
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, f).err(),
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, clear, axis, &IP_LIN_LEGENDRE_1, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
         assert_eq!(
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _| Err(
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, clear, axis, &IP_TRI_INTERNAL_1, |_, _, _| Err(
                 "stop"
             ))
             .err(),
@@ -151,6 +163,7 @@ mod tests {
     fn tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
+        let (clear, axis) = (true, false);
         let s = 12.0;
         let ana = AnalyticalTri3::new(&pad);
         let kk_correct = ana.mat_01_nsn(s, 1.0);
@@ -162,7 +175,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |_, _, _| Ok(s)).unwrap();
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
@@ -172,6 +185,7 @@ mod tests {
         let (a, b) = (2.0, 1.5);
         let mut pad = aux::gen_pad_qua4(2.0, 1.0, a, b);
         let mut kk = Matrix::new(4, 4);
+        let (clear, axis) = (true, false);
         let s = 12.0;
         let ana = AnalyticalQua4::new(a, b);
         let kk_correct = ana.mat_01_nsn(s, 1.0);
@@ -183,7 +197,7 @@ mod tests {
             .collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |_, _, _| Ok(s)).unwrap();
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
@@ -193,6 +207,7 @@ mod tests {
         let (a, b) = (2.0, 1.5);
         let mut pad = aux::gen_pad_qua8(2.0, 1.0, a, b);
         let mut kk = Matrix::new(8, 8);
+        let (clear, axis) = (true, false);
         let s = 3.0;
         let ana = AnalyticalQua8::new(a, b);
         let kk_correct = ana.mat_01_nsn(s, 1.0);
@@ -201,7 +216,7 @@ mod tests {
         let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |_, _, _| Ok(s)).unwrap();
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
     }
@@ -210,6 +225,7 @@ mod tests {
     fn tet4_works() {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4, 4);
+        let (clear, axis) = (true, false);
         let s = 3.0;
         let ana = AnalyticalTet4::new(&pad);
         let kk_correct = ana.mat_01_nsn(s);
@@ -219,7 +235,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
+            integ::mat_01_nsn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |_, _, _| Ok(s)).unwrap();
             // println!("{}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });

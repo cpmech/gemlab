@@ -55,7 +55,8 @@ use russell_lab::Vector;
 /// * `fn_v` -- Function `f(v,p,un,N)→α` that calculates `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   the **unit** normal vector `un(x(ιᵖ))`, and shape functions N(ιᵖ).
 ///   `v.dim() = space_ndim` and `un.dim() = space_ndim`.
-///   `fn_v` returns α that can accommodate plane-strain or axisymmetric simulations.
+///   `fn_v` returns α that can accommodate plane-strain simulations.
+///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Examples
 ///
@@ -64,6 +65,7 @@ pub fn vec_02_nv_bry<F>(
     pad: &mut Scratchpad,
     ii0: usize,
     clear_b: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_v: F,
 ) -> Result<(), StrError>
@@ -106,8 +108,18 @@ where
         let nn = &pad.interp;
         let alpha = fn_v(&mut v, p, &un, nn)?;
 
+        // calculate coefficient
+        let coef = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * mag_n * weight
+        } else {
+            alpha * mag_n * weight
+        };
+
         // add contribution to b vector
-        let coef = alpha * mag_n * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 b[ii0 + 0 + m * 2] += coef * nn[m] * v[0];
@@ -147,20 +159,21 @@ mod tests {
         let nn = Vector::new(0);
         let f = |_: &mut Vector, _: usize, _: &Vector, _: &Vector| Ok(0.0);
         assert_eq!(f(&mut v, 0, &un, &nn).unwrap(), 0.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], f).err(),
+            integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, &[], f).err(),
             Some("in 2D, geometry ndim must be equal to 1 (a line)")
         );
         let mut pad = aux::gen_pad_tet4();
         let mut b = Vector::new(8);
         assert_eq!(
-            integ::vec_02_nv_bry(&mut b, &mut pad, 0, false, &[], f).err(),
+            integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, &[], f).err(),
             Some("in 3D, geometry ndim must be equal to 2 (a surface)")
         );
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
         assert_eq!(
-            integ::vec_02_nv_bry(&mut b, &mut pad, 1, false, &[], f).err(),
+            integ::vec_02_nv_bry(&mut b, &mut pad, 1, clear, axis, &[], f).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -178,9 +191,10 @@ mod tests {
         pad.set_xx(1, 0, ll);
         pad.set_xx(1, 1, 0.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let (clear, axis) = (true, false);
         let ips = integ::default_points(pad.kind);
         // uniform
-        integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, _, _| {
+        integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, ips, |t, _, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
             Ok(1.0)
@@ -189,7 +203,7 @@ mod tests {
         vec_approx_eq(b.as_data(), &[0.0, -2.0, 0.0, -2.0], 1e-15);
         // triangular (see @sgm:14\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-        integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, p, _, _| {
+        integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, ips, |t, p, _, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
@@ -210,7 +224,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         // uniform
-        integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, _, _| {
+        integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, ips, |t, _, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
             Ok(1.0)
@@ -219,7 +233,7 @@ mod tests {
         vec_approx_eq(b.as_data(), &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
         // triangular (see @sgm:14\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-        integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, p, _, _| {
+        integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, ips, |t, p, _, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
@@ -244,7 +258,7 @@ mod tests {
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
         // uniform
-        integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, _, _| {
+        integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, ips, |t, _, _, _| {
             t[0] = 0.0;
             t[1] = -1.0;
             Ok(1.0)
@@ -265,7 +279,7 @@ mod tests {
         vec_approx_eq(b.as_data(), correct, 1e-15);
         // triangular (see @sgm:14\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-        integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, p, _, _| {
+        integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, ips, |t, p, _, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
             t[1] = -c;
@@ -305,8 +319,9 @@ mod tests {
         pad.set_xx(3, 1, dy);
         pad.set_xx(3, 2, 0.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let (clear, axis) = (true, false);
         let ips = integ::default_points(pad.kind);
-        integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, _, _| {
+        integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, ips, |t, _, _, _| {
             t[0] = 0.0;
             t[1] = 0.0;
             t[2] = -1.0;
@@ -359,7 +374,7 @@ mod tests {
         pad.set_xx(7, 2, 0.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
         let ips = integ::default_points(pad.kind);
-        integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, _, _| {
+        integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, ips, |t, _, _, _| {
             t[0] = 0.0;
             t[1] = 0.0;
             t[2] = -1.0;
@@ -409,9 +424,10 @@ mod tests {
         pad.set_xx(2, 0, r * SQRT_2 / 2.0);
         pad.set_xx(2, 1, r * SQRT_2 / 2.0);
         let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let (clear, axis) = (true, false);
         let ips = integ::default_points(pad.kind);
         let p = -20.0;
-        integ::vec_02_nv_bry(&mut b, &mut pad, 0, true, ips, |t, _, un, _| {
+        integ::vec_02_nv_bry(&mut b, &mut pad, 0, clear, axis, ips, |t, _, un, _| {
             t[0] = p * un[0];
             t[1] = p * un[1];
             Ok(1.0)

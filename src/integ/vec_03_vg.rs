@@ -47,7 +47,8 @@ use russell_lab::{Matrix, Vector};
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_w` -- Function `f(w,p,N,G)→α` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients G(ιᵖ). `w.dim() = space_ndim`.
-///   `fn_w` returns α that can accommodate plane-strain or axisymmetric simulations.
+///   `fn_w` returns α that can accommodate plane-strain simulations.
+///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Examples
 ///
@@ -71,7 +72,8 @@ use russell_lab::{Matrix, Vector};
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _, _| {
+///     let (clear, axis) = (true, false);
+///     integ::vec_03_vg(&mut c, &mut pad, 0, clear, axis, ips, |w, _, _, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
 ///         Ok(1.0)
@@ -92,6 +94,7 @@ pub fn vec_03_vg<F>(
     pad: &mut Scratchpad,
     ii0: usize,
     clear_c: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_w: F,
 ) -> Result<(), StrError>
@@ -127,8 +130,18 @@ where
         let gg = &pad.gradient;
         let alpha = fn_w(&mut w, p, nn, gg)?;
 
+        // calculate coefficient
+        let coef = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * det_jac * weight
+        } else {
+            alpha * det_jac * weight
+        };
+
         // add contribution to c vector
-        let coef = alpha * det_jac * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 c[ii0 + m] += coef * (w[0] * gg[m][0] + w[1] * gg[m][1]);
@@ -160,8 +173,9 @@ mod tests {
         let gg = Matrix::new(0, 0);
         let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(1.0);
         assert_eq!(f(&mut w, 0, &nn, &gg).unwrap(), 1.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::vec_03_vg(&mut c, &mut pad, 1, false, &[], f).err(),
+            integ::vec_03_vg(&mut c, &mut pad, 1, clear, axis, &[], f).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
     }
@@ -184,9 +198,10 @@ mod tests {
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, clear, axis, ips, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(1.0)
@@ -212,10 +227,11 @@ mod tests {
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, p, _, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, clear, axis, ips, |w, p, _, _| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(1.0)
@@ -247,9 +263,10 @@ mod tests {
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let (clear, axis) = (true, false);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _, _, _| {
+            integ::vec_03_vg(&mut c, &mut pad, 0, clear, axis, ips, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;

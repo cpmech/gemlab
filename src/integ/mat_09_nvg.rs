@@ -57,13 +57,15 @@ use russell_lab::{Matrix, Vector};
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_v` -- Function `f(v,p,N,G)→α` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients G(ιᵖ). `v.dim() = space_ndim`.
-///   `fn_v` returns α that can accommodate plane-strain or axisymmetric simulations.
+///   `fn_v` returns α that can accommodate plane-strain simulations.
+///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 pub fn mat_09_nvg<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ii0: usize,
     jj0: usize,
     clear_kk: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_v: F,
 ) -> Result<(), StrError>
@@ -103,8 +105,18 @@ where
         let gg = &pad.gradient;
         let alpha = fn_v(&mut v, p, nn, gg)?;
 
+        // calculate coefficient
+        let c = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * det_jac * weight
+        } else {
+            alpha * det_jac * weight
+        };
+
         // add contribution to K matrix
-        let c = alpha * det_jac * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
@@ -154,26 +166,26 @@ mod tests {
         let gg = Matrix::new(0, 0);
         let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(0.0);
         assert_eq!(f(&mut vv, 0, &nn, &gg).unwrap(), 0.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut pad, 1, 0, false, &[], f).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 1, 0, clear, axis, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut pad, 0, 1, false, &[], f).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 1, clear, axis, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
+        let ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, f).err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, clear, axis, ips, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
+        let ips = &IP_TRI_INTERNAL_1;
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _, _| Err(
-                "stop"
-            ))
-            .err(),
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, clear, axis, ips, |_, _, _, _| Err("stop")).err(),
             Some("stop")
         );
     }
@@ -182,6 +194,7 @@ mod tests {
     fn mat_09_nvg_tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3 * 2, 3 * 2);
+        let (clear, axis) = (true, false);
         let ana = AnalyticalTri3::new(&pad);
         // constant
         let (v0, v1) = (2.0, 3.0);
@@ -192,7 +205,7 @@ mod tests {
         let selection: Vec<_> = [3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, true, ips, |v, _, _, _| {
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, clear, axis, ips, |v, _, _, _| {
                 v[0] = v0;
                 v[1] = v1;
                 Ok(1.0)
@@ -207,6 +220,7 @@ mod tests {
     fn mat_09_nvg_tet4_works() {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4 * 3, 4 * 3);
+        let (clear, axis) = (true, false);
         let ana = AnalyticalTet4::new(&pad);
         // constant
         let (v0, v1, v2) = (2.0, 3.0, 4.0);
@@ -217,7 +231,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, true, ips, |v, _, _, _| {
+            integ::mat_09_nvg(&mut kk, &mut pad, 0, 0, clear, axis, ips, |v, _, _, _| {
                 v[0] = v0;
                 v[1] = v1;
                 v[2] = v2;

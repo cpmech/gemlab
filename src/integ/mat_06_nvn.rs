@@ -66,7 +66,8 @@ use russell_lab::{Matrix, Vector};
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_v` -- Function `f(v,p,N,G,Nb)→α` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), gradients G(ιᵖ), and shape functions Nb(ιᵖ). `v.dim() = space_ndim`.
-///   `fn_v` returns α that can accommodate plane-strain or axisymmetric simulations.
+///   `fn_v` returns α that can accommodate plane-strain simulations.
+///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 ///
 /// # Warning
 ///
@@ -79,6 +80,7 @@ pub fn mat_06_nvn<F>(
     ii0: usize,
     jj0: usize,
     clear_kk: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_v: F,
 ) -> Result<(), StrError>
@@ -121,8 +123,18 @@ where
         let nnb = &pad_b.interp;
         let alpha = fn_v(&mut v, p, nn, gg, nnb)?;
 
+        // calculate coefficient
+        let c = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * det_jac * weight
+        } else {
+            alpha * det_jac * weight
+        };
+
         // add contribution to K matrix
-        let c = alpha * det_jac * weight;
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode_b {
@@ -164,12 +176,13 @@ mod tests {
         let nnb = Vector::new(0);
         let f = |_v: &mut Vector, _p: usize, _nn: &Vector, _gg: &Matrix, _nnb: &Vector| Ok(1.0);
         assert_eq!(f(&mut v, 0, &nn, &gg, &nnb).unwrap(), 1.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 1, 0, false, &[], f).err(),
+            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 1, 0, clear, axis, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 1, false, &[], f).err(),
+            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 1, clear, axis, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + pad_b.nnode")
         );
     }
@@ -180,6 +193,7 @@ mod tests {
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
+        let (clear, axis) = (true, false);
         let ana = AnalyticalQua8::new(a, b);
         let (v0, v1) = (4.0, 5.0);
         let kk_correct = ana.mat_06_nvn(v0, v1);
@@ -189,11 +203,21 @@ mod tests {
         let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |v, _, _, _, _| {
-                v[0] = v0;
-                v[1] = v1;
-                Ok(1.0)
-            })
+            integ::mat_06_nvn(
+                &mut kk,
+                &mut pad,
+                &mut pad_b,
+                0,
+                0,
+                clear,
+                axis,
+                ips,
+                |v, _, _, _, _| {
+                    v[0] = v0;
+                    v[1] = v1;
+                    Ok(1.0)
+                },
+            )
             .unwrap();
             // println!("{}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
@@ -205,6 +229,7 @@ mod tests {
         let mut pad_b = aux::gen_pad_tet4();
         let mut pad = pad_b.clone();
         let mut kk = Matrix::new(4 * 3, 4);
+        let (clear, axis) = (true, false);
         let ana = AnalyticalTet4::new(&pad);
         let (v0, v1, v2) = (4.0, 5.0, 6.0);
         let kk_correct = ana.mat_06_nvn(v0, v1, v2);
@@ -214,12 +239,22 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_06_nvn(&mut kk, &mut pad, &mut pad_b, 0, 0, true, ips, |v, _, _, _, _| {
-                v[0] = v0;
-                v[1] = v1;
-                v[2] = v2;
-                Ok(1.0)
-            })
+            integ::mat_06_nvn(
+                &mut kk,
+                &mut pad,
+                &mut pad_b,
+                0,
+                0,
+                clear,
+                axis,
+                ips,
+                |v, _, _, _, _| {
+                    v[0] = v0;
+                    v[1] = v1;
+                    v[2] = v2;
+                    Ok(1.0)
+                },
+            )
             .unwrap();
             // println!("{}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);

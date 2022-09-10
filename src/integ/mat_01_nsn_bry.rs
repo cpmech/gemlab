@@ -57,6 +57,7 @@ pub fn mat_01_nsn_bry<F>(
     ii0: usize,
     jj0: usize,
     clear_kk: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_s: F,
 ) -> Result<(), StrError>
@@ -102,11 +103,21 @@ where
         let nn = &pad.interp;
         let s = fn_s(p, &un, nn)?;
 
+        // calculate coefficient
+        let c = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * s * mag_n * weight
+        } else {
+            s * mag_n * weight
+        };
+
         // add contribution to K matrix
-        let val = s * mag_n * weight;
         for m in 0..nnode {
             for n in 0..nnode {
-                kk[ii0 + m][jj0 + n] += nn[m] * val * nn[n];
+                kk[ii0 + m][jj0 + n] += nn[m] * c * nn[n];
             }
         }
     }
@@ -131,28 +142,29 @@ mod tests {
         let nn = Vector::new(0);
         let f = |_, _: &Vector, _: &Vector| Ok(0.0);
         assert_eq!(f(0, &un, &nn).unwrap(), 0.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], f).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, clear, axis, &[], f).err(),
             Some("in 2D, geometry ndim must be equal to 1 (a line)")
         );
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &[], f).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, clear, axis, &[], f).err(),
             Some("in 3D, geometry ndim must be equal to 2 (a surface)")
         );
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 1, 0, false, &[], f).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 1, 0, clear, axis, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 1, false, &[], f).err(),
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 1, clear, axis, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         assert_eq!(
-            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _| Err(
+            integ::mat_01_nsn_bry(&mut kk, &mut pad, 0, 0, clear, axis, &IP_TRI_INTERNAL_1, |_, _, _| Err(
                 "stop"
             ))
             .err(),
@@ -179,24 +191,25 @@ mod tests {
         let s = 12.0;
         let ana = AnalyticalTri3::new(&pad);
         let ips = integ::points(GeoClass::Lin, 2).unwrap();
+        let (clear, axis) = (true, false);
 
         // side # 0
         let mut pad_side = tri3_extract_pad_side(&pad, 0);
         let kk_correct = ana.mat_01_nsn_bry(0, s);
         let mut kk = Matrix::new(2, 2);
-        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
+        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, clear, axis, ips, |_, _, _| Ok(s)).unwrap();
         vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-15);
 
         // side # 1
         let mut pad_side = tri3_extract_pad_side(&pad, 1);
         let kk_correct = ana.mat_01_nsn_bry(1, s);
-        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
+        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, clear, axis, ips, |_, _, _| Ok(s)).unwrap();
         vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // side # 2
         let mut pad_side = tri3_extract_pad_side(&pad, 2);
         let kk_correct = ana.mat_01_nsn_bry(2, s);
-        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, true, ips, |_, _, _| Ok(s)).unwrap();
+        integ::mat_01_nsn_bry(&mut kk, &mut pad_side, 0, 0, clear, axis, ips, |_, _, _| Ok(s)).unwrap();
         vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);
     }
 }

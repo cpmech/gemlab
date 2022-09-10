@@ -59,13 +59,15 @@ use russell_tensor::Tensor2;
 /// * `ips` -- Integration points (n_integ_point)
 /// * `fn_tt` -- Function `f(T,p,N,G)→α` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients G(ιᵖ). `T` is set for `space_ndim`.
-///   `fn_tt` returns α that can accommodate plane-strain or axisymmetric simulations.
+///   `fn_tt` returns α that can accommodate plane-strain simulations.
+///   **NOTE:** the value α is ignored if axisymmetric = true, because the radius is calculated and used instead.
 pub fn mat_08_ntn<F>(
     kk: &mut Matrix,
     pad: &mut Scratchpad,
     ii0: usize,
     jj0: usize,
     clear_kk: bool,
+    axisymmetric: bool,
     ips: IntegPointData,
     mut fn_tt: F,
 ) -> Result<(), StrError>
@@ -106,8 +108,18 @@ where
         let gg = &pad.gradient;
         let alpha = fn_tt(&mut tt, p, nn, gg)?;
 
+        // calculate coefficient
+        let c = if axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * pad.xxt[0][m];
+            }
+            r * det_jac * weight
+        } else {
+            alpha * det_jac * weight
+        };
+
         // add contribution to K matrix
-        let c = alpha * det_jac * weight;
         let t = &tt.vec;
         if space_ndim == 2 {
             for m in 0..nnode {
@@ -159,26 +171,26 @@ mod tests {
         let gg = Matrix::new(0, 0);
         let f = |_tt: &mut Tensor2, _p: usize, _nn: &Vector, _gg: &Matrix| Ok(1.0);
         assert_eq!(f(&mut tt, 0, &nn, &gg).unwrap(), 1.0);
+        let (clear, axis) = (true, false);
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut pad, 1, 0, false, &[], f).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 1, 0, clear, axis, &[], f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 1, false, &[], f).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 1, clear, axis, &[], f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         // more errors
+        let ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, false, &IP_LIN_LEGENDRE_1, f).err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, clear, axis, ips, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
+        let ips = &IP_TRI_INTERNAL_1;
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, false, &IP_TRI_INTERNAL_1, |_, _, _, _| Err(
-                "stop"
-            ))
-            .err(),
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |_, _, _, _| Err("stop")).err(),
             Some("stop")
         );
     }
@@ -187,6 +199,7 @@ mod tests {
     fn tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3 * 2, 3 * 2);
+        let (clear, axis) = (true, false);
         let ana = AnalyticalTri3::new(&pad);
         let (rho, th) = (2.7, 1.0);
         let kk_correct = ana.mat_08_ntn(rho, th);
@@ -196,7 +209,7 @@ mod tests {
         let selection: Vec<_> = [3, 6].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _, _, _| {
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |tt, _, _, _| {
                 tt.sym_set(0, 0, rho);
                 tt.sym_set(1, 1, rho);
                 Ok(1.0)
@@ -211,6 +224,7 @@ mod tests {
     fn tet4_works() {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4 * 3, 4 * 3);
+        let (clear, axis) = (true, false);
         let ana = AnalyticalTet4::new(&pad);
         #[rustfmt::skip]
         let sig = Tensor2::from_matrix(&[
@@ -225,7 +239,7 @@ mod tests {
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, true, ips, |tt, _, _, _| {
+            integ::mat_08_ntn(&mut kk, &mut pad, 0, 0, clear, axis, ips, |tt, _, _, _| {
                 copy_tensor2(tt, &sig)?;
                 Ok(1.0)
             })
