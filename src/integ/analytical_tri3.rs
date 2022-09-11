@@ -9,7 +9,7 @@ pub struct AnalyticalTri3 {
     /// Holds the area of the triangle
     pub area: f64,
 
-    /// Holds the gradients (G-matrix)
+    /// Holds the gradients (B-matrix)
     ///
     /// ```text
     ///             →
@@ -19,11 +19,11 @@ pub struct AnalyticalTri3 {
     ///           dx
     /// ```
     ///
-    /// Organized as the G matrix (nnode=3, space_ndim=2)
-    pub gg: Matrix,
-
-    /// Holds the B-matrix (4, 6)
+    /// Organized as the B matrix (nnode=3, space_ndim=2)
     pub bb: Matrix,
+
+    /// Holds the (element) Be-matrix (4, 6)
+    pub bbe: Matrix,
 
     // Holds the lengths of each edge
     pub ll: Vec<f64>,
@@ -51,15 +51,15 @@ impl AnalyticalTri3 {
 
         // gradients
         #[rustfmt::skip]
-        let gg = Matrix::from(&[
+        let bb = Matrix::from(&[
             [a0/r, b0/r],
             [a1/r, b1/r],
             [a2/r, b2/r],
         ]);
 
-        // B-matrix
+        // element Be-matrix
         #[rustfmt::skip]
-        let bb = Matrix::from(&[
+        let bbe = Matrix::from(&[
             [a0/r,  0.0, a1/r,  0.0, a2/r,  0.0],
             [ 0.0, b0/r,  0.0, b1/r,  0.0, b2/r],
             [ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
@@ -74,7 +74,7 @@ impl AnalyticalTri3 {
         ];
 
         // results
-        AnalyticalTri3 { area, gg, bb, ll }
+        AnalyticalTri3 { area, bb, bbe, ll }
     }
 
     /// Integrates shape times scalar with constant function s(x) = cₛ
@@ -124,9 +124,9 @@ impl AnalyticalTri3 {
     /// ```
     pub fn vec_03_vg(&self, w0: f64, w1: f64) -> Vec<f64> {
         vec![
-            (w0 * self.gg[0][0] + w1 * self.gg[0][1]) * self.area,
-            (w0 * self.gg[1][0] + w1 * self.gg[1][1]) * self.area,
-            (w0 * self.gg[2][0] + w1 * self.gg[2][1]) * self.area,
+            (w0 * self.bb[0][0] + w1 * self.bb[0][1]) * self.area,
+            (w0 * self.bb[1][0] + w1 * self.bb[1][1]) * self.area,
+            (w0 * self.bb[2][0] + w1 * self.bb[2][1]) * self.area,
         ]
     }
 
@@ -146,9 +146,9 @@ impl AnalyticalTri3 {
         let (x0, x1, x2) = (pad.xxt[0][0], pad.xxt[0][1], pad.xxt[0][2]);
         let (y0, y1, y2) = (pad.xxt[1][0], pad.xxt[1][1], pad.xxt[1][2]);
         vec![
-            ((x0 + x1 + x2) * self.gg[0][0] + (y0 + y1 + y2) * self.gg[0][1]) * self.area / 3.0,
-            ((x0 + x1 + x2) * self.gg[1][0] + (y0 + y1 + y2) * self.gg[1][1]) * self.area / 3.0,
-            ((x0 + x1 + x2) * self.gg[2][0] + (y0 + y1 + y2) * self.gg[2][1]) * self.area / 3.0,
+            ((x0 + x1 + x2) * self.bb[0][0] + (y0 + y1 + y2) * self.bb[0][1]) * self.area / 3.0,
+            ((x0 + x1 + x2) * self.bb[1][0] + (y0 + y1 + y2) * self.bb[1][1]) * self.area / 3.0,
+            ((x0 + x1 + x2) * self.bb[2][0] + (y0 + y1 + y2) * self.bb[2][1]) * self.area / 3.0,
         ]
     }
 
@@ -168,12 +168,12 @@ impl AnalyticalTri3 {
     /// * `s₀₀, s₁₁, s₀₁` -- components of the constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
     pub fn vec_04_tg(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
         vec![
-            (s00 * self.gg[0][0] + s01 * self.gg[0][1]) * self.area,
-            (s01 * self.gg[0][0] + s11 * self.gg[0][1]) * self.area,
-            (s00 * self.gg[1][0] + s01 * self.gg[1][1]) * self.area,
-            (s01 * self.gg[1][0] + s11 * self.gg[1][1]) * self.area,
-            (s00 * self.gg[2][0] + s01 * self.gg[2][1]) * self.area,
-            (s01 * self.gg[2][0] + s11 * self.gg[2][1]) * self.area,
+            (s00 * self.bb[0][0] + s01 * self.bb[0][1]) * self.area,
+            (s01 * self.bb[0][0] + s11 * self.bb[0][1]) * self.area,
+            (s00 * self.bb[1][0] + s01 * self.bb[1][1]) * self.area,
+            (s01 * self.bb[1][0] + s11 * self.bb[1][1]) * self.area,
+            (s00 * self.bb[2][0] + s01 * self.bb[2][1]) * self.area,
+            (s01 * self.bb[2][0] + s11 * self.bb[2][1]) * self.area,
         ]
     }
 
@@ -199,7 +199,7 @@ impl AnalyticalTri3 {
     #[rustfmt::skip]
     pub fn mat_02_gvn(&self, v0: f64, v1: f64) -> Matrix {
         let aa = self.area;
-        let g = &self.gg;
+        let g = &self.bb;
         Matrix::from(&[
             [aa*(g[0][0]*v0 + g[0][1]*v1)/3.0, aa*(g[0][0]*v0 + g[0][1]*v1)/3.0, aa*(g[0][0]*v0 + g[0][1]*v1)/3.0],
             [aa*(g[1][0]*v0 + g[1][1]*v1)/3.0, aa*(g[1][0]*v0 + g[1][1]*v1)/3.0, aa*(g[1][0]*v0 + g[1][1]*v1)/3.0],
@@ -211,9 +211,9 @@ impl AnalyticalTri3 {
     #[rustfmt::skip]
     pub fn mat_02_gvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
         let aa = self.area;
-        let (g00, g01) = (self.gg[0][0], self.gg[0][1]);
-        let (g10, g11) = (self.gg[1][0], self.gg[1][1]);
-        let (g20, g21) = (self.gg[2][0], self.gg[2][1]);
+        let (g00, g01) = (self.bb[0][0], self.bb[0][1]);
+        let (g10, g11) = (self.bb[1][0], self.bb[1][1]);
+        let (g20, g21) = (self.bb[2][0], self.bb[2][1]);
         let (x0, y0) = (pad.xxt[0][0], pad.xxt[1][0]);
         let (x1, y1) = (pad.xxt[0][1], pad.xxt[1][1]);
         let (x2, y2) = (pad.xxt[0][2], pad.xxt[1][2]);
@@ -226,7 +226,7 @@ impl AnalyticalTri3 {
 
     /// Performs the g-t-g integration with constant tensor
     pub fn mat_03_gtg(&self, kx: f64, ky: f64) -> Matrix {
-        let g = &self.gg;
+        let g = &self.bb;
         let k00 = self.area * (g[0][0] * g[0][0] * kx + g[0][1] * g[0][1] * ky);
         let k11 = self.area * (g[1][0] * g[1][0] * kx + g[1][1] * g[1][1] * ky);
         let k01 = self.area * (g[0][0] * g[1][0] * kx + g[0][1] * g[1][1] * ky);
@@ -252,9 +252,9 @@ impl AnalyticalTri3 {
     /// Performs the n-v-g integration with constant vector
     #[rustfmt::skip]
     pub fn mat_09_nvg(&self, v0: f64, v1: f64) -> Matrix {
-        let (g00, g01) = (self.gg[0][0], self.gg[0][1]);
-        let (g10, g11) = (self.gg[1][0], self.gg[1][1]);
-        let (g20, g21) = (self.gg[2][0], self.gg[2][1]);
+        let (g00, g01) = (self.bb[0][0], self.bb[0][1]);
+        let (g10, g11) = (self.bb[1][0], self.bb[1][1]);
+        let (g20, g21) = (self.bb[2][0], self.bb[2][1]);
         let c = self.area / 3.0;
         Matrix::from(&[
             [c*g00*v0, c*g01*v0, c*g10*v0, c*g11*v0, c*g20*v0, c*g21*v0],
@@ -280,8 +280,8 @@ impl AnalyticalTri3 {
         let dim_kk = 6;
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bb, &dd.mat).unwrap();
-        mat_mat_mul(&mut kk, th * self.area, &bb_t_dd, &self.bb).unwrap();
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd.mat).unwrap();
+        mat_mat_mul(&mut kk, th * self.area, &bb_t_dd, &self.bbe).unwrap();
         Ok(kk)
     }
 }
@@ -312,7 +312,7 @@ mod tests {
         // b = [-0.1, -0.1, 0.2]
         // A = 0.01, Gmi = ai/(2 A) = -0.1 / 0.02 = -5
         assert_eq!(
-            format!("{:.2}", ana.gg),
+            format!("{:.2}", ana.bb),
             "┌             ┐\n\
              │ -5.00 -5.00 │\n\
              │  5.00 -5.00 │\n\
