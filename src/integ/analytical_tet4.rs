@@ -9,7 +9,7 @@ pub struct AnalyticalTet4 {
     /// Holds the volume of the tetrahedron
     pub volume: f64,
 
-    /// Holds the gradients (G-matrix)
+    /// Holds the gradients (B-matrix)
     ///
     /// ```text
     ///             →
@@ -19,11 +19,11 @@ pub struct AnalyticalTet4 {
     ///           dx
     /// ```
     ///
-    /// Organized as the G matrix (nnode=4, space_ndim=3)
-    pub gg: Matrix,
-
-    /// Holds the B-matrix (6, 12)
+    /// Organized as the B matrix (nnode=4, space_ndim=3)
     pub bb: Matrix,
+
+    /// Holds the (element) Be-matrix (6, 12)
+    pub bbe: Matrix,
 }
 
 impl AnalyticalTet4 {
@@ -106,16 +106,16 @@ impl AnalyticalTet4 {
 
         // gradients
         #[rustfmt::skip]
-        let gg = Matrix::from(&[
+        let bb = Matrix::from(&[
             [a1/r, b1/r, c1/r],
             [a2/r, b2/r, c2/r],
             [a3/r, b3/r, c3/r],
             [a4/r, b4/r, c4/r],
         ]);
 
-        // B-matrix
+        // Be-matrix
         #[rustfmt::skip]
-        let bb = Matrix::from(&[
+        let bbe = Matrix::from(&[
             [a1/r,  0.0,  0.0, a2/r,  0.0,  0.0, a3/r,  0.0,  0.0, a4/r,  0.0,  0.0],
             [ 0.0, b1/r,  0.0,  0.0, b2/r,  0.0,  0.0, b3/r,  0.0,  0.0, b4/r,  0.0],
             [ 0.0,  0.0, c1/r,  0.0,  0.0, c2/r,  0.0,  0.0, c3/r,  0.0,  0.0, c4/r],
@@ -126,8 +126,8 @@ impl AnalyticalTet4 {
 
         AnalyticalTet4 {
             volume: jj_det / 6.0,
-            gg,
             bb,
+            bbe,
         }
     }
 
@@ -198,10 +198,10 @@ impl AnalyticalTet4 {
     /// ```
     pub fn vec_03_vg(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
         vec![
-            (w0 * self.gg[0][0] + w1 * self.gg[0][1] + w2 * self.gg[0][2]) * self.volume,
-            (w0 * self.gg[1][0] + w1 * self.gg[1][1] + w2 * self.gg[1][2]) * self.volume,
-            (w0 * self.gg[2][0] + w1 * self.gg[2][1] + w2 * self.gg[2][2]) * self.volume,
-            (w0 * self.gg[3][0] + w1 * self.gg[3][1] + w2 * self.gg[3][2]) * self.volume,
+            (w0 * self.bb[0][0] + w1 * self.bb[0][1] + w2 * self.bb[0][2]) * self.volume,
+            (w0 * self.bb[1][0] + w1 * self.bb[1][1] + w2 * self.bb[1][2]) * self.volume,
+            (w0 * self.bb[2][0] + w1 * self.bb[2][1] + w2 * self.bb[2][2]) * self.volume,
+            (w0 * self.bb[3][0] + w1 * self.bb[3][1] + w2 * self.bb[3][2]) * self.volume,
         ]
     }
 
@@ -223,18 +223,18 @@ impl AnalyticalTet4 {
         let (a11, a12) = (mat[1][1], mat[1][2]);
         let a22 = mat[2][2];
         vec![
-            c * (a00 * self.gg[0][0] + a01 * self.gg[0][1] + a02 * self.gg[0][2]),
-            c * (a01 * self.gg[0][0] + a11 * self.gg[0][1] + a12 * self.gg[0][2]),
-            c * (a02 * self.gg[0][0] + a12 * self.gg[0][1] + a22 * self.gg[0][2]),
-            c * (a00 * self.gg[1][0] + a01 * self.gg[1][1] + a02 * self.gg[1][2]),
-            c * (a01 * self.gg[1][0] + a11 * self.gg[1][1] + a12 * self.gg[1][2]),
-            c * (a02 * self.gg[1][0] + a12 * self.gg[1][1] + a22 * self.gg[1][2]),
-            c * (a00 * self.gg[2][0] + a01 * self.gg[2][1] + a02 * self.gg[2][2]),
-            c * (a01 * self.gg[2][0] + a11 * self.gg[2][1] + a12 * self.gg[2][2]),
-            c * (a02 * self.gg[2][0] + a12 * self.gg[2][1] + a22 * self.gg[2][2]),
-            c * (a00 * self.gg[3][0] + a01 * self.gg[3][1] + a02 * self.gg[3][2]),
-            c * (a01 * self.gg[3][0] + a11 * self.gg[3][1] + a12 * self.gg[3][2]),
-            c * (a02 * self.gg[3][0] + a12 * self.gg[3][1] + a22 * self.gg[3][2]),
+            c * (a00 * self.bb[0][0] + a01 * self.bb[0][1] + a02 * self.bb[0][2]),
+            c * (a01 * self.bb[0][0] + a11 * self.bb[0][1] + a12 * self.bb[0][2]),
+            c * (a02 * self.bb[0][0] + a12 * self.bb[0][1] + a22 * self.bb[0][2]),
+            c * (a00 * self.bb[1][0] + a01 * self.bb[1][1] + a02 * self.bb[1][2]),
+            c * (a01 * self.bb[1][0] + a11 * self.bb[1][1] + a12 * self.bb[1][2]),
+            c * (a02 * self.bb[1][0] + a12 * self.bb[1][1] + a22 * self.bb[1][2]),
+            c * (a00 * self.bb[2][0] + a01 * self.bb[2][1] + a02 * self.bb[2][2]),
+            c * (a01 * self.bb[2][0] + a11 * self.bb[2][1] + a12 * self.bb[2][2]),
+            c * (a02 * self.bb[2][0] + a12 * self.bb[2][1] + a22 * self.bb[2][2]),
+            c * (a00 * self.bb[3][0] + a01 * self.bb[3][1] + a02 * self.bb[3][2]),
+            c * (a01 * self.bb[3][0] + a11 * self.bb[3][1] + a12 * self.bb[3][2]),
+            c * (a02 * self.bb[3][0] + a12 * self.bb[3][1] + a22 * self.bb[3][2]),
         ]
     }
 
@@ -254,10 +254,10 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_02_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
             [c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2)],
             [c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2)],
@@ -274,10 +274,10 @@ impl AnalyticalTet4 {
         let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
         let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
         let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
             [c*g00*(a00*g00 + a10*g01 + a20*g02) + c*g01*(a01*g00 + a11*g01 + a21*g02) + c*g02*(a02*g00 + a12*g01 + a22*g02), c*g10*(a00*g00 + a10*g01 + a20*g02) + c*g11*(a01*g00 + a11*g01 + a21*g02) + c*g12*(a02*g00 + a12*g01 + a22*g02), c*g20*(a00*g00 + a10*g01 + a20*g02) + c*g21*(a01*g00 + a11*g01 + a21*g02) + c*g22*(a02*g00 + a12*g01 + a22*g02), c*g30*(a00*g00 + a10*g01 + a20*g02) + c*g31*(a01*g00 + a11*g01 + a21*g02) + c*g32*(a02*g00 + a12*g01 + a22*g02)],
             [c*g00*(a00*g10 + a10*g11 + a20*g12) + c*g01*(a01*g10 + a11*g11 + a21*g12) + c*g02*(a02*g10 + a12*g11 + a22*g12), c*g10*(a00*g10 + a10*g11 + a20*g12) + c*g11*(a01*g10 + a11*g11 + a21*g12) + c*g12*(a02*g10 + a12*g11 + a22*g12), c*g20*(a00*g10 + a10*g11 + a20*g12) + c*g21*(a01*g10 + a11*g11 + a21*g12) + c*g22*(a02*g10 + a12*g11 + a22*g12), c*g30*(a00*g10 + a10*g11 + a20*g12) + c*g31*(a01*g10 + a11*g11 + a21*g12) + c*g32*(a02*g10 + a12*g11 + a22*g12)],
@@ -290,10 +290,10 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_04_nsg(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
             [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
             [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
@@ -310,10 +310,10 @@ impl AnalyticalTet4 {
         let (t00, t01, t02) = (mat[0][0], mat[0][1], mat[0][2]);
         let (t11, t12) = (mat[1][1], mat[1][2]);
         let t22 = mat[2][2];
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
             [c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22), c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22), c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22), c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22)],
             [c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22), c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22), c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22), c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22)],
@@ -346,10 +346,10 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_07_gsn(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
             [c*g00*s, c*g00*s, c*g00*s, c*g00*s],
             [c*g01*s, c*g01*s, c*g01*s, c*g01*s],
@@ -394,10 +394,10 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_09_nvg(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
             [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
             [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
@@ -428,8 +428,8 @@ impl AnalyticalTet4 {
         let dim_kk = 12;
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bb, &dd.mat).unwrap(); // cannot fail
-        mat_mat_mul(&mut kk, self.volume, &bb_t_dd, &self.bb).unwrap(); // cannot fail
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd.mat).unwrap(); // cannot fail
+        mat_mat_mul(&mut kk, self.volume, &bb_t_dd, &self.bbe).unwrap(); // cannot fail
         Ok(kk)
     }
 }
@@ -465,7 +465,7 @@ mod tests {
         assert_eq!(tet.volume, 1.0 / 6.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        vec_approx_eq(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
+        vec_approx_eq(tet.bb.as_data(), pad.gradient.as_data(), 1e-15);
         let ee = 480.0;
         let nu = 1.0 / 3.0;
         let eb = ee / (12.0 * (1.0 - 2.0 * nu) * (1.0 + nu));
@@ -510,7 +510,7 @@ mod tests {
         assert_eq!(tet.volume, 4.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        vec_approx_eq(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
+        vec_approx_eq(tet.bb.as_data(), pad.gradient.as_data(), 1e-15);
         let kk = tet.mat_10_gdg(ee, nu).unwrap();
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
