@@ -65,7 +65,7 @@ use russell_tensor::Tensor2;
 ///
 /// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
-pub fn mat_05_gtn<F>(
+pub fn mat_05_btn<F>(
     kk: &mut Matrix,
     pad_b: &mut Scratchpad,
     args: &mut CommonArgs,
@@ -173,13 +173,13 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut args, f).err(),
+            integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut args, f).err(),
+            integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
     }
@@ -197,7 +197,7 @@ mod tests {
             [5.0, 3.0, 0.0],
             [0.0, 0.0, 4.0]],
         true, true).unwrap();
-        let kk_correct = ana.mat_05_gtn(&tt);
+        let kk_correct = ana.mat_05_btn(&tt);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
@@ -205,7 +205,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
+            integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
                 copy_tensor2(ten, &tt)?;
                 Ok(())
             })
@@ -227,7 +227,7 @@ mod tests {
             [4.0, 2.0, 5.0],
             [6.0, 5.0, 3.0]],
         true, false).unwrap();
-        let kk_correct = ana.mat_05_gtn(&tt);
+        let kk_correct = ana.mat_05_btn(&tt);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14];
@@ -235,7 +235,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_05_gtn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
+            integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
                 copy_tensor2(ten, &tt)?;
                 Ok(())
             })

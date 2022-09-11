@@ -66,7 +66,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
-pub fn mat_07_gsn<F>(
+pub fn mat_07_bsn<F>(
     kk: &mut Matrix,
     args: &mut CommonArgs,
     pad_b: &mut Scratchpad,
@@ -164,13 +164,13 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_07_gsn(&mut kk, &mut args, &mut pad_b, f).err(),
+            integ::mat_07_bsn(&mut kk, &mut args, &mut pad_b, f).err(),
             Some("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_07_gsn(&mut kk, &mut args, &mut pad_b, f).err(),
+            integ::mat_07_bsn(&mut kk, &mut args, &mut pad_b, f).err(),
             Some("ncol(K) must be ≥ jj0 + pad_b.nnode")
         );
     }
@@ -183,7 +183,7 @@ mod tests {
         let mut kk = Matrix::new(8 * 2, 4);
         let ana = AnalyticalQua8::new(a, b);
         let s = 9.0;
-        let kk_correct = ana.mat_07_gsn(s);
+        let kk_correct = ana.mat_07_bsn(s);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
@@ -191,7 +191,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_07_gsn(&mut kk, &mut args, &mut pad_b, |_, _, _, _| Ok(s)).unwrap();
+            integ::mat_07_bsn(&mut kk, &mut args, &mut pad_b, |_, _, _, _| Ok(s)).unwrap();
             // println!("{:.2}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
@@ -204,7 +204,7 @@ mod tests {
         let mut kk = Matrix::new(4 * 3, 4);
         let ana = AnalyticalTet4::new(&pad);
         let s = 9.0;
-        let kk_correct = ana.mat_07_gsn(s);
+        let kk_correct = ana.mat_07_bsn(s);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];
@@ -212,7 +212,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_07_gsn(&mut kk, &mut args, &mut pad_b, |_, _, _, _| Ok(s)).unwrap();
+            integ::mat_07_bsn(&mut kk, &mut args, &mut pad_b, |_, _, _, _| Ok(s)).unwrap();
             // println!("{}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });

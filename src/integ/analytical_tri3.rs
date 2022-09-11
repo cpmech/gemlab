@@ -197,7 +197,7 @@ impl AnalyticalTri3 {
 
     /// Performs the g-v-n integration with constant vector
     #[rustfmt::skip]
-    pub fn mat_02_gvn(&self, v0: f64, v1: f64) -> Matrix {
+    pub fn mat_02_bvn(&self, v0: f64, v1: f64) -> Matrix {
         let aa = self.area;
         let g = &self.bb;
         Matrix::from(&[
@@ -209,7 +209,7 @@ impl AnalyticalTri3 {
 
     /// Performs the g-v-n integration with v = {x, y}
     #[rustfmt::skip]
-    pub fn mat_02_gvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
+    pub fn mat_02_bvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
         let aa = self.area;
         let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
         let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
@@ -225,7 +225,7 @@ impl AnalyticalTri3 {
     }
 
     /// Performs the g-t-g integration with constant tensor
-    pub fn mat_03_gtg(&self, kx: f64, ky: f64) -> Matrix {
+    pub fn mat_03_btb(&self, kx: f64, ky: f64) -> Matrix {
         let g = &self.bb;
         let k00 = self.area * (g[0][0] * g[0][0] * kx + g[0][1] * g[0][1] * ky);
         let k11 = self.area * (g[1][0] * g[1][0] * kx + g[1][1] * g[1][1] * ky);
@@ -251,7 +251,7 @@ impl AnalyticalTri3 {
 
     /// Performs the n-v-g integration with constant vector
     #[rustfmt::skip]
-    pub fn mat_09_nvg(&self, v0: f64, v1: f64) -> Matrix {
+    pub fn mat_09_nvb(&self, v0: f64, v1: f64) -> Matrix {
         let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
         let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
         let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
@@ -273,7 +273,7 @@ impl AnalyticalTri3 {
     /// ```text
     /// K = Bᵀ ⋅ D ⋅ B ⋅ th ⋅ area
     /// ```
-    pub fn mat_10_gdg(&self, young: f64, poisson: f64, plane_stress: bool, th: f64) -> Result<Matrix, StrError> {
+    pub fn mat_10_bdb(&self, young: f64, poisson: f64, plane_stress: bool, th: f64) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, true, plane_stress);
         let dd = ela.get_modulus();
         let dim_dd = 4;

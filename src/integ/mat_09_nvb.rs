@@ -51,7 +51,7 @@ use russell_lab::{Matrix, Vector};
 /// * `args` --- Common arguments
 /// * `fn_v` -- Function `f(v,p,N,B)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
 ///   shape functions N(ιᵖ), and gradients B(ιᵖ). `v.dim() = space_ndim`.
-pub fn mat_09_nvg<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
+pub fn mat_09_nvb<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
@@ -153,39 +153,39 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut args, f).err(),
+            integ::mat_09_nvb(&mut kk, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut args, f).err(),
+            integ::mat_09_nvb(&mut kk, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         args.jj0 = 0;
         // more errors
         args.ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut args, f).err(),
+            integ::mat_09_nvb(&mut kk, &mut args, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         let mut args = CommonArgs::new(&mut pad, &IP_TRI_INTERNAL_1);
         assert_eq!(
-            integ::mat_09_nvg(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
+            integ::mat_09_nvb(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
             Some("stop")
         );
     }
 
     #[test]
-    fn mat_09_nvg_tri3_works() {
+    fn mat_09_nvb_tri3_works() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3 * 2, 3 * 2);
         let ana = AnalyticalTri3::new(&pad);
         // constant
         let (v0, v1) = (2.0, 3.0);
-        let kk_correct = ana.mat_09_nvg(v0, v1);
+        let kk_correct = ana.mat_09_nvb(v0, v1);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];
@@ -193,7 +193,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_09_nvg(&mut kk, &mut args, |v, _, _, _| {
+            integ::mat_09_nvb(&mut kk, &mut args, |v, _, _, _| {
                 v[0] = v0;
                 v[1] = v1;
                 Ok(())
@@ -205,13 +205,13 @@ mod tests {
     }
 
     #[test]
-    fn mat_09_nvg_tet4_works() {
+    fn mat_09_nvb_tet4_works() {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4 * 3, 4 * 3);
         let ana = AnalyticalTet4::new(&pad);
         // constant
         let (v0, v1, v2) = (2.0, 3.0, 4.0);
-        let kk_correct = ana.mat_09_nvg(v0, v1, v2);
+        let kk_correct = ana.mat_09_nvb(v0, v1, v2);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];
@@ -219,7 +219,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_09_nvg(&mut kk, &mut args, |v, _, _, _| {
+            integ::mat_09_nvb(&mut kk, &mut args, |v, _, _, _| {
                 v[0] = v0;
                 v[1] = v1;
                 v[2] = v2;

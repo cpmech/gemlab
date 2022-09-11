@@ -252,7 +252,7 @@ impl AnalyticalTet4 {
 
     /// Performs the g-v-n integration with constant vector field
     #[rustfmt::skip]
-    pub fn mat_02_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+    pub fn mat_02_bvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
         let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
         let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
@@ -268,7 +268,7 @@ impl AnalyticalTet4 {
 
     /// Performs the g-t-g integration with constant tensor field
     #[rustfmt::skip]
-    pub fn mat_03_gtg(&self, tt: &Tensor2) -> Matrix {
+    pub fn mat_03_btb(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume;
         let mat = tt.to_matrix();
         let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
@@ -288,7 +288,7 @@ impl AnalyticalTet4 {
 
     /// Performs the n-s-g integration with constant scalar field (coupled with itself)
     #[rustfmt::skip]
-    pub fn mat_04_nsg(&self, s: f64) -> Matrix {
+    pub fn mat_04_nsb(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
         let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
         let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
@@ -304,7 +304,7 @@ impl AnalyticalTet4 {
 
     /// Performs the g-t-n integration with constant tensor field (coupled with itself)
     #[rustfmt::skip]
-    pub fn mat_05_gtn(&self, tt: &Tensor2) -> Matrix {
+    pub fn mat_05_btn(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume / 4.0;
         let mat = tt.to_matrix();
         let (t00, t01, t02) = (mat[0][0], mat[0][1], mat[0][2]);
@@ -344,7 +344,7 @@ impl AnalyticalTet4 {
 
     /// Performs the g-s-n integration with constant scalar field (coupled with itself)
     #[rustfmt::skip]
-    pub fn mat_07_gsn(&self, s: f64) -> Matrix {
+    pub fn mat_07_bsn(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
         let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
         let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
@@ -392,7 +392,7 @@ impl AnalyticalTet4 {
 
     /// Performs the n-v-g integration with constant vector field
     #[rustfmt::skip]
-    pub fn mat_09_nvg(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+    pub fn mat_09_nvb(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
         let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
         let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
@@ -421,7 +421,7 @@ impl AnalyticalTet4 {
     /// ```text
     /// K = Bᵀ ⋅ D ⋅ B ⋅ volume
     /// ```
-    pub fn mat_10_gdg(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
+    pub fn mat_10_bdb(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, false, false);
         let dd = ela.get_modulus();
         let dim_dd = 6;
@@ -488,7 +488,7 @@ mod tests {
             [ 0.0,  -nt,  -nt,  0.0, 0.0, 0.0, 0.0,  0.0,  nt, 0.0,  nt,  0.0],
             [-tnu, -tnu, -tnh,  tnu, 0.0, 0.0, 0.0,  tnu, 0.0, 0.0, 0.0,  tnh],
         ]);
-        let kk = tet.mat_10_gdg(ee, nu).unwrap();
+        let kk = tet.mat_10_bdb(ee, nu).unwrap();
         vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // non-right-angles tet4
@@ -511,7 +511,7 @@ mod tests {
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
         vec_approx_eq(tet.bb.as_data(), pad.gradient.as_data(), 1e-15);
-        let kk = tet.mat_10_gdg(ee, nu).unwrap();
+        let kk = tet.mat_10_bdb(ee, nu).unwrap();
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
             [ 745.0,  540.0, 120.0,  -5.0,  30.0,  60.0,-270.0, -240.0,   0.0,-470.0, -330.0,-180.0],

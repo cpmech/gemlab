@@ -102,7 +102,7 @@
 //!
 //! ## MAT 02: Gradient(B) dot vector(V) times shape(N) (e.g., compressibility matrix)
 //!
-//! Function [mat_02_gvn()]
+//! Function [mat_02_bvn()]
 //!
 //! ```text
 //!       ⌠ →    →
@@ -113,7 +113,7 @@
 //!
 //! ## MAT 03: Gradient(B) dot tensor(T) dot gradient(B) (e.g., conductivity matrix)
 //!
-//! Function [mat_03_gtg()]
+//! Function [mat_03_btb()]
 //!
 //! ```text
 //!       ⌠ →        →
@@ -124,7 +124,7 @@
 //!
 //! ## MAT 04: shape(Nb) times scalar(S) times gradient(B) (e.g., coupling matrix)
 //!
-//! Function [mat_04_nsg()]
+//! Function [mat_04_nsb()]
 //!
 //! ```text
 //! →     ⌠       →
@@ -135,7 +135,7 @@
 //!
 //! ## MAT 05: Gradient(Bb) times tensor(T) times shape(N) (e.g., coupling matrix)
 //!
-//! Function [mat_05_gtn()]
+//! Function [mat_05_btn()]
 //!
 //! ```text
 //! →     ⌠ →
@@ -157,7 +157,7 @@
 //!
 //! ## MAT 07: Gradient(B) times scalar(S) times shape(Nb) (e.g., coupling matrix)
 //!
-//! Function [mat_07_gsn()]
+//! Function [mat_07_bsn()]
 //!
 //! ```text
 //! →     ⌠ →
@@ -179,7 +179,7 @@
 //!
 //! ## MAT 09: Shape(N) times vector(V) dot gradient(B) (e.g., variable density matrix)
 //!
-//! Function [mat_09_nvg()]
+//! Function [mat_09_nvb()]
 //!
 //! ```text
 //!       ⌠    →   →
@@ -190,7 +190,7 @@
 //!
 //! ## MAT 10: Gradient(B) dot 4th-tensor(D) dot gradient(B) (e.g., stiffness matrix)
 //!
-//! Function [mat_10_gdg()]
+//! Function [mat_10_bdb()]
 //!
 //! ```text
 //!       ⌠                       →    →
@@ -301,12 +301,12 @@ mod mat_01_nsn_bry;
 mod mat_02_bvn;
 mod mat_03_btb;
 mod mat_04_nsb;
-mod mat_05_gtn;
+mod mat_05_btn;
 mod mat_06_nvn;
-mod mat_07_gsn;
+mod mat_07_bsn;
 mod mat_08_ntn;
-mod mat_09_nvg;
-mod mat_10_gdg;
+mod mat_09_nvb;
+mod mat_10_bdb;
 mod point_coords;
 mod scalar_field;
 mod testing;
@@ -326,12 +326,12 @@ pub use crate::integ::mat_01_nsn_bry::*;
 pub use crate::integ::mat_02_bvn::*;
 pub use crate::integ::mat_03_btb::*;
 pub use crate::integ::mat_04_nsb::*;
-pub use crate::integ::mat_05_gtn::*;
+pub use crate::integ::mat_05_btn::*;
 pub use crate::integ::mat_06_nvn::*;
-pub use crate::integ::mat_07_gsn::*;
+pub use crate::integ::mat_07_bsn::*;
 pub use crate::integ::mat_08_ntn::*;
-pub use crate::integ::mat_09_nvg::*;
-pub use crate::integ::mat_10_gdg::*;
+pub use crate::integ::mat_09_nvb::*;
+pub use crate::integ::mat_10_bdb::*;
 pub use crate::integ::point_coords::*;
 pub use crate::integ::scalar_field::*;
 pub use crate::integ::vec_01_ns::*;

@@ -34,7 +34,7 @@ fn main() -> Result<(), StrError> {
     let mut kk = Matrix::new(nrow, nrow);
     let ips = integ::default_points(pad.kind);
     let mut args = integ::CommonArgs::new(&mut pad, ips);
-    integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
+    integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
         copy_tensor4(dd, model.get_modulus()).unwrap();
         Ok(())
     })?;

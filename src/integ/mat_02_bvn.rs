@@ -165,7 +165,7 @@ mod tests {
         let ana = AnalyticalTri3::new(&pad);
         // constant
         let (v0, v1) = (2.0, 3.0);
-        let kk_correct = ana.mat_02_gvn(v0, v1);
+        let kk_correct = ana.mat_02_bvn(v0, v1);
         let class = pad.kind.class();
         let tolerances = [1e-15];
         let selection: Vec<_> = [3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
@@ -181,7 +181,7 @@ mod tests {
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
         // bilinear
-        let kk_correct = ana.mat_02_gvn_bilinear(&pad);
+        let kk_correct = ana.mat_02_bvn_bilinear(&pad);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-15];
         let selection: Vec<_> = [3, 6].iter().map(|n| integ::points(class, *n).unwrap()).collect();
@@ -205,7 +205,7 @@ mod tests {
         let mut kk = Matrix::new(4, 4);
         let ana = AnalyticalTet4::new(&pad);
         let (v0, v1, v2) = (2.0, 3.0, 4.0);
-        let kk_correct = ana.mat_02_gvn(v0, v1, v2);
+        let kk_correct = ana.mat_02_bvn(v0, v1, v2);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];

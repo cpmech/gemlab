@@ -40,7 +40,7 @@ impl AnalyticalQua8 {
     /// From @bhatti:05\page{348}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
     #[rustfmt::skip]
-    pub fn mat_03_gtg(&self, kx: f64, ky: f64) -> Matrix {
+    pub fn mat_03_btb(&self, kx: f64, ky: f64) -> Matrix {
         let a = self.a;
         let b = self.b;
         Matrix::from(&[
@@ -58,7 +58,7 @@ impl AnalyticalQua8 {
 
     /// Performs the coupled n-s-g integration with constant s(x) field
     #[rustfmt::skip]
-    pub fn mat_04_nsg(&self, s: f64) -> Matrix {
+    pub fn mat_04_nsb(&self, s: f64) -> Matrix {
         let a = self.a;
         let b = self.b;
         let c = s / 18.0;
@@ -72,7 +72,7 @@ impl AnalyticalQua8 {
 
     /// Performs the coupled g-t-n integration with constant tensor field
     #[rustfmt::skip]
-    pub fn mat_05_gtn(&self, tt: &Tensor2) -> Matrix {
+    pub fn mat_05_btn(&self, tt: &Tensor2) -> Matrix {
         let a = self.a;
         let b = self.b;
         let (t00,t01) = (tt.get(0,0), tt.get(0,1));
@@ -111,7 +111,7 @@ impl AnalyticalQua8 {
 
     /// Performs the coupled g-s-n integration with constant s(x) field
     #[rustfmt::skip]
-    pub fn mat_07_gsn(&self, s: f64) -> Matrix {
+    pub fn mat_07_bsn(&self, s: f64) -> Matrix {
         let a = self.a;
         let b = self.b;
         let c = s / 18.0;

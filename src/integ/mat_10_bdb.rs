@@ -92,7 +92,7 @@ use russell_tensor::Tensor4;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut args = integ::CommonArgs::new(&mut pad, ips);
-///     integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
+///     integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
 ///         copy_tensor4(dd, model.get_modulus())?;
 ///         Ok(())
 ///     })?;
@@ -117,7 +117,7 @@ use russell_tensor::Tensor4;
 ///     Ok(())
 /// }
 /// ```
-pub fn mat_10_gdg<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_dd: F) -> Result<(), StrError>
+pub fn mat_10_bdb<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_dd: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Tensor4, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
@@ -172,7 +172,7 @@ where
     Ok(())
 }
 
-/// Adds contribution to the K-matrix in mat_10_gdg
+/// Adds contribution to the K-matrix in mat_10_bdb
 #[inline]
 #[rustfmt::skip]
 fn add_to_kk(kk: &mut Matrix, ndim: usize, nnode: usize, c: f64, dd: &Tensor4, args: &mut CommonArgs) {
@@ -206,7 +206,7 @@ fn add_to_kk(kk: &mut Matrix, ndim: usize, nnode: usize, c: f64, dd: &Tensor4, a
     }
 }
 
-/// Adds contribution to the K-matrix in mat_10_gdg (axisymmetric case)
+/// Adds contribution to the K-matrix in mat_10_bdb (axisymmetric case)
 #[inline]
 #[rustfmt::skip]
 fn add_to_kk_axisymmetric(kk: &mut Matrix, nnode: usize, c: f64, r: f64, dd: &Tensor4, args: &mut CommonArgs) {
@@ -253,27 +253,27 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut args, f).err(),
+            integ::mat_10_bdb(&mut kk, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut args, f).err(),
+            integ::mat_10_bdb(&mut kk, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         args.jj0 = 0;
         // more errors
         args.ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut args, f).err(),
+            integ::mat_10_bdb(&mut kk, &mut args, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         let mut args = CommonArgs::new(&mut pad, &IP_TRI_INTERNAL_1);
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
+            integ::mat_10_bdb(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
             Some("stop")
         );
         // check axisymmetric flag
@@ -283,7 +283,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
         assert_eq!(
-            integ::mat_10_gdg(&mut kk, &mut args, f).err(),
+            integ::mat_10_bdb(&mut kk, &mut args, f).err(),
             Some("axisymmetric requires space_ndim = 2")
         );
     }
@@ -329,7 +329,7 @@ mod tests {
         let ips = integ::points(class, 1).unwrap();
         let mut args = CommonArgs::new(&mut pad, ips);
         args.alpha = thickness;
-        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
+        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
             Ok(())
         })
@@ -349,7 +349,7 @@ mod tests {
 
         // analytical solution
         let ana = AnalyticalTri3::new(&pad);
-        let kk_correct = ana.mat_10_gdg(young, poisson, plane_stress, thickness).unwrap();
+        let kk_correct = ana.mat_10_bdb(young, poisson, plane_stress, thickness).unwrap();
 
         // compare against analytical solution
         let tolerances = [1e-12, 1e-12, 1e-12, 1e-11, 1e-12];
@@ -361,7 +361,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             args.alpha = thickness;
-            integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
+            integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
                 copy_tensor4(dd, model.get_modulus())?;
                 Ok(())
             })
@@ -382,7 +382,7 @@ mod tests {
 
         // analytical solution
         let mut ana = AnalyticalTet4::new(&pad);
-        let kk_correct = ana.mat_10_gdg(young, poisson).unwrap();
+        let kk_correct = ana.mat_10_bdb(young, poisson).unwrap();
 
         // check
         let class = pad.kind.class();
@@ -397,7 +397,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
+            integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
                 copy_tensor4(dd, model.get_modulus())?;
                 Ok(())
             })
@@ -472,7 +472,7 @@ mod tests {
         let ips = integ::points(class, 1).unwrap();
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
-        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
+        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
             Ok(())
         })
@@ -482,7 +482,7 @@ mod tests {
         let ips = integ::points(class, 4).unwrap();
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
-        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
+        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
             Ok(())
         })
@@ -492,7 +492,7 @@ mod tests {
         let ips = integ::points(class, 9).unwrap();
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
-        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
+        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
             Ok(())
         })
@@ -502,7 +502,7 @@ mod tests {
         let ips = integ::points(class, 16).unwrap();
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
-        integ::mat_10_gdg(&mut kk, &mut args, |dd, _, _, _| {
+        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
             copy_tensor4(dd, model.get_modulus())?;
             Ok(())
         })
