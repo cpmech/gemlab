@@ -10,7 +10,7 @@ use russell_lab::{Matrix, Vector};
 /// **Notes:**
 ///
 /// * `m` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Nbᵐ`)
-/// * `n` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Gⁿ`)
+/// * `n` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Bⁿ`)
 /// * For example, `1 ≤ m ≤ 4` for a `pad_b→Qua4` and `1 ≤ n ≤ 8` for `pad→Qua8`
 /// * The determinant of the Jacobian is calculated for `pad` (`pad` is the driver of the calculations)
 /// * The number of integration points must consider the nodes of `pad` and the expected order of the whole integrand
@@ -19,7 +19,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 /// →     ⌠       →
-/// Kᵐⁿ = │ Nbᵐ s Gⁿ α dΩ
+/// Kᵐⁿ = │ Nbᵐ s Bⁿ α dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -28,7 +28,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///        nip-1     →     →       →       →
-/// Kᵐⁿⱼ ≈   Σ   Nbᵐ(ιᵖ) s(ιᵖ) Gⁿⱼ(ιᵖ) |J|(ιᵖ) wᵖ α
+/// Kᵐⁿⱼ ≈   Σ   Nbᵐ(ιᵖ) s(ιᵖ) Bⁿⱼ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///         p=0
 /// ```
 ///
@@ -63,7 +63,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
-pub fn mat_04_nsg<F>(
+pub fn mat_04_nsb<F>(
     kk: &mut Matrix,
     pad_b: &mut Scratchpad,
     args: &mut CommonArgs,
@@ -161,13 +161,13 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut args, f).err(),
+            integ::mat_04_nsb(&mut kk, &mut pad_b, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut args, f).err(),
+            integ::mat_04_nsb(&mut kk, &mut pad_b, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
     }
@@ -188,7 +188,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut args, |_, _, _, _| Ok(s)).unwrap();
+            integ::mat_04_nsb(&mut kk, &mut pad_b, &mut args, |_, _, _, _| Ok(s)).unwrap();
             // println!("{:.2}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
@@ -209,7 +209,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_04_nsg(&mut kk, &mut pad_b, &mut args, |_, _, _, _| Ok(s)).unwrap();
+            integ::mat_04_nsb(&mut kk, &mut pad_b, &mut args, |_, _, _, _| Ok(s)).unwrap();
             // println!("{:.2}", kk);
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });

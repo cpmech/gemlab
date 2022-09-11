@@ -117,7 +117,7 @@
 //!
 //! ```text
 //!       ⌠ →        →
-//! Kᵐⁿ = │ Bᵐ ⋅ T ⋅ Gⁿ dΩ
+//! Kᵐⁿ = │ Bᵐ ⋅ T ⋅ Bⁿ dΩ
 //!       ⌡      ▔
 //!       Ωₑ
 //! ```
@@ -128,7 +128,7 @@
 //!
 //! ```text
 //! →     ⌠       →
-//! Kᵐⁿ = │ Nbᵐ s Gⁿ dΩ
+//! Kᵐⁿ = │ Nbᵐ s Bⁿ dΩ
 //!       ⌡
 //!       Ωₑ
 //! ```
@@ -183,7 +183,7 @@
 //!
 //! ```text
 //!       ⌠    →   →
-//! Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ dΩ
+//! Kᵐⁿ = │ Nᵐ v ⊗ Bⁿ dΩ
 //! ▔     ⌡
 //!       Ωₑ
 //! ```
@@ -194,7 +194,7 @@
 //!
 //! ```text
 //!       ⌠                       →    →
-//! Kᵐⁿ = │ Σ Σ Σ Σ Bᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
+//! Kᵐⁿ = │ Σ Σ Σ Σ Bᵐₖ Dᵢₖⱼₗ Bⁿₗ eᵢ ⊗ eⱼ dΩ
 //! ▔     ⌡ i j k l
 //!       Ωₑ
 //! ```
@@ -298,9 +298,9 @@ mod common_args;
 mod integ_points;
 mod mat_01_nsn;
 mod mat_01_nsn_bry;
-mod mat_02_gvn;
-mod mat_03_gtg;
-mod mat_04_nsg;
+mod mat_02_bvn;
+mod mat_03_btb;
+mod mat_04_nsb;
 mod mat_05_gtn;
 mod mat_06_nvn;
 mod mat_07_gsn;
@@ -323,9 +323,9 @@ pub use crate::integ::common_args::*;
 pub use crate::integ::integ_points::*;
 pub use crate::integ::mat_01_nsn::*;
 pub use crate::integ::mat_01_nsn_bry::*;
-pub use crate::integ::mat_02_gvn::*;
-pub use crate::integ::mat_03_gtg::*;
-pub use crate::integ::mat_04_nsg::*;
+pub use crate::integ::mat_02_bvn::*;
+pub use crate::integ::mat_03_btb::*;
+pub use crate::integ::mat_04_nsb::*;
 pub use crate::integ::mat_05_gtn::*;
 pub use crate::integ::mat_06_nvn::*;
 pub use crate::integ::mat_07_gsn::*;

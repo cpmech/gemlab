@@ -1,28 +1,26 @@
 use super::CommonArgs;
 use crate::StrError;
-use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::Tensor2;
 
-/// Implements the gradient(B) dot tensor(T) dot gradient(B) integration case 03 (e.g., conductivity matrix)
+/// Implements the gradient(B) dot vector(V) times shape(N) integration case 02 (e.g., compressibility matrix)
 ///
-/// Callback function: `f(T, p, N, B)`
+/// Callback function: `f(v, p, N, B)`
 ///
-/// Conductivity coefficients:
+/// Compressibility coefficients:
 ///
 /// ```text
-///       ⌠ →        →
-/// Kᵐⁿ = │ Bᵐ ⋅ T ⋅ Gⁿ α dΩ
-///       ⌡      ▔
+///       ⌠ →    →
+/// Kᵐⁿ = │ Bᵐ ⋅ v Nⁿ α dΩ
+///       ⌡
 ///       Ωₑ
 /// ```
 ///
 /// The numerical integration is:
 ///
 /// ```text
-///       nip-1 →  →       →     →  →       →
-/// Kᵐⁿ ≈   Σ   Bᵐ(ιᵖ) ⋅ T(ιᵖ) ⋅ Gⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
-///        p=0           ▔
+///       nip-1 →  →     → →      →       →
+/// Kᵐⁿ ≈   Σ   Bᵐ(ιᵖ) ⋅ v(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
+///        p=0
 /// ```
 ///
 /// # Results
@@ -45,11 +43,11 @@ use russell_tensor::Tensor2;
 ///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
 /// * `args` --- Common arguments
-/// * `fn_tt` -- Function `f(T,p,N,B)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), and gradients B(ιᵖ). `T` is set for `space_ndim`.
-pub fn mat_03_gtg<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_tt: F) -> Result<(), StrError>
+/// * `fn_v` -- Function `f(v,p,N,B)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `v.dim() = space_ndim`.
+pub fn mat_02_bvn<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
@@ -62,8 +60,8 @@ where
         return Err("ncol(K) must be ≥ jj0 + nnode");
     }
 
-    // allocate auxiliary tensor
-    let mut tt = Tensor2::new(true, space_ndim == 2);
+    // allocate auxiliary vector
+    let mut v = Vector::new(space_ndim);
 
     // clear output matrix
     if args.clear {
@@ -71,20 +69,19 @@ where
     }
 
     // loop over integration points
-    let s = SQRT_2;
     for p in 0..args.ips.len() {
         // ksi coordinates and weight
         let iota = &args.ips[p];
         let weight = args.ips[p][3];
 
-        // calculate Jacobian and gradient
+        // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
         let det_jac = args.pad.calc_gradient(iota)?; // B
 
-        // calculate T tensor
+        // calculate v
         let nn = &args.pad.interp;
         let gg = &args.pad.gradient;
-        fn_tt(&mut tt, p, nn, gg)?;
+        fn_v(&mut v, p, nn, gg)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {
@@ -98,22 +95,16 @@ where
         };
 
         // add contribution to K matrix
-        let t = &tt.vec;
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + n] += c
-                        * (gg[n][1] * (t[1] * gg[m][1] + (t[3] * gg[m][0]) / s)
-                            + gg[n][0] * (t[0] * gg[m][0] + (t[3] * gg[m][1]) / s));
+                    kk[ii0 + m][jj0 + n] += c * (gg[m][0] * v[0] + gg[m][1] * v[1]) * nn[n];
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + n] += c
-                        * (gg[n][2] * (t[2] * gg[m][2] + (t[5] * gg[m][0]) / s + (t[4] * gg[m][1]) / s)
-                            + gg[n][1] * (t[1] * gg[m][1] + (t[3] * gg[m][0]) / s + (t[4] * gg[m][2]) / s)
-                            + gg[n][0] * (t[0] * gg[m][0] + (t[3] * gg[m][1]) / s + (t[5] * gg[m][2]) / s));
+                    kk[ii0 + m][jj0 + n] += c * (gg[m][0] * v[0] + gg[m][1] * v[1] + gg[m][2] * v[2]) * nn[n];
                 }
             }
         }
@@ -126,47 +117,43 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{
-        self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1,
-        IP_TRI_INTERNAL_1,
-    };
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
     use russell_chk::vec_approx_eq;
     use russell_lab::{Matrix, Vector};
-    use russell_tensor::{copy_tensor2, Tensor2};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
-        let mut tt = Tensor2::new(true, true);
+        let mut v = Vector::new(0);
         let nn = Vector::new(0);
         let gg = Matrix::new(0, 0);
-        let f = |_tt: &mut Tensor2, _p: usize, _nn: &Vector, _gg: &Matrix| Ok(());
-        f(&mut tt, 0, &nn, &gg).unwrap();
+        let f = |_v: &mut Vector, _p: usize, _nn: &Vector, _gg: &Matrix| Ok(());
+        f(&mut v, 0, &nn, &gg).unwrap();
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut args, f).err(),
+            integ::mat_02_bvn(&mut kk, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut args, f).err(),
+            integ::mat_02_bvn(&mut kk, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         args.jj0 = 0;
         // more errors
         args.ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut args, f).err(),
+            integ::mat_02_bvn(&mut kk, &mut args, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_qua4(0.0, 0.0, 1.0, 1.0);
         let mut kk = Matrix::new(4, 4);
         let mut args = CommonArgs::new(&mut pad, &IP_TRI_INTERNAL_1);
         assert_eq!(
-            integ::mat_03_gtg(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
+            integ::mat_02_bvn(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
             Some("stop")
         );
     }
@@ -176,65 +163,35 @@ mod tests {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
         let ana = AnalyticalTri3::new(&pad);
-        let (kx, ky) = (2.5, 3.8);
-        let kk_correct = ana.mat_03_gtg(kx, ky);
-        let class = pad.kind.class();
-        let tolerances = [1e-15, 1e-15, 1e-15];
-        let selection: Vec<_> = [1, 3, 7].iter().map(|n| integ::points(class, *n).unwrap()).collect();
-        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_03_gtg(&mut kk, &mut args, |tt, _, _, _| {
-                tt.sym_set(0, 0, kx);
-                tt.sym_set(1, 1, ky);
-                Ok(())
-            })
-            .unwrap();
-            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
-        });
-    }
-
-    #[test]
-    fn qua4_works() {
-        let (a, b) = (2.0, 1.5);
-        let mut pad = aux::gen_pad_qua4(2.0, 1.0, a, b);
-        let mut kk = Matrix::new(4, 4);
-        let ana = AnalyticalQua4::new(a, b);
-        let (kx, ky) = (2.5, 3.8);
-        let kk_correct = ana.mat_03_gtg(kx, ky);
+        // constant
+        let (v0, v1) = (2.0, 3.0);
+        let kk_correct = ana.mat_02_gvn(v0, v1);
         let class = pad.kind.class();
         let tolerances = [1e-15];
-        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_03_gtg(&mut kk, &mut args, |tt, _, _, _| {
-                tt.sym_set(0, 0, kx);
-                tt.sym_set(1, 1, ky);
+            integ::mat_02_bvn(&mut kk, &mut args, |v, _, _, _| {
+                v[0] = v0;
+                v[1] = v1;
                 Ok(())
             })
             .unwrap();
             vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
         });
-    }
-
-    #[test]
-    fn qua8_works() {
-        let (a, b) = (2.0, 1.5);
-        let mut pad = aux::gen_pad_qua8(2.0, 1.0, a, b);
-        let mut kk = Matrix::new(8, 8);
-        let ana = AnalyticalQua8::new(a, b);
-        let (kx, ky) = (2.5, 3.8);
-        let kk_correct = ana.mat_03_gtg(kx, ky);
+        // bilinear
+        let kk_correct = ana.mat_02_gvn_bilinear(&pad);
         let class = pad.kind.class();
-        let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [9, 16].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let tolerances = [1e-14, 1e-15];
+        let selection: Vec<_> = [3, 6].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_03_gtg(&mut kk, &mut args, |tt, _, _, _| {
-                tt.sym_set(0, 0, kx);
-                tt.sym_set(1, 1, ky);
+            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            integ::mat_02_bvn(&mut kk, &mut args, |v, p, _, _| {
+                v[0] = x_ips[p][0];
+                v[1] = x_ips[p][1];
                 Ok(())
             })
             .unwrap();
@@ -247,22 +204,19 @@ mod tests {
         let mut pad = aux::gen_pad_tet4();
         let mut kk = Matrix::new(4, 4);
         let ana = AnalyticalTet4::new(&pad);
-        #[rustfmt::skip]
-        let sig = Tensor2::from_matrix(&[
-            [1.1, 1.2, 1.3],
-            [1.2, 2.2, 2.3],
-            [1.3, 2.3, 3.3]],
-        true, false).unwrap();
-        let kk_correct = ana.mat_03_gtg(&sig);
+        let (v0, v1, v2) = (2.0, 3.0, 4.0);
+        let kk_correct = ana.mat_02_gvn(v0, v1, v2);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
-        let tolerances = [1e-14];
+        let tolerances = [1e-15];
         let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_03_gtg(&mut kk, &mut args, |tt, _, _, _| {
-                copy_tensor2(tt, &sig)?;
+            integ::mat_02_bvn(&mut kk, &mut args, |v, _, _, _| {
+                v[0] = v0;
+                v[1] = v1;
+                v[2] = v2;
                 Ok(())
             })
             .unwrap();
