@@ -6,7 +6,7 @@ use std::fs::{self, File};
 use std::io::Write as IoWrite;
 use std::path::Path;
 
-/// Writes tetrahedra as a Paraview's VTU file
+/// Writes Paraview's VTU file
 ///
 /// # Input
 ///
