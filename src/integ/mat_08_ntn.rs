@@ -6,7 +6,7 @@ use russell_tensor::Tensor2;
 
 /// Implements the shape(N) times tensor(T) times shape(N) integration case 08 (e.g., mass matrix)
 ///
-/// Callback function: `f(T, p, N, G)`
+/// Callback function: `f(T, p, N, B)`
 ///
 /// Mass coefficients:
 ///
@@ -51,8 +51,8 @@ use russell_tensor::Tensor2;
 ///   above (in 2D). `m` and `n` are the indices of the node and `i` and `j` correspond to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + nnode ⋅ space_ndim`.
 /// * `args` --- Common arguments
-/// * `fn_tt` -- Function `f(T,p,N,G)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), and gradients G(ιᵖ). `T` is set for `space_ndim`.
+/// * `fn_tt` -- Function `f(T,p,N,B)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `T` is set for `space_ndim`.
 pub fn mat_08_ntn<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_tt: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Tensor2, usize, &Vector, &Matrix) -> Result<(), StrError>,
@@ -85,7 +85,7 @@ where
 
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate T tensor
         let nn = &args.pad.interp;

@@ -3,9 +3,9 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the shape(Nb) times scalar(S) times gradient(G) integration case 04 (e.g., coupling matrix)
+/// Implements the shape(Nb) times scalar(S) times gradient(B) integration case 04 (e.g., coupling matrix)
 ///
-/// Callback function: `s ← f(p, Nb, N, G)`
+/// Callback function: `s ← f(p, Nb, N, B)`
 ///
 /// **Notes:**
 ///
@@ -55,9 +55,9 @@ use russell_lab::{Matrix, Vector};
 ///   above (in 2D). `m` and `n` are the indices of the node and `j` corresponds to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + pad_b.nnode` and `ncol(K) ≥ jj0 + pad.nnode ⋅ space_ndim`
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
-/// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute G)
-/// * `fn_s` -- Function `f(p,Nb,N,G)→s` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions Nb(ιᵖ), shape functions N(ιᵖ), and gradients G(ιᵖ).
+/// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute B)
+/// * `fn_s` -- Function `f(p,Nb,N,B)→s` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions Nb(ιᵖ), shape functions N(ιᵖ), and gradients B(ιᵖ).
 ///
 /// # Warning
 ///
@@ -98,7 +98,7 @@ where
         // calculate interpolation functions and Jacobian
         (pad_b.fn_interp)(&mut pad_b.interp, iota); // Nb
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate s
         let nnb = &pad_b.interp;

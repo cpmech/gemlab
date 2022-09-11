@@ -4,9 +4,9 @@ use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::Tensor4;
 
-/// Implements the gradient(G) dot 4th-tensor(D) dot gradient(G) integration case 10 (e.g., stiffness matrix)
+/// Implements the gradient(B) dot 4th-tensor(D) dot gradient(B) integration case 10 (e.g., stiffness matrix)
 ///
-/// Callback function: `f(D, p, N, G)`
+/// Callback function: `f(D, p, N, B)`
 ///
 /// Stiffness tensors (note the sum over repeated lower indices):
 ///
@@ -51,8 +51,8 @@ use russell_tensor::Tensor4;
 ///   above (in 2D). `m` and `n` are the indices of the node and `i` and `j` correspond to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + nnode ⋅ space_ndim`.
 /// * `args` --- Common arguments
-/// * `fn_dd` -- Function `f(D,p,N,G)` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), and gradients G(ιᵖ). `D` is **minor-symmetric** and set for `space_ndim`.
+/// * `fn_dd` -- Function `f(D,p,N,B)` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `D` is **minor-symmetric** and set for `space_ndim`.
 ///
 /// # Examples
 ///
@@ -150,7 +150,7 @@ where
 
         // calculate Jacobian and Gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate D tensor
         let nn = &args.pad.interp;

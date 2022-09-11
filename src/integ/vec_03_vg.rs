@@ -2,9 +2,9 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the vector(V) dot gradient(G) integration case 03
+/// Implements the vector(V) dot gradient(B) integration case 03
 ///
-/// Callback function: `f(w, p, N, G)`
+/// Callback function: `f(w, p, N, B)`
 ///
 /// Vector dot gradient:
 ///
@@ -40,8 +40,8 @@ use russell_lab::{Matrix, Vector};
 /// * `c` -- A vector containing all `cᵐ` values, one after another, and sequentially placed as shown above.
 ///   `m` is the index of the node. The length must be `c.len() ≥ ii0 + nnode`.
 /// * `args` --- Common arguments
-/// * `fn_w` -- Function `f(w,p,N,G)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), and gradients G(ιᵖ). `w.dim() = space_ndim`.
+/// * `fn_w` -- Function `f(w,p,N,B)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `w.dim() = space_ndim`.
 ///
 /// # Examples
 ///
@@ -75,7 +75,7 @@ use russell_lab::{Matrix, Vector};
 ///     // cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁) A
 ///     //     ┌       ┐
 ///     //     │ -¼ -⅓ │
-///     // G = │  ¼  0 │
+///     // B = │  ¼  0 │
 ///     //     │  0  ⅓ │
 ///     //     └       ┘
 ///     vec_approx_eq(c.as_data(), &[-5.5, 1.5, 4.0], 1e-14);
@@ -109,7 +109,7 @@ where
 
         // calculate Jacobian and Gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate w
         let nn = &args.pad.interp;

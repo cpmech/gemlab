@@ -2,9 +2,9 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the gradient(G) dot vector(V) times shape(N) integration case 02 (e.g., compressibility matrix)
+/// Implements the gradient(B) dot vector(V) times shape(N) integration case 02 (e.g., compressibility matrix)
 ///
-/// Callback function: `f(v, p, N, G)`
+/// Callback function: `f(v, p, N, B)`
 ///
 /// Compressibility coefficients:
 ///
@@ -43,8 +43,8 @@ use russell_lab::{Matrix, Vector};
 ///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
 /// * `args` --- Common arguments
-/// * `fn_v` -- Function `f(v,p,N,G)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), and gradients G(ιᵖ). `v.dim() = space_ndim`.
+/// * `fn_v` -- Function `f(v,p,N,B)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `v.dim() = space_ndim`.
 pub fn mat_02_gvn<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
@@ -76,7 +76,7 @@ where
 
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate v
         let nn = &args.pad.interp;

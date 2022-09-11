@@ -4,7 +4,7 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(N) times scalar(S) times shape(N) integration case 01 (e.g., diffusion matrix)
 ///
-/// Callback function: `s ← f(p, N, G)`
+/// Callback function: `s ← f(p, N, B)`
 ///
 /// Diffusion coefficients:
 ///
@@ -43,8 +43,8 @@ use russell_lab::{Matrix, Vector};
 ///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
 /// * `args` --- Common arguments
-/// * `fn_s` -- Function `f(p,N,G)→s` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), and gradients G(ιᵖ).
+/// * `fn_s` -- Function `f(p,N,B)→s` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients B(ιᵖ).
 pub fn mat_01_nsn<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_s: F) -> Result<(), StrError>
 where
     F: FnMut(usize, &Vector, &Matrix) -> Result<f64, StrError>,
@@ -73,7 +73,7 @@ where
 
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate s
         let nn = &args.pad.interp;

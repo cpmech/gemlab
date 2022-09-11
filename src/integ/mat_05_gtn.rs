@@ -5,9 +5,9 @@ use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::Tensor2;
 
-/// Implements the gradient(Gb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
+/// Implements the gradient(Bb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
 ///
-/// Callback function: `f(T, p, Gb, N, G)`
+/// Callback function: `f(T, p, Bb, N, B)`
 ///
 /// **Notes:**
 ///
@@ -57,9 +57,9 @@ use russell_tensor::Tensor2;
 ///   above (in 2D). `m` and `n` are the indices of the node and `j` corresponds to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + pad_b.nnode` and `ncol(K) ≥ jj0 + pad.nnode ⋅ space_ndim`
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
-/// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute G)
-/// * `fn_tt` -- Function `f(T,p,Gb,N,G)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   the gradients Gb(ιᵖ), shape functions N(ιᵖ), and gradients G(ιᵖ). `T` is set for `space_ndim`.
+/// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute B)
+/// * `fn_tt` -- Function `f(T,p,Bb,N,B)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   the gradients Bb(ιᵖ), shape functions N(ιᵖ), and gradients B(ιᵖ). `T` is set for `space_ndim`.
 ///
 /// # Warning
 ///
@@ -102,9 +102,9 @@ where
         let weight = args.ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        pad_b.calc_gradient(iota)?; // Gb
+        pad_b.calc_gradient(iota)?; // Bb
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate T tensor
         let ggb = &pad_b.gradient;

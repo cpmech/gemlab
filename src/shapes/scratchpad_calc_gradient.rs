@@ -17,7 +17,7 @@ impl Scratchpad {
     ///           dx
     /// ```
     ///
-    /// which can be organized in an (nnode,space_ndim) matrix `G` as follows
+    /// which can be organized in an (nnode,space_ndim) matrix `B` as follows
     ///
     /// ```text
     /// B = L · J⁻¹
@@ -86,7 +86,7 @@ impl Scratchpad {
         // Jacobian matrix J: dx/dξ
         let det_jac = self.calc_jacobian(ksi)?;
 
-        // gradient: G = L · J⁻¹
+        // gradient: B = L · J⁻¹
         mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian).unwrap(); // cannot fail because the dims are checked
         Ok(det_jac)
     }
@@ -117,7 +117,7 @@ mod tests {
         );
     }
 
-    // Holds arguments for numerical differentiation of N with respect to x => G (gradient) matrix
+    // Holds arguments for numerical differentiation of N with respect to x => B (gradient) matrix
     struct ArgsNumGrad {
         pad: Scratchpad, // scratchpad to send to calc_coords
         at_x: Vector,    // at x coord value

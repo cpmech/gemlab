@@ -4,9 +4,9 @@ use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::Tensor2;
 
-/// Implements the gradient(G) dot tensor(T) dot gradient(G) integration case 03 (e.g., conductivity matrix)
+/// Implements the gradient(B) dot tensor(T) dot gradient(B) integration case 03 (e.g., conductivity matrix)
 ///
-/// Callback function: `f(T, p, N, G)`
+/// Callback function: `f(T, p, N, B)`
 ///
 /// Conductivity coefficients:
 ///
@@ -45,8 +45,8 @@ use russell_tensor::Tensor2;
 ///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
 /// * `args` --- Common arguments
-/// * `fn_tt` -- Function `f(T,p,N,G)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), and gradients G(ιᵖ). `T` is set for `space_ndim`.
+/// * `fn_tt` -- Function `f(T,p,N,B)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `T` is set for `space_ndim`.
 pub fn mat_03_gtg<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_tt: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Tensor2, usize, &Vector, &Matrix) -> Result<(), StrError>,
@@ -79,7 +79,7 @@ where
 
         // calculate Jacobian and gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate T tensor
         let nn = &args.pad.interp;

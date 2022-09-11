@@ -4,9 +4,9 @@ use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::Tensor2;
 
-/// Implements the tensor(T) dot gradient(G) integration case 04
+/// Implements the tensor(T) dot gradient(B) integration case 04
 ///
-/// Callback function: `f(σ, p, N, G)`
+/// Callback function: `f(σ, p, N, B)`
 ///
 /// Tensor dot gradient:
 ///
@@ -49,8 +49,8 @@ use russell_tensor::Tensor2;
 ///   as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
 ///   The length must be `d.len() ≥ ii0 + nnode ⋅ space_ndim`
 /// * `args` --- Common arguments
-/// * `fn_sig` -- Function `f(σ,p,N,G)` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), and the gradients G(ιᵖ). `σ` is set for `space_ndim`.
+/// * `fn_sig` -- Function `f(σ,p,N,B)` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and the gradients B(ιᵖ). `σ` is set for `space_ndim`.
 ///
 /// # Examples
 ///
@@ -84,7 +84,7 @@ use russell_tensor::Tensor2;
 ///     // dᵐ₁ = (σ₁₀ Bᵐ₀ + σ₁₁ Bᵐ₁) A
 ///     //     ┌       ┐
 ///     //     │ -¼ -⅓ │
-///     // G = │  ¼  0 │
+///     // B = │  ¼  0 │
 ///     //     │  0  ⅓ │
 ///     //     └       ┘
 ///     vec_approx_eq(d.as_data(), &[-7.5, -8.5, 1.5, 4.5, 6.0, 4.0], 1e-14);
@@ -120,7 +120,7 @@ where
 
         // calculate Jacobian and Gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate σ tensor
         let nn = &args.pad.interp;

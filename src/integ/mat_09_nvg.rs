@@ -2,9 +2,9 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the shape(N) times vector(V) dot gradient(G) integration case 09 (e.g., variable density matrix)
+/// Implements the shape(N) times vector(V) dot gradient(B) integration case 09 (e.g., variable density matrix)
 ///
-/// Callback function: `f(v, p, N, G)`
+/// Callback function: `f(v, p, N, B)`
 ///
 /// Variable density coefficients:
 ///
@@ -49,8 +49,8 @@ use russell_lab::{Matrix, Vector};
 ///   above (in 2D). `m` and `n` are the indices of the node and `i` and `j` correspond to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + nnode ⋅ space_ndim`.
 /// * `args` --- Common arguments
-/// * `fn_v` -- Function `f(v,p,N,G)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), and gradients G(ιᵖ). `v.dim() = space_ndim`.
+/// * `fn_v` -- Function `f(v,p,N,B)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `v.dim() = space_ndim`.
 pub fn mat_09_nvg<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
@@ -82,7 +82,7 @@ where
 
         // calculate interpolation functions, Jacobian and gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate v
         let nn = &args.pad.interp;

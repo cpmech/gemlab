@@ -14,7 +14,7 @@
 //! * L -- Derivatives of shape functions
 //! * J -- Jacobian tensor
 //! * J⁻¹ -- Inverse Jacobian matrix (only available if geo_ndim = space_ndim)
-//! * G -- Gradients of shape functions (derivatives w.r.t real coordinates x)
+//! * B -- Gradients of shape functions (derivatives w.r.t real coordinates x)
 //! * see also the subsection named **Expressions** below
 //!
 //! # Integration of scalar field over a geometric shape
@@ -28,7 +28,7 @@
 //!     Ωₑ
 //! ```
 //!
-//! # Vector results: Integration of some combinations involving N and G resulting in vectors
+//! # Vector results: Integration of some combinations involving N and B resulting in vectors
 //!
 //! ## VEC 01: Shape(N) times scalar(S)
 //!
@@ -63,7 +63,7 @@
 //!      Γₑ
 //! ```
 //!
-//! ## VEC 03: Vector(V) dot gradient(G)
+//! ## VEC 03: Vector(V) dot gradient(B)
 //!
 //! Function [vec_03_vg()]
 //!
@@ -74,7 +74,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 04: Tensor(T) dot gradient(G)
+//! ## VEC 04: Tensor(T) dot gradient(B)
 //!
 //! Function [vec_04_tg()]
 //!
@@ -85,7 +85,7 @@
 //!      Ωₑ
 //! ```
 //!
-//! # Matrix results: Integration of some combinations involving N, tensors, and G, resulting in matrices
+//! # Matrix results: Integration of some combinations involving N, tensors, and B, resulting in matrices
 //!
 //! ![cases](https://github.com/cpmech/gemlab/raw/main/data/figures/integ-matrix-cases.png)
 //!
@@ -100,7 +100,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 02: Gradient(G) dot vector(V) times shape(N) (e.g., compressibility matrix)
+//! ## MAT 02: Gradient(B) dot vector(V) times shape(N) (e.g., compressibility matrix)
 //!
 //! Function [mat_02_gvn()]
 //!
@@ -111,7 +111,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 03: Gradient(G) dot tensor(T) dot gradient(G) (e.g., conductivity matrix)
+//! ## MAT 03: Gradient(B) dot tensor(T) dot gradient(B) (e.g., conductivity matrix)
 //!
 //! Function [mat_03_gtg()]
 //!
@@ -122,7 +122,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 04: shape(Nb) times scalar(S) times gradient(G) (e.g., coupling matrix)
+//! ## MAT 04: shape(Nb) times scalar(S) times gradient(B) (e.g., coupling matrix)
 //!
 //! Function [mat_04_nsg()]
 //!
@@ -133,7 +133,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 05: Gradient(Gb) times tensor(T) times shape(N) (e.g., coupling matrix)
+//! ## MAT 05: Gradient(Bb) times tensor(T) times shape(N) (e.g., coupling matrix)
 //!
 //! Function [mat_05_gtn()]
 //!
@@ -155,7 +155,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 07: Gradient(G) times scalar(S) times shape(Nb) (e.g., coupling matrix)
+//! ## MAT 07: Gradient(B) times scalar(S) times shape(Nb) (e.g., coupling matrix)
 //!
 //! Function [mat_07_gsn()]
 //!
@@ -177,7 +177,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 09: Shape(N) times vector(V) dot gradient(G) (e.g., variable density matrix)
+//! ## MAT 09: Shape(N) times vector(V) dot gradient(B) (e.g., variable density matrix)
 //!
 //! Function [mat_09_nvg()]
 //!
@@ -188,7 +188,7 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 10: Gradient(G) dot 4th-tensor(D) dot gradient(G) (e.g., stiffness matrix)
+//! ## MAT 10: Gradient(B) dot 4th-tensor(D) dot gradient(B) (e.g., stiffness matrix)
 //!
 //! Function [mat_10_gdg()]
 //!
@@ -278,7 +278,7 @@
 //! J is a (3,2) matrix
 //! ```
 //!
-//! ## G: Gradients of shape functions (derivatives w.r.t real coordinates x) (only for SOLID case)
+//! ## B: Gradients of shape functions (derivatives w.r.t real coordinates x) (only for SOLID case)
 //!
 //! ```text
 //!             →
@@ -286,8 +286,8 @@
 //! Bᵐ(ξ) = ——————
 //!            →
 //!           dx
-//! matrix notation: G = L · J⁻¹
-//! G is an (nnode,space_ndim) matrix
+//! matrix notation: B = L · J⁻¹
+//! B is an (nnode,space_ndim) matrix
 //! ```
 
 mod analytical_qua4;

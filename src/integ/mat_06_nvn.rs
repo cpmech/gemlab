@@ -5,7 +5,7 @@ use russell_lab::{Matrix, Vector};
 
 /// Implements the shape(N) times vector(V) times shape(Nb) integration case 06 (e.g., coupling matrix)
 ///
-/// Callback function: `f(v, p, N, G, Nb)`
+/// Callback function: `f(v, p, N, B, Nb)`
 ///
 /// **Notes:**
 ///
@@ -57,10 +57,10 @@ use russell_lab::{Matrix, Vector};
 /// * `kk` -- A matrix containing all `Kᵐⁿᵢ` values, one after another, and sequentially placed as shown
 ///   above (in 2D). `m` and `n` are the indices of the node and `i` corresponds to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + pad_b.nnode`.
-/// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute G)
+/// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute B)
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
-/// * `fn_v` -- Function `f(v,p,N,G,Nb)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
-///   shape functions N(ιᵖ), gradients G(ιᵖ), and shape functions Nb(ιᵖ). `v.dim() = space_ndim`.
+/// * `fn_v` -- Function `f(v,p,N,B,Nb)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), gradients B(ιᵖ), and shape functions Nb(ιᵖ). `v.dim() = space_ndim`.
 ///
 /// # Warning
 ///
@@ -103,7 +103,7 @@ where
 
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // G
+        let det_jac = args.pad.calc_gradient(iota)?; // B
         (pad_b.fn_interp)(&mut pad_b.interp, iota); // Nb
 
         // calculate v
