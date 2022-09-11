@@ -193,9 +193,9 @@ mod tests {
         let mut d = Vector::new(4);
         let mut sig = Tensor2::new(true, true);
         let nn = Vector::new(0);
-        let gg = Matrix::new(0, 0);
+        let bb = Matrix::new(0, 0);
         let f = |_: &mut Tensor2, _, _: &Vector, _: &Matrix| Ok(());
-        f(&mut sig, 0, &nn, &gg).unwrap();
+        f(&mut sig, 0, &nn, &bb).unwrap();
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(

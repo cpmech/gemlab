@@ -154,8 +154,8 @@ where
 
         // calculate D tensor
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
-        fn_dd(&mut dd, p, nn, gg)?;
+        let bb = &args.pad.gradient;
+        fn_dd(&mut dd, p, nn, bb)?;
 
         // add contribution to K matrix
         let c = det_jac * weight * args.alpha;
@@ -247,9 +247,9 @@ mod tests {
         let mut kk = Matrix::new(4, 4);
         let mut dd = Tensor4::new(true, true);
         let nn = Vector::new(0);
-        let gg = Matrix::new(0, 0);
+        let bb = Matrix::new(0, 0);
         let f = |_: &mut Tensor4, _: usize, _: &Vector, _: &Matrix| Ok(());
-        f(&mut dd, 0, &nn, &gg).unwrap();
+        f(&mut dd, 0, &nn, &bb).unwrap();
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(

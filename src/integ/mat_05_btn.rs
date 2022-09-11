@@ -167,9 +167,9 @@ mod tests {
         let mut tt = Tensor2::new(true, true);
         let ggb = Matrix::new(0, 0);
         let nn = Vector::new(0);
-        let gg = Matrix::new(0, 0);
-        let f = |_tt: &mut Tensor2, _p: usize, _ggb: &Matrix, _nn: &Vector, _gg: &Matrix| Ok(());
-        f(&mut tt, 0, &ggb, &nn, &gg).unwrap();
+        let bb = Matrix::new(0, 0);
+        let f = |_tt: &mut Tensor2, _p: usize, _ggb: &Matrix, _nn: &Vector, _bb: &Matrix| Ok(());
+        f(&mut tt, 0, &ggb, &nn, &bb).unwrap();
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(

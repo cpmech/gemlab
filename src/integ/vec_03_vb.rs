@@ -156,9 +156,9 @@ mod tests {
         let mut c = Vector::new(2);
         let mut w = Vector::new(0);
         let nn = Vector::new(0);
-        let gg = Matrix::new(0, 0);
+        let bb = Matrix::new(0, 0);
         let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(());
-        f(&mut w, 0, &nn, &gg).unwrap();
+        f(&mut w, 0, &nn, &bb).unwrap();
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(

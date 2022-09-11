@@ -127,9 +127,9 @@ mod tests {
         let mut kk = Matrix::new(2, 2);
         let mut v = Vector::new(0);
         let nn = Vector::new(0);
-        let gg = Matrix::new(0, 0);
-        let f = |_v: &mut Vector, _p: usize, _nn: &Vector, _gg: &Matrix| Ok(());
-        f(&mut v, 0, &nn, &gg).unwrap();
+        let bb = Matrix::new(0, 0);
+        let f = |_v: &mut Vector, _p: usize, _nn: &Vector, _bb: &Matrix| Ok(());
+        f(&mut v, 0, &nn, &bb).unwrap();
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(

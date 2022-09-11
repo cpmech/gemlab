@@ -140,9 +140,9 @@ mod tests {
         let mut kk = Matrix::new(2, 2);
         let mut tt = Tensor2::new(true, true);
         let nn = Vector::new(0);
-        let gg = Matrix::new(0, 0);
-        let f = |_tt: &mut Tensor2, _p: usize, _nn: &Vector, _gg: &Matrix| Ok(());
-        f(&mut tt, 0, &nn, &gg).unwrap();
+        let bb = Matrix::new(0, 0);
+        let f = |_tt: &mut Tensor2, _p: usize, _nn: &Vector, _bb: &Matrix| Ok(());
+        f(&mut tt, 0, &nn, &bb).unwrap();
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(

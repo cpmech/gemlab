@@ -118,9 +118,9 @@ mod tests {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
         let nn = Vector::new(0);
-        let gg = Matrix::new(0, 0);
-        let f = |_p: usize, _nn: &Vector, _gg: &Matrix| Ok(0.0);
-        assert_eq!(f(0, &nn, &gg).unwrap(), 0.0);
+        let bb = Matrix::new(0, 0);
+        let f = |_p: usize, _nn: &Vector, _bb: &Matrix| Ok(0.0);
+        assert_eq!(f(0, &nn, &bb).unwrap(), 0.0);
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(
