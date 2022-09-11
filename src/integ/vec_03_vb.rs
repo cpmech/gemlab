@@ -113,8 +113,8 @@ where
 
         // calculate w
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
-        fn_w(&mut w, p, nn, gg)?;
+        let bb = &args.pad.gradient;
+        fn_w(&mut w, p, nn, bb)?;
 
         // calculate coefficient
         let coef = if args.axisymmetric {
@@ -130,11 +130,11 @@ where
         // add contribution to c vector
         if space_ndim == 2 {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * gg[m][0] + w[1] * gg[m][1]);
+                c[ii0 + m] += coef * (w[0] * bb[m][0] + w[1] * bb[m][1]);
             }
         } else {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * gg[m][0] + w[1] * gg[m][1] + w[2] * gg[m][2]);
+                c[ii0 + m] += coef * (w[0] * bb[m][0] + w[1] * bb[m][1] + w[2] * bb[m][2]);
             }
         }
     }

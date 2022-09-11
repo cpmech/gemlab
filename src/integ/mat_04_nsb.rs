@@ -103,8 +103,8 @@ where
         // calculate s
         let nnb = &pad_b.interp;
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
-        let s = fn_s(p, nnb, nn, gg)?;
+        let bb = &args.pad.gradient;
+        let s = fn_s(p, nnb, nn, bb)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {
@@ -121,16 +121,16 @@ where
         if space_ndim == 2 {
             for m in 0..nnode_b {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + 0 + n * 2] += nnb[m] * c * gg[n][0];
-                    kk[ii0 + m][jj0 + 1 + n * 2] += nnb[m] * c * gg[n][1];
+                    kk[ii0 + m][jj0 + 0 + n * 2] += nnb[m] * c * bb[n][0];
+                    kk[ii0 + m][jj0 + 1 + n * 2] += nnb[m] * c * bb[n][1];
                 }
             }
         } else {
             for m in 0..nnode_b {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + 0 + n * 3] += nnb[m] * c * gg[n][0];
-                    kk[ii0 + m][jj0 + 1 + n * 3] += nnb[m] * c * gg[n][1];
-                    kk[ii0 + m][jj0 + 2 + n * 3] += nnb[m] * c * gg[n][2];
+                    kk[ii0 + m][jj0 + 0 + n * 3] += nnb[m] * c * bb[n][0];
+                    kk[ii0 + m][jj0 + 1 + n * 3] += nnb[m] * c * bb[n][1];
+                    kk[ii0 + m][jj0 + 2 + n * 3] += nnb[m] * c * bb[n][2];
                 }
             }
         }

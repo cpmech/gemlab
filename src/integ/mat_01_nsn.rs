@@ -77,8 +77,8 @@ where
 
         // calculate s
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
-        let s = fn_s(p, nn, gg)?;
+        let bb = &args.pad.gradient;
+        let s = fn_s(p, nn, bb)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {

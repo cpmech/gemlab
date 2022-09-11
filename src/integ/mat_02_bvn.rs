@@ -80,8 +80,8 @@ where
 
         // calculate v
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
-        fn_v(&mut v, p, nn, gg)?;
+        let bb = &args.pad.gradient;
+        fn_v(&mut v, p, nn, bb)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {
@@ -98,13 +98,13 @@ where
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + n] += c * (gg[m][0] * v[0] + gg[m][1] * v[1]) * nn[n];
+                    kk[ii0 + m][jj0 + n] += c * (bb[m][0] * v[0] + bb[m][1] * v[1]) * nn[n];
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + n] += c * (gg[m][0] * v[0] + gg[m][1] * v[1] + gg[m][2] * v[2]) * nn[n];
+                    kk[ii0 + m][jj0 + n] += c * (bb[m][0] * v[0] + bb[m][1] * v[1] + bb[m][2] * v[2]) * nn[n];
                 }
             }
         }

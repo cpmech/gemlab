@@ -86,8 +86,8 @@ where
 
         // calculate v
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
-        fn_v(&mut v, p, nn, gg)?;
+        let bb = &args.pad.gradient;
+        fn_v(&mut v, p, nn, bb)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {
@@ -104,27 +104,27 @@ where
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + 0 + m * 2][jj0 + 0 + n * 2] += c * nn[m] * v[0] * gg[n][0];
-                    kk[ii0 + 0 + m * 2][jj0 + 1 + n * 2] += c * nn[m] * v[0] * gg[n][1];
+                    kk[ii0 + 0 + m * 2][jj0 + 0 + n * 2] += c * nn[m] * v[0] * bb[n][0];
+                    kk[ii0 + 0 + m * 2][jj0 + 1 + n * 2] += c * nn[m] * v[0] * bb[n][1];
 
-                    kk[ii0 + 1 + m * 2][jj0 + 0 + n * 2] += c * nn[m] * v[1] * gg[n][0];
-                    kk[ii0 + 1 + m * 2][jj0 + 1 + n * 2] += c * nn[m] * v[1] * gg[n][1];
+                    kk[ii0 + 1 + m * 2][jj0 + 0 + n * 2] += c * nn[m] * v[1] * bb[n][0];
+                    kk[ii0 + 1 + m * 2][jj0 + 1 + n * 2] += c * nn[m] * v[1] * bb[n][1];
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + 0 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * v[0] * gg[n][0];
-                    kk[ii0 + 0 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * v[0] * gg[n][1];
-                    kk[ii0 + 0 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * v[0] * gg[n][2];
+                    kk[ii0 + 0 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * v[0] * bb[n][0];
+                    kk[ii0 + 0 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * v[0] * bb[n][1];
+                    kk[ii0 + 0 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * v[0] * bb[n][2];
 
-                    kk[ii0 + 1 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * v[1] * gg[n][0];
-                    kk[ii0 + 1 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * v[1] * gg[n][1];
-                    kk[ii0 + 1 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * v[1] * gg[n][2];
+                    kk[ii0 + 1 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * v[1] * bb[n][0];
+                    kk[ii0 + 1 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * v[1] * bb[n][1];
+                    kk[ii0 + 1 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * v[1] * bb[n][2];
 
-                    kk[ii0 + 2 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * v[2] * gg[n][0];
-                    kk[ii0 + 2 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * v[2] * gg[n][1];
-                    kk[ii0 + 2 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * v[2] * gg[n][2];
+                    kk[ii0 + 2 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * v[2] * bb[n][0];
+                    kk[ii0 + 2 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * v[2] * bb[n][1];
+                    kk[ii0 + 2 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * v[2] * bb[n][2];
                 }
             }
         }

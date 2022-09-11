@@ -89,8 +89,8 @@ where
 
         // calculate T tensor
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
-        fn_tt(&mut tt, p, nn, gg)?;
+        let bb = &args.pad.gradient;
+        fn_tt(&mut tt, p, nn, bb)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {

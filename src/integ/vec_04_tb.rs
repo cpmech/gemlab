@@ -124,8 +124,8 @@ where
 
         // calculate σ tensor
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
-        fn_sig(&mut sig, index, nn, gg)?;
+        let bb = &args.pad.gradient;
+        fn_sig(&mut sig, index, nn, bb)?;
 
         // add contribution to d vector
         let c = det_jac * weight * args.alpha;
@@ -147,18 +147,18 @@ where
 fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, args: &mut CommonArgs) {
     let t = &sig.vec;
     let s = SQRT_2;
-    let gg = &args.pad.gradient;
+    let b = &args.pad.gradient;
     let ii0 = args.ii0;
     if ndim == 2 {
         for m in 0..nnode {
-            d[ii0 + 0 + m * 2] += c * (t[0] * gg[m][0] + t[3] * gg[m][1] / s);
-            d[ii0 + 1 + m * 2] += c * (t[3] * gg[m][0] / s + t[1] * gg[m][1]);
+            d[ii0 + 0 + m * 2] += c * (t[0] * b[m][0] + t[3] * b[m][1] / s);
+            d[ii0 + 1 + m * 2] += c * (t[3] * b[m][0] / s + t[1] * b[m][1]);
         }
     } else {
         for m in 0..nnode {
-            d[ii0 + 0 + m * 3] += c * (t[0] * gg[m][0] + t[3] * gg[m][1] / s + t[5] * gg[m][2] / s);
-            d[ii0 + 1 + m * 3] += c * (t[3] * gg[m][0] / s + t[1] * gg[m][1] + t[4] * gg[m][2] / s);
-            d[ii0 + 2 + m * 3] += c * (t[5] * gg[m][0] / s + t[4] * gg[m][1] / s + t[2] * gg[m][2]);
+            d[ii0 + 0 + m * 3] += c * (t[0] * b[m][0] + t[3] * b[m][1] / s + t[5] * b[m][2] / s);
+            d[ii0 + 1 + m * 3] += c * (t[3] * b[m][0] / s + t[1] * b[m][1] + t[4] * b[m][2] / s);
+            d[ii0 + 2 + m * 3] += c * (t[5] * b[m][0] / s + t[4] * b[m][1] / s + t[2] * b[m][2]);
         }
     }
 }
@@ -169,11 +169,11 @@ fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Ten
     let t = &sig.vec;
     let s = SQRT_2;
     let nn = &args.pad.interp;
-    let gg = &args.pad.gradient;
+    let b = &args.pad.gradient;
     let ii0 = args.ii0;
     for m in 0..nnode {
-        d[ii0 + 0 + m * 2] += c * r * (t[0] * gg[m][0] + t[3] * gg[m][1] / s) + nn[m] * t[2];
-        d[ii0 + 1 + m * 2] += c * r * (t[3] * gg[m][0] / s + t[1] * gg[m][1]);
+        d[ii0 + 0 + m * 2] += c * r * (t[0] * b[m][0] + t[3] * b[m][1] / s) + nn[m] * t[2];
+        d[ii0 + 1 + m * 2] += c * r * (t[3] * b[m][0] / s + t[1] * b[m][1]);
     }
 }
 

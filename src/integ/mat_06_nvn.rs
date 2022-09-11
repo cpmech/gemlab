@@ -108,9 +108,9 @@ where
 
         // calculate v
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
+        let bb = &args.pad.gradient;
         let nnb = &pad_b.interp;
-        fn_v(&mut v, p, nn, gg, nnb)?;
+        fn_v(&mut v, p, nn, bb, nnb)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {

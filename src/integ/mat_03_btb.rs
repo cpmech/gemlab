@@ -83,8 +83,8 @@ where
 
         // calculate T tensor
         let nn = &args.pad.interp;
-        let gg = &args.pad.gradient;
-        fn_tt(&mut tt, p, nn, gg)?;
+        let bb = &args.pad.gradient;
+        fn_tt(&mut tt, p, nn, bb)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {
@@ -103,17 +103,17 @@ where
             for m in 0..nnode {
                 for n in 0..nnode {
                     kk[ii0 + m][jj0 + n] += c
-                        * (gg[n][1] * (t[1] * gg[m][1] + (t[3] * gg[m][0]) / s)
-                            + gg[n][0] * (t[0] * gg[m][0] + (t[3] * gg[m][1]) / s));
+                        * (bb[n][1] * (t[1] * bb[m][1] + (t[3] * bb[m][0]) / s)
+                            + bb[n][0] * (t[0] * bb[m][0] + (t[3] * bb[m][1]) / s));
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
                     kk[ii0 + m][jj0 + n] += c
-                        * (gg[n][2] * (t[2] * gg[m][2] + (t[5] * gg[m][0]) / s + (t[4] * gg[m][1]) / s)
-                            + gg[n][1] * (t[1] * gg[m][1] + (t[3] * gg[m][0]) / s + (t[4] * gg[m][2]) / s)
-                            + gg[n][0] * (t[0] * gg[m][0] + (t[3] * gg[m][1]) / s + (t[5] * gg[m][2]) / s));
+                        * (bb[n][2] * (t[2] * bb[m][2] + (t[5] * bb[m][0]) / s + (t[4] * bb[m][1]) / s)
+                            + bb[n][1] * (t[1] * bb[m][1] + (t[3] * bb[m][0]) / s + (t[4] * bb[m][2]) / s)
+                            + bb[n][0] * (t[0] * bb[m][0] + (t[3] * bb[m][1]) / s + (t[5] * bb[m][2]) / s));
                 }
             }
         }
