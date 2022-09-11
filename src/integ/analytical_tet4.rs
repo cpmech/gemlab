@@ -250,7 +250,7 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the g-v-n integration with constant vector field
+    /// Performs the b-v-n integration with constant vector field
     #[rustfmt::skip]
     pub fn mat_02_bvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
@@ -266,7 +266,7 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the g-t-g integration with constant tensor field
+    /// Performs the b-t-b integration with constant tensor field
     #[rustfmt::skip]
     pub fn mat_03_btb(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume;
@@ -286,7 +286,7 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the n-s-g integration with constant scalar field (coupled with itself)
+    /// Performs the n-s-b integration with constant scalar field (coupled with itself)
     #[rustfmt::skip]
     pub fn mat_04_nsb(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
@@ -342,7 +342,7 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the g-s-n integration with constant scalar field (coupled with itself)
+    /// Performs the b-s-n integration with constant scalar field (coupled with itself)
     #[rustfmt::skip]
     pub fn mat_07_bsn(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
@@ -390,7 +390,7 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the n-v-g integration with constant vector field
+    /// Performs the n-v-b integration with constant vector field
     #[rustfmt::skip]
     pub fn mat_09_nvb(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
@@ -414,7 +414,7 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the g-d-g integration with constant tensor field (calculates the stiffness matrix)
+    /// Performs the b-d-b integration with constant tensor field (calculates the stiffness matrix)
     ///
     /// solution:
     ///

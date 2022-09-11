@@ -195,7 +195,7 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Performs the g-v-n integration with constant vector
+    /// Performs the b-v-n integration with constant vector
     #[rustfmt::skip]
     pub fn mat_02_bvn(&self, v0: f64, v1: f64) -> Matrix {
         let aa = self.area;
@@ -207,7 +207,7 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Performs the g-v-n integration with v = {x, y}
+    /// Performs the b-v-n integration with v = {x, y}
     #[rustfmt::skip]
     pub fn mat_02_bvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
         let aa = self.area;
@@ -224,7 +224,7 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Performs the g-t-g integration with constant tensor
+    /// Performs the b-t-b integration with constant tensor
     pub fn mat_03_btb(&self, kx: f64, ky: f64) -> Matrix {
         let g = &self.bb;
         let k00 = self.area * (g[0][0] * g[0][0] * kx + g[0][1] * g[0][1] * ky);
@@ -249,7 +249,7 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Performs the n-v-g integration with constant vector
+    /// Performs the n-v-b integration with constant vector
     #[rustfmt::skip]
     pub fn mat_09_nvb(&self, v0: f64, v1: f64) -> Matrix {
         let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
@@ -266,7 +266,7 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Performs the g-d-g integration with constant tensor field (calculates the stiffness matrix)
+    /// Performs the b-d-b integration with constant tensor field (calculates the stiffness matrix)
     ///
     /// solution:
     ///

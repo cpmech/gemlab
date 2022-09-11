@@ -28,7 +28,7 @@ impl AnalyticalQua4 {
         ])
     }
 
-    /// Performs the g-t-g integration with constant (and diagonal) tensor field
+    /// Performs the b-t-b integration with constant (and diagonal) tensor field
     ///
     /// From @bhatti:05\page{332}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
