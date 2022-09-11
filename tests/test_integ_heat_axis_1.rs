@@ -34,7 +34,7 @@ fn generate_pads() -> (Scratchpad, Scratchpad, Scratchpad, AnalyticalTri3) {
 }
 
 #[test]
-fn test_integ_heat_eqs() {
+fn test_integ_heat_axis_1() {
     // generate scratchpads
     let (mut pad_tri, mut pad_conv, mut pad_flux, ana) = generate_pads();
     println!("area = {}", ana.area);
