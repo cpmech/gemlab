@@ -137,7 +137,23 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn write_vtu_works() -> Result<(), StrError> {
+    fn write_vtu_handles_unavailable_types() {
+        assert_eq!(
+            write_vtu(&Samples::lin_cells(), "/tmp/gemlab/nothing.vtu").err(),
+            Some("cannot generate VTU file because VTK cell type is not available")
+        );
+        assert_eq!(
+            write_vtu(&Samples::tri_cells(), "/tmp/gemlab/nothing.vtu").err(),
+            Some("cannot generate VTU file because VTK cell type is not available")
+        );
+        assert_eq!(
+            write_vtu(&Samples::qua_cells(), "/tmp/gemlab/nothing.vtu").err(),
+            Some("cannot generate VTU file because VTK cell type is not available")
+        );
+    }
+
+    #[test]
+    fn write_vtu_works_qua8_tri6_lin2() -> Result<(), StrError> {
         let mesh = Samples::qua8_tri6_lin2();
         let file_path = "/tmp/gemlab/test_qua8_tri6_lin2.vtu";
         write_vtu(&mesh, file_path)?;
@@ -162,6 +178,42 @@ mod tests {
 </DataArray>
 <DataArray type="UInt8" Name="types" format="ascii">
 23 22 3 3 
+</DataArray>
+</Cells>
+</Piece>
+</UnstructuredGrid>
+</VTKFile>
+"#
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn write_vtu_works_mixed_shapes_3d() -> Result<(), StrError> {
+        let mesh = Samples::mixed_shapes_3d();
+        let file_path = "/tmp/gemlab/test_mixed_shapes_3d.vtu";
+        write_vtu(&mesh, file_path)?;
+        let contents = fs::read_to_string(file_path).map_err(|_| "cannot open file")?;
+        assert_eq!(
+            contents,
+            r#"<?xml version="1.0"?>
+<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">
+<UnstructuredGrid>
+<Piece NumberOfPoints="13" NumberOfCells="5">
+<Points>
+<DataArray type="Float64" NumberOfComponents="3" format="ascii">
+0.0 0.0 0.0 1.0 0.0 0.0 1.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 1.0 1.0 1.0 0.0 1.0 1.0 1.0 2.0 0.0 0.0 2.0 0.0 0.0 2.0 1.0 1.0 -0.5 0.0 1.0 -1.0 0.0 
+</DataArray>
+</Points>
+<Cells>
+<DataArray type="Int32" Name="connectivity" format="ascii">
+0 1 2 3 4 5 6 7 2 8 3 6 3 9 10 7 8 9 3 1 12 11 
+</DataArray>
+<DataArray type="Int32" Name="offsets" format="ascii">
+8 12 16 19 22 
+</DataArray>
+<DataArray type="UInt8" Name="types" format="ascii">
+12 10 9 5 21 
 </DataArray>
 </Cells>
 </Piece>
