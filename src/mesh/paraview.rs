@@ -23,15 +23,16 @@ impl Mesh {
             return Err("there are no cells to write");
         }
 
+        // output buffer
         let mut buffer = String::new();
 
         // header
         write!(
             &mut buffer,
             "<?xml version=\"1.0\"?>\n\
-         <VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n\
-         <UnstructuredGrid>\n\
-         <Piece NumberOfPoints=\"{}\" NumberOfCells=\"{}\">\n",
+             <VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n\
+             <UnstructuredGrid>\n\
+             <Piece NumberOfPoints=\"{}\" NumberOfCells=\"{}\">\n",
             npoint, ncell
         )
         .unwrap();
@@ -40,7 +41,7 @@ impl Mesh {
         write!(
             &mut buffer,
             "<Points>\n\
-         <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n",
+             <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n",
         )
         .unwrap();
         for index in 0..npoint {
@@ -54,7 +55,7 @@ impl Mesh {
         write!(
             &mut buffer,
             "\n</DataArray>\n\
-         </Points>\n"
+             </Points>\n"
         )
         .unwrap();
 
@@ -62,7 +63,7 @@ impl Mesh {
         write!(
             &mut buffer,
             "<Cells>\n\
-         <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n"
+             <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n"
         )
         .unwrap();
         for cell in &self.cells {
@@ -78,7 +79,7 @@ impl Mesh {
         write!(
             &mut buffer,
             "\n</DataArray>\n\
-         <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n"
+             <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n"
         )
         .unwrap();
         let mut offset = 0;
@@ -91,7 +92,7 @@ impl Mesh {
         write!(
             &mut buffer,
             "\n</DataArray>\n\
-         <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n"
+             <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n"
         )
         .unwrap();
         for cell in &self.cells {
@@ -102,15 +103,33 @@ impl Mesh {
         write!(
             &mut buffer,
             "\n</DataArray>\n\
-         </Cells>\n"
+             </Cells>\n"
         )
         .unwrap();
 
+        // data: points
+        write!(
+            &mut buffer,
+            "<PointData Scalars=\"TheScalars\">\n\
+             <DataArray type=\"Int32\" Name=\"point_id\" NumberOfComponents=\"1\" format=\"ascii\">\n"
+        )
+        .unwrap();
+        for point_id in 0..npoint {
+            write!(&mut buffer, "{} ", point_id).unwrap();
+        }
+        write!(
+            &mut buffer,
+            "\n</DataArray>\n\
+             </PointData>\n"
+        )
+        .unwrap();
+
+        // footer
         write!(
             &mut buffer,
             "</Piece>\n\
-         </UnstructuredGrid>\n\
-         </VTKFile>\n"
+             </UnstructuredGrid>\n\
+             </VTKFile>\n"
         )
         .unwrap();
 
@@ -181,6 +200,11 @@ mod tests {
 23 22 3 3 
 </DataArray>
 </Cells>
+<PointData Scalars="TheScalars">
+<DataArray type="Int32" Name="point_id" NumberOfComponents="1" format="ascii">
+0 1 2 3 4 5 6 7 8 9 10 
+</DataArray>
+</PointData>
 </Piece>
 </UnstructuredGrid>
 </VTKFile>
@@ -217,6 +241,11 @@ mod tests {
 12 10 9 5 21 
 </DataArray>
 </Cells>
+<PointData Scalars="TheScalars">
+<DataArray type="Int32" Name="point_id" NumberOfComponents="1" format="ascii">
+0 1 2 3 4 5 6 7 8 9 10 11 12 
+</DataArray>
+</PointData>
 </Piece>
 </UnstructuredGrid>
 </VTKFile>
