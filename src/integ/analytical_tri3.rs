@@ -226,13 +226,15 @@ impl AnalyticalTri3 {
 
     /// Performs the b-t-b integration with constant tensor
     pub fn mat_03_btb(&self, kx: f64, ky: f64) -> Matrix {
-        let g = &self.bb;
-        let k00 = self.area * (g[0][0] * g[0][0] * kx + g[0][1] * g[0][1] * ky);
-        let k11 = self.area * (g[1][0] * g[1][0] * kx + g[1][1] * g[1][1] * ky);
-        let k01 = self.area * (g[0][0] * g[1][0] * kx + g[0][1] * g[1][1] * ky);
-        let k12 = self.area * (g[1][0] * g[2][0] * kx + g[1][1] * g[2][1] * ky);
-        let k02 = self.area * (g[0][0] * g[2][0] * kx + g[0][1] * g[2][1] * ky);
-        let k22 = self.area * (g[2][0] * g[2][0] * kx + g[2][1] * g[2][1] * ky);
+        let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
+        let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
+        let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
+        let k00 = self.area * (b00 * b00 * kx + b01 * b01 * ky);
+        let k11 = self.area * (b10 * b10 * kx + b11 * b11 * ky);
+        let k01 = self.area * (b00 * b10 * kx + b01 * b11 * ky);
+        let k12 = self.area * (b10 * b20 * kx + b11 * b21 * ky);
+        let k02 = self.area * (b00 * b20 * kx + b01 * b21 * ky);
+        let k22 = self.area * (b20 * b20 * kx + b21 * b21 * ky);
         Matrix::from(&[[k00, k01, k02], [k01, k11, k12], [k02, k12, k22]])
     }
 
