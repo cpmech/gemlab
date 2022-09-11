@@ -109,7 +109,7 @@ fn main() -> Result<(), StrError> {
     //     │  6 │
     //     └    ┘
     let mut c = Vector::filled(nnode, 0.0);
-    integ::vec_03_vg(&mut c, &mut args, |w, _, _, _| {
+    integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
         w[0] = -2.0;
         w[1] = 4.0;
         Ok(())
@@ -124,7 +124,7 @@ fn main() -> Result<(), StrError> {
     );
 
     // check
-    let c_correct = ana.vec_03_vg(-2.0, 4.0);
+    let c_correct = ana.vec_03_vb(-2.0, 4.0);
     vec_approx_eq(c.as_data(), &c_correct, 1e-15);
 
     // tensor dot gradient, returns vector 'd'
@@ -149,7 +149,7 @@ fn main() -> Result<(), StrError> {
     //     └     ┘
     let (s00, s11, s01) = (6.0, 4.0, 2.0);
     let mut d = Vector::filled(nnode * space_ndim, 0.0);
-    integ::vec_04_tg(&mut d, &mut args, |sig, _, _, _| {
+    integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
         sig.sym_set(0, 0, s00);
         sig.sym_set(1, 1, s11);
         sig.sym_set(0, 1, s01);
@@ -168,7 +168,7 @@ fn main() -> Result<(), StrError> {
     );
 
     // check
-    let d_correct = ana.vec_04_tg(s00, s11, s01);
+    let d_correct = ana.vec_04_tb(s00, s11, s01);
     vec_approx_eq(d.as_data(), &d_correct, 1e-15);
     Ok(())
 }

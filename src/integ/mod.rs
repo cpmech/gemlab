@@ -65,7 +65,7 @@
 //!
 //! ## VEC 03: Vector(V) dot gradient(B)
 //!
-//! Function [vec_03_vg()]
+//! Function [vec_03_vb()]
 //!
 //! ```text
 //!      ⌠ → →    →  → →
@@ -76,7 +76,7 @@
 //!
 //! ## VEC 04: Tensor(T) dot gradient(B)
 //!
-//! Function [vec_04_tg()]
+//! Function [vec_04_tb()]
 //!
 //! ```text
 //! →    ⌠   →    →  → →
@@ -313,8 +313,8 @@ mod testing;
 mod vec_01_ns;
 mod vec_02_nv;
 mod vec_02_nv_bry;
-mod vec_03_vg;
-mod vec_04_tg;
+mod vec_03_vb;
+mod vec_04_tb;
 pub use crate::integ::analytical_qua4::*;
 pub use crate::integ::analytical_qua8::*;
 pub use crate::integ::analytical_tet4::*;
@@ -337,5 +337,5 @@ pub use crate::integ::scalar_field::*;
 pub use crate::integ::vec_01_ns::*;
 pub use crate::integ::vec_02_nv::*;
 pub use crate::integ::vec_02_nv_bry::*;
-pub use crate::integ::vec_03_vg::*;
-pub use crate::integ::vec_04_tg::*;
+pub use crate::integ::vec_03_vb::*;
+pub use crate::integ::vec_04_tb::*;

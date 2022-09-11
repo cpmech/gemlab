@@ -73,7 +73,7 @@ use russell_tensor::Tensor2;
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
 ///     let mut args = integ::CommonArgs::new(&mut pad, ips);
-///     integ::vec_04_tg(&mut d, &mut args, |sig, _, _, _| {
+///     integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
 ///         sig.sym_set(0, 1, 3.0);
@@ -91,7 +91,7 @@ use russell_tensor::Tensor2;
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_04_tg<F>(d: &mut Vector, args: &mut CommonArgs, mut fn_sig: F) -> Result<(), StrError>
+pub fn vec_04_tb<F>(d: &mut Vector, args: &mut CommonArgs, mut fn_sig: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Tensor2, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
@@ -142,7 +142,7 @@ where
     Ok(())
 }
 
-/// Adds contribution to the d-vector in vec_04_tg
+/// Adds contribution to the d-vector in vec_04_tb
 #[inline]
 fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, args: &mut CommonArgs) {
     let t = &sig.vec;
@@ -163,7 +163,7 @@ fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, ar
     }
 }
 
-/// Adds contribution to the d-vector in vec_04_tg (axisymmetric case)
+/// Adds contribution to the d-vector in vec_04_tb (axisymmetric case)
 #[inline]
 fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Tensor2, args: &mut CommonArgs) {
     let t = &sig.vec;
@@ -199,7 +199,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &[]);
         args.ii0 = 1;
         assert_eq!(
-            integ::vec_04_tg(&mut d, &mut args, f).err(),
+            integ::vec_04_tb(&mut d, &mut args, f).err(),
             Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -218,7 +218,7 @@ mod tests {
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
         let ana = AnalyticalTri3::new(&pad);
-        let d_correct = ana.vec_04_tg(S00, S11, S01);
+        let d_correct = ana.vec_04_tb(S00, S11, S01);
 
         // integration points
         let class = pad.kind.class();
@@ -234,7 +234,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_04_tg(&mut d, &mut args, |sig, _, _, _| {
+            integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -259,7 +259,7 @@ mod tests {
             [7.0, 6.0, 4.0],
         ], true, false).unwrap();
         let ana = AnalyticalTet4::new(&pad);
-        let d_correct = ana.vec_04_tg(&tt);
+        let d_correct = ana.vec_04_tb(&tt);
 
         // integration points
         let class = pad.kind.class();
@@ -275,7 +275,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_04_tg(&mut d, &mut args, |sig, _, _, _| {
+            integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
                 copy_tensor2(sig, &tt).unwrap();
                 Ok(())
             })

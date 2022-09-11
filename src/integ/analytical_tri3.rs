@@ -122,7 +122,7 @@ impl AnalyticalTri3 {
     /// ```text
     /// cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁) A
     /// ```
-    pub fn vec_03_vg(&self, w0: f64, w1: f64) -> Vec<f64> {
+    pub fn vec_03_vb(&self, w0: f64, w1: f64) -> Vec<f64> {
         vec![
             (w0 * self.bb[0][0] + w1 * self.bb[0][1]) * self.area,
             (w0 * self.bb[1][0] + w1 * self.bb[1][1]) * self.area,
@@ -142,7 +142,7 @@ impl AnalyticalTri3 {
     ///
     /// * `pad` -- The same shape used in `new` because we need the nodal coordinates here
     ///            Do not change the coordinates, otherwise the values will be wrong.
-    pub fn vec_03_vg_bilinear(&self, pad: &Scratchpad) -> Vec<f64> {
+    pub fn vec_03_vb_bilinear(&self, pad: &Scratchpad) -> Vec<f64> {
         let (x0, x1, x2) = (pad.xxt[0][0], pad.xxt[0][1], pad.xxt[0][2]);
         let (y0, y1, y2) = (pad.xxt[1][0], pad.xxt[1][1], pad.xxt[1][2]);
         vec![
@@ -166,7 +166,7 @@ impl AnalyticalTri3 {
     /// # Input
     ///
     /// * `s₀₀, s₁₁, s₀₁` -- components of the constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
-    pub fn vec_04_tg(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
+    pub fn vec_04_tb(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
         vec![
             (s00 * self.bb[0][0] + s01 * self.bb[0][1]) * self.area,
             (s01 * self.bb[0][0] + s11 * self.bb[0][1]) * self.area,
