@@ -211,16 +211,16 @@ impl AnalyticalTri3 {
     #[rustfmt::skip]
     pub fn mat_02_gvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
         let aa = self.area;
-        let (g00, g01) = (self.bb[0][0], self.bb[0][1]);
-        let (g10, g11) = (self.bb[1][0], self.bb[1][1]);
-        let (g20, g21) = (self.bb[2][0], self.bb[2][1]);
+        let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
+        let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
+        let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
         let (x0, y0) = (pad.xxt[0][0], pad.xxt[1][0]);
         let (x1, y1) = (pad.xxt[0][1], pad.xxt[1][1]);
         let (x2, y2) = (pad.xxt[0][2], pad.xxt[1][2]);
         Matrix::from(&[
-            [(aa*(2.0*g00*x0 + g00*x1 + g00*x2 + 2.0*g01*y0 + g01*y1 + g01*y2))/12.0,(aa*(g00*x0 + 2.0*g00*x1 + g00*x2 + g01*y0 + 2.0*g01*y1 + g01*y2))/12.0, (aa*(g00*x0 + g00*x1 + 2.0*g00*x2 + g01*y0 + g01*y1 + 2.0*g01*y2))/12.0],
-            [(aa*(2.0*g10*x0 + g10*x1 + g10*x2 + 2.0*g11*y0 + g11*y1 + g11*y2))/12.0,(aa*(g10*x0 + 2.0*g10*x1 + g10*x2 + g11*y0 + 2.0*g11*y1 + g11*y2))/12.0, (aa*(g10*x0 + g10*x1 + 2.0*g10*x2 + g11*y0 + g11*y1 + 2.0*g11*y2))/12.0],
-            [(aa*(2.0*g20*x0 + g20*x1 + g20*x2 + 2.0*g21*y0 + g21*y1 + g21*y2))/12.0,(aa*(g20*x0 + 2.0*g20*x1 + g20*x2 + g21*y0 + 2.0*g21*y1 + g21*y2))/12.0, (aa*(g20*x0 + g20*x1 + 2.0*g20*x2 + g21*y0 + g21*y1 + 2.0*g21*y2))/12.0],
+            [(aa*(2.0*b00*x0 + b00*x1 + b00*x2 + 2.0*b01*y0 + b01*y1 + b01*y2))/12.0,(aa*(b00*x0 + 2.0*b00*x1 + b00*x2 + b01*y0 + 2.0*b01*y1 + b01*y2))/12.0, (aa*(b00*x0 + b00*x1 + 2.0*b00*x2 + b01*y0 + b01*y1 + 2.0*b01*y2))/12.0],
+            [(aa*(2.0*b10*x0 + b10*x1 + b10*x2 + 2.0*b11*y0 + b11*y1 + b11*y2))/12.0,(aa*(b10*x0 + 2.0*b10*x1 + b10*x2 + b11*y0 + 2.0*b11*y1 + b11*y2))/12.0, (aa*(b10*x0 + b10*x1 + 2.0*b10*x2 + b11*y0 + b11*y1 + 2.0*b11*y2))/12.0],
+            [(aa*(2.0*b20*x0 + b20*x1 + b20*x2 + 2.0*b21*y0 + b21*y1 + b21*y2))/12.0,(aa*(b20*x0 + 2.0*b20*x1 + b20*x2 + b21*y0 + 2.0*b21*y1 + b21*y2))/12.0, (aa*(b20*x0 + b20*x1 + 2.0*b20*x2 + b21*y0 + b21*y1 + 2.0*b21*y2))/12.0],
         ])
     }
 
@@ -252,17 +252,17 @@ impl AnalyticalTri3 {
     /// Performs the n-v-g integration with constant vector
     #[rustfmt::skip]
     pub fn mat_09_nvg(&self, v0: f64, v1: f64) -> Matrix {
-        let (g00, g01) = (self.bb[0][0], self.bb[0][1]);
-        let (g10, g11) = (self.bb[1][0], self.bb[1][1]);
-        let (g20, g21) = (self.bb[2][0], self.bb[2][1]);
+        let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
+        let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
+        let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
         let c = self.area / 3.0;
         Matrix::from(&[
-            [c*g00*v0, c*g01*v0, c*g10*v0, c*g11*v0, c*g20*v0, c*g21*v0],
-            [c*g00*v1, c*g01*v1, c*g10*v1, c*g11*v1, c*g20*v1, c*g21*v1],
-            [c*g00*v0, c*g01*v0, c*g10*v0, c*g11*v0, c*g20*v0, c*g21*v0],
-            [c*g00*v1, c*g01*v1, c*g10*v1, c*g11*v1, c*g20*v1, c*g21*v1],
-            [c*g00*v0, c*g01*v0, c*g10*v0, c*g11*v0, c*g20*v0, c*g21*v0],
-            [c*g00*v1, c*g01*v1, c*g10*v1, c*g11*v1, c*g20*v1, c*g21*v1],
+            [c*b00*v0, c*b01*v0, c*b10*v0, c*b11*v0, c*b20*v0, c*b21*v0],
+            [c*b00*v1, c*b01*v1, c*b10*v1, c*b11*v1, c*b20*v1, c*b21*v1],
+            [c*b00*v0, c*b01*v0, c*b10*v0, c*b11*v0, c*b20*v0, c*b21*v0],
+            [c*b00*v1, c*b01*v1, c*b10*v1, c*b11*v1, c*b20*v1, c*b21*v1],
+            [c*b00*v0, c*b01*v0, c*b10*v0, c*b11*v0, c*b20*v0, c*b21*v0],
+            [c*b00*v1, c*b01*v1, c*b10*v1, c*b11*v1, c*b20*v1, c*b21*v1],
         ])
     }
 
