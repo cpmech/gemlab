@@ -11,7 +11,7 @@ use russell_tensor::Tensor2;
 ///
 /// **Notes:**
 ///
-/// * `m` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Gbᵐ`)
+/// * `m` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Bbᵐ`)
 /// * `n` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Nⁿ`)
 /// * For example, `1 ≤ m ≤ 4` for a `pad_b→Qua4` and `1 ≤ n ≤ 8` for `pad→Qua8`
 /// * The determinant of the Jacobian is calculated for `pad` (`pad` is the driver of the calculations)
@@ -21,7 +21,7 @@ use russell_tensor::Tensor2;
 ///
 /// ```text
 /// →     ⌠ →
-/// Kᵐⁿ = │ Gbᵐ ⋅ T Nⁿ α dΩ
+/// Kᵐⁿ = │ Bbᵐ ⋅ T Nⁿ α dΩ
 ///       ⌡       ▔
 ///       Ωₑ
 /// ```
@@ -30,7 +30,7 @@ use russell_tensor::Tensor2;
 ///
 /// ```text
 ///        nip-1      →       →      →       →
-/// Kᵐⁿⱼ ≈   Σ   Gbᵐᵢ(ιᵖ) Tᵢⱼ(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
+/// Kᵐⁿⱼ ≈   Σ   Bbᵐᵢ(ιᵖ) Tᵢⱼ(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///         p=0
 /// ```
 ///
