@@ -6,148 +6,149 @@ use std::fs::{self, File};
 use std::io::Write as IoWrite;
 use std::path::Path;
 
-/// Writes Paraview's VTU file
-///
-/// # Input
-///
-/// * `full_path` -- may be a String, &str, or Path
-pub fn write_vtu<P>(mesh: &Mesh, full_path: &P) -> Result<(), StrError>
-where
-    P: AsRef<OsStr> + ?Sized,
-{
-    let ndim = mesh.ndim;
-    let npoint = mesh.points.len();
-    let ncell = mesh.cells.len();
-    if ncell < 1 {
-        return Err("there are no cells to write");
-    }
+impl Mesh {
+    /// Writes Paraview's VTU file
+    ///
+    /// # Input
+    ///
+    /// * `full_path` -- may be a String, &str, or Path
+    pub fn write_vtu<P>(&self, full_path: &P) -> Result<(), StrError>
+    where
+        P: AsRef<OsStr> + ?Sized,
+    {
+        let ndim = self.ndim;
+        let npoint = self.points.len();
+        let ncell = self.cells.len();
+        if ncell < 1 {
+            return Err("there are no cells to write");
+        }
 
-    let mut buffer = String::new();
+        let mut buffer = String::new();
 
-    // header
-    write!(
-        &mut buffer,
-        "<?xml version=\"1.0\"?>\n\
+        // header
+        write!(
+            &mut buffer,
+            "<?xml version=\"1.0\"?>\n\
          <VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n\
          <UnstructuredGrid>\n\
          <Piece NumberOfPoints=\"{}\" NumberOfCells=\"{}\">\n",
-        npoint, ncell
-    )
-    .unwrap();
+            npoint, ncell
+        )
+        .unwrap();
 
-    // nodes: coordinates
-    write!(
-        &mut buffer,
-        "<Points>\n\
+        // nodes: coordinates
+        write!(
+            &mut buffer,
+            "<Points>\n\
          <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n",
-    )
-    .unwrap();
-    for index in 0..npoint {
-        for dim in 0..ndim {
-            write!(&mut buffer, "{:?} ", mesh.points[index].coords[dim]).unwrap();
+        )
+        .unwrap();
+        for index in 0..npoint {
+            for dim in 0..ndim {
+                write!(&mut buffer, "{:?} ", self.points[index].coords[dim]).unwrap();
+            }
+            if ndim == 2 {
+                write!(&mut buffer, "0.0 ").unwrap();
+            }
         }
-        if ndim == 2 {
-            write!(&mut buffer, "0.0 ").unwrap();
-        }
-    }
-    write!(
-        &mut buffer,
-        "\n</DataArray>\n\
+        write!(
+            &mut buffer,
+            "\n</DataArray>\n\
          </Points>\n"
-    )
-    .unwrap();
+        )
+        .unwrap();
 
-    // elements: connectivity
-    write!(
-        &mut buffer,
-        "<Cells>\n\
+        // elements: connectivity
+        write!(
+            &mut buffer,
+            "<Cells>\n\
          <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n"
-    )
-    .unwrap();
-    for cell in &mesh.cells {
-        if cell.kind.vtk_type().is_none() {
-            return Err("cannot generate VTU file because VTK cell type is not available");
+        )
+        .unwrap();
+        for cell in &self.cells {
+            if cell.kind.vtk_type().is_none() {
+                return Err("cannot generate VTU file because VTK cell type is not available");
+            }
+            for p in &cell.points {
+                write!(&mut buffer, "{} ", p).unwrap();
+            }
         }
-        for p in &cell.points {
-            write!(&mut buffer, "{} ", p).unwrap();
-        }
-    }
 
-    // elements: offsets
-    write!(
-        &mut buffer,
-        "\n</DataArray>\n\
+        // elements: offsets
+        write!(
+            &mut buffer,
+            "\n</DataArray>\n\
          <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n"
-    )
-    .unwrap();
-    let mut offset = 0;
-    for cell in &mesh.cells {
-        offset += cell.points.len();
-        write!(&mut buffer, "{} ", offset).unwrap();
-    }
-
-    // elements: types
-    write!(
-        &mut buffer,
-        "\n</DataArray>\n\
-         <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n"
-    )
-    .unwrap();
-    for cell in &mesh.cells {
-        if let Some(vtk) = cell.kind.vtk_type() {
-            write!(&mut buffer, "{} ", vtk).unwrap();
+        )
+        .unwrap();
+        let mut offset = 0;
+        for cell in &self.cells {
+            offset += cell.points.len();
+            write!(&mut buffer, "{} ", offset).unwrap();
         }
-    }
-    write!(
-        &mut buffer,
-        "\n</DataArray>\n\
-         </Cells>\n"
-    )
-    .unwrap();
 
-    write!(
-        &mut buffer,
-        "</Piece>\n\
+        // elements: types
+        write!(
+            &mut buffer,
+            "\n</DataArray>\n\
+         <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n"
+        )
+        .unwrap();
+        for cell in &self.cells {
+            if let Some(vtk) = cell.kind.vtk_type() {
+                write!(&mut buffer, "{} ", vtk).unwrap();
+            }
+        }
+        write!(
+            &mut buffer,
+            "\n</DataArray>\n\
+         </Cells>\n"
+        )
+        .unwrap();
+
+        write!(
+            &mut buffer,
+            "</Piece>\n\
          </UnstructuredGrid>\n\
          </VTKFile>\n"
-    )
-    .unwrap();
+        )
+        .unwrap();
 
-    // create directory
-    let path = Path::new(full_path);
-    if let Some(p) = path.parent() {
-        fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
+        // create directory
+        let path = Path::new(full_path);
+        if let Some(p) = path.parent() {
+            fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
+        }
+
+        // write file
+        let mut file = File::create(path).map_err(|_| "cannot create file")?;
+        file.write_all(buffer.as_bytes()).map_err(|_| "cannot write file")?;
+
+        // force sync
+        file.sync_all().map_err(|_| "cannot sync file")?;
+        Ok(())
     }
-
-    // write file
-    let mut file = File::create(path).map_err(|_| "cannot create file")?;
-    file.write_all(buffer.as_bytes()).map_err(|_| "cannot write file")?;
-
-    // force sync
-    file.sync_all().map_err(|_| "cannot sync file")?;
-    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::write_vtu;
     use crate::{mesh::Samples, StrError};
     use std::fs;
 
     #[test]
     fn write_vtu_handles_unavailable_types() {
         assert_eq!(
-            write_vtu(&Samples::lin_cells(), "/tmp/gemlab/nothing.vtu").err(),
+            Samples::lin_cells().write_vtu("/tmp/gemlab/nothing.vtu").err(),
             Some("cannot generate VTU file because VTK cell type is not available")
         );
         assert_eq!(
-            write_vtu(&Samples::tri_cells(), "/tmp/gemlab/nothing.vtu").err(),
+            Samples::tri_cells().write_vtu("/tmp/gemlab/nothing.vtu").err(),
             Some("cannot generate VTU file because VTK cell type is not available")
         );
         assert_eq!(
-            write_vtu(&Samples::qua_cells(), "/tmp/gemlab/nothing.vtu").err(),
+            Samples::qua_cells().write_vtu("/tmp/gemlab/nothing.vtu").err(),
             Some("cannot generate VTU file because VTK cell type is not available")
         );
     }
@@ -156,7 +157,7 @@ mod tests {
     fn write_vtu_works_qua8_tri6_lin2() -> Result<(), StrError> {
         let mesh = Samples::qua8_tri6_lin2();
         let file_path = "/tmp/gemlab/test_qua8_tri6_lin2.vtu";
-        write_vtu(&mesh, file_path)?;
+        mesh.write_vtu(file_path)?;
         let contents = fs::read_to_string(file_path).map_err(|_| "cannot open file")?;
         assert_eq!(
             contents,
@@ -192,7 +193,7 @@ mod tests {
     fn write_vtu_works_mixed_shapes_3d() -> Result<(), StrError> {
         let mesh = Samples::mixed_shapes_3d();
         let file_path = "/tmp/gemlab/test_mixed_shapes_3d.vtu";
-        write_vtu(&mesh, file_path)?;
+        mesh.write_vtu(file_path)?;
         let contents = fs::read_to_string(file_path).map_err(|_| "cannot open file")?;
         assert_eq!(
             contents,
