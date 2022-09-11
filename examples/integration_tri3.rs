@@ -49,8 +49,8 @@ fn main() -> Result<(), StrError> {
     );
 
     // check
-    let a_correct = ana.vec_01_ns(18.0);
-    vec_approx_eq(a.as_data(), &a_correct, 1e-14);
+    let a_correct = ana.vec_01_ns(18.0, false);
+    vec_approx_eq(a.as_data(), a_correct.as_data(), 1e-14);
 
     // shape times vector, returns vector 'b'
     //
@@ -91,7 +91,7 @@ fn main() -> Result<(), StrError> {
 
     // check
     let b_correct = ana.vec_02_nv(12.0, 12.0);
-    vec_approx_eq(b.as_data(), &b_correct, 1e-14);
+    vec_approx_eq(b.as_data(), b_correct.as_data(), 1e-14);
 
     // vector dot gradient, returns vector 'c'
     //
@@ -125,7 +125,7 @@ fn main() -> Result<(), StrError> {
 
     // check
     let c_correct = ana.vec_03_vb(-2.0, 4.0);
-    vec_approx_eq(c.as_data(), &c_correct, 1e-15);
+    vec_approx_eq(c.as_data(), c_correct.as_data(), 1e-15);
 
     // tensor dot gradient, returns vector 'd'
     //
@@ -169,6 +169,6 @@ fn main() -> Result<(), StrError> {
 
     // check
     let d_correct = ana.vec_04_tb(s00, s11, s01);
-    vec_approx_eq(d.as_data(), &d_correct, 1e-15);
+    vec_approx_eq(d.as_data(), d_correct.as_data(), 1e-15);
     Ok(())
 }

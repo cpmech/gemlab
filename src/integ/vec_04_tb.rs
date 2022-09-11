@@ -242,7 +242,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(d.as_data(), &d_correct, tol);
+            vec_approx_eq(d.as_data(), d_correct.as_data(), tol);
         });
     }
 

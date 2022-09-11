@@ -1,7 +1,7 @@
 use crate::shapes::{GeoKind, Scratchpad};
 use crate::StrError;
 use russell_lab::math::SQRT_2;
-use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
+use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix, Vector};
 use russell_tensor::LinElasticity;
 
 /// Performs analytical integrations on a Tri3
@@ -90,15 +90,38 @@ impl AnalyticalTri3 {
         }
     }
 
-    /// Integrates shape times scalar with constant function s(x) = cₛ
+    /// Integrates shape times scalar with constant function s(x)
+    pub fn vec_01_ns(&self, s: f64, axisymmetric: bool) -> Vector {
+        if axisymmetric {
+            let c = s * self.area / 12.0;
+            Vector::from(&[
+                c * (2.0 * self.x0 + self.x1 + self.x2),
+                c * (self.x0 + 2.0 * self.x1 + self.x2),
+                c * (self.x0 + self.x1 + 2.0 * self.x2),
+            ])
+        } else {
+            let c = s * self.area / 3.0;
+            Vector::from(&[c, c, c])
+        }
+    }
+
+    /// Integrates shape times scalar with constant function s(x)
     ///
-    /// solution:
-    ///
-    /// ```text
-    /// aᵐ = cₛ A / 3
-    /// ```
-    pub fn vec_01_ns(&self, cs: f64) -> Vec<f64> {
-        vec![cs * self.area / 3.0, cs * self.area / 3.0, cs * self.area / 3.0]
+    /// **Important:** `side` must be 0, 1, or 2
+    pub fn vec_01_ns_bry(&self, side: usize, s: f64, axisymmetric: bool) -> Vector {
+        if axisymmetric {
+            let (a0, a1) = match side {
+                0 => (self.x1, self.x0),
+                1 => (self.x2, self.x1),
+                2 => (self.x0, self.x2),
+                _ => panic!("invalid side"),
+            };
+            let c = s * self.ll[side] / 6.0;
+            Vector::from(&[c * (2.0 * a0 + a1), c * (a0 + 2.0 * a1)])
+        } else {
+            let c = s * self.ll[side] / 2.0;
+            Vector::from(&[c, c])
+        }
     }
 
     /// Integrates shape times vector with constant vector v(x) = {v₀, v₁}
@@ -117,15 +140,15 @@ impl AnalyticalTri3 {
     ///       │ v1 │
     ///       └    ┘
     /// ```
-    pub fn vec_02_nv(&self, v0: f64, v1: f64) -> Vec<f64> {
-        vec![
+    pub fn vec_02_nv(&self, v0: f64, v1: f64) -> Vector {
+        Vector::from(&[
             v0 * self.area / 3.0,
             v1 * self.area / 3.0,
             v0 * self.area / 3.0,
             v1 * self.area / 3.0,
             v0 * self.area / 3.0,
             v1 * self.area / 3.0,
-        ]
+        ])
     }
 
     /// Integrates vector dot gradient with constant vector function w(x) = {w₀, w₁}
@@ -135,12 +158,12 @@ impl AnalyticalTri3 {
     /// ```text
     /// cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁) A
     /// ```
-    pub fn vec_03_vb(&self, w0: f64, w1: f64) -> Vec<f64> {
-        vec![
+    pub fn vec_03_vb(&self, w0: f64, w1: f64) -> Vector {
+        Vector::from(&[
             (w0 * self.bb[0][0] + w1 * self.bb[0][1]) * self.area,
             (w0 * self.bb[1][0] + w1 * self.bb[1][1]) * self.area,
             (w0 * self.bb[2][0] + w1 * self.bb[2][1]) * self.area,
-        ]
+        ])
     }
 
     /// Integrates vector dot gradient with bilinear vector function w(x) = {x, y}
@@ -155,14 +178,14 @@ impl AnalyticalTri3 {
     ///
     /// * `pad` -- The same shape used in `new` because we need the nodal coordinates here
     ///            Do not change the coordinates, otherwise the values will be wrong.
-    pub fn vec_03_vb_bilinear(&self, pad: &Scratchpad) -> Vec<f64> {
+    pub fn vec_03_vb_bilinear(&self, pad: &Scratchpad) -> Vector {
         let (x0, x1, x2) = (pad.xxt[0][0], pad.xxt[0][1], pad.xxt[0][2]);
         let (y0, y1, y2) = (pad.xxt[1][0], pad.xxt[1][1], pad.xxt[1][2]);
-        vec![
+        Vector::from(&[
             ((x0 + x1 + x2) * self.bb[0][0] + (y0 + y1 + y2) * self.bb[0][1]) * self.area / 3.0,
             ((x0 + x1 + x2) * self.bb[1][0] + (y0 + y1 + y2) * self.bb[1][1]) * self.area / 3.0,
             ((x0 + x1 + x2) * self.bb[2][0] + (y0 + y1 + y2) * self.bb[2][1]) * self.area / 3.0,
-        ]
+        ])
     }
 
     /// Integrates tensor dot gradient with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
@@ -179,15 +202,15 @@ impl AnalyticalTri3 {
     /// # Input
     ///
     /// * `s₀₀, s₁₁, s₀₁` -- components of the constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
-    pub fn vec_04_tb(&self, s00: f64, s11: f64, s01: f64) -> Vec<f64> {
-        vec![
+    pub fn vec_04_tb(&self, s00: f64, s11: f64, s01: f64) -> Vector {
+        Vector::from(&[
             (s00 * self.bb[0][0] + s01 * self.bb[0][1]) * self.area,
             (s01 * self.bb[0][0] + s11 * self.bb[0][1]) * self.area,
             (s00 * self.bb[1][0] + s01 * self.bb[1][1]) * self.area,
             (s01 * self.bb[1][0] + s11 * self.bb[1][1]) * self.area,
             (s00 * self.bb[2][0] + s01 * self.bb[2][1]) * self.area,
             (s01 * self.bb[2][0] + s11 * self.bb[2][1]) * self.area,
-        ]
+        ])
     }
 
     /// Performs the n-s-n integration with constant s(x) field

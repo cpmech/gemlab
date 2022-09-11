@@ -236,7 +236,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(b.as_data(), &b_correct, tol);
+            vec_approx_eq(b.as_data(), b_correct.as_data(), tol);
         });
     }
 

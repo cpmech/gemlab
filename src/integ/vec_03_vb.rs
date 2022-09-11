@@ -194,7 +194,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(c.as_data(), &c_correct, tol);
+            vec_approx_eq(c.as_data(), c_correct.as_data(), tol);
         });
     }
 
@@ -224,7 +224,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(c.as_data(), &c_correct, tol);
+            vec_approx_eq(c.as_data(), c_correct.as_data(), tol);
         });
     }
 

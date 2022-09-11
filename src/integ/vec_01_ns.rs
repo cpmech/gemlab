@@ -199,7 +199,7 @@ mod tests {
         // solution
         let ana = AnalyticalTri3::new(&pad);
         const CS: f64 = 3.0;
-        let a_correct = ana.vec_01_ns(CS);
+        let a_correct = ana.vec_01_ns(CS, false);
 
         // integration points
         let class = pad.kind.class();
@@ -214,7 +214,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(CS)).unwrap();
-            vec_approx_eq(a.as_data(), &a_correct, tol);
+            vec_approx_eq(a.as_data(), a_correct.as_data(), tol);
         });
     }
 
