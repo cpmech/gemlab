@@ -184,7 +184,7 @@ mod tests {
 
         // side # 0
         let mut pad_side = tri3_extract_pad_side(&pad, 0);
-        let kk_correct = ana.mat_01_nsn_bry(0, s);
+        let kk_correct = ana.mat_01_nsn_bry(0, s, false);
         let mut kk = Matrix::new(2, 2);
         let mut args = CommonArgs::new(&mut pad_side, ips);
         integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Ok(s)).unwrap();
@@ -192,14 +192,14 @@ mod tests {
 
         // side # 1
         let mut pad_side = tri3_extract_pad_side(&pad, 1);
-        let kk_correct = ana.mat_01_nsn_bry(1, s);
+        let kk_correct = ana.mat_01_nsn_bry(1, s, false);
         let mut args = CommonArgs::new(&mut pad_side, ips);
         integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Ok(s)).unwrap();
         vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // side # 2
         let mut pad_side = tri3_extract_pad_side(&pad, 2);
-        let kk_correct = ana.mat_01_nsn_bry(2, s);
+        let kk_correct = ana.mat_01_nsn_bry(2, s, false);
         let mut args = CommonArgs::new(&mut pad_side, ips);
         integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Ok(s)).unwrap();
         vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);

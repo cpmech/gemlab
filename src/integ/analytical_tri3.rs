@@ -1,6 +1,6 @@
 use crate::shapes::{GeoKind, Scratchpad};
-use russell_lab::math::SQRT_2;
 use crate::StrError;
+use russell_lab::math::SQRT_2;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
 use russell_tensor::LinElasticity;
 
@@ -27,6 +27,11 @@ pub struct AnalyticalTri3 {
 
     // Holds the lengths of each edge
     pub ll: Vec<f64>,
+
+    // Coordinates
+    x0: f64,
+    x1: f64,
+    x2: f64,
 }
 
 impl AnalyticalTri3 {
@@ -74,7 +79,15 @@ impl AnalyticalTri3 {
         ];
 
         // results
-        AnalyticalTri3 { area, bb, bbe, ll }
+        AnalyticalTri3 {
+            area,
+            bb,
+            bbe,
+            ll,
+            x0,
+            x1,
+            x2,
+        }
     }
 
     /// Integrates shape times scalar with constant function s(x) = cₛ
@@ -184,15 +197,25 @@ impl AnalyticalTri3 {
     }
 
     /// Performs the n-s-n integration with constant s(x) field (boundary integral version)
-    /// 
+    ///
     /// **Important:** `side` must be 0, 1, or 2
-    #[rustfmt::skip]
-    pub fn mat_01_nsn_bry(&self, side: usize, s: f64) -> Matrix {
-        let c = s * self.ll[side] / 6.0;
-        Matrix::from(&[
-            [2.0*c,     c], 
-            [    c, 2.0*c], 
-        ])
+    pub fn mat_01_nsn_bry(&self, side: usize, s: f64, axisymmetric: bool) -> Matrix {
+        if axisymmetric {
+            let (a0, a1) = match side {
+                0 => (self.x1, self.x0),
+                1 => (self.x2, self.x1),
+                2 => (self.x0, self.x2),
+                _ => panic!("invalid side"),
+            };
+            let c = s * self.ll[side] / 12.0;
+            Matrix::from(&[
+                [c * (3.0 * a0 + a1), c * (a0 + a1)],
+                [c * (a0 + a1), c * (a0 + 3.0 * a1)],
+            ])
+        } else {
+            let c = s * self.ll[side] / 6.0;
+            Matrix::from(&[[2.0 * c, c], [c, 2.0 * c]])
+        }
     }
 
     /// Performs the b-v-n integration with constant vector
@@ -225,16 +248,21 @@ impl AnalyticalTri3 {
     }
 
     /// Performs the b-t-b integration with constant tensor
-    pub fn mat_03_btb(&self, kx: f64, ky: f64) -> Matrix {
+    pub fn mat_03_btb(&self, kx: f64, ky: f64, axisymmetric: bool) -> Matrix {
+        let c = if axisymmetric {
+            self.area * (self.x0 + self.x1 + self.x2) / 3.0
+        } else {
+            self.area
+        };
         let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
         let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
         let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
-        let k00 = self.area * (b00 * b00 * kx + b01 * b01 * ky);
-        let k11 = self.area * (b10 * b10 * kx + b11 * b11 * ky);
-        let k01 = self.area * (b00 * b10 * kx + b01 * b11 * ky);
-        let k12 = self.area * (b10 * b20 * kx + b11 * b21 * ky);
-        let k02 = self.area * (b00 * b20 * kx + b01 * b21 * ky);
-        let k22 = self.area * (b20 * b20 * kx + b21 * b21 * ky);
+        let k00 = c * (b00 * b00 * kx + b01 * b01 * ky);
+        let k11 = c * (b10 * b10 * kx + b11 * b11 * ky);
+        let k01 = c * (b00 * b10 * kx + b01 * b11 * ky);
+        let k12 = c * (b10 * b20 * kx + b11 * b21 * ky);
+        let k02 = c * (b00 * b20 * kx + b01 * b21 * ky);
+        let k22 = c * (b20 * b20 * kx + b21 * b21 * ky);
         Matrix::from(&[[k00, k01, k02], [k01, k11, k12], [k02, k12, k22]])
     }
 

@@ -177,7 +177,7 @@ mod tests {
         let mut kk = Matrix::new(3, 3);
         let ana = AnalyticalTri3::new(&pad);
         let (kx, ky) = (2.5, 3.8);
-        let kk_correct = ana.mat_03_btb(kx, ky);
+        let kk_correct = ana.mat_03_btb(kx, ky, false);
         let class = pad.kind.class();
         let tolerances = [1e-15, 1e-15, 1e-15];
         let selection: Vec<_> = [1, 3, 7].iter().map(|n| integ::points(class, *n).unwrap()).collect();
