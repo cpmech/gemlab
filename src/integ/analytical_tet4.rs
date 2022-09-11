@@ -254,15 +254,15 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_02_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
-            [c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2)],
-            [c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2)],
-            [c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2)],
-            [c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2)],
+            [c*(b00*v0 + b01*v1 + b02*v2), c*(b00*v0 + b01*v1 + b02*v2), c*(b00*v0 + b01*v1 + b02*v2), c*(b00*v0 + b01*v1 + b02*v2)],
+            [c*(b10*v0 + b11*v1 + b12*v2), c*(b10*v0 + b11*v1 + b12*v2), c*(b10*v0 + b11*v1 + b12*v2), c*(b10*v0 + b11*v1 + b12*v2)],
+            [c*(b20*v0 + b21*v1 + b22*v2), c*(b20*v0 + b21*v1 + b22*v2), c*(b20*v0 + b21*v1 + b22*v2), c*(b20*v0 + b21*v1 + b22*v2)],
+            [c*(b30*v0 + b31*v1 + b32*v2), c*(b30*v0 + b31*v1 + b32*v2), c*(b30*v0 + b31*v1 + b32*v2), c*(b30*v0 + b31*v1 + b32*v2)],
         ])
     }
 
@@ -274,15 +274,15 @@ impl AnalyticalTet4 {
         let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
         let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
         let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
-        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
-            [c*g00*(a00*g00 + a10*g01 + a20*g02) + c*g01*(a01*g00 + a11*g01 + a21*g02) + c*g02*(a02*g00 + a12*g01 + a22*g02), c*g10*(a00*g00 + a10*g01 + a20*g02) + c*g11*(a01*g00 + a11*g01 + a21*g02) + c*g12*(a02*g00 + a12*g01 + a22*g02), c*g20*(a00*g00 + a10*g01 + a20*g02) + c*g21*(a01*g00 + a11*g01 + a21*g02) + c*g22*(a02*g00 + a12*g01 + a22*g02), c*g30*(a00*g00 + a10*g01 + a20*g02) + c*g31*(a01*g00 + a11*g01 + a21*g02) + c*g32*(a02*g00 + a12*g01 + a22*g02)],
-            [c*g00*(a00*g10 + a10*g11 + a20*g12) + c*g01*(a01*g10 + a11*g11 + a21*g12) + c*g02*(a02*g10 + a12*g11 + a22*g12), c*g10*(a00*g10 + a10*g11 + a20*g12) + c*g11*(a01*g10 + a11*g11 + a21*g12) + c*g12*(a02*g10 + a12*g11 + a22*g12), c*g20*(a00*g10 + a10*g11 + a20*g12) + c*g21*(a01*g10 + a11*g11 + a21*g12) + c*g22*(a02*g10 + a12*g11 + a22*g12), c*g30*(a00*g10 + a10*g11 + a20*g12) + c*g31*(a01*g10 + a11*g11 + a21*g12) + c*g32*(a02*g10 + a12*g11 + a22*g12)],
-            [c*g00*(a00*g20 + a10*g21 + a20*g22) + c*g01*(a01*g20 + a11*g21 + a21*g22) + c*g02*(a02*g20 + a12*g21 + a22*g22), c*g10*(a00*g20 + a10*g21 + a20*g22) + c*g11*(a01*g20 + a11*g21 + a21*g22) + c*g12*(a02*g20 + a12*g21 + a22*g22), c*g20*(a00*g20 + a10*g21 + a20*g22) + c*g21*(a01*g20 + a11*g21 + a21*g22) + c*g22*(a02*g20 + a12*g21 + a22*g22), c*g30*(a00*g20 + a10*g21 + a20*g22) + c*g31*(a01*g20 + a11*g21 + a21*g22) + c*g32*(a02*g20 + a12*g21 + a22*g22)],
-            [c*g00*(a00*g30 + a10*g31 + a20*g32) + c*g01*(a01*g30 + a11*g31 + a21*g32) + c*g02*(a02*g30 + a12*g31 + a22*g32), c*g10*(a00*g30 + a10*g31 + a20*g32) + c*g11*(a01*g30 + a11*g31 + a21*g32) + c*g12*(a02*g30 + a12*g31 + a22*g32), c*g20*(a00*g30 + a10*g31 + a20*g32) + c*g21*(a01*g30 + a11*g31 + a21*g32) + c*g22*(a02*g30 + a12*g31 + a22*g32), c*g30*(a00*g30 + a10*g31 + a20*g32) + c*g31*(a01*g30 + a11*g31 + a21*g32) + c*g32*(a02*g30 + a12*g31 + a22*g32)],
+            [c*b00*(a00*b00 + a10*b01 + a20*b02) + c*b01*(a01*b00 + a11*b01 + a21*b02) + c*b02*(a02*b00 + a12*b01 + a22*b02), c*b10*(a00*b00 + a10*b01 + a20*b02) + c*b11*(a01*b00 + a11*b01 + a21*b02) + c*b12*(a02*b00 + a12*b01 + a22*b02), c*b20*(a00*b00 + a10*b01 + a20*b02) + c*b21*(a01*b00 + a11*b01 + a21*b02) + c*b22*(a02*b00 + a12*b01 + a22*b02), c*b30*(a00*b00 + a10*b01 + a20*b02) + c*b31*(a01*b00 + a11*b01 + a21*b02) + c*b32*(a02*b00 + a12*b01 + a22*b02)],
+            [c*b00*(a00*b10 + a10*b11 + a20*b12) + c*b01*(a01*b10 + a11*b11 + a21*b12) + c*b02*(a02*b10 + a12*b11 + a22*b12), c*b10*(a00*b10 + a10*b11 + a20*b12) + c*b11*(a01*b10 + a11*b11 + a21*b12) + c*b12*(a02*b10 + a12*b11 + a22*b12), c*b20*(a00*b10 + a10*b11 + a20*b12) + c*b21*(a01*b10 + a11*b11 + a21*b12) + c*b22*(a02*b10 + a12*b11 + a22*b12), c*b30*(a00*b10 + a10*b11 + a20*b12) + c*b31*(a01*b10 + a11*b11 + a21*b12) + c*b32*(a02*b10 + a12*b11 + a22*b12)],
+            [c*b00*(a00*b20 + a10*b21 + a20*b22) + c*b01*(a01*b20 + a11*b21 + a21*b22) + c*b02*(a02*b20 + a12*b21 + a22*b22), c*b10*(a00*b20 + a10*b21 + a20*b22) + c*b11*(a01*b20 + a11*b21 + a21*b22) + c*b12*(a02*b20 + a12*b21 + a22*b22), c*b20*(a00*b20 + a10*b21 + a20*b22) + c*b21*(a01*b20 + a11*b21 + a21*b22) + c*b22*(a02*b20 + a12*b21 + a22*b22), c*b30*(a00*b20 + a10*b21 + a20*b22) + c*b31*(a01*b20 + a11*b21 + a21*b22) + c*b32*(a02*b20 + a12*b21 + a22*b22)],
+            [c*b00*(a00*b30 + a10*b31 + a20*b32) + c*b01*(a01*b30 + a11*b31 + a21*b32) + c*b02*(a02*b30 + a12*b31 + a22*b32), c*b10*(a00*b30 + a10*b31 + a20*b32) + c*b11*(a01*b30 + a11*b31 + a21*b32) + c*b12*(a02*b30 + a12*b31 + a22*b32), c*b20*(a00*b30 + a10*b31 + a20*b32) + c*b21*(a01*b30 + a11*b31 + a21*b32) + c*b22*(a02*b30 + a12*b31 + a22*b32), c*b30*(a00*b30 + a10*b31 + a20*b32) + c*b31*(a01*b30 + a11*b31 + a21*b32) + c*b32*(a02*b30 + a12*b31 + a22*b32)],
         ])
     }
 
@@ -290,15 +290,15 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_04_nsg(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
-            [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
-            [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
-            [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
-            [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
+            [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
+            [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
+            [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
+            [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
         ])
     }
 
@@ -310,15 +310,15 @@ impl AnalyticalTet4 {
         let (t00, t01, t02) = (mat[0][0], mat[0][1], mat[0][2]);
         let (t11, t12) = (mat[1][1], mat[1][2]);
         let t22 = mat[2][2];
-        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
-            [c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22), c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22), c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22), c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22)],
-            [c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22), c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22), c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22), c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22)],
-            [c*(g20*t00 + g21*t01 + g22*t02), c*(g20*t01 + g21*t11 + g22*t12), c*(g20*t02 + g21*t12 + g22*t22), c*(g20*t00 + g21*t01 + g22*t02), c*(g20*t01 + g21*t11 + g22*t12), c*(g20*t02 + g21*t12 + g22*t22), c*(g20*t00 + g21*t01 + g22*t02), c*(g20*t01 + g21*t11 + g22*t12), c*(g20*t02 + g21*t12 + g22*t22), c*(g20*t00 + g21*t01 + g22*t02), c*(g20*t01 + g21*t11 + g22*t12), c*(g20*t02 + g21*t12 + g22*t22)],
-            [c*(g30*t00 + g31*t01 + g32*t02), c*(g30*t01 + g31*t11 + g32*t12), c*(g30*t02 + g31*t12 + g32*t22), c*(g30*t00 + g31*t01 + g32*t02), c*(g30*t01 + g31*t11 + g32*t12), c*(g30*t02 + g31*t12 + g32*t22), c*(g30*t00 + g31*t01 + g32*t02), c*(g30*t01 + g31*t11 + g32*t12), c*(g30*t02 + g31*t12 + g32*t22), c*(g30*t00 + g31*t01 + g32*t02), c*(g30*t01 + g31*t11 + g32*t12), c*(g30*t02 + g31*t12 + g32*t22)],
+            [c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22), c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22), c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22), c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22)],
+            [c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22), c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22), c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22), c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22)],
+            [c*(b20*t00 + b21*t01 + b22*t02), c*(b20*t01 + b21*t11 + b22*t12), c*(b20*t02 + b21*t12 + b22*t22), c*(b20*t00 + b21*t01 + b22*t02), c*(b20*t01 + b21*t11 + b22*t12), c*(b20*t02 + b21*t12 + b22*t22), c*(b20*t00 + b21*t01 + b22*t02), c*(b20*t01 + b21*t11 + b22*t12), c*(b20*t02 + b21*t12 + b22*t22), c*(b20*t00 + b21*t01 + b22*t02), c*(b20*t01 + b21*t11 + b22*t12), c*(b20*t02 + b21*t12 + b22*t22)],
+            [c*(b30*t00 + b31*t01 + b32*t02), c*(b30*t01 + b31*t11 + b32*t12), c*(b30*t02 + b31*t12 + b32*t22), c*(b30*t00 + b31*t01 + b32*t02), c*(b30*t01 + b31*t11 + b32*t12), c*(b30*t02 + b31*t12 + b32*t22), c*(b30*t00 + b31*t01 + b32*t02), c*(b30*t01 + b31*t11 + b32*t12), c*(b30*t02 + b31*t12 + b32*t22), c*(b30*t00 + b31*t01 + b32*t02), c*(b30*t01 + b31*t11 + b32*t12), c*(b30*t02 + b31*t12 + b32*t22)],
         ])
     }
 
@@ -346,23 +346,23 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_07_gsn(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
-            [c*g00*s, c*g00*s, c*g00*s, c*g00*s],
-            [c*g01*s, c*g01*s, c*g01*s, c*g01*s],
-            [c*g02*s, c*g02*s, c*g02*s, c*g02*s],
-            [c*g10*s, c*g10*s, c*g10*s, c*g10*s],
-            [c*g11*s, c*g11*s, c*g11*s, c*g11*s],
-            [c*g12*s, c*g12*s, c*g12*s, c*g12*s],
-            [c*g20*s, c*g20*s, c*g20*s, c*g20*s],
-            [c*g21*s, c*g21*s, c*g21*s, c*g21*s],
-            [c*g22*s, c*g22*s, c*g22*s, c*g22*s],
-            [c*g30*s, c*g30*s, c*g30*s, c*g30*s],
-            [c*g31*s, c*g31*s, c*g31*s, c*g31*s],
-            [c*g32*s, c*g32*s, c*g32*s, c*g32*s],
+            [c*b00*s, c*b00*s, c*b00*s, c*b00*s],
+            [c*b01*s, c*b01*s, c*b01*s, c*b01*s],
+            [c*b02*s, c*b02*s, c*b02*s, c*b02*s],
+            [c*b10*s, c*b10*s, c*b10*s, c*b10*s],
+            [c*b11*s, c*b11*s, c*b11*s, c*b11*s],
+            [c*b12*s, c*b12*s, c*b12*s, c*b12*s],
+            [c*b20*s, c*b20*s, c*b20*s, c*b20*s],
+            [c*b21*s, c*b21*s, c*b21*s, c*b21*s],
+            [c*b22*s, c*b22*s, c*b22*s, c*b22*s],
+            [c*b30*s, c*b30*s, c*b30*s, c*b30*s],
+            [c*b31*s, c*b31*s, c*b31*s, c*b31*s],
+            [c*b32*s, c*b32*s, c*b32*s, c*b32*s],
         ])
     }
 
@@ -394,23 +394,23 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_09_nvg(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (g10, g11, g12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (g20, g21, g22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (g30, g31, g32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
+        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
+        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
+        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
         Matrix::from(&[
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+            [c*b00*v0, c*b01*v0, c*b02*v0, c*b10*v0, c*b11*v0, c*b12*v0, c*b20*v0, c*b21*v0, c*b22*v0, c*b30*v0, c*b31*v0, c*b32*v0],
+            [c*b00*v1, c*b01*v1, c*b02*v1, c*b10*v1, c*b11*v1, c*b12*v1, c*b20*v1, c*b21*v1, c*b22*v1, c*b30*v1, c*b31*v1, c*b32*v1],
+            [c*b00*v2, c*b01*v2, c*b02*v2, c*b10*v2, c*b11*v2, c*b12*v2, c*b20*v2, c*b21*v2, c*b22*v2, c*b30*v2, c*b31*v2, c*b32*v2],
+            [c*b00*v0, c*b01*v0, c*b02*v0, c*b10*v0, c*b11*v0, c*b12*v0, c*b20*v0, c*b21*v0, c*b22*v0, c*b30*v0, c*b31*v0, c*b32*v0],
+            [c*b00*v1, c*b01*v1, c*b02*v1, c*b10*v1, c*b11*v1, c*b12*v1, c*b20*v1, c*b21*v1, c*b22*v1, c*b30*v1, c*b31*v1, c*b32*v1],
+            [c*b00*v2, c*b01*v2, c*b02*v2, c*b10*v2, c*b11*v2, c*b12*v2, c*b20*v2, c*b21*v2, c*b22*v2, c*b30*v2, c*b31*v2, c*b32*v2],
+            [c*b00*v0, c*b01*v0, c*b02*v0, c*b10*v0, c*b11*v0, c*b12*v0, c*b20*v0, c*b21*v0, c*b22*v0, c*b30*v0, c*b31*v0, c*b32*v0],
+            [c*b00*v1, c*b01*v1, c*b02*v1, c*b10*v1, c*b11*v1, c*b12*v1, c*b20*v1, c*b21*v1, c*b22*v1, c*b30*v1, c*b31*v1, c*b32*v1],
+            [c*b00*v2, c*b01*v2, c*b02*v2, c*b10*v2, c*b11*v2, c*b12*v2, c*b20*v2, c*b21*v2, c*b22*v2, c*b30*v2, c*b31*v2, c*b32*v2],
+            [c*b00*v0, c*b01*v0, c*b02*v0, c*b10*v0, c*b11*v0, c*b12*v0, c*b20*v0, c*b21*v0, c*b22*v0, c*b30*v0, c*b31*v0, c*b32*v0],
+            [c*b00*v1, c*b01*v1, c*b02*v1, c*b10*v1, c*b11*v1, c*b12*v1, c*b20*v1, c*b21*v1, c*b22*v1, c*b30*v1, c*b31*v1, c*b32*v1],
+            [c*b00*v2, c*b01*v2, c*b02*v2, c*b10*v2, c*b11*v2, c*b12*v2, c*b20*v2, c*b21*v2, c*b22*v2, c*b30*v2, c*b31*v2, c*b32*v2],
         ])
     }
 
