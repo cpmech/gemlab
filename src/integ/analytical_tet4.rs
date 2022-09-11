@@ -14,7 +14,7 @@ pub struct AnalyticalTet4 {
     /// ```text
     ///             →
     /// →  →    dNᵐ(ξ)
-    /// Gᵐ(ξ) = ——————
+    /// Bᵐ(ξ) = ——————
     ///            →
     ///           dx
     /// ```
@@ -194,7 +194,7 @@ impl AnalyticalTet4 {
     /// Solution:
     ///
     /// ```text
-    /// cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁ + w₂ Gᵐ₂) V
+    /// cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁ + w₂ Bᵐ₂) V
     /// ```
     pub fn vec_03_vg(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
         vec![
@@ -212,9 +212,9 @@ impl AnalyticalTet4 {
     /// ```text
     /// σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
     ///
-    /// dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁ + σ₀₂ Gᵐ₂) V
-    /// dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁ + σ₁₂ Gᵐ₂) V
-    /// dᵐ₂ = (σ₂₀ Gᵐ₀ + σ₂₁ Gᵐ₁ + σ₂₂ Gᵐ₂) V
+    /// dᵐ₀ = (σ₀₀ Bᵐ₀ + σ₀₁ Bᵐ₁ + σ₀₂ Bᵐ₂) V
+    /// dᵐ₁ = (σ₁₀ Bᵐ₀ + σ₁₁ Bᵐ₁ + σ₁₂ Bᵐ₂) V
+    /// dᵐ₂ = (σ₂₀ Bᵐ₀ + σ₂₁ Bᵐ₁ + σ₂₂ Bᵐ₂) V
     /// ```
     pub fn vec_04_tg(&self, tt: &Tensor2) -> Vec<f64> {
         let c = self.volume;

@@ -96,7 +96,7 @@ fn main() -> Result<(), StrError> {
     // vector dot gradient, returns vector 'c'
     //
     //      ⌠ → →    →  → →
-    // cᵐ = │ w(x) · Gᵐ(x(ξ)) dΩ
+    // cᵐ = │ w(x) · Bᵐ(x(ξ)) dΩ
     //      ⌡
     //      Ωₑ
     //
@@ -130,7 +130,7 @@ fn main() -> Result<(), StrError> {
     // tensor dot gradient, returns vector 'd'
     //
     // →    ⌠   →    →  → →
-    // dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
+    // dᵐ = │ σ(x) · Bᵐ(x(ξ)) dΩ
     //      ⌡ ▔
     //      Ωₑ
     //

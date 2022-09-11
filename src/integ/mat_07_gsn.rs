@@ -9,7 +9,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// **Notes:**
 ///
-/// * `m` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Gᵐ`)
+/// * `m` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Bᵐ`)
 /// * `n` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Nbⁿ`)
 /// * For example, `1 ≤ m ≤ 8` for a `pad→Qua8` and `1 ≤ n ≤ 4` for `pad_b→Qua4`
 /// * The determinant of the Jacobian is calculated for `pad` (`pad` is the driver of the calculations)
@@ -19,7 +19,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 /// →     ⌠ →
-/// Kᵐⁿ = │ Gᵐ s Nbⁿ α dΩ
+/// Kᵐⁿ = │ Bᵐ s Nbⁿ α dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -28,7 +28,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///        nip-1     →     →       →       →
-/// Kᵐⁿᵢ ≈   Σ   Gᵐᵢ(ιᵖ) s(ιᵖ) Nbⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
+/// Kᵐⁿᵢ ≈   Σ   Bᵐᵢ(ιᵖ) s(ιᵖ) Nbⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///         p=0
 /// ```
 ///

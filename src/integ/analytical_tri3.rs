@@ -14,7 +14,7 @@ pub struct AnalyticalTri3 {
     /// ```text
     ///             →
     /// →  →    dNᵐ(ξ)
-    /// Gᵐ(ξ) = ——————
+    /// Bᵐ(ξ) = ——————
     ///            →
     ///           dx
     /// ```
@@ -120,7 +120,7 @@ impl AnalyticalTri3 {
     /// solution:
     ///
     /// ```text
-    /// cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
+    /// cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁) A
     /// ```
     pub fn vec_03_vg(&self, w0: f64, w1: f64) -> Vec<f64> {
         vec![
@@ -135,7 +135,7 @@ impl AnalyticalTri3 {
     /// solution:
     ///
     /// ```text
-    /// cᵐ = ((x₀+x₁+x₂) Gᵐ₀ + (y₀+y₁+y₂) Gᵐ₁) A / 3
+    /// cᵐ = ((x₀+x₁+x₂) Bᵐ₀ + (y₀+y₁+y₂) Bᵐ₁) A / 3
     /// ```
     ///
     /// # Input
@@ -157,8 +157,8 @@ impl AnalyticalTri3 {
     /// solution:
     ///
     /// ```text
-    /// dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁) A
-    /// dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁) A
+    /// dᵐ₀ = (σ₀₀ Bᵐ₀ + σ₀₁ Bᵐ₁) A
+    /// dᵐ₁ = (σ₁₀ Bᵐ₀ + σ₁₁ Bᵐ₁) A
     /// ```
     ///
     /// σ₂₂ is ignored.

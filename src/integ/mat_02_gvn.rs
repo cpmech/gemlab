@@ -10,7 +10,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///       ⌠ →    →
-/// Kᵐⁿ = │ Gᵐ ⋅ v Nⁿ α dΩ
+/// Kᵐⁿ = │ Bᵐ ⋅ v Nⁿ α dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -19,7 +19,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///       nip-1 →  →     → →      →       →
-/// Kᵐⁿ ≈   Σ   Gᵐ(ιᵖ) ⋅ v(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
+/// Kᵐⁿ ≈   Σ   Bᵐ(ιᵖ) ⋅ v(ιᵖ) Nⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///        p=0
 /// ```
 ///

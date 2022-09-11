@@ -12,7 +12,7 @@ impl Scratchpad {
     /// ```text
     ///             →
     /// →  →    dNᵐ(ξ)
-    /// Gᵐ(ξ) = ——————
+    /// Bᵐ(ξ) = ——————
     ///            →
     ///           dx
     /// ```
@@ -20,7 +20,7 @@ impl Scratchpad {
     /// which can be organized in an (nnode,space_ndim) matrix `G` as follows
     ///
     /// ```text
-    /// G = L · J⁻¹
+    /// B = L · J⁻¹
     /// ```
     ///
     /// # Output
@@ -190,12 +190,12 @@ mod tests {
                 j: 0,
             };
 
-            // check Gᵐ(ξ(x)) = dNᵐ(ξ(x))/dx
+            // check Bᵐ(ξ(x)) = dNᵐ(ξ(x))/dx
             for m in 0..kind.nnode() {
                 args.m = m;
                 for j in 0..geo_ndim {
                     args.j = j;
-                    // Gᵐⱼ := dNᵐ/dxⱼ
+                    // Bᵐⱼ := dNᵐ/dxⱼ
                     deriv_approx_eq(pad.gradient[m][j], args.at_x[j], nn_given_x, args, tol);
                 }
             }

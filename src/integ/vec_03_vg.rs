@@ -10,7 +10,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///      ⌠ → →    →  → →
-/// cᵐ = │ w(x) · Gᵐ(x(ξ)) α dΩ
+/// cᵐ = │ w(x) · Bᵐ(x(ξ)) α dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -19,7 +19,7 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ```text
 ///      nip-1  → →     →  →       →
-/// cᵐ ≈   Σ    w(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ α
+/// cᵐ ≈   Σ    w(ιᵖ) · Bᵐ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///       p=0
 /// ```
 ///
@@ -72,7 +72,7 @@ use russell_lab::{Matrix, Vector};
 ///         Ok(())
 ///     })?;
 ///     // solution (A = 6):
-///     // cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
+///     // cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁) A
 ///     //     ┌       ┐
 ///     //     │ -¼ -⅓ │
 ///     // G = │  ¼  0 │
