@@ -384,7 +384,7 @@ impl Find {
 mod tests {
     use super::Find;
     use crate::mesh::{At, Extract, Samples};
-    use russell_lab::math::SQRT_2;
+    use russell_lab::math::{PI, SQRT_2};
 
     #[allow(unused_imports)]
     use plotpy::Plot;
@@ -763,6 +763,7 @@ mod tests {
         let find = Find::new(&mesh, None);
         assert_eq!(find.face_keys(At::X(0.0), any).unwrap(), &[(0, 3, 4, 7), (4, 7, 8, 11)]);
         assert_eq!(find.face_keys(At::X(1.0), any).unwrap(), &[(1, 2, 5, 6), (5, 6, 9, 10)]);
+        assert_eq!(find.face_keys(At::X(1.0), |x| x[2] <= 1.0).unwrap(), &[(1, 2, 5, 6)]);
         assert_eq!(
             find.face_keys(At::X(10.0), any).err(),
             Some("cannot find any point with given constraints/filter")
@@ -772,12 +773,14 @@ mod tests {
             find.face_keys(At::Y(1.0), any).unwrap(),
             &[(2, 3, 6, 7), (6, 7, 10, 11)]
         );
+        assert_eq!(find.face_keys(At::Y(1.0), |x| x[2] >= 1.0).unwrap(), &[(6, 7, 10, 11)]);
         assert_eq!(
             find.face_keys(At::Y(10.0), any).err(),
             Some("cannot find any point with given constraints/filter")
         );
         assert_eq!(find.face_keys(At::Z(0.0), any).unwrap(), &[(0, 1, 2, 3)]);
         assert_eq!(find.face_keys(At::Z(2.0), any).unwrap(), &[(8, 9, 10, 11)]);
+        assert_eq!(find.face_keys(At::Z(2.0), |x| x[0] <= -1.0).ok(), None);
         assert_eq!(
             find.face_keys(At::Z(10.0), any).err(),
             Some("cannot find any point with given constraints/filter")
@@ -893,6 +896,14 @@ mod tests {
         assert_eq!(
             find.point_ids(At::Circle(0.0, 0.0, r), any).unwrap(),
             &[0, 3, 6, 9, 12, 25, 28, 31, 34],
+        );
+        assert_eq!(
+            find.point_ids(At::Circle(0.0, 0.0, r), |x| {
+                let alpha = f64::atan2(x[1], x[0]) * 180.0 / PI;
+                f64::abs(alpha - 45.0) < 1e-15
+            })
+            .unwrap(),
+            &[6],
         );
         assert_eq!(
             find.point_ids(At::Circle(0.0, 0.0, rr), any).unwrap(),
