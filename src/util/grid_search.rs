@@ -1404,16 +1404,26 @@ mod tests {
         assert_eq!(ids, [103, 108]);
 
         // vertical line (with filter)
-        let res = grid.find_on_line(&LINES_2D[0][0], &LINES_2D[0][1], any).unwrap();
+        let res = grid
+            .find_on_line(&LINES_2D[0][0], &LINES_2D[0][1], |x| x[1] > 0.0)
+            .unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
-        assert_eq!(ids, [103, 108]);
+        assert_eq!(ids, [108]);
 
-        // horizontal line
+        // horizontal line (without filter)
         let res = grid.find_on_line(&LINES_2D[1][0], &LINES_2D[1][1], any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [107, 110]);
+
+        // horizontal line (with filter)
+        let res = grid
+            .find_on_line(&LINES_2D[1][0], &LINES_2D[1][1], |x| x[0] < 0.8)
+            .unwrap();
+        let mut ids: Vec<_> = res.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, [110]);
 
         // semi-diagonal line
         let res = grid.find_on_line(&LINES_2D[2][0], &LINES_2D[2][1], any).unwrap();
@@ -1427,17 +1437,33 @@ mod tests {
         let mut grid = sample_grid_3d();
         add_sample_points_to_grid_3d(&mut grid);
 
-        // line parallel to x
+        // line parallel to x (without filter)
         let res = grid.find_on_line(&LINES_3D[0][0], &LINES_3D[0][1], any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 104]);
 
-        // diagonal
+        // line parallel to x (with filter)
+        let res = grid
+            .find_on_line(&LINES_3D[0][0], &LINES_3D[0][1], |x| x[0] < 0.0)
+            .unwrap();
+        let mut ids: Vec<_> = res.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, [100]);
+
+        // diagonal (without filter)
         let res = grid.find_on_line(&LINES_3D[1][0], &LINES_3D[1][1], any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 101, 102]);
+
+        // diagonal (with filter)
+        let res = grid
+            .find_on_line(&LINES_3D[1][0], &LINES_3D[1][1], |x| x[2] <= 0.0)
+            .unwrap();
+        let mut ids: Vec<_> = res.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, [100, 101]);
     }
 
     #[test]
@@ -1474,6 +1500,13 @@ mod tests {
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [109, 110, 111]);
+
+        let res = grid
+            .find_on_circle(&CIRCLE.0, CIRCLE.1, |x| x[0] < 0.0 || x[0] > 0.2)
+            .unwrap();
+        let mut ids: Vec<_> = res.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, [109, 110]);
     }
 
     #[test]
@@ -1518,6 +1551,13 @@ mod tests {
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [104, 105, 106, 107]);
+
+        let res = grid
+            .find_on_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2, |x| x[1] > 0.0)
+            .unwrap();
+        let mut ids: Vec<_> = res.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, [106, 107]);
     }
 
     #[test]
@@ -1576,19 +1616,38 @@ mod tests {
         let mut grid = sample_grid_3d();
         add_sample_points_to_grid_3d(&mut grid);
 
+        // xy ------------
+
         let res = grid.find_on_plane_xy(-1.0, any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 103, 104, 106]);
+
+        let res = grid.find_on_plane_xy(-1.0, |x| x[1] < 0.0).unwrap();
+        let mut ids: Vec<_> = res.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, [100, 103, 104]);
+
+        // yz ------------
 
         let res = grid.find_on_plane_yz(-1.0, any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100]);
 
+        let res = grid.find_on_plane_yz(-1.0, |x| x[2] > 1.0).unwrap();
+        assert_eq!(res.len(), 0);
+
+        // xz ------------
+
         let res = grid.find_on_plane_xz(-1.0, any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 104, 105]);
+
+        let res = grid.find_on_plane_xz(-1.0, |x| x[0] > 0.0).unwrap();
+        let mut ids: Vec<_> = res.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, [104, 105]);
     }
 }
