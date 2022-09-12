@@ -6,6 +6,10 @@ use russell_chk::approx_eq;
 use russell_lab::math::SQRT_2;
 use std::collections::HashMap;
 
+fn any(_: usize, _: &Vec<f64>) -> bool {
+    true
+}
+
 #[test]
 fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     // read mesh
@@ -63,20 +67,22 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
 
     // find points
     let find = Find::new(&mesh, None);
-    let points = find.point_ids(At::X(0.0))?;
+    let points = find.point_ids(At::X(0.0), any)?;
     assert_eq!(&points, &[0, 1, 2, 3, 4, 5, 6]);
-    let points = find.point_ids(At::X(1.0))?;
+    let points = find.point_ids(At::X(1.0), any)?;
     assert_eq!(&points, &[7, 8, 9, 10, 11, 12]);
 
     // find edges
-    let edges = find.edge_keys(At::X(0.0))?;
+    let edges = find.edge_keys(At::X(0.0), any)?;
     assert_eq!(&edges, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6)]);
-    let edges = find.edge_keys(At::X(1.0))?;
+    let edges = find.edge_keys(At::X(1.0), any)?;
     assert_eq!(&edges, &[(7, 8), (8, 9), (9, 10), (10, 11), (11, 12)]);
 
     // find faces
-    let faces = find.face_keys(At::X(0.0))?;
-    assert_eq!(faces.len(), 0);
+    assert_eq!(
+        find.face_keys(At::X(0.0), any).err(),
+        Some("cannot find face keys in 2D")
+    );
     Ok(())
 }
 
@@ -107,9 +113,9 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
 
     // find edges
     let find = Find::new(&mesh, None);
-    let edges = find.edge_keys(At::X(0.0))?;
+    let edges = find.edge_keys(At::X(0.0), any)?;
     assert_eq!(&edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
-    let edges = find.edge_keys(At::X(4.0))?;
+    let edges = find.edge_keys(At::X(4.0), any)?;
     assert_eq!(&edges, &[(2, 6), (6, 9), (9, 13)]);
 
     // edge (7,11)

@@ -57,8 +57,8 @@ fn main() -> Result<(), StrError> {
     // The `At` enum provides an easy way to define the type of the
     // constraint such as line, plane, circle, etc.
     let find = Find::new(&mesh, None);
-    assert_eq!(&find.point_ids(At::Y(0.5))?, &[3, 4]);
-    assert_eq!(&find.edge_keys(At::X(1.0))?, &[(2, 4), (4, 7)]);
+    assert_eq!(find.point_ids(At::Y(0.5), |_,_| true)?, &[3, 4]);
+    assert_eq!(find.edge_keys(At::X(1.0), |_,_| true)?, &[(2, 4), (4, 7)]);
 
     // Perform numerical integration to compute
     // the area of cell # 2

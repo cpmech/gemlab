@@ -335,11 +335,16 @@ impl GridSearch {
     ///
     /// * `a` -- (ndim) first point on the line
     /// * `b` -- (ndim) second point on the line (different than `a`)
+    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
     ///
     /// Returns the ids of points.
-    pub fn find_on_line(&self, a: &[f64], b: &[f64]) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_line<F>(&self, a: &[f64], b: &[f64], mut filter: F) -> Result<HashSet<usize>, StrError>
+    where
+        F: FnMut(ItemId, &Vec<f64>) -> bool,
+    {
         // check
         if a.len() != self.ndim {
             return Err("a.len() must equal ndim");
@@ -357,8 +362,8 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = point_line_distance(a, b, x_other)?;
-                if distance <= self.tol_dist {
-                    ids.insert(id.clone());
+                if distance <= self.tol_dist && filter(*id, x_other) {
+                    ids.insert(*id);
                 }
             }
         }
@@ -369,8 +374,10 @@ impl GridSearch {
     ///
     /// # Input
     ///
-    /// `center` -- 2D circle center
-    /// `radius` -- circle radius
+    /// * `center` -- 2D circle center
+    /// * `radius` -- circle radius
+    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
     ///
@@ -379,7 +386,10 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 2D only.
-    pub fn find_on_circle(&self, center: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_circle<F>(&self, center: &[f64], radius: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
+    where
+        F: FnMut(ItemId, &Vec<f64>) -> bool,
+    {
         // check
         if self.ndim != 2 {
             return Err("find_on_circle works in 2D only");
@@ -397,8 +407,8 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = point_circle_distance(center, radius, x_other)?;
-                if f64::abs(distance) <= self.tol_dist {
-                    ids.insert(id.clone());
+                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                    ids.insert(*id);
                 }
             }
         }
@@ -409,9 +419,11 @@ impl GridSearch {
     ///
     /// # Input
     ///
-    /// `a` -- 3D point on the cylinder axis
-    /// `b` -- 3D point on the cylinder axis
-    /// `radius` -- cylinder radius
+    /// * `a` -- 3D point on the cylinder axis
+    /// * `b` -- 3D point on the cylinder axis
+    /// * `radius` -- cylinder radius
+    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
     ///
@@ -420,7 +432,16 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_cylinder(&self, a: &[f64], b: &[f64], radius: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_cylinder<F>(
+        &self,
+        a: &[f64],
+        b: &[f64],
+        radius: f64,
+        mut filter: F,
+    ) -> Result<HashSet<usize>, StrError>
+    where
+        F: FnMut(ItemId, &Vec<f64>) -> bool,
+    {
         // check
         if self.ndim != 3 {
             return Err("find_on_cylinder works in 3D only");
@@ -441,8 +462,8 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = point_cylinder_distance(a, b, radius, x_other)?;
-                if f64::abs(distance) <= self.tol_dist {
-                    ids.insert(id.clone());
+                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                    ids.insert(*id);
                 }
             }
         }
@@ -453,7 +474,9 @@ impl GridSearch {
     ///
     /// # Input
     ///
-    /// `z` -- the plane passes through `z`
+    /// * `z` -- the plane passes through `z`
+    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
     ///
@@ -462,7 +485,10 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_plane_xy(&self, z: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_plane_xy<F>(&self, z: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
+    where
+        F: FnMut(ItemId, &Vec<f64>) -> bool,
+    {
         // check
         if self.ndim != 3 {
             return Err("find_on_plane_xy works in 3D only");
@@ -477,8 +503,8 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = f64::abs(x_other[2] - z);
-                if f64::abs(distance) <= self.tol_dist {
-                    ids.insert(id.clone());
+                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                    ids.insert(*id);
                 }
             }
         }
@@ -489,7 +515,9 @@ impl GridSearch {
     ///
     /// # Input
     ///
-    /// `x` -- the plane passes through `x`
+    /// * `x` -- the plane passes through `x`
+    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
     ///
@@ -498,7 +526,10 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_plane_yz(&self, x: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_plane_yz<F>(&self, x: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
+    where
+        F: FnMut(ItemId, &Vec<f64>) -> bool,
+    {
         // check
         if self.ndim != 3 {
             return Err("find_on_plane_yz works in 3D only");
@@ -513,8 +544,8 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = f64::abs(x_other[0] - x);
-                if f64::abs(distance) <= self.tol_dist {
-                    ids.insert(id.clone());
+                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                    ids.insert(*id);
                 }
             }
         }
@@ -525,7 +556,9 @@ impl GridSearch {
     ///
     /// # Input
     ///
-    /// `y` -- the plane passes through `y`
+    /// * `y` -- the plane passes through `y`
+    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
     ///
@@ -534,7 +567,10 @@ impl GridSearch {
     /// # Note
     ///
     /// This works in 3D only.
-    pub fn find_on_plane_xz(&self, y: f64) -> Result<HashSet<usize>, StrError> {
+    pub fn find_on_plane_xz<F>(&self, y: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
+    where
+        F: FnMut(ItemId, &Vec<f64>) -> bool,
+    {
         // check
         if self.ndim != 3 {
             return Err("find_on_plane_xz works in 3D only");
@@ -549,8 +585,8 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = f64::abs(x_other[1] - y);
-                if f64::abs(distance) <= self.tol_dist {
-                    ids.insert(id.clone());
+                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                    ids.insert(*id);
                 }
             }
         }
@@ -1328,11 +1364,22 @@ mod tests {
         assert_eq!(indices, &[0, 1, 2, 3, 4, 5, 6, 7]);
     }
 
+    fn any(_: usize, _: &Vec<f64>) -> bool {
+        true
+    }
+
     #[test]
     fn find_on_line_handles_wrong_input() {
+        assert_eq!(any(0, &vec![]), true);
         let grid = sample_grid_2d();
-        assert_eq!(grid.find_on_line(&[0.0], &[1.0, 1.0]), Err("a.len() must equal ndim"));
-        assert_eq!(grid.find_on_line(&[0.0, 0.0], &[1.0]), Err("b.len() must equal ndim"));
+        assert_eq!(
+            grid.find_on_line(&[0.0], &[1.0, 1.0], any),
+            Err("a.len() must equal ndim")
+        );
+        assert_eq!(
+            grid.find_on_line(&[0.0, 0.0], &[1.0], any),
+            Err("b.len() must equal ndim")
+        );
     }
 
     #[test]
@@ -1341,19 +1388,19 @@ mod tests {
         add_sample_points_to_grid_2d(&mut grid);
 
         // vertical line
-        let res = grid.find_on_line(&LINES_2D[0][0], &LINES_2D[0][1]).unwrap();
+        let res = grid.find_on_line(&LINES_2D[0][0], &LINES_2D[0][1], any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [103, 108]);
 
         // horizontal line
-        let res = grid.find_on_line(&LINES_2D[1][0], &LINES_2D[1][1]).unwrap();
+        let res = grid.find_on_line(&LINES_2D[1][0], &LINES_2D[1][1], any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [107, 110]);
 
         // semi-diagonal line
-        let res = grid.find_on_line(&LINES_2D[2][0], &LINES_2D[2][1]).unwrap();
+        let res = grid.find_on_line(&LINES_2D[2][0], &LINES_2D[2][1], any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [103]);
@@ -1365,13 +1412,13 @@ mod tests {
         add_sample_points_to_grid_3d(&mut grid);
 
         // line parallel to x
-        let res = grid.find_on_line(&LINES_3D[0][0], &LINES_3D[0][1]).unwrap();
+        let res = grid.find_on_line(&LINES_3D[0][0], &LINES_3D[0][1], any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 104]);
 
         // diagonal
-        let res = grid.find_on_line(&LINES_3D[1][0], &LINES_3D[1][1]).unwrap();
+        let res = grid.find_on_line(&LINES_3D[1][0], &LINES_3D[1][1], any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 101, 102]);
@@ -1390,11 +1437,14 @@ mod tests {
     #[test]
     fn find_on_circle_fails_on_wrong_input() {
         let grid = sample_grid_2d();
-        assert_eq!(grid.find_on_circle(&[-0.2], 0.3), Err("center.len() must equal ndim"));
+        assert_eq!(
+            grid.find_on_circle(&[-0.2], 0.3, any),
+            Err("center.len() must equal ndim")
+        );
 
         let grid = sample_grid_3d();
         assert_eq!(
-            grid.find_on_circle(&[0.0, 0.0, 0.0], 1.0),
+            grid.find_on_circle(&[0.0, 0.0, 0.0], 1.0, any),
             Err("find_on_circle works in 2D only")
         );
     }
@@ -1404,7 +1454,7 @@ mod tests {
         let mut grid = sample_grid_2d();
         add_sample_points_to_grid_2d(&mut grid);
 
-        let res = grid.find_on_circle(&CIRCLE.0, CIRCLE.1).unwrap();
+        let res = grid.find_on_circle(&CIRCLE.0, CIRCLE.1, any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [109, 110, 111]);
@@ -1426,17 +1476,17 @@ mod tests {
     fn find_on_cylinder_fails_on_wrong_input() {
         let grid = sample_grid_3d();
         assert_eq!(
-            grid.find_on_cylinder(&[0.0, 0.0], &[1.0, 0.0, 0.0], 1.0),
+            grid.find_on_cylinder(&[0.0, 0.0], &[1.0, 0.0, 0.0], 1.0, any),
             Err("a.len() must equal ndim")
         );
         assert_eq!(
-            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0),
+            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0, any),
             Err("b.len() must equal ndim")
         );
 
         let grid = sample_grid_2d();
         assert_eq!(
-            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0),
+            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0, any),
             Err("find_on_cylinder works in 3D only")
         );
     }
@@ -1446,7 +1496,9 @@ mod tests {
         let mut grid = sample_grid_3d();
         add_sample_points_to_grid_3d(&mut grid);
 
-        let res = grid.find_on_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2).unwrap();
+        let res = grid
+            .find_on_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2, any)
+            .unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [104, 105, 106, 107]);
@@ -1489,9 +1541,18 @@ mod tests {
     #[test]
     fn find_on_plane_fails_on_wrong_input() {
         let grid = sample_grid_2d();
-        assert_eq!(grid.find_on_plane_xy(-1.0), Err("find_on_plane_xy works in 3D only"));
-        assert_eq!(grid.find_on_plane_yz(-1.0), Err("find_on_plane_yz works in 3D only"));
-        assert_eq!(grid.find_on_plane_xz(-1.0), Err("find_on_plane_xz works in 3D only"));
+        assert_eq!(
+            grid.find_on_plane_xy(-1.0, any),
+            Err("find_on_plane_xy works in 3D only")
+        );
+        assert_eq!(
+            grid.find_on_plane_yz(-1.0, any),
+            Err("find_on_plane_yz works in 3D only")
+        );
+        assert_eq!(
+            grid.find_on_plane_xz(-1.0, any),
+            Err("find_on_plane_xz works in 3D only")
+        );
     }
 
     #[test]
@@ -1499,17 +1560,17 @@ mod tests {
         let mut grid = sample_grid_3d();
         add_sample_points_to_grid_3d(&mut grid);
 
-        let res = grid.find_on_plane_xy(-1.0).unwrap();
+        let res = grid.find_on_plane_xy(-1.0, any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 103, 104, 106]);
 
-        let res = grid.find_on_plane_yz(-1.0).unwrap();
+        let res = grid.find_on_plane_yz(-1.0, any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100]);
 
-        let res = grid.find_on_plane_xz(-1.0).unwrap();
+        let res = grid.find_on_plane_xz(-1.0, any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 104, 105]);
