@@ -263,7 +263,7 @@ impl Find {
             }
         }
         if edge_keys.len() == 0 {
-            return Err("cannot find any edge key with given constraints/filter");
+            return Err("cannot find any edge with given constraints/filter");
         }
         let mut keys: Vec<_> = edge_keys.iter().copied().collect();
         keys.sort();
@@ -312,7 +312,7 @@ impl Find {
             }
         }
         if face_keys.len() == 0 {
-            return Err("cannot find any face key with given constraints/filter");
+            return Err("cannot find any face with given constraints/filter");
         }
         let mut keys: Vec<_> = face_keys.iter().copied().collect();
         keys.sort();
@@ -579,10 +579,10 @@ mod tests {
         assert_eq!(find.edge_keys(At::X(0.0), any).unwrap(), &[(0, 3)]);
 
         // internal
-        // assert_eq!(
-        //     find.edge_keys(At::X(1.0), any).err(),
-        //     Some("cannot find any point with given constraints/filter")
-        // );
+        assert_eq!(
+            find.edge_keys(At::X(1.0), any).err(),
+            Some("cannot find any edge with given constraints/filter")
+        );
 
         // far away
         // assert_eq!(
@@ -680,7 +680,7 @@ mod tests {
         );
         assert_eq!(
             find.edge_keys(At::XYZ(0.0, 0.0, 0.0), any).err(),
-            Some("cannot find any edge key with given constraints/filter")
+            Some("cannot find any edge with given constraints/filter")
         );
         assert_eq!(
             find.edge_keys(At::XYZ(10.0, 0.0, 0.0), any).err(),
@@ -769,11 +769,11 @@ mod tests {
         );
         assert_eq!(
             find.face_keys(At::XY(0.0, 0.0), any).err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::XY(1.0, 1.0), any).err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::XY(10.0, 10.0), any).err(),
@@ -781,11 +781,11 @@ mod tests {
         );
         assert_eq!(
             find.face_keys(At::YZ(0.0, 0.0), any).err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::YZ(1.0, 1.0), any).err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::YZ(10.0, 10.0), any).err(),
@@ -793,15 +793,15 @@ mod tests {
         );
         assert_eq!(
             find.face_keys(At::XZ(0.0, 0.0), any).err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::XZ(1.0, 0.0), any).err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::XZ(1.0, 2.0), any).err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::XZ(10.0, 10.0), any).err(),
@@ -809,7 +809,7 @@ mod tests {
         );
         assert_eq!(
             find.face_keys(At::XYZ(0.0, 0.0, 0.0), any).err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::XYZ(10.0, 0.0, 0.0), any).err(),
@@ -818,12 +818,12 @@ mod tests {
         assert_eq!(
             find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0), any)
                 .err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2), any)
                 .err(),
-            Some("cannot find any face key with given constraints/filter")
+            Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
             find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0), any)
