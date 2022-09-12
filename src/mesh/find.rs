@@ -574,8 +574,10 @@ mod tests {
         let mesh = Samples::two_qua4();
         let find = Find::new(&mesh, None);
         assert_eq!(find.edge_keys(At::Y(0.0), any).unwrap(), &[(0, 1), (1, 4)]);
+        assert_eq!(find.edge_keys(At::Y(0.0), |x| x[0] <= 1.0).unwrap(), &[(0, 1)]);
         assert_eq!(find.edge_keys(At::X(2.0), any).unwrap(), &[(4, 5)]);
         assert_eq!(find.edge_keys(At::Y(1.0), any).unwrap(), &[(2, 3), (2, 5)]);
+        assert_eq!(find.edge_keys(At::Y(1.0), |x| x[0] >= 1.0).unwrap(), &[(2, 5)]);
         assert_eq!(find.edge_keys(At::X(0.0), any).unwrap(), &[(0, 3)]);
 
         // internal
@@ -585,10 +587,10 @@ mod tests {
         );
 
         // far away
-        // assert_eq!(
-        //     find.edge_keys(At::X(10.0), any).err(),
-        //     Some("cannot find any point with given constraints/filter")
-        // );
+        assert_eq!(
+            find.edge_keys(At::X(10.0), any).err(),
+            Some("cannot find any point with given constraints/filter")
+        );
 
         // high-level function
         let res = find.edges(At::Y(0.0), any).unwrap();
@@ -627,6 +629,7 @@ mod tests {
             find.edge_keys(At::X(0.0), any).unwrap(),
             &[(0, 3), (0, 4), (3, 7), (4, 7), (4, 8), (7, 11), (8, 11)],
         );
+        assert_eq!(find.edge_keys(At::X(0.0), |x| x[2] == 0.0).unwrap(), &[(0, 3)],);
         assert_eq!(
             find.edge_keys(At::X(1.0), any).unwrap(),
             &[(1, 2), (1, 5), (2, 6), (5, 6), (5, 9), (6, 10), (9, 10)],
@@ -638,6 +641,10 @@ mod tests {
         assert_eq!(
             find.edge_keys(At::Y(0.0), any).unwrap(),
             &[(0, 1), (0, 4), (1, 5), (4, 5), (4, 8), (5, 9), (8, 9)],
+        );
+        assert_eq!(
+            find.edge_keys(At::Y(0.0), |x| x[2] <= 1.0).unwrap(),
+            &[(0, 1), (0, 4), (1, 5), (4, 5)],
         );
         assert_eq!(
             find.edge_keys(At::Y(1.0), any).unwrap(),
@@ -655,12 +662,14 @@ mod tests {
             find.edge_keys(At::Z(2.0), any).unwrap(),
             &[(8, 9), (8, 11), (9, 10), (10, 11)],
         );
+        assert_eq!(find.edge_keys(At::Z(2.0), |x| x[1] == 1.0).unwrap(), &[(10, 11)],);
         assert_eq!(
             find.edge_keys(At::Z(10.0), any).err(),
             Some("cannot find any point with given constraints/filter")
         );
         assert_eq!(find.edge_keys(At::XY(0.0, 0.0), any).unwrap(), &[(0, 4), (4, 8)]);
         assert_eq!(find.edge_keys(At::XY(1.0, 1.0), any).unwrap(), &[(2, 6), (6, 10)]);
+        assert_eq!(find.edge_keys(At::XY(1.0, 1.0), |x| x[2] <= 1.0).unwrap(), &[(2, 6)]);
         assert_eq!(
             find.edge_keys(At::XY(10.0, 10.0), any).err(),
             Some("cannot find any point with given constraints/filter")
@@ -674,6 +683,7 @@ mod tests {
         assert_eq!(find.edge_keys(At::XZ(0.0, 0.0), any).unwrap(), &[(0, 3)]);
         assert_eq!(find.edge_keys(At::XZ(1.0, 0.0), any).unwrap(), &[(1, 2)]);
         assert_eq!(find.edge_keys(At::XZ(1.0, 2.0), any).unwrap(), &[(9, 10)]);
+        assert_eq!(find.edge_keys(At::XZ(1.0, 2.0), |x| x[0] == -1.0).ok(), None);
         assert_eq!(
             find.edge_keys(At::XZ(10.0, 10.0), any).err(),
             Some("cannot find any point with given constraints/filter")
@@ -690,6 +700,11 @@ mod tests {
             find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0), any)
                 .unwrap(),
             &[(1, 5), (3, 7), (5, 9), (7, 11)],
+        );
+        assert_eq!(
+            find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0), |x| x[2] >= 1.0)
+                .unwrap(),
+            &[(5, 9), (7, 11)],
         );
         assert_eq!(
             find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2), any)
