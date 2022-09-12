@@ -749,6 +749,94 @@ impl Structured {
         let mesh_4 = block_4.subdivide(target)?;
         join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])
     }
+
+    /// Generates a rectangle with horizontal layers
+    ///
+    /// ```text
+    ///        xa         xb                 xc
+    /// y[n-1] o----------o------------------o
+    ///        |          |                  |
+    ///        |          |                  | << ny[n-2]
+    /// y[n-2] o----------o------------------o
+    ///        |          |                  |
+    ///                      ...
+    ///        |          |                  |
+    /// y[1]   o----------o------------------o
+    ///        |          |                  | < ny[0]
+    /// y[0]   o----------o------------------o
+    ///        xa         xb                 xc
+    ///              ^               ^
+    ///             na              nb
+    /// ```
+    pub fn rectangle(
+        xa: f64,
+        xb: Option<f64>,
+        xc: f64,
+        na: usize,
+        nb: usize,
+        y: &[f64],
+        ny: &[usize],
+        attributes: &[usize],
+        target: GeoKind,
+    ) -> Result<Mesh, StrError> {
+        if xc <= xa {
+            return Err("xc must be > xa");
+        }
+        if let Some(xxb) = xb {
+            if xxb <= xa || xxb >= xc {
+                return Err("xb must satisfy: xa < xb < xc");
+            }
+        }
+        if na < 1 || nb < 1 {
+            return Err("na and nb must be > 0");
+        }
+        if y.len() < 2 {
+            return Err("y.len() must be ≥ 2");
+        }
+        let n_layer = y.len() - 1;
+        if ny.len() != n_layer {
+            return Err("ny.len() must be equal to n_layer = y.len() - 1");
+        }
+        if attributes.len() != n_layer {
+            return Err("attributes.len() must be equal to n_layer = y.len() - 1");
+        }
+        let mut meshes = Vec::new();
+        let mut ya = y[0];
+        if let Some(xxb) = xb {
+            for l in 0..n_layer {
+                let yb = y[l + 1];
+                if yb <= ya {
+                    return Err("y values must be sorted ascending");
+                }
+                let mut ba = Block::new(&[[xa, ya], [xxb, ya], [xxb, yb], [xa, yb]]).unwrap();
+                let mut bb = Block::new(&[[xxb, ya], [xc, ya], [xc, yb], [xxb, yb]]).unwrap();
+                ba.set_ndiv(&[na, ny[l]]).unwrap();
+                bb.set_ndiv(&[nb, ny[l]]).unwrap();
+                ba.set_attribute_id(attributes[l]);
+                bb.set_attribute_id(attributes[l]);
+                meshes.push(ba.subdivide(target)?);
+                meshes.push(bb.subdivide(target).unwrap());
+                ya = yb;
+            }
+        } else {
+            for l in 0..n_layer {
+                let yb = y[l + 1];
+                if yb <= ya {
+                    return Err("y values must be sorted ascending");
+                }
+                let mut block = Block::new(&[[xa, ya], [xc, ya], [xc, yb], [xa, yb]]).unwrap();
+                block.set_ndiv(&[na, ny[l]]).unwrap();
+                block.set_attribute_id(attributes[l]);
+                let mesh = block.subdivide(target)?;
+                if n_layer == 1 {
+                    return Ok(mesh);
+                }
+                meshes.push(mesh);
+                ya = yb;
+            }
+        }
+        join_meshes(&meshes.iter().collect::<Vec<_>>())
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -756,9 +844,9 @@ impl Structured {
 #[cfg(test)]
 mod tests {
     use super::Structured;
-    use crate::geometry::point_point_distance;
     use crate::mesh::check_overlapping_points;
     use crate::shapes::GeoKind;
+    use crate::{geometry::point_point_distance, prelude::check_all};
     use russell_chk::{approx_eq, vec_approx_eq};
 
     #[allow(unused_imports)]
@@ -996,5 +1084,170 @@ mod tests {
         vec_approx_eq(&mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
         vec_approx_eq(&mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_3d.svg").unwrap();
+    }
+
+    #[test]
+    fn rectangle_handles_errors() {
+        assert_eq!(
+            Structured::rectangle(0.0, None, -1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("xc must be > xa")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, Some(0.0), 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("xb must satisfy: xa < xb < xc")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 0, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("na and nb must be > 0")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 0, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("na and nb must be > 0")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("y.len() must be ≥ 2")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[], &[10], GeoKind::Qua4).err(),
+            Some("ny.len() must be equal to n_layer = y.len() - 1")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[], GeoKind::Qua4).err(),
+            Some("attributes.len() must be equal to n_layer = y.len() - 1")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("y values must be sorted ascending")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Tri3).err(),
+            Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, Some(0.5), 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("y values must be sorted ascending")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, Some(0.5), 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Tri3).err(),
+            Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
+        );
+    }
+
+    #[test]
+    fn rectangle_works() {
+        let (xa, xc, na, nb) = (1.0, 3.0, 1, 1);
+        let target = GeoKind::Qua4;
+
+        // one column / one layer = single cell -------------------------------
+
+        let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 5.0], &[1], &[10], target).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_1.svg").unwrap();
+        check_overlapping_points(&mesh, 1e-2).unwrap();
+        check_all(&mesh).unwrap();
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 4 1\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 1 2\n\
+             1 3 2\n\
+             2 3 5\n\
+             3 1 5\n\
+             \n\
+             # cells\n\
+             # id att kind  points\n\
+             0 10 qua4  0 1 2 3\n"
+        );
+
+        // two columns / one layer = two cells -------------------------------
+
+        let mesh = Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 5.0], &[1], &[20], target).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_2.svg").unwrap();
+        check_overlapping_points(&mesh, 1e-2).unwrap();
+        check_all(&mesh).unwrap();
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 6 2\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 1 2\n\
+             1 1.5 2\n\
+             2 1.5 5\n\
+             3 1 5\n\
+             4 3 2\n\
+             5 3 5\n\
+             \n\
+             # cells\n\
+             # id att kind  points\n\
+             0 20 qua4  0 1 2 3\n\
+             1 20 qua4  1 4 5 2\n"
+        );
+
+        // one column / two layers = two cells -------------------------------
+
+        let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_3.svg").unwrap();
+        check_overlapping_points(&mesh, 1e-2).unwrap();
+        check_all(&mesh).unwrap();
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 6 2\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 1 2\n\
+             1 3 2\n\
+             2 3 3\n\
+             3 1 3\n\
+             4 3 5\n\
+             5 1 5\n\
+             \n\
+             # cells\n\
+             # id att kind  points\n\
+             0 10 qua4  0 1 2 3\n\
+             1 20 qua4  3 2 4 5\n"
+        );
+
+        // two columns / two layers = four cells -------------------------------
+
+        let mesh =
+            Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_4.svg").unwrap();
+        check_overlapping_points(&mesh, 1e-2).unwrap();
+        check_all(&mesh).unwrap();
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 9 4\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 1 2\n\
+             1 1.5 2\n\
+             2 1.5 3\n\
+             3 1 3\n\
+             4 3 2\n\
+             5 3 3\n\
+             6 1.5 5\n\
+             7 1 5\n\
+             8 3 5\n\
+             \n\
+             # cells\n\
+             # id att kind  points\n\
+             0 10 qua4  0 1 2 3\n\
+             1 10 qua4  1 4 5 2\n\
+             2 20 qua4  3 2 6 7\n\
+             3 20 qua4  2 5 8 6\n"
+        );
     }
 }
