@@ -1,12 +1,8 @@
 use gemlab::geometry::Circle;
-use gemlab::util::GridSearch;
+use gemlab::util::{any, GridSearch};
 use gemlab::StrError;
 use plotpy::Plot;
 use russell_lab::math::PI;
-
-fn any(_: &Vec<f64>) -> bool {
-    true
-}
 
 #[test]
 fn test_grid_search_2d() -> Result<(), StrError> {

@@ -6,6 +6,11 @@ use russell_lab::math::{SQRT_2, SQRT_3};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
+/// Returns true to any point coordinate (this callback is useful for the Find functions)
+pub fn any(_: &Vec<f64>) -> bool {
+    true
+}
+
 /// Default GridSearch number of divisions for the longest direction
 pub const GS_DEFAULT_NDIV: usize = 20;
 
@@ -839,7 +844,7 @@ impl fmt::Display for GridSearch {
 
 #[cfg(test)]
 mod tests {
-    use super::{GridSearch, GS_DEFAULT_TOLERANCE};
+    use super::{any, GridSearch, GS_DEFAULT_TOLERANCE};
     use plotpy::Plot;
     use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::math::{SQRT_2, SQRT_3};
@@ -1372,10 +1377,6 @@ mod tests {
         let mut indices = grid.containers_near_line(&LINES_3D[1][0], &LINES_3D[1][1]).unwrap();
         indices.sort();
         assert_eq!(indices, &[0, 1, 2, 3, 4, 5, 6, 7]);
-    }
-
-    fn any(_: &Vec<f64>) -> bool {
-        true
     }
 
     #[test]

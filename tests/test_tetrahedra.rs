@@ -1,10 +1,7 @@
 use gemlab::mesh::{check_face_normals, At, Extract, Features, Find, Mesh};
+use gemlab::util::any;
 use gemlab::StrError;
 use std::collections::HashMap;
-
-fn any(_: &Vec<f64>) -> bool {
-    true
-}
 
 #[test]
 fn test_tetrahedra() -> Result<(), StrError> {

@@ -1,14 +1,11 @@
 use gemlab::integ;
 use gemlab::mesh::{check_2d_edge_normals, At, Extract, Features, Find, Mesh};
 use gemlab::shapes::{GeoKind, Scratchpad};
+use gemlab::util::any;
 use gemlab::StrError;
 use russell_chk::approx_eq;
 use russell_lab::math::SQRT_2;
 use std::collections::HashMap;
-
-fn any(_: &Vec<f64>) -> bool {
-    true
-}
 
 #[test]
 fn test_column_distorted_tris_quads() -> Result<(), StrError> {

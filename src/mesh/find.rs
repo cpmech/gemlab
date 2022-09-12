@@ -4,6 +4,7 @@ use crate::StrError;
 use std::collections::{HashMap, HashSet};
 
 /// Defines the location of points
+#[derive(Clone, Copy, Debug)]
 pub enum At {
     /// Fixed x, any (y,z). 2D (vertical-line) or 3D (yz-plane)
     X(f64),
@@ -376,6 +377,82 @@ impl Find {
             .collect();
         results
     }
+
+    /// Finds (many) edges using a list of constraints
+    ///
+    /// # Input
+    ///
+    /// * `at` -- the "main" constraint
+    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true)
+    ///
+    /// # Output
+    ///
+    /// * Returns edges sorted by keys
+    /// * **Warning** Every `At` in the `ats` must generate at least one edge,
+    ///   otherwise an error will occur.
+    pub fn many_edges<F>(&self, ats: &[At], mut filter: F) -> Result<Vec<&Feature>, StrError>
+    where
+        F: FnMut(&Vec<f64>) -> bool,
+    {
+        let mut edge_keys: HashSet<EdgeKey> = HashSet::new();
+        for at in ats {
+            let found = self.edge_keys(*at, &mut filter)?;
+            for edge in found {
+                edge_keys.insert(edge);
+            }
+        }
+        let mut keys: Vec<_> = edge_keys.iter().collect();
+        keys.sort();
+        let results: Result<Vec<_>, _> = keys
+            .iter()
+            .map(|key| {
+                self.features
+                    .edges
+                    .get(key)
+                    .ok_or("INTERNAL ERROR: features.edges data is inconsistent")
+            })
+            .collect();
+        results
+    }
+
+    /// Finds (many) faces using a list of constraints
+    ///
+    /// # Input
+    ///
+    /// * `at` -- the "main" constraint
+    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true)
+    ///
+    /// # Output
+    ///
+    /// * Returns faces sorted by keys
+    /// * **Warning** Every `At` in the `ats` must generate at least one face,
+    ///   otherwise an error will occur.
+    pub fn many_faces<F>(&self, ats: &[At], mut filter: F) -> Result<Vec<&Feature>, StrError>
+    where
+        F: FnMut(&Vec<f64>) -> bool,
+    {
+        let mut face_keys: HashSet<FaceKey> = HashSet::new();
+        for at in ats {
+            let found = self.face_keys(*at, &mut filter)?;
+            for face in found {
+                face_keys.insert(face);
+            }
+        }
+        let mut keys: Vec<_> = face_keys.iter().collect();
+        keys.sort();
+        let results: Result<Vec<_>, _> = keys
+            .iter()
+            .map(|key| {
+                self.features
+                    .faces
+                    .get(key)
+                    .ok_or("INTERNAL ERROR: features.faces data is inconsistent")
+            })
+            .collect();
+        results
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -384,6 +461,7 @@ impl Find {
 mod tests {
     use super::Find;
     use crate::mesh::{At, Extract, Samples};
+    use crate::util::any;
     use russell_lab::math::{PI, SQRT_2};
 
     #[allow(unused_imports)]
@@ -406,6 +484,13 @@ mod tests {
     // }
 
     #[test]
+    fn derive_methods_work() {
+        let at = At::X(0.0);
+        let at_clone = at.clone();
+        assert_eq!(format!("{:?}", at_clone), "X(0.0)");
+    }
+
+    #[test]
     fn new_works() {
         let mesh = Samples::two_qua4();
         let find = Find::new(&mesh, None);
@@ -423,10 +508,6 @@ mod tests {
              ndiv = [20, 10]\n"
         );
         // plot_grid_two_qua4(&find);
-    }
-
-    fn any(_: &Vec<f64>) -> bool {
-        true
     }
 
     #[test]
@@ -601,6 +682,14 @@ mod tests {
             find.edges(At::XYZ(0.0, 0.0, 0.0), any).err(),
             Some("At::XYZ works in 3D only")
         );
+
+        // many edges
+        let res = find
+            .many_edges(&[At::X(0.0), At::X(2.0), At::Y(0.0), At::Y(1.0)], any)
+            .unwrap();
+        assert_eq!(res.len(), 6);
+        let keys: Vec<_> = res.iter().map(|r| (r.points[0], r.points[1])).collect();
+        assert_eq!(keys, &[(1, 0), (0, 3), (4, 1), (3, 2), (2, 5), (5, 4)]);
     }
 
     #[test]
@@ -722,6 +811,15 @@ mod tests {
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].points, &[0, 4]);
         assert_eq!(res[1].points, &[4, 8]);
+
+        // many faces
+        let res = find.many_faces(&[At::Z(0.0), At::Z(2.0)], any).unwrap();
+        assert_eq!(res.len(), 2);
+        let keys: Vec<_> = res
+            .iter()
+            .map(|r| (r.points[0], r.points[1], r.points[2], r.points[3]))
+            .collect();
+        assert_eq!(keys, &[(0, 3, 2, 1), (8, 9, 10, 11)]);
     }
 
     #[test]
