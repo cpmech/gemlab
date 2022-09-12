@@ -1039,38 +1039,43 @@ mod tests {
         let mut plot = Plot::new();
         grid.draw(&mut plot).unwrap();
 
-        // let h = grid.side_length / 2.0;
-        // let r = grid.radius;
-        // let mut lines = Curve::new();
-        // let mut canvas = Canvas::new();
-        // // draw rectangle representing the original limits
-        // canvas
-        //     .set_face_color("#00000015")
-        //     .set_edge_color("None")
-        //     .draw_polyline(&[[-0.2, -0.2], [0.8, -0.2], [0.8, 1.8], [-0.2, 1.8]], true);
-        // // draw circle circumscribing the lower left container
-        // canvas
-        //     .set_face_color("None")
-        //     .set_edge_color("magenta")
-        //     .draw_circle(grid.xmin[0] + h, grid.xmin[1] + h, r);
-        // // draw lines
-        // lines.set_line_color("#fab32f").set_line_width(1.5);
-        // for l in &LINES_2D {
-        //     lines.draw_ray(l[0][0], l[0][1], RayEndpoint::Coords(l[1][0], l[1][1]));
-        // }
-        // // draw circle used in search
-        // canvas
-        //     .set_edge_color("#05480480")
-        //     .set_line_width(2.0)
-        //     .draw_circle(CIRCLE.0[0], CIRCLE.0[1], CIRCLE.1);
-        // // setup and save figure
-        // plot.add(&lines).add(&canvas);
-        // plot.set_equal_axes(true)
-        //     .set_ticks_x(0.1, 0.0, "")
-        //     .set_ticks_y(0.1, 0.0, "")
-        //     .grid_and_labels("x", "y")
-        //     .set_figure_size_points(500.0, 1000.0);
-        // plot.save("/tmp/gemlab/test_plot_grid_search_2d.svg").unwrap();
+        // DO NOT DELETE THE CODE BELOW (to generate figure)
+        /*
+        if true {
+            let h = grid.side_length / 2.0;
+            let r = grid.radius;
+            let mut lines = Curve::new();
+            let mut canvas = Canvas::new();
+            // draw rectangle representing the original limits
+            canvas
+                .set_face_color("#00000015")
+                .set_edge_color("None")
+                .draw_polyline(&[[-0.2, -0.2], [0.8, -0.2], [0.8, 1.8], [-0.2, 1.8]], true);
+            // draw circle circumscribing the lower left container
+            canvas
+                .set_face_color("None")
+                .set_edge_color("magenta")
+                .draw_circle(grid.xmin[0] + h, grid.xmin[1] + h, r);
+            // draw lines
+            lines.set_line_color("#fab32f").set_line_width(1.5);
+            for l in &LINES_2D {
+                lines.draw_ray(l[0][0], l[0][1], RayEndpoint::Coords(l[1][0], l[1][1]));
+            }
+            // draw circle used in search
+            canvas
+                .set_edge_color("#05480480")
+                .set_line_width(2.0)
+                .draw_circle(CIRCLE.0[0], CIRCLE.0[1], CIRCLE.1);
+            // setup and save figure
+            plot.add(&lines).add(&canvas);
+            plot.set_equal_axes(true)
+                .set_ticks_x(0.1, 0.0, "")
+                .set_ticks_y(0.1, 0.0, "")
+                .grid_and_labels("x", "y")
+                .set_figure_size_points(500.0, 1000.0);
+            plot.save("/tmp/gemlab/test_plot_grid_search_2d.svg").unwrap();
+        }
+        */
     }
 
     #[test]
