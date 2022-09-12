@@ -1085,27 +1085,32 @@ mod tests {
         let mut plot = Plot::new();
         grid.draw(&mut plot).unwrap();
 
-        // // draw lines
-        // let mut canvas = Canvas::new();
-        // canvas.set_edge_color("#fab32f").set_line_width(1.5);
-        // for l in &LINES_3D {
-        //     canvas.draw_polyline(l, false);
-        // }
-        // // draw cylinder used in search
-        // let (a, b, r) = CYLINDER;
-        // let mut surface = Surface::new();
-        // surface
-        //     .set_with_surface(false)
-        //     .set_with_wireframe(true)
-        //     .set_line_color("#3da83b")
-        //     .draw_cylinder(&a, &b, r, 12, 30)
-        //     .unwrap();
-        // // setup and save figure
-        // plot.add(&canvas).add(&surface);
-        // plot.set_equal_axes(true)
-        //     .set_figure_size_points(800.0, 800.0)
-        //     .save("/tmp/gemlab/test_plot_grid_search_3d.svg")
-        //     .unwrap();
+        // DO NOT DELETE THE CODE BELOW (to generate figure)
+        /*
+        if true {
+            // draw lines
+            let mut canvas = Canvas::new();
+            canvas.set_edge_color("#fab32f").set_line_width(1.5);
+            for l in &LINES_3D {
+                canvas.draw_polyline(l, false);
+            }
+            // draw cylinder used in search
+            let (a, b, r) = CYLINDER;
+            let mut surface = Surface::new();
+            surface
+                .set_with_surface(false)
+                .set_with_wireframe(true)
+                .set_line_color("#3da83b")
+                .draw_cylinder(&a, &b, r, 12, 30)
+                .unwrap();
+            // setup and save figure
+            plot.add(&canvas).add(&surface);
+            plot.set_equal_axes(true)
+                .set_figure_size_points(800.0, 800.0)
+                .save("/tmp/gemlab/test_plot_grid_search_3d.svg")
+                .unwrap();
+        }
+        */
     }
 
     #[test]
