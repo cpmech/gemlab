@@ -9,7 +9,7 @@ use crate::StrError;
 ///
 /// **Important:** This function does not guarantee the "mesh compatibility" requirements
 /// for finite element analyses.
-pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
+pub fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     // check
     if a.ndim != b.ndim {
         return Err("meshes must have the same ndim");
@@ -61,22 +61,40 @@ pub fn join_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     Ok(mesh)
 }
 
+/// Joins meshes by comparing the coordinates on the boundary
+///
+/// **Note:** The meshes must have the same space_ndim.
+///
+/// **Important:** This function does not guarantee the "mesh compatibility" requirements
+/// for finite element analyses.
+pub fn join_meshes(meshes: &[&Mesh]) -> Result<Mesh, StrError> {
+    if meshes.len() < 2 {
+        return Err("meshes.len() must be at least 2");
+    }
+    let mut new_mesh = join_two_meshes(meshes[0], meshes[1])?;
+    for i in 2..meshes.len() {
+        let temp_mesh = join_two_meshes(&new_mesh, meshes[i])?;
+        new_mesh = temp_mesh;
+    }
+    Ok(new_mesh)
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::join_meshes;
+    use super::{join_meshes, join_two_meshes};
     use crate::mesh::{check_ids_and_kind, check_jacobian, Samples};
 
     #[test]
-    fn join_meshes_handles_errors() {
+    fn join_two_meshes_handles_errors() {
         let a = Samples::two_qua4();
         let b = Samples::two_hex8();
-        assert_eq!(join_meshes(&a, &b).err(), Some("meshes must have the same ndim"));
+        assert_eq!(join_two_meshes(&a, &b).err(), Some("meshes must have the same ndim"));
     }
 
     #[test]
-    fn join_meshes_works_2d() {
+    fn join_two_meshes_works_2d() {
         //          [#] indicates id
         //      y   (#) indicates attribute_id
         //      ↑
@@ -118,7 +136,7 @@ mod tests {
         //      |           |           |
         // 0.0  0-----------1-----------4  → x
         //     0.0         1.0         2.0
-        let mesh = join_meshes(&a, &b).unwrap();
+        let mesh = join_two_meshes(&a, &b).unwrap();
         check_ids_and_kind(&mesh).unwrap();
         check_jacobian(&mesh).unwrap();
         assert_eq!(mesh.points[0].coords, &[0.0, 0.0]);
@@ -138,10 +156,11 @@ mod tests {
         assert_eq!(mesh.cells[1].attribute_id, 2);
         assert_eq!(mesh.cells[2].attribute_id, 1);
         assert_eq!(mesh.cells[3].attribute_id, 2);
+        println!("{}", mesh);
     }
 
     #[test]
-    fn join_meshes_works_3d() {
+    fn join_two_meshes_works_3d() {
         //       8-------------11  2.0          8-------------11  2.0
         //      /.             /|              /.             /|
         //     / .            / |             / .            / |
@@ -191,7 +210,7 @@ mod tests {
         //  |/             |/             |/
         //  1--------------2-------------12   1.0
         // 0.0            1.0            2.0
-        let mesh = join_meshes(&a, &b).unwrap();
+        let mesh = join_two_meshes(&a, &b).unwrap();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
@@ -207,5 +226,90 @@ mod tests {
             assert_eq!(mesh.points[i].id, sample.points[i].id);
             assert_eq!(mesh.points[i].coords, sample.points[i].coords);
         }
+    }
+
+    #[test]
+    fn join_meshes_works() {
+        // 1.0  3-----------2-----------5
+        //      |           |           |
+        //      |    [0]    |    [1]    |
+        //      |    (1)    |    (2)    |
+        //      |           |           |
+        // 0.0  0-----------1-----------4  → x
+        //
+        //                  +
+        //
+        // 1.0  3-----------2-----------5
+        //      |           |           |
+        //      |    [0]    |    [1]    |
+        //      |    (1)    |    (2)    |
+        //      |           |           |
+        // 0.0  0-----------1-----------4  → x
+        //
+        //                  +
+        //
+        // 1.0  3-----------2-----------5
+        //      |           |           |
+        //      |    [0]    |    [1]    |
+        //      |    (1)    |    (2)    |
+        //      |           |           |
+        // 0.0  0-----------1-----------4  → x
+        //     0.0         1.0         2.0
+        let a = Samples::two_qua4();
+        let mut b = Samples::two_qua4();
+        let mut c = Samples::two_qua4();
+        for m in 0..b.points.len() {
+            b.points[m].coords[1] += 1.0;
+            c.points[m].coords[1] += 2.0;
+        }
+
+        // 3.0  10----------9----------11
+        //      |           |           |
+        //      |    [4]    |    [5]    |
+        //      |    (1)    |    (2)    |
+        //      |           |           |
+        // 2.0  7-----------6-----------8
+        //      |           |           |
+        //      |    [2]    |    [3]    |
+        //      |    (1)    |    (2)    |
+        //      |           |           |
+        // 1.0  3-----------2-----------5
+        //      |           |           |
+        //      |    [0]    |    [1]    |
+        //      |    (1)    |    (2)    |
+        //      |           |           |
+        // 0.0  0-----------1-----------4  → x
+        //     0.0         1.0         2.0
+        let mesh = join_meshes(&[&a, &b, &c]).unwrap();
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 12 6\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 0 0\n\
+             1 1 0\n\
+             2 1 1\n\
+             3 0 1\n\
+             4 2 0\n\
+             5 2 1\n\
+             6 1 2\n\
+             7 0 2\n\
+             8 2 2\n\
+             9 1 3\n\
+             10 0 3\n\
+             11 2 3\n\
+             \n\
+             # cells\n\
+             # id att kind  points\n\
+             0 1 qua4  0 1 2 3\n\
+             1 2 qua4  1 4 5 2\n\
+             2 1 qua4  3 2 6 7\n\
+             3 2 qua4  2 5 8 6\n\
+             4 1 qua4  7 6 9 10\n\
+             5 2 qua4  6 8 11 9\n"
+        );
     }
 }

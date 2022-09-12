@@ -1,4 +1,4 @@
-use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Mesh};
+use super::{join_two_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Mesh};
 use crate::shapes::GeoKind;
 use crate::StrError;
 use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
@@ -143,8 +143,8 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        join_meshes(&mesh_1_2, &mesh_3)
+        let mesh_1_2 = join_two_meshes(&mesh_1, &mesh_2)?;
+        join_two_meshes(&mesh_1_2, &mesh_3)
     }
 
     /// Generates a mesh representing a quarter of a disk in 2D (B-version)
@@ -233,8 +233,8 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        join_meshes(&mesh_1_2, &mesh_3)
+        let mesh_1_2 = join_two_meshes(&mesh_1, &mesh_2)?;
+        join_two_meshes(&mesh_1_2, &mesh_3)
     }
 
     /// Generates a mesh representing a quarter of a disk in 3D (extrusion along z) (A-version)
@@ -320,8 +320,8 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        join_meshes(&mesh_1_2, &mesh_3)
+        let mesh_1_2 = join_two_meshes(&mesh_1, &mesh_2)?;
+        join_two_meshes(&mesh_1_2, &mesh_3)
     }
 
     /// Generates a mesh representing a quarter of a disk in 3D (extrusion along z) (B-version)
@@ -457,8 +457,8 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        join_meshes(&mesh_1_2, &mesh_3)
+        let mesh_1_2 = join_two_meshes(&mesh_1, &mesh_2)?;
+        join_two_meshes(&mesh_1_2, &mesh_3)
     }
 
     /// Generates a mesh representing a quarter of a plate with a hole in 2D
@@ -578,9 +578,9 @@ impl Structured {
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
         let mesh_4 = block_4.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        let mesh_1_2_3 = join_meshes(&mesh_1_2, &mesh_3)?;
-        join_meshes(&mesh_1_2_3, &mesh_4)
+        let mesh_1_2 = join_two_meshes(&mesh_1, &mesh_2)?;
+        let mesh_1_2_3 = join_two_meshes(&mesh_1_2, &mesh_3)?;
+        join_two_meshes(&mesh_1_2_3, &mesh_4)
     }
 
     /// Generates a mesh representing a quarter of a plate with a hole in 3D (extrusion along z)
@@ -753,9 +753,9 @@ impl Structured {
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
         let mesh_4 = block_4.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        let mesh_1_2_3 = join_meshes(&mesh_1_2, &mesh_3)?;
-        join_meshes(&mesh_1_2_3, &mesh_4)
+        let mesh_1_2 = join_two_meshes(&mesh_1, &mesh_2)?;
+        let mesh_1_2_3 = join_two_meshes(&mesh_1_2, &mesh_3)?;
+        join_two_meshes(&mesh_1_2_3, &mesh_4)
     }
 }
 
