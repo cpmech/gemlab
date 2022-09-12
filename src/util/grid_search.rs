@@ -343,7 +343,7 @@ impl GridSearch {
     /// Returns the ids of points.
     pub fn find_on_line<F>(&self, a: &[f64], b: &[f64], mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(ItemId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         // check
         if a.len() != self.ndim {
@@ -362,7 +362,7 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = point_line_distance(a, b, x_other)?;
-                if distance <= self.tol_dist && filter(*id, x_other) {
+                if distance <= self.tol_dist && filter(x_other) {
                     ids.insert(*id);
                 }
             }
@@ -388,7 +388,7 @@ impl GridSearch {
     /// This works in 2D only.
     pub fn find_on_circle<F>(&self, center: &[f64], radius: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(ItemId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         // check
         if self.ndim != 2 {
@@ -407,7 +407,7 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = point_circle_distance(center, radius, x_other)?;
-                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                if f64::abs(distance) <= self.tol_dist && filter(x_other) {
                     ids.insert(*id);
                 }
             }
@@ -440,7 +440,7 @@ impl GridSearch {
         mut filter: F,
     ) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(ItemId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         // check
         if self.ndim != 3 {
@@ -462,7 +462,7 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = point_cylinder_distance(a, b, radius, x_other)?;
-                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                if f64::abs(distance) <= self.tol_dist && filter(x_other) {
                     ids.insert(*id);
                 }
             }
@@ -487,7 +487,7 @@ impl GridSearch {
     /// This works in 3D only.
     pub fn find_on_plane_xy<F>(&self, z: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(ItemId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         // check
         if self.ndim != 3 {
@@ -503,7 +503,7 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = f64::abs(x_other[2] - z);
-                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                if f64::abs(distance) <= self.tol_dist && filter(x_other) {
                     ids.insert(*id);
                 }
             }
@@ -528,7 +528,7 @@ impl GridSearch {
     /// This works in 3D only.
     pub fn find_on_plane_yz<F>(&self, x: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(ItemId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         // check
         if self.ndim != 3 {
@@ -544,7 +544,7 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = f64::abs(x_other[0] - x);
-                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                if f64::abs(distance) <= self.tol_dist && filter(x_other) {
                     ids.insert(*id);
                 }
             }
@@ -569,7 +569,7 @@ impl GridSearch {
     /// This works in 3D only.
     pub fn find_on_plane_xz<F>(&self, y: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(ItemId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         // check
         if self.ndim != 3 {
@@ -585,7 +585,7 @@ impl GridSearch {
             let container = self.containers.get(&index).unwrap();
             for (id, x_other) in container {
                 let distance = f64::abs(x_other[1] - y);
-                if f64::abs(distance) <= self.tol_dist && filter(*id, x_other) {
+                if f64::abs(distance) <= self.tol_dist && filter(x_other) {
                     ids.insert(*id);
                 }
             }
@@ -1374,13 +1374,13 @@ mod tests {
         assert_eq!(indices, &[0, 1, 2, 3, 4, 5, 6, 7]);
     }
 
-    fn any(_: usize, _: &Vec<f64>) -> bool {
+    fn any(_: &Vec<f64>) -> bool {
         true
     }
 
     #[test]
     fn find_on_line_handles_wrong_input() {
-        assert_eq!(any(0, &vec![]), true);
+        assert_eq!(any(&vec![]), true);
         let grid = sample_grid_2d();
         assert_eq!(
             grid.find_on_line(&[0.0], &[1.0, 1.0], any),
@@ -1397,7 +1397,13 @@ mod tests {
         let mut grid = sample_grid_2d();
         add_sample_points_to_grid_2d(&mut grid);
 
-        // vertical line
+        // vertical line (without filter)
+        let res = grid.find_on_line(&LINES_2D[0][0], &LINES_2D[0][1], any).unwrap();
+        let mut ids: Vec<_> = res.iter().copied().collect();
+        ids.sort();
+        assert_eq!(ids, [103, 108]);
+
+        // vertical line (with filter)
         let res = grid.find_on_line(&LINES_2D[0][0], &LINES_2D[0][1], any).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();

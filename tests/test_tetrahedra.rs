@@ -2,7 +2,7 @@ use gemlab::mesh::{check_face_normals, At, Extract, Features, Find, Mesh};
 use gemlab::StrError;
 use std::collections::HashMap;
 
-fn any(_: usize, _: &Vec<f64>) -> bool {
+fn any(_: &Vec<f64>) -> bool {
     true
 }
 

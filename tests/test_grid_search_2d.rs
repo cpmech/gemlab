@@ -4,7 +4,7 @@ use gemlab::StrError;
 use plotpy::Plot;
 use russell_lab::math::PI;
 
-fn any(_: usize, _: &Vec<f64>) -> bool {
+fn any(_: &Vec<f64>) -> bool {
     true
 }
 

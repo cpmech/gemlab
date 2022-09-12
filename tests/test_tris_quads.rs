@@ -6,7 +6,7 @@ use russell_chk::approx_eq;
 use russell_lab::math::SQRT_2;
 use std::collections::HashMap;
 
-fn any(_: usize, _: &Vec<f64>) -> bool {
+fn any(_: &Vec<f64>) -> bool {
     true
 }
 

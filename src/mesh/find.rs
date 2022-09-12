@@ -132,7 +132,7 @@ impl Find {
     /// * Otherwise, returns an error
     pub fn point_ids<F>(&self, at: At, filter: F) -> Result<Vec<PointId>, StrError>
     where
-        F: FnMut(PointId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         let mut point_ids: HashSet<PointId> = HashSet::new();
         match at {
@@ -247,7 +247,7 @@ impl Find {
     /// * Otherwise, returns an error
     pub fn edge_keys<F>(&self, at: At, filter: F) -> Result<Vec<EdgeKey>, StrError>
     where
-        F: FnMut(PointId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         let mut edge_keys: HashSet<EdgeKey> = HashSet::new();
         // find all points constrained by "at" and "filter"
@@ -284,7 +284,7 @@ impl Find {
     /// * Otherwise, returns an error
     pub fn face_keys<F>(&self, at: At, filter: F) -> Result<Vec<FaceKey>, StrError>
     where
-        F: FnMut(PointId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         if self.space_ndim != 3 {
             return Err("cannot find face keys in 2D");
@@ -333,7 +333,7 @@ impl Find {
     /// * Otherwise, returns an error
     pub fn edges<F>(&self, at: At, filter: F) -> Result<Vec<&Feature>, StrError>
     where
-        F: FnMut(PointId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         let results: Result<Vec<_>, _> = self
             .edge_keys(at, filter)?
@@ -362,7 +362,7 @@ impl Find {
     /// * Otherwise, returns an error
     pub fn faces<F>(&self, at: At, filter: F) -> Result<Vec<&Feature>, StrError>
     where
-        F: FnMut(PointId, &Vec<f64>) -> bool,
+        F: FnMut(&Vec<f64>) -> bool,
     {
         let results: Result<Vec<_>, _> = self
             .face_keys(at, filter)?
@@ -425,13 +425,13 @@ mod tests {
         // plot_grid_two_qua4(&find);
     }
 
-    fn any(_: usize, _: &Vec<f64>) -> bool {
+    fn any(_: &Vec<f64>) -> bool {
         true
     }
 
     #[test]
     fn find_points_fails_on_wrong_input() {
-        assert_eq!(any(0, &vec![]), true);
+        assert_eq!(any(&vec![]), true);
         // 2d
         let mesh = Samples::two_qua4();
         let find = Find::new(&mesh, None);
