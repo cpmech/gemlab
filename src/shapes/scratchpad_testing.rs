@@ -503,7 +503,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Lᵐⱼ := dNᵐ/dξⱼ
-                    deriv_approx_eq(pad.deriv[m][j], args.at_ksi[j], nn_given_ksi, args, tol);
+                    deriv_approx_eq(pad.deriv[m][j], args.at_ksi[j], args, tol, nn_given_ksi);
                 }
             }
         }

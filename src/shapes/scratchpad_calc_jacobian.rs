@@ -237,7 +237,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Jᵢⱼ := dxᵢ/dξⱼ
-                    deriv_approx_eq(pad.jacobian[i][j], args.at_ksi[j], x_given_ksi, args, tol);
+                    deriv_approx_eq(pad.jacobian[i][j], args.at_ksi[j], args, tol, x_given_ksi);
                 }
             }
         }

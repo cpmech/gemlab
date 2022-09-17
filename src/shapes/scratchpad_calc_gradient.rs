@@ -196,7 +196,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Bᵐⱼ := dNᵐ/dxⱼ
-                    deriv_approx_eq(pad.gradient[m][j], args.at_x[j], nn_given_x, args, tol);
+                    deriv_approx_eq(pad.gradient[m][j], args.at_x[j], args, tol, nn_given_x);
                 }
             }
         }
