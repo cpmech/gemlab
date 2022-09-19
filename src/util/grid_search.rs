@@ -340,7 +340,7 @@ impl GridSearch {
     ///
     /// * `a` -- (ndim) first point on the line
     /// * `b` -- (ndim) second point on the line (different than `a`)
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -381,7 +381,7 @@ impl GridSearch {
     ///
     /// * `center` -- 2D circle center
     /// * `radius` -- circle radius
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -427,7 +427,7 @@ impl GridSearch {
     /// * `a` -- 3D point on the cylinder axis
     /// * `b` -- 3D point on the cylinder axis
     /// * `radius` -- cylinder radius
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -480,7 +480,7 @@ impl GridSearch {
     /// # Input
     ///
     /// * `z` -- the plane passes through `z`
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -521,7 +521,7 @@ impl GridSearch {
     /// # Input
     ///
     /// * `x` -- the plane passes through `x`
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -562,7 +562,7 @@ impl GridSearch {
     /// # Input
     ///
     /// * `y` -- the plane passes through `y`
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output

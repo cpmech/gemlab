@@ -124,7 +124,7 @@ impl Find {
     /// # Input
     ///
     /// * `at` -- the "main" constraint
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -239,7 +239,7 @@ impl Find {
     /// # Input
     ///
     /// * `at` -- the "main" constraint
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -276,7 +276,7 @@ impl Find {
     /// # Input
     ///
     /// * `at` -- the "main" constraint
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -325,7 +325,7 @@ impl Find {
     /// # Input
     ///
     /// * `at` -- the "main" constraint
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -354,7 +354,7 @@ impl Find {
     /// # Input
     ///
     /// * `at` -- the "main" constraint
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -383,7 +383,7 @@ impl Find {
     /// # Input
     ///
     /// * `at` -- the "main" constraint
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
@@ -421,7 +421,7 @@ impl Find {
     /// # Input
     ///
     /// * `at` -- the "main" constraint
-    /// * `filter` -- function(id,x)->bool that returns true to **keep** the coordinate just found
+    /// * `filter` -- fn(x) -> bool that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true)
     ///
     /// # Output
