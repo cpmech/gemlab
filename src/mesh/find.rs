@@ -461,7 +461,7 @@ impl Find {
 mod tests {
     use super::Find;
     use crate::mesh::{At, Extract, Samples};
-    use crate::util::any;
+    use crate::util::any_x;
     use russell_lab::math::{PI, SQRT_2};
 
     #[allow(unused_imports)]
@@ -512,25 +512,25 @@ mod tests {
 
     #[test]
     fn find_points_fails_on_wrong_input() {
-        assert_eq!(any(&vec![]), true);
+        assert_eq!(any_x(&vec![]), true);
         // 2d
         let mesh = Samples::two_qua4();
         let find = Find::new(&mesh, None);
-        assert_eq!(find.point_ids(At::Z(0.0), any).err(), Some("At::Z works in 3D only"));
+        assert_eq!(find.point_ids(At::Z(0.0), any_x).err(), Some("At::Z works in 3D only"));
         assert_eq!(
-            find.point_ids(At::YZ(0.0, 0.0), any).err(),
+            find.point_ids(At::YZ(0.0, 0.0), any_x).err(),
             Some("At::YZ works in 3D only")
         );
         assert_eq!(
-            find.point_ids(At::XZ(0.0, 0.0), any).err(),
+            find.point_ids(At::XZ(0.0, 0.0), any_x).err(),
             Some("At::XZ works in 3D only")
         );
         assert_eq!(
-            find.point_ids(At::XYZ(0.0, 0.0, 0.0), any).err(),
+            find.point_ids(At::XYZ(0.0, 0.0, 0.0), any_x).err(),
             Some("At::XYZ works in 3D only")
         );
         assert_eq!(
-            find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), any)
+            find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), any_x)
                 .err(),
             Some("At::Cylinder works in 3D only")
         );
@@ -539,7 +539,7 @@ mod tests {
         let mesh = Samples::two_hex8();
         let find = Find::new(&mesh, None);
         assert_eq!(
-            find.point_ids(At::Circle(0.0, 0.0, 0.0), any).err(),
+            find.point_ids(At::Circle(0.0, 0.0, 0.0), any_x).err(),
             Some("At::Circle works in 2D only")
         );
     }
@@ -555,16 +555,16 @@ mod tests {
         //           circle
         let mesh = Samples::two_qua4();
         let find = Find::new(&mesh, Some(Extract::All));
-        assert_eq!(find.point_ids(At::XY(0.0, 0.0), any).unwrap(), &[0]);
-        assert_eq!(find.point_ids(At::XY(2.0, 1.0), any).unwrap(), &[5]);
+        assert_eq!(find.point_ids(At::XY(0.0, 0.0), any_x).unwrap(), &[0]);
+        assert_eq!(find.point_ids(At::XY(2.0, 1.0), any_x).unwrap(), &[5]);
         assert_eq!(
-            find.point_ids(At::XY(10.0, 0.0), any).err(),
+            find.point_ids(At::XY(10.0, 0.0), any_x).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
-        assert_eq!(find.point_ids(At::Circle(0.0, 0.0, 1.0), any).unwrap(), &[1, 3]);
-        assert_eq!(find.point_ids(At::Circle(0.0, 0.0, SQRT_2), any).unwrap(), &[2]);
+        assert_eq!(find.point_ids(At::Circle(0.0, 0.0, 1.0), any_x).unwrap(), &[1, 3]);
+        assert_eq!(find.point_ids(At::Circle(0.0, 0.0, SQRT_2), any_x).unwrap(), &[2]);
         assert_eq!(
-            find.point_ids(At::Circle(0.0, 0.0, 10.0), any).err(),
+            find.point_ids(At::Circle(0.0, 0.0, 10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
     }
@@ -592,54 +592,54 @@ mod tests {
         let mesh = Samples::two_hex8();
         let find = Find::new(&mesh, None);
         // plot_grid_two_hex8(&find);
-        assert_eq!(find.point_ids(At::X(0.0), any).unwrap(), &[0, 3, 4, 7, 8, 11]);
-        assert_eq!(find.point_ids(At::X(1.0), any).unwrap(), &[1, 2, 5, 6, 9, 10]);
+        assert_eq!(find.point_ids(At::X(0.0), any_x).unwrap(), &[0, 3, 4, 7, 8, 11]);
+        assert_eq!(find.point_ids(At::X(1.0), any_x).unwrap(), &[1, 2, 5, 6, 9, 10]);
         assert_eq!(
-            find.point_ids(At::X(10.0), any).err(),
+            find.point_ids(At::X(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
-        assert_eq!(find.point_ids(At::Y(0.0), any).unwrap(), &[0, 1, 4, 5, 8, 9]);
-        assert_eq!(find.point_ids(At::Y(1.0), any).unwrap(), &[2, 3, 6, 7, 10, 11]);
+        assert_eq!(find.point_ids(At::Y(0.0), any_x).unwrap(), &[0, 1, 4, 5, 8, 9]);
+        assert_eq!(find.point_ids(At::Y(1.0), any_x).unwrap(), &[2, 3, 6, 7, 10, 11]);
         assert_eq!(
-            find.point_ids(At::Y(10.0), any).err(),
+            find.point_ids(At::Y(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
-        assert_eq!(find.point_ids(At::Z(0.0), any).unwrap(), &[0, 1, 2, 3]);
-        assert_eq!(find.point_ids(At::Z(1.0), any).unwrap(), &[4, 5, 6, 7]);
-        assert_eq!(find.point_ids(At::Z(2.0), any).unwrap(), &[8, 9, 10, 11]);
+        assert_eq!(find.point_ids(At::Z(0.0), any_x).unwrap(), &[0, 1, 2, 3]);
+        assert_eq!(find.point_ids(At::Z(1.0), any_x).unwrap(), &[4, 5, 6, 7]);
+        assert_eq!(find.point_ids(At::Z(2.0), any_x).unwrap(), &[8, 9, 10, 11]);
         assert_eq!(
-            find.point_ids(At::Z(10.0), any).err(),
+            find.point_ids(At::Z(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
-        assert_eq!(find.point_ids(At::XY(0.0, 0.0), any).unwrap(), &[0, 4, 8]);
-        assert_eq!(find.point_ids(At::XY(1.0, 1.0), any).unwrap(), &[2, 6, 10]);
+        assert_eq!(find.point_ids(At::XY(0.0, 0.0), any_x).unwrap(), &[0, 4, 8]);
+        assert_eq!(find.point_ids(At::XY(1.0, 1.0), any_x).unwrap(), &[2, 6, 10]);
         assert_eq!(
-            find.point_ids(At::XY(10.0, 10.0), any).err(),
+            find.point_ids(At::XY(10.0, 10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
-        assert_eq!(find.point_ids(At::YZ(0.0, 0.0), any).unwrap(), &[0, 1]);
-        assert_eq!(find.point_ids(At::YZ(1.0, 1.0), any).unwrap(), &[6, 7]);
-        assert_eq!(find.point_ids(At::XZ(0.0, 0.0), any).unwrap(), &[0, 3]);
-        assert_eq!(find.point_ids(At::XZ(1.0, 0.0), any).unwrap(), &[1, 2]);
-        assert_eq!(find.point_ids(At::XZ(1.0, 2.0), any).unwrap(), &[9, 10]);
-        assert_eq!(find.point_ids(At::XYZ(0.0, 0.0, 0.0), any).unwrap(), &[0]);
-        assert_eq!(find.point_ids(At::XYZ(1.0, 1.0, 2.0), any).unwrap(), &[10]);
+        assert_eq!(find.point_ids(At::YZ(0.0, 0.0), any_x).unwrap(), &[0, 1]);
+        assert_eq!(find.point_ids(At::YZ(1.0, 1.0), any_x).unwrap(), &[6, 7]);
+        assert_eq!(find.point_ids(At::XZ(0.0, 0.0), any_x).unwrap(), &[0, 3]);
+        assert_eq!(find.point_ids(At::XZ(1.0, 0.0), any_x).unwrap(), &[1, 2]);
+        assert_eq!(find.point_ids(At::XZ(1.0, 2.0), any_x).unwrap(), &[9, 10]);
+        assert_eq!(find.point_ids(At::XYZ(0.0, 0.0, 0.0), any_x).unwrap(), &[0]);
+        assert_eq!(find.point_ids(At::XYZ(1.0, 1.0, 2.0), any_x).unwrap(), &[10]);
         assert_eq!(
-            find.point_ids(At::XYZ(10.0, 0.0, 0.0), any).err(),
+            find.point_ids(At::XYZ(10.0, 0.0, 0.0), any_x).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
         assert_eq!(
-            find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0), any)
+            find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0), any_x)
                 .unwrap(),
             &[1, 3, 5, 7, 9, 11],
         );
         assert_eq!(
-            find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2), any)
+            find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2), any_x)
                 .unwrap(),
             &[2, 6, 10],
         );
         assert_eq!(
-            find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0), any)
+            find.point_ids(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0), any_x)
                 .err(),
             Some("cannot find any point with given constraints/filter")
         );
@@ -654,38 +654,38 @@ mod tests {
         // 0--------1--------4
         let mesh = Samples::two_qua4();
         let find = Find::new(&mesh, None);
-        assert_eq!(find.edge_keys(At::Y(0.0), any).unwrap(), &[(0, 1), (1, 4)]);
+        assert_eq!(find.edge_keys(At::Y(0.0), any_x).unwrap(), &[(0, 1), (1, 4)]);
         assert_eq!(find.edge_keys(At::Y(0.0), |x| x[0] <= 1.0).unwrap(), &[(0, 1)]);
-        assert_eq!(find.edge_keys(At::X(2.0), any).unwrap(), &[(4, 5)]);
-        assert_eq!(find.edge_keys(At::Y(1.0), any).unwrap(), &[(2, 3), (2, 5)]);
+        assert_eq!(find.edge_keys(At::X(2.0), any_x).unwrap(), &[(4, 5)]);
+        assert_eq!(find.edge_keys(At::Y(1.0), any_x).unwrap(), &[(2, 3), (2, 5)]);
         assert_eq!(find.edge_keys(At::Y(1.0), |x| x[0] >= 1.0).unwrap(), &[(2, 5)]);
-        assert_eq!(find.edge_keys(At::X(0.0), any).unwrap(), &[(0, 3)]);
+        assert_eq!(find.edge_keys(At::X(0.0), any_x).unwrap(), &[(0, 3)]);
 
         // internal
         assert_eq!(
-            find.edge_keys(At::X(1.0), any).err(),
+            find.edge_keys(At::X(1.0), any_x).err(),
             Some("cannot find any edge with given constraints/filter")
         );
 
         // far away
         assert_eq!(
-            find.edge_keys(At::X(10.0), any).err(),
+            find.edge_keys(At::X(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
 
         // high-level function
-        let res = find.edges(At::Y(0.0), any).unwrap();
+        let res = find.edges(At::Y(0.0), any_x).unwrap();
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].points, &[1, 0]);
         assert_eq!(res[1].points, &[4, 1]);
         assert_eq!(
-            find.edges(At::XYZ(0.0, 0.0, 0.0), any).err(),
+            find.edges(At::XYZ(0.0, 0.0, 0.0), any_x).err(),
             Some("At::XYZ works in 3D only")
         );
 
         // many edges
         let res = find
-            .many_edges(&[At::X(0.0), At::X(2.0), At::Y(0.0), At::Y(1.0)], any)
+            .many_edges(&[At::X(0.0), At::X(2.0), At::Y(0.0), At::Y(1.0)], any_x)
             .unwrap();
         assert_eq!(res.len(), 6);
         let keys: Vec<_> = res.iter().map(|r| (r.points[0], r.points[1])).collect();
@@ -715,20 +715,20 @@ mod tests {
         let mesh = Samples::two_hex8();
         let find = Find::new(&mesh, None);
         assert_eq!(
-            find.edge_keys(At::X(0.0), any).unwrap(),
+            find.edge_keys(At::X(0.0), any_x).unwrap(),
             &[(0, 3), (0, 4), (3, 7), (4, 7), (4, 8), (7, 11), (8, 11)],
         );
         assert_eq!(find.edge_keys(At::X(0.0), |x| x[2] == 0.0).unwrap(), &[(0, 3)],);
         assert_eq!(
-            find.edge_keys(At::X(1.0), any).unwrap(),
+            find.edge_keys(At::X(1.0), any_x).unwrap(),
             &[(1, 2), (1, 5), (2, 6), (5, 6), (5, 9), (6, 10), (9, 10)],
         );
         assert_eq!(
-            find.edge_keys(At::X(10.0), any).err(),
+            find.edge_keys(At::X(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
         assert_eq!(
-            find.edge_keys(At::Y(0.0), any).unwrap(),
+            find.edge_keys(At::Y(0.0), any_x).unwrap(),
             &[(0, 1), (0, 4), (1, 5), (4, 5), (4, 8), (5, 9), (8, 9)],
         );
         assert_eq!(
@@ -736,57 +736,57 @@ mod tests {
             &[(0, 1), (0, 4), (1, 5), (4, 5)],
         );
         assert_eq!(
-            find.edge_keys(At::Y(1.0), any).unwrap(),
+            find.edge_keys(At::Y(1.0), any_x).unwrap(),
             &[(2, 3), (2, 6), (3, 7), (6, 7), (6, 10), (7, 11), (10, 11)],
         );
         assert_eq!(
-            find.edge_keys(At::Y(10.0), any).err(),
+            find.edge_keys(At::Y(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
         assert_eq!(
-            find.edge_keys(At::Z(0.0), any).unwrap(),
+            find.edge_keys(At::Z(0.0), any_x).unwrap(),
             &[(0, 1), (0, 3), (1, 2), (2, 3)]
         );
         assert_eq!(
-            find.edge_keys(At::Z(2.0), any).unwrap(),
+            find.edge_keys(At::Z(2.0), any_x).unwrap(),
             &[(8, 9), (8, 11), (9, 10), (10, 11)],
         );
         assert_eq!(find.edge_keys(At::Z(2.0), |x| x[1] == 1.0).unwrap(), &[(10, 11)],);
         assert_eq!(
-            find.edge_keys(At::Z(10.0), any).err(),
+            find.edge_keys(At::Z(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
-        assert_eq!(find.edge_keys(At::XY(0.0, 0.0), any).unwrap(), &[(0, 4), (4, 8)]);
-        assert_eq!(find.edge_keys(At::XY(1.0, 1.0), any).unwrap(), &[(2, 6), (6, 10)]);
+        assert_eq!(find.edge_keys(At::XY(0.0, 0.0), any_x).unwrap(), &[(0, 4), (4, 8)]);
+        assert_eq!(find.edge_keys(At::XY(1.0, 1.0), any_x).unwrap(), &[(2, 6), (6, 10)]);
         assert_eq!(find.edge_keys(At::XY(1.0, 1.0), |x| x[2] <= 1.0).unwrap(), &[(2, 6)]);
         assert_eq!(
-            find.edge_keys(At::XY(10.0, 10.0), any).err(),
+            find.edge_keys(At::XY(10.0, 10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
-        assert_eq!(find.edge_keys(At::YZ(0.0, 0.0), any).unwrap(), &[(0, 1)]);
-        assert_eq!(find.edge_keys(At::YZ(1.0, 1.0), any).unwrap(), &[(6, 7)]);
+        assert_eq!(find.edge_keys(At::YZ(0.0, 0.0), any_x).unwrap(), &[(0, 1)]);
+        assert_eq!(find.edge_keys(At::YZ(1.0, 1.0), any_x).unwrap(), &[(6, 7)]);
         assert_eq!(
-            find.edge_keys(At::YZ(10.0, 10.0), any).err(),
+            find.edge_keys(At::YZ(10.0, 10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
-        assert_eq!(find.edge_keys(At::XZ(0.0, 0.0), any).unwrap(), &[(0, 3)]);
-        assert_eq!(find.edge_keys(At::XZ(1.0, 0.0), any).unwrap(), &[(1, 2)]);
-        assert_eq!(find.edge_keys(At::XZ(1.0, 2.0), any).unwrap(), &[(9, 10)]);
+        assert_eq!(find.edge_keys(At::XZ(0.0, 0.0), any_x).unwrap(), &[(0, 3)]);
+        assert_eq!(find.edge_keys(At::XZ(1.0, 0.0), any_x).unwrap(), &[(1, 2)]);
+        assert_eq!(find.edge_keys(At::XZ(1.0, 2.0), any_x).unwrap(), &[(9, 10)]);
         assert_eq!(find.edge_keys(At::XZ(1.0, 2.0), |x| x[0] == -1.0).ok(), None);
         assert_eq!(
-            find.edge_keys(At::XZ(10.0, 10.0), any).err(),
+            find.edge_keys(At::XZ(10.0, 10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
         assert_eq!(
-            find.edge_keys(At::XYZ(0.0, 0.0, 0.0), any).err(),
+            find.edge_keys(At::XYZ(0.0, 0.0, 0.0), any_x).err(),
             Some("cannot find any edge with given constraints/filter")
         );
         assert_eq!(
-            find.edge_keys(At::XYZ(10.0, 0.0, 0.0), any).err(),
+            find.edge_keys(At::XYZ(10.0, 0.0, 0.0), any_x).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
         assert_eq!(
-            find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0), any)
+            find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0), any_x)
                 .unwrap(),
             &[(1, 5), (3, 7), (5, 9), (7, 11)],
         );
@@ -796,24 +796,24 @@ mod tests {
             &[(5, 9), (7, 11)],
         );
         assert_eq!(
-            find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2), any)
+            find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2), any_x)
                 .unwrap(),
             &[(2, 6), (6, 10)],
         );
         assert_eq!(
-            find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0), any)
+            find.edge_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0), any_x)
                 .err(),
             Some("cannot find any point with given constraints/filter")
         );
 
         // high-level function
-        let res = find.edges(At::XY(0.0, 0.0), any).unwrap();
+        let res = find.edges(At::XY(0.0, 0.0), any_x).unwrap();
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].points, &[0, 4]);
         assert_eq!(res[1].points, &[4, 8]);
 
         // many faces
-        let res = find.many_faces(&[At::Z(0.0), At::Z(2.0)], any).unwrap();
+        let res = find.many_faces(&[At::Z(0.0), At::Z(2.0)], any_x).unwrap();
         assert_eq!(res.len(), 2);
         let keys: Vec<_> = res
             .iter()
@@ -832,7 +832,7 @@ mod tests {
         let mesh = Samples::two_qua4();
         let find = Find::new(&mesh, None);
         assert_eq!(
-            find.face_keys(At::X(0.0), any).err(),
+            find.face_keys(At::X(0.0), any_x).err(),
             Some("cannot find face keys in 2D")
         );
     }
@@ -859,100 +859,109 @@ mod tests {
         // 0.0          1.0
         let mesh = Samples::two_hex8();
         let find = Find::new(&mesh, None);
-        assert_eq!(find.face_keys(At::X(0.0), any).unwrap(), &[(0, 3, 4, 7), (4, 7, 8, 11)]);
-        assert_eq!(find.face_keys(At::X(1.0), any).unwrap(), &[(1, 2, 5, 6), (5, 6, 9, 10)]);
+        assert_eq!(
+            find.face_keys(At::X(0.0), any_x).unwrap(),
+            &[(0, 3, 4, 7), (4, 7, 8, 11)]
+        );
+        assert_eq!(
+            find.face_keys(At::X(1.0), any_x).unwrap(),
+            &[(1, 2, 5, 6), (5, 6, 9, 10)]
+        );
         assert_eq!(find.face_keys(At::X(1.0), |x| x[2] <= 1.0).unwrap(), &[(1, 2, 5, 6)]);
         assert_eq!(
-            find.face_keys(At::X(10.0), any).err(),
+            find.face_keys(At::X(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
-        assert_eq!(find.face_keys(At::Y(0.0), any).unwrap(), &[(0, 1, 4, 5), (4, 5, 8, 9)]);
         assert_eq!(
-            find.face_keys(At::Y(1.0), any).unwrap(),
+            find.face_keys(At::Y(0.0), any_x).unwrap(),
+            &[(0, 1, 4, 5), (4, 5, 8, 9)]
+        );
+        assert_eq!(
+            find.face_keys(At::Y(1.0), any_x).unwrap(),
             &[(2, 3, 6, 7), (6, 7, 10, 11)]
         );
         assert_eq!(find.face_keys(At::Y(1.0), |x| x[2] >= 1.0).unwrap(), &[(6, 7, 10, 11)]);
         assert_eq!(
-            find.face_keys(At::Y(10.0), any).err(),
+            find.face_keys(At::Y(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
-        assert_eq!(find.face_keys(At::Z(0.0), any).unwrap(), &[(0, 1, 2, 3)]);
-        assert_eq!(find.face_keys(At::Z(2.0), any).unwrap(), &[(8, 9, 10, 11)]);
+        assert_eq!(find.face_keys(At::Z(0.0), any_x).unwrap(), &[(0, 1, 2, 3)]);
+        assert_eq!(find.face_keys(At::Z(2.0), any_x).unwrap(), &[(8, 9, 10, 11)]);
         assert_eq!(find.face_keys(At::Z(2.0), |x| x[0] <= -1.0).ok(), None);
         assert_eq!(
-            find.face_keys(At::Z(10.0), any).err(),
+            find.face_keys(At::Z(10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::XY(0.0, 0.0), any).err(),
+            find.face_keys(At::XY(0.0, 0.0), any_x).err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::XY(1.0, 1.0), any).err(),
+            find.face_keys(At::XY(1.0, 1.0), any_x).err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::XY(10.0, 10.0), any).err(),
+            find.face_keys(At::XY(10.0, 10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::YZ(0.0, 0.0), any).err(),
+            find.face_keys(At::YZ(0.0, 0.0), any_x).err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::YZ(1.0, 1.0), any).err(),
+            find.face_keys(At::YZ(1.0, 1.0), any_x).err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::YZ(10.0, 10.0), any).err(),
+            find.face_keys(At::YZ(10.0, 10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::XZ(0.0, 0.0), any).err(),
+            find.face_keys(At::XZ(0.0, 0.0), any_x).err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::XZ(1.0, 0.0), any).err(),
+            find.face_keys(At::XZ(1.0, 0.0), any_x).err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::XZ(1.0, 2.0), any).err(),
+            find.face_keys(At::XZ(1.0, 2.0), any_x).err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::XZ(10.0, 10.0), any).err(),
+            find.face_keys(At::XZ(10.0, 10.0), any_x).err(),
             Some("cannot find any point with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::XYZ(0.0, 0.0, 0.0), any).err(),
+            find.face_keys(At::XYZ(0.0, 0.0, 0.0), any_x).err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::XYZ(10.0, 0.0, 0.0), any).err(),
+            find.face_keys(At::XYZ(10.0, 0.0, 0.0), any_x).err(),
             Some("cannot find point because the coordinates are outside the grid")
         );
         assert_eq!(
-            find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0), any)
+            find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0), any_x)
                 .err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2), any)
+            find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, SQRT_2), any_x)
                 .err(),
             Some("cannot find any face with given constraints/filter")
         );
         assert_eq!(
-            find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0), any)
+            find.face_keys(At::Cylinder(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 10.0), any_x)
                 .err(),
             Some("cannot find any point with given constraints/filter")
         );
 
         // high-level function
-        let res = find.faces(At::Z(0.0), any).unwrap();
+        let res = find.faces(At::Z(0.0), any_x).unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].points, &[0, 3, 2, 1]);
         assert_eq!(
-            find.faces(At::Circle(0.0, 0.0, 1.0), any).err(),
+            find.faces(At::Circle(0.0, 0.0, 1.0), any_x).err(),
             Some("At::Circle works in 2D only")
         );
     }
@@ -979,20 +988,20 @@ mod tests {
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let find = Find::new(&mesh, None);
         let (r, rr) = (1.0, 2.0);
-        assert_eq!(find.point_ids(At::XY(1.00, 0.00), any).unwrap(), &[0]);
-        assert_eq!(find.point_ids(At::XY(1.25, 0.00), any).unwrap(), &[15]);
-        assert_eq!(find.point_ids(At::XY(1.50, 0.00), any).unwrap(), &[1]);
-        assert_eq!(find.point_ids(At::XY(1.75, 0.00), any).unwrap(), &[16]);
-        assert_eq!(find.point_ids(At::XY(2.00, 0.00), any).unwrap(), &[2]);
-        assert_eq!(find.point_ids(At::XY(0.00, 1.00), any).unwrap(), &[12]);
-        assert_eq!(find.point_ids(At::XY(0.00, 1.25), any).unwrap(), &[23]);
-        assert_eq!(find.point_ids(At::XY(0.00, 1.75), any).unwrap(), &[24]);
-        assert_eq!(find.point_ids(At::XY(0.00, 1.50), any).unwrap(), &[13]);
-        assert_eq!(find.point_ids(At::XY(0.00, 2.00), any).unwrap(), &[14]);
-        assert_eq!(find.point_ids(At::XY(SQRT_2 / 2.0, SQRT_2 / 2.0), any).unwrap(), &[6]);
-        assert_eq!(find.point_ids(At::XY(SQRT_2, SQRT_2), any).unwrap(), &[8]);
+        assert_eq!(find.point_ids(At::XY(1.00, 0.00), any_x).unwrap(), &[0]);
+        assert_eq!(find.point_ids(At::XY(1.25, 0.00), any_x).unwrap(), &[15]);
+        assert_eq!(find.point_ids(At::XY(1.50, 0.00), any_x).unwrap(), &[1]);
+        assert_eq!(find.point_ids(At::XY(1.75, 0.00), any_x).unwrap(), &[16]);
+        assert_eq!(find.point_ids(At::XY(2.00, 0.00), any_x).unwrap(), &[2]);
+        assert_eq!(find.point_ids(At::XY(0.00, 1.00), any_x).unwrap(), &[12]);
+        assert_eq!(find.point_ids(At::XY(0.00, 1.25), any_x).unwrap(), &[23]);
+        assert_eq!(find.point_ids(At::XY(0.00, 1.75), any_x).unwrap(), &[24]);
+        assert_eq!(find.point_ids(At::XY(0.00, 1.50), any_x).unwrap(), &[13]);
+        assert_eq!(find.point_ids(At::XY(0.00, 2.00), any_x).unwrap(), &[14]);
+        assert_eq!(find.point_ids(At::XY(SQRT_2 / 2.0, SQRT_2 / 2.0), any_x).unwrap(), &[6]);
+        assert_eq!(find.point_ids(At::XY(SQRT_2, SQRT_2), any_x).unwrap(), &[8]);
         assert_eq!(
-            find.point_ids(At::Circle(0.0, 0.0, r), any).unwrap(),
+            find.point_ids(At::Circle(0.0, 0.0, r), any_x).unwrap(),
             &[0, 3, 6, 9, 12, 25, 28, 31, 34],
         );
         assert_eq!(
@@ -1004,17 +1013,17 @@ mod tests {
             &[6],
         );
         assert_eq!(
-            find.point_ids(At::Circle(0.0, 0.0, rr), any).unwrap(),
+            find.point_ids(At::Circle(0.0, 0.0, rr), any_x).unwrap(),
             &[2, 5, 8, 11, 14, 27, 30, 33, 36],
         );
-        assert_eq!(find.edge_keys(At::Y(0.0), any).unwrap(), &[(0, 1), (1, 2)]);
-        assert_eq!(find.edge_keys(At::X(0.0), any).unwrap(), &[(12, 13), (13, 14)]);
+        assert_eq!(find.edge_keys(At::Y(0.0), any_x).unwrap(), &[(0, 1), (1, 2)]);
+        assert_eq!(find.edge_keys(At::X(0.0), any_x).unwrap(), &[(12, 13), (13, 14)]);
         assert_eq!(
-            find.edge_keys(At::Circle(0.0, 0.0, r), any).unwrap(),
+            find.edge_keys(At::Circle(0.0, 0.0, r), any_x).unwrap(),
             &[(0, 3), (3, 6), (6, 9), (9, 12)],
         );
         assert_eq!(
-            find.edge_keys(At::Circle(0.0, 0.0, rr), any).unwrap(),
+            find.edge_keys(At::Circle(0.0, 0.0, rr), any_x).unwrap(),
             &[(2, 5), (5, 8), (8, 11), (11, 14)],
         );
     }

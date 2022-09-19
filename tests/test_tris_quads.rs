@@ -1,7 +1,7 @@
 use gemlab::integ;
 use gemlab::mesh::{check_2d_edge_normals, At, Extract, Features, Find, Mesh};
 use gemlab::shapes::{GeoKind, Scratchpad};
-use gemlab::util::any;
+use gemlab::util::any_x;
 use gemlab::StrError;
 use russell_chk::approx_eq;
 use russell_lab::math::SQRT_2;
@@ -64,20 +64,20 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
 
     // find points
     let find = Find::new(&mesh, None);
-    let points = find.point_ids(At::X(0.0), any)?;
+    let points = find.point_ids(At::X(0.0), any_x)?;
     assert_eq!(&points, &[0, 1, 2, 3, 4, 5, 6]);
-    let points = find.point_ids(At::X(1.0), any)?;
+    let points = find.point_ids(At::X(1.0), any_x)?;
     assert_eq!(&points, &[7, 8, 9, 10, 11, 12]);
 
     // find edges
-    let edges = find.edge_keys(At::X(0.0), any)?;
+    let edges = find.edge_keys(At::X(0.0), any_x)?;
     assert_eq!(&edges, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6)]);
-    let edges = find.edge_keys(At::X(1.0), any)?;
+    let edges = find.edge_keys(At::X(1.0), any_x)?;
     assert_eq!(&edges, &[(7, 8), (8, 9), (9, 10), (10, 11), (11, 12)]);
 
     // find faces
     assert_eq!(
-        find.face_keys(At::X(0.0), any).err(),
+        find.face_keys(At::X(0.0), any_x).err(),
         Some("cannot find face keys in 2D")
     );
     Ok(())
@@ -110,9 +110,9 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
 
     // find edges
     let find = Find::new(&mesh, None);
-    let edges = find.edge_keys(At::X(0.0), any)?;
+    let edges = find.edge_keys(At::X(0.0), any_x)?;
     assert_eq!(&edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
-    let edges = find.edge_keys(At::X(4.0), any)?;
+    let edges = find.edge_keys(At::X(4.0), any_x)?;
     assert_eq!(&edges, &[(2, 6), (6, 9), (9, 13)]);
 
     // edge (7,11)

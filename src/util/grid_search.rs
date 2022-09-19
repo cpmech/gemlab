@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// Returns true to any point coordinate (this callback is useful for the Find functions)
-pub fn any(_: &Vec<f64>) -> bool {
+pub fn any_x(_: &Vec<f64>) -> bool {
     true
 }
 
@@ -844,7 +844,7 @@ impl fmt::Display for GridSearch {
 
 #[cfg(test)]
 mod tests {
-    use super::{any, GridSearch, GS_DEFAULT_TOLERANCE};
+    use super::{any_x, GridSearch, GS_DEFAULT_TOLERANCE};
     use plotpy::Plot;
     use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::math::{SQRT_2, SQRT_3};
@@ -1381,14 +1381,14 @@ mod tests {
 
     #[test]
     fn find_on_line_handles_wrong_input() {
-        assert_eq!(any(&vec![]), true);
+        assert_eq!(any_x(&vec![]), true);
         let grid = sample_grid_2d();
         assert_eq!(
-            grid.find_on_line(&[0.0], &[1.0, 1.0], any),
+            grid.find_on_line(&[0.0], &[1.0, 1.0], any_x),
             Err("a.len() must equal ndim")
         );
         assert_eq!(
-            grid.find_on_line(&[0.0, 0.0], &[1.0], any),
+            grid.find_on_line(&[0.0, 0.0], &[1.0], any_x),
             Err("b.len() must equal ndim")
         );
     }
@@ -1399,7 +1399,7 @@ mod tests {
         add_sample_points_to_grid_2d(&mut grid);
 
         // vertical line (without filter)
-        let res = grid.find_on_line(&LINES_2D[0][0], &LINES_2D[0][1], any).unwrap();
+        let res = grid.find_on_line(&LINES_2D[0][0], &LINES_2D[0][1], any_x).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [103, 108]);
@@ -1413,7 +1413,7 @@ mod tests {
         assert_eq!(ids, [108]);
 
         // horizontal line (without filter)
-        let res = grid.find_on_line(&LINES_2D[1][0], &LINES_2D[1][1], any).unwrap();
+        let res = grid.find_on_line(&LINES_2D[1][0], &LINES_2D[1][1], any_x).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [107, 110]);
@@ -1427,7 +1427,7 @@ mod tests {
         assert_eq!(ids, [110]);
 
         // semi-diagonal line
-        let res = grid.find_on_line(&LINES_2D[2][0], &LINES_2D[2][1], any).unwrap();
+        let res = grid.find_on_line(&LINES_2D[2][0], &LINES_2D[2][1], any_x).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [103]);
@@ -1439,7 +1439,7 @@ mod tests {
         add_sample_points_to_grid_3d(&mut grid);
 
         // line parallel to x (without filter)
-        let res = grid.find_on_line(&LINES_3D[0][0], &LINES_3D[0][1], any).unwrap();
+        let res = grid.find_on_line(&LINES_3D[0][0], &LINES_3D[0][1], any_x).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 104]);
@@ -1453,7 +1453,7 @@ mod tests {
         assert_eq!(ids, [100]);
 
         // diagonal (without filter)
-        let res = grid.find_on_line(&LINES_3D[1][0], &LINES_3D[1][1], any).unwrap();
+        let res = grid.find_on_line(&LINES_3D[1][0], &LINES_3D[1][1], any_x).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 101, 102]);
@@ -1481,13 +1481,13 @@ mod tests {
     fn find_on_circle_fails_on_wrong_input() {
         let grid = sample_grid_2d();
         assert_eq!(
-            grid.find_on_circle(&[-0.2], 0.3, any),
+            grid.find_on_circle(&[-0.2], 0.3, any_x),
             Err("center.len() must equal ndim")
         );
 
         let grid = sample_grid_3d();
         assert_eq!(
-            grid.find_on_circle(&[0.0, 0.0, 0.0], 1.0, any),
+            grid.find_on_circle(&[0.0, 0.0, 0.0], 1.0, any_x),
             Err("find_on_circle works in 2D only")
         );
     }
@@ -1497,7 +1497,7 @@ mod tests {
         let mut grid = sample_grid_2d();
         add_sample_points_to_grid_2d(&mut grid);
 
-        let res = grid.find_on_circle(&CIRCLE.0, CIRCLE.1, any).unwrap();
+        let res = grid.find_on_circle(&CIRCLE.0, CIRCLE.1, any_x).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [109, 110, 111]);
@@ -1526,17 +1526,17 @@ mod tests {
     fn find_on_cylinder_fails_on_wrong_input() {
         let grid = sample_grid_3d();
         assert_eq!(
-            grid.find_on_cylinder(&[0.0, 0.0], &[1.0, 0.0, 0.0], 1.0, any),
+            grid.find_on_cylinder(&[0.0, 0.0], &[1.0, 0.0, 0.0], 1.0, any_x),
             Err("a.len() must equal ndim")
         );
         assert_eq!(
-            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0, any),
+            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0], 1.0, any_x),
             Err("b.len() must equal ndim")
         );
 
         let grid = sample_grid_2d();
         assert_eq!(
-            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0, any),
+            grid.find_on_cylinder(&[0.0, 0.0, 0.0], &[1.0, 0.0, 0.0], 1.0, any_x),
             Err("find_on_cylinder works in 3D only")
         );
     }
@@ -1547,7 +1547,7 @@ mod tests {
         add_sample_points_to_grid_3d(&mut grid);
 
         let res = grid
-            .find_on_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2, any)
+            .find_on_cylinder(&CYLINDER.0, &CYLINDER.1, CYLINDER.2, any_x)
             .unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
@@ -1599,15 +1599,15 @@ mod tests {
     fn find_on_plane_fails_on_wrong_input() {
         let grid = sample_grid_2d();
         assert_eq!(
-            grid.find_on_plane_xy(-1.0, any),
+            grid.find_on_plane_xy(-1.0, any_x),
             Err("find_on_plane_xy works in 3D only")
         );
         assert_eq!(
-            grid.find_on_plane_yz(-1.0, any),
+            grid.find_on_plane_yz(-1.0, any_x),
             Err("find_on_plane_yz works in 3D only")
         );
         assert_eq!(
-            grid.find_on_plane_xz(-1.0, any),
+            grid.find_on_plane_xz(-1.0, any_x),
             Err("find_on_plane_xz works in 3D only")
         );
     }
@@ -1619,7 +1619,7 @@ mod tests {
 
         // xy ------------
 
-        let res = grid.find_on_plane_xy(-1.0, any).unwrap();
+        let res = grid.find_on_plane_xy(-1.0, any_x).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 103, 104, 106]);
@@ -1631,7 +1631,7 @@ mod tests {
 
         // yz ------------
 
-        let res = grid.find_on_plane_yz(-1.0, any).unwrap();
+        let res = grid.find_on_plane_yz(-1.0, any_x).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100]);
@@ -1641,7 +1641,7 @@ mod tests {
 
         // xz ------------
 
-        let res = grid.find_on_plane_xz(-1.0, any).unwrap();
+        let res = grid.find_on_plane_xz(-1.0, any_x).unwrap();
         let mut ids: Vec<_> = res.iter().copied().collect();
         ids.sort();
         assert_eq!(ids, [100, 104, 105]);

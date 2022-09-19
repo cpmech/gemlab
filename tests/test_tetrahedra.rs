@@ -1,5 +1,5 @@
 use gemlab::mesh::{check_face_normals, At, Extract, Features, Find, Mesh};
-use gemlab::util::any;
+use gemlab::util::any_x;
 use gemlab::StrError;
 use std::collections::HashMap;
 
@@ -77,29 +77,29 @@ fn test_tetrahedra() -> Result<(), StrError> {
 
     // find points
     let find = Find::new(&mesh, None);
-    let points = find.point_ids(At::X(0.0), any)?;
+    let points = find.point_ids(At::X(0.0), any_x)?;
     assert_eq!(&points, &[0, 3, 4, 7]);
-    let points = find.point_ids(At::Y(2.0), any)?;
+    let points = find.point_ids(At::Y(2.0), any_x)?;
     assert_eq!(&points, &[2, 3, 6, 7]);
 
     // find edges
-    let edges = find.edge_keys(At::Z(0.0), any)?;
+    let edges = find.edge_keys(At::Z(0.0), any_x)?;
     assert_eq!(&edges, &[(0, 1), (0, 2), (0, 3), (1, 2), (2, 3)]);
-    let edges = find.edge_keys(At::Y(2.0), any)?;
+    let edges = find.edge_keys(At::Y(2.0), any_x)?;
     assert_eq!(&edges, &[(2, 3), (2, 6), (2, 7), (3, 7), (6, 7)]);
 
     // find faces
-    let faces = find.face_keys(At::X(0.0), any)?;
+    let faces = find.face_keys(At::X(0.0), any_x)?;
     assert_eq!(&faces, &[(0, 3, 7, npoint), (0, 4, 7, npoint)]);
-    let faces = find.face_keys(At::X(2.0), any)?;
+    let faces = find.face_keys(At::X(2.0), any_x)?;
     assert_eq!(&faces, &[(1, 2, 5, npoint), (2, 5, 6, npoint)]);
-    let faces = find.face_keys(At::Y(0.0), any)?;
+    let faces = find.face_keys(At::Y(0.0), any_x)?;
     assert_eq!(&faces, &[(0, 1, 5, npoint), (0, 4, 5, npoint)]);
-    let faces = find.face_keys(At::Y(2.0), any)?;
+    let faces = find.face_keys(At::Y(2.0), any_x)?;
     assert_eq!(&faces, &[(2, 3, 7, npoint), (2, 6, 7, npoint)]);
-    let faces = find.face_keys(At::Z(0.0), any)?;
+    let faces = find.face_keys(At::Z(0.0), any_x)?;
     assert_eq!(&faces, &[(0, 1, 2, npoint), (0, 2, 3, npoint)]);
-    let faces = find.face_keys(At::Z(2.0), any)?;
+    let faces = find.face_keys(At::Z(2.0), any_x)?;
     assert_eq!(&faces, &[(4, 5, 7, npoint), (5, 6, 7, npoint)]);
     Ok(())
 }
