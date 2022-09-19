@@ -1,6 +1,6 @@
 use super::Scratchpad;
 use crate::StrError;
-use russell_lab::{inverse, mat_mat_mul};
+use russell_lab::{mat_inverse, mat_mat_mul};
 
 /// Indicates that the determinant of the Jacobian is not available (e.g., Shells)
 ///
@@ -114,7 +114,7 @@ impl Scratchpad {
         let (space_ndim, geo_ndim) = self.jacobian.dims();
         if geo_ndim == space_ndim {
             // SOLID case: inverse J (returns determinant)
-            inverse(&mut self.inv_jacobian, &self.jacobian)
+            mat_inverse(&mut self.inv_jacobian, &self.jacobian)
         } else {
             // CABLE case: norm of Jacobian vector
             if geo_ndim == 1 {

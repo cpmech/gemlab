@@ -100,7 +100,7 @@ mod tests {
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_chk::deriv_approx_eq;
     use russell_lab::math::ONE_BY_3;
-    use russell_lab::{copy_vector, Vector};
+    use russell_lab::{vec_copy, Vector};
 
     #[test]
     fn calc_gradient_handles_errors() {
@@ -129,7 +129,7 @@ mod tests {
 
     // Computes Nᵐ(ξ(x)) with variable v := xⱼ
     fn nn_given_x(v: f64, args: &mut ArgsNumGrad) -> f64 {
-        copy_vector(&mut args.x, &args.at_x).unwrap();
+        vec_copy(&mut args.x, &args.at_x).unwrap();
         args.x[args.j] = v;
         args.pad.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-14).unwrap();
         (args.pad.fn_interp)(&mut args.pad.interp, &args.ksi);

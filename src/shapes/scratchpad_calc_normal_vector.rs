@@ -181,7 +181,7 @@ mod tests {
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::math::{ONE_BY_3, SQRT_2, SQRT_3};
-    use russell_lab::{vector_norm, NormVec, Vector};
+    use russell_lab::{vec_norm, Norm, Vector};
 
     #[test]
     fn calc_normal_vector_handles_errors() {
@@ -230,7 +230,7 @@ mod tests {
             // check
             let mag_n = pad.calc_normal_vector(&mut un, ksi).unwrap();
             approx_eq(mag_n, correct_magnitude, tol_mag);
-            approx_eq(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
+            approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
             vec_approx_eq(un.as_data(), &correct_normal, tol_vec);
         }
     }
@@ -278,14 +278,14 @@ mod tests {
             let mut pad_face = aux::extract_face(2, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
-            approx_eq(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
+            approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
             vec_approx_eq(un.as_data(), &correct_normal_face2, tol_vec);
 
             // face # 3
             let mut pad_face = aux::extract_face(3, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
-            approx_eq(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
+            approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
             vec_approx_eq(un.as_data(), &correct_normal_face3, tol_vec);
 
             // face # 4

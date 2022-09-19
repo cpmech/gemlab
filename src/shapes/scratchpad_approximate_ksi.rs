@@ -1,6 +1,6 @@
 use super::Scratchpad;
 use crate::StrError;
-use russell_lab::{mat_vec_mul, vector_norm, NormVec, Vector};
+use russell_lab::{mat_vec_mul, vec_norm, Norm, Vector};
 
 impl Scratchpad {
     /// Approximates the reference coordinates from given real coordinates (inverse mapping)
@@ -109,7 +109,7 @@ impl Scratchpad {
             for i in 0..space_ndim {
                 residual[i] = x[i] - x_at_ksi[i];
             }
-            if vector_norm(&residual, NormVec::Euc) <= tol {
+            if vec_norm(&residual, Norm::Euc) <= tol {
                 return Ok(it);
             }
 
