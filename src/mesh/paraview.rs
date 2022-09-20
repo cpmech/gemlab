@@ -11,8 +11,8 @@ impl Mesh {
     ///
     /// # Input
     ///
-    /// * `full_path` -- may be a String, &str, or Path
-    pub fn write_vtu<P>(&self, full_path: &P) -> Result<(), StrError>
+    /// * `filepath` -- may be a String, &str, or Path
+    pub fn write_vtu<P>(&self, filepath: &P) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
@@ -160,7 +160,7 @@ impl Mesh {
         .unwrap();
 
         // create directory
-        let path = Path::new(full_path);
+        let path = Path::new(filepath);
         if let Some(p) = path.parent() {
             fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
         }
