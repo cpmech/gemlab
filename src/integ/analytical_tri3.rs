@@ -2,7 +2,7 @@ use crate::shapes::{GeoKind, Scratchpad};
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix, Vector};
-use russell_tensor::LinElasticity;
+use russell_tensor::{LinElasticity, Tensor2};
 
 /// Performs analytical integrations on a Tri3
 pub struct AnalyticalTri3 {
@@ -190,26 +190,26 @@ impl AnalyticalTri3 {
 
     /// Integrates tensor dot gradient with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
     ///
-    /// solution:
+    /// solution (plane; σ₂₂ is ignored):
     ///
     /// ```text
     /// dᵐ₀ = (σ₀₀ Bᵐ₀ + σ₀₁ Bᵐ₁) A
     /// dᵐ₁ = (σ₁₀ Bᵐ₀ + σ₁₁ Bᵐ₁) A
     /// ```
     ///
-    /// σ₂₂ is ignored.
-    ///
-    /// # Input
-    ///
-    /// * `s₀₀, s₁₁, s₀₁` -- components of the constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
-    pub fn vec_04_tb(&self, s00: f64, s11: f64, s01: f64) -> Vector {
+    pub fn vec_04_tb(&self, tt: &Tensor2, _axisymmetric: bool) -> Vector {
+        let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
+        let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
+        let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
+        let (t0, t1, _t2, t3) = (tt.vec[0], tt.vec[1], tt.vec[2], tt.vec[3]);
+        let c = self.area;
         Vector::from(&[
-            (s00 * self.bb[0][0] + s01 * self.bb[0][1]) * self.area,
-            (s01 * self.bb[0][0] + s11 * self.bb[0][1]) * self.area,
-            (s00 * self.bb[1][0] + s01 * self.bb[1][1]) * self.area,
-            (s01 * self.bb[1][0] + s11 * self.bb[1][1]) * self.area,
-            (s00 * self.bb[2][0] + s01 * self.bb[2][1]) * self.area,
-            (s01 * self.bb[2][0] + s11 * self.bb[2][1]) * self.area,
+            c * (b00 * t0 + (b01 * t3) / SQRT_2),
+            c * (b01 * t1 + (b00 * t3) / SQRT_2),
+            c * (b10 * t0 + (b11 * t3) / SQRT_2),
+            c * (b11 * t1 + (b10 * t3) / SQRT_2),
+            c * (b20 * t0 + (b21 * t3) / SQRT_2),
+            c * (b21 * t1 + (b20 * t3) / SQRT_2),
         ])
     }
 

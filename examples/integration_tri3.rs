@@ -3,6 +3,7 @@ use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
 use russell_chk::vec_approx_eq;
 use russell_lab::Vector;
+use russell_tensor::Tensor2;
 
 fn main() -> Result<(), StrError> {
     // shape and state
@@ -168,7 +169,8 @@ fn main() -> Result<(), StrError> {
     );
 
     // check
-    let d_correct = ana.vec_04_tb(s00, s11, s01);
+    let sig = Tensor2::from_matrix(&[[s00, s01, 0.0], [s01, s11, 0.0], [0.0, 0.0, 0.0]], true, true).unwrap();
+    let d_correct = ana.vec_04_tb(&sig, false);
     vec_approx_eq(d.as_data(), d_correct.as_data(), 1e-15);
     Ok(())
 }

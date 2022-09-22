@@ -218,7 +218,8 @@ mod tests {
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
         let ana = AnalyticalTri3::new(&pad);
-        let d_correct = ana.vec_04_tb(S00, S11, S01);
+        let sig = Tensor2::from_matrix(&[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]], true, true).unwrap();
+        let d_correct = ana.vec_04_tb(&sig, false);
 
         // integration points
         let class = pad.kind.class();
