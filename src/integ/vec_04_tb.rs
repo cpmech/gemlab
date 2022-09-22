@@ -172,7 +172,7 @@ fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Ten
     let b = &args.pad.gradient;
     let ii0 = args.ii0;
     for m in 0..nnode {
-        d[ii0 + 0 + m * 2] += c * r * (t[0] * b[m][0] + t[3] * b[m][1] / s) + nn[m] * t[2];
+        d[ii0 + 0 + m * 2] += c * r * (t[0] * b[m][0] + t[3] * b[m][1] / s) + c * nn[m] * t[2];
         d[ii0 + 1 + m * 2] += c * r * (t[3] * b[m][0] / s + t[1] * b[m][1]);
     }
 }
@@ -235,6 +235,44 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+                sig.sym_set(0, 0, S00);
+                sig.sym_set(1, 1, S11);
+                sig.sym_set(2, 2, S22);
+                sig.sym_set(0, 1, S01);
+                Ok(())
+            })
+            .unwrap();
+            vec_approx_eq(d.as_data(), d_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn tri3_constant_axisymmetric_works() {
+        // constant tensor function: σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
+        let mut pad = aux::gen_pad_tri3();
+
+        // solution
+        const S00: f64 = 2.0;
+        const S11: f64 = 3.0;
+        const S22: f64 = 4.0;
+        const S01: f64 = 5.0;
+        let ana = AnalyticalTri3::new(&pad);
+        let sig = Tensor2::from_matrix(&[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]], true, true).unwrap();
+        let d_correct = ana.vec_04_tb(&sig, true);
+
+        // integration points
+        let class = pad.kind.class();
+        let tolerances = [1e-13, 1e-13];
+        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+
+        // check
+        let (space_ndim, nnode) = pad.xxt.dims();
+        let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            println!("nip={}, tol={:.e}", ips.len(), tol);
+            let mut args = CommonArgs::new(&mut pad, ips);
+            args.axisymmetric = true;
             integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);

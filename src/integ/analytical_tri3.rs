@@ -189,28 +189,34 @@ impl AnalyticalTri3 {
     }
 
     /// Integrates tensor dot gradient with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
-    ///
-    /// solution (plane; σ₂₂ is ignored):
-    ///
-    /// ```text
-    /// dᵐ₀ = (σ₀₀ Bᵐ₀ + σ₀₁ Bᵐ₁) A
-    /// dᵐ₁ = (σ₁₀ Bᵐ₀ + σ₁₁ Bᵐ₁) A
-    /// ```
-    ///
-    pub fn vec_04_tb(&self, tt: &Tensor2, _axisymmetric: bool) -> Vector {
+    #[rustfmt::skip]
+    pub fn vec_04_tb(&self, tt: &Tensor2, axisymmetric: bool) -> Vector {
+        let (x0, x1, x2) = (self.x0, self.x1, self.x2);
         let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
         let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
         let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
-        let (t0, t1, _t2, t3) = (tt.vec[0], tt.vec[1], tt.vec[2], tt.vec[3]);
-        let c = self.area;
-        Vector::from(&[
-            c * (b00 * t0 + (b01 * t3) / SQRT_2),
-            c * (b01 * t1 + (b00 * t3) / SQRT_2),
-            c * (b10 * t0 + (b11 * t3) / SQRT_2),
-            c * (b11 * t1 + (b10 * t3) / SQRT_2),
-            c * (b20 * t0 + (b21 * t3) / SQRT_2),
-            c * (b21 * t1 + (b20 * t3) / SQRT_2),
-        ])
+        let (t0, t1, t2, t3) = (tt.vec[0], tt.vec[1], tt.vec[2], tt.vec[3]);
+        if axisymmetric {
+            let c = self.area / 3.0;
+            Vector::from(&[
+                c * (b00 * t0 + b01 * t3 / SQRT_2) * (x0 + x1 + x2) + c * t2,
+                c * (b01 * t1 + b00 * t3 / SQRT_2) * (x0 + x1 + x2),
+                c * (b10 * t0 + b11 * t3 / SQRT_2) * (x0 + x1 + x2) + c * t2,
+                c * (b11 * t1 + b10 * t3 / SQRT_2) * (x0 + x1 + x2),
+                c * (b20 * t0 + b21 * t3 / SQRT_2) * (x0 + x1 + x2) + c * t2,
+                c * (b21 * t1 + b20 * t3 / SQRT_2) * (x0 + x1 + x2),
+            ])
+        } else {
+            let c = self.area;
+            Vector::from(&[
+                c * (b00 * t0 + b01 * t3 / SQRT_2),
+                c * (b01 * t1 + b00 * t3 / SQRT_2),
+                c * (b10 * t0 + b11 * t3 / SQRT_2),
+                c * (b11 * t1 + b10 * t3 / SQRT_2),
+                c * (b20 * t0 + b21 * t3 / SQRT_2),
+                c * (b21 * t1 + b20 * t3 / SQRT_2),
+            ])
+        }
     }
 
     /// Performs the n-s-n integration with constant s(x) field
