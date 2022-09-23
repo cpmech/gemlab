@@ -62,7 +62,7 @@ impl AnalyticalTri3 {
             [a2/r, b2/r],
         ]);
 
-        // element Be-matrix
+        // element Be-matrix (plane-strain or plane-stress)
         #[rustfmt::skip]
         let bbe = Matrix::from(&[
             [a0/r,  0.0, a1/r,  0.0, a2/r,  0.0],
