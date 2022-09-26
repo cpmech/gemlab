@@ -2,6 +2,7 @@ use super::algorithms;
 use super::{CellId, Mesh, PointId};
 use crate::shapes::GeoKind;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 
 /// Aliases (usize,usize) as the key of edges
 ///
@@ -291,11 +292,31 @@ impl Features {
     }
 }
 
+/// Returns a string with the points of a collection of Feature
+pub fn display_features(features: &[&Feature]) -> String {
+    let mut buffer = String::new();
+    for feature in features {
+        let pp = &feature.points;
+        if feature.kind.is_lin() {
+            // edge
+            write!(&mut buffer, "({},{}) ", pp[0], pp[1]).unwrap();
+        } else {
+            // face
+            if pp.len() > 3 {
+                write!(&mut buffer, "({},{},{},{}) ", pp[0], pp[1], pp[2], pp[3]).unwrap();
+            } else {
+                write!(&mut buffer, "({},{},{}) ", pp[0], pp[1], pp[2]).unwrap();
+            }
+        }
+    }
+    buffer
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{Extract, Feature, Features};
+    use super::{display_features, Extract, Feature, Features};
     use crate::mesh::Samples;
     use crate::shapes::GeoKind;
 
@@ -354,5 +375,40 @@ mod tests {
         assert_eq!(format!("{:?}", face), "Feature { kind: Qua4, points: [1, 2, 3, 4] }");
         assert_eq!(edge_clone.points.len(), 3);
         assert_eq!(face_clone.points.len(), 4);
+    }
+
+    #[test]
+    fn display_features_works() {
+        let edges = vec![
+            Feature {
+                kind: GeoKind::Lin2,
+                points: vec![0, 1],
+            },
+            Feature {
+                kind: GeoKind::Lin2,
+                points: vec![4, 5],
+            },
+            Feature {
+                kind: GeoKind::Lin3,
+                points: vec![7, 11, 9],
+            },
+        ];
+        let faces = vec![
+            Feature {
+                kind: GeoKind::Tri3,
+                points: vec![0, 3, 2],
+            },
+            Feature {
+                kind: GeoKind::Qua4,
+                points: vec![8, 9, 10, 11],
+            },
+            Feature {
+                kind: GeoKind::Qua4,
+                points: vec![6, 7, 11, 10],
+            },
+        ];
+        let features: Vec<&Feature> = vec![edges.iter().collect::<Vec<_>>(), faces.iter().collect::<Vec<_>>()].concat();
+        let res = display_features(&features);
+        assert_eq!(res, "(0,1) (4,5) (7,11) (0,3,2) (8,9,10,11) (6,7,11,10) ");
     }
 }
