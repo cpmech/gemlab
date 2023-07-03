@@ -113,27 +113,27 @@
 //! ```text
 //!             →
 //! →  →    dNᵐ(ξ)
-//! Gᵐ(ξ) = ——————
+//! Bᵐ(ξ) = ——————
 //!            →
 //!           dx
 //! ```
 //!
-//! which can be organized in an (nnode,space_ndim) matrix `G`.
+//! which can be organized in an (nnode,space_ndim) matrix `B`.
 //!
-//! The inverse Jacobian allows us to determine the gradient vectors `G` as follows
+//! The inverse Jacobian allows us to determine the gradient vectors `B` as follows
 //!
 //! ```text
 //! →       →  →        →
-//! Gᵐ(ξ) = Lᵐ(ξ) · J⁻¹(ξ)
+//! Bᵐ(ξ) = Lᵐ(ξ) · J⁻¹(ξ)
 //! ```
 //!
 //! Or, in matrix notation,
 //!
 //! ```text
-//! G = L · J⁻¹
+//! B = L · J⁻¹
 //! ```
 //!
-//! where `G` is an (nnode,space_ndim) matrix.
+//! where `B` is an (nnode,space_ndim) matrix.
 //!
 //! ## SHELL case with geo_ndim = 2 and space_ndim = 3
 //!

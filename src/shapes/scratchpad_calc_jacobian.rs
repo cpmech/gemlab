@@ -1,6 +1,6 @@
 use super::Scratchpad;
 use crate::StrError;
-use russell_lab::{inverse, mat_mat_mul};
+use russell_lab::{mat_inverse, mat_mat_mul};
 
 /// Indicates that the determinant of the Jacobian is not available (e.g., Shells)
 ///
@@ -57,7 +57,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::assert_approx_eq;
+    /// use russell_chk::approx_eq;
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //  3-------------2         ξ₀   ξ₁
@@ -81,7 +81,7 @@ impl Scratchpad {
     ///     pad.set_xx(3, 1, a);
     ///
     ///     let det_jac = pad.calc_jacobian(&[0.0, 0.0])?;
-    ///     assert_approx_eq!(det_jac, a * a / 2.0, 1e-15);
+    ///     approx_eq(det_jac, a * a / 2.0, 1e-15);
     ///
     ///     // the solution is
     ///     //  ┌         ┐
@@ -114,13 +114,13 @@ impl Scratchpad {
         let (space_ndim, geo_ndim) = self.jacobian.dims();
         if geo_ndim == space_ndim {
             // SOLID case: inverse J (returns determinant)
-            inverse(&mut self.inv_jacobian, &self.jacobian)
+            mat_inverse(&mut self.inv_jacobian, &self.jacobian)
         } else {
             // CABLE case: norm of Jacobian vector
             if geo_ndim == 1 {
                 let mut norm_jac = 0.0;
                 for i in 0..space_ndim {
-                    norm_jac += self.jacobian[i][0] * self.jacobian[i][0];
+                    norm_jac += self.jacobian.get(i, 0) * self.jacobian.get(i, 0);
                 }
                 Ok(f64::sqrt(norm_jac))
             } else {
@@ -138,7 +138,7 @@ mod tests {
     use super::DET_JAC_NOT_AVAILABLE;
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::assert_deriv_approx_eq;
+    use russell_chk::deriv_approx_eq;
     use russell_lab::{Matrix, Vector};
 
     #[test]
@@ -237,7 +237,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Jᵢⱼ := dxᵢ/dξⱼ
-                    assert_deriv_approx_eq!(pad.jacobian[i][j], args.at_ksi[j], x_given_ksi, args, tol);
+                    deriv_approx_eq(pad.jacobian.get(i, j), args.at_ksi[j], args, tol, x_given_ksi);
                 }
             }
         }

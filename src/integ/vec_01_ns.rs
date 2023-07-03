@@ -1,15 +1,16 @@
-use super::IntegPointData;
-use crate::shapes::Scratchpad;
+use super::CommonArgs;
 use crate::StrError;
 use russell_lab::Vector;
 
 /// Implements the shape(N) times scalar(S) integration case 01
 ///
+/// Callback function: `s ← f(p, N)`
+///
 /// Interpolation functions times scalar field:
 ///
 /// ```text
 ///      ⌠    → →     →
-/// aᵐ = │ Nᵐ(x(ξ)) s(x) dΩ
+/// aᵐ = │ Nᵐ(x(ξ)) s(x) α dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -18,7 +19,7 @@ use russell_lab::Vector;
 ///
 /// ```text
 ///      ⌠
-/// aᵐ = │ Nᵐ(ℓ(ξ)) s(ℓ) dℓ
+/// aᵐ = │ Nᵐ(ℓ(ξ)) s(ℓ) α dℓ
 ///      ⌡
 ///      Γₑ
 /// ```
@@ -27,11 +28,11 @@ use russell_lab::Vector;
 ///
 /// ```text
 ///      nip-1     →     →       →
-/// aᵐ ≈   Σ    Nᵐ(ιᵖ) s(ιᵖ) |J|(ιᵖ) wᵖ
+/// aᵐ ≈   Σ    Nᵐ(ιᵖ) s(ιᵖ) |J|(ιᵖ) wᵖ α
 ///       p=0
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌     ┐
@@ -43,17 +44,14 @@ use russell_lab::Vector;
 ///     └     ┘
 /// ```
 ///
+/// # Arguments
+///
 /// * `a` -- A vector containing all `aᵐ` values, one after another, and
 ///   sequentially placed as shown above. `m` is the index of the node.
 ///   The length must be `a.len() ≥ ii0 + nnode`
-/// * `pad` -- Some members of the scratchpad will be modified
-///
-/// # Input
-///
-/// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `clear_a` -- Fills `a` vector with zeros, otherwise accumulate values into `a`
-/// * `ips` -- Integration points (n_integ_point)
-/// * `fn_s` -- Function `f(p)` that computes `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `args` --- Common arguments
+/// * `fn_s` -- Function `f(p,N)` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   and shape functions N(ιᵖ).
 ///
 /// # Examples
 ///
@@ -61,7 +59,7 @@ use russell_lab::Vector;
 /// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
-/// use russell_chk::assert_vec_approx_eq;
+/// use russell_chk::vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -75,52 +73,58 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_| Ok(5.0))?;
+///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
-///     assert_vec_approx_eq!(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
+///     vec_approx_eq(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_01_ns<F>(
-    a: &mut Vector,
-    pad: &mut Scratchpad,
-    ii0: usize,
-    clear_a: bool,
-    ips: IntegPointData,
-    fn_s: F,
-) -> Result<(), StrError>
+pub fn vec_01_ns<F>(a: &mut Vector, args: &mut CommonArgs, mut fn_s: F) -> Result<(), StrError>
 where
-    F: Fn(usize) -> Result<f64, StrError>,
+    F: FnMut(usize, &Vector) -> Result<f64, StrError>,
 {
     // check
-    let nnode = pad.interp.dim();
+    let nnode = args.pad.interp.dim();
+    let ii0 = args.ii0;
     if a.dim() < ii0 + nnode {
         return Err("a.len() must be ≥ ii0 + nnode");
     }
 
     // clear output vector
-    if clear_a {
+    if args.clear {
         a.fill(0.0);
     }
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..args.ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &args.ips[p];
+        let weight = args.ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota);
-        let det_jac = pad.calc_jacobian(iota)?;
+        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
+        let det_jac = args.pad.calc_jacobian(iota)?;
 
         // calculate s
-        let s = fn_s(p)?;
+        let nn = &args.pad.interp;
+        let s = fn_s(p, nn)?;
+
+        // calculate coefficient
+        let coef = if args.axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * args.pad.xxt.get(0, m);
+            }
+            s * det_jac * weight * args.alpha * r
+        } else {
+            s * det_jac * weight * args.alpha
+        };
 
         // loop over nodes and perform sum
-        let val = s * det_jac * weight;
         for m in 0..nnode {
-            a[ii0 + m] += pad.interp[m] * val;
+            a[ii0 + m] += nn[m] * coef;
         }
     }
     Ok(())
@@ -131,16 +135,21 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
-    use russell_chk::assert_vec_approx_eq;
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use russell_chk::vec_approx_eq;
     use russell_lab::Vector;
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut a = Vector::new(2);
+        let nn = Vector::new(0);
+        let f = |_: usize, _: &Vector| Ok(0.0);
+        assert_eq!(f(0, &nn).unwrap(), 0.0);
+        let mut args = CommonArgs::new(&mut pad, &[]);
+        args.ii0 = 1;
         assert_eq!(
-            integ::vec_01_ns(&mut a, &mut pad, 1, false, &[], |_| Ok(0.0)).err(),
+            integ::vec_01_ns(&mut a, &mut args, f).err(),
             Some("a.len() must be ≥ ii0 + nnode")
         );
     }
@@ -163,7 +172,7 @@ mod tests {
 
         // solution
         let cf = L / 6.0;
-        let (xa, xb) = (pad.xxt[0][0], pad.xxt[0][1]);
+        let (xa, xb) = (pad.xxt.get(0, 0), pad.xxt.get(0, 1));
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
 
         // integration points
@@ -175,9 +184,10 @@ mod tests {
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][0])).unwrap();
-            assert_vec_approx_eq!(a.as_data(), a_correct, tol);
+            let mut args = CommonArgs::new(&mut pad, ips);
+            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][0])).unwrap();
+            vec_approx_eq(a.as_data(), a_correct, tol);
         });
     }
 
@@ -189,7 +199,7 @@ mod tests {
         // solution
         let ana = AnalyticalTri3::new(&pad);
         const CS: f64 = 3.0;
-        let a_correct = ana.vec_01_ns(CS);
+        let a_correct = ana.vec_01_ns(CS, false);
 
         // integration points
         let class = pad.kind.class();
@@ -202,8 +212,36 @@ mod tests {
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_| Ok(CS)).unwrap();
-            assert_vec_approx_eq!(a.as_data(), a_correct, tol);
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(CS)).unwrap();
+            vec_approx_eq(a.as_data(), a_correct.as_data(), tol);
+        });
+    }
+
+    #[test]
+    fn vec_01_ns_works_tet4_constant() {
+        // tet 4 with a constant source term s(x) = cs
+        let mut pad = aux::gen_pad_tet4();
+
+        // solution
+        const CS: f64 = 120.0;
+        let ana = AnalyticalTet4::new(&pad);
+        let a_correct = ana.vec_01_ns(CS);
+
+        // integration points
+        // Note that the tolerance is high for n_integ_point = 1
+        // because the numerical integration performs poorly with few IPs
+        let class = pad.kind.class();
+        let tolerances = [1e-13, 1e-13];
+        let selection: Vec<_> = [1, 4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+
+        // check
+        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        selection.iter().zip(tolerances).for_each(|(ips, tol)| {
+            // println!("nip={}, tol={:.e}", ips.len(), tol);
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(CS)).unwrap();
+            vec_approx_eq(a.as_data(), &a_correct, tol);
         });
     }
 
@@ -230,9 +268,10 @@ mod tests {
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |p| Ok(x_ips[p][2])).unwrap();
-            assert_vec_approx_eq!(a.as_data(), a_correct, tol);
+            let mut args = CommonArgs::new(&mut pad, ips);
+            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][2])).unwrap();
+            vec_approx_eq(a.as_data(), &a_correct, tol);
         });
     }
 }

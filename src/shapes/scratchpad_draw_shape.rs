@@ -34,7 +34,7 @@ impl Scratchpad {
                 for i in 0..self.kind.edge_nnode() {
                     let m = self.kind.edge_node_id(e, i);
                     for j in 0..space_ndim {
-                        edge_pad.set_xx(i, j, self.xxt[j][m]);
+                        edge_pad.set_xx(i, j, self.xxt.get(j,m));
                     }
                 }
                 draw_edge(&mut canvas, &mut edge_pad, edge_color)?;
@@ -69,9 +69,9 @@ impl Scratchpad {
                 };
                 for m in 0..self.kind.nnode() {
                     if m < m_corner_max {
-                        labels_corner.draw(self.xxt[0][m], self.xxt[1][m], format!("{}", m).as_str());
+                        labels_corner.draw(self.xxt.get(0,m), self.xxt.get(1,m), format!("{}", m).as_str());
                     } else {
-                        labels_middle.draw(self.xxt[0][m], self.xxt[1][m], format!("{}", m).as_str());
+                        labels_middle.draw(self.xxt.get(0,m), self.xxt.get(1,m), format!("{}", m).as_str());
                     }
                 }
             } else {
@@ -79,16 +79,16 @@ impl Scratchpad {
                 for m in 0..self.kind.nnode() {
                     if m < m_corner_max {
                         labels_corner.draw_3d(
-                            self.xxt[0][m],
-                            self.xxt[1][m],
-                            self.xxt[2][m],
+                            self.xxt.get(0,m),
+                            self.xxt.get(1,m),
+                            self.xxt.get(2,m),
                             format!("{}", m).as_str(),
                         );
                     } else {
                         labels_middle.draw_3d(
-                            self.xxt[0][m],
-                            self.xxt[1][m],
-                            self.xxt[2][m],
+                            self.xxt.get(0,m),
+                            self.xxt.get(1,m),
+                            self.xxt.get(2,m),
                             format!("{}", m).as_str(),
                         );
                     }
@@ -101,8 +101,8 @@ impl Scratchpad {
             let mut xmax = vec![f64::MIN; space_ndim];
             for m in 0..nnode {
                 for j in 0..space_ndim {
-                    xmin[j] = f64::min(xmin[j], self.xxt[j][m]);
-                    xmax[j] = f64::max(xmax[j], self.xxt[j][m]);
+                    xmin[j] = f64::min(xmin[j], self.xxt.get(j,m));
+                    xmax[j] = f64::max(xmax[j], self.xxt.get(j,m));
                 }
             }
             let mut dx = xmax[0] - xmin[0];

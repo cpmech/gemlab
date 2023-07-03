@@ -1,8 +1,8 @@
 use gemlab::integ;
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
-use russell_lab::{copy_matrix, Matrix};
-use russell_tensor::LinElasticity;
+use russell_lab::Matrix;
+use russell_tensor::{copy_tensor4, LinElasticity};
 
 fn main() -> Result<(), StrError> {
     // scratchpad
@@ -33,26 +33,29 @@ fn main() -> Result<(), StrError> {
     let nrow = nnode * space_ndim;
     let mut kk = Matrix::new(nrow, nrow);
     let ips = integ::default_points(pad.kind);
-    integ::mat_10_gdg(&mut kk, &mut pad, 0, 0, true, ips, |dd, _| {
-        copy_matrix(&mut dd.mat, &model.get_modulus().mat)
+    let mut args = integ::CommonArgs::new(&mut pad, ips);
+    integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
+        copy_tensor4(dd, model.get_modulus()).unwrap();
+        Ok(())
     })?;
 
     // output
-    println!("{:.0}", kk);
-    // will print:
-    // ┌                                                             ┐
-    // │  149  108   24   -1    6   12  -54  -48    0  -94  -66  -36 │
-    // │  108  344   54  -24  104   42  -24 -216  -12  -60 -232  -84 │
-    // │   24   54  113    0   30   35    0  -24  -54  -24  -60  -94 │
-    // │   -1  -24    0   29  -18  -12  -18   24    0  -10   18   12 │
-    // │    6  104   30  -18   44   18   12  -72  -12    0  -76  -36 │
-    // │   12   42   35  -12   18   29    0  -24  -18    0  -36  -46 │
-    // │  -54  -24    0  -18   12    0   36    0    0   36   12    0 │
-    // │  -48 -216  -24   24  -72  -24    0  144    0   24  144   48 │
-    // │    0  -12  -54    0  -12  -18    0    0   36    0   24   36 │
-    // │  -94  -60  -24  -10    0    0   36   24    0   68   36   24 │
-    // │  -66 -232  -60   18  -76  -36   12  144   24   36  164   72 │
-    // │  -36  -84  -94   12  -36  -46    0   48   36   24   72  104 │
-    // └                                                             ┘
+    assert_eq!(
+        format!("{:.0}", kk),
+        "┌                                                             ┐\n\
+         │  149  108   24   -1    6   12  -54  -48    0  -94  -66  -36 │\n\
+         │  108  344   54  -24  104   42  -24 -216  -12  -60 -232  -84 │\n\
+         │   24   54  113    0   30   35    0  -24  -54  -24  -60  -94 │\n\
+         │   -1  -24    0   29  -18  -12  -18   24    0  -10   18   12 │\n\
+         │    6  104   30  -18   44   18   12  -72  -12    0  -76  -36 │\n\
+         │   12   42   35  -12   18   29    0  -24  -18    0  -36  -46 │\n\
+         │  -54  -24    0  -18   12    0   36    0    0   36   12    0 │\n\
+         │  -48 -216  -24   24  -72  -24    0  144    0   24  144   48 │\n\
+         │    0  -12  -54    0  -12  -18    0    0   36    0   24   36 │\n\
+         │  -94  -60  -24  -10    0    0   36   24    0   68   36   24 │\n\
+         │  -66 -232  -60   18  -76  -36   12  144   24   36  164   72 │\n\
+         │  -36  -84  -94   12  -36  -46    0   48   36   24   72  104 │\n\
+         └                                                             ┘"
+    );
     Ok(())
 }

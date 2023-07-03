@@ -180,33 +180,33 @@ impl Hex8 {
         let tp = 1.0 + t;
 
         // with respect to r
-        deriv[0][0] = -sm * tm / 8.0;
-        deriv[1][0] = sm * tm / 8.0;
-        deriv[2][0] = sp * tm / 8.0;
-        deriv[3][0] = -sp * tm / 8.0;
-        deriv[4][0] = -sm * tp / 8.0;
-        deriv[5][0] = sm * tp / 8.0;
-        deriv[6][0] = sp * tp / 8.0;
-        deriv[7][0] = -sp * tp / 8.0;
+        deriv.set(0, 0, -sm * tm / 8.0);
+        deriv.set(1, 0, sm * tm / 8.0);
+        deriv.set(2, 0, sp * tm / 8.0);
+        deriv.set(3, 0, -sp * tm / 8.0);
+        deriv.set(4, 0, -sm * tp / 8.0);
+        deriv.set(5, 0, sm * tp / 8.0);
+        deriv.set(6, 0, sp * tp / 8.0);
+        deriv.set(7, 0, -sp * tp / 8.0);
 
         // with respect to s
-        deriv[0][1] = -rm * tm / 8.0;
-        deriv[1][1] = -rp * tm / 8.0;
-        deriv[2][1] = rp * tm / 8.0;
-        deriv[3][1] = rm * tm / 8.0;
-        deriv[4][1] = -rm * tp / 8.0;
-        deriv[5][1] = -rp * tp / 8.0;
-        deriv[6][1] = rp * tp / 8.0;
-        deriv[7][1] = rm * tp / 8.0;
+        deriv.set(0, 1, -rm * tm / 8.0);
+        deriv.set(1, 1, -rp * tm / 8.0);
+        deriv.set(2, 1, rp * tm / 8.0);
+        deriv.set(3, 1, rm * tm / 8.0);
+        deriv.set(4, 1, -rm * tp / 8.0);
+        deriv.set(5, 1, -rp * tp / 8.0);
+        deriv.set(6, 1, rp * tp / 8.0);
+        deriv.set(7, 1, rm * tp / 8.0);
 
         // with respect to t
-        deriv[0][2] = -rm * sm / 8.0;
-        deriv[1][2] = -rp * sm / 8.0;
-        deriv[2][2] = -rp * sp / 8.0;
-        deriv[3][2] = -rm * sp / 8.0;
-        deriv[4][2] = rm * sm / 8.0;
-        deriv[5][2] = rp * sm / 8.0;
-        deriv[6][2] = rp * sp / 8.0;
-        deriv[7][2] = rm * sp / 8.0;
+        deriv.set(0, 2, -rm * sm / 8.0);
+        deriv.set(1, 2, -rp * sm / 8.0);
+        deriv.set(2, 2, -rp * sp / 8.0);
+        deriv.set(3, 2, -rm * sp / 8.0);
+        deriv.set(4, 2, rm * sm / 8.0);
+        deriv.set(5, 2, rp * sm / 8.0);
+        deriv.set(6, 2, rp * sp / 8.0);
+        deriv.set(7, 2, rm * sp / 8.0);
     }
 }

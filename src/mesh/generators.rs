@@ -1,7 +1,7 @@
 use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Mesh};
 use crate::shapes::GeoKind;
-use crate::util::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
 use crate::StrError;
+use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
 
 /// Groups generators of structured meshes (Qua and Hex -- sometimes Tri)
 pub struct Structured {}
@@ -143,8 +143,7 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        join_meshes(&mesh_1_2, &mesh_3)
+        join_meshes(&[&mesh_1, &mesh_2, &mesh_3])
     }
 
     /// Generates a mesh representing a quarter of a disk in 2D (B-version)
@@ -233,8 +232,7 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        join_meshes(&mesh_1_2, &mesh_3)
+        join_meshes(&[&mesh_1, &mesh_2, &mesh_3])
     }
 
     /// Generates a mesh representing a quarter of a disk in 3D (extrusion along z) (A-version)
@@ -320,8 +318,7 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        join_meshes(&mesh_1_2, &mesh_3)
+        join_meshes(&[&mesh_1, &mesh_2, &mesh_3])
     }
 
     /// Generates a mesh representing a quarter of a disk in 3D (extrusion along z) (B-version)
@@ -457,8 +454,7 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        join_meshes(&mesh_1_2, &mesh_3)
+        join_meshes(&[&mesh_1, &mesh_2, &mesh_3])
     }
 
     /// Generates a mesh representing a quarter of a plate with a hole in 2D
@@ -578,9 +574,7 @@ impl Structured {
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
         let mesh_4 = block_4.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        let mesh_1_2_3 = join_meshes(&mesh_1_2, &mesh_3)?;
-        join_meshes(&mesh_1_2_3, &mesh_4)
+        join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])
     }
 
     /// Generates a mesh representing a quarter of a plate with a hole in 3D (extrusion along z)
@@ -753,9 +747,95 @@ impl Structured {
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
         let mesh_4 = block_4.subdivide(target)?;
-        let mesh_1_2 = join_meshes(&mesh_1, &mesh_2)?;
-        let mesh_1_2_3 = join_meshes(&mesh_1_2, &mesh_3)?;
-        join_meshes(&mesh_1_2_3, &mesh_4)
+        join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])
+    }
+
+    /// Generates a rectangle with horizontal layers
+    ///
+    /// ```text
+    ///        xa         xb                 xc
+    /// y[n-1] o----------o------------------o
+    ///        |          |                  |
+    ///        |          |                  | << ny[n-2]
+    /// y[n-2] o----------o------------------o
+    ///        |          |                  |
+    ///                      ...
+    ///        |          |                  |
+    /// y[1]   o----------o------------------o
+    ///        |          |                  | < ny[0]
+    /// y[0]   o----------o------------------o
+    ///        xa         xb                 xc
+    ///              ^               ^
+    ///             na              nb
+    /// ```
+    pub fn rectangle(
+        xa: f64,
+        xb: Option<f64>,
+        xc: f64,
+        na: usize,
+        nb: usize,
+        y: &[f64],
+        ny: &[usize],
+        attributes: &[usize],
+        target: GeoKind,
+    ) -> Result<Mesh, StrError> {
+        if xc <= xa {
+            return Err("xc must be > xa");
+        }
+        if let Some(xxb) = xb {
+            if xxb <= xa || xxb >= xc {
+                return Err("xb must satisfy: xa < xb < xc");
+            }
+        }
+        if na < 1 || nb < 1 {
+            return Err("na and nb must be > 0");
+        }
+        if y.len() < 2 {
+            return Err("y.len() must be ≥ 2");
+        }
+        let n_layer = y.len() - 1;
+        if ny.len() != n_layer {
+            return Err("ny.len() must be equal to n_layer = y.len() - 1");
+        }
+        if attributes.len() != n_layer {
+            return Err("attributes.len() must be equal to n_layer = y.len() - 1");
+        }
+        let mut meshes = Vec::new();
+        let mut ya = y[0];
+        if let Some(xxb) = xb {
+            for l in 0..n_layer {
+                let yb = y[l + 1];
+                if yb <= ya {
+                    return Err("y values must be sorted ascending");
+                }
+                let mut ba = Block::new(&[[xa, ya], [xxb, ya], [xxb, yb], [xa, yb]]).unwrap();
+                let mut bb = Block::new(&[[xxb, ya], [xc, ya], [xc, yb], [xxb, yb]]).unwrap();
+                ba.set_ndiv(&[na, ny[l]]).unwrap();
+                bb.set_ndiv(&[nb, ny[l]]).unwrap();
+                ba.set_attribute_id(attributes[l]);
+                bb.set_attribute_id(attributes[l]);
+                meshes.push(ba.subdivide(target)?);
+                meshes.push(bb.subdivide(target).unwrap());
+                ya = yb;
+            }
+        } else {
+            for l in 0..n_layer {
+                let yb = y[l + 1];
+                if yb <= ya {
+                    return Err("y values must be sorted ascending");
+                }
+                let mut block = Block::new(&[[xa, ya], [xc, ya], [xc, yb], [xa, yb]]).unwrap();
+                block.set_ndiv(&[na, ny[l]]).unwrap();
+                block.set_attribute_id(attributes[l]);
+                let mesh = block.subdivide(target)?;
+                if n_layer == 1 {
+                    return Ok(mesh);
+                }
+                meshes.push(mesh);
+                ya = yb;
+            }
+        }
+        join_meshes(&meshes.iter().collect::<Vec<_>>())
     }
 }
 
@@ -764,10 +844,10 @@ impl Structured {
 #[cfg(test)]
 mod tests {
     use super::Structured;
-    use crate::geometry::point_point_distance;
     use crate::mesh::check_overlapping_points;
     use crate::shapes::GeoKind;
-    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
+    use crate::{geometry::point_point_distance, prelude::check_all};
+    use russell_chk::{approx_eq, vec_approx_eq};
 
     #[allow(unused_imports)]
     use crate::mesh::draw_mesh;
@@ -788,19 +868,19 @@ mod tests {
         assert_eq!(mesh.cells.len(), 1);
         for p in [0, 11, 7, 3] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 3.0, 1e-15);
+            approx_eq(d, 3.0, 1e-15);
         }
         for p in [4, 12, 15, 10] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 4.0, 1e-15);
+            approx_eq(d, 4.0, 1e-15);
         }
         for p in [8, 13, 14, 6] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 5.0, 1e-15);
+            approx_eq(d, 5.0, 1e-15);
         }
         for p in [1, 5, 9, 2] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_ring_2d.svg").unwrap();
     }
@@ -821,11 +901,11 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         for p in [0, 15, 14, 3, 41, 40, 33] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 3.0, 1e-15);
+            approx_eq(d, 3.0, 1e-15);
         }
         for p in [1, 10, 11, 2, 36, 37, 32] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_ring_3d.svg").unwrap();
     }
@@ -838,7 +918,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         for p in [8, 11, 9, 14, 13] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8.svg").unwrap();
     }
@@ -851,7 +931,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 27);
         for p in [50, 53, 51, 62, 61, 71, 70, 99, 96, 98, 91, 94, 92] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8_finer.svg").unwrap();
     }
@@ -864,7 +944,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         for p in [16, 19, 22, 17, 29, 31, 28] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua16.svg").unwrap();
     }
@@ -885,7 +965,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         for p in [8, 11, 9, 14, 13] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8.svg").unwrap();
     }
@@ -898,7 +978,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 27);
         for p in [50, 53, 51, 62, 61, 71, 70, 99, 96, 98, 91, 94, 92] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8_finer.svg").unwrap();
     }
@@ -911,7 +991,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         for p in [16, 19, 22, 17, 29, 31, 28] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua16.svg").unwrap();
     }
@@ -928,7 +1008,7 @@ mod tests {
             34, 44, 45, 35, 58, 59, 53, // z-max
         ] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_3d_a_hex32.svg").unwrap();
     }
@@ -953,7 +1033,7 @@ mod tests {
             34, 44, 45, 35, 58, 59, 53, // z-max
         ] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-15);
         }
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_3d_b_hex32.svg").unwrap();
     }
@@ -966,11 +1046,11 @@ mod tests {
         check_overlapping_points(&mesh, 0.18).unwrap();
         for p in [0, 11, 7, 3, 19, 16, 13] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 1.0, 1e-15);
+            approx_eq(d, 1.0, 1e-15);
         }
         for p in [1, 5, 9, 2, 14, 17, 12] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 2.0, 1e-15);
+            approx_eq(d, 2.0, 1e-15);
         }
         assert_eq!(mesh.points[21].coords, &[3.0, 3.0]);
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_2d.svg").unwrap();
@@ -993,16 +1073,181 @@ mod tests {
         // hole/inner
         for p in [0, 15, 14, 3, 41, 40, 33] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 1.0, 1e-15);
+            approx_eq(d, 1.0, 1e-15);
         }
         // hole/outer (ring)
         for p in [1, 10, 11, 2, 36, 37, 32] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            assert_approx_eq!(d, 2.0, 1e-15);
+            approx_eq(d, 2.0, 1e-15);
         }
-        assert_vec_approx_eq!(mesh.points[26].coords, &[2.0, 0.0, 0.5], 1e-15);
-        assert_vec_approx_eq!(mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
-        assert_vec_approx_eq!(mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
+        vec_approx_eq(&mesh.points[26].coords, &[2.0, 0.0, 0.5], 1e-15);
+        vec_approx_eq(&mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
+        vec_approx_eq(&mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
         // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_3d.svg").unwrap();
+    }
+
+    #[test]
+    fn rectangle_handles_errors() {
+        assert_eq!(
+            Structured::rectangle(0.0, None, -1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("xc must be > xa")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, Some(0.0), 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("xb must satisfy: xa < xb < xc")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 0, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("na and nb must be > 0")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 0, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("na and nb must be > 0")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("y.len() must be ≥ 2")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[], &[10], GeoKind::Qua4).err(),
+            Some("ny.len() must be equal to n_layer = y.len() - 1")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[], GeoKind::Qua4).err(),
+            Some("attributes.len() must be equal to n_layer = y.len() - 1")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("y values must be sorted ascending")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Tri3).err(),
+            Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, Some(0.5), 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Some("y values must be sorted ascending")
+        );
+        assert_eq!(
+            Structured::rectangle(0.0, Some(0.5), 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Tri3).err(),
+            Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
+        );
+    }
+
+    #[test]
+    fn rectangle_works() {
+        let (xa, xc, na, nb) = (1.0, 3.0, 1, 1);
+        let target = GeoKind::Qua4;
+
+        // one column / one layer = single cell -------------------------------
+
+        let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 5.0], &[1], &[10], target).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_1.svg").unwrap();
+        check_overlapping_points(&mesh, 1e-2).unwrap();
+        check_all(&mesh).unwrap();
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 4 1\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 1 2\n\
+             1 3 2\n\
+             2 3 5\n\
+             3 1 5\n\
+             \n\
+             # cells\n\
+             # id att kind  points\n\
+             0 10 qua4  0 1 2 3\n"
+        );
+
+        // two columns / one layer = two cells -------------------------------
+
+        let mesh = Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 5.0], &[1], &[20], target).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_2.svg").unwrap();
+        check_overlapping_points(&mesh, 1e-2).unwrap();
+        check_all(&mesh).unwrap();
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 6 2\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 1 2\n\
+             1 1.5 2\n\
+             2 1.5 5\n\
+             3 1 5\n\
+             4 3 2\n\
+             5 3 5\n\
+             \n\
+             # cells\n\
+             # id att kind  points\n\
+             0 20 qua4  0 1 2 3\n\
+             1 20 qua4  1 4 5 2\n"
+        );
+
+        // one column / two layers = two cells -------------------------------
+
+        let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_3.svg").unwrap();
+        check_overlapping_points(&mesh, 1e-2).unwrap();
+        check_all(&mesh).unwrap();
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 6 2\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 1 2\n\
+             1 3 2\n\
+             2 3 3\n\
+             3 1 3\n\
+             4 3 5\n\
+             5 1 5\n\
+             \n\
+             # cells\n\
+             # id att kind  points\n\
+             0 10 qua4  0 1 2 3\n\
+             1 20 qua4  3 2 4 5\n"
+        );
+
+        // two columns / two layers = four cells -------------------------------
+
+        let mesh =
+            Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
+        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_4.svg").unwrap();
+        check_overlapping_points(&mesh, 1e-2).unwrap();
+        check_all(&mesh).unwrap();
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell\n\
+             2 9 4\n\
+             \n\
+             # points\n\
+             # id x y {z}\n\
+             0 1 2\n\
+             1 1.5 2\n\
+             2 1.5 3\n\
+             3 1 3\n\
+             4 3 2\n\
+             5 3 3\n\
+             6 1.5 5\n\
+             7 1 5\n\
+             8 3 5\n\
+             \n\
+             # cells\n\
+             # id att kind  points\n\
+             0 10 qua4  0 1 2 3\n\
+             1 10 qua4  1 4 5 2\n\
+             2 20 qua4  3 2 6 7\n\
+             3 20 qua4  2 5 8 6\n"
+        );
     }
 }

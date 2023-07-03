@@ -1,8 +1,9 @@
 use gemlab::integ;
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
-use russell_chk::assert_vec_approx_eq;
+use russell_chk::vec_approx_eq;
 use russell_lab::Vector;
+use russell_tensor::{Mandel, Tensor2};
 
 fn main() -> Result<(), StrError> {
     // shape and state
@@ -37,12 +38,20 @@ fn main() -> Result<(), StrError> {
     let nnode = pad.kind.nnode();
     let ips = integ::default_points(pad.kind);
     let mut a = Vector::filled(nnode, 0.0);
-    integ::vec_01_ns(&mut a, &mut pad, 0, true, ips, |_| Ok(18.0))?;
-    println!("a =\n{}", a);
+    let mut args = integ::CommonArgs::new(&mut pad, ips);
+    integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(18.0))?;
+    assert_eq!(
+        format!("{:.1}", a),
+        "┌      ┐\n\
+         │ 36.0 │\n\
+         │ 36.0 │\n\
+         │ 36.0 │\n\
+         └      ┘"
+    );
 
     // check
-    let a_correct = ana.vec_01_ns(18.0);
-    assert_vec_approx_eq!(a.as_data(), a_correct, 1e-14);
+    let a_correct = ana.vec_01_ns(18.0, false);
+    vec_approx_eq(a.as_data(), a_correct.as_data(), 1e-14);
 
     // shape times vector, returns vector 'b'
     //
@@ -64,21 +73,31 @@ fn main() -> Result<(), StrError> {
     //          └   ┘   └    ┘
     // ```
     let mut b = Vector::filled(nnode * space_ndim, 0.0);
-    integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
+    integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
         v[0] = 12.0;
         v[1] = 12.0;
         Ok(())
     })?;
-    println!("b =\n{}", b);
+    assert_eq!(
+        format!("{}", b),
+        "┌    ┐\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         │ 24 │\n\
+         └    ┘"
+    );
 
     // check
     let b_correct = ana.vec_02_nv(12.0, 12.0);
-    assert_vec_approx_eq!(b.as_data(), b_correct, 1e-14);
+    vec_approx_eq(b.as_data(), b_correct.as_data(), 1e-14);
 
     // vector dot gradient, returns vector 'c'
     //
     //      ⌠ → →    →  → →
-    // cᵐ = │ w(x) · Gᵐ(x(ξ)) dΩ
+    // cᵐ = │ w(x) · Bᵐ(x(ξ)) dΩ
     //      ⌡
     //      Ωₑ
     //
@@ -91,21 +110,28 @@ fn main() -> Result<(), StrError> {
     //     │  6 │
     //     └    ┘
     let mut c = Vector::filled(nnode, 0.0);
-    integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
+    integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
         w[0] = -2.0;
         w[1] = 4.0;
         Ok(())
     })?;
-    println!("c =\n{}", c);
+    assert_eq!(
+        format!("{}", c),
+        "┌    ┐\n\
+         │ -2 │\n\
+         │ -4 │\n\
+         │  6 │\n\
+         └    ┘"
+    );
 
     // check
-    let c_correct = ana.vec_03_vg(-2.0, 4.0);
-    assert_vec_approx_eq!(c.as_data(), c_correct, 1e-15);
+    let c_correct = ana.vec_03_vb(-2.0, 4.0);
+    vec_approx_eq(c.as_data(), c_correct.as_data(), 1e-15);
 
     // tensor dot gradient, returns vector 'd'
     //
     // →    ⌠   →    →  → →
-    // dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
+    // dᵐ = │ σ(x) · Bᵐ(x(ξ)) dΩ
     //      ⌡ ▔
     //      Ωₑ
     //
@@ -124,16 +150,31 @@ fn main() -> Result<(), StrError> {
     //     └     ┘
     let (s00, s11, s01) = (6.0, 4.0, 2.0);
     let mut d = Vector::filled(nnode * space_ndim, 0.0);
-    integ::vec_04_tg(&mut d, &mut pad, 0, true, ips, |sig, _| {
+    integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
         sig.sym_set(0, 0, s00);
         sig.sym_set(1, 1, s11);
         sig.sym_set(0, 1, s01);
         Ok(())
     })?;
-    println!("d =\n{}", d);
+    assert_eq!(
+        format!("{}", d),
+        "┌     ┐\n\
+         │ -15 │\n\
+         │ -10 │\n\
+         │  12 │\n\
+         │   4 │\n\
+         │   3 │\n\
+         │   6 │\n\
+         └     ┘"
+    );
 
     // check
-    let d_correct = ana.vec_04_tg(s00, s11, s01);
-    assert_vec_approx_eq!(d.as_data(), d_correct, 1e-15);
+    let sig = Tensor2::from_matrix(
+        &[[s00, s01, 0.0], [s01, s11, 0.0], [0.0, 0.0, 0.0]],
+        Mandel::Symmetric2D,
+    )
+    .unwrap();
+    let d_correct = ana.vec_04_tb(&sig, false);
+    vec_approx_eq(d.as_data(), d_correct.as_data(), 1e-15);
     Ok(())
 }

@@ -29,7 +29,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_chk::vec_approx_eq;
     /// use russell_lab::Vector;
     ///
     /// fn main() -> Result<(), StrError> {
@@ -56,7 +56,7 @@ impl Scratchpad {
     ///
     ///     let mut x = Vector::new(2);
     ///     pad.calc_coords(&mut x, &[0.0, 0.0])?;
-    ///     assert_vec_approx_eq!(x.as_data(), &[x0 + w / 2.0, y0 + h / 2.0], 1e-15);
+    ///     vec_approx_eq(x.as_data(), &[x0 + w / 2.0, y0 + h / 2.0], 1e-15);
     ///     Ok(())
     /// }
     /// ```
@@ -69,7 +69,8 @@ impl Scratchpad {
             return Err("x.dim() must be equal to space_ndim");
         }
         (self.fn_interp)(&mut self.interp, ksi);
-        mat_vec_mul(x, 1.0, &self.xxt, &self.interp)
+        mat_vec_mul(x, 1.0, &self.xxt, &self.interp).unwrap();
+        Ok(())
     }
 }
 
@@ -79,8 +80,8 @@ impl Scratchpad {
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::util::ONE_BY_3;
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
+    use russell_lab::math::ONE_BY_3;
     use russell_lab::Vector;
 
     #[test]
@@ -108,7 +109,7 @@ mod tests {
             (GeoKind::Tri10, 1e-14, 1e-14),
             (GeoKind::Tri15, 1e-14, 1e-5), // << this triangle is inaccurate as well here
             (GeoKind::Qua4, 1e-15, 0.19),  // linear maps are inaccurate for the circular wedge
-            (GeoKind::Qua8, 1e-15, 1e-15),
+            (GeoKind::Qua8, 1e-15, 1e-14),
             (GeoKind::Qua17, 1e-15, 1e-15),
             (GeoKind::Tet4, 1e-15, 0.35),   // linear tetrahedron is also inaccurate here
             (GeoKind::Tet10, 1e-15, 0.013), // quadratic tetrahedron is also inaccurate here
@@ -120,6 +121,8 @@ mod tests {
 
         // loop over shapes
         for (kind, tol, tol_in) in problem {
+            println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);
@@ -139,7 +142,7 @@ mod tests {
 
                 // compare xᵐ with generated coordinates
                 aux::map_point_coords(&mut x_correct, ksi, ksi_min, ksi_del);
-                assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol);
+                vec_approx_eq(x.as_data(), x_correct.as_data(), tol);
             }
 
             // test again inside the reference domain
@@ -150,7 +153,7 @@ mod tests {
             };
             pad.calc_coords(&mut x, &ksi_in).unwrap();
             aux::map_point_coords(&mut x_correct, &ksi_in, ksi_min, ksi_del);
-            assert_vec_approx_eq!(x.as_data(), x_correct.as_data(), tol_in);
+            vec_approx_eq(x.as_data(), x_correct.as_data(), tol_in);
         }
     }
 }

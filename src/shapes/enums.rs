@@ -1110,6 +1110,49 @@ impl GeoKind {
         }
     }
 
+    /// Returns the VTK cell type (if available in VTK)
+    pub fn vtk_type(&self) -> Option<usize> {
+        const VTK_LINE: usize = 3;
+        const VTK_TRIANGLE: usize = 5;
+        const VTK_QUAD: usize = 9;
+        const VTK_TETRA: usize = 10;
+        const VTK_HEXAHEDRON: usize = 12;
+        const VTK_QUADRATIC_EDGE: usize = 21;
+        const VTK_QUADRATIC_TRIANGLE: usize = 22;
+        const VTK_QUADRATIC_QUAD: usize = 23;
+        const VTK_QUADRATIC_TETRA: usize = 24;
+        const VTK_QUADRATIC_HEXAHEDRON: usize = 25;
+        const VTK_BIQUADRATIC_QUAD: usize = 28;
+        const VTK_CUBIC_LINE: usize = 35;
+        match self {
+            // Lin
+            GeoKind::Lin2 => Some(VTK_LINE),
+            GeoKind::Lin3 => Some(VTK_QUADRATIC_EDGE),
+            GeoKind::Lin4 => Some(VTK_CUBIC_LINE),
+            GeoKind::Lin5 => None,
+            // Tri
+            GeoKind::Tri3 => Some(VTK_TRIANGLE),
+            GeoKind::Tri6 => Some(VTK_QUADRATIC_TRIANGLE),
+            GeoKind::Tri10 => None,
+            GeoKind::Tri15 => None,
+            // Qua
+            GeoKind::Qua4 => Some(VTK_QUAD),
+            GeoKind::Qua8 => Some(VTK_QUADRATIC_QUAD),
+            GeoKind::Qua9 => Some(VTK_BIQUADRATIC_QUAD),
+            GeoKind::Qua12 => None,
+            GeoKind::Qua16 => None,
+            GeoKind::Qua17 => None,
+            // Tet
+            GeoKind::Tet4 => Some(VTK_TETRA),
+            GeoKind::Tet10 => Some(VTK_QUADRATIC_TETRA),
+            GeoKind::Tet20 => None,
+            // Hex
+            GeoKind::Hex8 => Some(VTK_HEXAHEDRON),
+            GeoKind::Hex20 => Some(VTK_QUADRATIC_HEXAHEDRON),
+            GeoKind::Hex32 => None,
+        }
+    }
+
     /// Holds all enum values
     pub const VALUES: [Self; 20] = [
         // Lin
@@ -1229,6 +1272,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), None);
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), Some(3));
                 }
                 GeoKind::Lin3 => {
                     assert_eq!(GeoKind::from("lin3").unwrap(), kind);
@@ -1246,6 +1290,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), Some(GeoKind::Lin2));
                     assert_eq!(kind.n_interior_nodes(), 1);
                     assert_eq!(kind.interior_node(0), 2);
+                    assert_eq!(kind.vtk_type(), Some(21));
                 }
                 GeoKind::Lin4 => {
                     assert_eq!(GeoKind::from("lin4").unwrap(), kind);
@@ -1264,6 +1309,7 @@ mod tests {
                     assert_eq!(kind.n_interior_nodes(), 2);
                     assert_eq!(kind.interior_node(0), 2);
                     assert_eq!(kind.interior_node(1), 3);
+                    assert_eq!(kind.vtk_type(), Some(35));
                 }
                 GeoKind::Lin5 => {
                     assert_eq!(GeoKind::from("lin5").unwrap(), kind);
@@ -1283,6 +1329,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 2);
                     assert_eq!(kind.interior_node(1), 3);
                     assert_eq!(kind.interior_node(2), 4);
+                    assert_eq!(kind.vtk_type(), None);
                 }
 
                 // Tri
@@ -1302,6 +1349,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), None);
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), Some(5));
                 }
                 GeoKind::Tri6 => {
                     assert_eq!(GeoKind::from("tri6").unwrap(), kind);
@@ -1319,6 +1367,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), Some(GeoKind::Tri3));
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), Some(22));
                 }
                 GeoKind::Tri10 => {
                     assert_eq!(GeoKind::from("tri10").unwrap(), kind);
@@ -1336,6 +1385,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), None);
                     assert_eq!(kind.n_interior_nodes(), 1);
                     assert_eq!(kind.interior_node(0), 9);
+                    assert_eq!(kind.vtk_type(), None);
                 }
                 GeoKind::Tri15 => {
                     assert_eq!(GeoKind::from("tri15").unwrap(), kind);
@@ -1355,6 +1405,7 @@ mod tests {
                     assert_eq!(kind.interior_node(0), 12);
                     assert_eq!(kind.interior_node(1), 13);
                     assert_eq!(kind.interior_node(2), 14);
+                    assert_eq!(kind.vtk_type(), None);
                 }
 
                 // Qua
@@ -1374,6 +1425,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), None);
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), Some(9));
                 }
                 GeoKind::Qua8 => {
                     assert_eq!(GeoKind::from("qua8").unwrap(), kind);
@@ -1391,6 +1443,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), Some(GeoKind::Qua4));
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), Some(23));
                 }
                 GeoKind::Qua9 => {
                     assert_eq!(GeoKind::from("qua9").unwrap(), kind);
@@ -1408,6 +1461,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), Some(GeoKind::Qua4));
                     assert_eq!(kind.n_interior_nodes(), 1);
                     assert_eq!(kind.interior_node(0), 8);
+                    assert_eq!(kind.vtk_type(), Some(28));
                 }
                 GeoKind::Qua12 => {
                     assert_eq!(GeoKind::from("qua12").unwrap(), kind);
@@ -1425,6 +1479,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), None);
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), None);
                 }
                 GeoKind::Qua16 => {
                     assert_eq!(GeoKind::from("qua16").unwrap(), kind);
@@ -1445,6 +1500,7 @@ mod tests {
                     assert_eq!(kind.interior_node(1), 13);
                     assert_eq!(kind.interior_node(2), 14);
                     assert_eq!(kind.interior_node(3), 15);
+                    assert_eq!(kind.vtk_type(), None);
                 }
                 GeoKind::Qua17 => {
                     assert_eq!(GeoKind::from("qua17").unwrap(), kind);
@@ -1462,6 +1518,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), Some(GeoKind::Qua9));
                     assert_eq!(kind.n_interior_nodes(), 1);
                     assert_eq!(kind.interior_node(0), 8);
+                    assert_eq!(kind.vtk_type(), None);
                 }
 
                 // Tet
@@ -1481,6 +1538,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), None);
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), Some(10));
                 }
                 GeoKind::Tet10 => {
                     assert_eq!(GeoKind::from("tet10").unwrap(), kind);
@@ -1498,6 +1556,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), Some(GeoKind::Tet4));
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), Some(24));
                 }
                 GeoKind::Tet20 => {
                     assert_eq!(GeoKind::from("tet20").unwrap(), kind);
@@ -1515,6 +1574,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), None);
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), None);
                 }
 
                 // Hex
@@ -1534,6 +1594,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), None);
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), Some(12));
                 }
                 GeoKind::Hex20 => {
                     assert_eq!(GeoKind::from("hex20").unwrap(), kind);
@@ -1551,6 +1612,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), Some(GeoKind::Hex8));
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), Some(25));
                 }
                 GeoKind::Hex32 => {
                     assert_eq!(GeoKind::from("hex32").unwrap(), kind);
@@ -1568,6 +1630,7 @@ mod tests {
                     assert_eq!(kind.lower_order(), None);
                     assert_eq!(kind.n_interior_nodes(), 0);
                     assert_eq!(kind.interior_node(0), 0);
+                    assert_eq!(kind.vtk_type(), None);
                 }
             }
             match kind.class() {

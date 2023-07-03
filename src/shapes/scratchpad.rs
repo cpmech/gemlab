@@ -36,18 +36,20 @@ use russell_lab::{Matrix, Vector};
 ///
 /// ## 3 Inverse Jacobian
 ///
+/// Compute the inverse Jacobian matrix
+///
 /// ## 4 Gradient @ ξ
 ///
 /// ```text
 ///             →
 /// →  →    dNᵐ(ξ)
-/// Gᵐ(ξ) = ——————
+/// Bᵐ(ξ) = ——————
 ///            →
 ///           dx
 /// ```
 ///
 /// ```text
-///        G          =       L        ·           J⁻¹
+///        B          =       L        ·           J⁻¹
 /// (nnode,space_ndim) (nnode,geo_ndim) (space_ndim,space_ndim)
 /// ```
 ///
@@ -80,12 +82,12 @@ pub struct Scratchpad {
     /// Only available if `geo_ndim = space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
     pub inv_jacobian: Matrix,
 
-    /// Matrix G: (nnode,space_ndim) dNᵐ/dx Gradient of shape functions (only if geo_ndim = space_ndim) at ξ (ksi)
+    /// Matrix B: (nnode,space_ndim) dNᵐ/dx Gradient of shape functions (only if geo_ndim = space_ndim) at ξ (ksi)
     ///
     /// Only available if `geo_ndim = space_ndim` (otherwise, the matrix is set to empty; 0 x 0 matrix)
     ///
     /// ```text
-    /// G = L · J⁻¹
+    /// B = L · J⁻¹
     /// ```
     pub gradient: Matrix,
 
@@ -254,7 +256,7 @@ impl Scratchpad {
     /// ```
     pub fn set_xx(&mut self, m: usize, j: usize, value: f64) {
         self.ok_xxt = false;
-        self.xxt[j][m] = value;
+        self.xxt.set(j, m, value);
         let (space_ndim, nnode) = self.xxt.dims();
         if m == nnode - 1 && j == space_ndim - 1 {
             self.ok_xxt = true;

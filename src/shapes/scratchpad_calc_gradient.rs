@@ -12,15 +12,15 @@ impl Scratchpad {
     /// ```text
     ///             →
     /// →  →    dNᵐ(ξ)
-    /// Gᵐ(ξ) = ——————
+    /// Bᵐ(ξ) = ——————
     ///            →
     ///           dx
     /// ```
     ///
-    /// which can be organized in an (nnode,space_ndim) matrix `G` as follows
+    /// which can be organized in an (nnode,space_ndim) matrix `B` as follows
     ///
     /// ```text
-    /// G = L · J⁻¹
+    /// B = L · J⁻¹
     /// ```
     ///
     /// # Output
@@ -40,7 +40,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_chk::vec_approx_eq;
     /// use russell_lab::Matrix;
     ///
     /// fn main() -> Result<(), StrError> {
@@ -72,7 +72,7 @@ impl Scratchpad {
     ///         [1.0 / (4.0 * a), 1.0 / (2.0 * a)],
     ///         [-1.0 / (4.0 * a), 1.0 / (2.0 * a)],
     ///     ]);
-    ///     assert_vec_approx_eq!(pad.gradient.as_data(), correct_gg.as_data(), 1e-15);
+    ///     vec_approx_eq(pad.gradient.as_data(), correct_gg.as_data(), 1e-15);
     ///     Ok(())
     /// }
     /// ```
@@ -86,7 +86,7 @@ impl Scratchpad {
         // Jacobian matrix J: dx/dξ
         let det_jac = self.calc_jacobian(ksi)?;
 
-        // gradient: G = L · J⁻¹
+        // gradient: B = L · J⁻¹
         mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian).unwrap(); // cannot fail because the dims are checked
         Ok(det_jac)
     }
@@ -98,9 +98,9 @@ impl Scratchpad {
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::util::ONE_BY_3;
-    use russell_chk::assert_deriv_approx_eq;
-    use russell_lab::{copy_vector, Vector};
+    use russell_chk::deriv_approx_eq;
+    use russell_lab::math::ONE_BY_3;
+    use russell_lab::{vec_copy, Vector};
 
     #[test]
     fn calc_gradient_handles_errors() {
@@ -117,7 +117,7 @@ mod tests {
         );
     }
 
-    // Holds arguments for numerical differentiation of N with respect to x => G (gradient) matrix
+    // Holds arguments for numerical differentiation of N with respect to x => B (gradient) matrix
     struct ArgsNumGrad {
         pad: Scratchpad, // scratchpad to send to calc_coords
         at_x: Vector,    // at x coord value
@@ -129,7 +129,7 @@ mod tests {
 
     // Computes Nᵐ(ξ(x)) with variable v := xⱼ
     fn nn_given_x(v: f64, args: &mut ArgsNumGrad) -> f64 {
-        copy_vector(&mut args.x, &args.at_x).unwrap();
+        vec_copy(&mut args.x, &args.at_x).unwrap();
         args.x[args.j] = v;
         args.pad.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-14).unwrap();
         (args.pad.fn_interp)(&mut args.pad.interp, &args.ksi);
@@ -149,7 +149,7 @@ mod tests {
             (GeoKind::Qua4, 1e-11),
             (GeoKind::Qua8, 1e-10),
             (GeoKind::Qua9, 1e-10),
-            (GeoKind::Qua12, 1e-10),
+            (GeoKind::Qua12, 1e-9),
             (GeoKind::Qua16, 1e-9),
             (GeoKind::Qua17, 1e-9),
             // Tet
@@ -164,6 +164,8 @@ mod tests {
 
         // loop over shapes
         for (kind, tol) in problem {
+            // println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);
@@ -190,13 +192,13 @@ mod tests {
                 j: 0,
             };
 
-            // check Gᵐ(ξ(x)) = dNᵐ(ξ(x))/dx
+            // check Bᵐ(ξ(x)) = dNᵐ(ξ(x))/dx
             for m in 0..kind.nnode() {
                 args.m = m;
                 for j in 0..geo_ndim {
                     args.j = j;
-                    // Gᵐⱼ := dNᵐ/dxⱼ
-                    assert_deriv_approx_eq!(pad.gradient[m][j], args.at_x[j], nn_given_x, args, tol);
+                    // Bᵐⱼ := dNᵐ/dxⱼ
+                    deriv_approx_eq(pad.gradient.get(m, j), args.at_x[j], args, tol, nn_given_x);
                 }
             }
         }

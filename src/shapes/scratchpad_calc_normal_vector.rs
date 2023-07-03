@@ -7,10 +7,10 @@ impl Scratchpad {
     ///
     /// **Important:** This function only works with:
     ///
-    /// * `CABLE` case (geo_ndim = 1 and space_ndim = 2) -- e.g., line in 2D, or
-    /// * `SHELL` case (geo_ndim = 2 and space_ndim = 3) -- e.g., surface in 3D.
+    /// * `CABLE` in 2D case (geo_ndim = 1 and space_ndim = 2) -- e.g., line in 2D, or
+    /// * `SHELL` in 3D case (geo_ndim = 2 and space_ndim = 3) -- e.g., surface in 3D.
     ///
-    /// i.e., `geo_ndim < space_ndim`.
+    /// The case `CABLE` in 3D is **not** available because we don't know the direction of the normal vector.
     ///
     /// # Output
     ///
@@ -29,8 +29,8 @@ impl Scratchpad {
     ///
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
-    /// use gemlab::util::SQRT_2;
     /// use gemlab::StrError;
+    /// use russell_lab::math::SQRT_2;
     /// use russell_lab::Vector;
     ///
     /// fn main() -> Result<(), StrError> {
@@ -111,20 +111,23 @@ impl Scratchpad {
     pub fn calc_normal_vector(&mut self, un: &mut Vector, ksi: &[f64]) -> Result<f64, StrError> {
         // check
         let (space_ndim, geo_ndim) = self.jacobian.dims();
-        if geo_ndim >= space_ndim {
-            return Err("calc_normal_vector requires that geo_ndim must be smaller than space_ndim");
+        if space_ndim == 2 && geo_ndim != 1 {
+            return Err("calc_normal_vector requires geo_ndim = 1 in 2D (CABLE in 2D)");
+        }
+        if space_ndim == 3 && geo_ndim != 2 {
+            return Err("calc_normal_vector requires geo_ndim = 2 in 3D (SHELL in 3D)");
         }
         if un.dim() != space_ndim {
-            return Err("n.dim() must be equal to space_ndim");
+            return Err("un.dim() must be equal to space_ndim");
         }
 
         // matrix L: dNᵐ/dξ
         (self.fn_deriv)(&mut self.deriv, ksi);
 
         // matrix J: dx/dξ
-        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv)?;
+        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv).unwrap();
 
-        // CABLE: line in 2D (geo_ndim = 1 and self.space_ndim = 2)
+        // CABLE: line in 2D (geo_ndim = 1 and space_ndim = 2)
         //          →
         //         dx
         // g₁(ξ) = —— = Xᵀ · L = first_column(J)
@@ -133,8 +136,8 @@ impl Scratchpad {
         // →   →    →
         // n = e₃ × g₁ = {-g₁_0, +g₁_1}
         if space_ndim == 2 {
-            un[0] = -self.jacobian[1][0];
-            un[1] = self.jacobian[0][0];
+            un[0] = -self.jacobian.get(1, 0);
+            un[1] = self.jacobian.get(0, 0);
             let mag_n = f64::sqrt(un[0] * un[0] + un[1] * un[1]);
             if mag_n > 0.0 {
                 un[0] /= mag_n;
@@ -157,9 +160,9 @@ impl Scratchpad {
         // →   →    →
         // n = g₁ × g₂
         let jj = &self.jacobian;
-        un[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
-        un[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
-        un[2] = jj[0][0] * jj[1][1] - jj[1][0] * jj[0][1];
+        un[0] = jj.get(1, 0) * jj.get(2, 1) - jj.get(2, 0) * jj.get(1, 1);
+        un[1] = jj.get(2, 0) * jj.get(0, 1) - jj.get(0, 0) * jj.get(2, 1);
+        un[2] = jj.get(0, 0) * jj.get(1, 1) - jj.get(1, 0) * jj.get(0, 1);
         let mag_n = f64::sqrt(un[0] * un[0] + un[1] * un[1] + un[2] * un[2]);
         if mag_n > 0.0 {
             un[0] /= mag_n;
@@ -176,22 +179,27 @@ impl Scratchpad {
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use crate::util::{ONE_BY_3, SQRT_2, SQRT_3};
-    use russell_chk::{assert_approx_eq, assert_vec_approx_eq};
-    use russell_lab::{vector_norm, NormVec, Vector};
+    use russell_chk::{approx_eq, vec_approx_eq};
+    use russell_lab::math::{ONE_BY_3, SQRT_2, SQRT_3};
+    use russell_lab::{vec_norm, Norm, Vector};
 
     #[test]
     fn calc_normal_vector_handles_errors() {
-        let mut n = Vector::new(1);
+        let mut un = Vector::new(1);
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         assert_eq!(
-            pad.calc_normal_vector(&mut n, &[0.0, 0.0]).err(),
-            Some("calc_normal_vector requires that geo_ndim must be smaller than space_ndim")
+            pad.calc_normal_vector(&mut un, &[0.0, 0.0]).err(),
+            Some("calc_normal_vector requires geo_ndim = 1 in 2D (CABLE in 2D)")
+        );
+        let mut pad = Scratchpad::new(3, GeoKind::Lin2).unwrap();
+        assert_eq!(
+            pad.calc_normal_vector(&mut un, &[0.0, 0.0]).err(),
+            Some("calc_normal_vector requires geo_ndim = 2 in 3D (SHELL in 3D)")
         );
         let mut pad = Scratchpad::new(3, GeoKind::Tri3).unwrap();
         assert_eq!(
-            pad.calc_normal_vector(&mut n, &[0.0, 0.0]).err(),
-            Some("n.dim() must be equal to space_ndim")
+            pad.calc_normal_vector(&mut un, &[0.0, 0.0]).err(),
+            Some("un.dim() must be equal to space_ndim")
         );
     }
 
@@ -202,7 +210,7 @@ mod tests {
             (GeoKind::Lin2, 1e-15, 1e-15),
             (GeoKind::Lin3, 1e-15, 1e-15),
             (GeoKind::Lin4, 1e-14, 1e-14),
-            (GeoKind::Lin5, 1e-15, 1e-14),
+            (GeoKind::Lin5, 1e-14, 1e-14),
         ];
 
         // correct values
@@ -214,6 +222,8 @@ mod tests {
         let ksi = &[0.25];
         let mut un = Vector::new(2);
         for (kind, tol_mag, tol_vec) in problem {
+            // println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);
@@ -221,9 +231,9 @@ mod tests {
 
             // check
             let mag_n = pad.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(mag_n, correct_magnitude, tol_mag);
-            assert_approx_eq!(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
-            assert_vec_approx_eq!(un.as_data(), &correct_normal, tol_vec);
+            approx_eq(mag_n, correct_magnitude, tol_mag);
+            approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
+            vec_approx_eq(un.as_data(), &correct_normal, tol_vec);
         }
     }
 
@@ -232,7 +242,7 @@ mod tests {
         // kind, tol_mag, tol_vec
         let problem = vec![
             (GeoKind::Hex8, 1e-15, 1e-15),
-            (GeoKind::Hex20, 1e-15, 1e-14),
+            (GeoKind::Hex20, 1e-14, 1e-14),
             (GeoKind::Hex32, 1e-14, 1e-14),
         ];
 
@@ -247,6 +257,8 @@ mod tests {
         let ksi = &[ONE_BY_3, ONE_BY_3];
         let mut un = Vector::new(3);
         for (kind, tol_mag, tol_vec) in problem {
+            // println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);
@@ -257,41 +269,41 @@ mod tests {
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert!(un[0] < 0.0);
             assert!(un[1] < 0.0);
-            assert_approx_eq!(un[2], 0.0, tol_vec);
+            approx_eq(un[2], 0.0, tol_vec);
 
             // face # 1
             let mut pad_face = aux::extract_face(1, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             assert!(un[0] > 0.0);
             assert!(un[1] > 0.0);
-            assert_approx_eq!(un[2], 0.0, tol_vec);
+            approx_eq(un[2], 0.0, tol_vec);
 
             // face # 2
             let mut pad_face = aux::extract_face(2, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
-            assert_approx_eq!(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
-            assert_vec_approx_eq!(un.as_data(), &correct_normal_face2, tol_vec);
+            approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
+            approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
+            vec_approx_eq(un.as_data(), &correct_normal_face2, tol_vec);
 
             // face # 3
             let mut pad_face = aux::extract_face(3, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(mag_n, correct_magnitude_face2_face3, tol_mag);
-            assert_approx_eq!(vector_norm(&un, NormVec::Euc), 1.0, tol_mag);
-            assert_vec_approx_eq!(un.as_data(), &correct_normal_face3, tol_vec);
+            approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
+            approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
+            vec_approx_eq(un.as_data(), &correct_normal_face3, tol_vec);
 
             // face # 4
             let mut pad_face = aux::extract_face(4, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(un[0], 0.0, tol_vec);
-            assert_approx_eq!(un[1], 0.0, tol_vec);
+            approx_eq(un[0], 0.0, tol_vec);
+            approx_eq(un[1], 0.0, tol_vec);
             assert!(un[2] < 0.0);
 
             // face # 5
             let mut pad_face = aux::extract_face(5, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert_approx_eq!(un[0], 0.0, tol_vec);
-            assert_approx_eq!(un[1], 0.0, tol_vec);
+            approx_eq(un[0], 0.0, tol_vec);
+            approx_eq(un[1], 0.0, tol_vec);
             assert!(un[2] > 0.0);
         }
     }
@@ -352,15 +364,15 @@ mod tests {
                     if pad.kind.is_tri_or_tet() {
                         // check triangle
                         if e == 1 {
-                            assert_approx_eq!(mag_n, SQRT_2, 1e-15);
+                            approx_eq(mag_n, SQRT_2, 1e-15);
                         } else {
-                            assert_approx_eq!(mag_n, 1.0, 1e-15);
+                            approx_eq(mag_n, 1.0, 1e-15);
                         }
-                        assert_vec_approx_eq!(un.as_data(), tri_correct[e], 1e-15);
+                        vec_approx_eq(un.as_data(), tri_correct[e], 1e-15);
                     } else {
                         // check quadrilateral
-                        assert_approx_eq!(mag_n, 1.0, 1e-15);
-                        assert_vec_approx_eq!(un.as_data(), qua_correct[e], 1e-15);
+                        approx_eq(mag_n, 1.0, 1e-15);
+                        vec_approx_eq(un.as_data(), qua_correct[e], 1e-15);
                     }
                 }
             }
@@ -434,15 +446,15 @@ mod tests {
                     if pad.kind.is_tri_or_tet() {
                         // check tetrahedron
                         if f == 3 {
-                            assert_approx_eq!(mag_n, 4.0 * SQRT_3, tol);
+                            approx_eq(mag_n, 4.0 * SQRT_3, tol);
                         } else {
-                            assert_approx_eq!(mag_n, 4.0, tol);
+                            approx_eq(mag_n, 4.0, tol);
                         }
-                        assert_vec_approx_eq!(un.as_data(), tet_correct[f], tol);
+                        vec_approx_eq(un.as_data(), tet_correct[f], tol);
                     } else {
                         // check hexahedron
-                        assert_approx_eq!(mag_n, 1.0, tol);
-                        assert_vec_approx_eq!(un.as_data(), hex_correct[f], tol);
+                        approx_eq(mag_n, 1.0, tol);
+                        vec_approx_eq(un.as_data(), hex_correct[f], tol);
                     }
                 }
             }

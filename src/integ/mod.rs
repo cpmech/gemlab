@@ -14,7 +14,7 @@
 //! * L -- Derivatives of shape functions
 //! * J -- Jacobian tensor
 //! * J⁻¹ -- Inverse Jacobian matrix (only available if geo_ndim = space_ndim)
-//! * G -- Gradients of shape functions (derivatives w.r.t real coordinates x)
+//! * B -- Gradients of shape functions (derivatives w.r.t real coordinates x)
 //! * see also the subsection named **Expressions** below
 //!
 //! # Integration of scalar field over a geometric shape
@@ -28,7 +28,7 @@
 //!     Ωₑ
 //! ```
 //!
-//! # Vector results: Integration of some combinations involving N and G resulting in vectors
+//! # Vector results: Integration of some combinations involving N and B resulting in vectors
 //!
 //! ## VEC 01: Shape(N) times scalar(S)
 //!
@@ -63,29 +63,29 @@
 //!      Γₑ
 //! ```
 //!
-//! ## VEC 03: Vector(V) dot gradient(G)
+//! ## VEC 03: Vector(V) dot gradient(B)
 //!
-//! Function [vec_03_vg()]
+//! Function [vec_03_vb()]
 //!
 //! ```text
 //!      ⌠ → →    →  → →
-//! cᵐ = │ w(x) · Gᵐ(x(ξ)) dΩ
+//! cᵐ = │ w(x) · Bᵐ(x(ξ)) dΩ
 //!      ⌡
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 04: Tensor(T) dot gradient(G)
+//! ## VEC 04: Tensor(T) dot gradient(B)
 //!
-//! Function [vec_04_tg()]
+//! Function [vec_04_tb()]
 //!
 //! ```text
 //! →    ⌠   →    →  → →
-//! dᵐ = │ σ(x) · Gᵐ(x(ξ)) dΩ
+//! dᵐ = │ σ(x) · Bᵐ(x(ξ)) dΩ
 //!      ⌡ ▔
 //!      Ωₑ
 //! ```
 //!
-//! # Matrix results: Integration of some combinations involving N, tensors, and G, resulting in matrices
+//! # Matrix results: Integration of some combinations involving N, tensors, and B, resulting in matrices
 //!
 //! ![cases](https://github.com/cpmech/gemlab/raw/main/data/figures/integ-matrix-cases.png)
 //!
@@ -100,46 +100,46 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 02: Gradient(G) dot vector(V) times shape(N) (e.g., compressibility matrix)
+//! ## MAT 02: Gradient(B) dot vector(V) times shape(N) (e.g., compressibility matrix)
 //!
-//! Function [mat_02_gvn()]
+//! Function [mat_02_bvn()]
 //!
 //! ```text
 //!       ⌠ →    →
-//! Kᵐⁿ = │ Gᵐ ⋅ v Nⁿ dΩ
+//! Kᵐⁿ = │ Bᵐ ⋅ v Nⁿ dΩ
 //!       ⌡
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 03: Gradient(G) dot tensor(T) dot gradient(G) (e.g., conductivity matrix)
+//! ## MAT 03: Gradient(B) dot tensor(T) dot gradient(B) (e.g., conductivity matrix)
 //!
-//! Function [mat_03_gtg()]
+//! Function [mat_03_btb()]
 //!
 //! ```text
 //!       ⌠ →        →
-//! Kᵐⁿ = │ Gᵐ ⋅ T ⋅ Gⁿ dΩ
+//! Kᵐⁿ = │ Bᵐ ⋅ T ⋅ Bⁿ dΩ
 //!       ⌡      ▔
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 04: shape(Nb) times scalar(S) times gradient(G) (e.g., coupling matrix)
+//! ## MAT 04: shape(Nb) times scalar(S) times gradient(B) (e.g., coupling matrix)
 //!
-//! Function [mat_04_nsg()]
+//! Function [mat_04_nsb()]
 //!
 //! ```text
 //! →     ⌠       →
-//! Kᵐⁿ = │ Nbᵐ s Gⁿ dΩ
+//! Kᵐⁿ = │ Nbᵐ s Bⁿ dΩ
 //!       ⌡
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 05: Gradient(Gb) times tensor(T) times shape(N) (e.g., coupling matrix)
+//! ## MAT 05: Gradient(Bb) times tensor(T) times shape(N) (e.g., coupling matrix)
 //!
-//! Function [mat_05_gtn()]
+//! Function [mat_05_btn()]
 //!
 //! ```text
 //! →     ⌠ →
-//! Kᵐⁿ = │ Gbᵐ ⋅ T Nⁿ dΩ
+//! Kᵐⁿ = │ Bbᵐ ⋅ T Nⁿ dΩ
 //!       ⌡       ▔
 //!       Ωₑ
 //! ```
@@ -155,13 +155,13 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 07: Gradient(G) times scalar(S) times shape(Nb) (e.g., coupling matrix)
+//! ## MAT 07: Gradient(B) times scalar(S) times shape(Nb) (e.g., coupling matrix)
 //!
-//! Function [mat_07_gsn()]
+//! Function [mat_07_bsn()]
 //!
 //! ```text
 //! →     ⌠ →
-//! Kᵐⁿ = │ Gᵐ s Nbⁿ dΩ
+//! Kᵐⁿ = │ Bᵐ s Nbⁿ dΩ
 //!       ⌡
 //!       Ωₑ
 //! ```
@@ -177,24 +177,24 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 09: Shape(N) times vector(V) dot gradient(G) (e.g., variable density matrix)
+//! ## MAT 09: Shape(N) times vector(V) dot gradient(B) (e.g., variable density matrix)
 //!
-//! Function [mat_09_nvg()]
+//! Function [mat_09_nvb()]
 //!
 //! ```text
 //!       ⌠    →   →
-//! Kᵐⁿ = │ Nᵐ v ⊗ Gⁿ dΩ
+//! Kᵐⁿ = │ Nᵐ v ⊗ Bⁿ dΩ
 //! ▔     ⌡
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 10: Gradient(G) dot 4th-tensor(D) dot gradient(G) (e.g., stiffness matrix)
+//! ## MAT 10: Gradient(B) dot 4th-tensor(D) dot gradient(B) (e.g., stiffness matrix)
 //!
-//! Function [mat_10_gdg()]
+//! Function [mat_10_bdb()]
 //!
 //! ```text
 //!       ⌠                       →    →
-//! Kᵐⁿ = │ Σ Σ Σ Σ Gᵐₖ Dᵢₖⱼₗ Gⁿₗ eᵢ ⊗ eⱼ dΩ
+//! Kᵐⁿ = │ Σ Σ Σ Σ Bᵐₖ Dᵢₖⱼₗ Bⁿₗ eᵢ ⊗ eⱼ dΩ
 //! ▔     ⌡ i j k l
 //!       Ωₑ
 //! ```
@@ -278,62 +278,64 @@
 //! J is a (3,2) matrix
 //! ```
 //!
-//! ## G: Gradients of shape functions (derivatives w.r.t real coordinates x) (only for SOLID case)
+//! ## B: Gradients of shape functions (derivatives w.r.t real coordinates x) (only for SOLID case)
 //!
 //! ```text
 //!             →
 //! →  →    dNᵐ(ξ)
-//! Gᵐ(ξ) = ——————
+//! Bᵐ(ξ) = ——————
 //!            →
 //!           dx
-//! matrix notation: G = L · J⁻¹
-//! G is an (nnode,space_ndim) matrix
+//! matrix notation: B = L · J⁻¹
+//! B is an (nnode,space_ndim) matrix
 //! ```
 
 mod analytical_qua4;
 mod analytical_qua8;
 mod analytical_tet4;
 mod analytical_tri3;
+mod common_args;
 mod integ_points;
 mod mat_01_nsn;
 mod mat_01_nsn_bry;
-mod mat_02_gvn;
-mod mat_03_gtg;
-mod mat_04_nsg;
-mod mat_05_gtn;
+mod mat_02_bvn;
+mod mat_03_btb;
+mod mat_04_nsb;
+mod mat_05_btn;
 mod mat_06_nvn;
-mod mat_07_gsn;
+mod mat_07_bsn;
 mod mat_08_ntn;
-mod mat_09_nvg;
-mod mat_10_gdg;
+mod mat_09_nvb;
+mod mat_10_bdb;
 mod point_coords;
 mod scalar_field;
 mod testing;
 mod vec_01_ns;
 mod vec_02_nv;
 mod vec_02_nv_bry;
-mod vec_03_vg;
-mod vec_04_tg;
+mod vec_03_vb;
+mod vec_04_tb;
 pub use crate::integ::analytical_qua4::*;
 pub use crate::integ::analytical_qua8::*;
 pub use crate::integ::analytical_tet4::*;
 pub use crate::integ::analytical_tri3::*;
+pub use crate::integ::common_args::*;
 pub use crate::integ::integ_points::*;
 pub use crate::integ::mat_01_nsn::*;
 pub use crate::integ::mat_01_nsn_bry::*;
-pub use crate::integ::mat_02_gvn::*;
-pub use crate::integ::mat_03_gtg::*;
-pub use crate::integ::mat_04_nsg::*;
-pub use crate::integ::mat_05_gtn::*;
+pub use crate::integ::mat_02_bvn::*;
+pub use crate::integ::mat_03_btb::*;
+pub use crate::integ::mat_04_nsb::*;
+pub use crate::integ::mat_05_btn::*;
 pub use crate::integ::mat_06_nvn::*;
-pub use crate::integ::mat_07_gsn::*;
+pub use crate::integ::mat_07_bsn::*;
 pub use crate::integ::mat_08_ntn::*;
-pub use crate::integ::mat_09_nvg::*;
-pub use crate::integ::mat_10_gdg::*;
+pub use crate::integ::mat_09_nvb::*;
+pub use crate::integ::mat_10_bdb::*;
 pub use crate::integ::point_coords::*;
 pub use crate::integ::scalar_field::*;
 pub use crate::integ::vec_01_ns::*;
 pub use crate::integ::vec_02_nv::*;
 pub use crate::integ::vec_02_nv_bry::*;
-pub use crate::integ::vec_03_vg::*;
-pub use crate::integ::vec_04_tg::*;
+pub use crate::integ::vec_03_vb::*;
+pub use crate::integ::vec_04_tb::*;

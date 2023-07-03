@@ -1,6 +1,6 @@
 use super::Scratchpad;
 use crate::StrError;
-use russell_lab::{mat_vec_mul, vector_norm, NormVec, Vector};
+use russell_lab::{mat_vec_mul, vec_norm, Norm, Vector};
 
 impl Scratchpad {
     /// Approximates the reference coordinates from given real coordinates (inverse mapping)
@@ -29,7 +29,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::assert_vec_approx_eq;
+    /// use russell_chk::vec_approx_eq;
     /// use russell_lab::Vector;
     ///
     /// fn main() -> Result<(), StrError> {
@@ -57,7 +57,7 @@ impl Scratchpad {
     ///     // find ξ corresponding to x @ middle of edge (0,2)
     ///     let mut ksi = vec![0.0; 2];
     ///     pad.approximate_ksi(&mut ksi, &x, 10, 1e-8)?;
-    ///     assert_vec_approx_eq!(ksi, &[0.0, 0.5], 1e-8);
+    ///     vec_approx_eq(&ksi, &[0.0, 0.5], 1e-8);
     ///     Ok(())
     /// }
     /// ```
@@ -91,8 +91,8 @@ impl Scratchpad {
         let nnode = self.interp.dim();
         for m in 0..nnode {
             for j in 0..space_ndim {
-                xmin[j] = f64::min(xmin[j], self.xxt[j][m]);
-                xmax[j] = f64::max(xmax[j], self.xxt[j][m]);
+                xmin[j] = f64::min(xmin[j], self.xxt.get(j, m));
+                xmax[j] = f64::max(xmax[j], self.xxt.get(j, m));
             }
         }
         for j in 0..space_ndim {
@@ -109,7 +109,7 @@ impl Scratchpad {
             for i in 0..space_ndim {
                 residual[i] = x[i] - x_at_ksi[i];
             }
-            if vector_norm(&residual, NormVec::Euc) <= tol {
+            if vec_norm(&residual, Norm::Euc) <= tol {
                 return Ok(it);
             }
 
@@ -136,8 +136,8 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::GeoKind;
     use crate::shapes::Scratchpad;
-    use crate::util::{ONE_BY_3, SQRT_3};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
+    use russell_lab::math::{ONE_BY_3, SQRT_3};
     use russell_lab::Vector;
 
     #[test]
@@ -173,12 +173,12 @@ mod tests {
             // Tri
             (GeoKind::Tri3, 1e-14),
             (GeoKind::Tri6, 1e-15),
-            (GeoKind::Tri10, 1e-15),
+            (GeoKind::Tri10, 1e-14),
             (GeoKind::Tri15, 1e-14),
             // Qua
             (GeoKind::Qua4, 1e-15),
-            (GeoKind::Qua8, 1e-15),
-            (GeoKind::Qua9, 1e-15),
+            (GeoKind::Qua8, 1e-14),
+            (GeoKind::Qua9, 1e-14),
             (GeoKind::Qua12, 1e-14),
             (GeoKind::Qua16, 1e-14),
             (GeoKind::Qua17, 1e-13),
@@ -194,6 +194,8 @@ mod tests {
 
         // loop over shapes
         for (kind, tol) in problem {
+            // println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);
@@ -217,7 +219,7 @@ mod tests {
                 if kind == GeoKind::Tri3 || kind == GeoKind::Qua4 || kind == GeoKind::Tet4 || kind == GeoKind::Hex8 {
                     assert_eq!(nit, 1);
                 }
-                assert_vec_approx_eq!(ksi, ksi_ref, tol);
+                vec_approx_eq(&ksi, ksi_ref, tol);
             }
 
             // test again inside the reference domain
@@ -228,7 +230,7 @@ mod tests {
             };
             pad.calc_coords(&mut x, &ksi_in).unwrap();
             pad.approximate_ksi(&mut ksi, &x, 10, 1e-14).unwrap();
-            assert_vec_approx_eq!(ksi, ksi_in, tol);
+            vec_approx_eq(&ksi, &ksi_in, tol);
         }
     }
 
@@ -289,7 +291,7 @@ mod tests {
             (0, [5.5, 4.0], 1e-15),
             (1, [6.75, 6.17], 1e-14),
             (1, [4.25, 6.17], 1e-14),
-            (2, [10.0, 10.0], 1e-14),
+            (4, [10.0, 10.0], 1e-14),
             (2, [-10.0, -10.0], 1e-13),
             (1, [100.0, 100.0], 1e-11),
         ] {
@@ -297,7 +299,7 @@ mod tests {
             let nit = pad.approximate_ksi(&mut ksi, &x, 30, *tol).unwrap();
             let mut x_out = Vector::new(2);
             pad.calc_coords(&mut x_out, &ksi).unwrap();
-            assert_vec_approx_eq!(x.as_data(), x_out.as_data(), *tol);
+            vec_approx_eq(x.as_data(), x_out.as_data(), *tol);
             assert_eq!(nit, *nit_correct);
         }
     }

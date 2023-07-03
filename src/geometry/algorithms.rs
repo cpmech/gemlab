@@ -16,12 +16,12 @@ use crate::StrError;
 /// ```
 /// use gemlab::geometry::point_point_distance;
 /// use gemlab::StrError;
-/// use gemlab::util::SQRT_2;
-/// use russell_chk::assert_approx_eq;
+/// use russell_lab::math::SQRT_2;
+/// use russell_chk::approx_eq;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let d = point_point_distance(&[0.0, 0.0], &[1.0, 1.0])?;
-///     assert_approx_eq!(d, SQRT_2, 1e-15);
+///     approx_eq(d, SQRT_2, 1e-15);
 ///     Ok(())
 /// }
 /// ```
@@ -75,20 +75,20 @@ pub fn point_point_distance(a: &[f64], b: &[f64]) -> Result<f64, StrError> {
 /// ```
 /// use gemlab::geometry::point_line_distance;
 /// use gemlab::StrError;
-/// use gemlab::util::{SQRT_2, SQRT_3};
-/// use russell_chk::assert_approx_eq;
+/// use russell_lab::math::{SQRT_2, SQRT_3};
+/// use russell_chk::approx_eq;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let a = &[-10.0, -10.0, -10.0];
 ///     let b = &[100.0, 100.0, 100.0];
 ///     let d = point_line_distance(a, b, &[1.0, 1.0, 1.0])?;
-///     assert_approx_eq!(d, 0.0, 1e-15);
+///     approx_eq(d, 0.0, 1e-15);
 ///
 ///     let d = point_line_distance(a, b, &[1.0, 1.0, 0.0])?;
-///     assert_approx_eq!(d, SQRT_2 / SQRT_3, 1e-15);
+///     approx_eq(d, SQRT_2 / SQRT_3, 1e-15);
 ///
 ///     let d = point_line_distance(a, b, &[0.0, 1.0, 1.0])?;
-///     assert_approx_eq!(d, SQRT_2 / SQRT_3, 1e-15);
+///     approx_eq(d, SQRT_2 / SQRT_3, 1e-15);
 ///     Ok(())
 /// }
 /// ```
@@ -156,8 +156,8 @@ pub fn point_line_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrEr
 /// ```
 /// use gemlab::geometry::point_circle_distance;
 /// use gemlab::StrError;
-/// use gemlab::util::SQRT_2;
-/// use russell_chk::assert_approx_eq;
+/// use russell_lab::math::SQRT_2;
+/// use russell_chk::approx_eq;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let center = &[3.0, 4.0];
@@ -172,7 +172,7 @@ pub fn point_line_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrEr
 ///     assert_eq!(d, 0.0);
 ///
 ///     let d = point_circle_distance(center, radius, &[8.0, 9.0])?;
-///     assert_approx_eq!(d, radius * SQRT_2 - radius, 1e-15);
+///     approx_eq(d, radius * SQRT_2 - radius, 1e-15);
 ///     Ok(())
 /// }
 /// ```
@@ -211,8 +211,8 @@ pub fn point_circle_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f
 /// ```
 /// use gemlab::geometry::point_cylinder_distance;
 /// use gemlab::StrError;
-/// use gemlab::util::{SQRT_2, SQRT_3};
-/// use russell_chk::assert_approx_eq;
+/// use russell_lab::math::{SQRT_2, SQRT_3};
+/// use russell_chk::approx_eq;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let a = &[-10.0, -10.0, -10.0];
@@ -222,11 +222,11 @@ pub fn point_circle_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f
 ///     assert_eq!(d, -radius);
 ///
 ///     let d = point_cylinder_distance(a, b, radius, &[1.0, 1.0, 0.0])?;
-///     assert_approx_eq!(d, SQRT_2 / SQRT_3 - radius, 1e-15);
+///     approx_eq(d, SQRT_2 / SQRT_3 - radius, 1e-15);
 ///
 ///     let z = radius * SQRT_3 / SQRT_2;
 ///     let d = point_cylinder_distance(a, b, radius, &[0.0, 0.0, z])?;
-///     assert_approx_eq!(d, 0.0, 1e-14);
+///     approx_eq(d, 0.0, 1e-14);
 ///     Ok(())
 /// }
 /// ```
@@ -251,8 +251,8 @@ pub fn point_cylinder_distance(a: &[f64], b: &[f64], radius: f64, p: &[f64]) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::{SQRT_2, SQRT_2_BY_3, SQRT_3};
-    use russell_chk::assert_approx_eq;
+    use russell_chk::approx_eq;
+    use russell_lab::math::{SQRT_2, SQRT_2_BY_3, SQRT_3};
 
     #[test]
     fn point_point_distance_fails_on_wrong_input() {
@@ -270,31 +270,31 @@ mod tests {
     fn point_point_distance_2d_works() {
         let a = &[0.0, 0.0];
         let b = &[1.0, 0.0];
-        assert_approx_eq!(point_point_distance(a, b).unwrap(), 1.0, 1e-15);
+        approx_eq(point_point_distance(a, b).unwrap(), 1.0, 1e-15);
 
         let b = &[0.0, 2.0];
-        assert_approx_eq!(point_point_distance(a, b).unwrap(), 2.0, 1e-15);
+        approx_eq(point_point_distance(a, b).unwrap(), 2.0, 1e-15);
 
         let a = &[1.0, 1.0];
         let b = &[2.0, 2.0];
-        assert_approx_eq!(point_point_distance(a, b).unwrap(), SQRT_2, 1e-15);
+        approx_eq(point_point_distance(a, b).unwrap(), SQRT_2, 1e-15);
     }
 
     #[test]
     fn point_point_distance_3d_works() {
         let a = &[0.0, 0.0, 0.0];
         let b = &[1.0, 0.0, 0.0];
-        assert_approx_eq!(point_point_distance(a, b).unwrap(), 1.0, 1e-15);
+        approx_eq(point_point_distance(a, b).unwrap(), 1.0, 1e-15);
 
         let b = &[0.0, 2.0, 0.0];
-        assert_approx_eq!(point_point_distance(a, b).unwrap(), 2.0, 1e-15);
+        approx_eq(point_point_distance(a, b).unwrap(), 2.0, 1e-15);
 
         let b = &[0.0, 0.0, 3.0];
-        assert_approx_eq!(point_point_distance(a, b).unwrap(), 3.0, 1e-15);
+        approx_eq(point_point_distance(a, b).unwrap(), 3.0, 1e-15);
 
         let a = &[1.0, 1.0, 1.0];
         let b = &[2.0, 2.0, 2.0];
-        assert_approx_eq!(point_point_distance(a, b).unwrap(), SQRT_3, 1e-15);
+        approx_eq(point_point_distance(a, b).unwrap(), SQRT_3, 1e-15);
     }
 
     #[test]
@@ -343,11 +343,11 @@ mod tests {
 
         let c = &[1.0, 0.0];
         let distance = point_line_distance(a, b, c).unwrap();
-        assert_approx_eq!(distance, SQRT_2 / 2.0, 1e-15);
+        approx_eq(distance, SQRT_2 / 2.0, 1e-15);
 
         let c = &[0.0, 1.0];
         let distance = point_line_distance(a, b, c).unwrap();
-        assert_approx_eq!(distance, SQRT_2 / 2.0, 1e-15);
+        approx_eq(distance, SQRT_2 / 2.0, 1e-15);
 
         let c = &[0.5, 0.5];
         let distance = point_line_distance(a, b, c).unwrap();
@@ -386,15 +386,15 @@ mod tests {
 
         let c = &[1.0, 1.0, 0.0];
         let distance = point_line_distance(a, b, c).unwrap();
-        assert_approx_eq!(distance, SQRT_2_BY_3, 1e-15);
+        approx_eq(distance, SQRT_2_BY_3, 1e-15);
 
         let c = &[0.0, 1.0, 1.0];
         let distance = point_line_distance(a, b, c).unwrap();
-        assert_approx_eq!(distance, SQRT_2_BY_3, 1e-15);
+        approx_eq(distance, SQRT_2_BY_3, 1e-15);
 
         let c = &[1.0, 0.0, 1.0];
         let distance = point_line_distance(a, b, c).unwrap();
-        assert_approx_eq!(distance, SQRT_2_BY_3, 1e-15);
+        approx_eq(distance, SQRT_2_BY_3, 1e-15);
 
         let c = &[0.5, 0.5, 0.5];
         let distance = point_line_distance(a, b, c).unwrap();

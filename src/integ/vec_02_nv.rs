@@ -1,15 +1,16 @@
-use super::IntegPointData;
-use crate::shapes::Scratchpad;
+use super::CommonArgs;
 use crate::StrError;
 use russell_lab::Vector;
 
 /// Implements the the shape(N) times vector(V) integration case 02
 ///
+/// Callback function: `f(v, p, N)`
+///
 /// Interpolation functions times vector field:
 ///
 /// ```text
 /// →    ⌠    → →   → →
-/// bᵐ = │ Nᵐ(x(ξ)) v(x) dΩ
+/// bᵐ = │ Nᵐ(x(ξ)) v(x) α dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -18,11 +19,11 @@ use russell_lab::Vector;
 ///
 /// ```text
 /// →    nip-1     →   → →       →
-/// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) |J|(ιᵖ) wᵖ
+/// bᵐ ≈   Σ    Nᵐ(ιᵖ) v(ιᵖ) |J|(ιᵖ) wᵖ α
 ///       p=0
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌     ┐
@@ -40,18 +41,14 @@ use russell_lab::Vector;
 /// i = ii % space_ndim
 /// ```
 ///
+/// # Arguments
+///
 /// * `b` -- A vector containing all `bᵐᵢ` values, one after another, and sequentially placed
 ///   as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
 ///   The length must be `b.len() ≥ ii0 + nnode ⋅ space_ndim`
-/// * `pad` -- Some members of the scratchpad will be modified
-///
-/// # Input
-///
-/// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `clear_b` -- fills `b` vector with zeros, otherwise accumulate values into `b`
-/// * `ips` -- Integration points (n_integ_point)
-/// * `fn_v` -- Function `f(v,p)` that computes `v(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`.
-///   The dim of `v` is equal to `space_ndim`.
+/// * `args` --- Common arguments
+/// * `fn_v` -- Function `f(v,p,N)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   and shape functions N(ιᵖ). `v.dim() = space_ndim`.
 ///
 /// # Examples
 ///
@@ -59,7 +56,7 @@ use russell_lab::Vector;
 /// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
-/// use russell_chk::assert_vec_approx_eq;
+/// use russell_chk::vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -73,7 +70,8 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
+///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
 ///         Ok(())
@@ -81,23 +79,17 @@ use russell_lab::Vector;
 ///     // solution (A = 6):
 ///     // bᵐ₀ = v₀ A / 3
 ///     // bᵐ₁ = v₁ A / 3
-///     assert_vec_approx_eq!(b.as_data(), &[2.0, 4.0, 2.0, 4.0, 2.0, 4.0], 1e-14);
+///     vec_approx_eq(b.as_data(), &[2.0, 4.0, 2.0, 4.0, 2.0, 4.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_02_nv<F>(
-    b: &mut Vector,
-    pad: &mut Scratchpad,
-    ii0: usize,
-    clear_b: bool,
-    ips: IntegPointData,
-    fn_v: F,
-) -> Result<(), StrError>
+pub fn vec_02_nv<F>(b: &mut Vector, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
-    F: Fn(&mut Vector, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Vector) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = pad.xxt.dims();
+    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let ii0 = args.ii0;
     if b.dim() < ii0 + nnode * space_ndim {
         return Err("b.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
@@ -106,26 +98,36 @@ where
     let mut v = Vector::new(space_ndim);
 
     // clear output vector
-    if clear_b {
+    if args.clear {
         b.fill(0.0);
     }
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..args.ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &args.ips[p];
+        let weight = args.ips[p][3];
 
         // calculate interpolation functions and Jacobian
-        (pad.fn_interp)(&mut pad.interp, iota);
-        let det_jac = pad.calc_jacobian(iota)?;
+        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
+        let det_jac = args.pad.calc_jacobian(iota)?;
 
         // calculate v
-        fn_v(&mut v, p)?;
+        let nn = &args.pad.interp;
+        fn_v(&mut v, p, nn)?;
+
+        // calculate coefficient
+        let coef = if args.axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * args.pad.xxt.get(0, m);
+            }
+            det_jac * weight * args.alpha * r
+        } else {
+            det_jac * weight * args.alpha
+        };
 
         // add contribution to b vector
-        let coef = det_jac * weight;
-        let nn = &pad.interp;
         if space_ndim == 2 {
             for m in 0..nnode {
                 b[ii0 + 0 + m * 2] += coef * nn[m] * v[0];
@@ -147,29 +149,35 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
-    use russell_chk::assert_vec_approx_eq;
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use russell_chk::vec_approx_eq;
     use russell_lab::Vector;
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
+        let mut v = Vector::new(0);
+        let nn = Vector::new(0);
+        let f = |_v: &mut Vector, _p: usize, _nn: &Vector| Ok(());
+        f(&mut v, 0, &nn).unwrap();
+        let mut args = CommonArgs::new(&mut pad, &[]);
+        args.ii0 = 1;
         assert_eq!(
-            integ::vec_02_nv(&mut b, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
+            integ::vec_02_nv(&mut b, &mut args, f).err(),
             Some("b.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
 
     #[test]
-    fn vec_02_nv_works_lin2_linear() {
+    fn lin2_linear_works() {
         // This test is similar to the shape_times_scalar with lin2
         const L: f64 = 6.0;
         let mut pad = aux::gen_pad_lin2(L);
 
         // solution
         let cf = L / 6.0;
-        let (xa, xb) = (pad.xxt[0][0], pad.xxt[0][1]);
+        let (xa, xb) = (pad.xxt.get(0, 0), pad.xxt.get(0, 1));
         let b_correct = &[
             cf * (2.0 * xa + xb),
             cf * (2.0 * xa + xb),
@@ -188,18 +196,19 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, p| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_02_nv(&mut b, &mut args, |v, p, _| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][0]; // << note use of x component here too
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(b.as_data(), b_correct, tol);
+            vec_approx_eq(b.as_data(), b_correct, tol);
         });
     }
 
     #[test]
-    fn vec_02_nv_works_tri3_constant() {
+    fn tri3_constant_works() {
         // This test is similar to the shape_times_scalar with tri3, however using a vector
         // So, each component of `b` equals `Fₛ`
         let mut pad = aux::gen_pad_tri3();
@@ -220,18 +229,19 @@ mod tests {
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
                 v[0] = V0;
                 v[1] = V1;
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(b.as_data(), b_correct, tol);
+            vec_approx_eq(b.as_data(), b_correct.as_data(), tol);
         });
     }
 
     #[test]
-    fn vec_02_nv_works_tet4_constant() {
+    fn tet4_constant_works() {
         // tet 4 with constant vector
         const V0: f64 = 2.0;
         const V1: f64 = 3.0;
@@ -252,14 +262,15 @@ mod tests {
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_02_nv(&mut b, &mut pad, 0, true, ips, |v, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
                 v[0] = V0;
                 v[1] = V1;
                 v[2] = V2;
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(b.as_data(), b_correct, tol);
+            vec_approx_eq(b.as_data(), &b_correct, tol);
         });
     }
 }

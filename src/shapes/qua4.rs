@@ -93,16 +93,16 @@ impl Qua4 {
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
-        deriv[0][0] = (-1.0 + s) / 4.0;
-        deriv[0][1] = (-1.0 + r) / 4.0;
+        deriv.set(0, 0, (-1.0 + s) / 4.0);
+        deriv.set(0, 1, (-1.0 + r) / 4.0);
 
-        deriv[1][0] = (1.0 - s) / 4.0;
-        deriv[1][1] = (-1.0 - r) / 4.0;
+        deriv.set(1, 0, (1.0 - s) / 4.0);
+        deriv.set(1, 1, (-1.0 - r) / 4.0);
 
-        deriv[2][0] = (1.0 + s) / 4.0;
-        deriv[2][1] = (1.0 + r) / 4.0;
+        deriv.set(2, 0, (1.0 + s) / 4.0);
+        deriv.set(2, 1, (1.0 + r) / 4.0);
 
-        deriv[3][0] = (-1.0 - s) / 4.0;
-        deriv[3][1] = (1.0 - r) / 4.0;
+        deriv.set(3, 0, (-1.0 - s) / 4.0);
+        deriv.set(3, 1, (1.0 - r) / 4.0);
     }
 }

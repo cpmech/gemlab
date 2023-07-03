@@ -1,7 +1,8 @@
 use gemlab::geometry::Circle;
-use gemlab::util::{GridSearch, PI};
+use gemlab::util::{any_x, GridSearch};
 use gemlab::StrError;
 use plotpy::Plot;
+use russell_lab::math::PI;
 
 #[test]
 fn test_grid_search_2d() -> Result<(), StrError> {
@@ -61,21 +62,21 @@ fn test_grid_search_2d() -> Result<(), StrError> {
     }
 
     // find points on bot circle
-    let res = grid.find_on_circle(&bot.center, bot.radius)?;
+    let res = grid.find_on_circle(&bot.center, bot.radius, any_x)?;
     let mut points: Vec<_> = res.iter().copied().collect();
     points.sort();
     let correct = (0..npoint).collect::<Vec<_>>();
     assert_eq!(points, correct);
 
     // find points on top circle
-    let res = grid.find_on_circle(&top.center, top.radius)?;
+    let res = grid.find_on_circle(&top.center, top.radius, any_x)?;
     let mut points: Vec<_> = res.iter().copied().collect();
     points.sort();
     let correct = (npoint..npoint * 2).collect::<Vec<_>>();
     assert_eq!(points, correct);
 
     // find points on line
-    let res = grid.find_on_line(a, b)?;
+    let res = grid.find_on_line(a, b, any_x)?;
     let mut points: Vec<_> = res.iter().copied().collect();
     points.sort();
     let correct = (npoint * 2..npoint * 3).collect::<Vec<_>>();

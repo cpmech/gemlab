@@ -183,19 +183,19 @@ impl Tet4 {
     ///
     /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, _: &[f64]) {
-        deriv[0][0] = -1.0;
-        deriv[1][0] = 1.0;
-        deriv[2][0] = 0.0;
-        deriv[3][0] = 0.0;
+        deriv.set(0, 0, -1.0);
+        deriv.set(1, 0, 1.0);
+        deriv.set(2, 0, 0.0);
+        deriv.set(3, 0, 0.0);
 
-        deriv[0][1] = -1.0;
-        deriv[1][1] = 0.0;
-        deriv[2][1] = 1.0;
-        deriv[3][1] = 0.0;
+        deriv.set(0, 1, -1.0);
+        deriv.set(1, 1, 0.0);
+        deriv.set(2, 1, 1.0);
+        deriv.set(3, 1, 0.0);
 
-        deriv[0][2] = -1.0;
-        deriv[1][2] = 0.0;
-        deriv[2][2] = 0.0;
-        deriv[3][2] = 1.0;
+        deriv.set(0, 2, -1.0);
+        deriv.set(1, 2, 0.0);
+        deriv.set(2, 2, 0.0);
+        deriv.set(3, 2, 1.0);
     }
 }

@@ -199,37 +199,37 @@ impl Tet10 {
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s, t) = (ksi[0], ksi[1], ksi[2]);
 
-        deriv[0][0] = 4.0 * (r + s + t) - 3.0;
-        deriv[1][0] = 4.0 * r - 1.0;
-        deriv[2][0] = 0.0;
-        deriv[3][0] = 0.0;
-        deriv[4][0] = 4.0 - 8.0 * r - 4.0 * s - 4.0 * t;
-        deriv[5][0] = 4.0 * s;
-        deriv[6][0] = -4.0 * s;
-        deriv[7][0] = -4.0 * t;
-        deriv[8][0] = 4.0 * t;
-        deriv[9][0] = 0.0;
+        deriv.set(0, 0, 4.0 * (r + s + t) - 3.0);
+        deriv.set(1, 0, 4.0 * r - 1.0);
+        deriv.set(2, 0, 0.0);
+        deriv.set(3, 0, 0.0);
+        deriv.set(4, 0, 4.0 - 8.0 * r - 4.0 * s - 4.0 * t);
+        deriv.set(5, 0, 4.0 * s);
+        deriv.set(6, 0, -4.0 * s);
+        deriv.set(7, 0, -4.0 * t);
+        deriv.set(8, 0, 4.0 * t);
+        deriv.set(9, 0, 0.0);
 
-        deriv[0][1] = 4.0 * (r + s + t) - 3.0;
-        deriv[1][1] = 0.0;
-        deriv[2][1] = 4.0 * s - 1.0;
-        deriv[3][1] = 0.0;
-        deriv[4][1] = -4.0 * r;
-        deriv[5][1] = 4.0 * r;
-        deriv[6][1] = 4.0 - 4.0 * r - 8.0 * s - 4.0 * t;
-        deriv[7][1] = -4.0 * t;
-        deriv[8][1] = 0.0;
-        deriv[9][1] = 4.0 * t;
+        deriv.set(0, 1, 4.0 * (r + s + t) - 3.0);
+        deriv.set(1, 1, 0.0);
+        deriv.set(2, 1, 4.0 * s - 1.0);
+        deriv.set(3, 1, 0.0);
+        deriv.set(4, 1, -4.0 * r);
+        deriv.set(5, 1, 4.0 * r);
+        deriv.set(6, 1, 4.0 - 4.0 * r - 8.0 * s - 4.0 * t);
+        deriv.set(7, 1, -4.0 * t);
+        deriv.set(8, 1, 0.0);
+        deriv.set(9, 1, 4.0 * t);
 
-        deriv[0][2] = 4.0 * (r + s + t) - 3.0;
-        deriv[1][2] = 0.0;
-        deriv[2][2] = 0.0;
-        deriv[3][2] = 4.0 * t - 1.0;
-        deriv[4][2] = -4.0 * r;
-        deriv[5][2] = 0.0;
-        deriv[6][2] = -4.0 * s;
-        deriv[7][2] = 4.0 - 4.0 * r - 4.0 * s - 8.0 * t;
-        deriv[8][2] = 4.0 * r;
-        deriv[9][2] = 4.0 * s;
+        deriv.set(0, 2, 4.0 * (r + s + t) - 3.0);
+        deriv.set(1, 2, 0.0);
+        deriv.set(2, 2, 0.0);
+        deriv.set(3, 2, 4.0 * t - 1.0);
+        deriv.set(4, 2, -4.0 * r);
+        deriv.set(5, 2, 0.0);
+        deriv.set(6, 2, -4.0 * s);
+        deriv.set(7, 2, 4.0 - 4.0 * r - 4.0 * s - 8.0 * t);
+        deriv.set(8, 2, 4.0 * r);
+        deriv.set(9, 2, 4.0 * s);
     }
 }

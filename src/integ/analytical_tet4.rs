@@ -1,6 +1,6 @@
 use crate::shapes::{GeoKind, Scratchpad};
-use crate::util::SQRT_2;
 use crate::StrError;
+use russell_lab::math::SQRT_2;
 use russell_lab::{mat_mat_mul, mat_t_mat_mul, Matrix};
 use russell_tensor::{LinElasticity, Tensor2};
 
@@ -9,21 +9,21 @@ pub struct AnalyticalTet4 {
     /// Holds the volume of the tetrahedron
     pub volume: f64,
 
-    /// Holds the gradients (G-matrix)
+    /// Holds the gradients (B-matrix)
     ///
     /// ```text
     ///             →
     /// →  →    dNᵐ(ξ)
-    /// Gᵐ(ξ) = ——————
+    /// Bᵐ(ξ) = ——————
     ///            →
     ///           dx
     /// ```
     ///
-    /// Organized as the G matrix (nnode=4, space_ndim=3)
-    pub gg: Matrix,
-
-    /// Holds the B-matrix (6, 12)
+    /// Organized as the B matrix (nnode=4, space_ndim=3)
     pub bb: Matrix,
+
+    /// Holds the (element) Be-matrix (6, 12)
+    pub bbe: Matrix,
 }
 
 impl AnalyticalTet4 {
@@ -31,20 +31,20 @@ impl AnalyticalTet4 {
     pub fn new(pad: &Scratchpad) -> Self {
         assert_eq!(pad.kind, GeoKind::Tet4);
 
-        let x1 = pad.xxt[0][0];
-        let x2 = pad.xxt[0][1];
-        let x3 = pad.xxt[0][2];
-        let x4 = pad.xxt[0][3];
+        let x1 = pad.xxt.get(0, 0);
+        let x2 = pad.xxt.get(0, 1);
+        let x3 = pad.xxt.get(0, 2);
+        let x4 = pad.xxt.get(0, 3);
 
-        let y1 = pad.xxt[1][0];
-        let y2 = pad.xxt[1][1];
-        let y3 = pad.xxt[1][2];
-        let y4 = pad.xxt[1][3];
+        let y1 = pad.xxt.get(1, 0);
+        let y2 = pad.xxt.get(1, 1);
+        let y3 = pad.xxt.get(1, 2);
+        let y4 = pad.xxt.get(1, 3);
 
-        let z1 = pad.xxt[2][0];
-        let z2 = pad.xxt[2][1];
-        let z3 = pad.xxt[2][2];
-        let z4 = pad.xxt[2][3];
+        let z1 = pad.xxt.get(2, 0);
+        let z2 = pad.xxt.get(2, 1);
+        let z3 = pad.xxt.get(2, 2);
+        let z4 = pad.xxt.get(2, 3);
 
         let x12 = x1 - x2;
         let x13 = x1 - x3;
@@ -106,16 +106,16 @@ impl AnalyticalTet4 {
 
         // gradients
         #[rustfmt::skip]
-        let gg = Matrix::from(&[
+        let bb = Matrix::from(&[
             [a1/r, b1/r, c1/r],
             [a2/r, b2/r, c2/r],
             [a3/r, b3/r, c3/r],
             [a4/r, b4/r, c4/r],
         ]);
 
-        // B-matrix
+        // Be-matrix
         #[rustfmt::skip]
-        let bb = Matrix::from(&[
+        let bbe = Matrix::from(&[
             [a1/r,  0.0,  0.0, a2/r,  0.0,  0.0, a3/r,  0.0,  0.0, a4/r,  0.0,  0.0],
             [ 0.0, b1/r,  0.0,  0.0, b2/r,  0.0,  0.0, b3/r,  0.0,  0.0, b4/r,  0.0],
             [ 0.0,  0.0, c1/r,  0.0,  0.0, c2/r,  0.0,  0.0, c3/r,  0.0,  0.0, c4/r],
@@ -126,9 +126,25 @@ impl AnalyticalTet4 {
 
         AnalyticalTet4 {
             volume: jj_det / 6.0,
-            gg,
             bb,
+            bbe,
         }
+    }
+
+    /// Integrates shape times scalar with constant function s(x) = cₛ
+    ///
+    /// solution:
+    ///
+    /// ```text
+    /// aᵐ = cₛ V / 4
+    /// ```
+    pub fn vec_01_ns(&self, cs: f64) -> Vec<f64> {
+        vec![
+            cs * self.volume / 4.0,
+            cs * self.volume / 4.0,
+            cs * self.volume / 4.0,
+            cs * self.volume / 4.0,
+        ]
     }
 
     /// Integrates shape times scalar with linear scalar function s(x) = x₂ = z
@@ -138,7 +154,12 @@ impl AnalyticalTet4 {
     /// * `pad` -- The same pad used in `new` because we need the nodal coordinates here.
     ///            Do not change the coordinates, otherwise the values will be wrong.
     pub fn vec_01_ns_linear_along_z(&self, pad: &Scratchpad) -> Vec<f64> {
-        let (z1, z2, z3, z4) = (pad.xxt[2][0], pad.xxt[2][1], pad.xxt[2][2], pad.xxt[2][3]);
+        let (z1, z2, z3, z4) = (
+            pad.xxt.get(2, 0),
+            pad.xxt.get(2, 1),
+            pad.xxt.get(2, 2),
+            pad.xxt.get(2, 3),
+        );
         vec![
             (self.volume * (2.0 * z1 + z2 + z3 + z4)) / 20.0,
             (self.volume * (z1 + 2.0 * z2 + z3 + z4)) / 20.0,
@@ -178,14 +199,15 @@ impl AnalyticalTet4 {
     /// Solution:
     ///
     /// ```text
-    /// cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁ + w₂ Gᵐ₂) V
+    /// cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁ + w₂ Bᵐ₂) V
     /// ```
-    pub fn vec_03_vg(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
+    #[rustfmt::skip]
+    pub fn vec_03_vb(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
         vec![
-            (w0 * self.gg[0][0] + w1 * self.gg[0][1] + w2 * self.gg[0][2]) * self.volume,
-            (w0 * self.gg[1][0] + w1 * self.gg[1][1] + w2 * self.gg[1][2]) * self.volume,
-            (w0 * self.gg[2][0] + w1 * self.gg[2][1] + w2 * self.gg[2][2]) * self.volume,
-            (w0 * self.gg[3][0] + w1 * self.gg[3][1] + w2 * self.gg[3][2]) * self.volume,
+            (w0 * self.bb.get(0,0) + w1 * self.bb.get(0,1) + w2 * self.bb.get(0,2)) * self.volume,
+            (w0 * self.bb.get(1,0) + w1 * self.bb.get(1,1) + w2 * self.bb.get(1,2)) * self.volume,
+            (w0 * self.bb.get(2,0) + w1 * self.bb.get(2,1) + w2 * self.bb.get(2,2)) * self.volume,
+            (w0 * self.bb.get(3,0) + w1 * self.bb.get(3,1) + w2 * self.bb.get(3,2)) * self.volume,
         ]
     }
 
@@ -196,29 +218,30 @@ impl AnalyticalTet4 {
     /// ```text
     /// σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2, σ₁₂√2, σ₀₂√2}
     ///
-    /// dᵐ₀ = (σ₀₀ Gᵐ₀ + σ₀₁ Gᵐ₁ + σ₀₂ Gᵐ₂) V
-    /// dᵐ₁ = (σ₁₀ Gᵐ₀ + σ₁₁ Gᵐ₁ + σ₁₂ Gᵐ₂) V
-    /// dᵐ₂ = (σ₂₀ Gᵐ₀ + σ₂₁ Gᵐ₁ + σ₂₂ Gᵐ₂) V
+    /// dᵐ₀ = (σ₀₀ Bᵐ₀ + σ₀₁ Bᵐ₁ + σ₀₂ Bᵐ₂) V
+    /// dᵐ₁ = (σ₁₀ Bᵐ₀ + σ₁₁ Bᵐ₁ + σ₁₂ Bᵐ₂) V
+    /// dᵐ₂ = (σ₂₀ Bᵐ₀ + σ₂₁ Bᵐ₁ + σ₂₂ Bᵐ₂) V
     /// ```
-    pub fn vec_04_tg(&self, tt: &Tensor2) -> Vec<f64> {
+    #[rustfmt::skip]
+    pub fn vec_04_tb(&self, tt: &Tensor2) -> Vec<f64> {
         let c = self.volume;
         let mat = tt.to_matrix();
-        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
-        let (a11, a12) = (mat[1][1], mat[1][2]);
-        let a22 = mat[2][2];
+        let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
+        let (a11, a12) = (mat.get(1,1), mat.get(1,2));
+        let a22 = mat.get(2,2);
         vec![
-            c * (a00 * self.gg[0][0] + a01 * self.gg[0][1] + a02 * self.gg[0][2]),
-            c * (a01 * self.gg[0][0] + a11 * self.gg[0][1] + a12 * self.gg[0][2]),
-            c * (a02 * self.gg[0][0] + a12 * self.gg[0][1] + a22 * self.gg[0][2]),
-            c * (a00 * self.gg[1][0] + a01 * self.gg[1][1] + a02 * self.gg[1][2]),
-            c * (a01 * self.gg[1][0] + a11 * self.gg[1][1] + a12 * self.gg[1][2]),
-            c * (a02 * self.gg[1][0] + a12 * self.gg[1][1] + a22 * self.gg[1][2]),
-            c * (a00 * self.gg[2][0] + a01 * self.gg[2][1] + a02 * self.gg[2][2]),
-            c * (a01 * self.gg[2][0] + a11 * self.gg[2][1] + a12 * self.gg[2][2]),
-            c * (a02 * self.gg[2][0] + a12 * self.gg[2][1] + a22 * self.gg[2][2]),
-            c * (a00 * self.gg[3][0] + a01 * self.gg[3][1] + a02 * self.gg[3][2]),
-            c * (a01 * self.gg[3][0] + a11 * self.gg[3][1] + a12 * self.gg[3][2]),
-            c * (a02 * self.gg[3][0] + a12 * self.gg[3][1] + a22 * self.gg[3][2]),
+            c * (a00 * self.bb.get(0,0) + a01 * self.bb.get(0,1) + a02 * self.bb.get(0,2)),
+            c * (a01 * self.bb.get(0,0) + a11 * self.bb.get(0,1) + a12 * self.bb.get(0,2)),
+            c * (a02 * self.bb.get(0,0) + a12 * self.bb.get(0,1) + a22 * self.bb.get(0,2)),
+            c * (a00 * self.bb.get(1,0) + a01 * self.bb.get(1,1) + a02 * self.bb.get(1,2)),
+            c * (a01 * self.bb.get(1,0) + a11 * self.bb.get(1,1) + a12 * self.bb.get(1,2)),
+            c * (a02 * self.bb.get(1,0) + a12 * self.bb.get(1,1) + a22 * self.bb.get(1,2)),
+            c * (a00 * self.bb.get(2,0) + a01 * self.bb.get(2,1) + a02 * self.bb.get(2,2)),
+            c * (a01 * self.bb.get(2,0) + a11 * self.bb.get(2,1) + a12 * self.bb.get(2,2)),
+            c * (a02 * self.bb.get(2,0) + a12 * self.bb.get(2,1) + a22 * self.bb.get(2,2)),
+            c * (a00 * self.bb.get(3,0) + a01 * self.bb.get(3,1) + a02 * self.bb.get(3,2)),
+            c * (a01 * self.bb.get(3,0) + a11 * self.bb.get(3,1) + a12 * self.bb.get(3,2)),
+            c * (a02 * self.bb.get(3,0) + a12 * self.bb.get(3,1) + a22 * self.bb.get(3,2)),
         ]
     }
 
@@ -234,75 +257,75 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the g-v-n integration with constant vector field
+    /// Performs the b-v-n integration with constant vector field
     #[rustfmt::skip]
-    pub fn mat_02_gvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+    pub fn mat_02_bvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
-            [c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2), c*(g00*v0 + g01*v1 + g02*v2)],
-            [c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2), c*(g10*v0 + g11*v1 + g12*v2)],
-            [c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2), c*(g20*v0 + g21*v1 + g22*v2)],
-            [c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2), c*(g30*v0 + g31*v1 + g32*v2)],
+            [c*(b00*v0 + b01*v1 + b02*v2), c*(b00*v0 + b01*v1 + b02*v2), c*(b00*v0 + b01*v1 + b02*v2), c*(b00*v0 + b01*v1 + b02*v2)],
+            [c*(b10*v0 + b11*v1 + b12*v2), c*(b10*v0 + b11*v1 + b12*v2), c*(b10*v0 + b11*v1 + b12*v2), c*(b10*v0 + b11*v1 + b12*v2)],
+            [c*(b20*v0 + b21*v1 + b22*v2), c*(b20*v0 + b21*v1 + b22*v2), c*(b20*v0 + b21*v1 + b22*v2), c*(b20*v0 + b21*v1 + b22*v2)],
+            [c*(b30*v0 + b31*v1 + b32*v2), c*(b30*v0 + b31*v1 + b32*v2), c*(b30*v0 + b31*v1 + b32*v2), c*(b30*v0 + b31*v1 + b32*v2)],
         ])
     }
 
-    /// Performs the g-t-g integration with constant tensor field
+    /// Performs the b-t-b integration with constant tensor field
     #[rustfmt::skip]
-    pub fn mat_03_gtg(&self, tt: &Tensor2) -> Matrix {
+    pub fn mat_03_btb(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume;
         let mat = tt.to_matrix();
-        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
-        let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
-        let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
+        let (a10, a11, a12) = (mat.get(1,0), mat.get(1,1), mat.get(1,2));
+        let (a20, a21, a22) = (mat.get(2,0), mat.get(2,1), mat.get(2,2));
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
-            [c*g00*(a00*g00 + a10*g01 + a20*g02) + c*g01*(a01*g00 + a11*g01 + a21*g02) + c*g02*(a02*g00 + a12*g01 + a22*g02), c*g10*(a00*g00 + a10*g01 + a20*g02) + c*g11*(a01*g00 + a11*g01 + a21*g02) + c*g12*(a02*g00 + a12*g01 + a22*g02), c*g20*(a00*g00 + a10*g01 + a20*g02) + c*g21*(a01*g00 + a11*g01 + a21*g02) + c*g22*(a02*g00 + a12*g01 + a22*g02), c*g30*(a00*g00 + a10*g01 + a20*g02) + c*g31*(a01*g00 + a11*g01 + a21*g02) + c*g32*(a02*g00 + a12*g01 + a22*g02)],
-            [c*g00*(a00*g10 + a10*g11 + a20*g12) + c*g01*(a01*g10 + a11*g11 + a21*g12) + c*g02*(a02*g10 + a12*g11 + a22*g12), c*g10*(a00*g10 + a10*g11 + a20*g12) + c*g11*(a01*g10 + a11*g11 + a21*g12) + c*g12*(a02*g10 + a12*g11 + a22*g12), c*g20*(a00*g10 + a10*g11 + a20*g12) + c*g21*(a01*g10 + a11*g11 + a21*g12) + c*g22*(a02*g10 + a12*g11 + a22*g12), c*g30*(a00*g10 + a10*g11 + a20*g12) + c*g31*(a01*g10 + a11*g11 + a21*g12) + c*g32*(a02*g10 + a12*g11 + a22*g12)],
-            [c*g00*(a00*g20 + a10*g21 + a20*g22) + c*g01*(a01*g20 + a11*g21 + a21*g22) + c*g02*(a02*g20 + a12*g21 + a22*g22), c*g10*(a00*g20 + a10*g21 + a20*g22) + c*g11*(a01*g20 + a11*g21 + a21*g22) + c*g12*(a02*g20 + a12*g21 + a22*g22), c*g20*(a00*g20 + a10*g21 + a20*g22) + c*g21*(a01*g20 + a11*g21 + a21*g22) + c*g22*(a02*g20 + a12*g21 + a22*g22), c*g30*(a00*g20 + a10*g21 + a20*g22) + c*g31*(a01*g20 + a11*g21 + a21*g22) + c*g32*(a02*g20 + a12*g21 + a22*g22)],
-            [c*g00*(a00*g30 + a10*g31 + a20*g32) + c*g01*(a01*g30 + a11*g31 + a21*g32) + c*g02*(a02*g30 + a12*g31 + a22*g32), c*g10*(a00*g30 + a10*g31 + a20*g32) + c*g11*(a01*g30 + a11*g31 + a21*g32) + c*g12*(a02*g30 + a12*g31 + a22*g32), c*g20*(a00*g30 + a10*g31 + a20*g32) + c*g21*(a01*g30 + a11*g31 + a21*g32) + c*g22*(a02*g30 + a12*g31 + a22*g32), c*g30*(a00*g30 + a10*g31 + a20*g32) + c*g31*(a01*g30 + a11*g31 + a21*g32) + c*g32*(a02*g30 + a12*g31 + a22*g32)],
+            [c*b00*(a00*b00 + a10*b01 + a20*b02) + c*b01*(a01*b00 + a11*b01 + a21*b02) + c*b02*(a02*b00 + a12*b01 + a22*b02), c*b10*(a00*b00 + a10*b01 + a20*b02) + c*b11*(a01*b00 + a11*b01 + a21*b02) + c*b12*(a02*b00 + a12*b01 + a22*b02), c*b20*(a00*b00 + a10*b01 + a20*b02) + c*b21*(a01*b00 + a11*b01 + a21*b02) + c*b22*(a02*b00 + a12*b01 + a22*b02), c*b30*(a00*b00 + a10*b01 + a20*b02) + c*b31*(a01*b00 + a11*b01 + a21*b02) + c*b32*(a02*b00 + a12*b01 + a22*b02)],
+            [c*b00*(a00*b10 + a10*b11 + a20*b12) + c*b01*(a01*b10 + a11*b11 + a21*b12) + c*b02*(a02*b10 + a12*b11 + a22*b12), c*b10*(a00*b10 + a10*b11 + a20*b12) + c*b11*(a01*b10 + a11*b11 + a21*b12) + c*b12*(a02*b10 + a12*b11 + a22*b12), c*b20*(a00*b10 + a10*b11 + a20*b12) + c*b21*(a01*b10 + a11*b11 + a21*b12) + c*b22*(a02*b10 + a12*b11 + a22*b12), c*b30*(a00*b10 + a10*b11 + a20*b12) + c*b31*(a01*b10 + a11*b11 + a21*b12) + c*b32*(a02*b10 + a12*b11 + a22*b12)],
+            [c*b00*(a00*b20 + a10*b21 + a20*b22) + c*b01*(a01*b20 + a11*b21 + a21*b22) + c*b02*(a02*b20 + a12*b21 + a22*b22), c*b10*(a00*b20 + a10*b21 + a20*b22) + c*b11*(a01*b20 + a11*b21 + a21*b22) + c*b12*(a02*b20 + a12*b21 + a22*b22), c*b20*(a00*b20 + a10*b21 + a20*b22) + c*b21*(a01*b20 + a11*b21 + a21*b22) + c*b22*(a02*b20 + a12*b21 + a22*b22), c*b30*(a00*b20 + a10*b21 + a20*b22) + c*b31*(a01*b20 + a11*b21 + a21*b22) + c*b32*(a02*b20 + a12*b21 + a22*b22)],
+            [c*b00*(a00*b30 + a10*b31 + a20*b32) + c*b01*(a01*b30 + a11*b31 + a21*b32) + c*b02*(a02*b30 + a12*b31 + a22*b32), c*b10*(a00*b30 + a10*b31 + a20*b32) + c*b11*(a01*b30 + a11*b31 + a21*b32) + c*b12*(a02*b30 + a12*b31 + a22*b32), c*b20*(a00*b30 + a10*b31 + a20*b32) + c*b21*(a01*b30 + a11*b31 + a21*b32) + c*b22*(a02*b30 + a12*b31 + a22*b32), c*b30*(a00*b30 + a10*b31 + a20*b32) + c*b31*(a01*b30 + a11*b31 + a21*b32) + c*b32*(a02*b30 + a12*b31 + a22*b32)],
         ])
     }
 
-    /// Performs the n-s-g integration with constant scalar field (coupled with itself)
+    /// Performs the n-s-b integration with constant scalar field (coupled with itself)
     #[rustfmt::skip]
-    pub fn mat_04_nsg(&self, s: f64) -> Matrix {
+    pub fn mat_04_nsb(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
-            [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
-            [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
-            [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
-            [c*g00*s, c*g01*s, c*g02*s, c*g10*s, c*g11*s, c*g12*s, c*g20*s, c*g21*s, c*g22*s, c*g30*s, c*g31*s, c*g32*s],
+            [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
+            [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
+            [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
+            [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
         ])
     }
 
     /// Performs the g-t-n integration with constant tensor field (coupled with itself)
     #[rustfmt::skip]
-    pub fn mat_05_gtn(&self, tt: &Tensor2) -> Matrix {
+    pub fn mat_05_btn(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume / 4.0;
         let mat = tt.to_matrix();
-        let (t00, t01, t02) = (mat[0][0], mat[0][1], mat[0][2]);
-        let (t11, t12) = (mat[1][1], mat[1][2]);
-        let t22 = mat[2][2];
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (t00, t01, t02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
+        let (t11, t12) = (mat.get(1,1), mat.get(1,2));
+        let t22 = mat.get(2,2);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
-            [c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22), c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22), c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22), c*(g00*t00 + g01*t01 + g02*t02), c*(g00*t01 + g01*t11 + g02*t12), c*(g00*t02 + g01*t12 + g02*t22)],
-            [c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22), c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22), c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22), c*(g10*t00 + g11*t01 + g12*t02), c*(g10*t01 + g11*t11 + g12*t12), c*(g10*t02 + g11*t12 + g12*t22)],
-            [c*(g20*t00 + g21*t01 + g22*t02), c*(g20*t01 + g21*t11 + g22*t12), c*(g20*t02 + g21*t12 + g22*t22), c*(g20*t00 + g21*t01 + g22*t02), c*(g20*t01 + g21*t11 + g22*t12), c*(g20*t02 + g21*t12 + g22*t22), c*(g20*t00 + g21*t01 + g22*t02), c*(g20*t01 + g21*t11 + g22*t12), c*(g20*t02 + g21*t12 + g22*t22), c*(g20*t00 + g21*t01 + g22*t02), c*(g20*t01 + g21*t11 + g22*t12), c*(g20*t02 + g21*t12 + g22*t22)],
-            [c*(g30*t00 + g31*t01 + g32*t02), c*(g30*t01 + g31*t11 + g32*t12), c*(g30*t02 + g31*t12 + g32*t22), c*(g30*t00 + g31*t01 + g32*t02), c*(g30*t01 + g31*t11 + g32*t12), c*(g30*t02 + g31*t12 + g32*t22), c*(g30*t00 + g31*t01 + g32*t02), c*(g30*t01 + g31*t11 + g32*t12), c*(g30*t02 + g31*t12 + g32*t22), c*(g30*t00 + g31*t01 + g32*t02), c*(g30*t01 + g31*t11 + g32*t12), c*(g30*t02 + g31*t12 + g32*t22)],
+            [c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22), c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22), c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22), c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22)],
+            [c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22), c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22), c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22), c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22)],
+            [c*(b20*t00 + b21*t01 + b22*t02), c*(b20*t01 + b21*t11 + b22*t12), c*(b20*t02 + b21*t12 + b22*t22), c*(b20*t00 + b21*t01 + b22*t02), c*(b20*t01 + b21*t11 + b22*t12), c*(b20*t02 + b21*t12 + b22*t22), c*(b20*t00 + b21*t01 + b22*t02), c*(b20*t01 + b21*t11 + b22*t12), c*(b20*t02 + b21*t12 + b22*t22), c*(b20*t00 + b21*t01 + b22*t02), c*(b20*t01 + b21*t11 + b22*t12), c*(b20*t02 + b21*t12 + b22*t22)],
+            [c*(b30*t00 + b31*t01 + b32*t02), c*(b30*t01 + b31*t11 + b32*t12), c*(b30*t02 + b31*t12 + b32*t22), c*(b30*t00 + b31*t01 + b32*t02), c*(b30*t01 + b31*t11 + b32*t12), c*(b30*t02 + b31*t12 + b32*t22), c*(b30*t00 + b31*t01 + b32*t02), c*(b30*t01 + b31*t11 + b32*t12), c*(b30*t02 + b31*t12 + b32*t22), c*(b30*t00 + b31*t01 + b32*t02), c*(b30*t01 + b31*t11 + b32*t12), c*(b30*t02 + b31*t12 + b32*t22)],
         ])
     }
 
@@ -326,27 +349,27 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the g-s-n integration with constant scalar field (coupled with itself)
+    /// Performs the b-s-n integration with constant scalar field (coupled with itself)
     #[rustfmt::skip]
-    pub fn mat_07_gsn(&self, s: f64) -> Matrix {
+    pub fn mat_07_bsn(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
-            [c*g00*s, c*g00*s, c*g00*s, c*g00*s],
-            [c*g01*s, c*g01*s, c*g01*s, c*g01*s],
-            [c*g02*s, c*g02*s, c*g02*s, c*g02*s],
-            [c*g10*s, c*g10*s, c*g10*s, c*g10*s],
-            [c*g11*s, c*g11*s, c*g11*s, c*g11*s],
-            [c*g12*s, c*g12*s, c*g12*s, c*g12*s],
-            [c*g20*s, c*g20*s, c*g20*s, c*g20*s],
-            [c*g21*s, c*g21*s, c*g21*s, c*g21*s],
-            [c*g22*s, c*g22*s, c*g22*s, c*g22*s],
-            [c*g30*s, c*g30*s, c*g30*s, c*g30*s],
-            [c*g31*s, c*g31*s, c*g31*s, c*g31*s],
-            [c*g32*s, c*g32*s, c*g32*s, c*g32*s],
+            [c*b00*s, c*b00*s, c*b00*s, c*b00*s],
+            [c*b01*s, c*b01*s, c*b01*s, c*b01*s],
+            [c*b02*s, c*b02*s, c*b02*s, c*b02*s],
+            [c*b10*s, c*b10*s, c*b10*s, c*b10*s],
+            [c*b11*s, c*b11*s, c*b11*s, c*b11*s],
+            [c*b12*s, c*b12*s, c*b12*s, c*b12*s],
+            [c*b20*s, c*b20*s, c*b20*s, c*b20*s],
+            [c*b21*s, c*b21*s, c*b21*s, c*b21*s],
+            [c*b22*s, c*b22*s, c*b22*s, c*b22*s],
+            [c*b30*s, c*b30*s, c*b30*s, c*b30*s],
+            [c*b31*s, c*b31*s, c*b31*s, c*b31*s],
+            [c*b32*s, c*b32*s, c*b32*s, c*b32*s],
         ])
     }
 
@@ -355,9 +378,9 @@ impl AnalyticalTet4 {
     pub fn mat_08_ntn(&self, sig: &Tensor2) -> Matrix {
         let vv = self.volume;
         let mat = sig.to_matrix();
-        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
-        let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
-        let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
+        let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
+        let (a10, a11, a12) = (mat.get(1,0), mat.get(1,1), mat.get(1,2));
+        let (a20, a21, a22) = (mat.get(2,0), mat.get(2,1), mat.get(2,2));
         Matrix::from(&[
             [a00*vv/10.0, a01*vv/10.0, a02*vv/10.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0],
             [a10*vv/10.0, a11*vv/10.0, a12*vv/10.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0],
@@ -374,46 +397,46 @@ impl AnalyticalTet4 {
         ])
     }
 
-    /// Performs the n-v-g integration with constant vector field
+    /// Performs the n-v-b integration with constant vector field
     #[rustfmt::skip]
-    pub fn mat_09_nvg(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
+    pub fn mat_09_nvb(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (g00, g01, g02) = (self.gg[0][0], self.gg[0][1], self.gg[0][2]);
-        let (g10, g11, g12) = (self.gg[1][0], self.gg[1][1], self.gg[1][2]);
-        let (g20, g21, g22) = (self.gg[2][0], self.gg[2][1], self.gg[2][2]);
-        let (g30, g31, g32) = (self.gg[3][0], self.gg[3][1], self.gg[3][2]);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
-            [c*g00*v0, c*g01*v0, c*g02*v0, c*g10*v0, c*g11*v0, c*g12*v0, c*g20*v0, c*g21*v0, c*g22*v0, c*g30*v0, c*g31*v0, c*g32*v0],
-            [c*g00*v1, c*g01*v1, c*g02*v1, c*g10*v1, c*g11*v1, c*g12*v1, c*g20*v1, c*g21*v1, c*g22*v1, c*g30*v1, c*g31*v1, c*g32*v1],
-            [c*g00*v2, c*g01*v2, c*g02*v2, c*g10*v2, c*g11*v2, c*g12*v2, c*g20*v2, c*g21*v2, c*g22*v2, c*g30*v2, c*g31*v2, c*g32*v2],
+            [c*b00*v0, c*b01*v0, c*b02*v0, c*b10*v0, c*b11*v0, c*b12*v0, c*b20*v0, c*b21*v0, c*b22*v0, c*b30*v0, c*b31*v0, c*b32*v0],
+            [c*b00*v1, c*b01*v1, c*b02*v1, c*b10*v1, c*b11*v1, c*b12*v1, c*b20*v1, c*b21*v1, c*b22*v1, c*b30*v1, c*b31*v1, c*b32*v1],
+            [c*b00*v2, c*b01*v2, c*b02*v2, c*b10*v2, c*b11*v2, c*b12*v2, c*b20*v2, c*b21*v2, c*b22*v2, c*b30*v2, c*b31*v2, c*b32*v2],
+            [c*b00*v0, c*b01*v0, c*b02*v0, c*b10*v0, c*b11*v0, c*b12*v0, c*b20*v0, c*b21*v0, c*b22*v0, c*b30*v0, c*b31*v0, c*b32*v0],
+            [c*b00*v1, c*b01*v1, c*b02*v1, c*b10*v1, c*b11*v1, c*b12*v1, c*b20*v1, c*b21*v1, c*b22*v1, c*b30*v1, c*b31*v1, c*b32*v1],
+            [c*b00*v2, c*b01*v2, c*b02*v2, c*b10*v2, c*b11*v2, c*b12*v2, c*b20*v2, c*b21*v2, c*b22*v2, c*b30*v2, c*b31*v2, c*b32*v2],
+            [c*b00*v0, c*b01*v0, c*b02*v0, c*b10*v0, c*b11*v0, c*b12*v0, c*b20*v0, c*b21*v0, c*b22*v0, c*b30*v0, c*b31*v0, c*b32*v0],
+            [c*b00*v1, c*b01*v1, c*b02*v1, c*b10*v1, c*b11*v1, c*b12*v1, c*b20*v1, c*b21*v1, c*b22*v1, c*b30*v1, c*b31*v1, c*b32*v1],
+            [c*b00*v2, c*b01*v2, c*b02*v2, c*b10*v2, c*b11*v2, c*b12*v2, c*b20*v2, c*b21*v2, c*b22*v2, c*b30*v2, c*b31*v2, c*b32*v2],
+            [c*b00*v0, c*b01*v0, c*b02*v0, c*b10*v0, c*b11*v0, c*b12*v0, c*b20*v0, c*b21*v0, c*b22*v0, c*b30*v0, c*b31*v0, c*b32*v0],
+            [c*b00*v1, c*b01*v1, c*b02*v1, c*b10*v1, c*b11*v1, c*b12*v1, c*b20*v1, c*b21*v1, c*b22*v1, c*b30*v1, c*b31*v1, c*b32*v1],
+            [c*b00*v2, c*b01*v2, c*b02*v2, c*b10*v2, c*b11*v2, c*b12*v2, c*b20*v2, c*b21*v2, c*b22*v2, c*b30*v2, c*b31*v2, c*b32*v2],
         ])
     }
 
-    /// Performs the g-d-g integration with constant tensor field (calculates the stiffness matrix)
+    /// Performs the b-d-b integration with constant tensor field (calculates the stiffness matrix)
     ///
     /// solution:
     ///
     /// ```text
     /// K = Bᵀ ⋅ D ⋅ B ⋅ volume
     /// ```
-    pub fn mat_10_gdg(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
+    pub fn mat_10_bdb(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
         let ela = LinElasticity::new(young, poisson, false, false);
         let dd = ela.get_modulus();
         let dim_dd = 6;
         let dim_kk = 12;
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bb, &dd.mat)?;
-        mat_mat_mul(&mut kk, self.volume, &bb_t_dd, &self.bb)?;
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd.mat).unwrap(); // cannot fail
+        mat_mat_mul(&mut kk, self.volume, &bb_t_dd, &self.bbe).unwrap(); // cannot fail
         Ok(kk)
     }
 }
@@ -424,7 +447,7 @@ impl AnalyticalTet4 {
 mod tests {
     use super::AnalyticalTet4;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use russell_lab::Matrix;
 
     #[test]
@@ -449,7 +472,7 @@ mod tests {
         assert_eq!(tet.volume, 1.0 / 6.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
+        vec_approx_eq(tet.bb.as_data(), pad.gradient.as_data(), 1e-15);
         let ee = 480.0;
         let nu = 1.0 / 3.0;
         let eb = ee / (12.0 * (1.0 - 2.0 * nu) * (1.0 + nu));
@@ -472,8 +495,8 @@ mod tests {
             [ 0.0,  -nt,  -nt,  0.0, 0.0, 0.0, 0.0,  0.0,  nt, 0.0,  nt,  0.0],
             [-tnu, -tnu, -tnh,  tnu, 0.0, 0.0, 0.0,  tnu, 0.0, 0.0, 0.0,  tnh],
         ]);
-        let kk = tet.mat_10_gdg(ee, nu).unwrap();
-        assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-14);
+        let kk = tet.mat_10_bdb(ee, nu).unwrap();
+        vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);
 
         // non-right-angles tet4
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4).unwrap();
@@ -494,8 +517,8 @@ mod tests {
         assert_eq!(tet.volume, 4.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        assert_vec_approx_eq!(tet.gg.as_data(), pad.gradient.as_data(), 1e-15);
-        let kk = tet.mat_10_gdg(ee, nu).unwrap();
+        vec_approx_eq(tet.bb.as_data(), pad.gradient.as_data(), 1e-15);
+        let kk = tet.mat_10_bdb(ee, nu).unwrap();
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
             [ 745.0,  540.0, 120.0,  -5.0,  30.0,  60.0,-270.0, -240.0,   0.0,-470.0, -330.0,-180.0],
@@ -511,6 +534,6 @@ mod tests {
             [-330.0,-1160.0,-300.0,  90.0,-380.0,-180.0,  60.0,  720.0, 120.0, 180.0,  820.0, 360.0],
             [-180.0, -420.0,-470.0,  60.0,-180.0,-230.0,   0.0,  240.0, 180.0, 120.0,  360.0, 520.0],
         ]);
-        assert_vec_approx_eq!(kk.as_data(), kk_correct.as_data(), 1e-12);
+        vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-12);
     }
 }

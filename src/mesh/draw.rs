@@ -1,10 +1,11 @@
 use super::{Features, Mesh, PointId};
 use crate::shapes::{GeoKind, Scratchpad};
-use crate::util::ONE_BY_3;
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, PolyCode, Text};
+use russell_lab::math::ONE_BY_3;
 use russell_lab::Vector;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 
 /// Adds (Polyline or Bezier) curve to the canvas
 fn add_curve(
@@ -538,8 +539,17 @@ impl Draw {
 
 /// Draws mesh
 ///
+/// # Input
+///
+/// * `mesh` -- the mesh
+/// * `with_ids` -- draw point ids and cell ids
+/// * `filepath` -- may be a String, &str, or Path
+///
 /// **Note:** This is a high-level function calling Draw and others
-pub fn draw_mesh(mesh: &Mesh, with_ids: bool, filename: &str) -> Result<(), StrError> {
+pub fn draw_mesh<P>(mesh: &Mesh, with_ids: bool, filepath: &P) -> Result<(), StrError>
+where
+    P: AsRef<OsStr> + ?Sized,
+{
     let mut plot = Plot::new();
     let mut draw = Draw::new();
     draw.cells(&mut plot, &mesh, true)?;
@@ -554,7 +564,7 @@ pub fn draw_mesh(mesh: &Mesh, with_ids: bool, filename: &str) -> Result<(), StrE
     }
     plot.set_equal_axes(true)
         .set_figure_size_points(600.0, 600.0)
-        .save(filename)
+        .save(filepath)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

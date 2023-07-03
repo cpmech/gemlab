@@ -1,6 +1,6 @@
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
-use russell_chk::assert_vec_approx_eq;
+use russell_chk::vec_approx_eq;
 use russell_lab::Vector;
 
 fn main() -> Result<(), StrError> {
@@ -50,7 +50,7 @@ fn main() -> Result<(), StrError> {
     let mut x_interpolated = Vector::new(space_ndim);
     for m in 0..nnode {
         for j in 0..space_ndim {
-            x_interpolated[j] += pad.interp[m] * pad.xxt[j][m];
+            x_interpolated[j] += pad.interp[m] * pad.xxt.get(j, m);
         }
     }
 
@@ -59,6 +59,6 @@ fn main() -> Result<(), StrError> {
     let ym = y0 + h / 2.0;
     println!("xm = {}, ym = {}", xm, ym);
     println!("x_interpolated =\n{}", x_interpolated);
-    assert_vec_approx_eq!(x_interpolated.as_data(), &[xm, ym], 1e-15);
+    vec_approx_eq(x_interpolated.as_data(), &[xm, ym], 1e-15);
     Ok(())
 }

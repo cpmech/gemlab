@@ -37,8 +37,7 @@ use gemlab::StrError;
 use std::collections::HashSet;
 
 fn main() -> Result<(), StrError> {
-    // Input the raw mesh data using a text file and compute all
-    // derived information such boundary edges and faces.
+    // Input the raw mesh data using a text file
     //
     // 1.0  5------,6.------7
     //      | [3],'   `.[4] |
@@ -52,14 +51,14 @@ fn main() -> Result<(), StrError> {
     //     0.0     0.5     1.0
     let path = "./data/meshes/four_tri3_one_qua4.msh";
     let mesh = Mesh::from_text_file(path)?;
-    let features = Features::new(&mesh, Extract::Boundary);
 
-    // Find entities along the boundary of the mesh with coordinates.
+    // Extract features such boundary edges and faces.
+    // Find entities along the boundary of the mesh given coordinates.
     // The `At` enum provides an easy way to define the type of the
     // constraint such as line, plane, circle, etc.
-    let find = Find::new(&mesh, &features)?;
-    assert_eq!(&find.point_ids(At::Y(0.5))?, &[3, 4]);
-    assert_eq!(&find.edge_keys(At::X(1.0))?, &[(2, 4), (4, 7)]);
+    let find = Find::new(&mesh, None);
+    assert_eq!(find.point_ids(At::Y(0.5), |_| true)?, &[3, 4]);
+    assert_eq!(find.edge_keys(At::X(1.0), |_| true)?, &[(2, 4), (4, 7)]);
 
     // Perform numerical integration to compute
     // the area of cell # 2
@@ -129,8 +128,8 @@ space-number-of-dimensions (`space_ndim`) are possible. There are three cases:
 
 ### Coverage tool
 
-The coverage tool cannot properly handle the macros in russell_chk such as assert_approx_eq!
-and assert_vec_approx_eq! We could use the `#[no_coverage]` decorator on
+The coverage tool cannot properly handle the macros in russell_chk such as approx_eq
+and vec_approx_eq We could use the `#[no_coverage]` decorator on
 the testing function to stop the coverage tool assessing the region coverage within the test function.
 However, we let the coverage tool report incorrect Region Coverage anyway. Sometimes, the coverage
 tool also fails to report line coverage even when all lines have been run.

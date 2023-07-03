@@ -1,15 +1,16 @@
-use super::IntegPointData;
-use crate::shapes::Scratchpad;
+use super::CommonArgs;
 use crate::StrError;
-use russell_lab::Vector;
+use russell_lab::{Matrix, Vector};
 
-/// Implements the vector(V) dot gradient(G) integration case 03
+/// Implements the vector(V) dot gradient(B) integration case 03
+///
+/// Callback function: `f(w, p, N, B)`
 ///
 /// Vector dot gradient:
 ///
 /// ```text
 ///      ⌠ → →    →  → →
-/// cᵐ = │ w(x) · Gᵐ(x(ξ)) dΩ
+/// cᵐ = │ w(x) · Bᵐ(x(ξ)) α dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -18,11 +19,11 @@ use russell_lab::Vector;
 ///
 /// ```text
 ///      nip-1  → →     →  →       →
-/// cᵐ ≈   Σ    w(ιᵖ) · Gᵐ(ιᵖ) |J|(ιᵖ) wᵖ
+/// cᵐ ≈   Σ    w(ιᵖ) · Bᵐ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///       p=0
 /// ```
 ///
-/// # Output
+/// # Results
 ///
 /// ```text
 ///     ┌     ┐
@@ -34,17 +35,13 @@ use russell_lab::Vector;
 ///     └     ┘
 /// ```
 ///
+/// # Arguments
+///
 /// * `c` -- A vector containing all `cᵐ` values, one after another, and sequentially placed as shown above.
 ///   `m` is the index of the node. The length must be `c.len() ≥ ii0 + nnode`.
-/// * `pad` -- Some members of the scratchpad will be modified
-///
-/// # Input
-///
-/// * `ii0` -- Stride marking the first row in the output vector where to add components
-/// * `clear_c` -- Fills `c` vector with zeros, otherwise accumulate values into `c`
-/// * `ips` -- Integration points (n_integ_point)
-/// * `fn_w` -- Function `f(w,p)` that computes `w(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`.
-///    The dim of `w` is equal to `space_ndim`.
+/// * `args` --- Common arguments
+/// * `fn_w` -- Function `f(w,p,N,B)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `w.dim() = space_ndim`.
 ///
 /// # Examples
 ///
@@ -54,7 +51,7 @@ use russell_lab::Vector;
 /// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
-/// use russell_chk::assert_vec_approx_eq;
+/// use russell_chk::vec_approx_eq;
 /// use russell_lab::Vector;
 ///
 /// fn main() -> Result<(), StrError> {
@@ -68,35 +65,30 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 1, 6.0);
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
+///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
 ///         Ok(())
 ///     })?;
 ///     // solution (A = 6):
-///     // cᵐ = (w₀ Gᵐ₀ + w₁ Gᵐ₁) A
+///     // cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁) A
 ///     //     ┌       ┐
 ///     //     │ -¼ -⅓ │
-///     // G = │  ¼  0 │
+///     // B = │  ¼  0 │
 ///     //     │  0  ⅓ │
 ///     //     └       ┘
-///     assert_vec_approx_eq!(c.as_data(), &[-5.5, 1.5, 4.0], 1e-14);
+///     vec_approx_eq(c.as_data(), &[-5.5, 1.5, 4.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_03_vg<F>(
-    c: &mut Vector,
-    pad: &mut Scratchpad,
-    ii0: usize,
-    clear_c: bool,
-    ips: IntegPointData,
-    fn_w: F,
-) -> Result<(), StrError>
+pub fn vec_03_vb<F>(c: &mut Vector, args: &mut CommonArgs, mut fn_w: F) -> Result<(), StrError>
 where
-    F: Fn(&mut Vector, usize) -> Result<(), StrError>,
+    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = pad.xxt.dims();
+    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let ii0 = args.ii0;
     if c.dim() < ii0 + nnode {
         return Err("c.len() must be ≥ ii0 + nnode");
     }
@@ -105,32 +97,44 @@ where
     let mut w = Vector::new(space_ndim);
 
     // clear output vector
-    if clear_c {
+    if args.clear {
         c.fill(0.0);
     }
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..args.ips.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &args.ips[p];
+        let weight = args.ips[p][3];
 
         // calculate Jacobian and Gradient
-        let det_jac = pad.calc_gradient(iota)?;
+        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
+        let det_jac = args.pad.calc_gradient(iota)?; // B
 
         // calculate w
-        fn_w(&mut w, p)?;
+        let nn = &args.pad.interp;
+        let bb = &args.pad.gradient;
+        fn_w(&mut w, p, nn, bb)?;
+
+        // calculate coefficient
+        let coef = if args.axisymmetric {
+            let mut r = 0.0; // radius @ x(ιᵖ)
+            for m in 0..nnode {
+                r += nn[m] * args.pad.xxt.get(0, m);
+            }
+            det_jac * weight * args.alpha * r
+        } else {
+            det_jac * weight * args.alpha
+        };
 
         // add contribution to c vector
-        let coef = det_jac * weight;
-        let g = &pad.gradient;
         if space_ndim == 2 {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * g[m][0] + w[1] * g[m][1]);
+                c[ii0 + m] += coef * (w[0] * bb.get(m, 0) + w[1] * bb.get(m, 1));
             }
         } else {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * g[m][0] + w[1] * g[m][1] + w[2] * g[m][2]);
+                c[ii0 + m] += coef * (w[0] * bb.get(m, 0) + w[1] * bb.get(m, 1) + w[2] * bb.get(m, 2));
             }
         }
     }
@@ -142,22 +146,29 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3};
-    use russell_chk::assert_vec_approx_eq;
-    use russell_lab::Vector;
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use russell_chk::vec_approx_eq;
+    use russell_lab::{Matrix, Vector};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut c = Vector::new(2);
+        let mut w = Vector::new(0);
+        let nn = Vector::new(0);
+        let bb = Matrix::new(0, 0);
+        let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(());
+        f(&mut w, 0, &nn, &bb).unwrap();
+        let mut args = CommonArgs::new(&mut pad, &[]);
+        args.ii0 = 1;
         assert_eq!(
-            integ::vec_03_vg(&mut c, &mut pad, 1, false, &[], |_, _| Ok(())).err(),
+            integ::vec_03_vb(&mut c, &mut args, f).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
     }
 
     #[test]
-    fn vec_03_vg_works_tri3_constant() {
+    fn tri3_constant_works() {
         // constant vector function: w(x) = {w₀, w₁}
         const W0: f64 = 2.0;
         const W1: f64 = 3.0;
@@ -165,7 +176,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
-        let c_correct = ana.vec_03_vg(W0, W1);
+        let c_correct = ana.vec_03_vb(W0, W1);
 
         // integration points
         let class = pad.kind.class();
@@ -176,24 +187,25 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(c.as_data(), c_correct, tol);
+            vec_approx_eq(c.as_data(), c_correct.as_data(), tol);
         });
     }
 
     #[test]
-    fn vec_03_vg_works_tri3_bilinear() {
+    fn tri3_bilinear_works() {
         // bilinear vector function: w(x) = {x, y}
         let mut pad = aux::gen_pad_tri3();
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
-        let c_correct = ana.vec_03_vg_bilinear(&pad);
+        let c_correct = ana.vec_03_vb_bilinear(&pad);
 
         // integration points
         let class = pad.kind.class();
@@ -204,19 +216,20 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, p| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            integ::vec_03_vb(&mut c, &mut args, |w, p, _, _| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(c.as_data(), c_correct, tol);
+            vec_approx_eq(c.as_data(), c_correct.as_data(), tol);
         });
     }
 
     #[test]
-    fn vec_03_vg_works_tet4_constant() {
+    fn tet4_constant_works() {
         // tet 4 with constant vector  w(x) = {w0, w1, w2}
         let mut pad = aux::gen_pad_tet4();
 
@@ -225,7 +238,7 @@ mod tests {
         const W1: f64 = 3.0;
         const W2: f64 = 4.0;
         let ana = AnalyticalTet4::new(&pad);
-        let c_correct = ana.vec_03_vg(W0, W1, W2);
+        let c_correct = ana.vec_03_vb(W0, W1, W2);
 
         // integration points
         let class = pad.kind.class();
@@ -239,14 +252,15 @@ mod tests {
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            integ::vec_03_vg(&mut c, &mut pad, 0, true, ips, |w, _| {
+            let mut args = CommonArgs::new(&mut pad, ips);
+            integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;
                 Ok(())
             })
             .unwrap();
-            assert_vec_approx_eq!(c.as_data(), c_correct, tol);
+            vec_approx_eq(c.as_data(), &c_correct, tol);
         });
     }
 }

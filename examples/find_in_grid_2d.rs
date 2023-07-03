@@ -1,7 +1,8 @@
 use gemlab::geometry::Circle;
-use gemlab::util::{GridSearch, PI};
+use gemlab::util::GridSearch;
 use gemlab::StrError;
 use plotpy::Plot;
+use russell_lab::math::PI;
 use std::collections::HashSet;
 
 struct Segment {
@@ -81,7 +82,7 @@ fn main() -> Result<(), StrError> {
     let mut start_id = 0;
     let mut end_id = NPOINT;
     for c in &circles {
-        let res = grid.find_on_circle(&c.center, c.radius)?;
+        let res = grid.find_on_circle(&c.center, c.radius, |_| true)?;
         check(&res, &(start_id..end_id).collect::<Vec<_>>());
         start_id += NPOINT;
         end_id += NPOINT;
@@ -89,7 +90,7 @@ fn main() -> Result<(), StrError> {
 
     // find points on segments
     for s in &segments {
-        let res = grid.find_on_line(&s.a, &s.b)?;
+        let res = grid.find_on_line(&s.a, &s.b, |_| true)?;
         check(&res, &(start_id..end_id).collect::<Vec<_>>());
         start_id += NPOINT;
         end_id += NPOINT;

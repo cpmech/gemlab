@@ -28,12 +28,12 @@ impl AnalyticalQua4 {
         ])
     }
 
-    /// Performs the g-t-g integration with constant (and diagonal) tensor field
+    /// Performs the b-t-b integration with constant (and diagonal) tensor field
     ///
     /// From @bhatti:05\page{332}
     /// @bhatti:05 Bhatti, M.A. (2005) Fundamental Finite Element Analysis and Applications, Wiley, 700p.
     #[rustfmt::skip]
-    pub fn mat_03_gtg(&self, kx: f64, ky: f64) -> Matrix {
+    pub fn mat_03_btb(&self, kx: f64, ky: f64) -> Matrix {
         let a = self.a;
         let b = self.b;
         Matrix::from(&[

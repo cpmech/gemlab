@@ -2,6 +2,7 @@ use super::algorithms;
 use super::{CellId, Mesh, PointId};
 use crate::shapes::GeoKind;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 
 /// Aliases (usize,usize) as the key of edges
 ///
@@ -17,23 +18,16 @@ pub type EdgeKey = (usize, usize);
 /// "corners" first, the middle points don't matter.
 pub type FaceKey = (usize, usize, usize, usize);
 
-/// Holds the point ids of an edge (an entity belonging to a solid cell in 2D or a face in 3D)
+/// Holds the point ids of an edge or a face
+///
+/// * An edge is an entity belonging to a solid cell in 2D or a face in 3D
+/// * A face is an entity belonging to a solid cell in 3D
 #[derive(Clone, Debug)]
-pub struct Edge {
+pub struct Feature {
     /// Geometry kind
     pub kind: GeoKind,
 
     /// List of points defining this edge; in the right order (unsorted)
-    pub points: Vec<PointId>,
-}
-
-/// Holds the point ids of a face (an entity belonging to a solid cell in 3D)
-#[derive(Clone, Debug)]
-pub struct Face {
-    /// Geometry kind
-    pub kind: GeoKind,
-
-    /// List of points defining this face; in the right order (unsorted)
     pub points: Vec<PointId>,
 }
 
@@ -207,7 +201,7 @@ pub struct Features {
     /// 2. In 3D, a boundary edge belongs to a boundary face
     /// 3. In 2D, an interior edge is such that it is shared by **more** than one 2D cell (1D cells are ignored)
     /// 4. In 3D, an interior edge belongs to an interior face
-    pub edges: HashMap<EdgeKey, Edge>,
+    pub edges: HashMap<EdgeKey, Feature>,
 
     /// Set of faces on the mesh boundary, interior, or both boundary and interior
     ///
@@ -215,7 +209,7 @@ pub struct Features {
     ///
     /// 1. A boundary face is such that it is shared by one 3D cell only (2D cells are ignored)
     /// 2. An interior face is such that it is shared by **more** than one 3D cell (2D cells are ignored)
-    pub faces: HashMap<FaceKey, Face>,
+    pub faces: HashMap<FaceKey, Feature>,
 
     /// The minimum coordinates of the points (space_ndim)
     pub min: Vec<f64>,
@@ -286,30 +280,135 @@ impl Features {
         }
         features
     }
+
+    /// Returns an edge or panics
+    pub fn get_edge(&self, a: usize, b: usize) -> &Feature {
+        self.edges.get(&(a, b)).expect("cannot find edge with given key")
+    }
+
+    /// Returns an face or panics
+    pub fn get_face(&self, a: usize, b: usize, c: usize, d: usize) -> &Feature {
+        self.faces.get(&(a, b, c, d)).expect("cannot find face with given key")
+    }
+}
+
+/// Returns a string with the points of a collection of Feature
+pub fn display_features(features: &[&Feature]) -> String {
+    let mut buffer = String::new();
+    for feature in features {
+        let pp = &feature.points;
+        if feature.kind.is_lin() {
+            // edge
+            write!(&mut buffer, "({},{}) ", pp[0], pp[1]).unwrap();
+        } else {
+            // face
+            if pp.len() > 3 {
+                write!(&mut buffer, "({},{},{},{}) ", pp[0], pp[1], pp[2], pp[3]).unwrap();
+            } else {
+                write!(&mut buffer, "({},{},{}) ", pp[0], pp[1], pp[2]).unwrap();
+            }
+        }
+    }
+    buffer
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{Edge, Face};
+    use super::{display_features, Extract, Feature, Features};
+    use crate::mesh::Samples;
     use crate::shapes::GeoKind;
 
     #[test]
+    fn new_and_get_methods_work() {
+        //      4--------------7  1.0
+        //     /.             /|
+        //    / .            / |    [#] indicates id
+        //   /  .           /  |    (#) indicates attribute_id
+        //  /   .          /   |
+        // 5--------------6    |          z
+        // |    .         |    |          ↑
+        // |    0---------|----3  0.0     o → y
+        // |   /  [0]     |   /          ↙
+        // |  /   (1)     |  /          x
+        // | /            | /
+        // |/             |/
+        // 1--------------2   1.0
+        let mesh = Samples::one_hex8();
+        let features = Features::new(&mesh, Extract::Boundary);
+        let edge = features.get_edge(4, 5);
+        let face = features.get_face(0, 1, 4, 5);
+        assert_eq!(edge.points, &[4, 5]);
+        assert_eq!(face.points, &[0, 1, 5, 4]);
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot find edge with given key")]
+    fn get_edge_panics_on_error() {
+        let mesh = Samples::one_tri3();
+        let features = Features::new(&mesh, Extract::Boundary);
+        features.get_edge(4, 5);
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot find face with given key")]
+    fn get_face_panics_on_error() {
+        let mesh = Samples::one_tet4();
+        let features = Features::new(&mesh, Extract::Boundary);
+        features.get_face(4, 5, 6, 100);
+    }
+
+    #[test]
     fn derive_works() {
-        let edge = Edge {
+        let edge = Feature {
             kind: GeoKind::Lin3,
             points: vec![10, 20, 33],
         };
-        let face = Face {
+        let face = Feature {
             kind: GeoKind::Qua4,
             points: vec![1, 2, 3, 4],
         };
         let edge_clone = edge.clone();
         let face_clone = face.clone();
-        assert_eq!(format!("{:?}", edge), "Edge { kind: Lin3, points: [10, 20, 33] }");
-        assert_eq!(format!("{:?}", face), "Face { kind: Qua4, points: [1, 2, 3, 4] }");
+        assert_eq!(format!("{:?}", edge), "Feature { kind: Lin3, points: [10, 20, 33] }");
+        assert_eq!(format!("{:?}", face), "Feature { kind: Qua4, points: [1, 2, 3, 4] }");
         assert_eq!(edge_clone.points.len(), 3);
         assert_eq!(face_clone.points.len(), 4);
+    }
+
+    #[test]
+    fn display_features_works() {
+        let edges = vec![
+            Feature {
+                kind: GeoKind::Lin2,
+                points: vec![0, 1],
+            },
+            Feature {
+                kind: GeoKind::Lin2,
+                points: vec![4, 5],
+            },
+            Feature {
+                kind: GeoKind::Lin3,
+                points: vec![7, 11, 9],
+            },
+        ];
+        let faces = vec![
+            Feature {
+                kind: GeoKind::Tri3,
+                points: vec![0, 3, 2],
+            },
+            Feature {
+                kind: GeoKind::Qua4,
+                points: vec![8, 9, 10, 11],
+            },
+            Feature {
+                kind: GeoKind::Qua4,
+                points: vec![6, 7, 11, 10],
+            },
+        ];
+        let features: Vec<&Feature> = vec![edges.iter().collect::<Vec<_>>(), faces.iter().collect::<Vec<_>>()].concat();
+        let res = display_features(&features);
+        assert_eq!(res, "(0,1) (4,5) (7,11) (0,3,2) (8,9,10,11) (6,7,11,10) ");
     }
 }

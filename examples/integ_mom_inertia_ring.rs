@@ -1,6 +1,7 @@
 use gemlab::StrError;
-use gemlab::{integ, mesh, shapes, util};
-use russell_chk::assert_approx_eq;
+use gemlab::{integ, mesh, shapes};
+use russell_chk::approx_eq;
+use russell_lab::math::PI;
 
 fn main() -> Result<(), StrError> {
     // generate mesh
@@ -32,14 +33,14 @@ fn main() -> Result<(), StrError> {
     second_mom_inertia *= 4.0;
 
     // compare with analytical solution
-    let correct = util::PI * (f64::powf(rmax, 4.0) - f64::powf(rmin, 4.0)) / 4.0;
+    let correct = PI * (f64::powf(rmax, 4.0) - f64::powf(rmin, 4.0)) / 4.0;
     println!(
         "second_mom_inertia = {} ({}): err = {:.2e}",
         second_mom_inertia,
         correct,
         f64::abs(second_mom_inertia - correct),
     );
-    assert_approx_eq!(second_mom_inertia, correct, 1e-7);
+    approx_eq(second_mom_inertia, correct, 1e-7);
 
     // draw mesh
     mesh::draw_mesh(&mesh, false, "/tmp/gemlab/example_mom_inertia_ring.svg")

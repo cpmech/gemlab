@@ -1,11 +1,11 @@
 //! Mesh definitions and generation, including tools to find features
 //!
 //! This module defines the [Mesh] structure and auxiliary functions for mesh generation,
-//! finding features such as [Point], [Edge], and [Face], and other algorithms such as
+//! finding features such as [Point], edges, and faces, and other algorithms such as
 //! merging meshes and drawing.
 //!
-//! A [Mesh] is composed of [Point]s and [Cell]s whereas the secondary features are [Edge]
-//! and [Face]. The structure [Features] holds the (secondary) features.
+//! A [Mesh] is composed of [Point]s and [Cell]s whereas the secondary features are edges
+//! and faces. The structure [Features] holds the (secondary) features.
 //!
 //! Below are some example of [Cell]s, classified according to [super::shapes::GeoClass].
 //! The numbers are the local numbers of the cell points (nodes).
@@ -43,6 +43,7 @@ mod grid_cells;
 mod helpers;
 mod join_meshes;
 mod mesh;
+mod paraview;
 mod read_text_mesh;
 mod samples;
 pub use crate::mesh::block::*;
@@ -56,4 +57,5 @@ pub use crate::mesh::grid_cells::*;
 pub use crate::mesh::helpers::*;
 pub use crate::mesh::join_meshes::*;
 pub use crate::mesh::mesh::*;
+pub use crate::mesh::paraview::*;
 pub use crate::mesh::samples::*;

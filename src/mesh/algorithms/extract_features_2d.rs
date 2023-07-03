@@ -1,4 +1,4 @@
-use crate::mesh::{Edge, EdgeKey, Extract, MapEdge2dToCells, Mesh, PointId};
+use crate::mesh::{EdgeKey, Extract, Feature, MapEdge2dToCells, Mesh, PointId};
 use std::collections::{HashMap, HashSet};
 
 /// Extracts mesh features in 2D
@@ -11,7 +11,7 @@ pub(crate) fn extract_features_2d(
     mesh: &Mesh,
     all_2d_edges: &MapEdge2dToCells,
     extract: Extract,
-) -> (HashSet<PointId>, HashMap<EdgeKey, Edge>, Vec<f64>, Vec<f64>) {
+) -> (HashSet<PointId>, HashMap<EdgeKey, Feature>, Vec<f64>, Vec<f64>) {
     assert_eq!(mesh.ndim, 2);
 
     // results
@@ -35,7 +35,7 @@ pub(crate) fn extract_features_2d(
         // cell and edge
         let (cell_id, e) = shared_by[0];
         let cell = &mesh.cells[cell_id];
-        let mut edge = Edge {
+        let mut edge = Feature {
             kind: cell.kind.edge_kind().unwrap(),
             points: vec![0; cell.kind.edge_nnode()],
         };
@@ -64,13 +64,13 @@ pub(crate) fn extract_features_2d(
 mod tests {
     use super::extract_features_2d;
     use crate::mesh::algorithms::extract_all_2d_edges;
-    use crate::mesh::{Edge, EdgeKey, Extract, PointId, Samples};
+    use crate::mesh::{EdgeKey, Extract, Feature, PointId, Samples};
     use crate::util::AsArray2D;
-    use russell_chk::assert_vec_approx_eq;
+    use russell_chk::vec_approx_eq;
     use std::collections::HashMap;
 
     fn validate_edges<'a, T>(
-        edges: &HashMap<EdgeKey, Edge>,
+        edges: &HashMap<EdgeKey, Feature>,
         correct_keys: &[EdgeKey], // sorted
         correct_points: &'a T,
     ) where
@@ -315,8 +315,8 @@ mod tests {
             [13, 14, 24],
         ];
         validate_edges(&edges, &correct_keys, &correct_points);
-        assert_vec_approx_eq!(min, &[0.0, 0.0], 1e-15);
-        assert_vec_approx_eq!(max, &[2.0, 2.0], 1e-15);
+        vec_approx_eq(&min, &[0.0, 0.0], 1e-15);
+        vec_approx_eq(&max, &[2.0, 2.0], 1e-15);
         let mut points: Vec<_> = points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(
