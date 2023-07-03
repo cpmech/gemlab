@@ -2,7 +2,7 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::Tensor2;
+use russell_tensor::{Mandel, Tensor2};
 
 /// Implements the gradient(B) dot tensor(T) dot gradient(B) integration case 03 (e.g., conductivity matrix)
 ///
@@ -63,7 +63,7 @@ where
     }
 
     // allocate auxiliary tensor
-    let mut tt = Tensor2::new(true, space_ndim == 2);
+    let mut tt = Tensor2::new(Mandel::new(2 * space_ndim));
 
     // clear output matrix
     if args.clear {
@@ -90,7 +90,7 @@ where
         let c = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             det_jac * weight * args.alpha * r
         } else {
@@ -102,18 +102,27 @@ where
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + n] += c
-                        * (bb[n][1] * (t[1] * bb[m][1] + (t[3] * bb[m][0]) / s)
-                            + bb[n][0] * (t[0] * bb[m][0] + (t[3] * bb[m][1]) / s));
+                    kk.add(
+                        ii0 + m,
+                        jj0 + n,
+                        c * (bb.get(n, 1) * (t[1] * bb.get(m, 1) + (t[3] * bb.get(m, 0)) / s)
+                            + bb.get(n, 0) * (t[0] * bb.get(m, 0) + (t[3] * bb.get(m, 1)) / s)),
+                    );
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + n] += c
-                        * (bb[n][2] * (t[2] * bb[m][2] + (t[5] * bb[m][0]) / s + (t[4] * bb[m][1]) / s)
-                            + bb[n][1] * (t[1] * bb[m][1] + (t[3] * bb[m][0]) / s + (t[4] * bb[m][2]) / s)
-                            + bb[n][0] * (t[0] * bb[m][0] + (t[3] * bb[m][1]) / s + (t[5] * bb[m][2]) / s));
+                    kk.add(
+                        ii0 + m,
+                        jj0 + n,
+                        c * (bb.get(n, 2)
+                            * (t[2] * bb.get(m, 2) + (t[5] * bb.get(m, 0)) / s + (t[4] * bb.get(m, 1)) / s)
+                            + bb.get(n, 1)
+                                * (t[1] * bb.get(m, 1) + (t[3] * bb.get(m, 0)) / s + (t[4] * bb.get(m, 2)) / s)
+                            + bb.get(n, 0)
+                                * (t[0] * bb.get(m, 0) + (t[3] * bb.get(m, 1)) / s + (t[5] * bb.get(m, 2)) / s)),
+                    );
                 }
             }
         }
@@ -132,13 +141,13 @@ mod tests {
     };
     use russell_chk::vec_approx_eq;
     use russell_lab::{Matrix, Vector};
-    use russell_tensor::{copy_tensor2, Tensor2};
+    use russell_tensor::{copy_tensor2, Mandel, Tensor2};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
-        let mut tt = Tensor2::new(true, true);
+        let mut tt = Tensor2::new(Mandel::Symmetric2D);
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
         let f = |_tt: &mut Tensor2, _p: usize, _nn: &Vector, _bb: &Matrix| Ok(());
@@ -252,7 +261,7 @@ mod tests {
             [1.1, 1.2, 1.3],
             [1.2, 2.2, 2.3],
             [1.3, 2.3, 3.3]],
-        true, false).unwrap();
+        Mandel::Symmetric).unwrap();
         let kk_correct = ana.mat_03_btb(&sig);
         // println!("{}", kk_correct);
         let class = pad.kind.class();

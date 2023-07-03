@@ -266,105 +266,201 @@ impl Hex32 {
         let tt9 = 9.0 * t * t;
 
         // with respect to r
-        deriv[0][0] = (9.0 * r * rm * sm * tm) / 32.0 - (sm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[1][0] = (9.0 * r * rp * sm * tm) / 32.0 + (sm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[2][0] = (9.0 * r * rp * sp * tm) / 32.0 + (sp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[3][0] = (9.0 * r * rm * sp * tm) / 32.0 - (sp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[4][0] = (9.0 * r * rm * sm * tp) / 32.0 - (sm * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[5][0] = (9.0 * r * rp * sm * tp) / 32.0 + (sm * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[6][0] = (9.0 * r * rp * sp * tp) / 32.0 + (sp * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[7][0] = (9.0 * r * rm * sp * tp) / 32.0 - (sp * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[8][0] = (-9.0 * r * r3m * sm * tm) / 32.0 - (27.0 * rr * sm * tm) / 64.0;
-        deriv[9][0] = (-9.0 * r * r3p * sm * tm) / 32.0 + (27.0 * rr * sm * tm) / 64.0;
-        deriv[10][0] = (9.0 * s3m * ss * tm) / 64.0;
-        deriv[11][0] = (9.0 * s3p * ss * tm) / 64.0;
-        deriv[12][0] = (-9.0 * r * r3p * sp * tm) / 32.0 + (27.0 * rr * sp * tm) / 64.0;
-        deriv[13][0] = (-9.0 * r * r3m * sp * tm) / 32.0 - (27.0 * rr * sp * tm) / 64.0;
-        deriv[14][0] = (-9.0 * s3p * ss * tm) / 64.0;
-        deriv[15][0] = (-9.0 * s3m * ss * tm) / 64.0;
-        deriv[16][0] = (-9.0 * r * r3m * sm * tp) / 32.0 - (27.0 * rr * sm * tp) / 64.0;
-        deriv[17][0] = (-9.0 * r * r3p * sm * tp) / 32.0 + (27.0 * rr * sm * tp) / 64.0;
-        deriv[18][0] = (9.0 * s3m * ss * tp) / 64.0;
-        deriv[19][0] = (9.0 * s3p * ss * tp) / 64.0;
-        deriv[20][0] = (-9.0 * r * r3p * sp * tp) / 32.0 + (27.0 * rr * sp * tp) / 64.0;
-        deriv[21][0] = (-9.0 * r * r3m * sp * tp) / 32.0 - (27.0 * rr * sp * tp) / 64.0;
-        deriv[22][0] = (-9.0 * s3p * ss * tp) / 64.0;
-        deriv[23][0] = (-9.0 * s3m * ss * tp) / 64.0;
-        deriv[24][0] = (-9.0 * sm * t3m * tt) / 64.0;
-        deriv[25][0] = (-9.0 * sm * t3p * tt) / 64.0;
-        deriv[26][0] = (9.0 * sm * t3m * tt) / 64.0;
-        deriv[27][0] = (9.0 * sm * t3p * tt) / 64.0;
-        deriv[28][0] = (9.0 * sp * t3m * tt) / 64.0;
-        deriv[29][0] = (9.0 * sp * t3p * tt) / 64.0;
-        deriv[30][0] = (-9.0 * sp * t3m * tt) / 64.0;
-        deriv[31][0] = (-9.0 * sp * t3p * tt) / 64.0;
+        deriv.set(
+            0,
+            0,
+            (9.0 * r * rm * sm * tm) / 32.0 - (sm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            1,
+            0,
+            (9.0 * r * rp * sm * tm) / 32.0 + (sm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            2,
+            0,
+            (9.0 * r * rp * sp * tm) / 32.0 + (sp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            3,
+            0,
+            (9.0 * r * rm * sp * tm) / 32.0 - (sp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            4,
+            0,
+            (9.0 * r * rm * sm * tp) / 32.0 - (sm * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            5,
+            0,
+            (9.0 * r * rp * sm * tp) / 32.0 + (sm * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            6,
+            0,
+            (9.0 * r * rp * sp * tp) / 32.0 + (sp * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            7,
+            0,
+            (9.0 * r * rm * sp * tp) / 32.0 - (sp * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(8, 0, (-9.0 * r * r3m * sm * tm) / 32.0 - (27.0 * rr * sm * tm) / 64.0);
+        deriv.set(9, 0, (-9.0 * r * r3p * sm * tm) / 32.0 + (27.0 * rr * sm * tm) / 64.0);
+        deriv.set(10, 0, (9.0 * s3m * ss * tm) / 64.0);
+        deriv.set(11, 0, (9.0 * s3p * ss * tm) / 64.0);
+        deriv.set(12, 0, (-9.0 * r * r3p * sp * tm) / 32.0 + (27.0 * rr * sp * tm) / 64.0);
+        deriv.set(13, 0, (-9.0 * r * r3m * sp * tm) / 32.0 - (27.0 * rr * sp * tm) / 64.0);
+        deriv.set(14, 0, (-9.0 * s3p * ss * tm) / 64.0);
+        deriv.set(15, 0, (-9.0 * s3m * ss * tm) / 64.0);
+        deriv.set(16, 0, (-9.0 * r * r3m * sm * tp) / 32.0 - (27.0 * rr * sm * tp) / 64.0);
+        deriv.set(17, 0, (-9.0 * r * r3p * sm * tp) / 32.0 + (27.0 * rr * sm * tp) / 64.0);
+        deriv.set(18, 0, (9.0 * s3m * ss * tp) / 64.0);
+        deriv.set(19, 0, (9.0 * s3p * ss * tp) / 64.0);
+        deriv.set(20, 0, (-9.0 * r * r3p * sp * tp) / 32.0 + (27.0 * rr * sp * tp) / 64.0);
+        deriv.set(21, 0, (-9.0 * r * r3m * sp * tp) / 32.0 - (27.0 * rr * sp * tp) / 64.0);
+        deriv.set(22, 0, (-9.0 * s3p * ss * tp) / 64.0);
+        deriv.set(23, 0, (-9.0 * s3m * ss * tp) / 64.0);
+        deriv.set(24, 0, (-9.0 * sm * t3m * tt) / 64.0);
+        deriv.set(25, 0, (-9.0 * sm * t3p * tt) / 64.0);
+        deriv.set(26, 0, (9.0 * sm * t3m * tt) / 64.0);
+        deriv.set(27, 0, (9.0 * sm * t3p * tt) / 64.0);
+        deriv.set(28, 0, (9.0 * sp * t3m * tt) / 64.0);
+        deriv.set(29, 0, (9.0 * sp * t3p * tt) / 64.0);
+        deriv.set(30, 0, (-9.0 * sp * t3m * tt) / 64.0);
+        deriv.set(31, 0, (-9.0 * sp * t3p * tt) / 64.0);
 
-        // with respect to s
-        deriv[0][1] = (9.0 * rm * s * sm * tm) / 32.0 - (rm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[1][1] = (9.0 * rp * s * sm * tm) / 32.0 - (rp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[2][1] = (9.0 * rp * s * sp * tm) / 32.0 + (rp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[3][1] = (9.0 * rm * s * sp * tm) / 32.0 + (rm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[4][1] = (9.0 * rm * s * sm * tp) / 32.0 - (rm * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[5][1] = (9.0 * rp * s * sm * tp) / 32.0 - (rp * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[6][1] = (9.0 * rp * s * sp * tp) / 32.0 + (rp * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[7][1] = (9.0 * rm * s * sp * tp) / 32.0 + (rm * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[8][1] = (-9.0 * r3m * rr * tm) / 64.0;
-        deriv[9][1] = (-9.0 * r3p * rr * tm) / 64.0;
-        deriv[10][1] = (-9.0 * rp * s * s3m * tm) / 32.0 - (27.0 * rp * ss * tm) / 64.0;
-        deriv[11][1] = (-9.0 * rp * s * s3p * tm) / 32.0 + (27.0 * rp * ss * tm) / 64.0;
-        deriv[12][1] = (9.0 * r3p * rr * tm) / 64.0;
-        deriv[13][1] = (9.0 * r3m * rr * tm) / 64.0;
-        deriv[14][1] = (-9.0 * rm * s * s3p * tm) / 32.0 + (27.0 * rm * ss * tm) / 64.0;
-        deriv[15][1] = (-9.0 * rm * s * s3m * tm) / 32.0 - (27.0 * rm * ss * tm) / 64.0;
-        deriv[16][1] = (-9.0 * r3m * rr * tp) / 64.0;
-        deriv[17][1] = (-9.0 * r3p * rr * tp) / 64.0;
-        deriv[18][1] = (-9.0 * rp * s * s3m * tp) / 32.0 - (27.0 * rp * ss * tp) / 64.0;
-        deriv[19][1] = (-9.0 * rp * s * s3p * tp) / 32.0 + (27.0 * rp * ss * tp) / 64.0;
-        deriv[20][1] = (9.0 * r3p * rr * tp) / 64.0;
-        deriv[21][1] = (9.0 * r3m * rr * tp) / 64.0;
-        deriv[22][1] = (-9.0 * rm * s * s3p * tp) / 32.0 + (27.0 * rm * ss * tp) / 64.0;
-        deriv[23][1] = (-9.0 * rm * s * s3m * tp) / 32.0 - (27.0 * rm * ss * tp) / 64.0;
-        deriv[24][1] = (-9.0 * rm * t3m * tt) / 64.0;
-        deriv[25][1] = (-9.0 * rm * t3p * tt) / 64.0;
-        deriv[26][1] = (-9.0 * rp * t3m * tt) / 64.0;
-        deriv[27][1] = (-9.0 * rp * t3p * tt) / 64.0;
-        deriv[28][1] = (9.0 * rp * t3m * tt) / 64.0;
-        deriv[29][1] = (9.0 * rp * t3p * tt) / 64.0;
-        deriv[30][1] = (9.0 * rm * t3m * tt) / 64.0;
-        deriv[31][1] = (9.0 * rm * t3p * tt) / 64.0;
+        // wi.set(h ,s,t to s
+        deriv.set(
+            0,
+            1,
+            (9.0 * rm * s * sm * tm) / 32.0 - (rm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            1,
+            1,
+            (9.0 * rp * s * sm * tm) / 32.0 - (rp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            2,
+            1,
+            (9.0 * rp * s * sp * tm) / 32.0 + (rp * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            3,
+            1,
+            (9.0 * rm * s * sp * tm) / 32.0 + (rm * tm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            4,
+            1,
+            (9.0 * rm * s * sm * tp) / 32.0 - (rm * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            5,
+            1,
+            (9.0 * rp * s * sm * tp) / 32.0 - (rp * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            6,
+            1,
+            (9.0 * rp * s * sp * tp) / 32.0 + (rp * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            7,
+            1,
+            (9.0 * rm * s * sp * tp) / 32.0 + (rm * tp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(8, 1, (-9.0 * r3m * rr * tm) / 64.0);
+        deriv.set(9, 1, (-9.0 * r3p * rr * tm) / 64.0);
+        deriv.set(10, 1, (-9.0 * rp * s * s3m * tm) / 32.0 - (27.0 * rp * ss * tm) / 64.0);
+        deriv.set(11, 1, (-9.0 * rp * s * s3p * tm) / 32.0 + (27.0 * rp * ss * tm) / 64.0);
+        deriv.set(12, 1, (9.0 * r3p * rr * tm) / 64.0);
+        deriv.set(13, 1, (9.0 * r3m * rr * tm) / 64.0);
+        deriv.set(14, 1, (-9.0 * rm * s * s3p * tm) / 32.0 + (27.0 * rm * ss * tm) / 64.0);
+        deriv.set(15, 1, (-9.0 * rm * s * s3m * tm) / 32.0 - (27.0 * rm * ss * tm) / 64.0);
+        deriv.set(16, 1, (-9.0 * r3m * rr * tp) / 64.0);
+        deriv.set(17, 1, (-9.0 * r3p * rr * tp) / 64.0);
+        deriv.set(18, 1, (-9.0 * rp * s * s3m * tp) / 32.0 - (27.0 * rp * ss * tp) / 64.0);
+        deriv.set(19, 1, (-9.0 * rp * s * s3p * tp) / 32.0 + (27.0 * rp * ss * tp) / 64.0);
+        deriv.set(20, 1, (9.0 * r3p * rr * tp) / 64.0);
+        deriv.set(21, 1, (9.0 * r3m * rr * tp) / 64.0);
+        deriv.set(22, 1, (-9.0 * rm * s * s3p * tp) / 32.0 + (27.0 * rm * ss * tp) / 64.0);
+        deriv.set(23, 1, (-9.0 * rm * s * s3m * tp) / 32.0 - (27.0 * rm * ss * tp) / 64.0);
+        deriv.set(24, 1, (-9.0 * rm * t3m * tt) / 64.0);
+        deriv.set(25, 1, (-9.0 * rm * t3p * tt) / 64.0);
+        deriv.set(26, 1, (-9.0 * rp * t3m * tt) / 64.0);
+        deriv.set(27, 1, (-9.0 * rp * t3p * tt) / 64.0);
+        deriv.set(28, 1, (9.0 * rp * t3m * tt) / 64.0);
+        deriv.set(29, 1, (9.0 * rp * t3p * tt) / 64.0);
+        deriv.set(30, 1, (9.0 * rm * t3m * tt) / 64.0);
+        deriv.set(31, 1, (9.0 * rm * t3p * tt) / 64.0);
 
-        // with respect to t
-        deriv[0][2] = (9.0 * rm * sm * t * tm) / 32.0 - (rm * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[1][2] = (9.0 * rp * sm * t * tm) / 32.0 - (rp * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[2][2] = (9.0 * rp * sp * t * tm) / 32.0 - (rp * sp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[3][2] = (9.0 * rm * sp * t * tm) / 32.0 - (rm * sp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[4][2] = (9.0 * rm * sm * t * tp) / 32.0 + (rm * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[5][2] = (9.0 * rp * sm * t * tp) / 32.0 + (rp * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[6][2] = (9.0 * rp * sp * t * tp) / 32.0 + (rp * sp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[7][2] = (9.0 * rm * sp * t * tp) / 32.0 + (rm * sp * (-19.0 + rr9 + ss9 + tt9)) / 64.0;
-        deriv[8][2] = (-9.0 * r3m * rr * sm) / 64.0;
-        deriv[9][2] = (-9.0 * r3p * rr * sm) / 64.0;
-        deriv[10][2] = (-9.0 * rp * s3m * ss) / 64.0;
-        deriv[11][2] = (-9.0 * rp * s3p * ss) / 64.0;
-        deriv[12][2] = (-9.0 * r3p * rr * sp) / 64.0;
-        deriv[13][2] = (-9.0 * r3m * rr * sp) / 64.0;
-        deriv[14][2] = (-9.0 * rm * s3p * ss) / 64.0;
-        deriv[15][2] = (-9.0 * rm * s3m * ss) / 64.0;
-        deriv[16][2] = (9.0 * r3m * rr * sm) / 64.0;
-        deriv[17][2] = (9.0 * r3p * rr * sm) / 64.0;
-        deriv[18][2] = (9.0 * rp * s3m * ss) / 64.0;
-        deriv[19][2] = (9.0 * rp * s3p * ss) / 64.0;
-        deriv[20][2] = (9.0 * r3p * rr * sp) / 64.0;
-        deriv[21][2] = (9.0 * r3m * rr * sp) / 64.0;
-        deriv[22][2] = (9.0 * rm * s3p * ss) / 64.0;
-        deriv[23][2] = (9.0 * rm * s3m * ss) / 64.0;
-        deriv[24][2] = (-9.0 * rm * sm * t * t3m) / 32.0 - (27.0 * rm * sm * tt) / 64.0;
-        deriv[25][2] = (-9.0 * rm * sm * t * t3p) / 32.0 + (27.0 * rm * sm * tt) / 64.0;
-        deriv[26][2] = (-9.0 * rp * sm * t * t3m) / 32.0 - (27.0 * rp * sm * tt) / 64.0;
-        deriv[27][2] = (-9.0 * rp * sm * t * t3p) / 32.0 + (27.0 * rp * sm * tt) / 64.0;
-        deriv[28][2] = (-9.0 * rp * sp * t * t3m) / 32.0 - (27.0 * rp * sp * tt) / 64.0;
-        deriv[29][2] = (-9.0 * rp * sp * t * t3p) / 32.0 + (27.0 * rp * sp * tt) / 64.0;
-        deriv[30][2] = (-9.0 * rm * sp * t * t3m) / 32.0 - (27.0 * rm * sp * tt) / 64.0;
-        deriv[31][2] = (-9.0 * rm * sp * t * t3p) / 32.0 + (27.0 * rm * sp * tt) / 64.0;
+        // wi.set(h ,s,t to t
+        deriv.set(
+            0,
+            2,
+            (9.0 * rm * sm * t * tm) / 32.0 - (rm * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            1,
+            2,
+            (9.0 * rp * sm * t * tm) / 32.0 - (rp * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            2,
+            2,
+            (9.0 * rp * sp * t * tm) / 32.0 - (rp * sp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            3,
+            2,
+            (9.0 * rm * sp * t * tm) / 32.0 - (rm * sp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            4,
+            2,
+            (9.0 * rm * sm * t * tp) / 32.0 + (rm * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            5,
+            2,
+            (9.0 * rp * sm * t * tp) / 32.0 + (rp * sm * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            6,
+            2,
+            (9.0 * rp * sp * t * tp) / 32.0 + (rp * sp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(
+            7,
+            2,
+            (9.0 * rm * sp * t * tp) / 32.0 + (rm * sp * (-19.0 + rr9 + ss9 + tt9)) / 64.0,
+        );
+        deriv.set(8, 2, (-9.0 * r3m * rr * sm) / 64.0);
+        deriv.set(9, 2, (-9.0 * r3p * rr * sm) / 64.0);
+        deriv.set(10, 2, (-9.0 * rp * s3m * ss) / 64.0);
+        deriv.set(11, 2, (-9.0 * rp * s3p * ss) / 64.0);
+        deriv.set(12, 2, (-9.0 * r3p * rr * sp) / 64.0);
+        deriv.set(13, 2, (-9.0 * r3m * rr * sp) / 64.0);
+        deriv.set(14, 2, (-9.0 * rm * s3p * ss) / 64.0);
+        deriv.set(15, 2, (-9.0 * rm * s3m * ss) / 64.0);
+        deriv.set(16, 2, (9.0 * r3m * rr * sm) / 64.0);
+        deriv.set(17, 2, (9.0 * r3p * rr * sm) / 64.0);
+        deriv.set(18, 2, (9.0 * rp * s3m * ss) / 64.0);
+        deriv.set(19, 2, (9.0 * rp * s3p * ss) / 64.0);
+        deriv.set(20, 2, (9.0 * r3p * rr * sp) / 64.0);
+        deriv.set(21, 2, (9.0 * r3m * rr * sp) / 64.0);
+        deriv.set(22, 2, (9.0 * rm * s3p * ss) / 64.0);
+        deriv.set(23, 2, (9.0 * rm * s3m * ss) / 64.0);
+        deriv.set(24, 2, (-9.0 * rm * sm * t * t3m) / 32.0 - (27.0 * rm * sm * tt) / 64.0);
+        deriv.set(25, 2, (-9.0 * rm * sm * t * t3p) / 32.0 + (27.0 * rm * sm * tt) / 64.0);
+        deriv.set(26, 2, (-9.0 * rp * sm * t * t3m) / 32.0 - (27.0 * rp * sm * tt) / 64.0);
+        deriv.set(27, 2, (-9.0 * rp * sm * t * t3p) / 32.0 + (27.0 * rp * sm * tt) / 64.0);
+        deriv.set(28, 2, (-9.0 * rp * sp * t * t3m) / 32.0 - (27.0 * rp * sp * tt) / 64.0);
+        deriv.set(29, 2, (-9.0 * rp * sp * t * t3p) / 32.0 + (27.0 * rp * sp * tt) / 64.0);
+        deriv.set(30, 2, (-9.0 * rm * sp * t * t3m) / 32.0 - (27.0 * rm * sp * tt) / 64.0);
+        deriv.set(31, 2, (-9.0 * rm * sp * t * t3p) / 32.0 + (27.0 * rm * sp * tt) / 64.0);
     }
 }

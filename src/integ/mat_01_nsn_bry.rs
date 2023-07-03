@@ -93,7 +93,7 @@ where
         let c = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             s * mag_n * weight * args.alpha * r
         } else {
@@ -103,7 +103,7 @@ where
         // add contribution to K matrix
         for m in 0..nnode {
             for n in 0..nnode {
-                kk[ii0 + m][jj0 + n] += nn[m] * c * nn[n];
+                kk.add(ii0 + m, jj0 + n, nn[m] * c * nn[n]);
             }
         }
     }
@@ -169,8 +169,8 @@ mod tests {
         let mut pad_side = Scratchpad::new(2, GeoKind::Lin2).unwrap();
         for i in 0..2 {
             let m = pad.kind.edge_node_id(side, i);
-            pad_side.set_xx(i, 0, pad.xxt[0][m]);
-            pad_side.set_xx(i, 1, pad.xxt[1][m]);
+            pad_side.set_xx(i, 0, pad.xxt.get(0, m));
+            pad_side.set_xx(i, 1, pad.xxt.get(1, m));
         }
         pad_side
     }

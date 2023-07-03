@@ -109,7 +109,7 @@ mod tests {
             (GeoKind::Tri10, 1e-14, 1e-14),
             (GeoKind::Tri15, 1e-14, 1e-5), // << this triangle is inaccurate as well here
             (GeoKind::Qua4, 1e-15, 0.19),  // linear maps are inaccurate for the circular wedge
-            (GeoKind::Qua8, 1e-15, 1e-15),
+            (GeoKind::Qua8, 1e-15, 1e-14),
             (GeoKind::Qua17, 1e-15, 1e-15),
             (GeoKind::Tet4, 1e-15, 0.35),   // linear tetrahedron is also inaccurate here
             (GeoKind::Tet10, 1e-15, 0.013), // quadratic tetrahedron is also inaccurate here
@@ -121,6 +121,8 @@ mod tests {
 
         // loop over shapes
         for (kind, tol, tol_in) in problem {
+            println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);

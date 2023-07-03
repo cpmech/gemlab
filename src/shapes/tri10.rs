@@ -132,26 +132,26 @@ impl Tri10 {
         let q9 = 0.5 * (27.0 * s * s - 18.0 * s + 2.0);
         let q10 = 0.5 * (27.0 * r * r - 18.0 * r + 2.0);
 
-        deriv[0][0] = q8;
-        deriv[1][0] = q10;
-        deriv[2][0] = 0.0;
-        deriv[3][0] = q2 - q7;
-        deriv[4][0] = s * q5;
-        deriv[5][0] = -q1;
-        deriv[6][0] = z * q5 - q3;
-        deriv[7][0] = q1;
-        deriv[8][0] = -q6;
-        deriv[9][0] = 27.0 * s * (z - r);
+        deriv.set(0, 0, q8);
+        deriv.set(1, 0, q10);
+        deriv.set(2, 0, 0.0);
+        deriv.set(3, 0, q2 - q7);
+        deriv.set(4, 0, s * q5);
+        deriv.set(5, 0, -q1);
+        deriv.set(6, 0, z * q5 - q3);
+        deriv.set(7, 0, q1);
+        deriv.set(8, 0, -q6);
+        deriv.set(9, 0, 27.0 * s * (z - r));
 
-        deriv[0][1] = q8;
-        deriv[1][1] = 0.0;
-        deriv[2][1] = q9;
-        deriv[3][1] = -q7;
-        deriv[4][1] = q3;
-        deriv[5][1] = z * q4 - q1;
-        deriv[6][1] = -q3;
-        deriv[7][1] = r * q4;
-        deriv[8][1] = q2 - q6;
-        deriv[9][1] = 27.0 * r * (z - s);
+        deriv.set(0, 1, q8);
+        deriv.set(1, 1, 0.0);
+        deriv.set(2, 1, q9);
+        deriv.set(3, 1, -q7);
+        deriv.set(4, 1, q3);
+        deriv.set(5, 1, z * q4 - q1);
+        deriv.set(6, 1, -q3);
+        deriv.set(7, 1, r * q4);
+        deriv.set(8, 1, q2 - q6);
+        deriv.set(9, 1, 27.0 * r * (z - s));
     }
 }

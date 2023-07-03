@@ -120,7 +120,7 @@ impl Scratchpad {
             if geo_ndim == 1 {
                 let mut norm_jac = 0.0;
                 for i in 0..space_ndim {
-                    norm_jac += self.jacobian[i][0] * self.jacobian[i][0];
+                    norm_jac += self.jacobian.get(i, 0) * self.jacobian.get(i, 0);
                 }
                 Ok(f64::sqrt(norm_jac))
             } else {
@@ -237,7 +237,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Jᵢⱼ := dxᵢ/dξⱼ
-                    deriv_approx_eq(pad.jacobian[i][j], args.at_ksi[j], args, tol, x_given_ksi);
+                    deriv_approx_eq(pad.jacobian.get(i, j), args.at_ksi[j], args, tol, x_given_ksi);
                 }
             }
         }

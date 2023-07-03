@@ -115,7 +115,7 @@ where
         let coef = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             s * det_jac * weight * args.alpha * r
         } else {
@@ -172,7 +172,7 @@ mod tests {
 
         // solution
         let cf = L / 6.0;
-        let (xa, xb) = (pad.xxt[0][0], pad.xxt[0][1]);
+        let (xa, xb) = (pad.xxt.get(0, 0), pad.xxt.get(0, 1));
         let a_correct = &[cf * (2.0 * xa + xb), cf * (xa + 2.0 * xb)];
 
         // integration points

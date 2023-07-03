@@ -120,7 +120,7 @@ where
         let coef = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             det_jac * weight * args.alpha * r
         } else {
@@ -130,11 +130,11 @@ where
         // add contribution to c vector
         if space_ndim == 2 {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * bb[m][0] + w[1] * bb[m][1]);
+                c[ii0 + m] += coef * (w[0] * bb.get(m, 0) + w[1] * bb.get(m, 1));
             }
         } else {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * bb[m][0] + w[1] * bb[m][1] + w[2] * bb[m][2]);
+                c[ii0 + m] += coef * (w[0] * bb.get(m, 0) + w[1] * bb.get(m, 1) + w[2] * bb.get(m, 2));
             }
         }
     }

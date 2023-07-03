@@ -113,7 +113,7 @@ where
         let c = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             s * det_jac * weight * args.alpha * r
         } else {
@@ -124,16 +124,16 @@ where
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode_b {
-                    kk[ii0 + 0 + m * 2][jj0 + n] += bb[m][0] * c * nnb[n];
-                    kk[ii0 + 1 + m * 2][jj0 + n] += bb[m][1] * c * nnb[n];
+                    kk.add(ii0 + 0 + m * 2, jj0 + n, bb.get(m, 0) * c * nnb[n]);
+                    kk.add(ii0 + 1 + m * 2, jj0 + n, bb.get(m, 1) * c * nnb[n]);
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode_b {
-                    kk[ii0 + 0 + m * 3][jj0 + n] += bb[m][0] * c * nnb[n];
-                    kk[ii0 + 1 + m * 3][jj0 + n] += bb[m][1] * c * nnb[n];
-                    kk[ii0 + 2 + m * 3][jj0 + n] += bb[m][2] * c * nnb[n];
+                    kk.add(ii0 + 0 + m * 3, jj0 + n, bb.get(m, 0) * c * nnb[n]);
+                    kk.add(ii0 + 1 + m * 3, jj0 + n, bb.get(m, 1) * c * nnb[n]);
+                    kk.add(ii0 + 2 + m * 3, jj0 + n, bb.get(m, 2) * c * nnb[n]);
                 }
             }
         }

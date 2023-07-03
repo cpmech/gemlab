@@ -256,7 +256,7 @@ impl Scratchpad {
     /// ```
     pub fn set_xx(&mut self, m: usize, j: usize, value: f64) {
         self.ok_xxt = false;
-        self.xxt[j][m] = value;
+        self.xxt.set(j, m, value);
         let (space_ndim, nnode) = self.xxt.dims();
         if m == nnode - 1 && j == space_ndim - 1 {
             self.ok_xxt = true;

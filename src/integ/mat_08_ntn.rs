@@ -2,7 +2,7 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::Tensor2;
+use russell_tensor::{Mandel, Tensor2};
 
 /// Implements the shape(N) times tensor(T) times shape(N) integration case 08 (e.g., mass matrix)
 ///
@@ -69,7 +69,7 @@ where
     }
 
     // allocate auxiliary tensor
-    let mut tt = Tensor2::new(true, space_ndim == 2);
+    let mut tt = Tensor2::new(Mandel::new(2 * space_ndim));
 
     // clear output matrix
     if args.clear {
@@ -96,7 +96,7 @@ where
         let c = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             det_jac * weight * args.alpha * r
         } else {
@@ -108,27 +108,27 @@ where
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + 0 + m * 2][jj0 + 0 + n * 2] += c * nn[m] * t[0] * nn[n];
-                    kk[ii0 + 0 + m * 2][jj0 + 1 + n * 2] += c * nn[m] * t[3] * nn[n] / s;
+                    kk.add(ii0 + 0 + m * 2, jj0 + 0 + n * 2, c * nn[m] * t[0] * nn[n]);
+                    kk.add(ii0 + 0 + m * 2, jj0 + 1 + n * 2, c * nn[m] * t[3] * nn[n] / s);
 
-                    kk[ii0 + 1 + m * 2][jj0 + 0 + n * 2] += c * nn[m] * t[3] * nn[n] / s;
-                    kk[ii0 + 1 + m * 2][jj0 + 1 + n * 2] += c * nn[m] * t[1] * nn[n];
+                    kk.add(ii0 + 1 + m * 2, jj0 + 0 + n * 2, c * nn[m] * t[3] * nn[n] / s);
+                    kk.add(ii0 + 1 + m * 2, jj0 + 1 + n * 2, c * nn[m] * t[1] * nn[n]);
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk[ii0 + 0 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * t[0] * nn[n];
-                    kk[ii0 + 0 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * t[3] * nn[n] / s;
-                    kk[ii0 + 0 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * t[5] * nn[n] / s;
+                    kk.add(ii0 + 0 + m * 3, jj0 + 0 + n * 3, c * nn[m] * t[0] * nn[n]);
+                    kk.add(ii0 + 0 + m * 3, jj0 + 1 + n * 3, c * nn[m] * t[3] * nn[n] / s);
+                    kk.add(ii0 + 0 + m * 3, jj0 + 2 + n * 3, c * nn[m] * t[5] * nn[n] / s);
 
-                    kk[ii0 + 1 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * t[3] * nn[n] / s;
-                    kk[ii0 + 1 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * t[1] * nn[n];
-                    kk[ii0 + 1 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * t[4] * nn[n] / s;
+                    kk.add(ii0 + 1 + m * 3, jj0 + 0 + n * 3, c * nn[m] * t[3] * nn[n] / s);
+                    kk.add(ii0 + 1 + m * 3, jj0 + 1 + n * 3, c * nn[m] * t[1] * nn[n]);
+                    kk.add(ii0 + 1 + m * 3, jj0 + 2 + n * 3, c * nn[m] * t[4] * nn[n] / s);
 
-                    kk[ii0 + 2 + m * 3][jj0 + 0 + n * 3] += c * nn[m] * t[5] * nn[n] / s;
-                    kk[ii0 + 2 + m * 3][jj0 + 1 + n * 3] += c * nn[m] * t[4] * nn[n] / s;
-                    kk[ii0 + 2 + m * 3][jj0 + 2 + n * 3] += c * nn[m] * t[2] * nn[n];
+                    kk.add(ii0 + 2 + m * 3, jj0 + 0 + n * 3, c * nn[m] * t[5] * nn[n] / s);
+                    kk.add(ii0 + 2 + m * 3, jj0 + 1 + n * 3, c * nn[m] * t[4] * nn[n] / s);
+                    kk.add(ii0 + 2 + m * 3, jj0 + 2 + n * 3, c * nn[m] * t[2] * nn[n]);
                 }
             }
         }
@@ -144,13 +144,13 @@ mod tests {
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
     use russell_chk::vec_approx_eq;
     use russell_lab::{Matrix, Vector};
-    use russell_tensor::{copy_tensor2, Tensor2};
+    use russell_tensor::{copy_tensor2, Mandel, Tensor2};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
-        let mut tt = Tensor2::new(true, true);
+        let mut tt = Tensor2::new(Mandel::Symmetric2D);
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
         let f = |_tt: &mut Tensor2, _p: usize, _nn: &Vector, _bb: &Matrix| Ok(());
@@ -218,7 +218,7 @@ mod tests {
             [1.1, 1.2, 1.3],
             [1.2, 2.2, 2.3],
             [1.3, 2.3, 3.3]],
-        true, false).unwrap();
+        Mandel::Symmetric).unwrap();
         let kk_correct = ana.mat_08_ntn(&sig);
         // println!("{}", kk_correct);
         let class = pad.kind.class();

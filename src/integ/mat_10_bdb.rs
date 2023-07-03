@@ -2,7 +2,7 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::Tensor4;
+use russell_tensor::{Mandel, Tensor4};
 
 /// Implements the gradient(B) dot 4th-tensor(D) dot gradient(B) integration case 10 (e.g., stiffness matrix)
 ///
@@ -135,7 +135,7 @@ where
     }
 
     // allocate auxiliary tensor
-    let mut dd = Tensor4::new(true, space_ndim == 2);
+    let mut dd = Tensor4::new(Mandel::new(2 * space_ndim));
 
     // clear output matrix
     if args.clear {
@@ -162,7 +162,7 @@ where
         if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             add_to_kk_axisymmetric(kk, nnode, c, r, &dd, args);
         } else {
@@ -183,24 +183,24 @@ fn add_to_kk(kk: &mut Matrix, ndim: usize, nnode: usize, c: f64, dd: &Tensor4, a
     if ndim == 2 {
         for m in 0..nnode {
             for n in 0..nnode {
-                kk[ii0+0+m*2][jj0+0+n*2] += c * (b[m][1]*b[n][1]*d[3][3] + s*b[m][1]*b[n][0]*d[3][0] + s*b[m][0]*b[n][1]*d[0][3] + 2.0*b[m][0]*b[n][0]*d[0][0]) / 2.0;
-                kk[ii0+0+m*2][jj0+1+n*2] += c * (b[m][1]*b[n][0]*d[3][3] + s*b[m][1]*b[n][1]*d[3][1] + s*b[m][0]*b[n][0]*d[0][3] + 2.0*b[m][0]*b[n][1]*d[0][1]) / 2.0;
-                kk[ii0+1+m*2][jj0+0+n*2] += c * (b[m][0]*b[n][1]*d[3][3] + s*b[m][0]*b[n][0]*d[3][0] + s*b[m][1]*b[n][1]*d[1][3] + 2.0*b[m][1]*b[n][0]*d[1][0]) / 2.0;
-                kk[ii0+1+m*2][jj0+1+n*2] += c * (b[m][0]*b[n][0]*d[3][3] + s*b[m][0]*b[n][1]*d[3][1] + s*b[m][1]*b[n][0]*d[1][3] + 2.0*b[m][1]*b[n][1]*d[1][1]) / 2.0;
+                kk.add(ii0+0+m*2,jj0+0+n*2, c * (b.get(m,1)*b.get(n,1)*d.get(3,3) + s*b.get(m,1)*b.get(n,0)*d.get(3,0) + s*b.get(m,0)*b.get(n,1)*d.get(0,3) + 2.0*b.get(m,0)*b.get(n,0)*d.get(0,0)) / 2.0);
+                kk.add(ii0+0+m*2,jj0+1+n*2, c * (b.get(m,1)*b.get(n,0)*d.get(3,3) + s*b.get(m,1)*b.get(n,1)*d.get(3,1) + s*b.get(m,0)*b.get(n,0)*d.get(0,3) + 2.0*b.get(m,0)*b.get(n,1)*d.get(0,1)) / 2.0);
+                kk.add(ii0+1+m*2,jj0+0+n*2, c * (b.get(m,0)*b.get(n,1)*d.get(3,3) + s*b.get(m,0)*b.get(n,0)*d.get(3,0) + s*b.get(m,1)*b.get(n,1)*d.get(1,3) + 2.0*b.get(m,1)*b.get(n,0)*d.get(1,0)) / 2.0);
+                kk.add(ii0+1+m*2,jj0+1+n*2, c * (b.get(m,0)*b.get(n,0)*d.get(3,3) + s*b.get(m,0)*b.get(n,1)*d.get(3,1) + s*b.get(m,1)*b.get(n,0)*d.get(1,3) + 2.0*b.get(m,1)*b.get(n,1)*d.get(1,1)) / 2.0);
             }
         }
     } else {
         for m in 0..nnode {
             for n in 0..nnode {
-                kk[ii0+0+m*3][jj0+0+n*3] += c * (b[m][2]*b[n][2]*d[5][5] + b[m][2]*b[n][1]*d[5][3] + s*b[m][2]*b[n][0]*d[5][0] + b[m][1]*b[n][2]*d[3][5] + b[m][1]*b[n][1]*d[3][3] + s*b[m][1]*b[n][0]*d[3][0] + s*b[m][0]*b[n][2]*d[0][5] + s*b[m][0]*b[n][1]*d[0][3] + 2.0*b[m][0]*b[n][0]*d[0][0]) / 2.0;
-                kk[ii0+0+m*3][jj0+1+n*3] += c * (b[m][2]*b[n][2]*d[5][4] + b[m][2]*b[n][0]*d[5][3] + s*b[m][2]*b[n][1]*d[5][1] + b[m][1]*b[n][2]*d[3][4] + b[m][1]*b[n][0]*d[3][3] + s*b[m][1]*b[n][1]*d[3][1] + s*b[m][0]*b[n][2]*d[0][4] + s*b[m][0]*b[n][0]*d[0][3] + 2.0*b[m][0]*b[n][1]*d[0][1]) / 2.0;
-                kk[ii0+0+m*3][jj0+2+n*3] += c * (b[m][2]*b[n][0]*d[5][5] + b[m][2]*b[n][1]*d[5][4] + s*b[m][2]*b[n][2]*d[5][2] + b[m][1]*b[n][0]*d[3][5] + b[m][1]*b[n][1]*d[3][4] + s*b[m][1]*b[n][2]*d[3][2] + s*b[m][0]*b[n][0]*d[0][5] + s*b[m][0]*b[n][1]*d[0][4] + 2.0*b[m][0]*b[n][2]*d[0][2]) / 2.0;
-                kk[ii0+1+m*3][jj0+0+n*3] += c * (b[m][2]*b[n][2]*d[4][5] + b[m][2]*b[n][1]*d[4][3] + s*b[m][2]*b[n][0]*d[4][0] + b[m][0]*b[n][2]*d[3][5] + b[m][0]*b[n][1]*d[3][3] + s*b[m][0]*b[n][0]*d[3][0] + s*b[m][1]*b[n][2]*d[1][5] + s*b[m][1]*b[n][1]*d[1][3] + 2.0*b[m][1]*b[n][0]*d[1][0]) / 2.0;
-                kk[ii0+1+m*3][jj0+1+n*3] += c * (b[m][2]*b[n][2]*d[4][4] + b[m][2]*b[n][0]*d[4][3] + s*b[m][2]*b[n][1]*d[4][1] + b[m][0]*b[n][2]*d[3][4] + b[m][0]*b[n][0]*d[3][3] + s*b[m][0]*b[n][1]*d[3][1] + s*b[m][1]*b[n][2]*d[1][4] + s*b[m][1]*b[n][0]*d[1][3] + 2.0*b[m][1]*b[n][1]*d[1][1]) / 2.0;
-                kk[ii0+1+m*3][jj0+2+n*3] += c * (b[m][2]*b[n][0]*d[4][5] + b[m][2]*b[n][1]*d[4][4] + s*b[m][2]*b[n][2]*d[4][2] + b[m][0]*b[n][0]*d[3][5] + b[m][0]*b[n][1]*d[3][4] + s*b[m][0]*b[n][2]*d[3][2] + s*b[m][1]*b[n][0]*d[1][5] + s*b[m][1]*b[n][1]*d[1][4] + 2.0*b[m][1]*b[n][2]*d[1][2]) / 2.0;
-                kk[ii0+2+m*3][jj0+0+n*3] += c * (b[m][0]*b[n][2]*d[5][5] + b[m][0]*b[n][1]*d[5][3] + s*b[m][0]*b[n][0]*d[5][0] + b[m][1]*b[n][2]*d[4][5] + b[m][1]*b[n][1]*d[4][3] + s*b[m][1]*b[n][0]*d[4][0] + s*b[m][2]*b[n][2]*d[2][5] + s*b[m][2]*b[n][1]*d[2][3] + 2.0*b[m][2]*b[n][0]*d[2][0]) / 2.0;
-                kk[ii0+2+m*3][jj0+1+n*3] += c * (b[m][0]*b[n][2]*d[5][4] + b[m][0]*b[n][0]*d[5][3] + s*b[m][0]*b[n][1]*d[5][1] + b[m][1]*b[n][2]*d[4][4] + b[m][1]*b[n][0]*d[4][3] + s*b[m][1]*b[n][1]*d[4][1] + s*b[m][2]*b[n][2]*d[2][4] + s*b[m][2]*b[n][0]*d[2][3] + 2.0*b[m][2]*b[n][1]*d[2][1]) / 2.0;
-                kk[ii0+2+m*3][jj0+2+n*3] += c * (b[m][0]*b[n][0]*d[5][5] + b[m][0]*b[n][1]*d[5][4] + s*b[m][0]*b[n][2]*d[5][2] + b[m][1]*b[n][0]*d[4][5] + b[m][1]*b[n][1]*d[4][4] + s*b[m][1]*b[n][2]*d[4][2] + s*b[m][2]*b[n][0]*d[2][5] + s*b[m][2]*b[n][1]*d[2][4] + 2.0*b[m][2]*b[n][2]*d[2][2]) / 2.0;
+                kk.add(ii0+0+m*3,jj0+0+n*3, c * (b.get(m,2)*b.get(n,2)*d.get(5,5) + b.get(m,2)*b.get(n,1)*d.get(5,3) + s*b.get(m,2)*b.get(n,0)*d.get(5,0) + b.get(m,1)*b.get(n,2)*d.get(3,5) + b.get(m,1)*b.get(n,1)*d.get(3,3) + s*b.get(m,1)*b.get(n,0)*d.get(3,0) + s*b.get(m,0)*b.get(n,2)*d.get(0,5) + s*b.get(m,0)*b.get(n,1)*d.get(0,3) + 2.0*b.get(m,0)*b.get(n,0)*d.get(0,0)) / 2.0);
+                kk.add(ii0+0+m*3,jj0+1+n*3, c * (b.get(m,2)*b.get(n,2)*d.get(5,4) + b.get(m,2)*b.get(n,0)*d.get(5,3) + s*b.get(m,2)*b.get(n,1)*d.get(5,1) + b.get(m,1)*b.get(n,2)*d.get(3,4) + b.get(m,1)*b.get(n,0)*d.get(3,3) + s*b.get(m,1)*b.get(n,1)*d.get(3,1) + s*b.get(m,0)*b.get(n,2)*d.get(0,4) + s*b.get(m,0)*b.get(n,0)*d.get(0,3) + 2.0*b.get(m,0)*b.get(n,1)*d.get(0,1)) / 2.0);
+                kk.add(ii0+0+m*3,jj0+2+n*3, c * (b.get(m,2)*b.get(n,0)*d.get(5,5) + b.get(m,2)*b.get(n,1)*d.get(5,4) + s*b.get(m,2)*b.get(n,2)*d.get(5,2) + b.get(m,1)*b.get(n,0)*d.get(3,5) + b.get(m,1)*b.get(n,1)*d.get(3,4) + s*b.get(m,1)*b.get(n,2)*d.get(3,2) + s*b.get(m,0)*b.get(n,0)*d.get(0,5) + s*b.get(m,0)*b.get(n,1)*d.get(0,4) + 2.0*b.get(m,0)*b.get(n,2)*d.get(0,2)) / 2.0);
+                kk.add(ii0+1+m*3,jj0+0+n*3, c * (b.get(m,2)*b.get(n,2)*d.get(4,5) + b.get(m,2)*b.get(n,1)*d.get(4,3) + s*b.get(m,2)*b.get(n,0)*d.get(4,0) + b.get(m,0)*b.get(n,2)*d.get(3,5) + b.get(m,0)*b.get(n,1)*d.get(3,3) + s*b.get(m,0)*b.get(n,0)*d.get(3,0) + s*b.get(m,1)*b.get(n,2)*d.get(1,5) + s*b.get(m,1)*b.get(n,1)*d.get(1,3) + 2.0*b.get(m,1)*b.get(n,0)*d.get(1,0)) / 2.0);
+                kk.add(ii0+1+m*3,jj0+1+n*3, c * (b.get(m,2)*b.get(n,2)*d.get(4,4) + b.get(m,2)*b.get(n,0)*d.get(4,3) + s*b.get(m,2)*b.get(n,1)*d.get(4,1) + b.get(m,0)*b.get(n,2)*d.get(3,4) + b.get(m,0)*b.get(n,0)*d.get(3,3) + s*b.get(m,0)*b.get(n,1)*d.get(3,1) + s*b.get(m,1)*b.get(n,2)*d.get(1,4) + s*b.get(m,1)*b.get(n,0)*d.get(1,3) + 2.0*b.get(m,1)*b.get(n,1)*d.get(1,1)) / 2.0);
+                kk.add(ii0+1+m*3,jj0+2+n*3, c * (b.get(m,2)*b.get(n,0)*d.get(4,5) + b.get(m,2)*b.get(n,1)*d.get(4,4) + s*b.get(m,2)*b.get(n,2)*d.get(4,2) + b.get(m,0)*b.get(n,0)*d.get(3,5) + b.get(m,0)*b.get(n,1)*d.get(3,4) + s*b.get(m,0)*b.get(n,2)*d.get(3,2) + s*b.get(m,1)*b.get(n,0)*d.get(1,5) + s*b.get(m,1)*b.get(n,1)*d.get(1,4) + 2.0*b.get(m,1)*b.get(n,2)*d.get(1,2)) / 2.0);
+                kk.add(ii0+2+m*3,jj0+0+n*3, c * (b.get(m,0)*b.get(n,2)*d.get(5,5) + b.get(m,0)*b.get(n,1)*d.get(5,3) + s*b.get(m,0)*b.get(n,0)*d.get(5,0) + b.get(m,1)*b.get(n,2)*d.get(4,5) + b.get(m,1)*b.get(n,1)*d.get(4,3) + s*b.get(m,1)*b.get(n,0)*d.get(4,0) + s*b.get(m,2)*b.get(n,2)*d.get(2,5) + s*b.get(m,2)*b.get(n,1)*d.get(2,3) + 2.0*b.get(m,2)*b.get(n,0)*d.get(2,0)) / 2.0);
+                kk.add(ii0+2+m*3,jj0+1+n*3, c * (b.get(m,0)*b.get(n,2)*d.get(5,4) + b.get(m,0)*b.get(n,0)*d.get(5,3) + s*b.get(m,0)*b.get(n,1)*d.get(5,1) + b.get(m,1)*b.get(n,2)*d.get(4,4) + b.get(m,1)*b.get(n,0)*d.get(4,3) + s*b.get(m,1)*b.get(n,1)*d.get(4,1) + s*b.get(m,2)*b.get(n,2)*d.get(2,4) + s*b.get(m,2)*b.get(n,0)*d.get(2,3) + 2.0*b.get(m,2)*b.get(n,1)*d.get(2,1)) / 2.0);
+                kk.add(ii0+2+m*3,jj0+2+n*3, c * (b.get(m,0)*b.get(n,0)*d.get(5,5) + b.get(m,0)*b.get(n,1)*d.get(5,4) + s*b.get(m,0)*b.get(n,2)*d.get(5,2) + b.get(m,1)*b.get(n,0)*d.get(4,5) + b.get(m,1)*b.get(n,1)*d.get(4,4) + s*b.get(m,1)*b.get(n,2)*d.get(4,2) + s*b.get(m,2)*b.get(n,0)*d.get(2,5) + s*b.get(m,2)*b.get(n,1)*d.get(2,4) + 2.0*b.get(m,2)*b.get(n,2)*d.get(2,2)) / 2.0);
             }
         }
     }
@@ -217,13 +217,16 @@ fn add_to_kk_axisymmetric(kk: &mut Matrix, nnode: usize, c: f64, r: f64, dd: &Te
     let (ii0, jj0) = (args.ii0, args.jj0);
     for m in 0..nnode {
         for n in 0..nnode {
-            kk[ii0+0+m*2][jj0+0+n*2] += c * r * (b[m][1]*b[n][1]*d[3][3] + s*b[m][1]*b[n][0]*d[3][0] + s*b[m][0]*b[n][1]*d[0][3] + 2.0*b[m][0]*b[n][0]*d[0][0]) / 2.0 +
-                                        c * (r*nn[n]*(2.0*d[0][2]*b[m][0] + s*d[3][2]*b[m][1]) + nn[m]*(2.0*nn[n]*d[2][2] + 2.0*r*d[2][0]*b[n][0] + s*r*d[2][3]*b[n][1])) / (2.0*r);
-            kk[ii0+0+m*2][jj0+1+n*2] += c * r * (b[m][1]*b[n][0]*d[3][3] + s*b[m][1]*b[n][1]*d[3][1] + s*b[m][0]*b[n][0]*d[0][3] + 2.0*b[m][0]*b[n][1]*d[0][1]) / 2.0 +
-                                        c * (nn[m]*(s*d[2][3]*b[n][0] + 2.0*d[2][1]*b[n][1])) / 2.0;
-            kk[ii0+1+m*2][jj0+0+n*2] += c * r * (b[m][0]*b[n][1]*d[3][3] + s*b[m][0]*b[n][0]*d[3][0] + s*b[m][1]*b[n][1]*d[1][3] + 2.0*b[m][1]*b[n][0]*d[1][0]) / 2.0 +
-                                        c * (nn[n]*(s*d[3][2]*b[m][0] + 2.0*d[1][2]*b[m][1])) / 2.0;
-            kk[ii0+1+m*2][jj0+1+n*2] += c * r * (b[m][0]*b[n][0]*d[3][3] + s*b[m][0]*b[n][1]*d[3][1] + s*b[m][1]*b[n][0]*d[1][3] + 2.0*b[m][1]*b[n][1]*d[1][1]) / 2.0;
+            kk.add(ii0+0+m*2,jj0+0+n*2, c * r * (b.get(m,1)*b.get(n,1)*d.get(3,3) + s*b.get(m,1)*b.get(n,0)*d.get(3,0) + s*b.get(m,0)*b.get(n,1)*d.get(0,3) + 2.0*b.get(m,0)*b.get(n,0)*d.get(0,0)) / 2.0 +
+                                    c * (r*nn[n]*(2.0*d.get(0,2)*b.get(m,0) + s*d.get(3,2)*b.get(m,1)) + nn[m]*(2.0*nn[n]*d.get(2,2) + 2.0*r*d.get(2,0)*b.get(n,0) + s*r*d.get(2,3)*b.get(n,1))) / (2.0*r));
+
+            kk.add(ii0+0+m*2,jj0+1+n*2, c * r * (b.get(m,1)*b.get(n,0)*d.get(3,3) + s*b.get(m,1)*b.get(n,1)*d.get(3,1) + s*b.get(m,0)*b.get(n,0)*d.get(0,3) + 2.0*b.get(m,0)*b.get(n,1)*d.get(0,1)) / 2.0 +
+                                    c * (nn[m]*(s*d.get(2,3)*b.get(n,0) + 2.0*d.get(2,1)*b.get(n,1))) / 2.0);
+
+            kk.add(ii0+1+m*2,jj0+0+n*2, c * r * (b.get(m,0)*b.get(n,1)*d.get(3,3) + s*b.get(m,0)*b.get(n,0)*d.get(3,0) + s*b.get(m,1)*b.get(n,1)*d.get(1,3) + 2.0*b.get(m,1)*b.get(n,0)*d.get(1,0)) / 2.0 +
+                                    c * (nn[n]*(s*d.get(3,2)*b.get(m,0) + 2.0*d.get(1,2)*b.get(m,1))) / 2.0);
+
+            kk.add(ii0+1+m*2,jj0+1+n*2, c * r * (b.get(m,0)*b.get(n,0)*d.get(3,3) + s*b.get(m,0)*b.get(n,1)*d.get(3,1) + s*b.get(m,1)*b.get(n,0)*d.get(1,3) + 2.0*b.get(m,1)*b.get(n,1)*d.get(1,1)) / 2.0);
         }
     }
 }
@@ -239,13 +242,13 @@ mod tests {
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_chk::vec_approx_eq;
     use russell_lab::{mat_approx_eq, Matrix, Vector};
-    use russell_tensor::{copy_tensor4, LinElasticity, Tensor4};
+    use russell_tensor::{copy_tensor4, LinElasticity, Mandel, Tensor4};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
-        let mut dd = Tensor4::new(true, true);
+        let mut dd = Tensor4::new(Mandel::Symmetric2D);
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
         let f = |_: &mut Tensor4, _: usize, _: &Vector, _: &Matrix| Ok(());

@@ -84,7 +84,7 @@ where
         let c = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             s * det_jac * weight * args.alpha * r
         } else {
@@ -94,7 +94,7 @@ where
         // add contribution to K matrix
         for m in 0..nnode {
             for n in 0..nnode {
-                kk[ii0 + m][jj0 + n] += nn[m] * c * nn[n];
+                kk.add(ii0 + m, jj0 + n, nn[m] * c * nn[n]);
             }
         }
     }

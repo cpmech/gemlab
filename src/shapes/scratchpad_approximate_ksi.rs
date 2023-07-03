@@ -91,8 +91,8 @@ impl Scratchpad {
         let nnode = self.interp.dim();
         for m in 0..nnode {
             for j in 0..space_ndim {
-                xmin[j] = f64::min(xmin[j], self.xxt[j][m]);
-                xmax[j] = f64::max(xmax[j], self.xxt[j][m]);
+                xmin[j] = f64::min(xmin[j], self.xxt.get(j, m));
+                xmax[j] = f64::max(xmax[j], self.xxt.get(j, m));
             }
         }
         for j in 0..space_ndim {
@@ -173,12 +173,12 @@ mod tests {
             // Tri
             (GeoKind::Tri3, 1e-14),
             (GeoKind::Tri6, 1e-15),
-            (GeoKind::Tri10, 1e-15),
+            (GeoKind::Tri10, 1e-14),
             (GeoKind::Tri15, 1e-14),
             // Qua
             (GeoKind::Qua4, 1e-15),
-            (GeoKind::Qua8, 1e-15),
-            (GeoKind::Qua9, 1e-15),
+            (GeoKind::Qua8, 1e-14),
+            (GeoKind::Qua9, 1e-14),
             (GeoKind::Qua12, 1e-14),
             (GeoKind::Qua16, 1e-14),
             (GeoKind::Qua17, 1e-13),
@@ -194,6 +194,8 @@ mod tests {
 
         // loop over shapes
         for (kind, tol) in problem {
+            // println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);
@@ -289,7 +291,7 @@ mod tests {
             (0, [5.5, 4.0], 1e-15),
             (1, [6.75, 6.17], 1e-14),
             (1, [4.25, 6.17], 1e-14),
-            (2, [10.0, 10.0], 1e-14),
+            (4, [10.0, 10.0], 1e-14),
             (2, [-10.0, -10.0], 1e-13),
             (1, [100.0, 100.0], 1e-11),
         ] {

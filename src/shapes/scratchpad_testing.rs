@@ -144,7 +144,7 @@ pub mod aux {
         for i in 0..pad.kind.edge_nnode() {
             let m = pad.kind.edge_node_id(e, i);
             for j in 0..space_ndim {
-                pad_edge.set_xx(i, j, pad.xxt[j][m]);
+                pad_edge.set_xx(i, j, pad.xxt.get(j, m));
             }
         }
         pad_edge
@@ -166,7 +166,7 @@ pub mod aux {
         for i in 0..pad.kind.face_nnode() {
             let m = pad.kind.face_node_id(f, i);
             for j in 0..space_ndim {
-                pad_face.set_xx(i, j, pad.xxt[j][m]);
+                pad_face.set_xx(i, j, pad.xxt.get(j, m));
             }
         }
         pad_face
@@ -204,8 +204,8 @@ pub mod aux {
         real_space.points_begin();
         for i in 0..N {
             for j in 0..N {
-                natural_space.points_add(ksi_0[i][j], ksi_1[i][j]);
-                map_point_coords(&mut x, &[ksi_0[i][j], ksi_1[i][j]], ksi_min, ksi_del);
+                natural_space.points_add(ksi_0.get(i, j), ksi_1.get(i, j));
+                map_point_coords(&mut x, &[ksi_0.get(i, j), ksi_1.get(i, j)], ksi_min, ksi_del);
                 real_space.points_add(x[0], x[1]);
             }
         }
@@ -252,118 +252,118 @@ mod tests {
     fn gen_scratchpad_with_coords_works() {
         // SOLID in 2D
         let pad = gen_scratchpad_with_coords(2, GeoKind::Qua4);
-        approx_eq(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[0][2], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][2], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[0][3], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][3], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(0, 0), aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(1, 0), aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(0, 1), aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(1, 1), aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(0, 2), aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 2), aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(0, 3), aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 3), aux::RMIN * f64::sin(aux::AMAX), 1e-15);
 
         // SOLID in 3D
         let pad = gen_scratchpad_with_coords(3, GeoKind::Hex8);
-        approx_eq(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[2][0], aux::ZMIN, 1e-15);
-        approx_eq(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[2][1], aux::ZMIN, 1e-15);
-        approx_eq(pad.xxt[0][2], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][2], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[2][2], aux::ZMIN, 1e-15);
-        approx_eq(pad.xxt[0][3], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][3], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[2][3], aux::ZMIN, 1e-15);
+        approx_eq(pad.xxt.get(0, 0), aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(1, 0), aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(2, 0), aux::ZMIN, 1e-15);
+        approx_eq(pad.xxt.get(0, 1), aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(1, 1), aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(2, 1), aux::ZMIN, 1e-15);
+        approx_eq(pad.xxt.get(0, 2), aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 2), aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(2, 2), aux::ZMIN, 1e-15);
+        approx_eq(pad.xxt.get(0, 3), aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 3), aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(2, 3), aux::ZMIN, 1e-15);
 
-        approx_eq(pad.xxt[0][4], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[1][4], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[2][4], aux::ZMAX, 1e-15);
-        approx_eq(pad.xxt[0][5], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[1][5], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[2][5], aux::ZMAX, 1e-15);
-        approx_eq(pad.xxt[0][6], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][6], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[2][6], aux::ZMAX, 1e-15);
-        approx_eq(pad.xxt[0][7], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][7], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[2][7], aux::ZMAX, 1e-15);
+        approx_eq(pad.xxt.get(0, 4), aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(1, 4), aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(2, 4), aux::ZMAX, 1e-15);
+        approx_eq(pad.xxt.get(0, 5), aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(1, 5), aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(2, 5), aux::ZMAX, 1e-15);
+        approx_eq(pad.xxt.get(0, 6), aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 6), aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(2, 6), aux::ZMAX, 1e-15);
+        approx_eq(pad.xxt.get(0, 7), aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 7), aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(2, 7), aux::ZMAX, 1e-15);
 
         // CABLE in 2D
         let pad = gen_scratchpad_with_coords(2, GeoKind::Lin2);
-        approx_eq(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(0, 0), aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 0), aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(0, 1), aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 1), aux::RMAX * f64::sin(aux::AMAX), 1e-15);
 
         // CABLE in 3D
         let pad = gen_scratchpad_with_coords(3, GeoKind::Lin2);
-        approx_eq(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[2][0], aux::ZMAX, 1e-15);
-        approx_eq(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[2][1], aux::ZMAX, 1e-15);
+        approx_eq(pad.xxt.get(0, 0), aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 0), aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(2, 0), aux::ZMAX, 1e-15);
+        approx_eq(pad.xxt.get(0, 1), aux::RMAX * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 1), aux::RMAX * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(2, 1), aux::ZMAX, 1e-15);
 
         // SHELL in 3D
         let pad = gen_scratchpad_with_coords(3, GeoKind::Tri3);
-        approx_eq(pad.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[2][0], aux::ZMAX, 1e-15);
-        approx_eq(pad.xxt[0][1], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[1][1], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad.xxt[2][1], aux::ZMAX, 1e-15);
-        approx_eq(pad.xxt[0][2], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[1][2], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad.xxt[2][2], aux::ZMAX, 1e-15);
+        approx_eq(pad.xxt.get(0, 0), aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(1, 0), aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(2, 0), aux::ZMAX, 1e-15);
+        approx_eq(pad.xxt.get(0, 1), aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(1, 1), aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad.xxt.get(2, 1), aux::ZMAX, 1e-15);
+        approx_eq(pad.xxt.get(0, 2), aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(1, 2), aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad.xxt.get(2, 2), aux::ZMAX, 1e-15);
     }
 
     #[test]
     fn gen_scratchpad_with_coords_aligned_works() {
         let pad = gen_scratchpad_with_coords_aligned(GeoKind::Tri3);
-        assert_eq!(pad.xxt[0][0], 0.0);
-        assert_eq!(pad.xxt[1][0], 0.0);
-        assert_eq!(pad.xxt[0][1], 2.0);
-        assert_eq!(pad.xxt[1][1], 0.0);
-        assert_eq!(pad.xxt[0][2], 0.0);
-        assert_eq!(pad.xxt[1][2], 2.0);
+        assert_eq!(pad.xxt.get(0, 0), 0.0);
+        assert_eq!(pad.xxt.get(1, 0), 0.0);
+        assert_eq!(pad.xxt.get(0, 1), 2.0);
+        assert_eq!(pad.xxt.get(1, 1), 0.0);
+        assert_eq!(pad.xxt.get(0, 2), 0.0);
+        assert_eq!(pad.xxt.get(1, 2), 2.0);
 
         let pad = gen_scratchpad_with_coords_aligned(GeoKind::Qua4);
-        assert_eq!(pad.xxt[0][0], 0.0);
-        assert_eq!(pad.xxt[1][0], 0.0);
-        assert_eq!(pad.xxt[0][1], 2.0);
-        assert_eq!(pad.xxt[1][1], 0.0);
-        assert_eq!(pad.xxt[0][2], 2.0);
-        assert_eq!(pad.xxt[1][2], 2.0);
-        assert_eq!(pad.xxt[0][3], 0.0);
-        assert_eq!(pad.xxt[1][3], 2.0);
+        assert_eq!(pad.xxt.get(0, 0), 0.0);
+        assert_eq!(pad.xxt.get(1, 0), 0.0);
+        assert_eq!(pad.xxt.get(0, 1), 2.0);
+        assert_eq!(pad.xxt.get(1, 1), 0.0);
+        assert_eq!(pad.xxt.get(0, 2), 2.0);
+        assert_eq!(pad.xxt.get(1, 2), 2.0);
+        assert_eq!(pad.xxt.get(0, 3), 0.0);
+        assert_eq!(pad.xxt.get(1, 3), 2.0);
 
         let pad = gen_scratchpad_with_coords_aligned(GeoKind::Hex8);
-        assert_eq!(pad.xxt[0][0], 0.0);
-        assert_eq!(pad.xxt[1][0], 0.0);
-        assert_eq!(pad.xxt[2][0], 0.0);
-        assert_eq!(pad.xxt[0][1], 2.0);
-        assert_eq!(pad.xxt[1][1], 0.0);
-        assert_eq!(pad.xxt[2][1], 0.0);
-        assert_eq!(pad.xxt[0][2], 2.0);
-        assert_eq!(pad.xxt[1][2], 2.0);
-        assert_eq!(pad.xxt[2][2], 0.0);
-        assert_eq!(pad.xxt[0][3], 0.0);
-        assert_eq!(pad.xxt[1][3], 2.0);
-        assert_eq!(pad.xxt[2][3], 0.0);
+        assert_eq!(pad.xxt.get(0, 0), 0.0);
+        assert_eq!(pad.xxt.get(1, 0), 0.0);
+        assert_eq!(pad.xxt.get(2, 0), 0.0);
+        assert_eq!(pad.xxt.get(0, 1), 2.0);
+        assert_eq!(pad.xxt.get(1, 1), 0.0);
+        assert_eq!(pad.xxt.get(2, 1), 0.0);
+        assert_eq!(pad.xxt.get(0, 2), 2.0);
+        assert_eq!(pad.xxt.get(1, 2), 2.0);
+        assert_eq!(pad.xxt.get(2, 2), 0.0);
+        assert_eq!(pad.xxt.get(0, 3), 0.0);
+        assert_eq!(pad.xxt.get(1, 3), 2.0);
+        assert_eq!(pad.xxt.get(2, 3), 0.0);
 
-        assert_eq!(pad.xxt[0][4], 0.0);
-        assert_eq!(pad.xxt[1][4], 0.0);
-        assert_eq!(pad.xxt[2][4], 2.0);
-        assert_eq!(pad.xxt[0][5], 2.0);
-        assert_eq!(pad.xxt[1][5], 0.0);
-        assert_eq!(pad.xxt[2][5], 2.0);
-        assert_eq!(pad.xxt[0][6], 2.0);
-        assert_eq!(pad.xxt[1][6], 2.0);
-        assert_eq!(pad.xxt[2][6], 2.0);
-        assert_eq!(pad.xxt[0][7], 0.0);
-        assert_eq!(pad.xxt[1][7], 2.0);
-        assert_eq!(pad.xxt[2][7], 2.0);
+        assert_eq!(pad.xxt.get(0, 4), 0.0);
+        assert_eq!(pad.xxt.get(1, 4), 0.0);
+        assert_eq!(pad.xxt.get(2, 4), 2.0);
+        assert_eq!(pad.xxt.get(0, 5), 2.0);
+        assert_eq!(pad.xxt.get(1, 5), 0.0);
+        assert_eq!(pad.xxt.get(2, 5), 2.0);
+        assert_eq!(pad.xxt.get(0, 6), 2.0);
+        assert_eq!(pad.xxt.get(1, 6), 2.0);
+        assert_eq!(pad.xxt.get(2, 6), 2.0);
+        assert_eq!(pad.xxt.get(0, 7), 0.0);
+        assert_eq!(pad.xxt.get(1, 7), 2.0);
+        assert_eq!(pad.xxt.get(2, 7), 2.0);
     }
 
     #[test]
@@ -371,10 +371,10 @@ mod tests {
         let pad = gen_scratchpad_with_coords(2, GeoKind::Qua4);
         let pad_edge = extract_edge(0, &pad);
         assert_eq!(pad_edge.kind, GeoKind::Lin2);
-        approx_eq(pad_edge.xxt[0][0], aux::RMAX * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad_edge.xxt[1][0], aux::RMAX * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad_edge.xxt[0][1], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad_edge.xxt[1][1], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad_edge.xxt.get(0, 0), aux::RMAX * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad_edge.xxt.get(1, 0), aux::RMAX * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad_edge.xxt.get(0, 1), aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad_edge.xxt.get(1, 1), aux::RMIN * f64::sin(aux::AMIN), 1e-15);
     }
 
     #[test]
@@ -382,18 +382,18 @@ mod tests {
         let pad = gen_scratchpad_with_coords(3, GeoKind::Hex8);
         let pad_face = extract_face(0, &pad);
         assert_eq!(pad_face.kind, GeoKind::Qua4);
-        approx_eq(pad_face.xxt[0][0], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad_face.xxt[1][0], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad_face.xxt[2][0], aux::ZMIN, 1e-15);
-        approx_eq(pad_face.xxt[0][1], aux::RMIN * f64::cos(aux::AMIN), 1e-15);
-        approx_eq(pad_face.xxt[1][1], aux::RMIN * f64::sin(aux::AMIN), 1e-15);
-        approx_eq(pad_face.xxt[2][1], aux::ZMAX, 1e-15);
-        approx_eq(pad_face.xxt[0][2], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad_face.xxt[1][2], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad_face.xxt[2][2], aux::ZMAX, 1e-15);
-        approx_eq(pad_face.xxt[0][3], aux::RMIN * f64::cos(aux::AMAX), 1e-15);
-        approx_eq(pad_face.xxt[1][3], aux::RMIN * f64::sin(aux::AMAX), 1e-15);
-        approx_eq(pad_face.xxt[2][3], aux::ZMIN, 1e-15);
+        approx_eq(pad_face.xxt.get(0, 0), aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad_face.xxt.get(1, 0), aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad_face.xxt.get(2, 0), aux::ZMIN, 1e-15);
+        approx_eq(pad_face.xxt.get(0, 1), aux::RMIN * f64::cos(aux::AMIN), 1e-15);
+        approx_eq(pad_face.xxt.get(1, 1), aux::RMIN * f64::sin(aux::AMIN), 1e-15);
+        approx_eq(pad_face.xxt.get(2, 1), aux::ZMAX, 1e-15);
+        approx_eq(pad_face.xxt.get(0, 2), aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad_face.xxt.get(1, 2), aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad_face.xxt.get(2, 2), aux::ZMAX, 1e-15);
+        approx_eq(pad_face.xxt.get(0, 3), aux::RMIN * f64::cos(aux::AMAX), 1e-15);
+        approx_eq(pad_face.xxt.get(1, 3), aux::RMIN * f64::sin(aux::AMAX), 1e-15);
+        approx_eq(pad_face.xxt.get(2, 3), aux::ZMIN, 1e-15);
     }
 
     #[test]
@@ -503,7 +503,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Lᵐⱼ := dNᵐ/dξⱼ
-                    deriv_approx_eq(pad.deriv[m][j], args.at_ksi[j], args, tol, nn_given_ksi);
+                    deriv_approx_eq(pad.deriv.get(m, j), args.at_ksi[j], args, tol, nn_given_ksi);
                 }
             }
         }

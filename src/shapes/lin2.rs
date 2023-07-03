@@ -59,7 +59,7 @@ impl Lin2 {
     ///
     /// * `ksi` -- reference coordinates with length ≥ geo_ndim
     pub fn calc_deriv(deriv: &mut Matrix, _: &[f64]) {
-        deriv[0][0] = -0.5;
-        deriv[1][0] = 0.5;
+        deriv.set(0, 0, -0.5);
+        deriv.set(1, 0, 0.5);
     }
 }

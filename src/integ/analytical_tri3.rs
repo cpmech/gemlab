@@ -40,9 +40,9 @@ impl AnalyticalTri3 {
         assert_eq!(pad.kind, GeoKind::Tri3);
 
         // coefficients
-        let (x0, y0) = (pad.xxt[0][0], pad.xxt[1][0]);
-        let (x1, y1) = (pad.xxt[0][1], pad.xxt[1][1]);
-        let (x2, y2) = (pad.xxt[0][2], pad.xxt[1][2]);
+        let (x0, y0) = (pad.xxt.get(0, 0), pad.xxt.get(1, 0));
+        let (x1, y1) = (pad.xxt.get(0, 1), pad.xxt.get(1, 1));
+        let (x2, y2) = (pad.xxt.get(0, 2), pad.xxt.get(1, 2));
         let (a0, a1, a2) = (y1 - y2, y2 - y0, y0 - y1);
         let (b0, b1, b2) = (x2 - x1, x0 - x2, x1 - x0);
         let (f0, f1, f2) = (x1 * y2 - x2 * y1, x2 * y0 - x0 * y2, x0 * y1 - x1 * y0);
@@ -160,9 +160,9 @@ impl AnalyticalTri3 {
     /// ```
     pub fn vec_03_vb(&self, w0: f64, w1: f64) -> Vector {
         Vector::from(&[
-            (w0 * self.bb[0][0] + w1 * self.bb[0][1]) * self.area,
-            (w0 * self.bb[1][0] + w1 * self.bb[1][1]) * self.area,
-            (w0 * self.bb[2][0] + w1 * self.bb[2][1]) * self.area,
+            (w0 * self.bb.get(0, 0) + w1 * self.bb.get(0, 1)) * self.area,
+            (w0 * self.bb.get(1, 0) + w1 * self.bb.get(1, 1)) * self.area,
+            (w0 * self.bb.get(2, 0) + w1 * self.bb.get(2, 1)) * self.area,
         ])
     }
 
@@ -178,13 +178,14 @@ impl AnalyticalTri3 {
     ///
     /// * `pad` -- The same shape used in `new` because we need the nodal coordinates here
     ///            Do not change the coordinates, otherwise the values will be wrong.
+    #[rustfmt::skip]
     pub fn vec_03_vb_bilinear(&self, pad: &Scratchpad) -> Vector {
-        let (x0, x1, x2) = (pad.xxt[0][0], pad.xxt[0][1], pad.xxt[0][2]);
-        let (y0, y1, y2) = (pad.xxt[1][0], pad.xxt[1][1], pad.xxt[1][2]);
+        let (x0, x1, x2) = (pad.xxt.get(0,0), pad.xxt.get(0,1), pad.xxt.get(0,2));
+        let (y0, y1, y2) = (pad.xxt.get(1,0), pad.xxt.get(1,1), pad.xxt.get(1,2));
         Vector::from(&[
-            ((x0 + x1 + x2) * self.bb[0][0] + (y0 + y1 + y2) * self.bb[0][1]) * self.area / 3.0,
-            ((x0 + x1 + x2) * self.bb[1][0] + (y0 + y1 + y2) * self.bb[1][1]) * self.area / 3.0,
-            ((x0 + x1 + x2) * self.bb[2][0] + (y0 + y1 + y2) * self.bb[2][1]) * self.area / 3.0,
+            ((x0 + x1 + x2) * self.bb.get(0,0) + (y0 + y1 + y2) * self.bb.get(0,1)) * self.area / 3.0,
+            ((x0 + x1 + x2) * self.bb.get(1,0) + (y0 + y1 + y2) * self.bb.get(1,1)) * self.area / 3.0,
+            ((x0 + x1 + x2) * self.bb.get(2,0) + (y0 + y1 + y2) * self.bb.get(2,1)) * self.area / 3.0,
         ])
     }
 
@@ -192,9 +193,9 @@ impl AnalyticalTri3 {
     #[rustfmt::skip]
     pub fn vec_04_tb(&self, tt: &Tensor2, axisymmetric: bool) -> Vector {
         let (x0, x1, x2) = (self.x0, self.x1, self.x2);
-        let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
-        let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
-        let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
+        let (b00, b01) = (self.bb.get(0,0), self.bb.get(0,1));
+        let (b10, b11) = (self.bb.get(1,0), self.bb.get(1,1));
+        let (b20, b21) = (self.bb.get(2,0), self.bb.get(2,1));
         let (t0, t1, t2, t3) = (tt.vec[0], tt.vec[1], tt.vec[2], tt.vec[3]);
         if axisymmetric {
             let c = self.area / 3.0;
@@ -253,9 +254,9 @@ impl AnalyticalTri3 {
         let aa = self.area;
         let g = &self.bb;
         Matrix::from(&[
-            [aa*(g[0][0]*v0 + g[0][1]*v1)/3.0, aa*(g[0][0]*v0 + g[0][1]*v1)/3.0, aa*(g[0][0]*v0 + g[0][1]*v1)/3.0],
-            [aa*(g[1][0]*v0 + g[1][1]*v1)/3.0, aa*(g[1][0]*v0 + g[1][1]*v1)/3.0, aa*(g[1][0]*v0 + g[1][1]*v1)/3.0],
-            [aa*(g[2][0]*v0 + g[2][1]*v1)/3.0, aa*(g[2][0]*v0 + g[2][1]*v1)/3.0, aa*(g[2][0]*v0 + g[2][1]*v1)/3.0],
+            [aa*(g.get(0,0)*v0 + g.get(0,1)*v1)/3.0, aa*(g.get(0,0)*v0 + g.get(0,1)*v1)/3.0, aa*(g.get(0,0)*v0 + g.get(0,1)*v1)/3.0],
+            [aa*(g.get(1,0)*v0 + g.get(1,1)*v1)/3.0, aa*(g.get(1,0)*v0 + g.get(1,1)*v1)/3.0, aa*(g.get(1,0)*v0 + g.get(1,1)*v1)/3.0],
+            [aa*(g.get(2,0)*v0 + g.get(2,1)*v1)/3.0, aa*(g.get(2,0)*v0 + g.get(2,1)*v1)/3.0, aa*(g.get(2,0)*v0 + g.get(2,1)*v1)/3.0],
         ])
     }
 
@@ -263,12 +264,12 @@ impl AnalyticalTri3 {
     #[rustfmt::skip]
     pub fn mat_02_bvn_bilinear(&self, pad: &Scratchpad) -> Matrix {
         let aa = self.area;
-        let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
-        let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
-        let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
-        let (x0, y0) = (pad.xxt[0][0], pad.xxt[1][0]);
-        let (x1, y1) = (pad.xxt[0][1], pad.xxt[1][1]);
-        let (x2, y2) = (pad.xxt[0][2], pad.xxt[1][2]);
+        let (b00, b01) = (self.bb.get(0,0), self.bb.get(0,1));
+        let (b10, b11) = (self.bb.get(1,0), self.bb.get(1,1));
+        let (b20, b21) = (self.bb.get(2,0), self.bb.get(2,1));
+        let (x0, y0) = (pad.xxt.get(0,0), pad.xxt.get(1,0));
+        let (x1, y1) = (pad.xxt.get(0,1), pad.xxt.get(1,1));
+        let (x2, y2) = (pad.xxt.get(0,2), pad.xxt.get(1,2));
         Matrix::from(&[
             [(aa*(2.0*b00*x0 + b00*x1 + b00*x2 + 2.0*b01*y0 + b01*y1 + b01*y2))/12.0,(aa*(b00*x0 + 2.0*b00*x1 + b00*x2 + b01*y0 + 2.0*b01*y1 + b01*y2))/12.0, (aa*(b00*x0 + b00*x1 + 2.0*b00*x2 + b01*y0 + b01*y1 + 2.0*b01*y2))/12.0],
             [(aa*(2.0*b10*x0 + b10*x1 + b10*x2 + 2.0*b11*y0 + b11*y1 + b11*y2))/12.0,(aa*(b10*x0 + 2.0*b10*x1 + b10*x2 + b11*y0 + 2.0*b11*y1 + b11*y2))/12.0, (aa*(b10*x0 + b10*x1 + 2.0*b10*x2 + b11*y0 + b11*y1 + 2.0*b11*y2))/12.0],
@@ -283,9 +284,9 @@ impl AnalyticalTri3 {
         } else {
             self.area
         };
-        let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
-        let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
-        let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
+        let (b00, b01) = (self.bb.get(0, 0), self.bb.get(0, 1));
+        let (b10, b11) = (self.bb.get(1, 0), self.bb.get(1, 1));
+        let (b20, b21) = (self.bb.get(2, 0), self.bb.get(2, 1));
         let k00 = c * (b00 * b00 * kx + b01 * b01 * ky);
         let k11 = c * (b10 * b10 * kx + b11 * b11 * ky);
         let k01 = c * (b00 * b10 * kx + b01 * b11 * ky);
@@ -311,9 +312,9 @@ impl AnalyticalTri3 {
     /// Performs the n-v-b integration with constant vector
     #[rustfmt::skip]
     pub fn mat_09_nvb(&self, v0: f64, v1: f64) -> Matrix {
-        let (b00, b01) = (self.bb[0][0], self.bb[0][1]);
-        let (b10, b11) = (self.bb[1][0], self.bb[1][1]);
-        let (b20, b21) = (self.bb[2][0], self.bb[2][1]);
+        let (b00, b01) = (self.bb.get(0,0), self.bb.get(0,1));
+        let (b10, b11) = (self.bb.get(1,0), self.bb.get(1,1));
+        let (b20, b21) = (self.bb.get(2,0), self.bb.get(2,1));
         let c = self.area / 3.0;
         Matrix::from(&[
             [c*b00*v0, c*b01*v0, c*b10*v0, c*b11*v0, c*b20*v0, c*b21*v0],

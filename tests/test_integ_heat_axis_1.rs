@@ -82,7 +82,7 @@ fn test_integ_heat_axis_1() {
         let m = GeoKind::Tri3.edge_node_id(0, i); // local(edge)-to-local(element)
         for j in 0..2 {
             let n = GeoKind::Tri3.edge_node_id(0, j); // local(edge)-to-local(element)
-            kk[m][n] += kc[i][j];
+            kk.add(m, n, kc.get(i, j));
         }
     }
     let kk_lewis = Matrix::from(&[[99.0, 61.0, -50.0], [61.0, 119.0, -50.0], [-50.0, -50.0, 100.0]]);

@@ -2,7 +2,7 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::Tensor2;
+use russell_tensor::{Mandel, Tensor2};
 
 /// Implements the tensor(T) dot gradient(B) integration case 04
 ///
@@ -105,7 +105,7 @@ where
     }
 
     // allocate auxiliary tensor
-    let mut sig = Tensor2::new(true, space_ndim == 2);
+    let mut sig = Tensor2::new(Mandel::new(2 * space_ndim));
 
     // clear output vector
     if args.clear {
@@ -132,7 +132,7 @@ where
         if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             add_to_d_axisymmetric(d, nnode, c, r, &sig, args);
         } else {
@@ -151,14 +151,14 @@ fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, ar
     let ii0 = args.ii0;
     if ndim == 2 {
         for m in 0..nnode {
-            d[ii0 + 0 + m * 2] += c * (t[0] * b[m][0] + t[3] * b[m][1] / s);
-            d[ii0 + 1 + m * 2] += c * (t[3] * b[m][0] / s + t[1] * b[m][1]);
+            d[ii0 + 0 + m * 2] += c * (t[0] * b.get(m, 0) + t[3] * b.get(m, 1) / s);
+            d[ii0 + 1 + m * 2] += c * (t[3] * b.get(m, 0) / s + t[1] * b.get(m, 1));
         }
     } else {
         for m in 0..nnode {
-            d[ii0 + 0 + m * 3] += c * (t[0] * b[m][0] + t[3] * b[m][1] / s + t[5] * b[m][2] / s);
-            d[ii0 + 1 + m * 3] += c * (t[3] * b[m][0] / s + t[1] * b[m][1] + t[4] * b[m][2] / s);
-            d[ii0 + 2 + m * 3] += c * (t[5] * b[m][0] / s + t[4] * b[m][1] / s + t[2] * b[m][2]);
+            d[ii0 + 0 + m * 3] += c * (t[0] * b.get(m, 0) + t[3] * b.get(m, 1) / s + t[5] * b.get(m, 2) / s);
+            d[ii0 + 1 + m * 3] += c * (t[3] * b.get(m, 0) / s + t[1] * b.get(m, 1) + t[4] * b.get(m, 2) / s);
+            d[ii0 + 2 + m * 3] += c * (t[5] * b.get(m, 0) / s + t[4] * b.get(m, 1) / s + t[2] * b.get(m, 2));
         }
     }
 }
@@ -172,8 +172,8 @@ fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Ten
     let b = &args.pad.gradient;
     let ii0 = args.ii0;
     for m in 0..nnode {
-        d[ii0 + 0 + m * 2] += c * r * (t[0] * b[m][0] + t[3] * b[m][1] / s) + c * nn[m] * t[2];
-        d[ii0 + 1 + m * 2] += c * r * (t[3] * b[m][0] / s + t[1] * b[m][1]);
+        d[ii0 + 0 + m * 2] += c * r * (t[0] * b.get(m, 0) + t[3] * b.get(m, 1) / s) + c * nn[m] * t[2];
+        d[ii0 + 1 + m * 2] += c * r * (t[3] * b.get(m, 0) / s + t[1] * b.get(m, 1));
     }
 }
 
@@ -185,13 +185,13 @@ mod tests {
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
     use russell_chk::vec_approx_eq;
     use russell_lab::{Matrix, Vector};
-    use russell_tensor::{copy_tensor2, Tensor2};
+    use russell_tensor::{copy_tensor2, Mandel, Tensor2};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut d = Vector::new(4);
-        let mut sig = Tensor2::new(true, true);
+        let mut sig = Tensor2::new(Mandel::Symmetric2D);
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
         let f = |_: &mut Tensor2, _, _: &Vector, _: &Matrix| Ok(());
@@ -218,7 +218,11 @@ mod tests {
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
         let ana = AnalyticalTri3::new(&pad);
-        let sig = Tensor2::from_matrix(&[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]], true, true).unwrap();
+        let sig = Tensor2::from_matrix(
+            &[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]],
+            Mandel::Symmetric2D,
+        )
+        .unwrap();
         let d_correct = ana.vec_04_tb(&sig, false);
 
         // integration points
@@ -258,7 +262,11 @@ mod tests {
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
         let ana = AnalyticalTri3::new(&pad);
-        let sig = Tensor2::from_matrix(&[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]], true, true).unwrap();
+        let sig = Tensor2::from_matrix(
+            &[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]],
+            Mandel::Symmetric2D,
+        )
+        .unwrap();
         let d_correct = ana.vec_04_tb(&sig, true);
 
         // integration points
@@ -296,7 +304,7 @@ mod tests {
             [2.0, 5.0, 7.0],
             [5.0, 3.0, 6.0],
             [7.0, 6.0, 4.0],
-        ], true, false).unwrap();
+        ], Mandel::Symmetric).unwrap();
         let ana = AnalyticalTet4::new(&pad);
         let d_correct = ana.vec_04_tb(&tt);
 

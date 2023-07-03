@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::Tensor2;
+use russell_tensor::{Mandel, Tensor2};
 
 /// Implements the gradient(Bb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
 ///
@@ -87,7 +87,7 @@ where
     }
 
     // allocate auxiliary tensor
-    let mut tt = Tensor2::new(true, space_ndim == 2);
+    let mut tt = Tensor2::new(Mandel::new(2 * space_ndim));
 
     // clear output matrix
     if args.clear {
@@ -116,7 +116,7 @@ where
         let c = if args.axisymmetric {
             let mut r = 0.0; // radius @ x(ιᵖ)
             for m in 0..nnode {
-                r += nn[m] * args.pad.xxt[0][m];
+                r += nn[m] * args.pad.xxt.get(0, m);
             }
             det_jac * weight * args.alpha * r
         } else {
@@ -128,19 +128,36 @@ where
         if space_ndim == 2 {
             for m in 0..nnode_b {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + 0 + n * 2] += c * (ggb[m][0] * t[0] + ggb[m][1] * t[3] / s) * nn[n];
-                    kk[ii0 + m][jj0 + 1 + n * 2] += c * (ggb[m][0] * t[3] / s + ggb[m][1] * t[1]) * nn[n];
+                    kk.add(
+                        ii0 + m,
+                        jj0 + 0 + n * 2,
+                        c * (ggb.get(m, 0) * t[0] + ggb.get(m, 1) * t[3] / s) * nn[n],
+                    );
+                    kk.add(
+                        ii0 + m,
+                        jj0 + 1 + n * 2,
+                        c * (ggb.get(m, 0) * t[3] / s + ggb.get(m, 1) * t[1]) * nn[n],
+                    );
                 }
             }
         } else {
             for m in 0..nnode_b {
                 for n in 0..nnode {
-                    kk[ii0 + m][jj0 + 0 + n * 3] +=
-                        c * (ggb[m][0] * t[0] + ggb[m][1] * t[3] / s + ggb[m][2] * t[5] / s) * nn[n];
-                    kk[ii0 + m][jj0 + 1 + n * 3] +=
-                        c * (ggb[m][0] * t[3] / s + ggb[m][1] * t[1] + ggb[m][2] * t[4] / s) * nn[n];
-                    kk[ii0 + m][jj0 + 2 + n * 3] +=
-                        c * (ggb[m][0] * t[5] / s + ggb[m][1] * t[4] / s + ggb[m][2] * t[2]) * nn[n];
+                    kk.add(
+                        ii0 + m,
+                        jj0 + 0 + n * 3,
+                        c * (ggb.get(m, 0) * t[0] + ggb.get(m, 1) * t[3] / s + ggb.get(m, 2) * t[5] / s) * nn[n],
+                    );
+                    kk.add(
+                        ii0 + m,
+                        jj0 + 1 + n * 3,
+                        c * (ggb.get(m, 0) * t[3] / s + ggb.get(m, 1) * t[1] + ggb.get(m, 2) * t[4] / s) * nn[n],
+                    );
+                    kk.add(
+                        ii0 + m,
+                        jj0 + 2 + n * 3,
+                        c * (ggb.get(m, 0) * t[5] / s + ggb.get(m, 1) * t[4] / s + ggb.get(m, 2) * t[2]) * nn[n],
+                    );
                 }
             }
         }
@@ -156,7 +173,7 @@ mod tests {
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs};
     use russell_chk::vec_approx_eq;
     use russell_lab::{Matrix, Vector};
-    use russell_tensor::{copy_tensor2, Tensor2};
+    use russell_tensor::{copy_tensor2, Mandel, Tensor2};
 
     #[test]
     fn capture_some_errors() {
@@ -164,7 +181,7 @@ mod tests {
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
-        let mut tt = Tensor2::new(true, true);
+        let mut tt = Tensor2::new(Mandel::Symmetric2D);
         let ggb = Matrix::new(0, 0);
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
@@ -196,7 +213,7 @@ mod tests {
             [2.0, 5.0, 0.0],
             [5.0, 3.0, 0.0],
             [0.0, 0.0, 4.0]],
-        true, true).unwrap();
+        Mandel::Symmetric2D).unwrap();
         let kk_correct = ana.mat_05_btn(&tt);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
@@ -226,7 +243,7 @@ mod tests {
             [1.0, 4.0, 6.0],
             [4.0, 2.0, 5.0],
             [6.0, 5.0, 3.0]],
-        true, false).unwrap();
+        Mandel::Symmetric).unwrap();
         let kk_correct = ana.mat_05_btn(&tt);
         // println!("{}", kk_correct);
         let class = pad.kind.class();

@@ -102,22 +102,22 @@ impl Qua8 {
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
-        deriv[0][0] = -(1.0 - s) * (-r - r - s) / 4.0;
-        deriv[1][0] = (1.0 - s) * (r + r - s) / 4.0;
-        deriv[2][0] = (1.0 + s) * (r + r + s) / 4.0;
-        deriv[3][0] = -(1.0 + s) * (-r - r + s) / 4.0;
-        deriv[4][0] = -(1.0 - s) * r;
-        deriv[5][0] = (1.0 - s * s) / 2.0;
-        deriv[6][0] = -(1.0 + s) * r;
-        deriv[7][0] = -(1.0 - s * s) / 2.0;
+        deriv.set(0, 0, -(1.0 - s) * (-r - r - s) / 4.0);
+        deriv.set(1, 0, (1.0 - s) * (r + r - s) / 4.0);
+        deriv.set(2, 0, (1.0 + s) * (r + r + s) / 4.0);
+        deriv.set(3, 0, -(1.0 + s) * (-r - r + s) / 4.0);
+        deriv.set(4, 0, -(1.0 - s) * r);
+        deriv.set(5, 0, (1.0 - s * s) / 2.0);
+        deriv.set(6, 0, -(1.0 + s) * r);
+        deriv.set(7, 0, -(1.0 - s * s) / 2.0);
 
-        deriv[0][1] = -(1.0 - r) * (-s - s - r) / 4.0;
-        deriv[1][1] = -(1.0 + r) * (-s - s + r) / 4.0;
-        deriv[2][1] = (1.0 + r) * (s + s + r) / 4.0;
-        deriv[3][1] = (1.0 - r) * (s + s - r) / 4.0;
-        deriv[4][1] = -(1.0 - r * r) / 2.0;
-        deriv[5][1] = -(1.0 + r) * s;
-        deriv[6][1] = (1.0 - r * r) / 2.0;
-        deriv[7][1] = -(1.0 - r) * s;
+        deriv.set(0, 1, -(1.0 - r) * (-s - s - r) / 4.0);
+        deriv.set(1, 1, -(1.0 + r) * (-s - s + r) / 4.0);
+        deriv.set(2, 1, (1.0 + r) * (s + s + r) / 4.0);
+        deriv.set(3, 1, (1.0 - r) * (s + s - r) / 4.0);
+        deriv.set(4, 1, -(1.0 - r * r) / 2.0);
+        deriv.set(5, 1, -(1.0 + r) * s);
+        deriv.set(6, 1, (1.0 - r * r) / 2.0);
+        deriv.set(7, 1, -(1.0 - r) * s);
     }
 }

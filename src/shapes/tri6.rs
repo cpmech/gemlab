@@ -106,18 +106,18 @@ impl Tri6 {
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let (r, s) = (ksi[0], ksi[1]);
 
-        deriv[0][0] = -3.0 + 4.0 * (r + s);
-        deriv[1][0] = 4.0 * r - 1.0;
-        deriv[2][0] = 0.0;
-        deriv[3][0] = 4.0 - 8.0 * r - 4.0 * s;
-        deriv[4][0] = 4.0 * s;
-        deriv[5][0] = -4.0 * s;
+        deriv.set(0, 0, -3.0 + 4.0 * (r + s));
+        deriv.set(1, 0, 4.0 * r - 1.0);
+        deriv.set(2, 0, 0.0);
+        deriv.set(3, 0, 4.0 - 8.0 * r - 4.0 * s);
+        deriv.set(4, 0, 4.0 * s);
+        deriv.set(5, 0, -4.0 * s);
 
-        deriv[0][1] = -3.0 + 4.0 * (r + s);
-        deriv[1][1] = 0.0;
-        deriv[2][1] = 4.0 * s - 1.0;
-        deriv[3][1] = -4.0 * r;
-        deriv[4][1] = 4.0 * r;
-        deriv[5][1] = 4.0 - 4.0 * r - 8.0 * s;
+        deriv.set(0, 1, -3.0 + 4.0 * (r + s));
+        deriv.set(1, 1, 0.0);
+        deriv.set(2, 1, 4.0 * s - 1.0);
+        deriv.set(3, 1, -4.0 * r);
+        deriv.set(4, 1, 4.0 * r);
+        deriv.set(5, 1, 4.0 - 4.0 * r - 8.0 * s);
     }
 }

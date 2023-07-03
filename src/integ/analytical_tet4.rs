@@ -31,20 +31,20 @@ impl AnalyticalTet4 {
     pub fn new(pad: &Scratchpad) -> Self {
         assert_eq!(pad.kind, GeoKind::Tet4);
 
-        let x1 = pad.xxt[0][0];
-        let x2 = pad.xxt[0][1];
-        let x3 = pad.xxt[0][2];
-        let x4 = pad.xxt[0][3];
+        let x1 = pad.xxt.get(0, 0);
+        let x2 = pad.xxt.get(0, 1);
+        let x3 = pad.xxt.get(0, 2);
+        let x4 = pad.xxt.get(0, 3);
 
-        let y1 = pad.xxt[1][0];
-        let y2 = pad.xxt[1][1];
-        let y3 = pad.xxt[1][2];
-        let y4 = pad.xxt[1][3];
+        let y1 = pad.xxt.get(1, 0);
+        let y2 = pad.xxt.get(1, 1);
+        let y3 = pad.xxt.get(1, 2);
+        let y4 = pad.xxt.get(1, 3);
 
-        let z1 = pad.xxt[2][0];
-        let z2 = pad.xxt[2][1];
-        let z3 = pad.xxt[2][2];
-        let z4 = pad.xxt[2][3];
+        let z1 = pad.xxt.get(2, 0);
+        let z2 = pad.xxt.get(2, 1);
+        let z3 = pad.xxt.get(2, 2);
+        let z4 = pad.xxt.get(2, 3);
 
         let x12 = x1 - x2;
         let x13 = x1 - x3;
@@ -154,7 +154,12 @@ impl AnalyticalTet4 {
     /// * `pad` -- The same pad used in `new` because we need the nodal coordinates here.
     ///            Do not change the coordinates, otherwise the values will be wrong.
     pub fn vec_01_ns_linear_along_z(&self, pad: &Scratchpad) -> Vec<f64> {
-        let (z1, z2, z3, z4) = (pad.xxt[2][0], pad.xxt[2][1], pad.xxt[2][2], pad.xxt[2][3]);
+        let (z1, z2, z3, z4) = (
+            pad.xxt.get(2, 0),
+            pad.xxt.get(2, 1),
+            pad.xxt.get(2, 2),
+            pad.xxt.get(2, 3),
+        );
         vec![
             (self.volume * (2.0 * z1 + z2 + z3 + z4)) / 20.0,
             (self.volume * (z1 + 2.0 * z2 + z3 + z4)) / 20.0,
@@ -196,12 +201,13 @@ impl AnalyticalTet4 {
     /// ```text
     /// cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁ + w₂ Bᵐ₂) V
     /// ```
+    #[rustfmt::skip]
     pub fn vec_03_vb(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
         vec![
-            (w0 * self.bb[0][0] + w1 * self.bb[0][1] + w2 * self.bb[0][2]) * self.volume,
-            (w0 * self.bb[1][0] + w1 * self.bb[1][1] + w2 * self.bb[1][2]) * self.volume,
-            (w0 * self.bb[2][0] + w1 * self.bb[2][1] + w2 * self.bb[2][2]) * self.volume,
-            (w0 * self.bb[3][0] + w1 * self.bb[3][1] + w2 * self.bb[3][2]) * self.volume,
+            (w0 * self.bb.get(0,0) + w1 * self.bb.get(0,1) + w2 * self.bb.get(0,2)) * self.volume,
+            (w0 * self.bb.get(1,0) + w1 * self.bb.get(1,1) + w2 * self.bb.get(1,2)) * self.volume,
+            (w0 * self.bb.get(2,0) + w1 * self.bb.get(2,1) + w2 * self.bb.get(2,2)) * self.volume,
+            (w0 * self.bb.get(3,0) + w1 * self.bb.get(3,1) + w2 * self.bb.get(3,2)) * self.volume,
         ]
     }
 
@@ -216,25 +222,26 @@ impl AnalyticalTet4 {
     /// dᵐ₁ = (σ₁₀ Bᵐ₀ + σ₁₁ Bᵐ₁ + σ₁₂ Bᵐ₂) V
     /// dᵐ₂ = (σ₂₀ Bᵐ₀ + σ₂₁ Bᵐ₁ + σ₂₂ Bᵐ₂) V
     /// ```
+    #[rustfmt::skip]
     pub fn vec_04_tb(&self, tt: &Tensor2) -> Vec<f64> {
         let c = self.volume;
         let mat = tt.to_matrix();
-        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
-        let (a11, a12) = (mat[1][1], mat[1][2]);
-        let a22 = mat[2][2];
+        let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
+        let (a11, a12) = (mat.get(1,1), mat.get(1,2));
+        let a22 = mat.get(2,2);
         vec![
-            c * (a00 * self.bb[0][0] + a01 * self.bb[0][1] + a02 * self.bb[0][2]),
-            c * (a01 * self.bb[0][0] + a11 * self.bb[0][1] + a12 * self.bb[0][2]),
-            c * (a02 * self.bb[0][0] + a12 * self.bb[0][1] + a22 * self.bb[0][2]),
-            c * (a00 * self.bb[1][0] + a01 * self.bb[1][1] + a02 * self.bb[1][2]),
-            c * (a01 * self.bb[1][0] + a11 * self.bb[1][1] + a12 * self.bb[1][2]),
-            c * (a02 * self.bb[1][0] + a12 * self.bb[1][1] + a22 * self.bb[1][2]),
-            c * (a00 * self.bb[2][0] + a01 * self.bb[2][1] + a02 * self.bb[2][2]),
-            c * (a01 * self.bb[2][0] + a11 * self.bb[2][1] + a12 * self.bb[2][2]),
-            c * (a02 * self.bb[2][0] + a12 * self.bb[2][1] + a22 * self.bb[2][2]),
-            c * (a00 * self.bb[3][0] + a01 * self.bb[3][1] + a02 * self.bb[3][2]),
-            c * (a01 * self.bb[3][0] + a11 * self.bb[3][1] + a12 * self.bb[3][2]),
-            c * (a02 * self.bb[3][0] + a12 * self.bb[3][1] + a22 * self.bb[3][2]),
+            c * (a00 * self.bb.get(0,0) + a01 * self.bb.get(0,1) + a02 * self.bb.get(0,2)),
+            c * (a01 * self.bb.get(0,0) + a11 * self.bb.get(0,1) + a12 * self.bb.get(0,2)),
+            c * (a02 * self.bb.get(0,0) + a12 * self.bb.get(0,1) + a22 * self.bb.get(0,2)),
+            c * (a00 * self.bb.get(1,0) + a01 * self.bb.get(1,1) + a02 * self.bb.get(1,2)),
+            c * (a01 * self.bb.get(1,0) + a11 * self.bb.get(1,1) + a12 * self.bb.get(1,2)),
+            c * (a02 * self.bb.get(1,0) + a12 * self.bb.get(1,1) + a22 * self.bb.get(1,2)),
+            c * (a00 * self.bb.get(2,0) + a01 * self.bb.get(2,1) + a02 * self.bb.get(2,2)),
+            c * (a01 * self.bb.get(2,0) + a11 * self.bb.get(2,1) + a12 * self.bb.get(2,2)),
+            c * (a02 * self.bb.get(2,0) + a12 * self.bb.get(2,1) + a22 * self.bb.get(2,2)),
+            c * (a00 * self.bb.get(3,0) + a01 * self.bb.get(3,1) + a02 * self.bb.get(3,2)),
+            c * (a01 * self.bb.get(3,0) + a11 * self.bb.get(3,1) + a12 * self.bb.get(3,2)),
+            c * (a02 * self.bb.get(3,0) + a12 * self.bb.get(3,1) + a22 * self.bb.get(3,2)),
         ]
     }
 
@@ -254,10 +261,10 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_02_bvn(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
             [c*(b00*v0 + b01*v1 + b02*v2), c*(b00*v0 + b01*v1 + b02*v2), c*(b00*v0 + b01*v1 + b02*v2), c*(b00*v0 + b01*v1 + b02*v2)],
             [c*(b10*v0 + b11*v1 + b12*v2), c*(b10*v0 + b11*v1 + b12*v2), c*(b10*v0 + b11*v1 + b12*v2), c*(b10*v0 + b11*v1 + b12*v2)],
@@ -271,13 +278,13 @@ impl AnalyticalTet4 {
     pub fn mat_03_btb(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume;
         let mat = tt.to_matrix();
-        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
-        let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
-        let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
-        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
+        let (a10, a11, a12) = (mat.get(1,0), mat.get(1,1), mat.get(1,2));
+        let (a20, a21, a22) = (mat.get(2,0), mat.get(2,1), mat.get(2,2));
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
             [c*b00*(a00*b00 + a10*b01 + a20*b02) + c*b01*(a01*b00 + a11*b01 + a21*b02) + c*b02*(a02*b00 + a12*b01 + a22*b02), c*b10*(a00*b00 + a10*b01 + a20*b02) + c*b11*(a01*b00 + a11*b01 + a21*b02) + c*b12*(a02*b00 + a12*b01 + a22*b02), c*b20*(a00*b00 + a10*b01 + a20*b02) + c*b21*(a01*b00 + a11*b01 + a21*b02) + c*b22*(a02*b00 + a12*b01 + a22*b02), c*b30*(a00*b00 + a10*b01 + a20*b02) + c*b31*(a01*b00 + a11*b01 + a21*b02) + c*b32*(a02*b00 + a12*b01 + a22*b02)],
             [c*b00*(a00*b10 + a10*b11 + a20*b12) + c*b01*(a01*b10 + a11*b11 + a21*b12) + c*b02*(a02*b10 + a12*b11 + a22*b12), c*b10*(a00*b10 + a10*b11 + a20*b12) + c*b11*(a01*b10 + a11*b11 + a21*b12) + c*b12*(a02*b10 + a12*b11 + a22*b12), c*b20*(a00*b10 + a10*b11 + a20*b12) + c*b21*(a01*b10 + a11*b11 + a21*b12) + c*b22*(a02*b10 + a12*b11 + a22*b12), c*b30*(a00*b10 + a10*b11 + a20*b12) + c*b31*(a01*b10 + a11*b11 + a21*b12) + c*b32*(a02*b10 + a12*b11 + a22*b12)],
@@ -290,10 +297,10 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_04_nsb(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
             [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
             [c*b00*s, c*b01*s, c*b02*s, c*b10*s, c*b11*s, c*b12*s, c*b20*s, c*b21*s, c*b22*s, c*b30*s, c*b31*s, c*b32*s],
@@ -307,13 +314,13 @@ impl AnalyticalTet4 {
     pub fn mat_05_btn(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume / 4.0;
         let mat = tt.to_matrix();
-        let (t00, t01, t02) = (mat[0][0], mat[0][1], mat[0][2]);
-        let (t11, t12) = (mat[1][1], mat[1][2]);
-        let t22 = mat[2][2];
-        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (t00, t01, t02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
+        let (t11, t12) = (mat.get(1,1), mat.get(1,2));
+        let t22 = mat.get(2,2);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
             [c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22), c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22), c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22), c*(b00*t00 + b01*t01 + b02*t02), c*(b00*t01 + b01*t11 + b02*t12), c*(b00*t02 + b01*t12 + b02*t22)],
             [c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22), c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22), c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22), c*(b10*t00 + b11*t01 + b12*t02), c*(b10*t01 + b11*t11 + b12*t12), c*(b10*t02 + b11*t12 + b12*t22)],
@@ -346,10 +353,10 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_07_bsn(&self, s: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
             [c*b00*s, c*b00*s, c*b00*s, c*b00*s],
             [c*b01*s, c*b01*s, c*b01*s, c*b01*s],
@@ -371,9 +378,9 @@ impl AnalyticalTet4 {
     pub fn mat_08_ntn(&self, sig: &Tensor2) -> Matrix {
         let vv = self.volume;
         let mat = sig.to_matrix();
-        let (a00, a01, a02) = (mat[0][0], mat[0][1], mat[0][2]);
-        let (a10, a11, a12) = (mat[1][0], mat[1][1], mat[1][2]);
-        let (a20, a21, a22) = (mat[2][0], mat[2][1], mat[2][2]);
+        let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
+        let (a10, a11, a12) = (mat.get(1,0), mat.get(1,1), mat.get(1,2));
+        let (a20, a21, a22) = (mat.get(2,0), mat.get(2,1), mat.get(2,2));
         Matrix::from(&[
             [a00*vv/10.0, a01*vv/10.0, a02*vv/10.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0, a00*vv/20.0, a01*vv/20.0, a02*vv/20.0],
             [a10*vv/10.0, a11*vv/10.0, a12*vv/10.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0, a10*vv/20.0, a11*vv/20.0, a12*vv/20.0],
@@ -394,10 +401,10 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_09_nvb(&self, v0: f64, v1: f64, v2: f64) -> Matrix {
         let c = self.volume / 4.0;
-        let (b00, b01, b02) = (self.bb[0][0], self.bb[0][1], self.bb[0][2]);
-        let (b10, b11, b12) = (self.bb[1][0], self.bb[1][1], self.bb[1][2]);
-        let (b20, b21, b22) = (self.bb[2][0], self.bb[2][1], self.bb[2][2]);
-        let (b30, b31, b32) = (self.bb[3][0], self.bb[3][1], self.bb[3][2]);
+        let (b00, b01, b02) = (self.bb.get(0,0), self.bb.get(0,1), self.bb.get(0,2));
+        let (b10, b11, b12) = (self.bb.get(1,0), self.bb.get(1,1), self.bb.get(1,2));
+        let (b20, b21, b22) = (self.bb.get(2,0), self.bb.get(2,1), self.bb.get(2,2));
+        let (b30, b31, b32) = (self.bb.get(3,0), self.bb.get(3,1), self.bb.get(3,2));
         Matrix::from(&[
             [c*b00*v0, c*b01*v0, c*b02*v0, c*b10*v0, c*b11*v0, c*b12*v0, c*b20*v0, c*b21*v0, c*b22*v0, c*b30*v0, c*b31*v0, c*b32*v0],
             [c*b00*v1, c*b01*v1, c*b02*v1, c*b10*v1, c*b11*v1, c*b12*v1, c*b20*v1, c*b21*v1, c*b22*v1, c*b30*v1, c*b31*v1, c*b32*v1],

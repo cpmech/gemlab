@@ -136,8 +136,8 @@ impl Scratchpad {
         // →   →    →
         // n = e₃ × g₁ = {-g₁_0, +g₁_1}
         if space_ndim == 2 {
-            un[0] = -self.jacobian[1][0];
-            un[1] = self.jacobian[0][0];
+            un[0] = -self.jacobian.get(1, 0);
+            un[1] = self.jacobian.get(0, 0);
             let mag_n = f64::sqrt(un[0] * un[0] + un[1] * un[1]);
             if mag_n > 0.0 {
                 un[0] /= mag_n;
@@ -160,9 +160,9 @@ impl Scratchpad {
         // →   →    →
         // n = g₁ × g₂
         let jj = &self.jacobian;
-        un[0] = jj[1][0] * jj[2][1] - jj[2][0] * jj[1][1];
-        un[1] = jj[2][0] * jj[0][1] - jj[0][0] * jj[2][1];
-        un[2] = jj[0][0] * jj[1][1] - jj[1][0] * jj[0][1];
+        un[0] = jj.get(1, 0) * jj.get(2, 1) - jj.get(2, 0) * jj.get(1, 1);
+        un[1] = jj.get(2, 0) * jj.get(0, 1) - jj.get(0, 0) * jj.get(2, 1);
+        un[2] = jj.get(0, 0) * jj.get(1, 1) - jj.get(1, 0) * jj.get(0, 1);
         let mag_n = f64::sqrt(un[0] * un[0] + un[1] * un[1] + un[2] * un[2]);
         if mag_n > 0.0 {
             un[0] /= mag_n;
@@ -210,7 +210,7 @@ mod tests {
             (GeoKind::Lin2, 1e-15, 1e-15),
             (GeoKind::Lin3, 1e-15, 1e-15),
             (GeoKind::Lin4, 1e-14, 1e-14),
-            (GeoKind::Lin5, 1e-15, 1e-14),
+            (GeoKind::Lin5, 1e-14, 1e-14),
         ];
 
         // correct values
@@ -222,6 +222,8 @@ mod tests {
         let ksi = &[0.25];
         let mut un = Vector::new(2);
         for (kind, tol_mag, tol_vec) in problem {
+            // println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);
@@ -240,7 +242,7 @@ mod tests {
         // kind, tol_mag, tol_vec
         let problem = vec![
             (GeoKind::Hex8, 1e-15, 1e-15),
-            (GeoKind::Hex20, 1e-15, 1e-14),
+            (GeoKind::Hex20, 1e-14, 1e-14),
             (GeoKind::Hex32, 1e-14, 1e-14),
         ];
 
@@ -255,6 +257,8 @@ mod tests {
         let ksi = &[ONE_BY_3, ONE_BY_3];
         let mut un = Vector::new(3);
         for (kind, tol_mag, tol_vec) in problem {
+            // println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);

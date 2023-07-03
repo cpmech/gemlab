@@ -50,7 +50,7 @@ fn main() -> Result<(), StrError> {
     let mut x_interpolated = Vector::new(space_ndim);
     for m in 0..nnode {
         for j in 0..space_ndim {
-            x_interpolated[j] += pad.interp[m] * pad.xxt[j][m];
+            x_interpolated[j] += pad.interp[m] * pad.xxt.get(j, m);
         }
     }
 

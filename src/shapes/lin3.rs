@@ -67,8 +67,8 @@ impl Lin3 {
     pub fn calc_deriv(deriv: &mut Matrix, ksi: &[f64]) {
         let r = ksi[0];
 
-        deriv[0][0] = r - 0.5;
-        deriv[1][0] = r + 0.5;
-        deriv[2][0] = -2.0 * r;
+        deriv.set(0, 0, r - 0.5);
+        deriv.set(1, 0, r + 0.5);
+        deriv.set(2, 0, -2.0 * r);
     }
 }

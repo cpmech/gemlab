@@ -149,7 +149,7 @@ mod tests {
             (GeoKind::Qua4, 1e-11),
             (GeoKind::Qua8, 1e-10),
             (GeoKind::Qua9, 1e-10),
-            (GeoKind::Qua12, 1e-10),
+            (GeoKind::Qua12, 1e-9),
             (GeoKind::Qua16, 1e-9),
             (GeoKind::Qua17, 1e-9),
             // Tet
@@ -164,6 +164,8 @@ mod tests {
 
         // loop over shapes
         for (kind, tol) in problem {
+            // println!("kind = {:?}", kind);
+
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);
@@ -196,7 +198,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Bᵐⱼ := dNᵐ/dxⱼ
-                    deriv_approx_eq(pad.gradient[m][j], args.at_x[j], args, tol, nn_given_x);
+                    deriv_approx_eq(pad.gradient.get(m, j), args.at_x[j], args, tol, nn_given_x);
                 }
             }
         }

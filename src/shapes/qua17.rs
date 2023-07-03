@@ -162,42 +162,74 @@ impl Qua17 {
         let rrr = rr * r;
         let sss = ss * s;
 
-        deriv[0][0] = b * sm * (16.0 * rrr - 12.0 * rr - 6.0 * rs - 8.0 * r + 4.0 * sss - s + 4.0);
-        deriv[1][0] = b * sm * (16.0 * rrr + 12.0 * rr - 6.0 * rs - 8.0 * r - 4.0 * sss + s - 4.0);
-        deriv[2][0] = b * sp * (16.0 * rrr + 12.0 * rr + 6.0 * rs - 8.0 * r + 4.0 * sss - s - 4.0);
-        deriv[3][0] = b * sp * (16.0 * rrr - 12.0 * rr + 6.0 * rs - 8.0 * r - 4.0 * sss + s + 4.0);
+        deriv.set(
+            0,
+            0,
+            b * sm * (16.0 * rrr - 12.0 * rr - 6.0 * rs - 8.0 * r + 4.0 * sss - s + 4.0),
+        );
+        deriv.set(
+            1,
+            0,
+            b * sm * (16.0 * rrr + 12.0 * rr - 6.0 * rs - 8.0 * r - 4.0 * sss + s - 4.0),
+        );
+        deriv.set(
+            2,
+            0,
+            b * sp * (16.0 * rrr + 12.0 * rr + 6.0 * rs - 8.0 * r + 4.0 * sss - s - 4.0),
+        );
+        deriv.set(
+            3,
+            0,
+            b * sp * (16.0 * rrr - 12.0 * rr + 6.0 * rs - 8.0 * r - 4.0 * sss + s + 4.0),
+        );
 
-        deriv[9][0] = -a * (1.0 - 4.0 * r - 3.0 * rr + 8.0 * rrr) * sm;
-        deriv[11][0] = a * s * sm * sp * (-1.0 + 2.0 * s);
-        deriv[13][0] = -a * (-1.0 - 4.0 * r + 3.0 * rr + 8.0 * rrr) * sp;
-        deriv[15][0] = -a * s * sm * sp * (1.0 + 2.0 * s);
-        deriv[4][0] = r * sm * (8.0 * rr + s - 4.0);
-        deriv[5][0] = 0.5 * sm * sp * (2.0 * r - 4.0 * ss + 1.0);
-        deriv[6][0] = r * sp * (8.0 * rr - s - 4.0);
-        deriv[7][0] = 0.5 * sm * sp * (2.0 * r - 1.0 + 4.0 * ss);
-        deriv[10][0] = a * (1.0 + 4.0 * r - 3.0 * rr - 8.0 * rrr) * sm;
-        deriv[12][0] = a * s * sm * sp * (1.0 + 2.0 * s);
-        deriv[14][0] = -a * (1.0 - 4.0 * r - 3.0 * rr + 8.0 * rrr) * sp;
-        deriv[16][0] = a * s * sm * sp * (1.0 - 2.0 * s);
-        deriv[8][0] = -2.0 * r * sm * sp;
+        deriv.set(9, 0, -a * (1.0 - 4.0 * r - 3.0 * rr + 8.0 * rrr) * sm);
+        deriv.set(11, 0, a * s * sm * sp * (-1.0 + 2.0 * s));
+        deriv.set(13, 0, -a * (-1.0 - 4.0 * r + 3.0 * rr + 8.0 * rrr) * sp);
+        deriv.set(15, 0, -a * s * sm * sp * (1.0 + 2.0 * s));
+        deriv.set(4, 0, r * sm * (8.0 * rr + s - 4.0));
+        deriv.set(5, 0, 0.5 * sm * sp * (2.0 * r - 4.0 * ss + 1.0));
+        deriv.set(6, 0, r * sp * (8.0 * rr - s - 4.0));
+        deriv.set(7, 0, 0.5 * sm * sp * (2.0 * r - 1.0 + 4.0 * ss));
+        deriv.set(10, 0, a * (1.0 + 4.0 * r - 3.0 * rr - 8.0 * rrr) * sm);
+        deriv.set(12, 0, a * s * sm * sp * (1.0 + 2.0 * s));
+        deriv.set(14, 0, -a * (1.0 - 4.0 * r - 3.0 * rr + 8.0 * rrr) * sp);
+        deriv.set(16, 0, a * s * sm * sp * (1.0 - 2.0 * s));
+        deriv.set(8, 0, -2.0 * r * sm * sp);
 
-        deriv[0][1] = b * rm * (16.0 * sss - 12.0 * ss - 6.0 * rs - 8.0 * s + 4.0 * rrr - r + 4.0);
-        deriv[1][1] = -b * rp * (-16.0 * sss + 12.0 * ss - 6.0 * rs + 8.0 * s + 4.0 * rrr - r - 4.0);
-        deriv[2][1] = b * rp * (16.0 * sss + 12.0 * ss + 6.0 * rs - 8.0 * s + 4.0 * rrr - r - 4.0);
-        deriv[3][1] = b * r1 * (-16.0 * sss - 12.0 * ss + 6.0 * rs + 8.0 * s + 4.0 * rrr - r + 4.0);
+        deriv.set(
+            0,
+            1,
+            b * rm * (16.0 * sss - 12.0 * ss - 6.0 * rs - 8.0 * s + 4.0 * rrr - r + 4.0),
+        );
+        deriv.set(
+            1,
+            1,
+            -b * rp * (-16.0 * sss + 12.0 * ss - 6.0 * rs + 8.0 * s + 4.0 * rrr - r - 4.0),
+        );
+        deriv.set(
+            2,
+            1,
+            b * rp * (16.0 * sss + 12.0 * ss + 6.0 * rs - 8.0 * s + 4.0 * rrr - r - 4.0),
+        );
+        deriv.set(
+            3,
+            1,
+            b * r1 * (-16.0 * sss - 12.0 * ss + 6.0 * rs + 8.0 * s + 4.0 * rrr - r + 4.0),
+        );
 
-        deriv[9][1] = a * r * r1 * rp * (2.0 * r - 1.0);
-        deriv[11][1] = -a * (1.0 - 4.0 * s - 3.0 * ss + 8.0 * sss) * rp;
-        deriv[13][1] = -a * r * r1 * rp * (1.0 + 2.0 * r);
-        deriv[15][1] = a * (-1.0 - 4.0 * s + 3.0 * ss + 8.0 * sss) * r1;
-        deriv[4][1] = -0.5 * r1 * rp * (2.0 * s - 1.0 + 4.0 * rr);
-        deriv[5][1] = -s * rp * (-8.0 * ss + r + 4.0);
-        deriv[6][1] = 0.5 * r1 * rp * (-2.0 * s + 4.0 * rr - 1.0);
-        deriv[7][1] = -s * r1 * (8.0 * ss + r - 4.0);
-        deriv[10][1] = a * r * r1 * rp * (1.0 + 2.0 * r);
-        deriv[12][1] = -a * (-1.0 - 4.0 * s + 3.0 * ss + 8.0 * sss) * rp;
-        deriv[14][1] = -a * r * r1 * rp * (2.0 * r - 1.0);
-        deriv[16][1] = a * (1.0 - 4.0 * s - 3.0 * ss + 8.0 * sss) * r1;
-        deriv[8][1] = 2.0 * s * r1 * rp;
+        deriv.set(9, 1, a * r * r1 * rp * (2.0 * r - 1.0));
+        deriv.set(11, 1, -a * (1.0 - 4.0 * s - 3.0 * ss + 8.0 * sss) * rp);
+        deriv.set(13, 1, -a * r * r1 * rp * (1.0 + 2.0 * r));
+        deriv.set(15, 1, a * (-1.0 - 4.0 * s + 3.0 * ss + 8.0 * sss) * r1);
+        deriv.set(4, 1, -0.5 * r1 * rp * (2.0 * s - 1.0 + 4.0 * rr));
+        deriv.set(5, 1, -s * rp * (-8.0 * ss + r + 4.0));
+        deriv.set(6, 1, 0.5 * r1 * rp * (-2.0 * s + 4.0 * rr - 1.0));
+        deriv.set(7, 1, -s * r1 * (8.0 * ss + r - 4.0));
+        deriv.set(10, 1, a * r * r1 * rp * (1.0 + 2.0 * r));
+        deriv.set(12, 1, -a * (-1.0 - 4.0 * s + 3.0 * ss + 8.0 * sss) * rp);
+        deriv.set(14, 1, -a * r * r1 * rp * (2.0 * r - 1.0));
+        deriv.set(16, 1, a * (1.0 - 4.0 * s - 3.0 * ss + 8.0 * sss) * r1);
+        deriv.set(8, 1, 2.0 * s * r1 * rp);
     }
 }
