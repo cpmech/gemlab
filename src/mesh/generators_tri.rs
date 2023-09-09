@@ -178,6 +178,6 @@ mod tests {
         let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, false, None).unwrap();
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 14);
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_tri_quarter_ring_2d.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_tri_quarter_ring_2d.svg").unwrap();
     }
 }

@@ -66,6 +66,6 @@ fn main() -> Result<(), StrError> {
     approx_eq(second_mom_inertia_mesh_2, correct, 1e-5);
 
     // draw meshes
-    mesh::draw_mesh(&mesh_1, false, "/tmp/gemlab/example_mom_inertia_disk_1.svg")?;
-    mesh::draw_mesh(&mesh_2, false, "/tmp/gemlab/example_mom_inertia_disk_2.svg")
+    mesh::draw_mesh(&mesh_1, false, true, "/tmp/gemlab/example_mom_inertia_disk_1.svg")?;
+    mesh::draw_mesh(&mesh_2, false, true, "/tmp/gemlab/example_mom_inertia_disk_2.svg")
 }

@@ -1810,7 +1810,7 @@ mod tests {
                 approx_eq(point.coords[2], block.args_ring.zmax, 1e-15);
             }
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
     }
 
     #[test]
@@ -1847,7 +1847,7 @@ mod tests {
                 approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg").unwrap();
     }
 
     #[test]

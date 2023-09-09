@@ -543,10 +543,11 @@ impl Draw {
 ///
 /// * `mesh` -- the mesh
 /// * `with_ids` -- draw point ids and cell ids
+/// * `with_points` -- draw point markers (only if with_ids = false)
 /// * `filepath` -- may be a String, &str, or Path
 ///
 /// **Note:** This is a high-level function calling Draw and others
-pub fn draw_mesh<P>(mesh: &Mesh, with_ids: bool, filepath: &P) -> Result<(), StrError>
+pub fn draw_mesh<P>(mesh: &Mesh, with_ids: bool, with_points: bool, filepath: &P) -> Result<(), StrError>
 where
     P: AsRef<OsStr> + ?Sized,
 {
@@ -557,7 +558,9 @@ where
         draw.cell_ids(&mut plot, mesh)?;
         draw.point_ids(&mut plot, mesh);
     } else {
-        draw.points(&mut plot, mesh);
+        if with_points {
+            draw.points(&mut plot, mesh);
+        }
     }
     if mesh.ndim == 2 {
         plot.grid_and_labels("x", "y");

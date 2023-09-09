@@ -882,7 +882,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_ring_2d.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_ring_2d.svg").unwrap();
     }
 
     #[test]
@@ -907,7 +907,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_ring_3d.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_ring_3d.svg").unwrap();
     }
 
     #[test]
@@ -920,7 +920,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_disk_2d_a_qua8.svg").unwrap();
     }
 
     #[test]
@@ -933,7 +933,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua8_finer.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_disk_2d_a_qua8_finer.svg").unwrap();
     }
 
     #[test]
@@ -946,7 +946,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_a_qua16.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_disk_2d_a_qua16.svg").unwrap();
     }
 
     #[test]
@@ -967,7 +967,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_disk_2d_b_qua8.svg").unwrap();
     }
 
     #[test]
@@ -980,7 +980,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua8_finer.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_disk_2d_b_qua8_finer.svg").unwrap();
     }
 
     #[test]
@@ -993,7 +993,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_2d_b_qua16.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_disk_2d_b_qua16.svg").unwrap();
     }
 
     #[test]
@@ -1010,7 +1010,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_3d_a_hex32.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_disk_3d_a_hex32.svg").unwrap();
     }
 
     #[test]
@@ -1035,7 +1035,7 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_disk_3d_b_hex32.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_disk_3d_b_hex32.svg").unwrap();
     }
 
     #[test]
@@ -1053,7 +1053,7 @@ mod tests {
             approx_eq(d, 2.0, 1e-15);
         }
         assert_eq!(mesh.points[21].coords, &[3.0, 3.0]);
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_2d.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_plate_hole_2d.svg").unwrap();
     }
 
     #[test]
@@ -1083,7 +1083,7 @@ mod tests {
         vec_approx_eq(&mesh.points[26].coords, &[2.0, 0.0, 0.5], 1e-15);
         vec_approx_eq(&mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
         vec_approx_eq(&mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_3d.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_quarter_plate_hole_3d.svg").unwrap();
     }
 
     #[test]
@@ -1142,7 +1142,7 @@ mod tests {
         // one column / one layer = single cell -------------------------------
 
         let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 5.0], &[1], &[10], target).unwrap();
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_1.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_layered_rectangle_1.svg").unwrap();
         check_overlapping_points(&mesh, 1e-2).unwrap();
         check_all(&mesh).unwrap();
         assert_eq!(
@@ -1166,7 +1166,7 @@ mod tests {
         // two columns / one layer = two cells -------------------------------
 
         let mesh = Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 5.0], &[1], &[20], target).unwrap();
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_2.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_layered_rectangle_2.svg").unwrap();
         check_overlapping_points(&mesh, 1e-2).unwrap();
         check_all(&mesh).unwrap();
         assert_eq!(
@@ -1193,7 +1193,7 @@ mod tests {
         // one column / two layers = two cells -------------------------------
 
         let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_3.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_layered_rectangle_3.svg").unwrap();
         check_overlapping_points(&mesh, 1e-2).unwrap();
         check_all(&mesh).unwrap();
         assert_eq!(
@@ -1221,7 +1221,7 @@ mod tests {
 
         let mesh =
             Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_layered_rectangle_4.svg").unwrap();
+        // draw_mesh(&mesh, true, false, "/tmp/gemlab/test_layered_rectangle_4.svg").unwrap();
         check_overlapping_points(&mesh, 1e-2).unwrap();
         check_all(&mesh).unwrap();
         assert_eq!(
