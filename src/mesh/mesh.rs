@@ -148,11 +148,11 @@ impl fmt::Display for Mesh {
         write!(f, "# id x y {{z}}\n").unwrap();
         self.points.iter().for_each(|point| {
             if self.ndim == 2 {
-                write!(f, "{} {} {}\n", point.id, point.coords[0], point.coords[1]).unwrap();
+                write!(f, "{} {:?} {:?}\n", point.id, point.coords[0], point.coords[1]).unwrap();
             } else {
                 write!(
                     f,
-                    "{} {} {} {}\n",
+                    "{} {:?} {:?} {:?}\n",
                     point.id, point.coords[0], point.coords[1], point.coords[2]
                 )
                 .unwrap();
@@ -262,12 +262,12 @@ mod tests {
              \n\
              # points\n\
              # id x y {z}\n\
-             0 0 0\n\
-             1 1 0\n\
-             2 1 1\n\
-             3 0 1\n\
-             4 2 0\n\
-             5 2 1\n\
+             0 0.0 0.0\n\
+             1 1.0 0.0\n\
+             2 1.0 1.0\n\
+             3 0.0 1.0\n\
+             4 2.0 0.0\n\
+             5 2.0 1.0\n\
              \n\
              # cells\n\
              # id att kind  points\n\
@@ -290,18 +290,18 @@ mod tests {
              \n\
              # points\n\
              # id x y {z}\n\
-             0 0 0 0\n\
-             1 1 0 0\n\
-             2 1 1 0\n\
-             3 0 1 0\n\
-             4 0 0 1\n\
-             5 1 0 1\n\
-             6 1 1 1\n\
-             7 0 1 1\n\
-             8 0 0 2\n\
-             9 1 0 2\n\
-             10 1 1 2\n\
-             11 0 1 2\n\
+             0 0.0 0.0 0.0\n\
+             1 1.0 0.0 0.0\n\
+             2 1.0 1.0 0.0\n\
+             3 0.0 1.0 0.0\n\
+             4 0.0 0.0 1.0\n\
+             5 1.0 0.0 1.0\n\
+             6 1.0 1.0 1.0\n\
+             7 0.0 1.0 1.0\n\
+             8 0.0 0.0 2.0\n\
+             9 1.0 0.0 2.0\n\
+             10 1.0 1.0 2.0\n\
+             11 0.0 1.0 2.0\n\
              \n\
              # cells\n\
              # id att kind  points\n\
