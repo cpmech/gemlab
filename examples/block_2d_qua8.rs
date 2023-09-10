@@ -69,6 +69,6 @@ fn main() -> Result<(), StrError> {
 ";
 
     assert_eq!(format!("{}", mesh), correct);
-    draw_mesh(&mesh, true, false, "/tmp/gemlab/example_block_2d_qua8.svg")?;
+    draw_mesh(&mesh, true, false, false, "/tmp/gemlab/example_block_2d_qua8.svg")?;
     Ok(())
 }

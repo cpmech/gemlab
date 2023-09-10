@@ -43,5 +43,5 @@ fn main() -> Result<(), StrError> {
     approx_eq(second_mom_inertia, correct, 1e-7);
 
     // draw mesh
-    mesh::draw_mesh(&mesh, false, true, "/tmp/gemlab/example_mom_inertia_ring.svg")
+    mesh::draw_mesh(&mesh, false, true, false, "/tmp/gemlab/example_mom_inertia_ring.svg")
 }

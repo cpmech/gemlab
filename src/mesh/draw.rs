@@ -542,20 +542,29 @@ impl Draw {
 /// # Input
 ///
 /// * `mesh` -- the mesh
-/// * `with_ids` -- draw point ids and cell ids
-/// * `with_points` -- draw point markers (only if with_ids = false)
+/// * `with_cell_ids` -- draw cell ids
+/// * `with_point_ids` -- draw point ids
+/// * `with_points` -- draw point markers (only if with_point_ids = false)
 /// * `filepath` -- may be a String, &str, or Path
 ///
 /// **Note:** This is a high-level function calling Draw and others
-pub fn draw_mesh<P>(mesh: &Mesh, with_ids: bool, with_points: bool, filepath: &P) -> Result<(), StrError>
+pub fn draw_mesh<P>(
+    mesh: &Mesh,
+    with_cell_ids: bool,
+    with_point_ids: bool,
+    with_points: bool,
+    filepath: &P,
+) -> Result<(), StrError>
 where
     P: AsRef<OsStr> + ?Sized,
 {
     let mut plot = Plot::new();
     let mut draw = Draw::new();
     draw.cells(&mut plot, &mesh, true)?;
-    if with_ids {
+    if with_cell_ids {
         draw.cell_ids(&mut plot, mesh)?;
+    }
+    if with_point_ids {
         draw.point_ids(&mut plot, mesh);
     } else {
         if with_points {

@@ -42,6 +42,6 @@ fn main() -> Result<(), StrError> {
     assert_eq!(mesh.cells.len(), 5);
     assert_eq!(mesh.cells[0].points.len(), 3);
     assert_eq!(mesh.cells[2].points.len(), 4);
-    draw_mesh(&mesh, true, false, "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg")?;
+    draw_mesh(&mesh, true, false, false, "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg")?;
     Ok(())
 }
