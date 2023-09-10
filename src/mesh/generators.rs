@@ -844,9 +844,9 @@ impl Structured {
 #[cfg(test)]
 mod tests {
     use super::Structured;
-    use crate::mesh::check_overlapping_points;
+    use crate::geometry::point_point_distance;
+    use crate::mesh::{check_all, check_overlapping_points};
     use crate::shapes::GeoKind;
-    use crate::{geometry::point_point_distance, prelude::check_all};
     use russell_chk::{approx_eq, vec_approx_eq};
 
     #[allow(unused_imports)]

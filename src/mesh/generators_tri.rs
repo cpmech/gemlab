@@ -2,7 +2,7 @@ use super::{Cell, Mesh, Point};
 use crate::shapes::GeoKind;
 use crate::StrError;
 use russell_lab::math::PI;
-use tritet::Triangle;
+use tritet::Trigen;
 
 /// Groups generators of unstructured meshes (Tri and Tet only)
 pub struct Unstructured {}
@@ -55,7 +55,7 @@ impl Unstructured {
         let npoint = 2 * (nr + 1) + 2 * (na - 1);
         let nsegment = npoint;
         let nregion = 1;
-        let mut tri = Triangle::new(npoint, Some(nsegment), Some(nregion), None)?;
+        let mut trigen = Trigen::new(npoint, Some(nsegment), Some(nregion), None)?;
 
         // constants
         const AMIN: f64 = 0.0;
@@ -67,12 +67,12 @@ impl Unstructured {
         let mut index = 0;
 
         // horizontal line
-        tri.set_point(index, rmin, 0.0)?;
+        trigen.set_point(index, rmin, 0.0)?;
         index += 1;
         for i in 1..(nr + 1) {
             let r = rmin + (i as f64) * dr;
-            tri.set_point(index, r, 0.0)?;
-            tri.set_segment(index - 1, index - 1, index)?;
+            trigen.set_point(index, r, 0.0)?;
+            trigen.set_segment(index - 1, index - 1, index)?;
             index += 1;
         }
 
@@ -81,16 +81,16 @@ impl Unstructured {
             let a = AMIN + (i as f64) * da;
             let x = rmax * f64::cos(a);
             let y = rmax * f64::sin(a);
-            tri.set_point(index, x, y)?;
-            tri.set_segment(index - 1, index - 1, index)?;
+            trigen.set_point(index, x, y)?;
+            trigen.set_segment(index - 1, index - 1, index)?;
             index += 1;
         }
 
         // vertical line
         for i in 1..(nr + 1) {
             let r = rmin + ((nr - i) as f64) * dr;
-            tri.set_point(index, 0.0, r)?;
-            tri.set_segment(index - 1, index - 1, index)?;
+            trigen.set_point(index, 0.0, r)?;
+            trigen.set_segment(index - 1, index - 1, index)?;
             index += 1;
         }
 
@@ -99,23 +99,23 @@ impl Unstructured {
             let a = AMIN + ((na - i) as f64) * da;
             let x = rmin * f64::cos(a);
             let y = rmin * f64::sin(a);
-            tri.set_point(index, x, y)?;
-            tri.set_segment(index - 1, index - 1, index)?;
+            trigen.set_point(index, x, y)?;
+            trigen.set_segment(index - 1, index - 1, index)?;
             index += 1;
         }
-        tri.set_segment(index - 1, index - 1, 0)?;
+        trigen.set_segment(index - 1, index - 1, 0)?;
 
         // region
-        tri.set_region(0, rmin + 1e-4, 1e-4, 1, None)?;
+        trigen.set_region(0, rmin + 1e-4, 1e-4, 1, None)?;
 
         // generate mesh
-        tri.generate_mesh(false, o2, global_max_area, None)?;
+        trigen.generate_mesh(false, o2, false, global_max_area, None)?;
 
         // allocate data
         const NDIM: usize = 2;
-        let npoint = tri.npoint();
-        let ncell = tri.ntriangle();
-        let nnode = tri.nnode();
+        let npoint = trigen.npoint();
+        let ncell = trigen.ntriangle();
+        let nnode = trigen.nnode();
         let kind = if o2 { GeoKind::Tri6 } else { GeoKind::Tri3 };
         let zero_point = Point {
             id: 0,
@@ -136,14 +136,14 @@ impl Unstructured {
         // set mesh data
         for i in 0..npoint {
             mesh.points[i].id = i;
-            mesh.points[i].coords[0] = tri.point(i, 0);
-            mesh.points[i].coords[1] = tri.point(i, 1);
+            mesh.points[i].coords[0] = trigen.point(i, 0);
+            mesh.points[i].coords[1] = trigen.point(i, 1);
         }
         for i in 0..ncell {
             mesh.cells[i].id = i;
-            mesh.cells[i].attribute_id = tri.triangle_attribute(i);
+            mesh.cells[i].attribute_id = trigen.triangle_attribute(i);
             for m in 0..nnode {
-                mesh.cells[i].points[m] = tri.triangle_node(i, m);
+                mesh.cells[i].points[m] = trigen.triangle_node(i, m);
             }
         }
 
@@ -157,6 +157,9 @@ impl Unstructured {
 #[cfg(test)]
 mod tests {
     use super::Unstructured;
+    use crate::geometry::point_point_distance;
+    use crate::mesh::{check_all, check_overlapping_points};
+    use russell_chk::approx_eq;
 
     #[allow(unused_imports)]
     use crate::mesh::draw_mesh;
@@ -176,8 +179,38 @@ mod tests {
     #[test]
     fn tri_quarter_ring_2d_works() {
         let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, false, None).unwrap();
+        // draw_mesh(&mesh, false, true, false, "/tmp/gemlab/test_tri_quarter_ring_2d.svg").unwrap();
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 14);
-        // draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_tri_quarter_ring_2d.svg").unwrap();
+        check_all(&mesh).unwrap();
+        check_overlapping_points(&mesh, 0.18).unwrap();
+        for p in [0, 11, 10, 9, 8] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, 3.0, 1e-15);
+        }
+        for p in [2, 3, 4, 5, 6] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, 6.0, 1e-15);
+        }
+    }
+
+    #[test]
+    fn tri_quarter_ring_2d_global_max_area_works() {
+        let global_max_area = 0.4;
+        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, false, Some(global_max_area)).unwrap();
+        // let svg = "/tmp/gemlab/test_tri_quarter_ring_2d_global_max_area.svg";
+        // draw_mesh(&mesh, false, true, false, svg).unwrap();
+        assert_eq!(mesh.points.len(), 40);
+        assert_eq!(mesh.cells.len(), 66);
+        check_all(&mesh).unwrap();
+        check_overlapping_points(&mesh, 0.18).unwrap();
+        for p in [0, 11, 10, 9, 8] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, 3.0, 1e-15);
+        }
+        for p in [2, 3, 4, 5, 6] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, 6.0, 1e-15);
+        }
     }
 }
