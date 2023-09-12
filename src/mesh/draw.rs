@@ -408,6 +408,10 @@ impl Draw {
     ///
     /// * `plot` -- the plot instance (to be updated)
     /// * `mesh` -- the mesh
+    ///
+    /// # Note
+    ///
+    /// If the point marker is negative, this marker is show in parenthesis.
     pub fn point_ids(&mut self, plot: &mut Plot, mesh: &Mesh) {
         if mesh.ndim == 2 {
             mesh.points.iter().for_each(|point| {
@@ -472,6 +476,10 @@ impl Draw {
     ///
     /// * `plot` -- the plot instance (to be updated)
     /// * `mesh` -- the mesh
+    ///
+    /// # Note
+    ///
+    /// The number in parenthesis is the cell attribute.
     pub fn cell_ids(&mut self, plot: &mut Plot, mesh: &Mesh) -> Result<(), StrError> {
         // auxiliary
         let mut x = Vector::new(mesh.ndim);
@@ -491,7 +499,7 @@ impl Draw {
             }
 
             // add label
-            let msg = format!("{} a {}", cell.id, cell.attribute);
+            let msg = format!("{}({})", cell.id, cell.attribute);
             if mesh.ndim == 2 {
                 self.canvas_cell_ids.draw(x[0], x[1], msg.as_str());
             } else {
@@ -597,7 +605,7 @@ mod tests {
     #[allow(unused_imports)]
     use plotpy::GraphMaker;
 
-    const SAVE_FIGURE: bool = false;
+    const SAVE_FIGURE: bool = true;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
