@@ -137,11 +137,11 @@ impl Mesh {
         write!(
             &mut buffer,
             "\n</DataArray>\n\
-             <DataArray type=\"Int32\" Name=\"attribute_id\" NumberOfComponents=\"1\" format=\"ascii\">\n"
+             <DataArray type=\"Int32\" Name=\"attribute\" NumberOfComponents=\"1\" format=\"ascii\">\n"
         )
         .unwrap();
         for cell in &self.cells {
-            write!(&mut buffer, "{} ", cell.attribute_id).unwrap();
+            write!(&mut buffer, "{} ", cell.attribute).unwrap();
         }
         write!(
             &mut buffer,
@@ -235,7 +235,7 @@ mod tests {
 <DataArray type="Int32" Name="cell_id" NumberOfComponents="1" format="ascii">
 0 1 2 3 
 </DataArray>
-<DataArray type="Int32" Name="attribute_id" NumberOfComponents="1" format="ascii">
+<DataArray type="Int32" Name="attribute" NumberOfComponents="1" format="ascii">
 1 2 3 3 
 </DataArray>
 </CellData>
@@ -284,7 +284,7 @@ mod tests {
 <DataArray type="Int32" Name="cell_id" NumberOfComponents="1" format="ascii">
 0 1 2 3 4 
 </DataArray>
-<DataArray type="Int32" Name="attribute_id" NumberOfComponents="1" format="ascii">
+<DataArray type="Int32" Name="attribute" NumberOfComponents="1" format="ascii">
 1 2 2 2 3 
 </DataArray>
 </CellData>

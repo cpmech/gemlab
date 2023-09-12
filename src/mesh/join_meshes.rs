@@ -52,7 +52,7 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     for cell in &b.cells {
         mesh.cells.push(Cell {
             id: new_cell_id,
-            attribute_id: cell.attribute_id,
+            attribute: cell.attribute,
             kind: cell.kind,
             points: cell.points.iter().map(|id| map_old_to_new_point_id_b[*id]).collect(),
         });
@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn join_two_meshes_works_2d() {
         //          [#] indicates id
-        //      y   (#) indicates attribute_id
+        //      y   (#) indicates attribute
         //      ↑
         // 1.0  3-----------2-----------5
         //      |           |           |
@@ -153,10 +153,10 @@ mod tests {
         assert_eq!(mesh.cells[1].points, &[1, 4, 5, 2]);
         assert_eq!(mesh.cells[2].points, &[3, 2, 6, 7]);
         assert_eq!(mesh.cells[3].points, &[2, 5, 8, 6]);
-        assert_eq!(mesh.cells[0].attribute_id, 1);
-        assert_eq!(mesh.cells[1].attribute_id, 2);
-        assert_eq!(mesh.cells[2].attribute_id, 1);
-        assert_eq!(mesh.cells[3].attribute_id, 2);
+        assert_eq!(mesh.cells[0].attribute, 1);
+        assert_eq!(mesh.cells[1].attribute, 2);
+        assert_eq!(mesh.cells[2].attribute, 1);
+        assert_eq!(mesh.cells[3].attribute, 2);
         println!("{}", mesh);
     }
 

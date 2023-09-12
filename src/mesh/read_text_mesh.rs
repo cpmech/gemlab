@@ -118,9 +118,9 @@ impl DataForReadTextMesh {
             return Err("the id and index of cells must equal each other");
         }
 
-        let attribute_id: usize = match data.next() {
-            Some(v) => v.parse().map_err(|_| "cannot parse cell attribute id")?,
-            None => return Err("cannot read cell attribute id"),
+        let attribute: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse cell attribute")?,
+            None => return Err("cannot read cell attribute"),
         };
 
         let str_kind = match data.next() {
@@ -147,7 +147,7 @@ impl DataForReadTextMesh {
 
         mesh.cells.push(Cell {
             id,
-            attribute_id,
+            attribute: attribute,
             kind,
             points,
         });
@@ -169,7 +169,7 @@ impl Mesh {
     /// 2. The points list where each line contains the `id` of the point, which must be **equal to the position** in the list,
     ///    followed by the `x` and `y` (and `z`) coordinates;
     /// 3. The cells list where each line contains the `id` of the cell, which must be **equal to the position** in the list,
-    ///    the attribute ID (`att`) of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
+    ///    the attribute (`att`) of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
     ///
     /// The text file looks like this (the hash tag indicates a comment/the mesh below is just an example which won't work):
     ///
@@ -285,7 +285,7 @@ impl Mesh {
     /// 2. The points list where each line contains the `id` of the point, which must be **equal to the position** in the list,
     ///    followed by the `x` and `y` (and `z`) coordinates;
     /// 3. The cells list where each line contains the `id` of the cell, which must be **equal to the position** in the list,
-    ///    the attribute ID (`att`) of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
+    ///    the attribute (`att`) of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
     ///
     /// The text looks like this (the hash tag indicates a comment/the mesh below is just an example which won't work):
     ///
@@ -516,11 +516,11 @@ mod tests {
 
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 \n")).err(),
-            Some("cannot read cell attribute id")
+            Some("cannot read cell attribute")
         );
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 wrong")).err(),
-            Some("cannot parse cell attribute id")
+            Some("cannot parse cell attribute")
         );
 
         assert_eq!(

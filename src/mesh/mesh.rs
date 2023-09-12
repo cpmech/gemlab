@@ -13,8 +13,8 @@ pub type PointId = usize;
 /// Aliases usize as Cell ID
 pub type CellId = usize;
 
-/// Aliases usize as Cell's attribute ID
-pub type CellAttributeId = usize;
+/// Aliases usize as Cell's attribute
+pub type CellAttribute = usize;
 
 /// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -32,8 +32,8 @@ pub struct Cell {
     /// Identification number which equals the index of the cell in the mesh
     pub id: CellId,
 
-    /// Attribute identification number
-    pub attribute_id: CellAttributeId,
+    /// Attribute number
+    pub attribute: CellAttribute,
 
     /// The kind of cell
     pub kind: GeoKind,
@@ -53,7 +53,7 @@ pub struct Cell {
 /// use gemlab::shapes::GeoKind;
 ///
 /// //          [#] indicates id
-/// //      y   (#) indicates attribute_id
+/// //      y   (#) indicates attribute
 /// //      ↑
 /// // 1.0  3-----------2-----------5
 /// //      |           |           |
@@ -74,8 +74,8 @@ pub struct Cell {
 ///         Point { id: 5, coords: vec![2.0, 1.0] },
 ///     ],
 ///     cells: vec![
-///         Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-///         Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+///         Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+///         Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
 ///     ],
 /// };
 /// ```
@@ -165,7 +165,7 @@ impl fmt::Display for Mesh {
                 f,
                 "{} {} {} {}\n",
                 cell.id,
-                cell.attribute_id,
+                cell.attribute,
                 cell.kind.to_string(),
                 cell.points.iter().fold(&mut String::new(), |acc, cur| {
                     write!(acc, " {}", cur).unwrap();
@@ -238,7 +238,7 @@ mod tests {
     fn derive_works() {
         let mesh = Samples::two_qua4();
         let mesh_clone = mesh.clone();
-        let correct ="Mesh { ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute_id: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute_id: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
+        let correct ="Mesh { ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
         assert_eq!(format!("{:?}", mesh), correct);
         assert_eq!(mesh_clone.ndim, mesh.ndim);
         assert_eq!(mesh_clone.points.len(), mesh.points.len());

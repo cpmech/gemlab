@@ -486,7 +486,7 @@ impl Draw {
             }
 
             // add label
-            let msg = format!("{} a {}", cell.id, cell.attribute_id);
+            let msg = format!("{} a {}", cell.id, cell.attribute);
             if mesh.ndim == 2 {
                 self.canvas_cell_ids.draw(x[0], x[1], msg.as_str());
             } else {

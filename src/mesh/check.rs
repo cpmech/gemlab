@@ -167,8 +167,8 @@ mod tests {
                 Point { id: 5, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         };
         check_ids_and_kind(&mesh).expect("should not fail");
@@ -222,8 +222,8 @@ mod tests {
                 Point { id: 5, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         };
         check_jacobian(&mesh).expect("should not fail");
@@ -269,8 +269,8 @@ mod tests {
                 Point { id: 5, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         };
 
@@ -342,7 +342,7 @@ mod tests {
                 Point { id: 7, coords: vec![0.0, 1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
+                Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
         };
 
@@ -398,8 +398,8 @@ mod tests {
                 Point { id: 5, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
         };
         check_overlapping_points(&mesh, 1e-2).expect("should not fail");

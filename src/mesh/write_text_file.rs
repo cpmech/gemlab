@@ -17,7 +17,7 @@ impl Mesh {
     /// 2. The points list where each line contains the `id` of the point, which must be **equal to the position** in the list,
     ///    followed by the `x` and `y` (and `z`) coordinates;
     /// 3. The cells list where each line contains the `id` of the cell, which must be **equal to the position** in the list,
-    ///    the attribute ID (`att`) of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
+    ///    the attribute (`att`) of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
     ///
     /// The text file looks like this (the hash tag indicates a comment/the mesh below is just an example which won't work):
     ///

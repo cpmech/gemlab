@@ -134,7 +134,7 @@ impl Unstructured {
         };
         let zero_cell = Cell {
             id: 0,
-            attribute_id: 1,
+            attribute: 1,
             kind,
             points: vec![0; nnode],
         };
@@ -161,7 +161,7 @@ impl Unstructured {
         }
         for i in 0..ncell {
             mesh.cells[i].id = i;
-            mesh.cells[i].attribute_id = trigen.out_cell_attribute(i);
+            mesh.cells[i].attribute = trigen.out_cell_attribute(i);
             for m in 0..nnode {
                 mesh.cells[i].points[m] = trigen.out_cell_point(i, m);
             }

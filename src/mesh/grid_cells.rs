@@ -575,8 +575,8 @@ mod tests {
                 Point { id: 3, coords: vec![0.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
-                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
             ],
         };
         let tolerance = 1e-3;
@@ -669,8 +669,8 @@ mod tests {
                 Point { id: 3, coords: vec![0.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
-                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
             ],
         };
         let tolerance = 1e-3;

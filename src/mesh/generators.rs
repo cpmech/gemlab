@@ -812,8 +812,8 @@ impl Structured {
                 let mut bb = Block::new(&[[xxb, ya], [xc, ya], [xc, yb], [xxb, yb]]).unwrap();
                 ba.set_ndiv(&[na, ny[l]]).unwrap();
                 bb.set_ndiv(&[nb, ny[l]]).unwrap();
-                ba.set_attribute_id(attributes[l]);
-                bb.set_attribute_id(attributes[l]);
+                ba.set_attribute(attributes[l]);
+                bb.set_attribute(attributes[l]);
                 meshes.push(ba.subdivide(target)?);
                 meshes.push(bb.subdivide(target).unwrap());
                 ya = yb;
@@ -826,7 +826,7 @@ impl Structured {
                 }
                 let mut block = Block::new(&[[xa, ya], [xc, ya], [xc, yb], [xa, yb]]).unwrap();
                 block.set_ndiv(&[na, ny[l]]).unwrap();
-                block.set_attribute_id(attributes[l]);
+                block.set_attribute(attributes[l]);
                 let mesh = block.subdivide(target)?;
                 if n_layer == 1 {
                     return Ok(mesh);
