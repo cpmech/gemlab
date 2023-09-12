@@ -27,7 +27,7 @@ pub struct Feature {
     /// Geometry kind
     pub kind: GeoKind,
 
-    /// List of points defining this edge; in the right order (unsorted)
+    /// List of points defining this edge or face; in the right (FEM) order (i.e., unsorted)
     pub points: Vec<PointId>,
 }
 
