@@ -592,6 +592,29 @@ mod tests {
     #[allow(unused_imports)]
     use plotpy::GraphMaker;
 
+    const SAVE_FIGURE: bool = false;
+
+    fn labels_and_caption() -> (Text, Text) {
+        // labels for cell local ids
+        let mut labels = Text::new();
+        labels
+            .set_color("#17af14")
+            .set_align_vertical("bottom")
+            .set_align_horizontal("center");
+
+        // captions such as Lin3, Lin4, Tri3, ...
+        let mut caption = Text::new();
+        caption
+            .set_fontsize(12.0)
+            .set_align_horizontal("center")
+            .set_align_vertical("top")
+            .set_bbox(true)
+            .set_bbox_style("round4,pad=0.3,rounding_size=0.15")
+            .set_bbox_edgecolor("None")
+            .set_bbox_facecolor("#57e986");
+        (labels, caption)
+    }
+
     fn draw_cell_local_ids(plot: &mut Plot, labels: &mut Text, mesh: &Mesh, dx: f64, dy: f64, dz: f64) {
         for cell in &mesh.cells {
             for m in 0..cell.points.len() {
@@ -659,43 +682,29 @@ mod tests {
 
     #[test]
     fn draw_cells_and_points_work() {
-        // labels for cell local ids
-        let mut labels = Text::new();
-        labels
-            .set_color("#17af14")
-            .set_align_vertical("bottom")
-            .set_align_horizontal("center");
-
-        // captions such as Lin3, Lin4, Tri3, ...
-        let mut caption = Text::new();
-        caption
-            .set_fontsize(12.0)
-            .set_align_horizontal("center")
-            .set_align_vertical("top")
-            .set_bbox(true)
-            .set_bbox_style("round4,pad=0.3,rounding_size=0.15")
-            .set_bbox_edgecolor("None")
-            .set_bbox_facecolor("#57e986");
-
         // lin cells
         let mesh = Samples::lin_cells();
         let mut plot = Plot::new();
         let mut draw = Draw::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
-        // draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.0, 0.05, 0.0);
-        // caption.draw(0.6, -0.05, "Lin2");
-        // caption.draw(1.4 + 0.6, -0.05, "Lin3");
-        // caption.draw(2.8 + 0.6, -0.05, "Lin4");
-        // caption.draw(4.2 + 0.6, -0.05, "Lin5");
-        // plot.add(&caption);
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_frame_borders(false)
-        //     .set_hide_axes(true)
-        //     .set_equal_axes(true)
-        //     .set_range(-0.1, 5.6, -0.3, 1.5)
-        //     .save("/tmp/gemlab/test_draw_cells_and_points_work_1_lin.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            let (mut labels, mut caption) = labels_and_caption();
+            draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.0, 0.05, 0.0);
+            caption.draw(0.6, -0.05, "Lin2");
+            caption.draw(1.4 + 0.6, -0.05, "Lin3");
+            caption.draw(2.8 + 0.6, -0.05, "Lin4");
+            caption.draw(4.2 + 0.6, -0.05, "Lin5");
+            plot.add(&caption);
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_frame_borders(false)
+                .set_hide_axes(true)
+                .set_equal_axes(true)
+                .set_range(-0.1, 5.6, -0.3, 1.5)
+                .save("/tmp/gemlab/test_draw_cells_and_points_work_1_lin.svg")
+                .unwrap();
+        }
 
         // lin cells in 3d
         let mesh = Samples::lin_cells_3d();
@@ -703,17 +712,21 @@ mod tests {
         let mut draw = Draw::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
-        // draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.0, 0.05, 0.0);
-        // caption.draw_3d(1.2, 1.33, 1.33, "Lin2");
-        // caption.draw_3d(1.4 + 1.2, 1.33, 1.33, "Lin3");
-        // caption.draw_3d(2.8 + 1.2, 1.33, 1.33, "Lin4");
-        // caption.draw_3d(4.2 + 1.2, 1.33, 1.33, "Lin5");
-        // plot.add(&caption);
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_equal_axes(true)
-        //     .set_range_3d(0.0, 5.3, 0.0, 1.2, 0.0, 1.2)
-        //     .save("/tmp/gemlab/test_draw_cells_and_points_work_1_lin_3d.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            let (mut labels, mut caption) = labels_and_caption();
+            draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.0, 0.05, 0.0);
+            caption.draw_3d(1.2, 1.33, 1.33, "Lin2");
+            caption.draw_3d(1.4 + 1.2, 1.33, 1.33, "Lin3");
+            caption.draw_3d(2.8 + 1.2, 1.33, 1.33, "Lin4");
+            caption.draw_3d(4.2 + 1.2, 1.33, 1.33, "Lin5");
+            plot.add(&caption);
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .set_range_3d(0.0, 5.3, 0.0, 1.2, 0.0, 1.2)
+                .save("/tmp/gemlab/test_draw_cells_and_points_work_1_lin_3d.svg")
+                .unwrap();
+        }
 
         // tri cells
         let mesh = Samples::tri_cells();
@@ -721,91 +734,102 @@ mod tests {
         let mut draw = Draw::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
-        // labels.clear_buffer();
-        // caption.clear_buffer();
-        // draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.0, 0.02, 0.0);
-        // caption.draw(0.5, -0.1, "Tri3");
-        // caption.draw(1.7, -0.1, "Tri6");
-        // caption.draw(0.5, 1.1, "Tri10");
-        // caption.draw(1.7, 1.1, "Tri15");
-        // plot.add(&caption);
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_frame_borders(false)
-        //     .set_hide_axes(true)
-        //     .set_equal_axes(true)
-        //     .set_range(-0.1, 2.3, -0.2, 2.2)
-        //     .save("/tmp/gemlab/test_draw_cells_and_points_work_2_tri.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            let (mut labels, mut caption) = labels_and_caption();
+            draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.0, 0.02, 0.0);
+            caption.draw(0.5, -0.1, "Tri3");
+            caption.draw(1.7, -0.1, "Tri6");
+            caption.draw(0.5, 1.1, "Tri10");
+            caption.draw(1.7, 1.1, "Tri15");
+            plot.add(&caption);
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_frame_borders(false)
+                .set_hide_axes(true)
+                .set_equal_axes(true)
+                .set_range(-0.1, 2.3, -0.2, 2.2)
+                .save("/tmp/gemlab/test_draw_cells_and_points_work_2_tri.svg")
+                .unwrap();
+        }
 
         let mesh = Samples::qua_cells();
         let mut plot = Plot::new();
         let mut draw = Draw::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
-        // labels.clear_buffer();
-        // caption.clear_buffer();
-        // draw_cell_local_ids(&mut plot, &mut labels, &mesh, -0.02, 0.02, 0.0);
-        // caption.draw(0.4, -0.06, "Qua4");
-        // caption.draw(1.5, -0.06, "Qua8");
-        // caption.draw(2.6, -0.06, "Qua9");
-        // caption.draw(0.4, 1.1, "Qua12");
-        // caption.draw(1.5, 1.1, "Qua16");
-        // caption.draw(2.6, 1.1, "Qua17");
-        // plot.add(&caption);
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_frame_borders(false)
-        //     .set_hide_axes(true)
-        //     .set_equal_axes(true)
-        //     .set_range(-0.15, 3.1, -0.25, 2.15)
-        //     .save("/tmp/gemlab/test_draw_cells_and_points_work_3_qua.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            let (mut labels, mut caption) = labels_and_caption();
+            draw_cell_local_ids(&mut plot, &mut labels, &mesh, -0.02, 0.02, 0.0);
+            caption.draw(0.4, -0.06, "Qua4");
+            caption.draw(1.5, -0.06, "Qua8");
+            caption.draw(2.6, -0.06, "Qua9");
+            caption.draw(0.4, 1.1, "Qua12");
+            caption.draw(1.5, 1.1, "Qua16");
+            caption.draw(2.6, 1.1, "Qua17");
+            plot.add(&caption);
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_frame_borders(false)
+                .set_hide_axes(true)
+                .set_equal_axes(true)
+                .set_range(-0.15, 3.1, -0.25, 2.15)
+                .save("/tmp/gemlab/test_draw_cells_and_points_work_3_qua.svg")
+                .unwrap();
+        }
 
         let mesh = Samples::tet_cells();
         let mut plot = Plot::new();
         let mut draw = Draw::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
-        // labels.clear_buffer();
-        // caption.clear_buffer();
-        // draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.03, 0.0, 0.03);
-        // caption.draw_3d(0.5, -0.15, 0.0, "Tet4");
-        // caption.draw_3d(1.7, -0.15, 0.0, "Tet10");
-        // caption.draw_3d(1.1, 1.05, 0.8, "Tet20");
-        // plot.add(&caption);
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_equal_axes(true)
-        //     .set_range_3d(0.0, 2.2, 0.0, 2.2, 0.0, 2.2)
-        //     .save("/tmp/gemlab/test_draw_cells_and_points_work_4_tet.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            let (mut labels, mut caption) = labels_and_caption();
+            draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.03, 0.0, 0.03);
+            caption.draw_3d(0.5, -0.15, 0.0, "Tet4");
+            caption.draw_3d(1.7, -0.15, 0.0, "Tet10");
+            caption.draw_3d(1.1, 1.05, 0.8, "Tet20");
+            plot.add(&caption);
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .set_range_3d(0.0, 2.2, 0.0, 2.2, 0.0, 2.2)
+                .save("/tmp/gemlab/test_draw_cells_and_points_work_4_tet.svg")
+                .unwrap();
+        }
 
         let mesh = Samples::hex_cells();
         let mut plot = Plot::new();
         let mut draw = Draw::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
-        // labels.clear_buffer();
-        // caption.clear_buffer();
-        // draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.03, 0.0, 0.03);
-        // caption.draw_3d(0.5, -0.15, 0.0, "Hex8");
-        // caption.draw_3d(2.3, -0.15, 0.0, "Hex20");
-        // caption.draw_3d(1.1, 1.1, 1.3, "Hex32");
-        // plot.add(&caption);
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_equal_axes(true)
-        //     .set_range_3d(0.0, 3.0, 0.0, 3.0, 0.0, 2.5)
-        //     .save("/tmp/gemlab/test_draw_cells_and_points_work_5_hex.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            let (mut labels, mut caption) = labels_and_caption();
+            draw_cell_local_ids(&mut plot, &mut labels, &mesh, 0.03, 0.0, 0.03);
+            caption.draw_3d(0.5, -0.15, 0.0, "Hex8");
+            caption.draw_3d(2.3, -0.15, 0.0, "Hex20");
+            caption.draw_3d(1.1, 1.1, 1.3, "Hex32");
+            plot.add(&caption);
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .set_range_3d(0.0, 3.0, 0.0, 3.0, 0.0, 2.5)
+                .save("/tmp/gemlab/test_draw_cells_and_points_work_5_hex.svg")
+                .unwrap();
+        }
 
         let mut plot = draw_reference_circles();
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let mut draw = Draw::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_equal_axes(true)
-        //     .set_range(-0.1, 2.1, -0.1, 2.1)
-        //     .save("/tmp/gemlab/test_draw_cells_and_points_work_6_ring.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .set_range(-0.1, 2.1, -0.1, 2.1)
+                .save("/tmp/gemlab/test_draw_cells_and_points_work_6_ring.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -834,12 +858,13 @@ mod tests {
         // draw cell ids
         draw.cell_ids(&mut plot, &mesh).unwrap();
 
-        // save figure
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_equal_axes(true)
-        //     .set_range(-0.1, 2.1, -0.1, 2.1)
-        //     .save("/tmp/gemlab/test_draw_edges_points_and_ids_work_2d_ring.svg")
-        //     .unwrap();
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .set_range(-0.1, 2.1, -0.1, 2.1)
+                .save("/tmp/gemlab/test_draw_edges_points_and_ids_work_2d_ring.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -851,10 +876,13 @@ mod tests {
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua12.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua12.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -866,10 +894,13 @@ mod tests {
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua16.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua16.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -880,10 +911,13 @@ mod tests {
         let mut draw = Draw::new();
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua17.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua17.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -895,10 +929,13 @@ mod tests {
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
-        // plot.set_figure_size_points(600.0, 600.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_mixed.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_mixed.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -918,10 +955,13 @@ mod tests {
         draw.points(&mut plot, &mesh);
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
-        // plot.set_figure_size_points(500.0, 500.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/test_draw_edges_points_and_ids_work_3d.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(500.0, 500.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_edges_points_and_ids_work_3d.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -933,10 +973,13 @@ mod tests {
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
-        // plot.set_figure_size_points(800.0, 800.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/test_draw_edges_and_ids_work_3d_1.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(800.0, 800.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_edges_and_ids_work_3d_1.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -948,9 +991,12 @@ mod tests {
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
-        // plot.set_figure_size_points(800.0, 800.0)
-        //     .set_equal_axes(true)
-        //     .save("/tmp/gemlab/test_draw_edges_and_ids_work_3d_2.svg")
-        //     .unwrap();
+
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(800.0, 800.0)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_edges_and_ids_work_3d_2.svg")
+                .unwrap();
+        }
     }
 }
