@@ -119,7 +119,7 @@ impl Find {
         }
     }
 
-    /// Finds points ids
+    /// Finds point ids
     ///
     /// # Input
     ///
