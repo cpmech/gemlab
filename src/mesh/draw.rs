@@ -411,8 +411,13 @@ impl Draw {
     pub fn point_ids(&mut self, plot: &mut Plot, mesh: &Mesh) {
         if mesh.ndim == 2 {
             mesh.points.iter().for_each(|point| {
+                let msg = if point.marker < 0 {
+                    format!("{}({})", point.id, point.marker)
+                } else {
+                    format!("{}", point.id)
+                };
                 self.canvas_point_ids
-                    .draw(point.coords[0], point.coords[1], format!("{}", point.id).as_str());
+                    .draw(point.coords[0], point.coords[1], msg.as_str());
             });
         } else {
             mesh.points.iter().for_each(|point| {
@@ -996,6 +1001,24 @@ mod tests {
             plot.set_figure_size_points(800.0, 800.0)
                 .set_equal_axes(true)
                 .save("/tmp/gemlab/test_draw_edges_and_ids_work_3d_2.svg")
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_point_markers_work_2d() {
+        let mut plot = Plot::new();
+        let mesh = Samples::qua8_tri6_lin2();
+        let features = Features::new(&mesh, Extract::All);
+        let mut draw = Draw::new();
+        draw.edges(&mut plot, &mesh, &features, true).unwrap();
+        draw.point_ids(&mut plot, &mesh);
+
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(600.0, 600.0)
+                .set_range(-0.1, 2.0, -0.1, 1.1)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_point_markers_work_2d.svg")
                 .unwrap();
         }
     }
