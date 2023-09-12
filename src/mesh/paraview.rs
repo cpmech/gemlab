@@ -128,15 +128,6 @@ impl Mesh {
         write!(
             &mut buffer,
             "<CellData Scalars=\"TheScalars\">\n\
-             <DataArray type=\"Int32\" Name=\"cell_id\" NumberOfComponents=\"1\" format=\"ascii\">\n"
-        )
-        .unwrap();
-        for cell in &self.cells {
-            write!(&mut buffer, "{} ", cell.id).unwrap();
-        }
-        write!(
-            &mut buffer,
-            "\n</DataArray>\n\
              <DataArray type=\"Int32\" Name=\"attribute\" NumberOfComponents=\"1\" format=\"ascii\">\n"
         )
         .unwrap();
@@ -232,9 +223,6 @@ mod tests {
 </DataArray>
 </PointData>
 <CellData Scalars="TheScalars">
-<DataArray type="Int32" Name="cell_id" NumberOfComponents="1" format="ascii">
-0 1 2 3 
-</DataArray>
 <DataArray type="Int32" Name="attribute" NumberOfComponents="1" format="ascii">
 1 2 3 3 
 </DataArray>
@@ -281,9 +269,6 @@ mod tests {
 </DataArray>
 </PointData>
 <CellData Scalars="TheScalars">
-<DataArray type="Int32" Name="cell_id" NumberOfComponents="1" format="ascii">
-0 1 2 3 4 
-</DataArray>
 <DataArray type="Int32" Name="attribute" NumberOfComponents="1" format="ascii">
 1 2 2 2 3 
 </DataArray>
