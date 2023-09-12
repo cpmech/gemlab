@@ -641,13 +641,15 @@ impl Samples {
     /// Returns a mesh with one Qua8, one Tri6, and two Lin2
     ///
     /// ```text
+    /// -500        -400
     /// 8------7------6._
     /// |       [3](3)|  '-.5
     /// |  [0]        |     '-._
-    /// 9  (1)       10  [1]    '4
+    /// 9  (1)       10  [1]    '4 -300
     /// |             |  (2)  .-'
     /// |       [2](3)|   _.3'
     /// 0------1------2.-'
+    /// -100         -200
     /// ```
     ///
     /// ![qua8_tri6_lin2](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_qua8_tri6_lin2.svg)
@@ -658,17 +660,17 @@ impl Samples {
         Mesh {
             ndim: 2,
             points: vec![
-                Point { id:  0, marker: 0, coords: vec![0.0,   0.0 ] },
-                Point { id:  1, marker: 0, coords: vec![0.5,   0.0 ] },
-                Point { id:  2, marker: 0, coords: vec![1.0,   0.0 ] },
-                Point { id:  3, marker: 0, coords: vec![1.0+m, 0.25] },
-                Point { id:  4, marker: 0, coords: vec![1.0+h, 0.5 ] },
-                Point { id:  5, marker: 0, coords: vec![1.0+m, 0.75] },
-                Point { id:  6, marker: 0, coords: vec![1.0,   1.0 ] },
-                Point { id:  7, marker: 0, coords: vec![0.5,   1.0 ] },
-                Point { id:  8, marker: 0, coords: vec![0.0,   1.0 ] },
-                Point { id:  9, marker: 0, coords: vec![0.0,   0.5 ] },
-                Point { id: 10, marker: 0, coords: vec![1.0,   0.5 ] },
+                Point { id:  0, marker: -100, coords: vec![0.0,   0.0 ] },
+                Point { id:  1, marker:    0, coords: vec![0.5,   0.0 ] },
+                Point { id:  2, marker: -200, coords: vec![1.0,   0.0 ] },
+                Point { id:  3, marker:    0, coords: vec![1.0+m, 0.25] },
+                Point { id:  4, marker: -300, coords: vec![1.0+h, 0.5 ] },
+                Point { id:  5, marker:    0, coords: vec![1.0+m, 0.75] },
+                Point { id:  6, marker: -400, coords: vec![1.0,   1.0 ] },
+                Point { id:  7, marker:    0, coords: vec![0.5,   1.0 ] },
+                Point { id:  8, marker: -500, coords: vec![0.0,   1.0 ] },
+                Point { id:  9, marker:    0, coords: vec![0.0,   0.5 ] },
+                Point { id: 10, marker:    0, coords: vec![1.0,   0.5 ] },
             ],
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
