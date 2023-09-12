@@ -676,6 +676,7 @@ impl Block {
                                 // add new point to mesh
                                 mesh.points.push(Point {
                                     id: point_id,
+                                    marker: 0,
                                     coords: x.as_data().clone(),
                                 });
                                 point_id

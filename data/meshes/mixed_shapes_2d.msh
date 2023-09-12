@@ -10,16 +10,16 @@
      2      6     3
 
 # points
-# id    x   y
-   0  0.0 0.0
-   1  1.0 0.0
-   2  2.0 0.0
-   3  2.0 1.0
-   4  1.0 1.0
-   5  3.0 0.0
+# id marker x y
+   0 0 0.0 0.0
+   1 0 1.0 0.0
+   2 0 2.0 0.0
+   3 0 2.0 1.0
+   4 0 1.0 1.0
+   5 0 3.0 0.0
 
 # cells
-# id att kind  point_ids...
-   0   1 lin2  0 1
-   1   2 qua4  1 2 3 4
-   2   1 lin2  2 5
+# id attribute kind point_ids...
+   0 1 lin2 0 1
+   1 2 qua4 1 2 3 4
+   2 1 lin2 2 5

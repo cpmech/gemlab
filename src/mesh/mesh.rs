@@ -10,6 +10,9 @@ use std::path::Path;
 /// Aliases usize as Point ID
 pub type PointId = usize;
 
+/// Aliases i32 as Point Marker
+pub type PointMarker = i32;
+
 /// Aliases usize as Cell ID
 pub type CellId = usize;
 
@@ -21,6 +24,9 @@ pub type CellAttribute = usize;
 pub struct Point {
     /// Identification number which equals the index of the point in the mesh
     pub id: PointId,
+
+    /// Holds a marker that can be used to group points (e.g., on the boundary)
+    pub marker: PointMarker,
 
     /// Point coordinates (2D or 3D)
     pub coords: Vec<f64>,
@@ -66,12 +72,12 @@ pub struct Cell {
 /// let mesh = Mesh {
 ///     ndim: 2,
 ///     points: vec![
-///         Point { id: 0, coords: vec![0.0, 0.0] },
-///         Point { id: 1, coords: vec![1.0, 0.0] },
-///         Point { id: 2, coords: vec![1.0, 1.0] },
-///         Point { id: 3, coords: vec![0.0, 1.0] },
-///         Point { id: 4, coords: vec![2.0, 0.0] },
-///         Point { id: 5, coords: vec![2.0, 1.0] },
+///         Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+///         Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+///         Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
+///         Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
+///         Point { id: 4, marker: 0, coords: vec![2.0, 0.0] },
+///         Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
 ///     ],
 ///     cells: vec![
 ///         Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
@@ -145,25 +151,30 @@ impl fmt::Display for Mesh {
         write!(f, "# ndim npoint ncell\n").unwrap();
         write!(f, "{} {} {}\n", self.ndim, self.points.len(), self.cells.len()).unwrap();
         write!(f, "\n# points\n").unwrap();
-        write!(f, "# id x y {{z}}\n").unwrap();
+        write!(f, "# id marker x y {{z}}\n").unwrap();
         self.points.iter().for_each(|point| {
             if self.ndim == 2 {
-                write!(f, "{} {:?} {:?}\n", point.id, point.coords[0], point.coords[1]).unwrap();
+                write!(
+                    f,
+                    "{} {} {:?} {:?}\n",
+                    point.id, point.marker, point.coords[0], point.coords[1]
+                )
+                .unwrap();
             } else {
                 write!(
                     f,
-                    "{} {:?} {:?} {:?}\n",
-                    point.id, point.coords[0], point.coords[1], point.coords[2]
+                    "{} {} {:?} {:?} {:?}\n",
+                    point.id, point.marker, point.coords[0], point.coords[1], point.coords[2]
                 )
                 .unwrap();
             }
         });
         write!(f, "\n# cells\n").unwrap();
-        write!(f, "# id att kind  points\n").unwrap();
+        write!(f, "# id attribute kind points\n").unwrap();
         self.cells.iter().for_each(|cell| {
             write!(
                 f,
-                "{} {} {} {}\n",
+                "{} {} {}{}\n",
                 cell.id,
                 cell.attribute,
                 cell.kind.to_string(),
@@ -215,16 +226,16 @@ mod tests {
                  2      6     2
             
             # points
-            # id   x   y
-               0 0.0 0.0
-               1 1.0 0.0
-               2 1.0 1.0
-               3 0.0 1.0
-               4 2.0 0.0
-               5 2.0 1.0
+            # id marker x y
+               0 0 0.0 0.0
+               1 0 1.0 0.0
+               2 0 1.0 1.0
+               3 0 0.0 1.0
+               4 0 2.0 0.0
+               5 0 2.0 1.0
             
             # cells
-            # id att kind point_ids...
+            # id attribute kind point_ids...
                0   1 qua4 0 1 2 3
                1   0 qua4 1 4 5 2",
         )
@@ -238,7 +249,7 @@ mod tests {
     fn derive_works() {
         let mesh = Samples::two_qua4();
         let mesh_clone = mesh.clone();
-        let correct ="Mesh { ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
+        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: 0, coords: [0.0, 0.0] }, Point { id: 1, marker: 0, coords: [1.0, 0.0] }, Point { id: 2, marker: 0, coords: [1.0, 1.0] }, Point { id: 3, marker: 0, coords: [0.0, 1.0] }, Point { id: 4, marker: 0, coords: [2.0, 0.0] }, Point { id: 5, marker: 0, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
         assert_eq!(format!("{:?}", mesh), correct);
         assert_eq!(mesh_clone.ndim, mesh.ndim);
         assert_eq!(mesh_clone.points.len(), mesh.points.len());
@@ -261,18 +272,18 @@ mod tests {
              2 6 2\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 0.0 0.0\n\
-             1 1.0 0.0\n\
-             2 1.0 1.0\n\
-             3 0.0 1.0\n\
-             4 2.0 0.0\n\
-             5 2.0 1.0\n\
+             # id marker x y {z}\n\
+             0 0 0.0 0.0\n\
+             1 0 1.0 0.0\n\
+             2 0 1.0 1.0\n\
+             3 0 0.0 1.0\n\
+             4 0 2.0 0.0\n\
+             5 0 2.0 1.0\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 1 qua4  0 1 2 3\n\
-             1 2 qua4  1 4 5 2\n"
+             # id attribute kind points\n\
+             0 1 qua4 0 1 2 3\n\
+             1 2 qua4 1 4 5 2\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);
@@ -289,24 +300,24 @@ mod tests {
              3 12 2\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 0.0 0.0 0.0\n\
-             1 1.0 0.0 0.0\n\
-             2 1.0 1.0 0.0\n\
-             3 0.0 1.0 0.0\n\
-             4 0.0 0.0 1.0\n\
-             5 1.0 0.0 1.0\n\
-             6 1.0 1.0 1.0\n\
-             7 0.0 1.0 1.0\n\
-             8 0.0 0.0 2.0\n\
-             9 1.0 0.0 2.0\n\
-             10 1.0 1.0 2.0\n\
-             11 0.0 1.0 2.0\n\
+             # id marker x y {z}\n\
+             0 0 0.0 0.0 0.0\n\
+             1 0 1.0 0.0 0.0\n\
+             2 0 1.0 1.0 0.0\n\
+             3 0 0.0 1.0 0.0\n\
+             4 0 0.0 0.0 1.0\n\
+             5 0 1.0 0.0 1.0\n\
+             6 0 1.0 1.0 1.0\n\
+             7 0 0.0 1.0 1.0\n\
+             8 0 0.0 0.0 2.0\n\
+             9 0 1.0 0.0 2.0\n\
+             10 0 1.0 1.0 2.0\n\
+             11 0 0.0 1.0 2.0\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 1 hex8  0 1 2 3 4 5 6 7\n\
-             1 2 hex8  4 5 6 7 8 9 10 11\n"
+             # id attribute kind points\n\
+             0 1 hex8 0 1 2 3 4 5 6 7\n\
+             1 2 hex8 4 5 6 7 8 9 10 11\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);

@@ -569,10 +569,10 @@ mod tests {
         let mesh = Mesh {
             ndim: 2,
             points: vec![
-                Point { id: 0, coords: vec![0.0, 0.0] },
-                Point { id: 1, coords: vec![1.0, 0.0] },
-                Point { id: 2, coords: vec![1.0, 1.0] },
-                Point { id: 3, coords: vec![0.0, 1.0] },
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+                Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
+                Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
             ],
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
@@ -663,10 +663,10 @@ mod tests {
         let mesh = Mesh {
             ndim: 2,
             points: vec![
-                Point { id: 0, coords: vec![0.0, 0.0] },
-                Point { id: 1, coords: vec![1.0, 0.0] },
-                Point { id: 2, coords: vec![1.2, 1.5] },
-                Point { id: 3, coords: vec![0.0, 1.0] },
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+                Point { id: 2, marker: 0, coords: vec![1.2, 1.5] },
+                Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
             ],
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },

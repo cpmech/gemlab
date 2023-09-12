@@ -1152,15 +1152,15 @@ mod tests {
              2 4 1\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 1.0 2.0\n\
-             1 3.0 2.0\n\
-             2 3.0 5.0\n\
-             3 1.0 5.0\n\
+             # id marker x y {z}\n\
+             0 0 1.0 2.0\n\
+             1 0 3.0 2.0\n\
+             2 0 3.0 5.0\n\
+             3 0 1.0 5.0\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 10 qua4  0 1 2 3\n"
+             # id attribute kind points\n\
+             0 10 qua4 0 1 2 3\n"
         );
 
         // two columns / one layer = two cells -------------------------------
@@ -1176,18 +1176,18 @@ mod tests {
              2 6 2\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 1.0 2.0\n\
-             1 1.5 2.0\n\
-             2 1.5 5.0\n\
-             3 1.0 5.0\n\
-             4 3.0 2.0\n\
-             5 3.0 5.0\n\
+             # id marker x y {z}\n\
+             0 0 1.0 2.0\n\
+             1 0 1.5 2.0\n\
+             2 0 1.5 5.0\n\
+             3 0 1.0 5.0\n\
+             4 0 3.0 2.0\n\
+             5 0 3.0 5.0\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 20 qua4  0 1 2 3\n\
-             1 20 qua4  1 4 5 2\n"
+             # id attribute kind points\n\
+             0 20 qua4 0 1 2 3\n\
+             1 20 qua4 1 4 5 2\n"
         );
 
         // one column / two layers = two cells -------------------------------
@@ -1203,18 +1203,18 @@ mod tests {
              2 6 2\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 1.0 2.0\n\
-             1 3.0 2.0\n\
-             2 3.0 3.0\n\
-             3 1.0 3.0\n\
-             4 3.0 5.0\n\
-             5 1.0 5.0\n\
+             # id marker x y {z}\n\
+             0 0 1.0 2.0\n\
+             1 0 3.0 2.0\n\
+             2 0 3.0 3.0\n\
+             3 0 1.0 3.0\n\
+             4 0 3.0 5.0\n\
+             5 0 1.0 5.0\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 10 qua4  0 1 2 3\n\
-             1 20 qua4  3 2 4 5\n"
+             # id attribute kind points\n\
+             0 10 qua4 0 1 2 3\n\
+             1 20 qua4 3 2 4 5\n"
         );
 
         // two columns / two layers = four cells -------------------------------
@@ -1231,23 +1231,23 @@ mod tests {
              2 9 4\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 1.0 2.0\n\
-             1 1.5 2.0\n\
-             2 1.5 3.0\n\
-             3 1.0 3.0\n\
-             4 3.0 2.0\n\
-             5 3.0 3.0\n\
-             6 1.5 5.0\n\
-             7 1.0 5.0\n\
-             8 3.0 5.0\n\
+             # id marker x y {z}\n\
+             0 0 1.0 2.0\n\
+             1 0 1.5 2.0\n\
+             2 0 1.5 3.0\n\
+             3 0 1.0 3.0\n\
+             4 0 3.0 2.0\n\
+             5 0 3.0 3.0\n\
+             6 0 1.5 5.0\n\
+             7 0 1.0 5.0\n\
+             8 0 3.0 5.0\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 10 qua4  0 1 2 3\n\
-             1 10 qua4  1 4 5 2\n\
-             2 20 qua4  3 2 6 7\n\
-             3 20 qua4  2 5 8 6\n"
+             # id attribute kind points\n\
+             0 10 qua4 0 1 2 3\n\
+             1 10 qua4 1 4 5 2\n\
+             2 20 qua4 3 2 6 7\n\
+             3 20 qua4 2 5 8 6\n"
         );
     }
 }

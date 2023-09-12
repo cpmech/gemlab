@@ -11,6 +11,8 @@ impl Unstructured {
     /// Generates a mesh representing a quarter of a ring in 2D
     ///
     /// ```text
+    /// Geometry:
+    ///
     /// y ^
     ///   |
     ///   ***=---__
@@ -26,6 +28,23 @@ impl Unstructured {
     ///                 #         #
     ///   o -   -   -   # ------- # --> x
     ///               rmin       rmax
+    /// ```
+    ///
+    /// ```text
+    /// Point markers:
+    ///
+    /// -300 =---__
+    ///   |        '*._
+    ///   | -40        *._
+    ///   |               *.  -20
+    /// -400 =-__           *.
+    ///          '-.          *
+    ///             *.         *
+    ///          -10  *         *
+    ///                *         *
+    ///                 *         *
+    ///                 #   -30   #
+    ///               -100 ----- -200
     /// ```
     ///
     /// # Input
@@ -130,6 +149,7 @@ impl Unstructured {
         let kind = if o2 { GeoKind::Tri6 } else { GeoKind::Tri3 };
         let zero_point = Point {
             id: 0,
+            marker: 0,
             coords: vec![0.0; NDIM],
         };
         let zero_cell = Cell {
@@ -156,6 +176,7 @@ impl Unstructured {
                 points_on_outer_circle.push(i);
             }
             mesh.points[i].id = i;
+            mesh.points[i].marker = marker;
             mesh.points[i].coords[0] = trigen.out_point(i, 0);
             mesh.points[i].coords[1] = trigen.out_point(i, 1);
         }

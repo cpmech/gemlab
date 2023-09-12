@@ -22,21 +22,21 @@ impl Mesh {
     /// The text file looks like this (the hash tag indicates a comment/the mesh below is just an example which won't work):
     ///
     /// ```text
-    /// ## header
-    /// ## ndim npoint ncell
+    /// # header
+    /// # ndim npoint ncell
     ///      2      8     5
     ///
-    /// ## points
-    /// ## id    x   y
-    ///    0  0.0 0.0
-    ///    1  0.5 0.0
-    ///    2  1.0 0.0
-    /// ## ... more points should follow
+    /// # points
+    /// # id marker x y
+    ///    0 0 0.0 0.0
+    ///    1 0 0.5 0.0
+    ///    2 0 1.0 0.0
+    /// # ... more points should follow
     ///
-    /// ## cells
-    /// ## id att kind  point_ids...
-    ///    0   1 tri3  0 1 3
-    ///    1   1 qua4  1 4 6 3
+    /// # cells
+    /// # id attribute kind point_ids...
+    ///    0 1 tri3 0 1 3
+    ///    1 1 qua4 1 4 6 3
     /// ```
     ///
     /// where we can see that different cell (shape) kinds can be present in the same mesh.
@@ -112,25 +112,25 @@ mod tests {
              2 11 4\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 0.0 0.0\n\
-             1 0.5 0.0\n\
-             2 1.0 0.0\n\
-             3 1.433 0.25\n\
-             4 1.866 0.5\n\
-             5 1.433 0.75\n\
-             6 1.0 1.0\n\
-             7 0.5 1.0\n\
-             8 0.0 1.0\n\
-             9 0.0 0.5\n\
-             10 1.0 0.5\n\
+             # id marker x y {z}\n\
+             0 0 0.0 0.0\n\
+             1 0 0.5 0.0\n\
+             2 0 1.0 0.0\n\
+             3 0 1.433 0.25\n\
+             4 0 1.866 0.5\n\
+             5 0 1.433 0.75\n\
+             6 0 1.0 1.0\n\
+             7 0 0.5 1.0\n\
+             8 0 0.0 1.0\n\
+             9 0 0.0 0.5\n\
+             10 0 1.0 0.5\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 1 qua8  0 2 6 8 1 10 7 9\n\
-             1 2 tri6  2 4 6 3 5 10\n\
-             2 3 lin2  2 10\n\
-             3 3 lin2  10 6\n"
+             # id attribute kind points\n\
+             0 1 qua8 0 2 6 8 1 10 7 9\n\
+             1 2 tri6 2 4 6 3 5 10\n\
+             2 3 lin2 2 10\n\
+             3 3 lin2 10 6\n"
         );
         Ok(())
     }

@@ -38,6 +38,7 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
             None => {
                 mesh.points.push(Point {
                     id: new_point_id,
+                    marker: b.points[m].marker,
                     coords: x.clone(),
                 });
                 new_point_id += 1;
@@ -291,28 +292,28 @@ mod tests {
              2 12 6\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 0.0 0.0\n\
-             1 1.0 0.0\n\
-             2 1.0 1.0\n\
-             3 0.0 1.0\n\
-             4 2.0 0.0\n\
-             5 2.0 1.0\n\
-             6 1.0 2.0\n\
-             7 0.0 2.0\n\
-             8 2.0 2.0\n\
-             9 1.0 3.0\n\
-             10 0.0 3.0\n\
-             11 2.0 3.0\n\
+             # id marker x y {z}\n\
+             0 0 0.0 0.0\n\
+             1 0 1.0 0.0\n\
+             2 0 1.0 1.0\n\
+             3 0 0.0 1.0\n\
+             4 0 2.0 0.0\n\
+             5 0 2.0 1.0\n\
+             6 0 1.0 2.0\n\
+             7 0 0.0 2.0\n\
+             8 0 2.0 2.0\n\
+             9 0 1.0 3.0\n\
+             10 0 0.0 3.0\n\
+             11 0 2.0 3.0\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 1 qua4  0 1 2 3\n\
-             1 2 qua4  1 4 5 2\n\
-             2 1 qua4  3 2 6 7\n\
-             3 2 qua4  2 5 8 6\n\
-             4 1 qua4  7 6 9 10\n\
-             5 2 qua4  6 8 11 9\n"
+             # id attribute kind points\n\
+             0 1 qua4 0 1 2 3\n\
+             1 2 qua4 1 4 5 2\n\
+             2 1 qua4 3 2 6 7\n\
+             3 2 qua4 2 5 8 6\n\
+             4 1 qua4 7 6 9 10\n\
+             5 2 qua4 6 8 11 9\n"
         );
     }
 }
