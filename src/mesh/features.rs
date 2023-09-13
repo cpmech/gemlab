@@ -178,9 +178,19 @@ pub type MapFaceToCells = HashMap<FaceKey, Vec<(CellId, usize)>>;
 /// ```
 pub struct Features {
     /// Maps all edge keys to cells sharing the edge (2D only)
+    ///
+    /// Relates edge keys to `Vec<(cell_id, e)>` where:
+    ///
+    /// * `cell_id` -- is he id of the cell sharing the edge
+    /// * `e` -- is the cell's local edge index
     pub all_2d_edges: Option<MapEdge2dToCells>,
 
     /// Maps all face keys to cells sharing the face (3D only)
+    ///
+    /// Relates face keys to `Vec<(cell_id, f)>` where:
+    ///
+    /// * `cell_id` -- is the id of the cell sharing the face
+    /// * `f` -- is the cell's local face index
     pub all_faces: Option<MapFaceToCells>,
 
     /// Set of points on the boundary edges/faces, on the interior edges/faces, or both boundary and interior
