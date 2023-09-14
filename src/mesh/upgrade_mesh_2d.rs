@@ -4,7 +4,7 @@ use crate::StrError;
 use russell_lab::Vector;
 
 /// Upgrades a mesh with triangles or quadrilaterals to a higher order
-pub fn upgrade_tri_mesh(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError> {
+pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError> {
     //        2,
     //  s     | ',
     //        |   ',
@@ -187,7 +187,7 @@ pub fn upgrade_tri_mesh(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError
 
 #[cfg(test)]
 mod tests {
-    use super::upgrade_tri_mesh;
+    use super::upgrade_mesh_2d;
     use crate::mesh::{check_all, Cell, Mesh, Point};
     use crate::shapes::GeoKind;
     use russell_chk::vec_approx_eq;
@@ -198,7 +198,7 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    fn upgrade_tri6_to_tri15_captures_errors() {
+    fn upgrade_mesh_2d_captures_errors() {
         #[rustfmt::skip]
         let mut mesh = Mesh {
             ndim: 3,
@@ -217,7 +217,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            upgrade_tri_mesh(&mut mesh, GeoKind::Tri15).err(),
+            upgrade_mesh_2d(&mut mesh, GeoKind::Tri15).err(),
             Some("mesh ndim must be equal to 2")
         );
     }
@@ -249,7 +249,7 @@ mod tests {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_before.svg").unwrap();
         }
 
-        upgrade_tri_mesh(&mut mesh, GeoKind::Tri15).unwrap();
+        upgrade_mesh_2d(&mut mesh, GeoKind::Tri15).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_after.svg").unwrap();
