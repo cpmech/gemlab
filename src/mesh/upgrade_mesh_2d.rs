@@ -50,11 +50,11 @@ pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError>
     if target.class() != source.class() {
         return Err("target class must equal the GeoClass of current cells");
     }
-    if !(target.class() == GeoClass::Tri || target.class() == GeoClass::Qua) {
-        return Err("target GeoClass must be Tri or Qua");
-    }
     if delta_nnode < 1 {
         return Err("target GeoKind must have more nodes than the current GeoKind");
+    }
+    if !(target.class() == GeoClass::Tri || target.class() == GeoClass::Qua) {
+        return Err("target GeoClass must be Tri or Qua");
     }
     let nedge = source.nedge();
     let source_edge_nnode = source.edge_nnode();
@@ -71,7 +71,7 @@ pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError>
     // expand connectivity array
     for i in 0..ncell {
         if mesh.cells[i].kind != source {
-            return Err("all current cells must have the same GeoKind");
+            return Err("all cells must have the same GeoKind");
         }
         mesh.cells[i].points.resize(target_nnode, not_set_yet);
     }
@@ -219,6 +219,68 @@ mod tests {
         assert_eq!(
             upgrade_mesh_2d(&mut mesh, GeoKind::Tri15).err(),
             Some("mesh ndim must be equal to 2")
+        );
+        let mut mesh = Mesh {
+            ndim: 2,
+            points: vec![],
+            cells: vec![],
+        };
+        assert_eq!(
+            upgrade_mesh_2d(&mut mesh, GeoKind::Tri15).err(),
+            Some("the conversion requires at least one cell")
+        );
+        #[rustfmt::skip]
+        let mut mesh = Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0 ] },
+                Point { id: 1, marker: 0, coords: vec![1.0, 0.0 ] },
+                Point { id: 2, marker: 0, coords: vec![0.5, 0.85] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+            ],
+        };
+        assert_eq!(
+            upgrade_mesh_2d(&mut mesh, GeoKind::Qua8).err(),
+            Some("target class must equal the GeoClass of current cells")
+        );
+        assert_eq!(
+            upgrade_mesh_2d(&mut mesh, GeoKind::Tri3).err(),
+            Some("target GeoKind must have more nodes than the current GeoKind")
+        );
+        #[rustfmt::skip]
+        let mut mesh =Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, marker: 0, coords: vec![1.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
+            ],
+        };
+        assert_eq!(
+            upgrade_mesh_2d(&mut mesh, GeoKind::Lin3).err(),
+            Some("target GeoClass must be Tri or Qua")
+        );
+        #[rustfmt::skip]
+        let mut mesh = Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0 ] },
+                Point { id: 1, marker: 0, coords: vec![1.0, 0.0 ] },
+                Point { id: 2, marker: 0, coords: vec![0.5, 0.85] },
+                Point { id: 3, marker: 0, coords: vec![1.0, 1.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+                Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+            ],
+        };
+        assert_eq!(
+            upgrade_mesh_2d(&mut mesh, GeoKind::Tri6).err(),
+            Some("all cells must have the same GeoKind")
         );
     }
 
