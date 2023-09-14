@@ -486,16 +486,26 @@ impl Draw {
 
         // loop over all cells
         for cell_id in 0..mesh.cells.len() {
-            // compute coordinates at the center of cell
+            // compute coordinates of the label
             let cell = &mesh.cells[cell_id];
             x.fill(0.0);
-            for m in 0..cell.points.len() {
+            if cell.kind == GeoKind::Qua9 || cell.kind == GeoKind::Qua17 {
                 for i in 0..mesh.ndim {
-                    x[i] += mesh.points[cell.points[m]].coords[i];
+                    x[i] = (3.0 * mesh.points[cell.points[0]].coords[i] + mesh.points[cell.points[2]].coords[i]) / 4.0;
                 }
-            }
-            for i in 0..mesh.ndim {
-                x[i] /= cell.points.len() as f64;
+            } else if cell.kind == GeoKind::Tri10 {
+                for i in 0..mesh.ndim {
+                    x[i] = (mesh.points[cell.points[0]].coords[i] + mesh.points[cell.points[9]].coords[i]) / 2.0;
+                }
+            } else {
+                for m in 0..cell.points.len() {
+                    for i in 0..mesh.ndim {
+                        x[i] += mesh.points[cell.points[m]].coords[i];
+                    }
+                }
+                for i in 0..mesh.ndim {
+                    x[i] /= cell.points.len() as f64;
+                }
             }
 
             // add label
