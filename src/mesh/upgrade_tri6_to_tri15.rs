@@ -84,7 +84,7 @@ pub fn upgrade_tri6_to_tri15(mesh: &mut Mesh) -> Result<(), StrError> {
                 let marker = mesh.points[mid_point].marker;
 
                 // coordinates of new point
-                pad.calc_coords(&mut x, &Tri15::NODE_REFERENCE_COORDS[m])?;
+                pad.calc_coords(&mut x, &Tri15::NODE_REFERENCE_COORDS[m]).unwrap();
 
                 // new point
                 let new_point_id = mesh.points.len();
@@ -170,7 +170,27 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    fn tri6_to_tri15_works_1() {
+    fn upgrade_tri6_to_tri15_captures_errors() {
+        #[rustfmt::skip]
+        let mut mesh = Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0 ] },
+                Point { id: 1, marker: 0, coords: vec![1.0, 0.0 ] },
+                Point { id: 2, marker: 0, coords: vec![0.5, 0.85] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+            ],
+        };
+        assert_eq!(
+            upgrade_tri6_to_tri15(&mut mesh).err(),
+            Some("only Tri6 cells are allowed in the conversion")
+        );
+    }
+
+    #[test]
+    fn upgrade_tri6_to_tri15_works_1() {
         #[rustfmt::skip]
         let mut mesh = Mesh {
             ndim: 2,
