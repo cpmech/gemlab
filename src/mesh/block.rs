@@ -1,6 +1,6 @@
 use super::{Cell, Mesh, Point};
 use crate::mesh::{set_pad_coords, PointId};
-use crate::shapes::{GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
+use crate::shapes::{GeoClass, GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
@@ -539,12 +539,12 @@ impl Block {
         // check
         let ndim = self.ndim;
         if ndim == 2 {
-            if !GeoKind::QUAS.contains(&target) {
-                return Err("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...");
+            if target.class() != GeoClass::Qua {
+                return Err("in 2D, the GeoClass of target must be Qua");
             }
         } else {
-            if !GeoKind::HEXS.contains(&target) {
-                return Err("in 3D, 'target' must be a Hex8, Hex20, Hex32, ...");
+            if target.class() != GeoClass::Hex {
+                return Err("in 3D, the GeoClass of target must be Hex");
             }
         }
 
@@ -1331,12 +1331,12 @@ mod tests {
         let mut b2d = Block::new_square(1.0);
         assert_eq!(
             b2d.subdivide(GeoKind::Tri3).err(),
-            Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
+            Some("in 2D, the GeoClass of target must be Qua")
         );
         let mut b3d = Block::new_cube(1.0);
         assert_eq!(
             b3d.subdivide(GeoKind::Tet4).err(),
-            Some("in 3D, 'target' must be a Hex8, Hex20, Hex32, ...")
+            Some("in 3D, the GeoClass of target must be Hex")
         );
     }
 

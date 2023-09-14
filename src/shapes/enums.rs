@@ -1301,34 +1301,6 @@ impl GeoKind {
         Self::Hex20,
         Self::Hex32,
     ];
-
-    /// Holds all quadrilaterals
-    pub const QUAS: [Self; 6] = [
-        Self::Qua4,
-        Self::Qua8,
-        Self::Qua9,
-        Self::Qua12,
-        Self::Qua16,
-        Self::Qua17,
-    ];
-
-    /// Holds all hexahedrons
-    pub const HEXS: [Self; 3] = [Self::Hex8, Self::Hex20, Self::Hex32];
-
-    /// Holds all quads and hexs
-    pub const QUAS_AND_HEXS: [Self; 9] = [
-        // Qua
-        Self::Qua4,
-        Self::Qua8,
-        Self::Qua9,
-        Self::Qua12,
-        Self::Qua16,
-        Self::Qua17,
-        // Hex
-        Self::Hex8,
-        Self::Hex20,
-        Self::Hex32,
-    ];
 }
 
 /// Converts edge-local-index to face-local-indices of a Hexahedron

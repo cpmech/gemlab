@@ -1122,7 +1122,7 @@ mod tests {
         );
         assert_eq!(
             Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Tri3).err(),
-            Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
+            Some("in 2D, the GeoClass of target must be Qua")
         );
         assert_eq!(
             Structured::rectangle(0.0, Some(0.5), 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
@@ -1130,7 +1130,7 @@ mod tests {
         );
         assert_eq!(
             Structured::rectangle(0.0, Some(0.5), 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Tri3).err(),
-            Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
+            Some("in 2D, the GeoClass of target must be Qua")
         );
     }
 
