@@ -51,7 +51,7 @@ pub fn upgrade_tri6_to_tri15(mesh: &mut Mesh) -> Result<(), StrError> {
 
     // scratchpad for point interpolation
     const NDIM: usize = 2;
-    let mut pad = Scratchpad::new(NDIM, GeoKind::Tri6)?;
+    let mut pad = Scratchpad::new(NDIM, GeoKind::Tri6).unwrap();
 
     // real coordinates of new points
     let mut x = Vector::new(NDIM);
@@ -134,7 +134,7 @@ pub fn upgrade_tri6_to_tri15(mesh: &mut Mesh) -> Result<(), StrError> {
         // new points in the interior of the Tri15
         for m in 12..15 {
             // coordinates of new point
-            pad.calc_coords(&mut x, &Tri15::NODE_REFERENCE_COORDS[m])?;
+            pad.calc_coords(&mut x, &Tri15::NODE_REFERENCE_COORDS[m]).unwrap();
 
             // new point
             let new_point_id = mesh.points.len();
