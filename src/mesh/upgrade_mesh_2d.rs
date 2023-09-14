@@ -70,6 +70,10 @@ pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError>
     let target_edge_nnode = target.edge_nnode();
     assert!(target_edge_nnode >= source_edge_nnode);
 
+    // find neighbors
+    let features = Features::new(mesh, Extract::All);
+    let edges = features.all_2d_edges.unwrap();
+
     // not_set_yet: number that indicates that a point has not been set yet
     // here we use 1 + max number of points possible, ignoring edge overlaps
     // for example, in a mesh with two Tri6 cells (ncell = 2, npoint = 9), if target = Tri15,
@@ -92,10 +96,6 @@ pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError>
 
     // real coordinates of new points
     let mut x = Vector::new(NDIM);
-
-    // find neighbors
-    let features = Features::new(mesh, Extract::All);
-    let edges = features.all_2d_edges.unwrap();
 
     // get info about target
     let target_first_interior_node = target_nnode - target.n_interior_nodes();
