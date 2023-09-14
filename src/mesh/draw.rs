@@ -615,7 +615,7 @@ mod tests {
     #[allow(unused_imports)]
     use plotpy::GraphMaker;
 
-    const SAVE_FIGURE: bool = true;
+    const SAVE_FIGURE: bool = false;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
