@@ -63,6 +63,13 @@ impl Tri3 {
     ];
 
     #[rustfmt::skip]
+    pub const EDGE_NODE_IDS_INWARD: [[usize; Tri3::EDGE_NNODE]; Tri3::NEDGE] = [
+        [0, 1],
+        [1, 2],
+        [2, 0],
+    ];
+
+    #[rustfmt::skip]
     pub const NODE_REFERENCE_COORDS: [[f64; Tri3::GEO_NDIM]; Tri3::NNODE] = [
         [0.0, 0.0],
         [1.0, 0.0],

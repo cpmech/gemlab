@@ -68,6 +68,13 @@ impl Tri15 {
     ];
 
     #[rustfmt::skip]
+    pub const EDGE_NODE_IDS_INWARD: [[usize; Tri15::EDGE_NNODE]; Tri15::NEDGE] = [
+        [0, 1, 3,  6,  7],
+        [1, 2, 4,  8,  9],
+        [2, 0, 5, 10, 11],
+    ];
+
+    #[rustfmt::skip]
     pub const NODE_REFERENCE_COORDS: [[f64; Tri15::GEO_NDIM]; Tri15::NNODE] = [
         [0.0  , 0.0 ], //  0
         [1.0  , 0.0 ], //  1

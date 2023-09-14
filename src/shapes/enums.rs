@@ -603,14 +603,41 @@ impl GeoKind {
         }
     }
 
-    /// Returns the local id of node on edge
+    /// Returns the local id of node on edge (outward normals)
     ///
     /// # Input
     ///
     /// * `e` -- index of edge in [0, nedge-1]
     /// * `i` -- index of local node [0, edge_nnode-1]
     ///
+    /// **Note:** For 2D GeoKinds, the sequence of edge nodes is such that the normals are **outward**.
+    /// For 3D GeoKinds, the sequence just follows the associate Lin GeoKind.
+    ///
     /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::GeoKind;
+    ///
+    /// //         2            OUTWARD NORMALS
+    /// //   3-----6-----2          p0 p1 p2
+    /// //   |           |      e:0 [1, 0, 4]
+    /// //   |           |      e:1 [2, 1, 5]
+    /// // 3 7           5 1    e:2 [3, 2, 6]
+    /// //   |           |      e:3 [0, 3, 7]
+    /// //   |           |
+    /// //   0-----4-----1
+    /// //         0
+    /// let kind = GeoKind::Qua8;
+    /// let edges: Vec<_> = (0..kind.nedge())
+    ///     .map(|e| (kind.edge_node_id(e, 0),
+    ///               kind.edge_node_id(e, 1),
+    ///               kind.edge_node_id(e, 2)))
+    ///     .collect();
+    /// assert_eq!(
+    ///     edges,
+    ///     &[(1, 0, 4), (2, 1, 5), (3, 2, 6), (0, 3, 7)]
+    /// );
+    /// ```
     ///
     /// ```
     /// use gemlab::shapes::GeoKind;
@@ -658,6 +685,99 @@ impl GeoKind {
             GeoKind::Qua12 => Qua12::EDGE_NODE_IDS[e][i],
             GeoKind::Qua16 => Qua16::EDGE_NODE_IDS[e][i],
             GeoKind::Qua17 => Qua17::EDGE_NODE_IDS[e][i],
+            // Tet
+            GeoKind::Tet4 => Tet4::EDGE_NODE_IDS[e][i],
+            GeoKind::Tet10 => Tet10::EDGE_NODE_IDS[e][i],
+            GeoKind::Tet20 => Tet20::EDGE_NODE_IDS[e][i],
+            // Hex
+            GeoKind::Hex8 => Hex8::EDGE_NODE_IDS[e][i],
+            GeoKind::Hex20 => Hex20::EDGE_NODE_IDS[e][i],
+            GeoKind::Hex32 => Hex32::EDGE_NODE_IDS[e][i],
+        }
+    }
+
+    /// Returns the local id of node on edge (inward normals)
+    ///
+    /// # Input
+    ///
+    /// * `e` -- index of edge in [0, nedge-1]
+    /// * `i` -- index of local node [0, edge_nnode-1]
+    ///
+    /// **Note:** For 2D GeoKinds, the sequence of edge nodes is such that the normals are **inward**.
+    /// For 3D GeoKinds, the sequence just follows the associate Lin GeoKind.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::shapes::GeoKind;
+    ///
+    /// //         2            OUTWARD NORMALS
+    /// //   3-----6-----2          p0 p1 p2
+    /// //   |           |      e:0 [1, 0, 4]
+    /// //   |           |      e:1 [2, 1, 5]
+    /// // 3 7           5 1    e:2 [3, 2, 6]
+    /// //   |           |      e:3 [0, 3, 7]
+    /// //   |           |
+    /// //   0-----4-----1
+    /// //         0
+    /// let kind = GeoKind::Qua8;
+    /// let edges: Vec<_> = (0..kind.nedge())
+    ///     .map(|e| (kind.edge_node_id_inward(e, 0),
+    ///               kind.edge_node_id_inward(e, 1),
+    ///               kind.edge_node_id_inward(e, 2)))
+    ///     .collect();
+    /// assert_eq!(
+    ///     edges,
+    ///     &[(0, 1, 4), (1, 2, 5), (2, 3, 6), (3, 0, 7)]
+    /// );
+    /// ```
+    ///
+    /// ```
+    /// use gemlab::shapes::GeoKind;
+    ///
+    /// //          .4-----[7]------7
+    /// //        ,' |            ,'|
+    /// //      [4] [8]         [6] |  [#] indicates local
+    /// //    ,'     |        ,'    |      edge number "e"
+    /// //  5'========[5]===6'     [11]
+    /// //  |               |       |
+    /// //  |        |      |       |
+    /// // [9]      ,0-[3]- | - - - 3
+    /// //  |     ,'       [10]  [2]
+    /// //  |   [0]         |   ,'
+    /// //  | ,'            | ,'
+    /// //  1'-----[1]------2'
+    /// let kind = GeoKind::Hex8;
+    /// let edges: Vec<_> = (0..kind.nedge())
+    ///     .map(|e| (kind.edge_node_id_inward(e, 0), kind.edge_node_id_inward(e, 1)))
+    ///     .collect();
+    /// assert_eq!(
+    ///     edges,
+    ///     &[(0, 1), (1, 2), (2, 3), (3, 0),
+    ///       (4, 5), (5, 6), (6, 7), (7, 4),
+    ///       (0, 4), (1, 5), (2, 6), (3, 7),
+    ///     ]
+    /// );
+    /// ```
+    pub fn edge_node_id_inward(&self, e: usize, i: usize) -> usize {
+        match self {
+            // Lin
+            GeoKind::Lin2 => 0,
+            GeoKind::Lin3 => 0,
+            GeoKind::Lin4 => 0,
+            GeoKind::Lin5 => 0,
+            // Tri
+            GeoKind::Tri3 => Tri3::EDGE_NODE_IDS_INWARD[e][i],
+            GeoKind::Tri6 => Tri6::EDGE_NODE_IDS_INWARD[e][i],
+            GeoKind::Tri10 => Tri10::EDGE_NODE_IDS_INWARD[e][i],
+            GeoKind::Tri15 => Tri15::EDGE_NODE_IDS_INWARD[e][i],
+            // Qua
+            GeoKind::Qua4 => Qua4::EDGE_NODE_IDS_INWARD[e][i],
+            GeoKind::Qua8 => Qua8::EDGE_NODE_IDS_INWARD[e][i],
+            GeoKind::Qua9 => Qua9::EDGE_NODE_IDS_INWARD[e][i],
+            GeoKind::Qua12 => Qua12::EDGE_NODE_IDS_INWARD[e][i],
+            GeoKind::Qua16 => Qua16::EDGE_NODE_IDS_INWARD[e][i],
+            GeoKind::Qua17 => Qua17::EDGE_NODE_IDS_INWARD[e][i],
             // Tet
             GeoKind::Tet4 => Tet4::EDGE_NODE_IDS[e][i],
             GeoKind::Tet10 => Tet10::EDGE_NODE_IDS[e][i],
@@ -1234,6 +1354,24 @@ mod tests {
     use super::{GeoCase, GeoClass, GeoKind};
     use std::collections::HashSet;
 
+    const IGNORED: usize = 0;
+    const SWAP_EDGE_NODE_LIN2: [usize; 5] = [1, 0, IGNORED, IGNORED, IGNORED];
+    const SWAP_EDGE_NODE_LIN3: [usize; 5] = [1, 0, 2, IGNORED, IGNORED];
+    const SWAP_EDGE_NODE_LIN4: [usize; 5] = [1, 0, 3, 2, IGNORED];
+    const SWAP_EDGE_NODE_LIN5: [usize; 5] = [1, 0, 2, 4, 3];
+
+    fn swap_edge_node_id(tri_or_qua_kind: GeoKind, e: usize, i: usize) -> usize {
+        let edge_kind = tri_or_qua_kind.edge_kind().unwrap();
+        let swap = match edge_kind {
+            GeoKind::Lin2 => SWAP_EDGE_NODE_LIN2,
+            GeoKind::Lin3 => SWAP_EDGE_NODE_LIN3,
+            GeoKind::Lin4 => SWAP_EDGE_NODE_LIN4,
+            GeoKind::Lin5 => SWAP_EDGE_NODE_LIN5,
+            _ => panic!("INTERNAL ERROR: edge kind is not possible for Tri or Qua"),
+        };
+        tri_or_qua_kind.edge_node_id(e, swap[i])
+    }
+
     #[test]
     fn derive_works() {
         let case = GeoCase::Cable.clone();
@@ -1636,30 +1774,45 @@ mod tests {
             match kind.class() {
                 GeoClass::Lin => {
                     assert_eq!(kind.edge_node_id(0, 0), 0);
+                    assert_eq!(kind.edge_node_id_inward(0, 0), 0);
                     assert_eq!(kind.is_lin(), true);
                     assert_eq!(kind.is_tri_or_tet(), false);
                     assert_eq!(kind.is_qua_or_hex(), false);
                 }
                 GeoClass::Tri => {
                     assert_eq!(kind.edge_node_id(0, 0), 1); // it always going to be the next node, after 0
+                    assert_eq!(kind.edge_node_id_inward(0, 0), 0);
                     assert_eq!(kind.is_lin(), false);
                     assert_eq!(kind.is_tri_or_tet(), true);
                     assert_eq!(kind.is_qua_or_hex(), false);
+                    for e in 0..3 {
+                        let inward: Vec<_> = (0..kind.edge_nnode()).map(|i| kind.edge_node_id_inward(e, i)).collect();
+                        let correct: Vec<_> = (0..kind.edge_nnode()).map(|i| swap_edge_node_id(kind, e, i)).collect();
+                        assert_eq!(inward, correct);
+                    }
                 }
                 GeoClass::Qua => {
                     assert_eq!(kind.edge_node_id(0, 0), 1); // it always going to be the next node, after 0
+                    assert_eq!(kind.edge_node_id_inward(0, 0), 0);
                     assert_eq!(kind.is_lin(), false);
                     assert_eq!(kind.is_tri_or_tet(), false);
                     assert_eq!(kind.is_qua_or_hex(), true);
+                    for e in 0..4 {
+                        let inward: Vec<_> = (0..kind.edge_nnode()).map(|i| kind.edge_node_id_inward(e, i)).collect();
+                        let correct: Vec<_> = (0..kind.edge_nnode()).map(|i| swap_edge_node_id(kind, e, i)).collect();
+                        assert_eq!(inward, correct);
+                    }
                 }
                 GeoClass::Tet => {
                     assert_eq!(kind.edge_node_id(0, 1), 1); // the next node is equal to 1
+                    assert_eq!(kind.edge_node_id_inward(0, 0), 0);
                     assert_eq!(kind.is_lin(), false);
                     assert_eq!(kind.is_tri_or_tet(), true);
                     assert_eq!(kind.is_qua_or_hex(), false);
                 }
                 GeoClass::Hex => {
                     assert_eq!(kind.edge_node_id(0, 1), 1); // the next node is equal to 1
+                    assert_eq!(kind.edge_node_id_inward(0, 0), 0);
                     assert_eq!(kind.is_lin(), false);
                     assert_eq!(kind.is_tri_or_tet(), false);
                     assert_eq!(kind.is_qua_or_hex(), true);

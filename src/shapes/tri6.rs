@@ -64,6 +64,13 @@ impl Tri6 {
     ];
 
     #[rustfmt::skip]
+    pub const EDGE_NODE_IDS_INWARD: [[usize; Tri6::EDGE_NNODE]; Tri6::NEDGE] = [
+        [0, 1, 3],
+        [1, 2, 4],
+        [2, 0, 5],
+    ];
+
+    #[rustfmt::skip]
     pub const NODE_REFERENCE_COORDS: [[f64; Tri6::GEO_NDIM]; Tri6::NNODE] = [
         [0.0, 0.0],
         [1.0, 0.0],

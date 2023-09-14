@@ -55,6 +55,14 @@ impl Qua4 {
     ];
 
     #[rustfmt::skip]
+    pub const EDGE_NODE_IDS_INWARD: [[usize; Qua4::EDGE_NNODE]; Qua4::NEDGE] = [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+    ];
+
+    #[rustfmt::skip]
     pub const NODE_REFERENCE_COORDS: [[f64; Qua4::GEO_NDIM]; Qua4::NNODE] = [
         [-1.0, -1.0],
         [ 1.0, -1.0],

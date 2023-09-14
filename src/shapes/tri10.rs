@@ -61,6 +61,13 @@ impl Tri10 {
     ];
 
     #[rustfmt::skip]
+    pub const EDGE_NODE_IDS_INWARD: [[usize; Tri10::EDGE_NNODE]; Tri10::NEDGE] = [
+        [0, 1, 3, 6],
+        [1, 2, 4, 7],
+        [2, 0, 5, 8],
+    ];
+
+    #[rustfmt::skip]
     pub const NODE_REFERENCE_COORDS: [[f64; Tri10::GEO_NDIM]; Tri10::NNODE] = [
         [0.0       , 0.0      ], // 0
         [1.0       , 0.0      ], // 1
