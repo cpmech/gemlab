@@ -1,5 +1,5 @@
 use super::{Cell, Mesh, Point};
-use crate::shapes::GeoKind;
+use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 use russell_lab::math::PI;
 use tritet::Trigen;
@@ -61,9 +61,8 @@ impl Unstructured {
         rmax: f64,
         nr: usize,
         na: usize,
-        o2: bool,
+        target: GeoKind,
         global_max_area: Option<f64>,
-        trigen_vtu_filename: &str,
     ) -> Result<Mesh, StrError> {
         // check
         if nr < 1 {
@@ -72,6 +71,12 @@ impl Unstructured {
         if na < 1 {
             return Err("number of divisions along alpha must be > 0");
         }
+        if target.class() != GeoClass::Tri {
+            return Err("the GeoClass of target must be Tri");
+        }
+
+        // generate o2 triangles (i.e., Tri6)
+        let o2 = if target.nnode() > 3 { true } else { false };
 
         // allocate data
         let npoint = 2 * (nr + 1) + 2 * (na - 1);
@@ -135,11 +140,6 @@ impl Unstructured {
 
         // generate mesh
         trigen.generate_mesh(false, o2, true, global_max_area, None)?;
-
-        // write trigen vtu file
-        if trigen_vtu_filename != "" {
-            trigen.write_vtu(trigen_vtu_filename)?;
-        }
 
         // allocate data
         const NDIM: usize = 2;
@@ -240,6 +240,7 @@ mod tests {
     use super::Unstructured;
     use crate::geometry::point_point_distance;
     use crate::mesh::{check_all, check_overlapping_points};
+    use crate::shapes::GeoKind;
     use russell_chk::approx_eq;
 
     #[allow(unused_imports)]
@@ -247,34 +248,33 @@ mod tests {
 
     const SAVE_FIGURE: bool = false;
 
-    fn filenames(fn_key: &str) -> (String, String, String) {
-        let fn_trigen_vtu = if SAVE_FIGURE {
-            [fn_key, "_trigen.vtu"].concat()
-        } else {
-            String::new()
-        };
+    fn filenames(fn_key: &str) -> (String, String) {
         let fn_vtu = [fn_key, ".vtu"].concat();
         let fn_svg = [fn_key, ".svg"].concat();
-        (fn_trigen_vtu, fn_vtu, fn_svg)
+        (fn_vtu, fn_svg)
     }
 
     #[test]
     fn tri_quarter_ring_2d_captures_errors() {
         assert_eq!(
-            Unstructured::quarter_ring_2d(3.0, 6.0, 0, 4, false, None, "").err(),
+            Unstructured::quarter_ring_2d(3.0, 6.0, 0, 4, GeoKind::Tri3, None).err(),
             Some("number of divisions along the radius must be > 0")
         );
         assert_eq!(
-            Unstructured::quarter_ring_2d(3.0, 6.0, 2, 0, false, None, "").err(),
+            Unstructured::quarter_ring_2d(3.0, 6.0, 2, 0, GeoKind::Tri3, None).err(),
             Some("number of divisions along alpha must be > 0")
+        );
+        assert_eq!(
+            Unstructured::quarter_ring_2d(3.0, 6.0, 2, 2, GeoKind::Qua4, None).err(),
+            Some("the GeoClass of target must be Tri")
         );
     }
 
     #[test]
     fn tri_quarter_ring_2d_works() {
-        let (fn_trigen_vtu, fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d");
+        let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d");
 
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, false, None, &fn_trigen_vtu).unwrap();
+        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri3, None).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
@@ -297,9 +297,9 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_o2_works() {
-        let (fn_trigen_vtu, fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_o2");
+        let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_o2");
 
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, true, None, &fn_trigen_vtu).unwrap();
+        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri6, None).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
@@ -322,10 +322,10 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_global_max_area_works() {
-        let (fn_trigen_vtu, fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_global_max_area");
+        let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_global_max_area");
 
         let global_max_area = Some(0.4);
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, false, global_max_area, &fn_trigen_vtu).unwrap();
+        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri3, global_max_area).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
@@ -349,10 +349,10 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_o2_global_max_area_works() {
-        let (fn_trigen_vtu, fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_o2_global_max_area");
+        let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_o2_global_max_area");
 
         let global_max_area = Some(0.4);
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, true, global_max_area, &fn_trigen_vtu).unwrap();
+        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri6, global_max_area).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
