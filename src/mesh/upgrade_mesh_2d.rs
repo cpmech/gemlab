@@ -154,6 +154,7 @@ pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError>
                             this_b = temp;
                         }
                         let edge_shares = edges.get(&(this_a, this_b)).unwrap();
+                        assert!(edge_shares.len() == 1 || edge_shares.len() == 2);
                         let shares: Vec<_> = edge_shares.iter().filter(|v| v.0 != this_cell_id).collect();
 
                         // found neighbor
