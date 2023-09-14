@@ -4,6 +4,13 @@ use crate::StrError;
 use russell_lab::Vector;
 
 /// Upgrades a mesh with triangles or quadrilaterals to a higher order
+///
+/// # Notes
+///
+/// 1. All cells must have the same GeoKind
+/// 2. Only [GeoClass::Tri] and [GeoClass::Qua] are allowed
+/// 3. The target GeoKind must have more nodes that the current GeoKind
+/// 4. The current cells must not have interior nodes, i.e., the current cells must **not** be Tri10, Qua9, or Qua16
 pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError> {
     //        2,
     //  s     | ',
@@ -46,15 +53,17 @@ pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError>
     let source = mesh.cells[0].kind;
     let source_nnode = source.nnode();
     let target_nnode = target.nnode();
-    let delta_nnode = target_nnode - source_nnode;
     if target.class() != source.class() {
         return Err("target class must equal the GeoClass of current cells");
     }
-    if delta_nnode < 1 {
+    if target_nnode <= source_nnode {
         return Err("target GeoKind must have more nodes than the current GeoKind");
     }
     if !(target.class() == GeoClass::Tri || target.class() == GeoClass::Qua) {
         return Err("target GeoClass must be Tri or Qua");
+    }
+    if source.n_interior_nodes() > 0 {
+        return Err("source class must not have interior nodes");
     }
     let nedge = source.nedge();
     let source_edge_nnode = source.edge_nnode();
@@ -66,6 +75,7 @@ pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError>
     // for example, in a mesh with two Tri6 cells (ncell = 2, npoint = 9), if target = Tri15,
     // then delta_nnode = 9, and not_set_yet will be equal to 1 + 9 + 2 * 9 = 28,
     // however, the final total number of points will be 25
+    let delta_nnode = target_nnode - source_nnode;
     let not_set_yet = 1 + npoint + ncell * delta_nnode;
 
     // expand connectivity array
@@ -268,6 +278,28 @@ mod tests {
         let mut mesh = Mesh {
             ndim: 2,
             points: vec![
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0 ] }, // 0
+                Point { id: 1, marker: 0, coords: vec![0.8, 0.0 ] }, // 1
+                Point { id: 2, marker: 0, coords: vec![0.8, 0.8 ] }, // 2
+                Point { id: 3, marker: 0, coords: vec![0.0, 0.8 ] }, // 3
+                Point { id: 4, marker: 0, coords: vec![0.4, 0.05] }, // 4
+                Point { id: 5, marker: 0, coords: vec![0.8, 0.4 ] }, // 5
+                Point { id: 6, marker: 0, coords: vec![0.4, 0.85] }, // 6
+                Point { id: 7, marker: 0, coords: vec![0.0, 0.4 ] }, // 7
+                Point { id: 8, marker: 0, coords: vec![0.4, 0.4 ] }, // 8
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Qua9, points: vec![0, 1, 2, 3, 4, 5, 6, 7, 8] },
+            ],
+        };
+        assert_eq!(
+            upgrade_mesh_2d(&mut mesh, GeoKind::Qua12).err(),
+            Some("source class must not have interior nodes")
+        );
+        #[rustfmt::skip]
+        let mut mesh = Mesh {
+            ndim: 2,
+            points: vec![
                 Point { id: 0, marker: 0, coords: vec![0.0, 0.0 ] },
                 Point { id: 1, marker: 0, coords: vec![1.0, 0.0 ] },
                 Point { id: 2, marker: 0, coords: vec![0.5, 0.85] },
@@ -385,5 +417,18 @@ mod tests {
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells[0].points, &[0, 1, 3, 4, 6, 8, 5, 7, 9, 10]);
         assert_eq!(mesh.cells[1].points, &[2, 3, 1, 11, 7, 13, 12, 6, 14, 15]);
+    }
+
+    #[test]
+    fn upgrade_qua4_to_qua8_works() {
+        let mut mesh = Samples::two_qua4().clone();
+        upgrade_mesh_2d(&mut mesh, GeoKind::Qua8).unwrap();
+        if SAVE_FIGURE {
+            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_qua4_to_qua8_after.svg").unwrap();
+        }
+        check_all(&mesh).unwrap();
+        assert_eq!(mesh.points.len(), 13);
+        assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3, 6, 7, 8, 9]);
+        assert_eq!(mesh.cells[1].points, &[1, 4, 5, 2, 10, 11, 12, 7]);
     }
 }
