@@ -431,4 +431,31 @@ mod tests {
         assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3, 6, 7, 8, 9]);
         assert_eq!(mesh.cells[1].points, &[1, 4, 5, 2, 10, 11, 12, 7]);
     }
+
+    #[test]
+    fn upgrade_qua12_to_qua16_works() {
+        let mut mesh = Samples::block_2d_four_qua12().clone();
+        upgrade_mesh_2d(&mut mesh, GeoKind::Qua16).unwrap();
+        if SAVE_FIGURE {
+            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_qua12_to_qua16_after.svg").unwrap();
+        }
+        check_all(&mesh).unwrap();
+        assert_eq!(mesh.points.len(), 33 + 4 * 4);
+        assert_eq!(
+            mesh.cells[0].points,
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 33, 34, 35, 36]
+        );
+        assert_eq!(
+            mesh.cells[1].points,
+            [1, 12, 13, 2, 14, 15, 16, 9, 17, 18, 19, 5, 37, 38, 39, 40]
+        );
+        assert_eq!(
+            mesh.cells[2].points,
+            [3, 2, 20, 21, 10, 22, 23, 24, 6, 25, 26, 27, 41, 42, 43, 44]
+        );
+        assert_eq!(
+            mesh.cells[3].points,
+            [2, 13, 28, 20, 19, 29, 30, 25, 16, 31, 32, 22, 45, 46, 47, 48]
+        );
+    }
 }
