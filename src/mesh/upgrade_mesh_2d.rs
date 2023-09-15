@@ -199,7 +199,7 @@ pub fn upgrade_mesh_2d(mesh: &mut Mesh, target: GeoKind) -> Result<(), StrError>
 #[cfg(test)]
 mod tests {
     use super::upgrade_mesh_2d;
-    use crate::mesh::{check_all, Cell, Mesh, Point, Samples};
+    use crate::mesh::{check_all, check_overlapping_points, Cell, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_chk::vec_approx_eq;
 
@@ -351,6 +351,8 @@ mod tests {
         }
 
         check_all(&mesh).unwrap();
+        check_overlapping_points(&mesh, 0.2).unwrap();
+
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(
             mesh.cells[0].points,
@@ -402,6 +404,7 @@ mod tests {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri3_to_tri6_after.svg").unwrap();
         }
         check_all(&mesh).unwrap();
+        check_overlapping_points(&mesh, 0.1).unwrap();
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells[0].points, &[0, 1, 3, 4, 5, 6]);
         assert_eq!(mesh.cells[1].points, &[2, 3, 1, 7, 5, 8]);
@@ -415,6 +418,7 @@ mod tests {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri3_to_tri10_after.svg").unwrap();
         }
         check_all(&mesh).unwrap();
+        check_overlapping_points(&mesh, 0.1).unwrap();
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells[0].points, &[0, 1, 3, 4, 6, 8, 5, 7, 9, 10]);
         assert_eq!(mesh.cells[1].points, &[2, 3, 1, 11, 7, 13, 12, 6, 14, 15]);
@@ -428,6 +432,7 @@ mod tests {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_qua4_to_qua8_after.svg").unwrap();
         }
         check_all(&mesh).unwrap();
+        check_overlapping_points(&mesh, 0.2).unwrap();
         assert_eq!(mesh.points.len(), 13);
         assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3, 6, 7, 8, 9]);
         assert_eq!(mesh.cells[1].points, &[1, 4, 5, 2, 10, 11, 12, 7]);
@@ -441,6 +446,7 @@ mod tests {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_qua12_to_qua16_after.svg").unwrap();
         }
         check_all(&mesh).unwrap();
+        check_overlapping_points(&mesh, 0.2).unwrap();
         assert_eq!(mesh.points.len(), 33 + 4 * 4);
         assert_eq!(
             mesh.cells[0].points,
