@@ -421,4 +421,46 @@ mod tests {
         let res = display_features(&features);
         assert_eq!(res, "(0,1) (4,5) (7,11) (0,3,2) (8,9,10,11) (6,7,11,10) ");
     }
+
+    #[test]
+    fn neighbors_are_correct_2d() {
+        let mesh = Samples::block_2d_four_qua12().clone();
+        let features = Features::new(&mesh, Extract::All);
+        let edges = features.all_2d_edges.unwrap();
+        let mut keys: Vec<_> = edges.keys().into_iter().collect();
+        keys.sort();
+        // for key in &keys {
+        //     println!("{:2?} => {:?}", key, edges.get(key).unwrap());
+        // }
+        assert_eq!(edges.len(), 12);
+        assert_eq!(
+            keys,
+            &[
+                &(0, 1),
+                &(0, 3),
+                &(1, 2),
+                &(1, 12),
+                &(2, 3),
+                &(2, 13),
+                &(2, 20),
+                &(3, 21),
+                &(12, 13),
+                &(13, 28),
+                &(20, 21),
+                &(20, 28)
+            ]
+        );
+        assert_eq!(edges.get(&(0, 1)), Some(&vec![(0, 0)]));
+        assert_eq!(edges.get(&(0, 3)), Some(&vec![(0, 3)]));
+        assert_eq!(edges.get(&(1, 2)), Some(&vec![(0, 1), (1, 3)]));
+        assert_eq!(edges.get(&(1, 12)), Some(&vec![(1, 0)]));
+        assert_eq!(edges.get(&(2, 3)), Some(&vec![(0, 2), (2, 0)]));
+        assert_eq!(edges.get(&(2, 13)), Some(&vec![(1, 2), (3, 0)]));
+        assert_eq!(edges.get(&(2, 20)), Some(&vec![(2, 1), (3, 3)]));
+        assert_eq!(edges.get(&(3, 21)), Some(&vec![(2, 3)]));
+        assert_eq!(edges.get(&(12, 13)), Some(&vec![(1, 1)]));
+        assert_eq!(edges.get(&(13, 28)), Some(&vec![(3, 1)]));
+        assert_eq!(edges.get(&(20, 21)), Some(&vec![(2, 2)]));
+        assert_eq!(edges.get(&(20, 28)), Some(&vec![(3, 2)]));
+    }
 }
