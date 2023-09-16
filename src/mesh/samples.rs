@@ -2002,7 +2002,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 5);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh).unwrap();
-        if true {
+        if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_four_tri3.svg").unwrap();
         }
 

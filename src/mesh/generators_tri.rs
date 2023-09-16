@@ -232,10 +232,9 @@ impl Unstructured {
 
         // upgrade mesh
         if target.nnode() > 6 {
-            convert_mesh_2d(&mut mesh, target)?;
-
-            // need to apply constraints again
-            apply_constraints(&mut mesh, rmin, rmax);
+            let mut new_mesh = convert_mesh_2d(&mesh, target)?;
+            apply_constraints(&mut new_mesh, rmin, rmax); // need to apply constraints again
+            return Ok(new_mesh);
         }
 
         // results
@@ -312,7 +311,7 @@ mod tests {
         let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri6, None).unwrap();
 
         if SAVE_FIGURE {
-            draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
+            draw_mesh(&mesh, true, true, false, &fn_svg).unwrap();
             mesh.write_vtu(&fn_vtu).unwrap();
         }
 
@@ -342,7 +341,6 @@ mod tests {
             mesh.write_vtu(&fn_vtu).unwrap();
         }
 
-        // draw_mesh(&mesh, false, true, false, svg).unwrap();
         assert_eq!(mesh.points.len(), 50);
         assert_eq!(mesh.cells.len(), 78);
         check_all(&mesh).unwrap();
@@ -369,7 +367,6 @@ mod tests {
             mesh.write_vtu(&fn_vtu).unwrap();
         }
 
-        // draw_mesh(&mesh, false, true, false, svg).unwrap();
         assert_eq!(mesh.points.len(), 177);
         assert_eq!(mesh.cells.len(), 78);
         check_all(&mesh).unwrap();
@@ -397,13 +394,15 @@ mod tests {
         assert_eq!(mesh.points.len(), 82);
         assert_eq!(mesh.cells.len(), 14);
         check_all(&mesh).unwrap();
-        check_overlapping_points(&mesh, 0.18).unwrap();
-        for p in [0, 73, 32, 11, 77, 36, 10, 62, 21, 9, 63, 22, 8] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+        check_overlapping_points(&mesh, 0.1).unwrap();
+        let inner: Vec<_> = mesh.points.iter().filter(|p| p.marker == -10).collect();
+        let outer: Vec<_> = mesh.points.iter().filter(|p| p.marker == -20).collect();
+        for point in inner {
+            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, 3.0, 1e-15);
         }
-        for p in [2, 34, 75, 3, 40, 81, 4, 17, 58, 5, 26, 67, 6] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+        for point in outer {
+            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
     }

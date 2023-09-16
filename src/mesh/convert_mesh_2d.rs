@@ -1,8 +1,9 @@
-use super::{get_edge_key_2d, Cell, Extract, Features, Mesh, Point};
+use super::{get_neighbors_2d, Cell, Extract, Features, Mesh, Point};
+use crate::prelude::PointId;
 use crate::shapes::{GeoClass, GeoKind, Scratchpad};
 use crate::StrError;
 use russell_lab::Vector;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 /// Converts a mesh with triangles or quadrilaterals
 ///
@@ -49,18 +50,32 @@ pub fn convert_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
 
     // get info about first cell in the mesh
     let source = mesh.cells[0].kind;
+    let class = source.class();
     let source_nnode = source.nnode();
     let target_nnode = target.nnode();
-    if target.class() != source.class() {
+    if target.class() != class {
         return Err("target class must equal the GeoClass of current cells");
     }
     if target.class() != GeoClass::Tri && target.class() != GeoClass::Qua {
         return Err("target GeoClass must be Tri or Qua");
     }
 
-    // info about the edge nodes
+    // info about the edges and corners
     let source_edge_nnode = source.edge_nnode();
     let target_edge_nnode = target.edge_nnode();
+    let nedge = target.nedge();
+    let ncorner = if class == GeoClass::Tri { 3 } else { 4 };
+    let mut edge_point_markers = vec![0; nedge];
+
+    // maps target local node id to edge number (to set markers of points on edges)
+    const INTERIOR_OR_CORNER: usize = usize::MAX;
+    let mut target_node_to_edge = vec![INTERIOR_OR_CORNER; target_nnode];
+    for e in 0..nedge {
+        for i in 2..target_edge_nnode {
+            let m = target.edge_node_id(e, i);
+            target_node_to_edge[m] = e;
+        }
+    }
 
     // find neighbors in the original mesh
     let source_features = Features::new(&mesh, Extract::All);
@@ -91,8 +106,8 @@ pub fn convert_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
     // coordinates of new points
     let mut x = Vector::new(mesh.ndim);
 
-    // indicates that the points on an edge have been configured for both cells sharing the edge
-    let mut edges_done: HashSet<(usize, usize)> = HashSet::new();
+    // maps old point id to new point id
+    let mut corners: HashMap<PointId, PointId> = HashMap::new();
 
     // upgrade or downgrade mesh
     for cell_id in 0..ncell {
@@ -109,72 +124,71 @@ pub fn convert_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
             }
         }
 
+        // find markers of points on edges
+        if source_edge_nnode > 2 {
+            for e in 0..nedge {
+                for i in 2..source_edge_nnode {
+                    let m = source.edge_node_id(e, i);
+                    let p = mesh.cells[cell_id].points[m];
+                    edge_point_markers[e] = mesh.points[p].marker;
+                }
+            }
+        }
+
         // set the new cell data
         dest.cells[cell_id].id = cell_id;
         dest.cells[cell_id].attribute = mesh.cells[cell_id].attribute;
 
-        // add points
-        for m in 0..target_nnode {
+        // handle corner nodes
+        for m in 0..ncorner {
+            let old_point_id = mesh.cells[cell_id].points[m];
+            if let Some(new_point_id) = corners.get(&old_point_id) {
+                dest.cells[cell_id].points[m] = *new_point_id;
+            } else {
+                let new_point_id = dest.points.len();
+                dest.points.push(Point {
+                    id: new_point_id,
+                    marker: mesh.points[old_point_id].marker,
+                    coords: mesh.points[old_point_id].coords.clone(),
+                });
+                corners.insert(old_point_id, new_point_id);
+                dest.cells[cell_id].points[m] = new_point_id;
+            }
+        }
+
+        // consult neighbors to see if there are points (in the middle of the edge) set already
+        if target_edge_nnode > 2 {
+            let neighbors = get_neighbors_2d(mesh, &source_edges, cell_id);
+            for (e, neigh_cell_id, neigh_e) in neighbors {
+                // only deal with the centre edge points, not the corner ones (start at 2)
+                for i in 2..target_edge_nnode {
+                    let n = target.edge_node_id(neigh_e, i); // outward normal
+                    let p = dest.cells[neigh_cell_id].points[n];
+                    if p != UNSET {
+                        let m = target.edge_node_id_inward(e, i); // inward normal
+                        dest.cells[cell_id].points[m] = p;
+                    }
+                }
+            }
+        }
+
+        // add new points (skip corner nodes)
+        for m in ncorner..target_nnode {
             if dest.cells[cell_id].points[m] == UNSET {
+                let e = target_node_to_edge[m];
+                let marker = if e == INTERIOR_OR_CORNER {
+                    0
+                } else {
+                    edge_point_markers[e]
+                };
                 let point_id = dest.points.len();
                 pad.calc_coords(&mut x, target.reference_coords(m)).unwrap();
                 dest.points.push(Point {
                     id: point_id,
-                    marker: 0,
+                    marker,
                     coords: x.as_data().clone(),
                 });
                 dest.cells[cell_id].points[m] = point_id;
-            }
-        }
-
-        // handle markers and neighbors
-        for e in 0..target.nedge() {
-            let (a, b) = get_edge_key_2d(mesh, cell_id, e);
-
-            // the edge is not configured yet
-            if !edges_done.contains(&(a, b)) {
-                // find the first non-zero marker of an internal node on the original edge
-                let mut marker = 0;
-                for i in 2..source_edge_nnode {
-                    let m = source.edge_node_id(e, i);
-                    let p = mesh.cells[cell_id].points[m];
-                    marker = mesh.points[p].marker;
-                    if marker != 0 {
-                        break;
-                    }
-                }
-
-                // find cells sharing the edge
-                let edge_shares = source_edges.get(&(a, b)).unwrap();
-                assert!(edge_shares.len() == 1 || edge_shares.len() == 2); // boundary or internal edge
-
-                // boundary edge (has 1 cell sharing it)
-                if edge_shares.len() == 1 {
-                    // set the marker of internal edge nodes
-                    for i in 2..target_edge_nnode {
-                        let m = target.edge_node_id(e, i);
-                        let p = dest.cells[cell_id].points[m];
-                        dest.points[p].marker = marker;
-                    }
-
-                // internal edge (has 2 cells sharing it)
-                } else {
-                    // find neighbor data
-                    let (neigh_cell_id, neigh_e) = if edge_shares[0].0 == cell_id {
-                        edge_shares[1] // myself, get the other
-                    } else {
-                        edge_shares[0] // not myself, ok
-                    };
-                    // set points on the edges of neighbor cells
-                    for i in 0..target_edge_nnode {
-                        let m = target.edge_node_id_inward(e, i); // inward normal
-                        let n = target.edge_node_id(neigh_e, i); // outward normal
-                        dest.cells[neigh_cell_id].points[n] = dest.cells[cell_id].points[m];
-                    }
-                }
-
-                // mark that this edge has been configured already
-                edges_done.insert((a, b));
             }
         }
     }
@@ -505,6 +519,23 @@ mod tests {
     }
 
     #[test]
+    fn convert_four_tri3_to_tri6_works() {
+        let mesh = Samples::four_tri3().clone();
+        let res = convert_mesh_2d(&mesh, GeoKind::Tri6).unwrap();
+        if SAVE_FIGURE {
+            let name = "/tmp/gemlab/test_four_tri3_to_tri6_after.svg";
+            draw_mesh(&res, true, true, false, name).unwrap();
+        }
+        check_all(&res).unwrap();
+        check_overlapping_points(&res, 0.1).unwrap();
+        assert_eq!(res.points.len(), 13);
+        assert_eq!(res.cells[0].points, (0..6).collect::<Vec<_>>());
+        assert_eq!(res.cells[1].points, &[0, 6, 7, 8, 9, 10]);
+        assert_eq!(res.cells[2].points, &[0, 2, 6, 5, 11, 8]);
+        assert_eq!(res.cells[3].points, &[0, 7, 1, 10, 12, 3]);
+    }
+
+    #[test]
     fn convert_tri3_to_tri10_works() {
         let mesh = Samples::two_tri3().clone();
         let res = convert_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
@@ -516,6 +547,29 @@ mod tests {
         assert_eq!(res.points.len(), 16);
         assert_eq!(res.cells[0].points, (0..10).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[10, 2, 1, 11, 7, 12, 13, 4, 14, 15]);
+    }
+
+    #[test]
+    fn convert_tri6_multi_shares_to_tri10_works() {
+        let mesh = Samples::three_tri6_multi_shares().clone();
+        let res = convert_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
+        if SAVE_FIGURE {
+            let name = "/tmp/gemlab/test_tri6_multi_shares_to_tri10_after.svg";
+            draw_mesh(&res, true, true, false, name).unwrap();
+        }
+        check_all(&res).unwrap();
+        check_overlapping_points(&res, 0.1).unwrap();
+        assert_eq!(res.points.len(), 19);
+        assert_eq!(res.cells[0].points, (0..10).collect::<Vec<_>>());
+        assert_eq!(res.cells[1].points, &[2, 1, 10, 7, 11, 12, 4, 13, 14, 15]);
+        assert_eq!(res.cells[2].points, &[0, 2, 10, 8, 14, 16, 5, 12, 17, 18]);
+        assert_eq!(res.points[3].marker, -10);
+        assert_eq!(res.points[6].marker, -10);
+        assert_eq!(res.points[11].marker, -20);
+        assert_eq!(res.points[13].marker, -20);
+        assert_eq!(res.points[16].marker, -30);
+        assert_eq!(res.points[17].marker, -30);
+        // TODO: implement cloning of corner tags
     }
 
     #[test]
