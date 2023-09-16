@@ -42,7 +42,7 @@ impl Mesh {
     /// where we can see that different cell (shape) kinds can be present in the same mesh.
     /// However, this function does not check for element compatibility as required by finite element analyses.
     ///
-    /// See [GeoKind::from] for the keys used to identify the cell kind (the keys are **lowercase**).
+    /// See [crate::shapes::GeoKind::from] for the keys used to identify the cell kind (the keys are **lowercase**).
     ///
     /// # Input
     ///
