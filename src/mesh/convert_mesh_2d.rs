@@ -454,6 +454,43 @@ mod tests {
     }
 
     #[test]
+    fn convert_tri6_to_tri3_works() {
+        #[rustfmt::skip]
+        let mesh = Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, marker: 0, coords: vec![4.0, 0.0] },
+                Point { id: 2, marker: 0, coords: vec![0.0, 4.0] },
+                Point { id: 3, marker: 0, coords: vec![2.0, 0.0] },
+                Point { id: 4, marker: -20, coords: vec![2.0, 2.0] },
+                Point { id: 5, marker: -10, coords: vec![0.0, 2.0] },
+                Point { id: 6, marker: 0, coords: vec![0.0,-4.0] },
+                Point { id: 7, marker: -30, coords: vec![2.0,-2.0] },
+                Point { id: 8, marker: -10, coords: vec![0.0,-2.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
+                Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
+            ],
+        };
+        check_all(&mesh).unwrap();
+
+        let res = convert_mesh_2d(&mesh, GeoKind::Tri3).unwrap();
+
+        if SAVE_FIGURE {
+            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri3_after.svg").unwrap();
+        }
+
+        check_all(&res).unwrap();
+        check_overlapping_points(&res, 0.1).unwrap();
+
+        assert_eq!(res.points.len(), 4);
+        assert_eq!(res.cells[0].points, &[0, 1, 2]);
+        assert_eq!(res.cells[1].points, &[2, 3, 0]);
+    }
+
+    #[test]
     fn convert_tri3_to_tri6_works() {
         let mesh = Samples::two_tri3().clone();
         let res = convert_mesh_2d(&mesh, GeoKind::Tri6).unwrap();
@@ -548,6 +585,27 @@ mod tests {
             assert_eq!(&res.cells[i].points, &correct.cells[i].points);
         }
         let sf = 3.0 / 4.0;
+        for i in 0..correct.points.len() {
+            let scaled = &[sf * correct.points[i].coords[0], sf * correct.points[i].coords[1]];
+            vec_approx_eq(&res.points[i].coords, scaled, 1e-15);
+        }
+    }
+
+    #[test]
+    fn convert_qua17_to_qua4_works() {
+        let mesh = Samples::block_2d_four_qua17().clone();
+        let res = convert_mesh_2d(&mesh, GeoKind::Qua4).unwrap();
+        if SAVE_FIGURE {
+            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua17_to_qua4_after.svg").unwrap();
+        }
+        check_all(&res).unwrap();
+        check_overlapping_points(&res, 0.2).unwrap();
+        assert_eq!(res.points.len(), 9);
+        let correct = Samples::block_2d_four_qua4();
+        for i in 0..correct.cells.len() {
+            assert_eq!(&res.cells[i].points, &correct.cells[i].points);
+        }
+        let sf = 4.0 / 2.0;
         for i in 0..correct.points.len() {
             let scaled = &[sf * correct.points[i].coords[0], sf * correct.points[i].coords[1]];
             vec_approx_eq(&res.points[i].coords, scaled, 1e-15);
