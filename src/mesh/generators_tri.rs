@@ -9,18 +9,18 @@ use tritet::Trigen;
 pub struct Unstructured {}
 
 fn apply_constraints(mesh: &mut Mesh, rmin: f64, rmax: f64) {
-    // -300 =---__
+    //  -3 =---__
     //   |        '*._
     //   | -40        *._
     //   |               *.  -20
-    // -400 =-__           *.
+    //  -4 ==-__           *.
     //          '-.          *
     //             *.         *
     //          -10  *         *
     //                *         *
     //                 *         *
     //                 #   -30   #
-    //               -100 ----- -200
+    //                -1 ------- -2
 
     // apply constraints
     const TOL: f64 = 1e-15;
@@ -80,18 +80,18 @@ impl Unstructured {
     /// ```text
     /// Point markers:
     ///
-    /// -300 =---__
+    ///  -3 ==---__
     ///   |        '*._
     ///   | -40        *._
     ///   |               *.  -20
-    /// -400 =-__           *.
+    ///  -4 ==-__           *.
     ///          '-.          *
     ///             *.         *
     ///          -10  *         *
     ///                *         *
     ///                 *         *
     ///                 #   -30   #
-    ///               -100 ----- -200
+    ///                -1 ------- -2
     /// ```
     ///
     /// # Input
@@ -141,10 +141,10 @@ impl Unstructured {
         let mut index = 0;
 
         // horizontal line
-        trigen.set_point(index, -100, rmin, 0.0)?;
+        trigen.set_point(index, -1, rmin, 0.0)?;
         index += 1;
         for i in 1..(nr + 1) {
-            let marker = if i == nr { -200 } else { 0 };
+            let marker = if i == nr { -2 } else { 0 };
             let r = rmin + (i as f64) * dr;
             trigen.set_point(index, marker, r, 0.0)?;
             trigen.set_segment(index - 1, -30, index - 1, index)?;
@@ -153,7 +153,7 @@ impl Unstructured {
 
         // outer circle
         for i in 1..(na + 1) {
-            let marker = if i == na { -300 } else { 0 };
+            let marker = if i == na { -3 } else { 0 };
             let a = AMIN + (i as f64) * da;
             let x = rmax * f64::cos(a);
             let y = rmax * f64::sin(a);
@@ -164,7 +164,7 @@ impl Unstructured {
 
         // vertical line
         for i in 1..(nr + 1) {
-            let marker = if i == nr { -400 } else { 0 };
+            let marker = if i == nr { -4 } else { 0 };
             let r = rmin + ((nr - i) as f64) * dr;
             trigen.set_point(index, marker, 0.0, r)?;
             trigen.set_segment(index - 1, -40, index - 1, index)?;
@@ -248,13 +248,16 @@ impl Unstructured {
 mod tests {
     use super::Unstructured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{check_all, check_overlapping_points};
+    use crate::mesh::{check_all, check_overlapping_points, At, Find, Mesh};
     use crate::shapes::GeoKind;
+    use crate::util::any_x;
     use russell_chk::approx_eq;
 
     #[allow(unused_imports)]
     use crate::mesh::draw_mesh;
 
+    const RMIN: f64 = 3.0;
+    const RMAX: f64 = 6.0;
     const SAVE_FIGURE: bool = false;
 
     fn filenames(fn_key: &str) -> (String, String) {
@@ -263,18 +266,50 @@ mod tests {
         (fn_vtu, fn_svg)
     }
 
+    fn check_constraints(mesh: &Mesh) {
+        let inner: Vec<_> = mesh.points.iter().filter(|p| p.marker == -10).collect();
+        let outer: Vec<_> = mesh.points.iter().filter(|p| p.marker == -20).collect();
+        for point in inner {
+            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMIN, 1e-15);
+        }
+        for point in outer {
+            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMAX, 1e-15);
+        }
+    }
+
+    fn check_corner_markers(mesh: &Mesh) {
+        let find = Find::new(mesh, None);
+        let res = find.point_ids(At::XY(RMIN, 0.0), any_x).unwrap();
+        assert_eq!(res.len(), 1);
+        assert_eq!(mesh.points[res[0]].marker, -1);
+
+        let res = find.point_ids(At::XY(RMAX, 0.0), any_x).unwrap();
+        assert_eq!(res.len(), 1);
+        assert_eq!(mesh.points[res[0]].marker, -2);
+
+        let res = find.point_ids(At::XY(0.0, RMAX), any_x).unwrap();
+        assert_eq!(res.len(), 1);
+        assert_eq!(mesh.points[res[0]].marker, -3);
+
+        let res = find.point_ids(At::XY(0.0, RMIN), any_x).unwrap();
+        assert_eq!(res.len(), 1);
+        assert_eq!(mesh.points[res[0]].marker, -4);
+    }
+
     #[test]
     fn tri_quarter_ring_2d_captures_errors() {
         assert_eq!(
-            Unstructured::quarter_ring_2d(3.0, 6.0, 0, 4, GeoKind::Tri3, None).err(),
+            Unstructured::quarter_ring_2d(RMIN, RMAX, 0, 4, GeoKind::Tri3, None).err(),
             Some("number of divisions along the radius must be > 0")
         );
         assert_eq!(
-            Unstructured::quarter_ring_2d(3.0, 6.0, 2, 0, GeoKind::Tri3, None).err(),
+            Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 0, GeoKind::Tri3, None).err(),
             Some("number of divisions along alpha must be > 0")
         );
         assert_eq!(
-            Unstructured::quarter_ring_2d(3.0, 6.0, 2, 2, GeoKind::Qua4, None).err(),
+            Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 2, GeoKind::Qua4, None).err(),
             Some("the GeoClass of target must be Tri")
         );
     }
@@ -282,128 +317,96 @@ mod tests {
     #[test]
     fn tri_quarter_ring_2d_works() {
         let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d");
-
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri3, None).unwrap();
-
+        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, None).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
             mesh.write_vtu(&fn_vtu).unwrap();
         }
-
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 14);
         check_all(&mesh).unwrap();
         check_overlapping_points(&mesh, 0.18).unwrap();
-        for p in [0, 11, 10, 9, 8] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 3.0, 1e-15);
-        }
-        for p in [2, 3, 4, 5, 6] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 6.0, 1e-15);
-        }
+        check_constraints(&mesh);
+        check_corner_markers(&mesh);
     }
 
     #[test]
     fn tri_quarter_ring_2d_o2_works() {
         let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_o2");
-
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri6, None).unwrap();
-
+        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, None).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, &fn_svg).unwrap();
             mesh.write_vtu(&fn_vtu).unwrap();
         }
-
         assert_eq!(mesh.points.len(), 41);
         assert_eq!(mesh.cells.len(), 14);
         check_all(&mesh).unwrap();
         check_overlapping_points(&mesh, 0.18).unwrap();
-        for p in [0, 32, 11, 36, 10, 21, 9, 22, 8] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 3.0, 1e-15);
-        }
-        for p in [2, 34, 3, 40, 4, 17, 5, 26, 6] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 6.0, 1e-15);
-        }
+        check_constraints(&mesh);
+        check_corner_markers(&mesh);
     }
 
     #[test]
     fn tri_quarter_ring_2d_global_max_area_works() {
         let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_global_max_area");
-
         let global_max_area = Some(0.4);
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri3, global_max_area).unwrap();
-
+        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, global_max_area).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
             mesh.write_vtu(&fn_vtu).unwrap();
         }
-
         assert_eq!(mesh.points.len(), 50);
         assert_eq!(mesh.cells.len(), 78);
         check_all(&mesh).unwrap();
         check_overlapping_points(&mesh, 0.18).unwrap();
-        for p in [0, 11, 10, 17, 9, 8] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 3.0, 1e-15);
-        }
-        for p in [2, 40, 3, 25, 4, 24, 5, 33, 6] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 6.0, 1e-15);
-        }
+        check_constraints(&mesh);
+        check_corner_markers(&mesh);
     }
 
     #[test]
     fn tri_quarter_ring_2d_o2_global_max_area_works() {
         let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_o2_global_max_area");
-
         let global_max_area = Some(0.4);
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri6, global_max_area).unwrap();
-
+        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, global_max_area).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
             mesh.write_vtu(&fn_vtu).unwrap();
         }
-
         assert_eq!(mesh.points.len(), 177);
         assert_eq!(mesh.cells.len(), 78);
         check_all(&mesh).unwrap();
         check_overlapping_points(&mesh, 0.1).unwrap();
-        for p in [0, 150, 11, 81, 10, 58, 17, 99, 9, 146, 8] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 3.0, 1e-15);
-        }
-        for p in [2, 154, 40, 176, 3, 174, 25, 130, 4, 118, 24, 136, 5, 124, 33, 134, 6] {
-            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 6.0, 1e-15);
-        }
+        check_constraints(&mesh);
+        check_corner_markers(&mesh);
     }
 
     #[test]
     fn tri_quarter_ring_2d_tri10_works() {
         let (_, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_tri10");
-
-        let mesh = Unstructured::quarter_ring_2d(3.0, 6.0, 2, 4, GeoKind::Tri10, None).unwrap();
-
+        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri10, None).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
         }
-
         assert_eq!(mesh.points.len(), 82);
         assert_eq!(mesh.cells.len(), 14);
         check_all(&mesh).unwrap();
         check_overlapping_points(&mesh, 0.1).unwrap();
-        let inner: Vec<_> = mesh.points.iter().filter(|p| p.marker == -10).collect();
-        let outer: Vec<_> = mesh.points.iter().filter(|p| p.marker == -20).collect();
-        for point in inner {
-            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 3.0, 1e-15);
+        check_constraints(&mesh);
+        check_corner_markers(&mesh);
+    }
+
+    #[test]
+    fn tri_quarter_ring_2d_tri15_works() {
+        let (_, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_tri15");
+        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri15, None).unwrap();
+        if SAVE_FIGURE {
+            draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
         }
-        for point in outer {
-            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, 6.0, 1e-15);
-        }
+        assert_eq!(mesh.points.len(), 137);
+        assert_eq!(mesh.cells.len(), 14);
+        check_all(&mesh).unwrap();
+        check_overlapping_points(&mesh, 0.1).unwrap();
+        check_constraints(&mesh);
+        check_corner_markers(&mesh);
     }
 }
