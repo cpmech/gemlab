@@ -322,7 +322,81 @@ pub fn display_features(features: &[&Feature]) -> String {
     buffer
 }
 
+/// Returns the 2D edge key of a given cell and edge index
+///
+/// # Input
+///
+/// * `mesh` -- the mesh
+/// * `cell_id` -- the cell ID
+/// * `e` -- the index of the edge (see [GeoKind::edge_node_id])
+///
+/// # Output
+///
+/// Returns `(a, b)`, a **sorted** pair of point indices.
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::mesh::{get_edge_key_2d, Cell, Mesh, Point};
+/// use gemlab::shapes::GeoKind;
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3---------2---------5
+///     //  |         |         |
+///     //  |   [0]   |   [1]   |
+///     //  |         |         |
+///     //  0---------1---------4
+///     #[rustfmt::skip]
+///     let mesh = Mesh {
+///         ndim: 2,
+///         points: vec![
+///             Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+///             Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+///             Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
+///             Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
+///             Point { id: 4, marker: 0, coords: vec![2.0, 0.0] },
+///             Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+///         ],
+///     };
+///
+///     assert_eq!(get_edge_key_2d(&mesh, 0, 0), (0, 1));
+///     assert_eq!(get_edge_key_2d(&mesh, 0, 1), (1, 2));
+///     assert_eq!(get_edge_key_2d(&mesh, 0, 2), (2, 3));
+///     assert_eq!(get_edge_key_2d(&mesh, 0, 3), (0, 3));
+///
+///     assert_eq!(get_edge_key_2d(&mesh, 1, 0), (1, 4));
+///     assert_eq!(get_edge_key_2d(&mesh, 1, 1), (4, 5));
+///     assert_eq!(get_edge_key_2d(&mesh, 1, 2), (2, 5));
+///     assert_eq!(get_edge_key_2d(&mesh, 1, 3), (1, 2));
+///     Ok(())
+/// }
+/// ```
+pub fn get_edge_key_2d(mesh: &Mesh, cell_id: CellId, e: usize) -> (usize, usize) {
+    let cell = &mesh.cells[cell_id];
+    let local_a = cell.kind.edge_node_id(e, 0);
+    let local_b = cell.kind.edge_node_id(e, 1);
+    let mut a = cell.points[local_a];
+    let mut b = cell.points[local_b];
+    if b < a {
+        let temp = a;
+        a = b;
+        b = temp;
+    }
+    (a, b)
+}
+
 /// Returns all neighbors of a 2D cell
+///
+/// # Input
+///
+/// * `mesh` -- the mesh
+/// * `edges` -- the edge-to-cells map
+/// * `e` -- the index of the edge (see [GeoKind::edge_node_id])
 ///
 /// # Output
 ///
@@ -331,6 +405,51 @@ pub fn display_features(features: &[&Feature]) -> String {
 /// * `e` -- the local edge of this cell through which the neighbor is in contact
 /// * `neigh_cell_id` -- is the ID of the neighbor cell
 /// * `neigh_e` -- is the neighbor's local edge through which this cell is in contact
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::mesh::{neighbors_2d, Cell, Extract, Features, Mesh, Point};
+/// use gemlab::shapes::GeoKind;
+/// use gemlab::StrError;
+///
+/// fn main() -> Result<(), StrError> {
+///     //  3---------2---------5
+///     //  |         |         |
+///     //  |   [0]   |   [1]   |
+///     //  |         |         |
+///     //  0---------1---------4
+///     #[rustfmt::skip]
+///     let mesh = Mesh {
+///         ndim: 2,
+///         points: vec![
+///             Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+///             Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+///             Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
+///             Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
+///             Point { id: 4, marker: 0, coords: vec![2.0, 0.0] },
+///             Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
+///         ],
+///         cells: vec![
+///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+///         ],
+///     };
+///
+///     let features = Features::new(&mesh, Extract::All);
+///     let edges = features.all_2d_edges.unwrap();
+///
+///     let neighbors = neighbors_2d(&mesh, &edges, 0);
+///     assert_eq!(neighbors.len(), 1);
+///     assert!(neighbors.contains(&(1, 1, 3)));
+///
+///     let neighbors = neighbors_2d(&mesh, &edges, 1);
+///     assert_eq!(neighbors.len(), 1);
+///     assert!(neighbors.contains(&(3, 0, 1)));
+///
+///     Ok(())
+/// }
+/// ```
 pub fn neighbors_2d(mesh: &Mesh, edges: &MapEdge2dToCells, cell_id: CellId) -> Vec<(usize, CellId, usize)> {
     let cell = &mesh.cells[cell_id];
     let nedge = cell.kind.nedge();
@@ -359,7 +478,7 @@ pub fn neighbors_2d(mesh: &Mesh, edges: &MapEdge2dToCells, cell_id: CellId) -> V
 
 #[cfg(test)]
 mod tests {
-    use super::{display_features, neighbors_2d, Extract, Feature, Features};
+    use super::{display_features, get_edge_key_2d, neighbors_2d, Extract, Feature, Features};
     use crate::mesh::Samples;
     use crate::shapes::GeoKind;
 
@@ -453,6 +572,31 @@ mod tests {
         let features: Vec<&Feature> = vec![edges.iter().collect::<Vec<_>>(), faces.iter().collect::<Vec<_>>()].concat();
         let res = display_features(&features);
         assert_eq!(res, "(0,1) (4,5) (7,11) (0,3,2) (8,9,10,11) (6,7,11,10) ");
+    }
+
+    #[test]
+    fn get_edge_key_2d_works() {
+        let mesh = Samples::block_2d_four_qua12().clone();
+
+        assert_eq!(get_edge_key_2d(&mesh, 0, 0), (0, 1));
+        assert_eq!(get_edge_key_2d(&mesh, 0, 1), (1, 2));
+        assert_eq!(get_edge_key_2d(&mesh, 0, 2), (2, 3));
+        assert_eq!(get_edge_key_2d(&mesh, 0, 3), (0, 3));
+
+        assert_eq!(get_edge_key_2d(&mesh, 1, 0), (1, 12));
+        assert_eq!(get_edge_key_2d(&mesh, 1, 1), (12, 13));
+        assert_eq!(get_edge_key_2d(&mesh, 1, 2), (2, 13));
+        assert_eq!(get_edge_key_2d(&mesh, 1, 3), (1, 2));
+
+        assert_eq!(get_edge_key_2d(&mesh, 2, 0), (2, 3));
+        assert_eq!(get_edge_key_2d(&mesh, 2, 1), (2, 20));
+        assert_eq!(get_edge_key_2d(&mesh, 2, 2), (20, 21));
+        assert_eq!(get_edge_key_2d(&mesh, 2, 3), (3, 21));
+
+        assert_eq!(get_edge_key_2d(&mesh, 3, 0), (2, 13));
+        assert_eq!(get_edge_key_2d(&mesh, 3, 1), (13, 28));
+        assert_eq!(get_edge_key_2d(&mesh, 3, 2), (20, 28));
+        assert_eq!(get_edge_key_2d(&mesh, 3, 3), (2, 20));
     }
 
     #[test]
