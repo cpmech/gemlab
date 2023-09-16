@@ -122,7 +122,8 @@ impl Unstructured {
             return Err("the GeoClass of target must be Tri");
         }
 
-        // generate o2 triangles (i.e., Tri6)
+        // generate o2 triangles (i.e., Tri6) (need to use o2 for others too, e.g.,
+        // Tri10, Tri15, because the the middle-edge markers will be replicated by trigen
         let o2 = if target.nnode() > 3 { true } else { false };
 
         // allocate data
@@ -227,13 +228,15 @@ impl Unstructured {
             }
         }
 
-        // apply constraints
+        // apply constraints (need to be done before the upgrade because
+        // Steiner points may be added even for Tri3)
         apply_constraints(&mut mesh, rmin, rmax);
 
-        // upgrade mesh
+        // upgrade mesh (need to apply constraints again because
+        // new mid-edge points may be created)
         if target.nnode() > 6 {
             let mut new_mesh = convert_mesh_2d(&mesh, target)?;
-            apply_constraints(&mut new_mesh, rmin, rmax); // need to apply constraints again
+            apply_constraints(&mut new_mesh, rmin, rmax);
             return Ok(new_mesh);
         }
 
