@@ -400,7 +400,7 @@ pub fn get_edge_key_2d(mesh: &Mesh, cell_id: CellId, e: usize) -> (usize, usize)
 /// # Examples
 ///
 /// ```
-/// use gemlab::mesh::{neighbors_2d, Cell, Extract, Features, Mesh, Point};
+/// use gemlab::mesh::{get_neighbors_2d, Cell, Extract, Features, Mesh, Point};
 /// use gemlab::shapes::GeoKind;
 /// use gemlab::StrError;
 ///
@@ -430,18 +430,18 @@ pub fn get_edge_key_2d(mesh: &Mesh, cell_id: CellId, e: usize) -> (usize, usize)
 ///     let features = Features::new(&mesh, Extract::All);
 ///     let edges = features.all_2d_edges.unwrap();
 ///
-///     let neighbors = neighbors_2d(&mesh, &edges, 0);
+///     let neighbors = get_neighbors_2d(&mesh, &edges, 0);
 ///     assert_eq!(neighbors.len(), 1);
 ///     assert!(neighbors.contains(&(1, 1, 3)));
 ///
-///     let neighbors = neighbors_2d(&mesh, &edges, 1);
+///     let neighbors = get_neighbors_2d(&mesh, &edges, 1);
 ///     assert_eq!(neighbors.len(), 1);
 ///     assert!(neighbors.contains(&(3, 0, 1)));
 ///
 ///     Ok(())
 /// }
 /// ```
-pub fn neighbors_2d(mesh: &Mesh, edges: &MapEdge2dToCells, cell_id: CellId) -> Vec<(usize, CellId, usize)> {
+pub fn get_neighbors_2d(mesh: &Mesh, edges: &MapEdge2dToCells, cell_id: CellId) -> Vec<(usize, CellId, usize)> {
     let cell = &mesh.cells[cell_id];
     let nedge = cell.kind.nedge();
     let mut res = Vec::new();
@@ -469,7 +469,7 @@ pub fn neighbors_2d(mesh: &Mesh, edges: &MapEdge2dToCells, cell_id: CellId) -> V
 
 #[cfg(test)]
 mod tests {
-    use super::{display_features, get_edge_key_2d, neighbors_2d, Extract, Feature, Features};
+    use super::{display_features, get_edge_key_2d, get_neighbors_2d, Extract, Feature, Features};
     use crate::mesh::Samples;
     use crate::shapes::GeoKind;
 
@@ -633,27 +633,27 @@ mod tests {
     }
 
     #[test]
-    fn neighbors_2d_works() {
+    fn get_neighbors_2d_works() {
         let mesh = Samples::block_2d_four_qua4();
         let features = Features::new(&mesh, Extract::All);
         let edges = features.all_2d_edges.unwrap();
 
-        let neighbors = neighbors_2d(&mesh, &edges, 0);
+        let neighbors = get_neighbors_2d(&mesh, &edges, 0);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(1, 1, 3)));
         assert!(neighbors.contains(&(2, 2, 0)));
 
-        let neighbors = neighbors_2d(&mesh, &edges, 1);
+        let neighbors = get_neighbors_2d(&mesh, &edges, 1);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(3, 0, 1)));
         assert!(neighbors.contains(&(2, 3, 0)));
 
-        let neighbors = neighbors_2d(&mesh, &edges, 2);
+        let neighbors = get_neighbors_2d(&mesh, &edges, 2);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 0, 2)));
         assert!(neighbors.contains(&(1, 3, 3)));
 
-        let neighbors = neighbors_2d(&mesh, &edges, 3);
+        let neighbors = get_neighbors_2d(&mesh, &edges, 3);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 1, 2)));
         assert!(neighbors.contains(&(3, 2, 1)));
