@@ -11,6 +11,9 @@ use std::collections::HashMap;
 ///
 /// 1. All cells must have the same GeoKind
 /// 2. Only [GeoClass::Tri] and [GeoClass::Qua] are allowed
+/// 3. The points will be completely renumbered
+/// 4. The corner tags will be replicated into the new mesh
+/// 5. The points at the middle of edges will inherit the tag of ONE corresponding middle point
 pub fn convert_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
     //        2,
     //  s     | ',
@@ -151,8 +154,8 @@ pub fn convert_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
                     marker: mesh.points[old_point_id].marker,
                     coords: mesh.points[old_point_id].coords.clone(),
                 });
-                corners.insert(old_point_id, new_point_id);
                 dest.cells[cell_id].points[m] = new_point_id;
+                corners.insert(old_point_id, new_point_id);
             }
         }
 
@@ -181,14 +184,14 @@ pub fn convert_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
                 } else {
                     edge_point_markers[e]
                 };
-                let point_id = dest.points.len();
+                let new_point_id = dest.points.len();
                 pad.calc_coords(&mut x, target.reference_coords(m)).unwrap();
                 dest.points.push(Point {
-                    id: point_id,
+                    id: new_point_id,
                     marker,
                     coords: x.as_data().clone(),
                 });
-                dest.cells[cell_id].points[m] = point_id;
+                dest.cells[cell_id].points[m] = new_point_id;
             }
         }
     }
