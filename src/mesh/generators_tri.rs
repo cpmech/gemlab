@@ -1,5 +1,5 @@
 use super::{Cell, Mesh, Point};
-use crate::mesh::upgrade_mesh_2d;
+use crate::mesh::convert_mesh_2d;
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 use russell_lab::math::PI;
@@ -232,7 +232,7 @@ impl Unstructured {
 
         // upgrade mesh
         if target.nnode() > 6 {
-            upgrade_mesh_2d(&mut mesh, target)?;
+            convert_mesh_2d(&mut mesh, target)?;
 
             // need to apply constraints again
             apply_constraints(&mut mesh, rmin, rmax);

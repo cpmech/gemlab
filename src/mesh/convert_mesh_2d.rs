@@ -4,13 +4,13 @@ use crate::StrError;
 use russell_lab::Vector;
 use std::collections::HashSet;
 
-/// Upgrades a mesh with triangles or quadrilaterals to a higher order
+/// Converts a mesh with triangles or quadrilaterals
 ///
 /// # Notes
 ///
 /// 1. All cells must have the same GeoKind
 /// 2. Only [GeoClass::Tri] and [GeoClass::Qua] are allowed
-pub fn upgrade_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
+pub fn convert_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
     //        2,
     //  s     | ',
     //        |   ',
@@ -185,7 +185,7 @@ pub fn upgrade_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
 
 #[cfg(test)]
 mod tests {
-    use super::upgrade_mesh_2d;
+    use super::convert_mesh_2d;
     use crate::mesh::{check_all, check_overlapping_points, Cell, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_chk::vec_approx_eq;
@@ -215,7 +215,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            upgrade_mesh_2d(&mesh, GeoKind::Tri15).err(),
+            convert_mesh_2d(&mesh, GeoKind::Tri15).err(),
             Some("ndim must be equal to 2")
         );
 
@@ -225,7 +225,7 @@ mod tests {
             cells: vec![],
         };
         assert_eq!(
-            upgrade_mesh_2d(&mesh, GeoKind::Tri15).err(),
+            convert_mesh_2d(&mesh, GeoKind::Tri15).err(),
             Some("the conversion requires at least one cell")
         );
 
@@ -242,7 +242,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            upgrade_mesh_2d(&mesh, GeoKind::Qua8).err(),
+            convert_mesh_2d(&mesh, GeoKind::Qua8).err(),
             Some("target class must equal the GeoClass of current cells")
         );
         // assert_eq!(
@@ -262,7 +262,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            upgrade_mesh_2d(&mesh, GeoKind::Lin3).err(),
+            convert_mesh_2d(&mesh, GeoKind::Lin3).err(),
             Some("target GeoClass must be Tri or Qua")
         );
 
@@ -304,7 +304,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            upgrade_mesh_2d(&mesh, GeoKind::Tri6).err(),
+            convert_mesh_2d(&mesh, GeoKind::Tri6).err(),
             Some("all cells must have the same GeoKind")
         );
     }
@@ -336,7 +336,7 @@ mod tests {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_before.svg").unwrap();
         }
 
-        let res = upgrade_mesh_2d(&mesh, GeoKind::Tri15).unwrap();
+        let res = convert_mesh_2d(&mesh, GeoKind::Tri15).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_after.svg").unwrap();
@@ -432,7 +432,7 @@ mod tests {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri10_before.svg").unwrap();
         }
 
-        let res = upgrade_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
+        let res = convert_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri10_after.svg").unwrap();
@@ -483,7 +483,7 @@ mod tests {
     #[test]
     fn upgrade_tri3_to_tri6_works() {
         let mesh = Samples::two_tri3().clone();
-        let res = upgrade_mesh_2d(&mesh, GeoKind::Tri6).unwrap();
+        let res = convert_mesh_2d(&mesh, GeoKind::Tri6).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri3_to_tri6_after.svg").unwrap();
         }
@@ -497,7 +497,7 @@ mod tests {
     #[test]
     fn upgrade_tri3_to_tri10_works() {
         let mesh = Samples::two_tri3().clone();
-        let res = upgrade_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
+        let res = convert_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri3_to_tri10_after.svg").unwrap();
         }
@@ -511,7 +511,7 @@ mod tests {
     #[test]
     fn upgrade_qua4_to_qua8_works() {
         let mesh = Samples::two_qua4().clone();
-        let res = upgrade_mesh_2d(&mesh, GeoKind::Qua8).unwrap();
+        let res = convert_mesh_2d(&mesh, GeoKind::Qua8).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua4_to_qua8_after.svg").unwrap();
         }
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn upgrade_qua12_to_qua16_works() {
         let mesh = Samples::block_2d_four_qua12().clone();
-        let res = upgrade_mesh_2d(&mesh, GeoKind::Qua16).unwrap();
+        let res = convert_mesh_2d(&mesh, GeoKind::Qua16).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua12_to_qua16_after.svg").unwrap();
         }
@@ -550,7 +550,7 @@ mod tests {
     #[test]
     fn upgrade_qua12_to_qua17_works() {
         let mesh = Samples::block_2d_four_qua12().clone();
-        let res = upgrade_mesh_2d(&mesh, GeoKind::Qua17).unwrap();
+        let res = convert_mesh_2d(&mesh, GeoKind::Qua17).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua12_to_qua17_after.svg").unwrap();
         }
