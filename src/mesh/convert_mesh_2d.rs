@@ -566,13 +566,25 @@ mod tests {
         assert_eq!(res.cells[0].points, (0..10).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[2, 1, 10, 7, 11, 12, 4, 13, 14, 15]);
         assert_eq!(res.cells[2].points, &[0, 2, 10, 8, 14, 16, 5, 12, 17, 18]);
+        assert_eq!(res.points[0].marker, -1);
+        assert_eq!(res.points[1].marker, -2);
+        assert_eq!(res.points[2].marker, -3);
         assert_eq!(res.points[3].marker, -10);
+        assert_eq!(res.points[4].marker, -5);
+        assert_eq!(res.points[5].marker, -6);
         assert_eq!(res.points[6].marker, -10);
+        assert_eq!(res.points[7].marker, -5);
+        assert_eq!(res.points[8].marker, -6);
+        assert_eq!(res.points[9].marker, 0);
+        assert_eq!(res.points[10].marker, -7);
         assert_eq!(res.points[11].marker, -20);
+        assert_eq!(res.points[12].marker, 0);
         assert_eq!(res.points[13].marker, -20);
+        assert_eq!(res.points[14].marker, 0);
+        assert_eq!(res.points[15].marker, 0);
         assert_eq!(res.points[16].marker, -30);
         assert_eq!(res.points[17].marker, -30);
-        // TODO: implement cloning of corner tags
+        assert_eq!(res.points[18].marker, 0);
     }
 
     #[test]
