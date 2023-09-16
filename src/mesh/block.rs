@@ -533,8 +533,8 @@ impl Block {
     ///
     /// # Input
     ///
-    /// * `target` -- If 2D, a quadrilateral as defined in [GeoKind::QUAS];
-    ///               If 3D, a hexahedron as defined in [GeoKind::HEXS].
+    /// * `target` -- If 2D, a quadrilateral (must have [GeoClass::Qua])
+    ///               If 3D, a hexahedron (must have [GeoClass::Hex])
     pub fn subdivide(&mut self, target: GeoKind) -> Result<Mesh, StrError> {
         // check
         let ndim = self.ndim;
