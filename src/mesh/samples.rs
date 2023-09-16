@@ -530,6 +530,49 @@ impl Samples {
         }
     }
 
+    /// Returns a mesh with three Tri3 with one point being shared by three cells
+    ///
+    /// ```text
+    ///            (-40) 3     [#] indicates id
+    ///                 /|\    (#) indicates attribute
+    ///                / | \       or marker
+    ///               /  |  \
+    ///              /   |   \
+    ///             /    |    \
+    ///            / [2] | [1] \
+    ///           /  (2) | (2)  \
+    ///          /       |       \
+    ///         /       .2.       \
+    ///        /      .'   '.      \
+    ///       /     .' (-30) '.     \
+    ///      /    .'           '.    \
+    ///     /   .'               '.   \
+    ///    /  .'       [0]         '.  \
+    ///   / .'         (1)           '. \
+    ///  /.'                           '.\
+    ///  0-------------------------------1
+    /// (-10)                          (-20)
+    /// ```
+    ///
+    /// ![three_tri3_multi_shares](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri3_multi_shares.svg)
+    #[rustfmt::skip]
+    pub fn three_tri3_multi_shares() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: -10, coords: vec![0.0, 0.0] },
+                Point { id: 1, marker: -20, coords: vec![2.0, 0.0] },
+                Point { id: 2, marker: -30, coords: vec![1.0, 1.0] },
+                Point { id: 3, marker: -40, coords: vec![1.0, 2.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+                Cell { id: 1, attribute: 2, kind: GeoKind::Tri3, points: vec![2, 1, 3] },
+                Cell { id: 2, attribute: 2, kind: GeoKind::Tri3, points: vec![0, 2, 3] },
+            ],
+        }
+    }
+
     /// Returns a mesh with two Tri3 and one Qua4
     ///
     /// ```text
@@ -1848,6 +1891,15 @@ mod tests {
         check_all(&mesh).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_three_tri3.svg").unwrap();
+        }
+
+        let mesh = Samples::three_tri3_multi_shares();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 4);
+        assert_eq!(mesh.cells.len(), 3);
+        check_all(&mesh).unwrap();
+        if SAVE_FIGURE {
+            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_three_tri3_multi_shares.svg").unwrap();
         }
 
         let mesh = Samples::two_tri3_one_qua4();
