@@ -196,7 +196,7 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    fn upgrade_mesh_2d_captures_errors() {
+    fn convert_mesh_2d_captures_errors() {
         #[rustfmt::skip]
         let mesh = Mesh {
             ndim: 3,
@@ -245,10 +245,6 @@ mod tests {
             convert_mesh_2d(&mesh, GeoKind::Qua8).err(),
             Some("target class must equal the GeoClass of current cells")
         );
-        // assert_eq!(
-        //     upgrade_mesh_2d(&mesh, GeoKind::Tri3).err(),
-        //     Some("target GeoKind must have more nodes than the current GeoKind")
-        // );
 
         #[rustfmt::skip]
         let mesh =Mesh {
@@ -265,29 +261,6 @@ mod tests {
             convert_mesh_2d(&mesh, GeoKind::Lin3).err(),
             Some("target GeoClass must be Tri or Qua")
         );
-
-        // #[rustfmt::skip]
-        // let mesh = Mesh {
-        //     ndim: 2,
-        //     points: vec![
-        //         Point { id: 0, marker: 0, coords: vec![0.0, 0.0 ] }, // 0
-        //         Point { id: 1, marker: 0, coords: vec![0.8, 0.0 ] }, // 1
-        //         Point { id: 2, marker: 0, coords: vec![0.8, 0.8 ] }, // 2
-        //         Point { id: 3, marker: 0, coords: vec![0.0, 0.8 ] }, // 3
-        //         Point { id: 4, marker: 0, coords: vec![0.4, 0.05] }, // 4
-        //         Point { id: 5, marker: 0, coords: vec![0.8, 0.4 ] }, // 5
-        //         Point { id: 6, marker: 0, coords: vec![0.4, 0.85] }, // 6
-        //         Point { id: 7, marker: 0, coords: vec![0.0, 0.4 ] }, // 7
-        //         Point { id: 8, marker: 0, coords: vec![0.4, 0.4 ] }, // 8
-        //     ],
-        //     cells: vec![
-        //         Cell { id: 0, attribute: 1, kind: GeoKind::Qua9, points: vec![0, 1, 2, 3, 4, 5, 6, 7, 8] },
-        //     ],
-        // };
-        // assert_eq!(
-        //     upgrade_mesh_2d(&mesh, GeoKind::Qua12).err(),
-        //     Some("source class must not have interior nodes")
-        // );
 
         #[rustfmt::skip]
         let mesh = Mesh {
@@ -310,7 +283,7 @@ mod tests {
     }
 
     #[test]
-    fn upgrade_tri6_to_tri15_works_1() {
+    fn convert_tri6_to_tri15_works_1() {
         #[rustfmt::skip]
         let mesh = Mesh {
             ndim: 2,
@@ -406,7 +379,7 @@ mod tests {
     }
 
     #[test]
-    fn upgrade_tri6_to_tri10_works() {
+    fn convert_tri6_to_tri10_works() {
         #[rustfmt::skip]
         let mesh = Mesh {
             ndim: 2,
@@ -481,7 +454,7 @@ mod tests {
     }
 
     #[test]
-    fn upgrade_tri3_to_tri6_works() {
+    fn convert_tri3_to_tri6_works() {
         let mesh = Samples::two_tri3().clone();
         let res = convert_mesh_2d(&mesh, GeoKind::Tri6).unwrap();
         if SAVE_FIGURE {
@@ -495,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    fn upgrade_tri3_to_tri10_works() {
+    fn convert_tri3_to_tri10_works() {
         let mesh = Samples::two_tri3().clone();
         let res = convert_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
         if SAVE_FIGURE {
@@ -509,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn upgrade_qua4_to_qua8_works() {
+    fn convert_qua4_to_qua8_works() {
         let mesh = Samples::two_qua4().clone();
         let res = convert_mesh_2d(&mesh, GeoKind::Qua8).unwrap();
         if SAVE_FIGURE {
@@ -523,7 +496,7 @@ mod tests {
     }
 
     #[test]
-    fn upgrade_qua12_to_qua16_works() {
+    fn convert_qua12_to_qua16_works() {
         let mesh = Samples::block_2d_four_qua12().clone();
         let res = convert_mesh_2d(&mesh, GeoKind::Qua16).unwrap();
         if SAVE_FIGURE {
@@ -548,7 +521,7 @@ mod tests {
     }
 
     #[test]
-    fn upgrade_qua12_to_qua17_works() {
+    fn convert_qua12_to_qua17_works() {
         let mesh = Samples::block_2d_four_qua12().clone();
         let res = convert_mesh_2d(&mesh, GeoKind::Qua17).unwrap();
         if SAVE_FIGURE {
