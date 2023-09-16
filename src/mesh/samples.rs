@@ -627,10 +627,10 @@ impl Samples {
     /// ```text
     ///  (-4)            (-3)
     ///    3---------------2
-    ///    | '.    2    .' |
+    ///    | '.    1    .' |
     ///    |   '.     .'   |
     ///    |     '. .'     |
-    ///    |  3   .1.   1  |
+    ///    |  3   .1.   2  |
     ///    |    .'   '.    |
     ///    |  .'   0   '.  |
     ///    |.'           '.|
@@ -652,8 +652,8 @@ impl Samples {
             ],
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 0, 4] },
-                Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 4, 2] },
-                Cell { id: 2, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+                Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+                Cell { id: 2, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 4, 2] },
                 Cell { id: 3, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 3, 0] },
             ],
         }
@@ -2002,7 +2002,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 5);
         assert_eq!(mesh.cells.len(), 4);
         check_all(&mesh).unwrap();
-        if SAVE_FIGURE {
+        if true {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_four_tri3.svg").unwrap();
         }
 
