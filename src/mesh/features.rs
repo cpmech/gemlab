@@ -326,14 +326,15 @@ pub fn display_features(features: &[&Feature]) -> String {
 ///
 /// # Output
 ///
-/// Returns a vector with the pairs `(neigh_cell_id, neigh_e)` where:
+/// Returns a vector with the pairs `(e, neigh_cell_id, neigh_e)` where:
 ///
+/// * `e` -- the local edge of this cell through which the neighbor is in contact
 /// * `neigh_cell_id` -- is the ID of the neighbor cell
-/// * `neigh_e` -- is the neighbor's local edge through which this cell is in touch
-pub fn neighbors_2d(mesh: &Mesh, edges: &MapEdge2dToCells, cell_id: CellId) -> Vec<(CellId, usize)> {
+/// * `neigh_e` -- is the neighbor's local edge through which this cell is in contact
+pub fn neighbors_2d(mesh: &Mesh, edges: &MapEdge2dToCells, cell_id: CellId) -> Vec<(usize, CellId, usize)> {
     let cell = &mesh.cells[cell_id];
     let nedge = cell.kind.nedge();
-    let mut res: Vec<(CellId, usize)> = Vec::new();
+    let mut res = Vec::new();
     for e in 0..nedge {
         let local_a = cell.kind.edge_node_id(e, 0);
         let local_b = cell.kind.edge_node_id(e, 1);
@@ -347,7 +348,7 @@ pub fn neighbors_2d(mesh: &Mesh, edges: &MapEdge2dToCells, cell_id: CellId) -> V
         let shares = edges.get(&(this_a, this_b)).unwrap();
         for share in shares {
             if share.0 != cell_id {
-                res.push((share.0, share.1));
+                res.push((e, share.0, share.1));
             }
         }
     }
@@ -504,22 +505,22 @@ mod tests {
 
         let neighbors = neighbors_2d(&mesh, &edges, 0);
         assert_eq!(neighbors.len(), 2);
-        assert!(neighbors.contains(&(1, 3)));
-        assert!(neighbors.contains(&(2, 0)));
+        assert!(neighbors.contains(&(1, 1, 3)));
+        assert!(neighbors.contains(&(2, 2, 0)));
 
         let neighbors = neighbors_2d(&mesh, &edges, 1);
         assert_eq!(neighbors.len(), 2);
-        assert!(neighbors.contains(&(0, 1)));
-        assert!(neighbors.contains(&(3, 0)));
+        assert!(neighbors.contains(&(3, 0, 1)));
+        assert!(neighbors.contains(&(2, 3, 0)));
 
         let neighbors = neighbors_2d(&mesh, &edges, 2);
         assert_eq!(neighbors.len(), 2);
-        assert!(neighbors.contains(&(0, 2)));
-        assert!(neighbors.contains(&(3, 3)));
+        assert!(neighbors.contains(&(0, 0, 2)));
+        assert!(neighbors.contains(&(1, 3, 3)));
 
         let neighbors = neighbors_2d(&mesh, &edges, 3);
         assert_eq!(neighbors.len(), 2);
-        assert!(neighbors.contains(&(1, 2)));
-        assert!(neighbors.contains(&(2, 1)));
+        assert!(neighbors.contains(&(0, 1, 2)));
+        assert!(neighbors.contains(&(3, 2, 1)));
     }
 }
