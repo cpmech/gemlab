@@ -64,32 +64,23 @@ pub type MapFaceToCells = HashMap<FaceKey, Vec<(CellId, usize)>>;
 ///     //  |   [0]   |   [1]   |
 ///     //  |         |         |
 ///     //  0---------1---------4
+///     #[rustfmt::skip]
 ///     let mesh = Mesh {
 ///         ndim: 2,
-///         #[rustfmt::skip]
-///          points: vec![
-///              Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
-///              Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
-///              Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
-///              Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
-///              Point { id: 4, marker: 0, coords: vec![2.0, 0.0] },
-///              Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
-///          ],
+///         points: vec![
+///             Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+///             Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+///             Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
+///             Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
+///             Point { id: 4, marker: 0, coords: vec![2.0, 0.0] },
+///             Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
+///         ],
 ///         cells: vec![
-///             Cell {
-///                 id: 0,
-///                 attribute: 1,
-///                 kind: GeoKind::Qua4,
-///                 points: vec![0, 1, 2, 3],
-///             },
-///             Cell {
-///                 id: 1,
-///                 attribute: 2,
-///                 kind: GeoKind::Qua4,
-///                 points: vec![1, 4, 5, 2],
-///             },
+///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
 ///         ],
 ///     };
+///
 ///     let features = Features::new(&mesh, Extract::Boundary);
 ///
 ///     let mut points: Vec<_> = features.points.iter().copied().collect();
