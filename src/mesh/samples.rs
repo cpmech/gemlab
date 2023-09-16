@@ -597,7 +597,7 @@ impl Samples {
     /// (-1)           (-10)           (-2)
     /// ```
     ///
-    /// ![three_tri3_multi_shares](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri3_multi_shares.svg)
+    /// ![three_tri3_multi_shares](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri6_multi_shares.svg)
     #[rustfmt::skip]
     pub fn three_tri6_multi_shares() -> Mesh {
         Mesh {
@@ -618,6 +618,43 @@ impl Samples {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![0, 1, 2, 3, 4, 5] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![2, 1, 6, 4, 7, 8] },
                 Cell { id: 2, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 2, 6, 5, 8, 9] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with four tri3 cells
+    ///
+    /// ```text
+    ///  (-4)            (-3)
+    ///    3---------------2
+    ///    | '.    2    .' |
+    ///    |   '.     .'   |
+    ///    |     '. .'     |
+    ///    |  3   .1.   1  |
+    ///    |    .'   '.    |
+    ///    |  .'   0   '.  |
+    ///    |.'           '.|
+    ///    0---------------4
+    ///  (-1)            (-5)
+    /// ```
+    ///
+    /// ![four_tri3](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_four_tri3.svg)
+    #[rustfmt::skip]
+    pub fn four_tri3() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: -1, coords: vec![0.0, 0.0] },
+                Point { id: 1, marker:  0, coords: vec![1.0, 1.0] },
+                Point { id: 2, marker: -3, coords: vec![2.0, 2.0] },
+                Point { id: 3, marker: -4, coords: vec![0.0, 2.0] },
+                Point { id: 4, marker: -5, coords: vec![2.0, 0.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 0, 4] },
+                Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 4, 2] },
+                Cell { id: 2, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+                Cell { id: 3, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 3, 0] },
             ],
         }
     }
@@ -1958,6 +1995,15 @@ mod tests {
         check_all(&mesh).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_three_tri6_multi_shares.svg").unwrap();
+        }
+
+        let mesh = Samples::four_tri3();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 5);
+        assert_eq!(mesh.cells.len(), 4);
+        check_all(&mesh).unwrap();
+        if SAVE_FIGURE {
+            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_four_tri3.svg").unwrap();
         }
 
         let mesh = Samples::two_tri3_one_qua4();
