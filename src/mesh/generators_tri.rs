@@ -251,9 +251,10 @@ impl Unstructured {
 mod tests {
     use super::Unstructured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{check_all, check_overlapping_points, At, Find, Mesh};
+    use crate::mesh::{check_all, check_overlapping_points, At, Draw, Find, Mesh};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
+    use plotpy::Plot;
     use russell_chk::approx_eq;
 
     #[allow(unused_imports)]
@@ -301,6 +302,15 @@ mod tests {
         assert_eq!(mesh.points[res[0]].marker, -4);
     }
 
+    fn check_edge_point_markers(mesh: &Mesh, inner: &[usize], outer: &[usize]) {
+        for p in inner {
+            assert_eq!(mesh.points[*p].marker, -10);
+        }
+        for p in outer {
+            assert_eq!(mesh.points[*p].marker, -20);
+        }
+    }
+
     #[test]
     fn tri_quarter_ring_2d_captures_errors() {
         assert_eq!(
@@ -331,6 +341,15 @@ mod tests {
         check_overlapping_points(&mesh, 0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
+        check_edge_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5]);
+        for p in [0, 11, 10, 9, 8] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMIN, 1e-15);
+        }
+        for p in [2, 3, 4, 5, 6] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMAX, 1e-15);
+        }
     }
 
     #[test]
@@ -347,6 +366,15 @@ mod tests {
         check_overlapping_points(&mesh, 0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
+        check_edge_point_markers(&mesh, &[32, 11, 36, 10, 21, 9, 22], &[34, 3, 40, 4, 17, 5, 26]);
+        for p in [0, 32, 11, 36, 10, 21, 9, 22, 8] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMIN, 1e-15);
+        }
+        for p in [2, 34, 3, 40, 4, 17, 5, 26, 6] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMAX, 1e-15);
+        }
     }
 
     #[test]
@@ -364,6 +392,15 @@ mod tests {
         check_overlapping_points(&mesh, 0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
+        check_edge_point_markers(&mesh, &[11, 10, 17, 9], &[40, 3, 25, 4, 24, 5, 33]);
+        for p in [0, 11, 10, 17, 9, 8] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMIN, 1e-15);
+        }
+        for p in [2, 40, 3, 25, 4, 24, 5, 33, 6] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMAX, 1e-15);
+        }
     }
 
     #[test]
@@ -381,6 +418,19 @@ mod tests {
         check_overlapping_points(&mesh, 0.1).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
+        check_edge_point_markers(
+            &mesh,
+            &[150, 11, 81, 10, 58, 17, 99, 9, 146],
+            &[154, 40, 176, 3, 174, 25, 130, 4, 118, 24, 136, 5, 124, 33, 134],
+        );
+        for p in [0, 150, 11, 81, 10, 58, 17, 99, 9, 146, 8] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMIN, 1e-15);
+        }
+        for p in [2, 154, 40, 176, 3, 174, 25, 130, 4, 118, 24, 136, 5, 124, 33, 134, 6] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMAX, 1e-15);
+        }
     }
 
     #[test]
@@ -396,6 +446,19 @@ mod tests {
         check_overlapping_points(&mesh, 0.1).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
+        check_edge_point_markers(
+            &mesh,
+            &[57, 54, 51, 70, 68, 2, 23, 21, 19, 30, 27],
+            &[62, 65, 60, 79, 80, 10, 12, 15, 11, 36, 39],
+        );
+        for p in [49, 57, 54, 51, 70, 68, 2, 23, 21, 19, 30, 27, 25] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMIN, 1e-15);
+        }
+        for p in [59, 62, 65, 60, 79, 80, 10, 12, 15, 11, 36, 39, 34] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMAX, 1e-15);
+        }
     }
 
     #[test]
@@ -403,7 +466,15 @@ mod tests {
         let (_, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_tri15");
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri15, None).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
+            let mut plot = Plot::new();
+            let mut draw = Draw::new();
+            draw.cells(&mut plot, &mesh, true).unwrap();
+            draw.point_ids(&mut plot, &mesh);
+            plot.grid_and_labels("x", "y");
+            plot.set_equal_axes(true)
+                .set_figure_size_points(800.0, 800.0)
+                .save(&fn_svg)
+                .unwrap();
         }
         assert_eq!(mesh.points.len(), 137);
         assert_eq!(mesh.cells.len(), 14);
@@ -411,5 +482,18 @@ mod tests {
         check_overlapping_points(&mesh, 0.1).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
+        check_edge_point_markers(
+            &mesh,
+            &[92, 86, 91, 83, 113, 110, 112, 2, 35, 31, 34, 29, 45, 41, 44],
+            &[103, 99, 104, 97, 132, 131, 133, 15, 20, 17, 21, 16, 59, 55, 60],
+        );
+        for p in [81, 92, 86, 91, 83, 113, 110, 112, 2, 35, 31, 34, 29, 45, 41, 44, 39] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMIN, 1e-15);
+        }
+        for p in [96, 103, 99, 104, 97, 132, 131, 133, 15, 20, 17, 21, 16, 59, 55, 60, 53] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMAX, 1e-15);
+        }
     }
 }
