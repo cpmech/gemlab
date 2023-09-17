@@ -424,6 +424,7 @@ impl Find {
     /// * `filter` -- function `fn(x) -> bool` that returns true to **keep** the coordinate just found
     ///   (yields only the elements for which the closure returns true).
     ///   Use `|_| true` or [crate::util::any_x] to allow any point in the resulting array.
+    ///   Another example of filter: `|x| x[0] > 1.4 && x[0] < 1.6`
     ///
     /// # Output
     ///
