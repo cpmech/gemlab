@@ -352,97 +352,98 @@ impl Features {
     pub fn get_face(&self, a: usize, b: usize, c: usize, d: usize) -> &Feature {
         self.faces.get(&(a, b, c, d)).expect("cannot find face with given key")
     }
-}
 
-/// Returns all neighbors of a 2D cell
-///
-/// # Input
-///
-/// * `mesh` -- the mesh
-/// * `edges` -- the edge-to-cells map
-/// * `e` -- the index of the edge (see [GeoKind::edge_node_id])
-///
-/// # Output
-///
-/// Returns a vector with the pairs `(e, neigh_cell_id, neigh_e)` where:
-///
-/// * `e` -- the local edge of this cell through which the neighbor is in contact
-/// * `neigh_cell_id` -- is the ID of the neighbor cell
-/// * `neigh_e` -- is the neighbor's local edge through which this cell is in contact
-///
-/// # Examples
-///
-/// ```
-/// use gemlab::mesh::{get_neighbors_2d, Cell, Extract, Features, Mesh, Point};
-/// use gemlab::shapes::GeoKind;
-/// use gemlab::StrError;
-///
-/// fn main() -> Result<(), StrError> {
-///     //  3---------2---------5
-///     //  |         |         |
-///     //  |   [0]   |   [1]   |
-///     //  |         |         |
-///     //  0---------1---------4
-///     #[rustfmt::skip]
-///     let mesh = Mesh {
-///         ndim: 2,
-///         points: vec![
-///             Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
-///             Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
-///             Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
-///             Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
-///             Point { id: 4, marker: 0, coords: vec![2.0, 0.0] },
-///             Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
-///         ],
-///         cells: vec![
-///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
-///         ],
-///     };
-///
-///     let features = Features::new(&mesh, Extract::All);
-///     let edges = features.all_2d_edges;
-///
-///     let neighbors = get_neighbors_2d(&mesh, &edges, 0);
-///     assert_eq!(neighbors.len(), 1);
-///     assert!(neighbors.contains(&(1, 1, 3)));
-///
-///     let neighbors = get_neighbors_2d(&mesh, &edges, 1);
-///     assert_eq!(neighbors.len(), 1);
-///     assert!(neighbors.contains(&(3, 0, 1)));
-///
-///     Ok(())
-/// }
-/// ```
-pub fn get_neighbors_2d(mesh: &Mesh, edges: &MapEdge2dToCells, cell_id: CellId) -> Vec<(usize, CellId, usize)> {
-    let cell = &mesh.cells[cell_id];
-    let nedge = cell.kind.nedge();
-    let mut res = Vec::new();
-    for e in 0..nedge {
-        let local_a = cell.kind.edge_node_id(e, 0);
-        let local_b = cell.kind.edge_node_id(e, 1);
-        let mut this_a = cell.points[local_a];
-        let mut this_b = cell.points[local_b];
-        if this_b < this_a {
-            let temp = this_a;
-            this_a = this_b;
-            this_b = temp;
-        }
-        let shares = edges.get(&(this_a, this_b)).unwrap();
-        for share in shares {
-            if share.0 != cell_id {
-                res.push((e, share.0, share.1));
+    /// Returns all neighbors of a 2D cell
+    ///
+    /// # Input
+    ///
+    /// * `mesh` -- the mesh
+    /// * `edges` -- the edge-to-cells map
+    /// * `e` -- the index of the edge (see [GeoKind::edge_node_id])
+    ///
+    /// # Output
+    ///
+    /// Returns a vector with the pairs `(e, neigh_cell_id, neigh_e)` where:
+    ///
+    /// * `e` -- the local edge of this cell through which the neighbor is in contact
+    /// * `neigh_cell_id` -- is the ID of the neighbor cell
+    /// * `neigh_e` -- is the neighbor's local edge through which this cell is in contact
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::mesh::{Cell, Extract, Features, Mesh, Point};
+    /// use gemlab::shapes::GeoKind;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     //  3---------2---------5
+    ///     //  |         |         |
+    ///     //  |   [0]   |   [1]   |
+    ///     //  |         |         |
+    ///     //  0---------1---------4
+    ///     #[rustfmt::skip]
+    ///     let mesh = Mesh {
+    ///         ndim: 2,
+    ///         points: vec![
+    ///             Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+    ///             Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+    ///             Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
+    ///             Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
+    ///             Point { id: 4, marker: 0, coords: vec![2.0, 0.0] },
+    ///             Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
+    ///         ],
+    ///         cells: vec![
+    ///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+    ///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+    ///         ],
+    ///     };
+    ///
+    ///     let features = Features::new(&mesh, Extract::All);
+    ///
+    ///     let neighbors = features.get_neighbors_2d(&mesh, 0);
+    ///     assert_eq!(neighbors.len(), 1);
+    ///     assert!(neighbors.contains(&(1, 1, 3)));
+    ///
+    ///     let neighbors = features.get_neighbors_2d(&mesh, 1);
+    ///     assert_eq!(neighbors.len(), 1);
+    ///     assert!(neighbors.contains(&(3, 0, 1)));
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn get_neighbors_2d(&self, mesh: &Mesh, cell_id: CellId) -> Vec<(usize, CellId, usize)> {
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(self.space_ndim, 2);
+        let cell = &mesh.cells[cell_id];
+        let nedge = cell.kind.nedge();
+        let mut res = Vec::new();
+        for e in 0..nedge {
+            let local_a = cell.kind.edge_node_id(e, 0);
+            let local_b = cell.kind.edge_node_id(e, 1);
+            let mut this_a = cell.points[local_a];
+            let mut this_b = cell.points[local_b];
+            if this_b < this_a {
+                let temp = this_a;
+                this_a = this_b;
+                this_b = temp;
+            }
+            let shares = self.all_2d_edges.get(&(this_a, this_b)).unwrap();
+            for share in shares {
+                if share.0 != cell_id {
+                    res.push((e, share.0, share.1));
+                }
             }
         }
+        res
     }
-    res
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::{get_neighbors_2d, Extract, Feature, Features};
+    use super::{Extract, Feature, Features};
     use crate::mesh::Samples;
     use crate::shapes::GeoKind;
 
@@ -549,24 +550,23 @@ mod tests {
     fn get_neighbors_2d_works() {
         let mesh = Samples::block_2d_four_qua4();
         let features = Features::new(&mesh, Extract::All);
-        let edges = features.all_2d_edges;
 
-        let neighbors = get_neighbors_2d(&mesh, &edges, 0);
+        let neighbors = features.get_neighbors_2d(&mesh, 0);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(1, 1, 3)));
         assert!(neighbors.contains(&(2, 2, 0)));
 
-        let neighbors = get_neighbors_2d(&mesh, &edges, 1);
+        let neighbors = features.get_neighbors_2d(&mesh, 1);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(3, 0, 1)));
         assert!(neighbors.contains(&(2, 3, 0)));
 
-        let neighbors = get_neighbors_2d(&mesh, &edges, 2);
+        let neighbors = features.get_neighbors_2d(&mesh, 2);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 0, 2)));
         assert!(neighbors.contains(&(1, 3, 3)));
 
-        let neighbors = get_neighbors_2d(&mesh, &edges, 3);
+        let neighbors = features.get_neighbors_2d(&mesh, 3);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 1, 2)));
         assert!(neighbors.contains(&(3, 2, 1)));

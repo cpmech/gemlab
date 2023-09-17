@@ -1,4 +1,4 @@
-use super::{get_neighbors_2d, Cell, Extract, Features, Mesh, Point};
+use super::{Cell, Extract, Features, Mesh, Point};
 use crate::prelude::PointId;
 use crate::shapes::{GeoClass, GeoKind, Scratchpad};
 use crate::StrError;
@@ -83,7 +83,6 @@ impl Mesh {
 
         // find neighbors in the original mesh
         let source_features = Features::new(self, Extract::All);
-        let source_edges = source_features.all_2d_edges;
 
         // flag indicating that a connectivity point has not been set
         const UNSET: usize = usize::MAX;
@@ -162,7 +161,7 @@ impl Mesh {
 
             // consult neighbors to see if there are points (in the middle of the edge) set already
             if target_edge_nnode > 2 {
-                let neighbors = get_neighbors_2d(self, &source_edges, cell_id);
+                let neighbors = source_features.get_neighbors_2d(self, cell_id);
                 for (e, neigh_cell_id, neigh_e) in neighbors {
                     // only deal with the centre edge points, not the corner ones (start at 2)
                     for i in 2..target_edge_nnode {
