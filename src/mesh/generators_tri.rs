@@ -250,14 +250,11 @@ impl Unstructured {
 mod tests {
     use super::Unstructured;
     use crate::geometry::point_point_distance;
+    use crate::mesh::draw_mesh;
     use crate::mesh::{At, Figure, Find, Mesh};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
-    use plotpy::Plot;
     use russell_chk::approx_eq;
-
-    #[allow(unused_imports)]
-    use crate::mesh::draw_mesh;
 
     const RMIN: f64 = 3.0;
     const RMAX: f64 = 6.0;
@@ -465,12 +462,12 @@ mod tests {
         let (_, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_tri15");
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri15, None).unwrap();
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
-            let mut draw = Figure::new();
-            draw.cells(&mut plot, &mesh, true).unwrap();
-            draw.point_ids(&mut plot, &mesh);
-            plot.grid_and_labels("x", "y");
-            plot.set_equal_axes(true)
+            let mut fig = Figure::new();
+            fig.cells(&mesh, true).unwrap();
+            fig.point_ids(&mesh);
+            fig.plot.grid_and_labels("x", "y");
+            fig.plot
+                .set_equal_axes(true)
                 .set_figure_size_points(800.0, 800.0)
                 .save(&fn_svg)
                 .unwrap();

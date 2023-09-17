@@ -991,8 +991,10 @@ mod tests {
         with_circle_mid: bool,
         filename: &str,
     ) {
+        // fig struct
+        let mut fig = Figure::new();
+
         // draw reference circles
-        let mut plot = Plot::new();
         let mut circle_in = Canvas::new();
         let mut circle_mid = Canvas::new();
         let mut circle_out = Canvas::new();
@@ -1013,45 +1015,57 @@ mod tests {
             .set_edge_color("#bfbfbf")
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, args.rmax);
-        plot.add(&circle_in);
-        plot.add(&circle_mid);
-        plot.add(&circle_out);
+        fig.plot.add(&circle_in);
+        fig.plot.add(&circle_mid);
+        fig.plot.add(&circle_out);
+
         // draw mesh
-        let mut draw = Figure::new();
-        draw.canvas_point_ids
+        fig.canvas_point_ids
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
         let features = Features::new(mesh, Extract::Boundary);
-        draw.edges(&mut plot, mesh, &features, false).unwrap();
+        fig.edges(mesh, &features, false).unwrap();
         if with_ids {
-            draw.cell_ids(&mut plot, &mesh).unwrap();
-            draw.point_ids(&mut plot, &mesh);
+            fig.cell_ids(&mesh).unwrap();
+            fig.point_ids(&mesh);
         }
         if with_points {
-            draw.points(&mut plot, &mesh);
+            fig.points(&mesh);
         }
         let d = args.rmax * 0.05;
-        plot.set_equal_axes(true)
+
+        // config plot
+        fig.plot
+            .set_equal_axes(true)
             .set_figure_size_points(600.0, 600.0)
             .set_range(-d, args.rmax + d, -d, args.rmax + d)
             .save(filename)
             .unwrap();
     }
 
-    fn draw_mesh_and_block(plot: &mut Plot, mesh: Mesh, block: &Block, set_range: bool, filename: &str) {
+    fn pre(_: &mut Plot) {
+        // do nothing
+    }
+
+    fn draw_mesh_and_block<F>(mut pre: F, mesh: Mesh, block: &Block, set_range: bool, filename: &str)
+    where
+        F: FnMut(&mut Plot),
+    {
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Figure::new();
-        block.draw(plot, false, set_range).unwrap();
-        draw.canvas_point_ids
+        let mut fig = Figure::new();
+        pre(&mut fig.plot);
+        block.draw(&mut fig.plot, false, set_range).unwrap();
+        fig.canvas_point_ids
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
-        draw.edges(plot, &mesh, &features, false).unwrap();
-        draw.cell_ids(plot, &mesh).unwrap();
-        draw.point_ids(plot, &mesh);
-        draw.points(plot, &mesh);
-        plot.set_equal_axes(true)
+        fig.edges(&mesh, &features, false).unwrap();
+        fig.cell_ids(&mesh).unwrap();
+        fig.point_ids(&mesh);
+        fig.points(&mesh);
+        fig.plot
+            .set_equal_axes(true)
             .set_figure_size_points(600.0, 600.0)
             .save(filename)
             .unwrap();
@@ -1892,14 +1906,7 @@ mod tests {
             approx_eq(d, 1.0, 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
-            draw_mesh_and_block(
-                &mut plot,
-                mesh,
-                &block,
-                true,
-                "/tmp/gemlab/test_constraints_2d_qua4_1.svg",
-            );
+            draw_mesh_and_block(pre, mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua4_1.svg");
         }
 
         // circle pulls point
@@ -1911,14 +1918,7 @@ mod tests {
             approx_eq(d, 0.5, 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
-            draw_mesh_and_block(
-                &mut plot,
-                mesh,
-                &block,
-                true,
-                "/tmp/gemlab/test_constraints_2d_qua4_2.svg",
-            );
+            draw_mesh_and_block(pre, mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua4_2.svg");
         }
 
         // block touches constraint (also we need to move mid nodes)
@@ -1952,14 +1952,7 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
-            draw_mesh_and_block(
-                &mut plot,
-                mesh,
-                &block,
-                true,
-                "/tmp/gemlab/test_constraints_2d_qua8.svg",
-            );
+            draw_mesh_and_block(pre, mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua8.svg");
         }
     }
 
@@ -2027,15 +2020,10 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
-            plot.set_range(-4.0, 4.0, -4.0, 4.0);
-            draw_mesh_and_block(
-                &mut plot,
-                mesh,
-                &block,
-                false,
-                "/tmp/gemlab/test_constraints_2d_multiple.svg",
-            );
+            let pre = |plot: &mut Plot| {
+                plot.set_range(-4.0, 4.0, -4.0, 4.0);
+            };
+            draw_mesh_and_block(pre, mesh, &block, false, "/tmp/gemlab/test_constraints_2d_multiple.svg");
         }
     }
 
@@ -2152,24 +2140,25 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
-            let mut surf = Surface::new();
-            const NP: usize = 81;
-            surf.set_solid_color("#ff000020");
-            surf.draw_cylinder(&[cen_minus, 0.0, -half_l], &[cen_minus, 0.0, half_l], r, 5, NP)
-                .unwrap();
-            surf.set_solid_color("#00ff0020");
-            surf.draw_cylinder(&[cen_plus, 0.0, -half_l], &[cen_plus, 0.0, half_l], r, 5, NP)
-                .unwrap();
-            surf.set_solid_color("#0000ff20");
-            surf.draw_cylinder(&[0.0, cen_minus, -half_l], &[0.0, cen_minus, half_l], r, 5, NP)
-                .unwrap();
-            surf.set_solid_color("#ff00ff20");
-            surf.draw_cylinder(&[0.0, cen_plus, -half_l], &[0.0, cen_plus, half_l], r, 5, NP)
-                .unwrap();
-            plot.add(&surf);
-            plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
-            draw_mesh_and_block(&mut plot, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg");
+            let pre = |plot: &mut Plot| {
+                let mut surf = Surface::new();
+                const NP: usize = 81;
+                surf.set_solid_color("#ff000020");
+                surf.draw_cylinder(&[cen_minus, 0.0, -half_l], &[cen_minus, 0.0, half_l], r, 5, NP)
+                    .unwrap();
+                surf.set_solid_color("#00ff0020");
+                surf.draw_cylinder(&[cen_plus, 0.0, -half_l], &[cen_plus, 0.0, half_l], r, 5, NP)
+                    .unwrap();
+                surf.set_solid_color("#0000ff20");
+                surf.draw_cylinder(&[0.0, cen_minus, -half_l], &[0.0, cen_minus, half_l], r, 5, NP)
+                    .unwrap();
+                surf.set_solid_color("#ff00ff20");
+                surf.draw_cylinder(&[0.0, cen_plus, -half_l], &[0.0, cen_plus, half_l], r, 5, NP)
+                    .unwrap();
+                plot.add(&surf);
+                plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
+            };
+            draw_mesh_and_block(pre, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg");
         }
     }
 
@@ -2250,19 +2239,20 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
-            let mut surf = Surface::new();
-            const NP: usize = 81;
-            surf.set_solid_color("#ff000020");
-            surf.draw_cylinder(&[-half_l, 0.0, cen_minus], &[half_l, 0.0, cen_minus], r, 5, NP)
-                .unwrap();
-            surf.set_solid_color("#00ff0020");
-            surf.draw_cylinder(&[0.0, -half_l, cen_plus], &[0.0, half_l, cen_plus], r, 5, NP)
-                .unwrap();
-            plot.add(&surf);
-            plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
+            let pre = |plot: &mut Plot| {
+                let mut surf = Surface::new();
+                const NP: usize = 81;
+                surf.set_solid_color("#ff000020");
+                surf.draw_cylinder(&[-half_l, 0.0, cen_minus], &[half_l, 0.0, cen_minus], r, 5, NP)
+                    .unwrap();
+                surf.set_solid_color("#00ff0020");
+                surf.draw_cylinder(&[0.0, -half_l, cen_plus], &[0.0, half_l, cen_plus], r, 5, NP)
+                    .unwrap();
+                plot.add(&surf);
+                plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
+            };
             draw_mesh_and_block(
-                &mut plot,
+                pre,
                 mesh,
                 &block,
                 false,
@@ -2288,9 +2278,8 @@ mod tests {
             approx_eq(d, 6.0, 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
             draw_mesh_and_block(
-                &mut plot,
+                pre,
                 mesh,
                 &block,
                 true,
@@ -2320,9 +2309,8 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
             draw_mesh_and_block(
-                &mut plot,
+                pre,
                 mesh,
                 &block,
                 true,
@@ -2352,9 +2340,8 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
             draw_mesh_and_block(
-                &mut plot,
+                pre,
                 mesh,
                 &block,
                 true,
@@ -2394,9 +2381,8 @@ mod tests {
             vec_approx_eq(&mesh.points[d].coords, &[xd, yd], 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
             draw_mesh_and_block(
-                &mut plot,
+                pre,
                 mesh,
                 &block,
                 true,
@@ -2422,9 +2408,8 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
             draw_mesh_and_block(
-                &mut plot,
+                pre,
                 mesh,
                 &block,
                 true,
@@ -2469,9 +2454,8 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         if SAVE_FIGURE {
-            let mut plot = Plot::new();
             draw_mesh_and_block(
-                &mut plot,
+                pre,
                 mesh,
                 &block,
                 true,
