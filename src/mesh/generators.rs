@@ -768,6 +768,25 @@ impl Structured {
     ///              ^               ^
     ///             na              nb
     /// ```
+    ///
+    /// # Input
+    ///
+    /// * `xa` -- minimum x-coordinate
+    /// * `xb` -- (optional) a transitional x-coordinate (e.g., to accommodate a "footing" width)
+    /// * `xc` -- maximum x-coordinate
+    /// * `na` -- If `xb` is Some value, `na` is the number of spacings between `xa` and `xb`.
+    ///   Otherwise, if `xb` is None, `na` is the number of spacings between `xa` and `xc`.
+    ///   `na` must be greater than 0.
+    /// * `nb` -- If `xb` is Some value, `nb` is the number of spacings between `xb` and `xc`.
+    ///   Otherwise, if `xb` is None, `nb` is ignored.
+    ///   `nb` must be greater than 0.
+    /// * `y` -- is a list of increasing y-coordinates, including the first and last y-coordinate
+    ///   The length of `y` must be greater than or equal to 2.
+    /// * `ny` -- is the number of spacings between `y[i]` and `y[i+1]`. The length of `ny`, which
+    ///   is equal to the number of layers, must be equal to the length of `y` minus one, i.e.,
+    ///   `n_layer = ny.len() = y.len() - 1`
+    /// * `attributes` -- is a list of attributes for each layer; it's length is equal to `n_layer`
+    /// * `target` -- is the resulting GeoKind and must be a [crate::shapes::GeoClass::Qua]
     pub fn rectangle(
         xa: f64,
         xb: Option<f64>,
