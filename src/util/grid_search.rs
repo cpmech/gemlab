@@ -7,6 +7,12 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// Returns true to any point coordinate (this callback is useful for the Find functions)
+///
+/// This function corresponds to the following closure:
+///
+/// ```text
+/// |_| true
+/// ```
 pub fn any_x(_: &Vec<f64>) -> bool {
     true
 }
