@@ -47,6 +47,16 @@ pub type MapEdge2dToCells = HashMap<EdgeKey, Vec<(CellId, usize)>>;
 /// * `f` -- is the cell's local face index
 pub type MapFaceToCells = HashMap<FaceKey, Vec<(CellId, usize)>>;
 
+/// Maps a point id to edges sharing the point
+///
+/// Relates a point id to a unique set of EdgeKey
+pub type MapPointToEdges = HashMap<PointId, HashSet<EdgeKey>>;
+
+/// Maps a point id to faces sharing the point
+///
+/// Relates a point id to a unique set of FaceKey
+pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
+
 /// Holds points, edges and faces on the mesh boundary or interior
 ///
 /// # Examples
@@ -225,10 +235,10 @@ pub struct Features {
     pub grid: GridSearch,
 
     /// Maps a point id to edges sharing the point
-    pub point_to_edges: HashMap<PointId, HashSet<EdgeKey>>,
+    pub point_to_edges: MapPointToEdges,
 
     /// Maps a point id to faces sharing the point
-    pub point_to_faces: HashMap<PointId, HashSet<FaceKey>>,
+    pub point_to_faces: MapPointToFaces,
 }
 
 impl Features {
@@ -297,7 +307,7 @@ impl Features {
         }
 
         // map point ids to edges
-        let mut point_to_edges: HashMap<PointId, HashSet<EdgeKey>> = HashMap::new();
+        let mut point_to_edges = HashMap::new();
         for (edge_key, edge) in &edges {
             for point_id in &edge.points {
                 point_to_edges
@@ -308,7 +318,7 @@ impl Features {
         }
 
         // map point ids to faces
-        let mut point_to_faces: HashMap<PointId, HashSet<FaceKey>> = HashMap::new();
+        let mut point_to_faces = HashMap::new();
         for (face_key, face) in &faces {
             for point_id in &face.points {
                 point_to_faces
