@@ -276,6 +276,49 @@ impl Mesh {
     ///       drawing functions. Otherwise, **false* indicates that the function is being called after
     ///       all other drawing functions, and just before the `plot.save` call.
     ///   For example, use `|_, _| {}` to do nothing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::mesh::Samples;
+    /// use gemlab::StrError;
+    /// use plotpy::Canvas;
+    ///
+    /// const SAVE_FIGURE: bool = false;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     // use sample mesh
+    ///     let mesh = Samples::ring_eight_qua8_rad1_thick1();
+    ///
+    ///     // configure circles
+    ///     let mut circle_in = Canvas::new();
+    ///     let mut circle_out = Canvas::new();
+    ///     circle_in
+    ///         .set_face_color("None")
+    ///         .set_edge_color("#ff000080")
+    ///         .set_line_width(7.0)
+    ///         .draw_circle(0.0, 0.0, 1.0);
+    ///     circle_out
+    ///         .set_face_color("None")
+    ///         .set_edge_color("#0000ff80")
+    ///         .set_line_width(7.0)
+    ///         .draw_circle(0.0, 0.0, 2.0);
+    ///
+    ///     // draw mesh elements and circles
+    ///     if SAVE_FIGURE {
+    ///         let filename = "/tmp/gemlab/doc_example_mesh_draw.svg";
+    ///         mesh.draw(None, filename, |plot, before| {
+    ///             if !before {
+    ///                 plot.add(&circle_in);
+    ///                 plot.add(&circle_out);
+    ///             }
+    ///         })?;
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
+    /// ![doc_example_mesh_draw](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/doc_example_mesh_draw.svg)
     pub fn draw<P, F>(&self, fig: Option<Figure>, filepath: &P, mut extra: F) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
