@@ -1780,49 +1780,64 @@ impl Samples {
     ///                     1.0 1.25  1.5 1.75  2.0
     /// ```
     ///
+    /// ```text
+    ///  -3 =---__     point markers
+    ///   |        '*._
+    ///   | -40        *._
+    ///   |               *.  -20
+    ///  -4 ==-__           *.
+    ///          '-.          *
+    ///             *.         *
+    ///          -10  *         *
+    ///                *         *
+    ///                 *         *
+    ///                 #   -30   #
+    ///                -1 ------- -2
+    /// ```
+    ///
     /// ![ring_eight_qua8_rad1_thick1](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_ring_eight_qua8_rad1_thick1.svg)
     #[rustfmt::skip]
     pub fn ring_eight_qua8_rad1_thick1() -> Mesh {
         Mesh {
             ndim: 2,
             points: vec![
-                Point { id:  0, marker: 0, coords: vec![1.000000000000000e+00, 0.000000000000000e+00] },
-                Point { id:  1, marker: 0, coords: vec![1.500000000000000e+00, 0.000000000000000e+00] },
-                Point { id:  2, marker: 0, coords: vec![2.000000000000000e+00, 0.000000000000000e+00] },
-                Point { id:  3, marker: 0, coords: vec![9.127002149692066e-01, 4.086298050744269e-01] },
-                Point { id:  4, marker: 0, coords: vec![1.357995128834866e+00, 6.079951288348657e-01] },
-                Point { id:  5, marker: 0, coords: vec![1.825400429938413e+00, 8.172596101488537e-01] },
-                Point { id:  6, marker: 0, coords: vec![7.071067811865476e-01, 7.071067811865475e-01] },
-                Point { id:  7, marker: 0, coords: vec![1.060660171779821e+00, 1.060660171779821e+00] },
-                Point { id:  8, marker: 0, coords: vec![1.414213562373095e+00, 1.414213562373095e+00] },
-                Point { id:  9, marker: 0, coords: vec![4.086298050744270e-01, 9.127002149692066e-01] },
-                Point { id: 10, marker: 0, coords: vec![6.079951288348662e-01, 1.357995128834866e+00] },
-                Point { id: 11, marker: 0, coords: vec![8.172596101488541e-01, 1.825400429938413e+00] },
-                Point { id: 12, marker: 0, coords: vec![6.123233995736766e-17, 1.000000000000000e+00] },
-                Point { id: 13, marker: 0, coords: vec![9.184850993605148e-17, 1.500000000000000e+00] },
-                Point { id: 14, marker: 0, coords: vec![1.224646799147353e-16, 2.000000000000000e+00] },
-                Point { id: 15, marker: 0, coords: vec![1.250000000000000e+00, 0.000000000000000e+00] },
-                Point { id: 16, marker: 0, coords: vec![1.750000000000000e+00, 0.000000000000000e+00] },
-                Point { id: 17, marker: 0, coords: vec![1.131662607362388e+00, 5.066626073623883e-01] },
-                Point { id: 18, marker: 0, coords: vec![1.584327650307344e+00, 7.093276503073436e-01] },
-                Point { id: 19, marker: 0, coords: vec![8.838834764831844e-01, 8.838834764831842e-01] },
-                Point { id: 20, marker: 0, coords: vec![1.237436867076458e+00, 1.237436867076458e+00] },
-                Point { id: 21, marker: 0, coords: vec![5.066626073623884e-01, 1.131662607362388e+00] },
-                Point { id: 22, marker: 0, coords: vec![7.093276503073440e-01, 1.584327650307344e+00] },
-                Point { id: 23, marker: 0, coords: vec![7.654042494670958e-17, 1.250000000000000e+00] },
-                Point { id: 24, marker: 0, coords: vec![1.071565949253934e-16, 1.750000000000000e+00] },
-                Point { id: 25, marker: 0, coords: vec![9.759662299218728e-01, 2.179218163747866e-01] },
-                Point { id: 26, marker: 0, coords: vec![1.448413825153672e+00, 3.234138251536718e-01] },
-                Point { id: 27, marker: 0, coords: vec![1.951932459843746e+00, 4.358436327495732e-01] },
-                Point { id: 28, marker: 0, coords: vec![8.212291819630956e-01, 5.705984846564395e-01] },
-                Point { id: 29, marker: 0, coords: vec![1.228743911043582e+00, 8.537439110435825e-01] },
-                Point { id: 30, marker: 0, coords: vec![1.642458363926191e+00, 1.141196969312879e+00] },
-                Point { id: 31, marker: 0, coords: vec![5.705984846564395e-01, 8.212291819630954e-01] },
-                Point { id: 32, marker: 0, coords: vec![8.537439110435825e-01, 1.228743911043582e+00] },
-                Point { id: 33, marker: 0, coords: vec![1.141196969312879e+00, 1.642458363926191e+00] },
-                Point { id: 34, marker: 0, coords: vec![2.179218163747867e-01, 9.759662299218727e-01] },
-                Point { id: 35, marker: 0, coords: vec![3.234138251536719e-01, 1.448413825153672e+00] },
-                Point { id: 36, marker: 0, coords: vec![4.358436327495734e-01, 1.951932459843745e+00] },
+                Point { id:  0, marker:  -1, coords: vec![1.000000000000000e+00, 0.000000000000000e+00] },
+                Point { id:  1, marker: -30, coords: vec![1.500000000000000e+00, 0.000000000000000e+00] },
+                Point { id:  2, marker:  -2, coords: vec![2.000000000000000e+00, 0.000000000000000e+00] },
+                Point { id:  3, marker: -10, coords: vec![9.127002149692066e-01, 4.086298050744269e-01] },
+                Point { id:  4, marker:   0, coords: vec![1.357995128834866e+00, 6.079951288348657e-01] },
+                Point { id:  5, marker: -20, coords: vec![1.825400429938413e+00, 8.172596101488537e-01] },
+                Point { id:  6, marker: -10, coords: vec![7.071067811865476e-01, 7.071067811865475e-01] },
+                Point { id:  7, marker:   0, coords: vec![1.060660171779821e+00, 1.060660171779821e+00] },
+                Point { id:  8, marker: -20, coords: vec![1.414213562373095e+00, 1.414213562373095e+00] },
+                Point { id:  9, marker: -10, coords: vec![4.086298050744270e-01, 9.127002149692066e-01] },
+                Point { id: 10, marker:   0, coords: vec![6.079951288348662e-01, 1.357995128834866e+00] },
+                Point { id: 11, marker: -20, coords: vec![8.172596101488541e-01, 1.825400429938413e+00] },
+                Point { id: 12, marker:  -4, coords: vec![6.123233995736766e-17, 1.000000000000000e+00] },
+                Point { id: 13, marker: -40, coords: vec![9.184850993605148e-17, 1.500000000000000e+00] },
+                Point { id: 14, marker:  -3, coords: vec![1.224646799147353e-16, 2.000000000000000e+00] },
+                Point { id: 15, marker: -30, coords: vec![1.250000000000000e+00, 0.000000000000000e+00] },
+                Point { id: 16, marker: -30, coords: vec![1.750000000000000e+00, 0.000000000000000e+00] },
+                Point { id: 17, marker:   0, coords: vec![1.131662607362388e+00, 5.066626073623883e-01] },
+                Point { id: 18, marker:   0, coords: vec![1.584327650307344e+00, 7.093276503073436e-01] },
+                Point { id: 19, marker:   0, coords: vec![8.838834764831844e-01, 8.838834764831842e-01] },
+                Point { id: 20, marker:   0, coords: vec![1.237436867076458e+00, 1.237436867076458e+00] },
+                Point { id: 21, marker:   0, coords: vec![5.066626073623884e-01, 1.131662607362388e+00] },
+                Point { id: 22, marker:   0, coords: vec![7.093276503073440e-01, 1.584327650307344e+00] },
+                Point { id: 23, marker: -40, coords: vec![7.654042494670958e-17, 1.250000000000000e+00] },
+                Point { id: 24, marker: -40, coords: vec![1.071565949253934e-16, 1.750000000000000e+00] },
+                Point { id: 25, marker: -10, coords: vec![9.759662299218728e-01, 2.179218163747866e-01] },
+                Point { id: 26, marker:   0, coords: vec![1.448413825153672e+00, 3.234138251536718e-01] },
+                Point { id: 27, marker: -20, coords: vec![1.951932459843746e+00, 4.358436327495732e-01] },
+                Point { id: 28, marker: -10, coords: vec![8.212291819630956e-01, 5.705984846564395e-01] },
+                Point { id: 29, marker:   0, coords: vec![1.228743911043582e+00, 8.537439110435825e-01] },
+                Point { id: 30, marker: -20, coords: vec![1.642458363926191e+00, 1.141196969312879e+00] },
+                Point { id: 31, marker: -10, coords: vec![5.705984846564395e-01, 8.212291819630954e-01] },
+                Point { id: 32, marker:   0, coords: vec![8.537439110435825e-01, 1.228743911043582e+00] },
+                Point { id: 33, marker: -20, coords: vec![1.141196969312879e+00, 1.642458363926191e+00] },
+                Point { id: 34, marker: -10, coords: vec![2.179218163747867e-01, 9.759662299218727e-01] },
+                Point { id: 35, marker:   0, coords: vec![3.234138251536719e-01, 1.448413825153672e+00] },
+                Point { id: 36, marker: -20, coords: vec![4.358436327495734e-01, 1.951932459843745e+00] },
             ],
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua8, points: vec![ 0, 1, 4, 3,15,26,17,25] },
