@@ -1,4 +1,4 @@
-use super::{draw_cell, Cell, Mesh};
+use super::{Cell, Mesh};
 use crate::geometry::{in_tetrahedron, in_triangle, tetrahedron_coords, triangle_coords};
 use crate::shapes::GeoKind;
 use crate::util::calc_container_key;
@@ -381,7 +381,8 @@ impl<'a> GridCells<'a> {
         for container in self.containers.values() {
             for cell_id in container {
                 let cell = &self.mesh.cells[*cell_id];
-                draw_cell(&mut canvas_cells, self.mesh, cell.kind, &cell.points, &mut pads)?;
+                self.mesh
+                    .draw_cell(&mut canvas_cells, cell.kind, &cell.points, &mut pads)?;
                 if with_ids {
                     draw_ids(cell);
                 }
@@ -390,7 +391,8 @@ impl<'a> GridCells<'a> {
         canvas_cells.set_face_color("#fffca3");
         for cell_id in &self.large_cells {
             let cell = &self.mesh.cells[*cell_id];
-            draw_cell(&mut canvas_cells, self.mesh, cell.kind, &cell.points, &mut pads)?;
+            self.mesh
+                .draw_cell(&mut canvas_cells, cell.kind, &cell.points, &mut pads)?;
             if with_ids {
                 draw_ids(cell);
             }
