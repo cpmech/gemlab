@@ -1894,7 +1894,6 @@ impl Samples {
 #[cfg(test)]
 mod tests {
     use super::Samples;
-    use crate::mesh::check_all;
 
     #[allow(unused_imports)]
     use crate::mesh::draw_mesh;
@@ -1908,43 +1907,43 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
 
         let mesh = Samples::lin_cells_3d();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
 
         let mesh = Samples::tri_cells();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 34);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
 
         let mesh = Samples::qua_cells();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 66);
         assert_eq!(mesh.cells.len(), 6);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
 
         let mesh = Samples::tet_cells();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 34);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
 
         let mesh = Samples::hex_cells();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 60);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
 
         let mesh = Samples::one_lin2();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 2);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_lin2.svg").unwrap();
         }
@@ -1953,7 +1952,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 3);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_tri3.svg").unwrap();
         }
@@ -1962,7 +1961,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_tri6.svg").unwrap();
         }
@@ -1971,7 +1970,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 4);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_qua4.svg").unwrap();
         }
@@ -1980,7 +1979,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 4);
         assert_eq!(mesh.cells.len(), 2);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_two_tri3.svg").unwrap();
         }
@@ -1989,7 +1988,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 5);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_three_tri3.svg").unwrap();
         }
@@ -1998,7 +1997,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 4);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_three_tri3_multi_shares.svg").unwrap();
         }
@@ -2007,7 +2006,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 10);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_three_tri6_multi_shares.svg").unwrap();
         }
@@ -2016,7 +2015,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 5);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_four_tri3.svg").unwrap();
         }
@@ -2025,7 +2024,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_two_tri3_one_qua4.svg").unwrap();
         }
@@ -2034,7 +2033,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 8);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_qua8.svg").unwrap();
         }
@@ -2043,7 +2042,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 2);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_two_qua4.svg").unwrap();
         }
@@ -2052,7 +2051,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 11);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_qua8_tri6_lin2.svg").unwrap();
         }
@@ -2061,7 +2060,7 @@ mod tests {
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 4);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_tet4.svg").unwrap();
         }
@@ -2070,7 +2069,7 @@ mod tests {
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 8);
         assert_eq!(mesh.cells.len(), 1);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_hex8.svg").unwrap();
         }
@@ -2079,7 +2078,7 @@ mod tests {
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 12);
         assert_eq!(mesh.cells.len(), 2);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_two_hex8.svg").unwrap();
         }
@@ -2088,7 +2087,7 @@ mod tests {
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_four_hex8.svg").unwrap();
         }
@@ -2097,7 +2096,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 6);
         assert_eq!(mesh.cells.len(), 3);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_mixed_shapes_2d.svg").unwrap();
         }
@@ -2106,7 +2105,7 @@ mod tests {
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 13);
         assert_eq!(mesh.cells.len(), 5);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_mixed_shapes_3d.svg").unwrap();
         }
@@ -2115,7 +2114,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua4.svg").unwrap();
         }
@@ -2124,7 +2123,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 21);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua8.svg").unwrap();
         }
@@ -2133,7 +2132,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 25);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua9.svg").unwrap();
         }
@@ -2142,7 +2141,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua12.svg").unwrap();
         }
@@ -2151,7 +2150,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua16.svg").unwrap();
         }
@@ -2160,7 +2159,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 49);
         assert_eq!(mesh.cells.len(), 4);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua17.svg").unwrap();
         }
@@ -2169,7 +2168,7 @@ mod tests {
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_3d_eight_hex8.svg").unwrap();
         }
@@ -2178,7 +2177,7 @@ mod tests {
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 81);
         assert_eq!(mesh.cells.len(), 8);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_3d_eight_hex20.svg").unwrap();
         }
@@ -2187,7 +2186,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 8);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_ring_eight_qua8_rad1_thick1.svg").unwrap();
         }
@@ -2196,7 +2195,7 @@ mod tests {
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 10);
         assert_eq!(mesh.cells.len(), 12);
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_tri3_from_delaunay.svg").unwrap();
         }

@@ -1,4 +1,4 @@
-use gemlab::mesh::{check_2d_edge_normals, check_face_normals, Extract, Features, Samples};
+use gemlab::mesh::{Extract, Features, Samples};
 use gemlab::StrError;
 use std::collections::HashMap;
 
@@ -27,7 +27,8 @@ fn test_normal_vectors_2d() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
+    mesh.check_2d_edge_normals(&features.edges, &solutions, 1e-15)
+        .expect("ok");
     Ok(())
 }
 
@@ -66,7 +67,8 @@ fn test_normal_vectors_2d_qua8() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
+    mesh.check_2d_edge_normals(&features.edges, &solutions, 1e-15)
+        .expect("ok");
     Ok(())
 }
 
@@ -105,7 +107,8 @@ fn test_normal_vectors_2d_qua9() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
+    mesh.check_2d_edge_normals(&features.edges, &solutions, 1e-15)
+        .expect("ok");
     Ok(())
 }
 
@@ -144,7 +147,8 @@ fn test_normal_vectors_2d_qua12() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
+    mesh.check_2d_edge_normals(&features.edges, &solutions, 1e-15)
+        .expect("ok");
     Ok(())
 }
 
@@ -183,7 +187,8 @@ fn test_normal_vectors_2d_qua16() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
+    mesh.check_2d_edge_normals(&features.edges, &solutions, 1e-15)
+        .expect("ok");
     Ok(())
 }
 
@@ -226,7 +231,8 @@ fn test_normal_vectors_2d_qua17() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
+    mesh.check_2d_edge_normals(&features.edges, &solutions, 1e-15)
+        .expect("ok");
     Ok(())
 }
 
@@ -274,7 +280,7 @@ fn test_normal_vectors_3d() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_face_normals(&mesh, &features.faces, &solutions, 1e-15).expect("ok");
+    mesh.check_face_normals(&features.faces, &solutions, 1e-15).expect("ok");
     Ok(())
 }
 
@@ -338,6 +344,6 @@ fn test_normal_vectors_3d_hex20() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_face_normals(&mesh, &features.faces, &solutions, 1e-15).expect("ok");
+    mesh.check_face_normals(&features.faces, &solutions, 1e-15).expect("ok");
     Ok(())
 }

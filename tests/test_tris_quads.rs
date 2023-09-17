@@ -1,5 +1,5 @@
 use gemlab::integ;
-use gemlab::mesh::{check_2d_edge_normals, At, Extract, Features, Find, Mesh};
+use gemlab::mesh::{At, Extract, Features, Find, Mesh};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::any_x;
 use gemlab::StrError;
@@ -60,7 +60,8 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-15).expect("ok");
+    mesh.check_2d_edge_normals(&features.edges, &solutions, 1e-15)
+        .expect("ok");
 
     // find points
     let find = Find::new(&mesh, None);
@@ -106,7 +107,8 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_2d_edge_normals(&mesh, &features.edges, &solutions, 1e-17).expect("ok");
+    mesh.check_2d_edge_normals(&features.edges, &solutions, 1e-17)
+        .expect("ok");
 
     // find edges
     let find = Find::new(&mesh, None);

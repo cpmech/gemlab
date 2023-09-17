@@ -1,5 +1,5 @@
 use super::{Cell, Mesh, Point};
-use crate::mesh::{set_pad_coords, PointId};
+use crate::mesh::PointId;
 use crate::shapes::{GeoClass, GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
@@ -712,10 +712,9 @@ impl Block {
                                     continue; // skip edge that doesn't contain the constrained point
                                 }
                                 // set Lin2 with the first two (corner) points of target's edge
-                                set_pad_coords(
+                                mesh.set_pad(
                                     &mut pad_lin2,
                                     &[points[target.edge_node_id(e, 0)], points[target.edge_node_id(e, 1)]],
-                                    &mesh,
                                 );
                                 // only change the coordinates of the middle edge nodes: idx >= 2
                                 for idx in 2..target_edge_nnode {
@@ -738,7 +737,7 @@ impl Block {
                             if let Some(ref mut pad_ser) = serendipity {
                                 let nn = pad_ser.interp.dim();
                                 let pts = points[0..nn].to_vec();
-                                set_pad_coords(pad_ser, &pts, &mesh);
+                                mesh.set_pad(pad_ser, &pts);
                                 for idx in 0..target_n_interior_nodes {
                                     let m = target.interior_node(idx);
                                     let ksi_interior = target.reference_coords(m);
@@ -976,99 +975,87 @@ impl Block {
 mod tests {
     use super::{ArgsRing, Block, Constraint2D, Constraint3D};
     use crate::geometry::point_point_distance;
-    use crate::mesh::{check_all, Samples};
+    use crate::mesh::{draw_mesh, Draw, Extract, Features, Mesh, Samples};
     use crate::shapes::GeoKind;
-    use plotpy::Plot;
+    use plotpy::{Canvas, Plot, Surface};
     use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::math::{PI, SQRT_2};
 
-    #[allow(unused_imports)]
-    use crate::mesh::draw_mesh;
+    const SAVE_FIGURE: bool = false;
 
-    #[allow(unused_imports)]
-    use crate::mesh::{Draw, Extract, Features, Mesh};
+    fn draw_ring_and_mesh(
+        mesh: &Mesh,
+        args: &ArgsRing,
+        with_ids: bool,
+        with_points: bool,
+        with_circle_mid: bool,
+        filename: &str,
+    ) {
+        // draw reference circles
+        let mut plot = Plot::new();
+        let mut circle_in = Canvas::new();
+        let mut circle_mid = Canvas::new();
+        let mut circle_out = Canvas::new();
+        circle_in
+            .set_face_color("None")
+            .set_edge_color("#bfbfbf")
+            .set_line_width(7.0)
+            .draw_circle(0.0, 0.0, args.rmin);
+        if with_circle_mid {
+            circle_mid
+                .set_face_color("None")
+                .set_edge_color("#bfbfbf")
+                .set_line_width(7.0)
+                .draw_circle(0.0, 0.0, (args.rmax + args.rmin) / 2.0);
+        }
+        circle_out
+            .set_face_color("None")
+            .set_edge_color("#bfbfbf")
+            .set_line_width(7.0)
+            .draw_circle(0.0, 0.0, args.rmax);
+        plot.add(&circle_in);
+        plot.add(&circle_mid);
+        plot.add(&circle_out);
+        // draw mesh
+        let mut draw = Draw::new();
+        draw.canvas_point_ids
+            .set_bbox(false)
+            .set_align_horizontal("left")
+            .set_align_vertical("bottom");
+        let features = Features::new(mesh, Extract::Boundary);
+        draw.edges(&mut plot, mesh, &features, false).unwrap();
+        if with_ids {
+            draw.cell_ids(&mut plot, &mesh).unwrap();
+            draw.point_ids(&mut plot, &mesh);
+        }
+        if with_points {
+            draw.points(&mut plot, &mesh);
+        }
+        let d = args.rmax * 0.05;
+        plot.set_equal_axes(true)
+            .set_figure_size_points(600.0, 600.0)
+            .set_range(-d, args.rmax + d, -d, args.rmax + d)
+            .save(filename)
+            .unwrap();
+    }
 
-    #[allow(unused_imports)]
-    use plotpy::Canvas;
-
-    #[allow(unused_imports)]
-    use plotpy::Surface;
-
-    // DO NOT DELETE the following lines
-    // fn draw_ring_and_mesh(
-    //     mesh: &Mesh,
-    //     args: &ArgsRing,
-    //     with_ids: bool,
-    //     with_points: bool,
-    //     with_circle_mid: bool,
-    //     filename: &str,
-    // ) {
-    //     // draw reference circles
-    //     let mut plot = Plot::new();
-    //     let mut circle_in = Canvas::new();
-    //     let mut circle_mid = Canvas::new();
-    //     let mut circle_out = Canvas::new();
-    //     circle_in
-    //         .set_face_color("None")
-    //         .set_edge_color("#bfbfbf")
-    //         .set_line_width(7.0)
-    //         .draw_circle(0.0, 0.0, args.rmin);
-    //     if with_circle_mid {
-    //         circle_mid
-    //             .set_face_color("None")
-    //             .set_edge_color("#bfbfbf")
-    //             .set_line_width(7.0)
-    //             .draw_circle(0.0, 0.0, (args.rmax + args.rmin) / 2.0);
-    //     }
-    //     circle_out
-    //         .set_face_color("None")
-    //         .set_edge_color("#bfbfbf")
-    //         .set_line_width(7.0)
-    //         .draw_circle(0.0, 0.0, args.rmax);
-    //     plot.add(&circle_in);
-    //     plot.add(&circle_mid);
-    //     plot.add(&circle_out);
-    //     // draw mesh
-    //     let mut draw = Draw::new();
-    //     draw.canvas_point_ids
-    //         .set_bbox(false)
-    //         .set_align_horizontal("left")
-    //         .set_align_vertical("bottom");
-    //     let features = Features::new(mesh, Extract::Boundary);
-    //     draw.edges(&mut plot, mesh, &features, false).unwrap();
-    //     if with_ids {
-    //         draw.cell_ids(&mut plot, &mesh).unwrap();
-    //         draw.point_ids(&mut plot, &mesh);
-    //     }
-    //     if with_points {
-    //         draw.points(&mut plot, &mesh);
-    //     }
-    //     let d = args.rmax * 0.05;
-    //     plot.set_equal_axes(true)
-    //         .set_figure_size_points(600.0, 600.0)
-    //         .set_range(-d, args.rmax + d, -d, args.rmax + d)
-    //         .save(filename)
-    //         .unwrap();
-    // }
-
-    // DO NOT DELETE the following lines
-    // fn draw_mesh_and_block(plot: &mut Plot, mesh: Mesh, block: &Block, set_range: bool, filename: &str) {
-    //     let features = Features::new(&mesh, Extract::All);
-    //     let mut draw = Draw::new();
-    //     block.draw(plot, false, set_range).unwrap();
-    //     draw.canvas_point_ids
-    //         .set_bbox(false)
-    //         .set_align_horizontal("left")
-    //         .set_align_vertical("bottom");
-    //     draw.edges(plot, &mesh, &features, false).unwrap();
-    //     draw.cell_ids(plot, &mesh).unwrap();
-    //     draw.point_ids(plot, &mesh);
-    //     draw.points(plot, &mesh);
-    //     plot.set_equal_axes(true)
-    //         .set_figure_size_points(600.0, 600.0)
-    //         .save(filename)
-    //         .unwrap();
-    // }
+    fn draw_mesh_and_block(plot: &mut Plot, mesh: Mesh, block: &Block, set_range: bool, filename: &str) {
+        let features = Features::new(&mesh, Extract::All);
+        let mut draw = Draw::new();
+        block.draw(plot, false, set_range).unwrap();
+        draw.canvas_point_ids
+            .set_bbox(false)
+            .set_align_horizontal("left")
+            .set_align_vertical("bottom");
+        draw.edges(plot, &mesh, &features, false).unwrap();
+        draw.cell_ids(plot, &mesh).unwrap();
+        draw.point_ids(plot, &mesh);
+        draw.points(plot, &mesh);
+        plot.set_equal_axes(true)
+            .set_figure_size_points(600.0, 600.0)
+            .save(filename)
+            .unwrap();
+    }
 
     #[test]
     fn derive_works() {
@@ -1365,7 +1352,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         let correct = Samples::block_2d_four_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1409,7 +1396,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         let correct = Samples::block_2d_four_qua8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1437,7 +1424,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua9).unwrap();
         let correct = Samples::block_2d_four_qua9();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1472,7 +1459,7 @@ mod tests {
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
         }
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1507,7 +1494,7 @@ mod tests {
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
         }
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1539,7 +1526,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua17).unwrap();
         let correct = Samples::block_2d_four_qua17();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1601,7 +1588,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Hex8).unwrap();
         let correct = Samples::block_3d_eight_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1663,7 +1650,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
         let correct = Samples::block_3d_eight_hex20();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1681,7 +1668,7 @@ mod tests {
             }))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
         assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3]);
@@ -1706,14 +1693,16 @@ mod tests {
                 approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
         }
-        // draw_ring_and_mesh(
-        //     &mesh,
-        //     &block.args_ring,
-        //     true,
-        //     true,
-        //     true,
-        //     "/tmp/gemlab/test_transform_into_ring_2d.svg",
-        // );
+        if SAVE_FIGURE {
+            draw_ring_and_mesh(
+                &mesh,
+                &block.args_ring,
+                true,
+                true,
+                true,
+                "/tmp/gemlab/test_transform_into_ring_2d.svg",
+            );
+        }
     }
 
     #[test]
@@ -1731,7 +1720,7 @@ mod tests {
             }))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Qua16).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         for point in &mesh.points {
             let mut radius = 0.0;
             for i in 0..2 {
@@ -1750,14 +1739,16 @@ mod tests {
                 approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
         }
-        // draw_ring_and_mesh(
-        //     &mesh,
-        //     &block.args_ring,
-        //     true,
-        //     true,
-        //     true,
-        //     "/tmp/gemlab/test_transform_into_ring_2d_qua16.svg",
-        // );
+        if SAVE_FIGURE {
+            draw_ring_and_mesh(
+                &mesh,
+                &block.args_ring,
+                true,
+                true,
+                true,
+                "/tmp/gemlab/test_transform_into_ring_2d_qua16.svg",
+            );
+        }
     }
 
     #[test]
@@ -1775,7 +1766,7 @@ mod tests {
             }))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex8).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
         assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3, 4, 5, 6, 7]);
@@ -1811,7 +1802,9 @@ mod tests {
                 approx_eq(point.coords[2], block.args_ring.zmax, 1e-15);
             }
         }
-        // draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
+        if SAVE_FIGURE {
+            draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
+        }
     }
 
     #[test]
@@ -1829,7 +1822,7 @@ mod tests {
             }))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex32).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         for point in &mesh.points {
             let mut radius = 0.0;
             for i in 0..2 {
@@ -1848,7 +1841,16 @@ mod tests {
                 approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
         }
-        // draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg").unwrap();
+        if SAVE_FIGURE {
+            draw_mesh(
+                &mesh,
+                true,
+                false,
+                false,
+                "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg",
+            )
+            .unwrap();
+        }
     }
 
     #[test]
@@ -1889,16 +1891,16 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 1.0, 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         true,
-        //         "/tmp/gemlab/test_constraints_2d_qua4_1.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_2d_qua4_1.svg",
+            );
+        }
 
         // circle pulls point
         let ct = Constraint2D::Circle(0.0, 0.0, 0.5);
@@ -1908,16 +1910,16 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 0.5, 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         true,
-        //         "/tmp/gemlab/test_constraints_2d_qua4_2.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_2d_qua4_2.svg",
+            );
+        }
 
         // block touches constraint (also we need to move mid nodes)
         #[rustfmt::skip]
@@ -1949,16 +1951,16 @@ mod tests {
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         true,
-        //         "/tmp/gemlab/test_constraints_2d_qua8.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_2d_qua8.svg",
+            );
+        }
     }
 
     #[test]
@@ -1989,7 +1991,7 @@ mod tests {
             .set_edge_constraint(3, Some(Constraint2D::Circle(cen_minus, 0.0, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         // side 0
         for p in [0, 4, 1, 10, 8] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, cen_minus]).unwrap();
@@ -2024,17 +2026,17 @@ mod tests {
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     plot.set_range(-4.0, 4.0, -4.0, 4.0);
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         false,
-        //         "/tmp/gemlab/test_constraints_2d_multiple.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            plot.set_range(-4.0, 4.0, -4.0, 4.0);
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                false,
+                "/tmp/gemlab/test_constraints_2d_multiple.svg",
+            );
+        }
     }
 
     #[test]
@@ -2068,7 +2070,7 @@ mod tests {
             .set_face_constraint(3, Some(Constraint3D::CylinderZ(0.0, cen_plus, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         // corner points
         for p in [0, 20, 33, 44] {
             assert_eq!(mesh.points[p].coords[2], -half_l);
@@ -2149,26 +2151,26 @@ mod tests {
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     let mut surf = Surface::new();
-        //     const NP: usize = 81;
-        //     surf.set_solid_color("#ff000020");
-        //     surf.draw_cylinder(&[cen_minus, 0.0, -half_l], &[cen_minus, 0.0, half_l], r, 5, NP)
-        //         .unwrap();
-        //     surf.set_solid_color("#00ff0020");
-        //     surf.draw_cylinder(&[cen_plus, 0.0, -half_l], &[cen_plus, 0.0, half_l], r, 5, NP)
-        //         .unwrap();
-        //     surf.set_solid_color("#0000ff20");
-        //     surf.draw_cylinder(&[0.0, cen_minus, -half_l], &[0.0, cen_minus, half_l], r, 5, NP)
-        //         .unwrap();
-        //     surf.set_solid_color("#ff00ff20");
-        //     surf.draw_cylinder(&[0.0, cen_plus, -half_l], &[0.0, cen_plus, half_l], r, 5, NP)
-        //         .unwrap();
-        //     plot.add(&surf);
-        //     plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
-        //     draw_mesh_and_block(&mut plot, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg");
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            let mut surf = Surface::new();
+            const NP: usize = 81;
+            surf.set_solid_color("#ff000020");
+            surf.draw_cylinder(&[cen_minus, 0.0, -half_l], &[cen_minus, 0.0, half_l], r, 5, NP)
+                .unwrap();
+            surf.set_solid_color("#00ff0020");
+            surf.draw_cylinder(&[cen_plus, 0.0, -half_l], &[cen_plus, 0.0, half_l], r, 5, NP)
+                .unwrap();
+            surf.set_solid_color("#0000ff20");
+            surf.draw_cylinder(&[0.0, cen_minus, -half_l], &[0.0, cen_minus, half_l], r, 5, NP)
+                .unwrap();
+            surf.set_solid_color("#ff00ff20");
+            surf.draw_cylinder(&[0.0, cen_plus, -half_l], &[0.0, cen_plus, half_l], r, 5, NP)
+                .unwrap();
+            plot.add(&surf);
+            plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
+            draw_mesh_and_block(&mut plot, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg");
+        }
     }
 
     #[test]
@@ -2196,7 +2198,7 @@ mod tests {
             .set_face_constraint(5, Some(Constraint3D::CylinderY(0.0, cen_plus, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         // corner points
         for p in [0, 20, 33, 44] {
             assert_eq!(mesh.points[p].coords[2], -half_l);
@@ -2247,26 +2249,26 @@ mod tests {
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     let mut surf = Surface::new();
-        //     const NP: usize = 81;
-        //     surf.set_solid_color("#ff000020");
-        //     surf.draw_cylinder(&[-half_l, 0.0, cen_minus], &[half_l, 0.0, cen_minus], r, 5, NP)
-        //         .unwrap();
-        //     surf.set_solid_color("#00ff0020");
-        //     surf.draw_cylinder(&[0.0, -half_l, cen_plus], &[0.0, half_l, cen_plus], r, 5, NP)
-        //         .unwrap();
-        //     plot.add(&surf);
-        //     plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         false,
-        //         "/tmp/gemlab/test_constraints_3d_cylinder_xy.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            let mut surf = Surface::new();
+            const NP: usize = 81;
+            surf.set_solid_color("#ff000020");
+            surf.draw_cylinder(&[-half_l, 0.0, cen_minus], &[half_l, 0.0, cen_minus], r, 5, NP)
+                .unwrap();
+            surf.set_solid_color("#00ff0020");
+            surf.draw_cylinder(&[0.0, -half_l, cen_plus], &[0.0, half_l, cen_plus], r, 5, NP)
+                .unwrap();
+            plot.add(&surf);
+            plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                false,
+                "/tmp/gemlab/test_constraints_3d_cylinder_xy.svg",
+            );
+        }
     }
 
     #[test]
@@ -2285,16 +2287,16 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 6.0, 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         true,
-        //         "/tmp/gemlab/test_constraints_imprecision_2d.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_imprecision_2d.svg",
+            );
+        }
     }
 
     #[test]
@@ -2317,16 +2319,16 @@ mod tests {
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         true,
-        //         "/tmp/gemlab/test_constraints_interior_nodes_qua8.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_qua8.svg",
+            );
+        }
     }
 
     #[test]
@@ -2349,16 +2351,16 @@ mod tests {
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         true,
-        //         "/tmp/gemlab/test_constraints_interior_nodes_qua9.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_qua9.svg",
+            );
+        }
     }
 
     #[test]
@@ -2391,16 +2393,16 @@ mod tests {
             vec_approx_eq(&mesh.points[c].coords, &[xc, yc], 1e-14);
             vec_approx_eq(&mesh.points[d].coords, &[xd, yd], 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         true,
-        //         "/tmp/gemlab/test_constraints_interior_nodes_qua16.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_qua16.svg",
+            );
+        }
     }
 
     #[test]
@@ -2419,16 +2421,16 @@ mod tests {
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         true,
-        //         "/tmp/gemlab/test_constraints_interior_nodes_qua17.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_qua17.svg",
+            );
+        }
     }
 
     #[test]
@@ -2466,15 +2468,15 @@ mod tests {
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
-        // if true {
-        //     let mut plot = Plot::new();
-        //     draw_mesh_and_block(
-        //         &mut plot,
-        //         mesh,
-        //         &block,
-        //         true,
-        //         "/tmp/gemlab/test_constraints_interior_nodes_hex20.svg",
-        //     );
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            draw_mesh_and_block(
+                &mut plot,
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_constraints_interior_nodes_hex20.svg",
+            );
+        }
     }
 }

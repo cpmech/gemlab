@@ -1,5 +1,4 @@
 use super::{Cell, Mesh, Point};
-use crate::mesh::convert_mesh_2d;
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 use russell_lab::math::PI;
@@ -235,7 +234,7 @@ impl Unstructured {
         // upgrade mesh (need to apply constraints again because
         // new mid-edge points may be created)
         if target.nnode() > 6 {
-            let mut new_mesh = convert_mesh_2d(&mesh, target)?;
+            let mut new_mesh = mesh.convert_2d(target)?;
             apply_constraints(&mut new_mesh, rmin, rmax);
             return Ok(new_mesh);
         }
@@ -251,7 +250,7 @@ impl Unstructured {
 mod tests {
     use super::Unstructured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{check_all, check_overlapping_points, At, Draw, Find, Mesh};
+    use crate::mesh::{At, Draw, Find, Mesh};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
     use plotpy::Plot;
@@ -337,8 +336,8 @@ mod tests {
         }
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 14);
-        check_all(&mesh).unwrap();
-        check_overlapping_points(&mesh, 0.18).unwrap();
+        mesh.check_all().unwrap();
+        mesh.check_overlapping_points(0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_edge_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5]);
@@ -362,8 +361,8 @@ mod tests {
         }
         assert_eq!(mesh.points.len(), 41);
         assert_eq!(mesh.cells.len(), 14);
-        check_all(&mesh).unwrap();
-        check_overlapping_points(&mesh, 0.18).unwrap();
+        mesh.check_all().unwrap();
+        mesh.check_overlapping_points(0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_edge_point_markers(&mesh, &[32, 11, 36, 10, 21, 9, 22], &[34, 3, 40, 4, 17, 5, 26]);
@@ -388,8 +387,8 @@ mod tests {
         }
         assert_eq!(mesh.points.len(), 50);
         assert_eq!(mesh.cells.len(), 78);
-        check_all(&mesh).unwrap();
-        check_overlapping_points(&mesh, 0.18).unwrap();
+        mesh.check_all().unwrap();
+        mesh.check_overlapping_points(0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_edge_point_markers(&mesh, &[11, 10, 17, 9], &[40, 3, 25, 4, 24, 5, 33]);
@@ -414,8 +413,8 @@ mod tests {
         }
         assert_eq!(mesh.points.len(), 177);
         assert_eq!(mesh.cells.len(), 78);
-        check_all(&mesh).unwrap();
-        check_overlapping_points(&mesh, 0.1).unwrap();
+        mesh.check_all().unwrap();
+        mesh.check_overlapping_points(0.1).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_edge_point_markers(
@@ -442,8 +441,8 @@ mod tests {
         }
         assert_eq!(mesh.points.len(), 82);
         assert_eq!(mesh.cells.len(), 14);
-        check_all(&mesh).unwrap();
-        check_overlapping_points(&mesh, 0.1).unwrap();
+        mesh.check_all().unwrap();
+        mesh.check_overlapping_points(0.1).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_edge_point_markers(
@@ -478,8 +477,8 @@ mod tests {
         }
         assert_eq!(mesh.points.len(), 137);
         assert_eq!(mesh.cells.len(), 14);
-        check_all(&mesh).unwrap();
-        check_overlapping_points(&mesh, 0.1).unwrap();
+        mesh.check_all().unwrap();
+        mesh.check_overlapping_points(0.1).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_edge_point_markers(
