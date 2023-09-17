@@ -208,7 +208,7 @@ mod tests {
     use crate::shapes::GeoKind;
     use russell_chk::vec_approx_eq;
 
-    const SAVE_FIGURE: bool = false;
+    const SAVE_FIGURE: bool = true;
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();

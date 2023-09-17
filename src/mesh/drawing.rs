@@ -284,7 +284,7 @@ impl Mesh {
     /// use gemlab::StrError;
     /// use plotpy::Canvas;
     ///
-    /// const SAVE_FIGURE: bool = false;
+    /// const SAVE_FIGURE: bool = true;
     ///
     /// fn main() -> Result<(), StrError> {
     ///     // use sample mesh
@@ -367,7 +367,7 @@ mod tests {
     use crate::mesh::{Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
-    const SAVE_FIGURE: bool = false;
+    const SAVE_FIGURE: bool = true;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
