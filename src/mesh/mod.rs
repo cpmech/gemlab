@@ -34,7 +34,7 @@
 mod algorithms;
 mod block;
 mod check;
-mod convert_mesh_2d;
+mod convert_2d;
 mod draw;
 mod features;
 mod find;
@@ -49,7 +49,7 @@ mod samples;
 mod write_text_file;
 pub use crate::mesh::block::*;
 pub use crate::mesh::check::*;
-pub use crate::mesh::convert_mesh_2d::*;
+pub use crate::mesh::convert_2d::*;
 pub use crate::mesh::draw::*;
 pub use crate::mesh::features::*;
 pub use crate::mesh::find::*;
