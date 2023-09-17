@@ -1,5 +1,4 @@
-use super::algorithms;
-use super::{CellId, Mesh, PointId};
+use super::{algorithms, CellId, Extract, Mesh, PointId};
 use crate::shapes::GeoKind;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
@@ -217,18 +216,6 @@ pub struct Features {
 
     /// The maximum coordinates of the points (space_ndim)
     pub max: Vec<f64>,
-}
-
-/// Defines what features to extract
-pub enum Extract {
-    /// Extracts boundary and interior features
-    All,
-
-    /// Extracts boundary features only
-    Boundary,
-
-    /// Extracts interior features only
-    Interior,
 }
 
 impl Features {
