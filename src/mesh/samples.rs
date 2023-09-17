@@ -554,9 +554,9 @@ impl Samples {
     /// (-10)                          (-20)
     /// ```
     ///
-    /// ![three_tri3_multi_shares](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri3_multi_shares.svg)
+    /// ![three_tri3_arrow](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri3_arrow.svg)
     #[rustfmt::skip]
-    pub fn three_tri3_multi_shares() -> Mesh {
+    pub fn three_tri3_arrow() -> Mesh {
         Mesh {
             ndim: 2,
             points: vec![
@@ -597,9 +597,9 @@ impl Samples {
     /// (-1)           (-10)           (-2)
     /// ```
     ///
-    /// ![three_tri3_multi_shares](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri6_multi_shares.svg)
+    /// ![three_tri6_arrow](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_three_tri6_arrow.svg)
     #[rustfmt::skip]
-    pub fn three_tri6_multi_shares() -> Mesh {
+    pub fn three_tri6_arrow() -> Mesh {
         Mesh {
             ndim: 2,
             points: vec![
@@ -2001,22 +2001,22 @@ mod tests {
             draw(&mesh, false, "/tmp/gemlab/test_mesh_three_tri3.svg");
         }
 
-        let mesh = Samples::three_tri3_multi_shares();
+        let mesh = Samples::three_tri3_arrow();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 4);
         assert_eq!(mesh.cells.len(), 3);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw(&mesh, true, "/tmp/gemlab/test_mesh_three_tri3_multi_shares.svg")
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_three_tri3_arrow.svg")
         }
 
-        let mesh = Samples::three_tri6_multi_shares();
+        let mesh = Samples::three_tri6_arrow();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 10);
         assert_eq!(mesh.cells.len(), 3);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw(&mesh, true, "/tmp/gemlab/test_mesh_three_tri6_multi_shares.svg")
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_three_tri6_arrow.svg")
         }
 
         let mesh = Samples::four_tri3();
