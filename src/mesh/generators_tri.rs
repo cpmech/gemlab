@@ -1,5 +1,4 @@
 use super::{Cell, Mesh, Point};
-use crate::mesh::convert_mesh_2d;
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 use russell_lab::math::PI;
@@ -235,7 +234,7 @@ impl Unstructured {
         // upgrade mesh (need to apply constraints again because
         // new mid-edge points may be created)
         if target.nnode() > 6 {
-            let mut new_mesh = convert_mesh_2d(&mesh, target)?;
+            let mut new_mesh = mesh.convert_2d(target)?;
             apply_constraints(&mut new_mesh, rmin, rmax);
             return Ok(new_mesh);
         }

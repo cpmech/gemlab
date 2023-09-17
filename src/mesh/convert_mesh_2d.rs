@@ -5,204 +5,205 @@ use crate::StrError;
 use russell_lab::Vector;
 use std::collections::HashMap;
 
-/// Converts a mesh with triangles or quadrilaterals
-///
-/// # Notes
-///
-/// 1. All cells must have the same GeoKind
-/// 2. Only [GeoClass::Tri] and [GeoClass::Qua] are allowed
-/// 3. The points will be completely renumbered
-/// 4. The corner tags will be replicated into the new mesh
-/// 5. The points at the middle of edges will inherit the tag of ONE corresponding middle point
-pub fn convert_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
-    //        2,
-    //  s     | ',
-    //        |   ',
-    //  i    10     9,
-    //        |       ',
-    //  d     |         ',   side = 1
-    //        5    14     4,
-    //  e     |             ',
-    //        |               ',         NOTE that two neighboring triangles
-    //  =    11    12    13     8,       will have reversed pairs of local
-    //        |                   ',     points, e.g. (6,7) <-> (7,6)
-    //  2     |      side = 0       ',   Thus, the first point along the
-    //        0-----6-----3-----7-----1  edge of one triangle will be the
-    //        1-----7-----3-----6-----0  second point along the edge of the
-    //  2     |      side = 0       ,'   neighbor triangle, and vice-versa
-    //        |                   ,'     Solution: Flip Normals
-    //  =     8    13    12    11'
-    //        |               ,'
-    //  e     |             ,'
-    //        4    14     5'
-    //  d     |         ,'   side = 1
-    //        |       ,'
-    //  i     9    10'
-    //        |   ,'
-    //  s     | ,'
-    //        2'
-    if mesh.ndim != 2 {
-        return Err("ndim must be equal to 2");
-    }
-
-    // current number of cells
-    let ncell = mesh.cells.len();
-    if ncell < 1 {
-        return Err("the conversion requires at least one cell");
-    }
-
-    // get info about first cell in the mesh
-    let source = mesh.cells[0].kind;
-    let class = source.class();
-    let source_nnode = source.nnode();
-    let target_nnode = target.nnode();
-    if target.class() != class {
-        return Err("target class must equal the GeoClass of current cells");
-    }
-    if target.class() != GeoClass::Tri && target.class() != GeoClass::Qua {
-        return Err("target GeoClass must be Tri or Qua");
-    }
-
-    // info about the edges and corners
-    let source_edge_nnode = source.edge_nnode();
-    let target_edge_nnode = target.edge_nnode();
-    let nedge = target.nedge();
-    let ncorner = if class == GeoClass::Tri { 3 } else { 4 };
-    let mut edge_point_markers = vec![0; nedge];
-
-    // maps target local node id to edge number (to set markers of points on edges)
-    const INTERIOR_OR_CORNER: usize = usize::MAX;
-    let mut target_node_to_edge = vec![INTERIOR_OR_CORNER; target_nnode];
-    for e in 0..nedge {
-        for i in 2..target_edge_nnode {
-            let m = target.edge_node_id(e, i);
-            target_node_to_edge[m] = e;
-        }
-    }
-
-    // find neighbors in the original mesh
-    let source_features = Features::new(&mesh, Extract::All);
-    let source_edges = source_features.all_2d_edges.unwrap();
-
-    // flag indicating that a connectivity point has not been set
-    const UNSET: usize = usize::MAX;
-    assert!(ncell * target_nnode < UNSET);
-
-    // zeroed new cell
-    let zero_cell = Cell {
-        id: 0,
-        attribute: 0,
-        kind: target,
-        points: vec![UNSET; target_nnode],
-    };
-
-    // allocate destination mesh
-    let mut dest = Mesh {
-        ndim: mesh.ndim,
-        points: Vec::new(),
-        cells: vec![zero_cell; ncell],
-    };
-
-    // scratchpad for point interpolation (based on the original mesh)
-    let mut pad = Scratchpad::new(mesh.ndim, source).unwrap();
-
-    // coordinates of new points
-    let mut x = Vector::new(mesh.ndim);
-
-    // maps old point id to new point id
-    let mut corners: HashMap<PointId, PointId> = HashMap::new();
-
-    // upgrade or downgrade mesh
-    for cell_id in 0..ncell {
-        // check GeoKind
-        if mesh.cells[cell_id].kind != source {
-            return Err("all cells must have the same GeoKind");
+impl Mesh {
+    /// Upgrades or downgrades a mesh with triangles or quadrilaterals
+    ///
+    /// # Notes
+    ///
+    /// 1. All cells must have the same GeoKind
+    /// 2. Only [GeoClass::Tri] and [GeoClass::Qua] are allowed
+    /// 3. The points will be completely renumbered
+    /// 4. The corner tags will be replicated into the new mesh
+    /// 5. The points at the middle of edges will inherit the tag of ONE corresponding middle point
+    pub fn convert_2d(&self, target: GeoKind) -> Result<Mesh, StrError> {
+        //        2,
+        //  s     | ',
+        //        |   ',
+        //  i    10     9,
+        //        |       ',
+        //  d     |         ',   side = 1
+        //        5    14     4,
+        //  e     |             ',
+        //        |               ',         NOTE that two neighboring triangles
+        //  =    11    12    13     8,       will have reversed pairs of local
+        //        |                   ',     points, e.g. (6,7) <-> (7,6)
+        //  2     |      side = 0       ',   Thus, the first point along the
+        //        0-----6-----3-----7-----1  edge of one triangle will be the
+        //        1-----7-----3-----6-----0  second point along the edge of the
+        //  2     |      side = 0       ,'   neighbor triangle, and vice-versa
+        //        |                   ,'     Solution: Flip Normals
+        //  =     8    13    12    11'
+        //        |               ,'
+        //  e     |             ,'
+        //        4    14     5'
+        //  d     |         ,'   side = 1
+        //        |       ,'
+        //  i     9    10'
+        //        |   ,'
+        //  s     | ,'
+        //        2'
+        if self.ndim != 2 {
+            return Err("ndim must be equal to 2");
         }
 
-        // set the coordinates matrix of the original mesh
-        for m in 0..source_nnode {
-            let p = mesh.cells[cell_id].points[m];
-            for j in 0..mesh.ndim {
-                pad.set_xx(m, j, mesh.points[p].coords[j]);
+        // current number of cells
+        let ncell = self.cells.len();
+        if ncell < 1 {
+            return Err("the conversion requires at least one cell");
+        }
+
+        // get info about first cell in the mesh
+        let source = self.cells[0].kind;
+        let class = source.class();
+        let source_nnode = source.nnode();
+        let target_nnode = target.nnode();
+        if target.class() != class {
+            return Err("target class must equal the GeoClass of current cells");
+        }
+        if target.class() != GeoClass::Tri && target.class() != GeoClass::Qua {
+            return Err("target GeoClass must be Tri or Qua");
+        }
+
+        // info about the edges and corners
+        let source_edge_nnode = source.edge_nnode();
+        let target_edge_nnode = target.edge_nnode();
+        let nedge = target.nedge();
+        let ncorner = if class == GeoClass::Tri { 3 } else { 4 };
+        let mut edge_point_markers = vec![0; nedge];
+
+        // maps target local node id to edge number (to set markers of points on edges)
+        const INTERIOR_OR_CORNER: usize = usize::MAX;
+        let mut target_node_to_edge = vec![INTERIOR_OR_CORNER; target_nnode];
+        for e in 0..nedge {
+            for i in 2..target_edge_nnode {
+                let m = target.edge_node_id(e, i);
+                target_node_to_edge[m] = e;
             }
         }
 
-        // find markers of points on edges
-        if source_edge_nnode > 2 {
-            for e in 0..nedge {
-                for i in 2..source_edge_nnode {
-                    let m = source.edge_node_id(e, i);
-                    let p = mesh.cells[cell_id].points[m];
-                    edge_point_markers[e] = mesh.points[p].marker;
+        // find neighbors in the original mesh
+        let source_features = Features::new(self, Extract::All);
+        let source_edges = source_features.all_2d_edges.unwrap();
+
+        // flag indicating that a connectivity point has not been set
+        const UNSET: usize = usize::MAX;
+        assert!(ncell * target_nnode < UNSET);
+
+        // zeroed new cell
+        let zero_cell = Cell {
+            id: 0,
+            attribute: 0,
+            kind: target,
+            points: vec![UNSET; target_nnode],
+        };
+
+        // allocate destination mesh
+        let mut dest = Mesh {
+            ndim: self.ndim,
+            points: Vec::new(),
+            cells: vec![zero_cell; ncell],
+        };
+
+        // scratchpad for point interpolation (based on the original mesh)
+        let mut pad = Scratchpad::new(self.ndim, source).unwrap();
+
+        // coordinates of new points
+        let mut x = Vector::new(self.ndim);
+
+        // maps old point id to new point id
+        let mut corners: HashMap<PointId, PointId> = HashMap::new();
+
+        // upgrade or downgrade mesh
+        for cell_id in 0..ncell {
+            // check GeoKind
+            if self.cells[cell_id].kind != source {
+                return Err("all cells must have the same GeoKind");
+            }
+
+            // set the coordinates matrix of the original mesh
+            for m in 0..source_nnode {
+                let p = self.cells[cell_id].points[m];
+                for j in 0..self.ndim {
+                    pad.set_xx(m, j, self.points[p].coords[j]);
                 }
             }
-        }
 
-        // set the new cell data
-        dest.cells[cell_id].id = cell_id;
-        dest.cells[cell_id].attribute = mesh.cells[cell_id].attribute;
-
-        // handle corner nodes
-        for m in 0..ncorner {
-            let old_point_id = mesh.cells[cell_id].points[m];
-            if let Some(new_point_id) = corners.get(&old_point_id) {
-                dest.cells[cell_id].points[m] = *new_point_id;
-            } else {
-                let new_point_id = dest.points.len();
-                dest.points.push(Point {
-                    id: new_point_id,
-                    marker: mesh.points[old_point_id].marker,
-                    coords: mesh.points[old_point_id].coords.clone(),
-                });
-                dest.cells[cell_id].points[m] = new_point_id;
-                corners.insert(old_point_id, new_point_id);
-            }
-        }
-
-        // consult neighbors to see if there are points (in the middle of the edge) set already
-        if target_edge_nnode > 2 {
-            let neighbors = get_neighbors_2d(mesh, &source_edges, cell_id);
-            for (e, neigh_cell_id, neigh_e) in neighbors {
-                // only deal with the centre edge points, not the corner ones (start at 2)
-                for i in 2..target_edge_nnode {
-                    let n = target.edge_node_id(neigh_e, i); // outward normal
-                    let p = dest.cells[neigh_cell_id].points[n];
-                    if p != UNSET {
-                        let m = target.edge_node_id_inward(e, i); // inward normal
-                        dest.cells[cell_id].points[m] = p;
+            // find markers of points on edges
+            if source_edge_nnode > 2 {
+                for e in 0..nedge {
+                    for i in 2..source_edge_nnode {
+                        let m = source.edge_node_id(e, i);
+                        let p = self.cells[cell_id].points[m];
+                        edge_point_markers[e] = self.points[p].marker;
                     }
                 }
             }
-        }
 
-        // add new points (skip corner nodes)
-        for m in ncorner..target_nnode {
-            if dest.cells[cell_id].points[m] == UNSET {
-                let e = target_node_to_edge[m];
-                let marker = if e == INTERIOR_OR_CORNER {
-                    0
+            // set the new cell data
+            dest.cells[cell_id].id = cell_id;
+            dest.cells[cell_id].attribute = self.cells[cell_id].attribute;
+
+            // handle corner nodes
+            for m in 0..ncorner {
+                let old_point_id = self.cells[cell_id].points[m];
+                if let Some(new_point_id) = corners.get(&old_point_id) {
+                    dest.cells[cell_id].points[m] = *new_point_id;
                 } else {
-                    edge_point_markers[e]
-                };
-                let new_point_id = dest.points.len();
-                pad.calc_coords(&mut x, target.reference_coords(m)).unwrap();
-                dest.points.push(Point {
-                    id: new_point_id,
-                    marker,
-                    coords: x.as_data().clone(),
-                });
-                dest.cells[cell_id].points[m] = new_point_id;
+                    let new_point_id = dest.points.len();
+                    dest.points.push(Point {
+                        id: new_point_id,
+                        marker: self.points[old_point_id].marker,
+                        coords: self.points[old_point_id].coords.clone(),
+                    });
+                    dest.cells[cell_id].points[m] = new_point_id;
+                    corners.insert(old_point_id, new_point_id);
+                }
+            }
+
+            // consult neighbors to see if there are points (in the middle of the edge) set already
+            if target_edge_nnode > 2 {
+                let neighbors = get_neighbors_2d(self, &source_edges, cell_id);
+                for (e, neigh_cell_id, neigh_e) in neighbors {
+                    // only deal with the centre edge points, not the corner ones (start at 2)
+                    for i in 2..target_edge_nnode {
+                        let n = target.edge_node_id(neigh_e, i); // outward normal
+                        let p = dest.cells[neigh_cell_id].points[n];
+                        if p != UNSET {
+                            let m = target.edge_node_id_inward(e, i); // inward normal
+                            dest.cells[cell_id].points[m] = p;
+                        }
+                    }
+                }
+            }
+
+            // add new points (skip corner nodes)
+            for m in ncorner..target_nnode {
+                if dest.cells[cell_id].points[m] == UNSET {
+                    let e = target_node_to_edge[m];
+                    let marker = if e == INTERIOR_OR_CORNER {
+                        0
+                    } else {
+                        edge_point_markers[e]
+                    };
+                    let new_point_id = dest.points.len();
+                    pad.calc_coords(&mut x, target.reference_coords(m)).unwrap();
+                    dest.points.push(Point {
+                        id: new_point_id,
+                        marker,
+                        coords: x.as_data().clone(),
+                    });
+                    dest.cells[cell_id].points[m] = new_point_id;
+                }
             }
         }
+        Ok(dest)
     }
-    Ok(dest)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {
-    use super::convert_mesh_2d;
     use crate::mesh::{Cell, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_chk::vec_approx_eq;
@@ -231,10 +232,7 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
         };
-        assert_eq!(
-            convert_mesh_2d(&mesh, GeoKind::Tri15).err(),
-            Some("ndim must be equal to 2")
-        );
+        assert_eq!(mesh.convert_2d(GeoKind::Tri15).err(), Some("ndim must be equal to 2"));
 
         let mesh = Mesh {
             ndim: 2,
@@ -242,7 +240,7 @@ mod tests {
             cells: vec![],
         };
         assert_eq!(
-            convert_mesh_2d(&mesh, GeoKind::Tri15).err(),
+            mesh.convert_2d(GeoKind::Tri15).err(),
             Some("the conversion requires at least one cell")
         );
 
@@ -259,7 +257,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            convert_mesh_2d(&mesh, GeoKind::Qua8).err(),
+            mesh.convert_2d(GeoKind::Qua8).err(),
             Some("target class must equal the GeoClass of current cells")
         );
 
@@ -275,7 +273,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            convert_mesh_2d(&mesh, GeoKind::Lin3).err(),
+            mesh.convert_2d(GeoKind::Lin3).err(),
             Some("target GeoClass must be Tri or Qua")
         );
 
@@ -294,7 +292,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            convert_mesh_2d(&mesh, GeoKind::Tri6).err(),
+            mesh.convert_2d(GeoKind::Tri6).err(),
             Some("all cells must have the same GeoKind")
         );
     }
@@ -326,7 +324,7 @@ mod tests {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_before.svg").unwrap();
         }
 
-        let res = convert_mesh_2d(&mesh, GeoKind::Tri15).unwrap();
+        let res = mesh.convert_2d(GeoKind::Tri15).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_after.svg").unwrap();
@@ -422,7 +420,7 @@ mod tests {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri10_before.svg").unwrap();
         }
 
-        let res = convert_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
+        let res = mesh.convert_2d(GeoKind::Tri10).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri10_after.svg").unwrap();
@@ -493,7 +491,7 @@ mod tests {
         };
         mesh.check_all().unwrap();
 
-        let res = convert_mesh_2d(&mesh, GeoKind::Tri3).unwrap();
+        let res = mesh.convert_2d(GeoKind::Tri3).unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri3_after.svg").unwrap();
@@ -510,7 +508,7 @@ mod tests {
     #[test]
     fn convert_tri3_to_tri6_works() {
         let mesh = Samples::two_tri3().clone();
-        let res = convert_mesh_2d(&mesh, GeoKind::Tri6).unwrap();
+        let res = mesh.convert_2d(GeoKind::Tri6).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri3_to_tri6_after.svg").unwrap();
         }
@@ -524,7 +522,7 @@ mod tests {
     #[test]
     fn convert_four_tri3_to_tri6_works() {
         let mesh = Samples::four_tri3().clone();
-        let res = convert_mesh_2d(&mesh, GeoKind::Tri6).unwrap();
+        let res = mesh.convert_2d(GeoKind::Tri6).unwrap();
         if SAVE_FIGURE {
             let name = "/tmp/gemlab/test_four_tri3_to_tri6_after.svg";
             draw_mesh(&res, true, true, false, name).unwrap();
@@ -541,7 +539,7 @@ mod tests {
     #[test]
     fn convert_tri3_to_tri10_works() {
         let mesh = Samples::two_tri3().clone();
-        let res = convert_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
+        let res = mesh.convert_2d(GeoKind::Tri10).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri3_to_tri10_after.svg").unwrap();
         }
@@ -555,7 +553,7 @@ mod tests {
     #[test]
     fn convert_tri6_multi_shares_to_tri10_works() {
         let mesh = Samples::three_tri6_multi_shares().clone();
-        let res = convert_mesh_2d(&mesh, GeoKind::Tri10).unwrap();
+        let res = mesh.convert_2d(GeoKind::Tri10).unwrap();
         if SAVE_FIGURE {
             let name = "/tmp/gemlab/test_tri6_multi_shares_to_tri10_after.svg";
             draw_mesh(&res, true, true, false, name).unwrap();
@@ -590,7 +588,7 @@ mod tests {
     #[test]
     fn convert_qua4_to_qua8_works() {
         let mesh = Samples::two_qua4().clone();
-        let res = convert_mesh_2d(&mesh, GeoKind::Qua8).unwrap();
+        let res = mesh.convert_2d(GeoKind::Qua8).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua4_to_qua8_after.svg").unwrap();
         }
@@ -604,7 +602,7 @@ mod tests {
     #[test]
     fn convert_qua12_to_qua16_works() {
         let mesh = Samples::block_2d_four_qua12().clone();
-        let res = convert_mesh_2d(&mesh, GeoKind::Qua16).unwrap();
+        let res = mesh.convert_2d(GeoKind::Qua16).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua12_to_qua16_after.svg").unwrap();
         }
@@ -629,7 +627,7 @@ mod tests {
     #[test]
     fn convert_qua12_to_qua17_works() {
         let mesh = Samples::block_2d_four_qua12().clone();
-        let res = convert_mesh_2d(&mesh, GeoKind::Qua17).unwrap();
+        let res = mesh.convert_2d(GeoKind::Qua17).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua12_to_qua17_after.svg").unwrap();
         }
@@ -663,7 +661,7 @@ mod tests {
     #[test]
     fn convert_qua17_to_qua4_works() {
         let mesh = Samples::block_2d_four_qua17().clone();
-        let res = convert_mesh_2d(&mesh, GeoKind::Qua4).unwrap();
+        let res = mesh.convert_2d(GeoKind::Qua4).unwrap();
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua17_to_qua4_after.svg").unwrap();
         }
