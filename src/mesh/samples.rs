@@ -241,6 +241,7 @@ impl Samples {
     /// ![tet_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
     #[rustfmt::skip]
     pub fn tet_cells() -> Mesh {
+        let d = 0.1;
         Mesh {
             ndim: 3,
             points: vec![
@@ -249,37 +250,37 @@ impl Samples {
                 Point { id: 2, marker: 0, coords: vec![0.5, 1.0, 0.0] }, // 2
                 Point { id: 3, marker: 0, coords: vec![0.5, 0.5, 1.0] }, // 3
 
-                Point { id:  4, marker: 0, coords: vec![1.2+0.0,  0.0,  0.0] }, // 0
-                Point { id:  5, marker: 0, coords: vec![1.2+1.0,  0.0,  0.0] }, // 1
-                Point { id:  6, marker: 0, coords: vec![1.2+0.5,  1.0,  0.0] }, // 2
-                Point { id:  7, marker: 0, coords: vec![1.2+0.5,  0.5,  1.0] }, // 3
-                Point { id:  8, marker: 0, coords: vec![1.2+0.5,  0.0,  0.0] }, // 4
-                Point { id:  9, marker: 0, coords: vec![1.2+0.75, 0.5,  0.0] }, // 5
-                Point { id: 10, marker: 0, coords: vec![1.2+0.25, 0.5,  0.0] }, // 6
-                Point { id: 11, marker: 0, coords: vec![1.2+0.25, 0.25, 0.5] }, // 7
-                Point { id: 12, marker: 0, coords: vec![1.2+0.75, 0.25, 0.5] }, // 8
-                Point { id: 13, marker: 0, coords: vec![1.2+0.5,  0.75, 0.5] }, // 9
+                Point { id:  4, marker: 0, coords: vec![1.2+0.0,    0.0,  0.0] }, // 0
+                Point { id:  5, marker: 0, coords: vec![1.2+1.0,    0.0,  0.0] }, // 1
+                Point { id:  6, marker: 0, coords: vec![1.2+0.5,    1.0,  0.0] }, // 2
+                Point { id:  7, marker: 0, coords: vec![1.2+0.5,    0.5,  1.0] }, // 3
+                Point { id:  8, marker: 0, coords: vec![1.2+0.5,    0.0,  0.0] }, // 4
+                Point { id:  9, marker: 0, coords: vec![1.2+0.75,   0.5,  0.0] }, // 5
+                Point { id: 10, marker: 0, coords: vec![1.2+0.25+d, 0.5,  0.0] }, // 6
+                Point { id: 11, marker: 0, coords: vec![1.2+0.25+d, 0.25, 0.5] }, // 7
+                Point { id: 12, marker: 0, coords: vec![1.2+0.75,   0.25, 0.5] }, // 8
+                Point { id: 13, marker: 0, coords: vec![1.2+0.5,    0.75, 0.5] }, // 9
 
-                Point { id: 14, marker: 0, coords: vec![0.5+0.0,  1.2+0.0,  0.8+0.0] }, //  0
-                Point { id: 15, marker: 0, coords: vec![0.5+1.2,  1.2+0.0,  0.8+0.0] }, //  1
-                Point { id: 16, marker: 0, coords: vec![0.5+0.6,  1.2+1.2,  0.8+0.0] }, //  2
-                Point { id: 17, marker: 0, coords: vec![0.5+0.6,  1.2+0.6,  0.8+1.2] }, //  3
-                Point { id: 18, marker: 0, coords: vec![0.5+0.4,  1.2+0.0,  0.8+0.0] }, //  4
-                Point { id: 19, marker: 0, coords: vec![0.5+0.8,  1.2+0.0,  0.8+0.0] }, //  5
-                Point { id: 20, marker: 0, coords: vec![0.5+0.2,  1.2+0.4,  0.8+0.0] }, //  6
-                Point { id: 21, marker: 0, coords: vec![0.5+0.4,  1.2+0.8,  0.8+0.0] }, //  7
-                Point { id: 22, marker: 0, coords: vec![0.5+0.2,  1.2+0.2,  0.8+0.4] }, //  8
-                Point { id: 23, marker: 0, coords: vec![0.5+0.4,  1.2+0.4,  0.8+0.8] }, //  9
-                Point { id: 24, marker: 0, coords: vec![0.5+0.6,  1.2+1.0,  0.8+0.4] }, // 10
-                Point { id: 25, marker: 0, coords: vec![0.5+0.6,  1.2+0.8,  0.8+0.8] }, // 11
-                Point { id: 26, marker: 0, coords: vec![0.5+1.0,  1.2+0.2,  0.8+0.4] }, // 12
-                Point { id: 27, marker: 0, coords: vec![0.5+0.8,  1.2+0.4,  0.8+0.8] }, // 13
-                Point { id: 28, marker: 0, coords: vec![0.5+1.0,  1.2+0.4,  0.8+0.0] }, // 14
-                Point { id: 29, marker: 0, coords: vec![0.5+0.8,  1.2+0.8,  0.8+0.0] }, // 15
-                Point { id: 30, marker: 0, coords: vec![0.5+0.4,  1.2+0.6,  0.8+0.4] }, // 16
-                Point { id: 31, marker: 0, coords: vec![0.5+0.6,  1.2+0.2,  0.8+0.4] }, // 17
-                Point { id: 32, marker: 0, coords: vec![0.5+0.6,  1.2+0.4,  0.8+0.0] }, // 18
-                Point { id: 33, marker: 0, coords: vec![0.5+0.8,  1.2+0.6,  0.8+0.4] }, // 19
+                Point { id: 14, marker: 0, coords: vec![0.5+0.0,   1.2+0.0, 0.8+0.0] }, //  0
+                Point { id: 15, marker: 0, coords: vec![0.5+1.2,   1.2+0.0, 0.8+0.0] }, //  1
+                Point { id: 16, marker: 0, coords: vec![0.5+0.6,   1.2+1.2, 0.8+0.0] }, //  2
+                Point { id: 17, marker: 0, coords: vec![0.5+0.6,   1.2+0.6, 0.8+1.2] }, //  3
+                Point { id: 18, marker: 0, coords: vec![0.5+0.4,   1.2+0.0, 0.8+0.0] }, //  4
+                Point { id: 19, marker: 0, coords: vec![0.5+0.8,   1.2+0.0, 0.8+0.0] }, //  5
+                Point { id: 20, marker: 0, coords: vec![0.5+0.2+d, 1.2+0.4, 0.8+0.0] }, //  6
+                Point { id: 21, marker: 0, coords: vec![0.5+0.4+d, 1.2+0.8, 0.8+0.0] }, //  7
+                Point { id: 22, marker: 0, coords: vec![0.5+0.2+d, 1.2+0.2, 0.8+0.4] }, //  8
+                Point { id: 23, marker: 0, coords: vec![0.5+0.4+d, 1.2+0.4, 0.8+0.8] }, //  9
+                Point { id: 24, marker: 0, coords: vec![0.5+0.6,   1.2+1.0, 0.8+0.4] }, // 10
+                Point { id: 25, marker: 0, coords: vec![0.5+0.6,   1.2+0.8, 0.8+0.8] }, // 11
+                Point { id: 26, marker: 0, coords: vec![0.5+1.0,   1.2+0.2, 0.8+0.4] }, // 12
+                Point { id: 27, marker: 0, coords: vec![0.5+0.8,   1.2+0.4, 0.8+0.8] }, // 13
+                Point { id: 28, marker: 0, coords: vec![0.5+1.0,   1.2+0.4, 0.8+0.0] }, // 14
+                Point { id: 29, marker: 0, coords: vec![0.5+0.8,   1.2+0.8, 0.8+0.0] }, // 15
+                Point { id: 30, marker: 0, coords: vec![0.5+0.4,   1.2+0.6, 0.8+0.4] }, // 16
+                Point { id: 31, marker: 0, coords: vec![0.5+0.6,   1.2+0.2, 0.8+0.4] }, // 17
+                Point { id: 32, marker: 0, coords: vec![0.5+0.6,   1.2+0.4, 0.8+0.0] }, // 18
+                Point { id: 33, marker: 0, coords: vec![0.5+0.8,   1.2+0.6, 0.8+0.4] }, // 19
             ],
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tet4,  points: vec![0, 1, 2, 3] },
@@ -297,6 +298,7 @@ impl Samples {
     /// ![hex_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
     #[rustfmt::skip]
     pub fn hex_cells() -> Mesh {
+        let d = 0.1;
         Mesh {
             ndim: 3,
             points: vec![
@@ -309,59 +311,59 @@ impl Samples {
                 Point { id: 6, marker: 0, coords: vec![1.0, 1.0, 1.0] }, // 6
                 Point { id: 7, marker: 0, coords: vec![0.0, 1.0, 1.0] }, // 7
 
-                Point { id:  8, marker: 0, coords: vec![1.8+0.0, 0.0, 0.0] }, //  0
-                Point { id:  9, marker: 0, coords: vec![1.8+1.0, 0.0, 0.0] }, //  1
-                Point { id: 10, marker: 0, coords: vec![1.8+1.0, 1.0, 0.0] }, //  2
-                Point { id: 11, marker: 0, coords: vec![1.8+0.0, 1.0, 0.0] }, //  3
-                Point { id: 12, marker: 0, coords: vec![1.8+0.0, 0.0, 1.0] }, //  4
-                Point { id: 13, marker: 0, coords: vec![1.8+1.0, 0.0, 1.0] }, //  5
-                Point { id: 14, marker: 0, coords: vec![1.8+1.0, 1.0, 1.0] }, //  6
-                Point { id: 15, marker: 0, coords: vec![1.8+0.0, 1.0, 1.0] }, //  7
-                Point { id: 16, marker: 0, coords: vec![1.8+0.5, 0.0, 0.0] }, //  8
-                Point { id: 17, marker: 0, coords: vec![1.8+1.0, 0.5, 0.0] }, //  9
-                Point { id: 18, marker: 0, coords: vec![1.8+0.5, 1.0, 0.0] }, // 10
-                Point { id: 19, marker: 0, coords: vec![1.8+0.0, 0.5, 0.0] }, // 10
-                Point { id: 20, marker: 0, coords: vec![1.8+0.5, 0.0, 1.0] }, // 11
-                Point { id: 21, marker: 0, coords: vec![1.8+1.0, 0.5, 1.0] }, // 12
-                Point { id: 22, marker: 0, coords: vec![1.8+0.5, 1.0, 1.0] }, // 13
-                Point { id: 23, marker: 0, coords: vec![1.8+0.0, 0.5, 1.0] }, // 14
-                Point { id: 24, marker: 0, coords: vec![1.8+0.0, 0.0, 0.5] }, // 15
-                Point { id: 25, marker: 0, coords: vec![1.8+1.0, 0.0, 0.5] }, // 16
-                Point { id: 26, marker: 0, coords: vec![1.8+1.0, 1.0, 0.5] }, // 17
-                Point { id: 27, marker: 0, coords: vec![1.8+0.0, 1.0, 0.5] }, // 18
+                Point { id:  8, marker: 0, coords: vec![1.8+0.0, 0.0,   0.0] }, //  0
+                Point { id:  9, marker: 0, coords: vec![1.8+1.0, 0.0,   0.0] }, //  1
+                Point { id: 10, marker: 0, coords: vec![1.8+1.0, 1.0,   0.0] }, //  2
+                Point { id: 11, marker: 0, coords: vec![1.8+0.0, 1.0,   0.0] }, //  3
+                Point { id: 12, marker: 0, coords: vec![1.8+0.0, 0.0,   1.0] }, //  4
+                Point { id: 13, marker: 0, coords: vec![1.8+1.0, 0.0,   1.0] }, //  5
+                Point { id: 14, marker: 0, coords: vec![1.8+1.0, 1.0,   1.0] }, //  6
+                Point { id: 15, marker: 0, coords: vec![1.8+0.0, 1.0,   1.0] }, //  7
+                Point { id: 16, marker: 0, coords: vec![1.8+0.5, 0.0-d, 0.0] }, //  8
+                Point { id: 17, marker: 0, coords: vec![1.8+1.0, 0.5,   0.0] }, //  9
+                Point { id: 18, marker: 0, coords: vec![1.8+0.5, 1.0+d, 0.0] }, // 10
+                Point { id: 19, marker: 0, coords: vec![1.8+0.0, 0.5,   0.0] }, // 11
+                Point { id: 20, marker: 0, coords: vec![1.8+0.5, 0.0-d, 1.0] }, // 12
+                Point { id: 21, marker: 0, coords: vec![1.8+1.0, 0.5,   1.0] }, // 13
+                Point { id: 22, marker: 0, coords: vec![1.8+0.5, 1.0+d, 1.0] }, // 14
+                Point { id: 23, marker: 0, coords: vec![1.8+0.0, 0.5,   1.0] }, // 15
+                Point { id: 24, marker: 0, coords: vec![1.8+0.0, 0.0,   0.5] }, // 16
+                Point { id: 25, marker: 0, coords: vec![1.8+1.0, 0.0,   0.5] }, // 17
+                Point { id: 26, marker: 0, coords: vec![1.8+1.0, 1.0,   0.5] }, // 18
+                Point { id: 27, marker: 0, coords: vec![1.8+0.0, 1.0,   0.5] }, // 19
 
-                Point { id: 28, marker: 0, coords: vec![0.5+0.0, 1.3+0.0, 1.3+0.0] }, //  0
-                Point { id: 29, marker: 0, coords: vec![0.5+1.2, 1.3+0.0, 1.3+0.0] }, //  1
-                Point { id: 30, marker: 0, coords: vec![0.5+1.2, 1.3+1.2, 1.3+0.0] }, //  2
-                Point { id: 31, marker: 0, coords: vec![0.5+0.0, 1.3+1.2, 1.3+0.0] }, //  3
-                Point { id: 32, marker: 0, coords: vec![0.5+0.0, 1.3+0.0, 1.3+1.2] }, //  4
-                Point { id: 33, marker: 0, coords: vec![0.5+1.2, 1.3+0.0, 1.3+1.2] }, //  5
-                Point { id: 34, marker: 0, coords: vec![0.5+1.2, 1.3+1.2, 1.3+1.2] }, //  6
-                Point { id: 35, marker: 0, coords: vec![0.5+0.0, 1.3+1.2, 1.3+1.2] }, //  7
-                Point { id: 36, marker: 0, coords: vec![0.5+0.4, 1.3+0.0, 1.3+0.0] }, //  8
-                Point { id: 37, marker: 0, coords: vec![0.5+0.8, 1.3+0.0, 1.3+0.0] }, //  9
-                Point { id: 38, marker: 0, coords: vec![0.5+1.2, 1.3+0.4, 1.3+0.0] }, // 10
-                Point { id: 39, marker: 0, coords: vec![0.5+1.2, 1.3+0.8, 1.3+0.0] }, // 11
-                Point { id: 40, marker: 0, coords: vec![0.5+0.8, 1.3+1.2, 1.3+0.0] }, // 12
-                Point { id: 41, marker: 0, coords: vec![0.5+0.4, 1.3+1.2, 1.3+0.0] }, // 13
-                Point { id: 42, marker: 0, coords: vec![0.5+0.0, 1.3+0.8, 1.3+0.0] }, // 14
-                Point { id: 43, marker: 0, coords: vec![0.5+0.0, 1.3+0.4, 1.3+0.0] }, // 15
-                Point { id: 44, marker: 0, coords: vec![0.5+0.4, 1.3+0.0, 1.3+1.2] }, // 16
-                Point { id: 45, marker: 0, coords: vec![0.5+0.8, 1.3+0.0, 1.3+1.2] }, // 17
-                Point { id: 46, marker: 0, coords: vec![0.5+1.2, 1.3+0.4, 1.3+1.2] }, // 18
-                Point { id: 47, marker: 0, coords: vec![0.5+1.2, 1.3+0.8, 1.3+1.2] }, // 19
-                Point { id: 48, marker: 0, coords: vec![0.5+0.8, 1.3+1.2, 1.3+1.2] }, // 20
-                Point { id: 49, marker: 0, coords: vec![0.5+0.4, 1.3+1.2, 1.3+1.2] }, // 21
-                Point { id: 50, marker: 0, coords: vec![0.5+0.0, 1.3+0.8, 1.3+1.2] }, // 22
-                Point { id: 51, marker: 0, coords: vec![0.5+0.0, 1.3+0.4, 1.3+1.2] }, // 23
-                Point { id: 52, marker: 0, coords: vec![0.5+0.0, 1.3+0.0, 1.3+0.4] }, // 24
-                Point { id: 53, marker: 0, coords: vec![0.5+0.0, 1.3+0.0, 1.3+0.8] }, // 25
-                Point { id: 54, marker: 0, coords: vec![0.5+1.2, 1.3+0.0, 1.3+0.4] }, // 26
-                Point { id: 55, marker: 0, coords: vec![0.5+1.2, 1.3+0.0, 1.3+0.8] }, // 27
-                Point { id: 56, marker: 0, coords: vec![0.5+1.2, 1.3+1.2, 1.3+0.4] }, // 28
-                Point { id: 57, marker: 0, coords: vec![0.5+1.2, 1.3+1.2, 1.3+0.8] }, // 29
-                Point { id: 58, marker: 0, coords: vec![0.5+0.0, 1.3+1.2, 1.3+0.4] }, // 30
-                Point { id: 59, marker: 0, coords: vec![0.5+0.0, 1.3+1.2, 1.3+0.8] }, // 31
+                Point { id: 28, marker: 0, coords: vec![0.5+0.0, 1.3+0.0,   1.3+0.0] }, //  0
+                Point { id: 29, marker: 0, coords: vec![0.5+1.2, 1.3+0.0,   1.3+0.0] }, //  1
+                Point { id: 30, marker: 0, coords: vec![0.5+1.2, 1.3+1.2,   1.3+0.0] }, //  2
+                Point { id: 31, marker: 0, coords: vec![0.5+0.0, 1.3+1.2,   1.3+0.0] }, //  3
+                Point { id: 32, marker: 0, coords: vec![0.5+0.0, 1.3+0.0,   1.3+1.2] }, //  4
+                Point { id: 33, marker: 0, coords: vec![0.5+1.2, 1.3+0.0,   1.3+1.2] }, //  5
+                Point { id: 34, marker: 0, coords: vec![0.5+1.2, 1.3+1.2,   1.3+1.2] }, //  6
+                Point { id: 35, marker: 0, coords: vec![0.5+0.0, 1.3+1.2,   1.3+1.2] }, //  7
+                Point { id: 36, marker: 0, coords: vec![0.5+0.4, 1.3+0.0-d, 1.3+0.0] }, //  8
+                Point { id: 37, marker: 0, coords: vec![0.5+0.8, 1.3+0.0-d, 1.3+0.0] }, //  9
+                Point { id: 38, marker: 0, coords: vec![0.5+1.2, 1.3+0.4,   1.3+0.0] }, // 10
+                Point { id: 39, marker: 0, coords: vec![0.5+1.2, 1.3+0.8,   1.3+0.0] }, // 11
+                Point { id: 40, marker: 0, coords: vec![0.5+0.8, 1.3+1.2+d, 1.3+0.0] }, // 12
+                Point { id: 41, marker: 0, coords: vec![0.5+0.4, 1.3+1.2+d, 1.3+0.0] }, // 13
+                Point { id: 42, marker: 0, coords: vec![0.5+0.0, 1.3+0.8,   1.3+0.0] }, // 14
+                Point { id: 43, marker: 0, coords: vec![0.5+0.0, 1.3+0.4,   1.3+0.0] }, // 15
+                Point { id: 44, marker: 0, coords: vec![0.5+0.4, 1.3+0.0-d, 1.3+1.2] }, // 16
+                Point { id: 45, marker: 0, coords: vec![0.5+0.8, 1.3+0.0-d, 1.3+1.2] }, // 17
+                Point { id: 46, marker: 0, coords: vec![0.5+1.2, 1.3+0.4,   1.3+1.2] }, // 18
+                Point { id: 47, marker: 0, coords: vec![0.5+1.2, 1.3+0.8,   1.3+1.2] }, // 19
+                Point { id: 48, marker: 0, coords: vec![0.5+0.8, 1.3+1.2+d, 1.3+1.2] }, // 20
+                Point { id: 49, marker: 0, coords: vec![0.5+0.4, 1.3+1.2+d, 1.3+1.2] }, // 21
+                Point { id: 50, marker: 0, coords: vec![0.5+0.0, 1.3+0.8,   1.3+1.2] }, // 22
+                Point { id: 51, marker: 0, coords: vec![0.5+0.0, 1.3+0.4,   1.3+1.2] }, // 23
+                Point { id: 52, marker: 0, coords: vec![0.5+0.0, 1.3+0.0,   1.3+0.4] }, // 24
+                Point { id: 53, marker: 0, coords: vec![0.5+0.0, 1.3+0.0,   1.3+0.8] }, // 25
+                Point { id: 54, marker: 0, coords: vec![0.5+1.2, 1.3+0.0,   1.3+0.4] }, // 26
+                Point { id: 55, marker: 0, coords: vec![0.5+1.2, 1.3+0.0,   1.3+0.8] }, // 27
+                Point { id: 56, marker: 0, coords: vec![0.5+1.2, 1.3+1.2,   1.3+0.4] }, // 28
+                Point { id: 57, marker: 0, coords: vec![0.5+1.2, 1.3+1.2,   1.3+0.8] }, // 29
+                Point { id: 58, marker: 0, coords: vec![0.5+0.0, 1.3+1.2,   1.3+0.4] }, // 30
+                Point { id: 59, marker: 0, coords: vec![0.5+0.0, 1.3+1.2,   1.3+0.8] }, // 31
             ],
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0, 1, 2, 3, 4, 5, 6, 7] },
