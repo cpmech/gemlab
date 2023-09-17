@@ -64,6 +64,14 @@ impl Qua16 {
     ];
 
     #[rustfmt::skip]
+    pub const EDGE_NODE_IDS_INWARD: [[usize; Qua16::EDGE_NNODE]; Qua16::NEDGE] = [
+        [0, 1, 4,  8],
+        [1, 2, 5,  9],
+        [2, 3, 6, 10],
+        [3, 0, 7, 11]
+    ];
+
+    #[rustfmt::skip]
     pub const NODE_REFERENCE_COORDS: [[f64; Qua16::GEO_NDIM]; Qua16::NNODE] = [
         [-1.0       , -1.0       ],
         [ 1.0       , -1.0       ],

@@ -55,6 +55,13 @@ const I_MIN: usize = 0;
 const I_MAX: usize = 1;
 type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
 
+/// Implements a grid for fast searching cells where a point falls in
+///
+/// # Reference
+///
+/// * Durand, Farias, and Pedroso (2015) Computing intersections between
+///   non-compatible curves and finite elements, Computational Mechanics;
+///   DOI=10.1007/s00466-015-1181-y
 pub struct GridCells<'a> {
     mesh: &'a Mesh,                  // the mesh
     ndiv: Vec<usize>,                // (ndim) number of divisions along each direction
@@ -569,14 +576,14 @@ mod tests {
         let mesh = Mesh {
             ndim: 2,
             points: vec![
-                Point { id: 0, coords: vec![0.0, 0.0] },
-                Point { id: 1, coords: vec![1.0, 0.0] },
-                Point { id: 2, coords: vec![1.0, 1.0] },
-                Point { id: 3, coords: vec![0.0, 1.0] },
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+                Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
+                Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
-                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
             ],
         };
         let tolerance = 1e-3;
@@ -663,14 +670,14 @@ mod tests {
         let mesh = Mesh {
             ndim: 2,
             points: vec![
-                Point { id: 0, coords: vec![0.0, 0.0] },
-                Point { id: 1, coords: vec![1.0, 0.0] },
-                Point { id: 2, coords: vec![1.2, 1.5] },
-                Point { id: 3, coords: vec![0.0, 1.0] },
+                Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+                Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+                Point { id: 2, marker: 0, coords: vec![1.2, 1.5] },
+                Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
-                Cell { id: 1, attribute_id: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
             ],
         };
         let tolerance = 1e-3;

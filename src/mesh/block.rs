@@ -1,6 +1,6 @@
 use super::{Cell, Mesh, Point};
 use crate::mesh::{set_pad_coords, PointId};
-use crate::shapes::{GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
+use crate::shapes::{GeoClass, GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
@@ -153,8 +153,8 @@ const TOL_DISTANCE: f64 = 1e-8;
 /// }
 /// ```
 pub struct Block {
-    /// Attribute ID of all elements in this block
-    attribute_id: usize,
+    /// Attribute of all elements in this block
+    attribute: usize,
 
     /// Space dimension
     ndim: usize,
@@ -191,8 +191,8 @@ impl Block {
     /// Default number of divisions
     const NDIV: usize = 2;
 
-    /// Default attribute ID
-    const ATTRIBUTE_ID: usize = 1;
+    /// Default attribute
+    const ATTRIBUTE: usize = 1;
 
     /// Allocate a new instance
     ///
@@ -288,7 +288,7 @@ impl Block {
 
         // block
         Ok(Block {
-            attribute_id: Block::ATTRIBUTE_ID,
+            attribute: Block::ATTRIBUTE,
             ndim,
             ndiv: vec![Block::NDIV; ndim],
             delta_ksi: vec![vec![1.0; Block::NDIV]; ndim],
@@ -363,8 +363,8 @@ impl Block {
     }
 
     /// Sets group
-    pub fn set_attribute_id(&mut self, attribute_id: usize) -> &mut Self {
-        self.attribute_id = attribute_id;
+    pub fn set_attribute(&mut self, attribute: usize) -> &mut Self {
+        self.attribute = attribute;
         self
     }
 
@@ -533,18 +533,18 @@ impl Block {
     ///
     /// # Input
     ///
-    /// * `target` -- If 2D, a quadrilateral as defined in [GeoKind::QUAS];
-    ///               If 3D, a hexahedron as defined in [GeoKind::HEXS].
+    /// * `target` -- If 2D, a quadrilateral (must have [GeoClass::Qua])
+    ///               If 3D, a hexahedron (must have [GeoClass::Hex])
     pub fn subdivide(&mut self, target: GeoKind) -> Result<Mesh, StrError> {
         // check
         let ndim = self.ndim;
         if ndim == 2 {
-            if !GeoKind::QUAS.contains(&target) {
-                return Err("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...");
+            if target.class() != GeoClass::Qua {
+                return Err("in 2D, the GeoClass of target must be Qua");
             }
         } else {
-            if !GeoKind::HEXS.contains(&target) {
-                return Err("in 3D, 'target' must be a Hex8, Hex20, Hex32, ...");
+            if target.class() != GeoClass::Hex {
+                return Err("in 3D, the GeoClass of target must be Hex");
             }
         }
 
@@ -676,6 +676,7 @@ impl Block {
                                 // add new point to mesh
                                 mesh.points.push(Point {
                                     id: point_id,
+                                    marker: 0,
                                     coords: x.as_data().clone(),
                                 });
                                 point_id
@@ -753,7 +754,7 @@ impl Block {
                     // new cell
                     let cell = Cell {
                         id: cell_id,
-                        attribute_id: self.attribute_id,
+                        attribute: self.attribute,
                         kind: target,
                         points,
                     };
@@ -1109,7 +1110,7 @@ mod tests {
     #[test]
     fn new_works() {
         let b2d = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]]).unwrap();
-        assert_eq!(b2d.attribute_id, 1);
+        assert_eq!(b2d.attribute, 1);
         assert_eq!(b2d.ndim, 2);
         assert_eq!(b2d.ndiv, &[2, 2]);
         assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
@@ -1151,7 +1152,7 @@ mod tests {
             [0.0, 2.0, 2.0],
         ])
         .unwrap();
-        assert_eq!(b3d.attribute_id, 1);
+        assert_eq!(b3d.attribute, 1);
         assert_eq!(b3d.ndim, 3);
         assert_eq!(
             format!("{}", b3d.pad.xxt),
@@ -1198,10 +1199,10 @@ mod tests {
     }
 
     #[test]
-    fn set_attribute_id_works() {
+    fn set_attribute_works() {
         let mut block = Block::new_square(1.0);
-        block.set_attribute_id(2);
-        assert_eq!(block.attribute_id, 2);
+        block.set_attribute(2);
+        assert_eq!(block.attribute, 2);
     }
 
     #[test]
@@ -1330,12 +1331,12 @@ mod tests {
         let mut b2d = Block::new_square(1.0);
         assert_eq!(
             b2d.subdivide(GeoKind::Tri3).err(),
-            Some("in 2D, 'target' must be a Qua4, Qua8, Qua9, Qua12, ...")
+            Some("in 2D, the GeoClass of target must be Qua")
         );
         let mut b3d = Block::new_cube(1.0);
         assert_eq!(
             b3d.subdivide(GeoKind::Tet4).err(),
-            Some("in 3D, 'target' must be a Hex8, Hex20, Hex32, ...")
+            Some("in 3D, the GeoClass of target must be Hex")
         );
     }
 
@@ -1810,7 +1811,7 @@ mod tests {
                 approx_eq(point.coords[2], block.args_ring.zmax, 1e-15);
             }
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
+        // draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
     }
 
     #[test]
@@ -1847,7 +1848,7 @@ mod tests {
                 approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
         }
-        // draw_mesh(&mesh, true, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg").unwrap();
+        // draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg").unwrap();
     }
 
     #[test]

@@ -70,6 +70,14 @@ impl Qua17 {
     ];
 
     #[rustfmt::skip]
+    pub const EDGE_NODE_IDS_INWARD: [[usize; Qua17::EDGE_NNODE]; Qua17::NEDGE] = [
+        [0, 1, 4, 9 , 10],
+        [1, 2, 5, 11, 12],
+        [2, 3, 6, 13, 14],
+        [3, 0, 7, 15, 16]
+    ];
+
+    #[rustfmt::skip]
     pub const NODE_REFERENCE_COORDS: [[f64; Qua17::GEO_NDIM]; Qua17::NNODE] = [
         [-1.0, -1.0], //  0
         [ 1.0, -1.0], //  1

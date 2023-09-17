@@ -10,17 +10,23 @@ use std::path::Path;
 /// Aliases usize as Point ID
 pub type PointId = usize;
 
+/// Aliases i32 as Point Marker
+pub type PointMarker = i32;
+
 /// Aliases usize as Cell ID
 pub type CellId = usize;
 
-/// Aliases usize as Cell's attribute ID
-pub type CellAttributeId = usize;
+/// Aliases usize as Cell's attribute
+pub type CellAttribute = usize;
 
 /// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Point {
     /// Identification number which equals the index of the point in the mesh
     pub id: PointId,
+
+    /// Holds a marker that can be used to group points (e.g., on the boundary)
+    pub marker: PointMarker,
 
     /// Point coordinates (2D or 3D)
     pub coords: Vec<f64>,
@@ -32,8 +38,8 @@ pub struct Cell {
     /// Identification number which equals the index of the cell in the mesh
     pub id: CellId,
 
-    /// Attribute identification number
-    pub attribute_id: CellAttributeId,
+    /// Attribute number
+    pub attribute: CellAttribute,
 
     /// The kind of cell
     pub kind: GeoKind,
@@ -53,7 +59,7 @@ pub struct Cell {
 /// use gemlab::shapes::GeoKind;
 ///
 /// //          [#] indicates id
-/// //      y   (#) indicates attribute_id
+/// //      y   (#) indicates attribute
 /// //      ↑
 /// // 1.0  3-----------2-----------5
 /// //      |           |           |
@@ -66,16 +72,16 @@ pub struct Cell {
 /// let mesh = Mesh {
 ///     ndim: 2,
 ///     points: vec![
-///         Point { id: 0, coords: vec![0.0, 0.0] },
-///         Point { id: 1, coords: vec![1.0, 0.0] },
-///         Point { id: 2, coords: vec![1.0, 1.0] },
-///         Point { id: 3, coords: vec![0.0, 1.0] },
-///         Point { id: 4, coords: vec![2.0, 0.0] },
-///         Point { id: 5, coords: vec![2.0, 1.0] },
+///         Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
+///         Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
+///         Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
+///         Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
+///         Point { id: 4, marker: 0, coords: vec![2.0, 0.0] },
+///         Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
 ///     ],
 ///     cells: vec![
-///         Cell { id: 0, attribute_id: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-///         Cell { id: 1, attribute_id: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+///         Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+///         Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
 ///     ],
 /// };
 /// ```
@@ -136,6 +142,92 @@ impl Mesh {
         file.write_all(&bin).map_err(|_| "cannot write file")?;
         Ok(())
     }
+
+    /// Finds marked points
+    ///
+    /// # Input
+    ///
+    /// * `mark` -- the point marker
+    /// * `filter` -- function `fn(x) -> bool` that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true).
+    ///   Use `|_| true` or [crate::util::any_x] to allow any point in the resulting array.
+    ///   Another example of filter: `|x| x[0] > 1.4 && x[0] < 1.6`
+    ///
+    /// # Output
+    ///
+    /// * If at least one point has been found, returns a **sorted** array of point ids.
+    /// * Otherwise, returns an error
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::prelude::*;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     // ```text
+    ///     // -500        -400
+    ///     // 8------7------6._
+    ///     // |       [3](3)|  '-.5
+    ///     // |  [0]        |     '-._
+    ///     // 9  (1)       10  [1]    '4 -300
+    ///     // |             |  (2)  .-'
+    ///     // |       [2](3)|   _.3'
+    ///     // 0------1------2.-'
+    ///     // -100         -200
+    ///     // ```
+    ///     let h = 0.866; // ~ SQRT_3 / 2
+    ///     let m = h / 2.0;
+    ///     #[rustfmt::skip]
+    ///     let mesh = Mesh {
+    ///         ndim: 2,
+    ///         points: vec![
+    ///             Point { id:  0, marker: -100, coords: vec![0.0,   0.0 ] },
+    ///             Point { id:  1, marker:    0, coords: vec![0.5,   0.0 ] },
+    ///             Point { id:  2, marker: -200, coords: vec![1.0,   0.0 ] },
+    ///             Point { id:  3, marker:    0, coords: vec![1.0+m, 0.25] },
+    ///             Point { id:  4, marker: -300, coords: vec![1.0+h, 0.5 ] },
+    ///             Point { id:  5, marker:    0, coords: vec![1.0+m, 0.75] },
+    ///             Point { id:  6, marker: -400, coords: vec![1.0,   1.0 ] },
+    ///             Point { id:  7, marker:    0, coords: vec![0.5,   1.0 ] },
+    ///             Point { id:  8, marker: -500, coords: vec![0.0,   1.0 ] },
+    ///             Point { id:  9, marker:    0, coords: vec![0.0,   0.5 ] },
+    ///             Point { id: 10, marker:    0, coords: vec![1.0,   0.5 ] },
+    ///         ],
+    ///         cells: vec![
+    ///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
+    ///             Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
+    ///             Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
+    ///             Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
+    ///         ],
+    ///     };
+    ///     assert_eq!(mesh.marked_points(-200, |_| true)?, &[2]);
+    ///     assert_eq!(mesh.marked_points(-400, |_| true)?, &[6]);
+    ///     assert_eq!(mesh.marked_points(0, |x| x[1] > 0.49 && x[1] < 0.51)?, &[9, 10]);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn marked_points<F>(&self, marker: PointMarker, mut filter: F) -> Result<Vec<PointId>, StrError>
+    where
+        F: FnMut(&Vec<f64>) -> bool,
+    {
+        let mut point_ids: Vec<_> = self
+            .points
+            .iter()
+            .filter_map(|p| {
+                if p.marker == marker && filter(&p.coords) {
+                    Some(p.id)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if point_ids.len() == 0 {
+            return Err("cannot find any point with given mark (and filter)");
+        }
+        point_ids.sort();
+        Ok(point_ids)
+    }
 }
 
 impl fmt::Display for Mesh {
@@ -145,27 +237,32 @@ impl fmt::Display for Mesh {
         write!(f, "# ndim npoint ncell\n").unwrap();
         write!(f, "{} {} {}\n", self.ndim, self.points.len(), self.cells.len()).unwrap();
         write!(f, "\n# points\n").unwrap();
-        write!(f, "# id x y {{z}}\n").unwrap();
+        write!(f, "# id marker x y {{z}}\n").unwrap();
         self.points.iter().for_each(|point| {
             if self.ndim == 2 {
-                write!(f, "{} {:?} {:?}\n", point.id, point.coords[0], point.coords[1]).unwrap();
+                write!(
+                    f,
+                    "{} {} {:?} {:?}\n",
+                    point.id, point.marker, point.coords[0], point.coords[1]
+                )
+                .unwrap();
             } else {
                 write!(
                     f,
-                    "{} {:?} {:?} {:?}\n",
-                    point.id, point.coords[0], point.coords[1], point.coords[2]
+                    "{} {} {:?} {:?} {:?}\n",
+                    point.id, point.marker, point.coords[0], point.coords[1], point.coords[2]
                 )
                 .unwrap();
             }
         });
         write!(f, "\n# cells\n").unwrap();
-        write!(f, "# id att kind  points\n").unwrap();
+        write!(f, "# id attribute kind points\n").unwrap();
         self.cells.iter().for_each(|cell| {
             write!(
                 f,
-                "{} {} {} {}\n",
+                "{} {} {}{}\n",
                 cell.id,
-                cell.attribute_id,
+                cell.attribute,
                 cell.kind.to_string(),
                 cell.points.iter().fold(&mut String::new(), |acc, cur| {
                     write!(acc, " {}", cur).unwrap();
@@ -215,16 +312,16 @@ mod tests {
                  2      6     2
             
             # points
-            # id   x   y
-               0 0.0 0.0
-               1 1.0 0.0
-               2 1.0 1.0
-               3 0.0 1.0
-               4 2.0 0.0
-               5 2.0 1.0
+            # id marker x y
+               0 0 0.0 0.0
+               1 0 1.0 0.0
+               2 0 1.0 1.0
+               3 0 0.0 1.0
+               4 0 2.0 0.0
+               5 0 2.0 1.0
             
             # cells
-            # id att kind point_ids...
+            # id attribute kind point_ids...
                0   1 qua4 0 1 2 3
                1   0 qua4 1 4 5 2",
         )
@@ -238,7 +335,7 @@ mod tests {
     fn derive_works() {
         let mesh = Samples::two_qua4();
         let mesh_clone = mesh.clone();
-        let correct ="Mesh { ndim: 2, points: [Point { id: 0, coords: [0.0, 0.0] }, Point { id: 1, coords: [1.0, 0.0] }, Point { id: 2, coords: [1.0, 1.0] }, Point { id: 3, coords: [0.0, 1.0] }, Point { id: 4, coords: [2.0, 0.0] }, Point { id: 5, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute_id: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute_id: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
+        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: 0, coords: [0.0, 0.0] }, Point { id: 1, marker: 0, coords: [1.0, 0.0] }, Point { id: 2, marker: 0, coords: [1.0, 1.0] }, Point { id: 3, marker: 0, coords: [0.0, 1.0] }, Point { id: 4, marker: 0, coords: [2.0, 0.0] }, Point { id: 5, marker: 0, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
         assert_eq!(format!("{:?}", mesh), correct);
         assert_eq!(mesh_clone.ndim, mesh.ndim);
         assert_eq!(mesh_clone.points.len(), mesh.points.len());
@@ -261,18 +358,18 @@ mod tests {
              2 6 2\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 0.0 0.0\n\
-             1 1.0 0.0\n\
-             2 1.0 1.0\n\
-             3 0.0 1.0\n\
-             4 2.0 0.0\n\
-             5 2.0 1.0\n\
+             # id marker x y {z}\n\
+             0 0 0.0 0.0\n\
+             1 0 1.0 0.0\n\
+             2 0 1.0 1.0\n\
+             3 0 0.0 1.0\n\
+             4 0 2.0 0.0\n\
+             5 0 2.0 1.0\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 1 qua4  0 1 2 3\n\
-             1 2 qua4  1 4 5 2\n"
+             # id attribute kind points\n\
+             0 1 qua4 0 1 2 3\n\
+             1 2 qua4 1 4 5 2\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);
@@ -289,24 +386,24 @@ mod tests {
              3 12 2\n\
              \n\
              # points\n\
-             # id x y {z}\n\
-             0 0.0 0.0 0.0\n\
-             1 1.0 0.0 0.0\n\
-             2 1.0 1.0 0.0\n\
-             3 0.0 1.0 0.0\n\
-             4 0.0 0.0 1.0\n\
-             5 1.0 0.0 1.0\n\
-             6 1.0 1.0 1.0\n\
-             7 0.0 1.0 1.0\n\
-             8 0.0 0.0 2.0\n\
-             9 1.0 0.0 2.0\n\
-             10 1.0 1.0 2.0\n\
-             11 0.0 1.0 2.0\n\
+             # id marker x y {z}\n\
+             0 0 0.0 0.0 0.0\n\
+             1 0 1.0 0.0 0.0\n\
+             2 0 1.0 1.0 0.0\n\
+             3 0 0.0 1.0 0.0\n\
+             4 0 0.0 0.0 1.0\n\
+             5 0 1.0 0.0 1.0\n\
+             6 0 1.0 1.0 1.0\n\
+             7 0 0.0 1.0 1.0\n\
+             8 0 0.0 0.0 2.0\n\
+             9 0 1.0 0.0 2.0\n\
+             10 0 1.0 1.0 2.0\n\
+             11 0 0.0 1.0 2.0\n\
              \n\
              # cells\n\
-             # id att kind  points\n\
-             0 1 hex8  0 1 2 3 4 5 6 7\n\
-             1 2 hex8  4 5 6 7 8 9 10 11\n"
+             # id attribute kind points\n\
+             0 1 hex8 0 1 2 3 4 5 6 7\n\
+             1 2 hex8 4 5 6 7 8 9 10 11\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);
@@ -330,5 +427,41 @@ mod tests {
         assert_eq!(format!("{}", mesh_in), text);
         assert_eq!(mesh_in.cells[0].points.len(), 8);
         assert_eq!(mesh_in.cells[4].points.len(), 3);
+    }
+
+    #[test]
+    fn marked_points_works() {
+        let mesh = Samples::four_tri3();
+        assert_eq!(mesh.marked_points(-1, |_| true).unwrap(), &[0]);
+        assert_eq!(mesh.marked_points(-3, |_| true).unwrap(), &[2]);
+        assert_eq!(mesh.marked_points(-4, |_| true).unwrap(), &[3]);
+        assert_eq!(mesh.marked_points(-5, |_| true).unwrap(), &[4]);
+        assert_eq!(
+            mesh.marked_points(-10, |_| true).err(),
+            Some("cannot find any point with given mark (and filter)")
+        );
+
+        let mesh = Samples::ring_eight_qua8_rad1_thick1();
+        assert_eq!(mesh.marked_points(-1, |_| true).unwrap(), &[0]);
+        assert_eq!(mesh.marked_points(-2, |_| true).unwrap(), &[2]);
+        assert_eq!(mesh.marked_points(-3, |_| true).unwrap(), &[14]);
+        assert_eq!(mesh.marked_points(-4, |_| true).unwrap(), &[12]);
+        assert_eq!(mesh.marked_points(-10, |_| true).unwrap(), &[3, 6, 9, 25, 28, 31, 34]);
+        assert_eq!(mesh.marked_points(-20, |_| true).unwrap(), &[5, 8, 11, 27, 30, 33, 36]);
+        assert_eq!(mesh.marked_points(-30, |_| true).unwrap(), &[1, 15, 16]);
+        assert_eq!(mesh.marked_points(-40, |_| true).unwrap(), &[13, 23, 24]);
+        assert_eq!(
+            mesh.marked_points(0, |_| true).unwrap(),
+            &[4, 7, 10, 17, 18, 19, 20, 21, 22, 26, 29, 32, 35]
+        );
+        assert_eq!(
+            mesh.marked_points(8, |_| true).err(),
+            Some("cannot find any point with given mark (and filter)")
+        );
+        assert_eq!(
+            mesh.marked_points(-30, |x| x[0] > 10.0).err(),
+            Some("cannot find any point with given mark (and filter)")
+        );
+        assert_eq!(mesh.marked_points(-30, |x| x[0] > 1.4 && x[0] < 1.6).unwrap(), &[1]);
     }
 }

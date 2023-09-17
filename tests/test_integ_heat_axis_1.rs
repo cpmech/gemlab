@@ -15,12 +15,12 @@ fn generate_pads() -> (Scratchpad, Scratchpad, Scratchpad, AnalyticalTri3) {
     let mesh = Mesh {
         ndim: 2,
         points: vec![
-            Point { id: 0, coords: vec![15.0, 10.0] },
-            Point { id: 1, coords: vec![25.0, 10.0] },
-            Point { id: 2, coords: vec![20.0, 12.0] },
+            Point { id: 0, marker: 0, coords: vec![15.0, 10.0] },
+            Point { id: 1, marker: 0, coords: vec![25.0, 10.0] },
+            Point { id: 2, marker: 0, coords: vec![20.0, 12.0] },
         ],
         cells: vec![
-            Cell { id: 0, attribute_id: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+            Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
         ],
     };
     let mut pad_tri = Scratchpad::new(2, GeoKind::Tri3).unwrap();

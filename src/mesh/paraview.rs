@@ -111,11 +111,11 @@ impl Mesh {
         write!(
             &mut buffer,
             "<PointData Scalars=\"TheScalars\">\n\
-             <DataArray type=\"Int32\" Name=\"point_id\" NumberOfComponents=\"1\" format=\"ascii\">\n"
+             <DataArray type=\"Int32\" Name=\"marker\" NumberOfComponents=\"1\" format=\"ascii\">\n"
         )
         .unwrap();
-        for point_id in 0..npoint {
-            write!(&mut buffer, "{} ", point_id).unwrap();
+        for i in 0..npoint {
+            write!(&mut buffer, "{} ", self.points[i].marker).unwrap();
         }
         write!(
             &mut buffer,
@@ -128,20 +128,11 @@ impl Mesh {
         write!(
             &mut buffer,
             "<CellData Scalars=\"TheScalars\">\n\
-             <DataArray type=\"Int32\" Name=\"cell_id\" NumberOfComponents=\"1\" format=\"ascii\">\n"
+             <DataArray type=\"Int32\" Name=\"attribute\" NumberOfComponents=\"1\" format=\"ascii\">\n"
         )
         .unwrap();
         for cell in &self.cells {
-            write!(&mut buffer, "{} ", cell.id).unwrap();
-        }
-        write!(
-            &mut buffer,
-            "\n</DataArray>\n\
-             <DataArray type=\"Int32\" Name=\"attribute_id\" NumberOfComponents=\"1\" format=\"ascii\">\n"
-        )
-        .unwrap();
-        for cell in &self.cells {
-            write!(&mut buffer, "{} ", cell.attribute_id).unwrap();
+            write!(&mut buffer, "{} ", cell.attribute).unwrap();
         }
         write!(
             &mut buffer,
@@ -227,15 +218,12 @@ mod tests {
 </DataArray>
 </Cells>
 <PointData Scalars="TheScalars">
-<DataArray type="Int32" Name="point_id" NumberOfComponents="1" format="ascii">
-0 1 2 3 4 5 6 7 8 9 10 
+<DataArray type="Int32" Name="marker" NumberOfComponents="1" format="ascii">
+-100 0 -200 0 -300 0 -400 0 -500 0 0 
 </DataArray>
 </PointData>
 <CellData Scalars="TheScalars">
-<DataArray type="Int32" Name="cell_id" NumberOfComponents="1" format="ascii">
-0 1 2 3 
-</DataArray>
-<DataArray type="Int32" Name="attribute_id" NumberOfComponents="1" format="ascii">
+<DataArray type="Int32" Name="attribute" NumberOfComponents="1" format="ascii">
 1 2 3 3 
 </DataArray>
 </CellData>
@@ -276,15 +264,12 @@ mod tests {
 </DataArray>
 </Cells>
 <PointData Scalars="TheScalars">
-<DataArray type="Int32" Name="point_id" NumberOfComponents="1" format="ascii">
-0 1 2 3 4 5 6 7 8 9 10 11 12 
+<DataArray type="Int32" Name="marker" NumberOfComponents="1" format="ascii">
+0 0 0 0 0 0 0 0 0 0 0 0 0 
 </DataArray>
 </PointData>
 <CellData Scalars="TheScalars">
-<DataArray type="Int32" Name="cell_id" NumberOfComponents="1" format="ascii">
-0 1 2 3 4 
-</DataArray>
-<DataArray type="Int32" Name="attribute_id" NumberOfComponents="1" format="ascii">
+<DataArray type="Int32" Name="attribute" NumberOfComponents="1" format="ascii">
 1 2 2 2 3 
 </DataArray>
 </CellData>
