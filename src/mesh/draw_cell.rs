@@ -105,7 +105,7 @@ impl Mesh {
                     let a = cell_kind.edge_node_id(e, 0);
                     let b = cell_kind.edge_node_id(e, 1);
                     let c = cell_kind.edge_node_id(e, 2);
-                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b], ii[c]], true, true);
+                    self.add_curve(canvas, GeoKind::Lin3, &[ii[a], ii[b], ii[c]], true, true);
                 }
             }
             GeoKind::Tet20 => {
@@ -114,7 +114,7 @@ impl Mesh {
                     let b = cell_kind.edge_node_id(e, 1);
                     let c = cell_kind.edge_node_id(e, 2);
                     let d = cell_kind.edge_node_id(e, 3);
-                    self.add_curve(canvas, GeoKind::Lin3, &[ii[a], ii[b], ii[c], ii[d]], true, true);
+                    self.add_curve(canvas, GeoKind::Lin4, &[ii[a], ii[b], ii[c], ii[d]], true, true);
                 }
             }
             // Hex
@@ -130,7 +130,7 @@ impl Mesh {
                     let a = cell_kind.edge_node_id(e, 0);
                     let b = cell_kind.edge_node_id(e, 1);
                     let c = cell_kind.edge_node_id(e, 2);
-                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b], ii[c]], true, true);
+                    self.add_curve(canvas, GeoKind::Lin3, &[ii[a], ii[b], ii[c]], true, true);
                 }
             }
             GeoKind::Hex32 => {
@@ -139,7 +139,7 @@ impl Mesh {
                     let b = cell_kind.edge_node_id(e, 1);
                     let c = cell_kind.edge_node_id(e, 2);
                     let d = cell_kind.edge_node_id(e, 3);
-                    self.add_curve(canvas, GeoKind::Lin3, &[ii[a], ii[b], ii[c], ii[d]], true, true);
+                    self.add_curve(canvas, GeoKind::Lin4, &[ii[a], ii[b], ii[c], ii[d]], true, true);
                 }
             }
         }
