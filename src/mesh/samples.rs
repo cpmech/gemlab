@@ -7,6 +7,9 @@ pub struct Samples;
 impl Samples {
     /// Returns a mesh with every kind of Lin cell
     ///
+    /// **WARNING:** This is not a valid FEM mesh because the cells are not compatible.
+    /// We use this function to generate figures for the documentation only.
+    ///
     /// ![lin_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
     #[rustfmt::skip]
     pub fn lin_cells() -> Mesh {
@@ -42,6 +45,9 @@ impl Samples {
 
     /// Returns a mesh with every kind of Lin cell in 2D
     ///
+    /// **WARNING:** This is not a valid FEM mesh because the cells are not compatible.
+    /// We use this function to generate figures for the documentation only.
+    ///
     /// ![lin_cells_3d](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin_3d.svg)
     #[rustfmt::skip]
     pub fn lin_cells_3d() -> Mesh {
@@ -76,6 +82,9 @@ impl Samples {
     }
 
     /// Returns a mesh with every kind of Tri cell
+    ///
+    /// **WARNING:** This is not a valid FEM mesh because the cells are not compatible.
+    /// We use this function to generate figures for the documentation only.
     ///
     /// ![tri_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
     #[rustfmt::skip]
@@ -131,6 +140,9 @@ impl Samples {
     }
 
     /// Returns a mesh with every kind of Qua cell
+    ///
+    /// **WARNING:** This is not a valid FEM mesh because the cells are not compatible.
+    /// We use this function to generate figures for the documentation only.
     ///
     /// ![qua_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
     #[rustfmt::skip]
@@ -223,6 +235,9 @@ impl Samples {
 
     /// Returns a mesh with every kind of Tet cell
     ///
+    /// **WARNING:** This is not a valid FEM mesh because the cells are not compatible.
+    /// We use this function to generate figures for the documentation only.
+    ///
     /// ![tet_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
     #[rustfmt::skip]
     pub fn tet_cells() -> Mesh {
@@ -275,6 +290,9 @@ impl Samples {
     }
 
     /// Returns a mesh with every kind of Hex cell
+    ///
+    /// **WARNING:** This is not a valid FEM mesh because the cells are not compatible.
+    /// We use this function to generate figures for the documentation only.
     ///
     /// ![hex_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
     #[rustfmt::skip]
@@ -1900,12 +1918,12 @@ mod tests {
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
-        fig.param_cell_ids = true;
-        fig.param_point_ids = true;
+        fig.cell_ids = true;
+        fig.point_ids = true;
         if larger {
-            fig.param_figure_size = Some((600.0, 600.0));
+            fig.figure_size = Some((600.0, 600.0));
         }
-        mesh.draw(Some(fig), filename).unwrap();
+        mesh.draw(Some(fig), filename, |_| {}).unwrap();
     }
 
     #[test]
