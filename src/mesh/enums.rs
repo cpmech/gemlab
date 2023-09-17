@@ -32,6 +32,7 @@ pub enum At {
 }
 
 /// Defines what features to extract
+#[derive(Clone, Copy, Debug)]
 pub enum Extract {
     /// Extracts boundary and interior features
     All,
@@ -41,4 +42,22 @@ pub enum Extract {
 
     /// Extracts interior features only
     Interior,
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use super::{At, Extract};
+
+    #[test]
+    fn derive_methods_work() {
+        let at = At::X(0.0);
+        let at_clone = at.clone();
+        assert_eq!(format!("{:?}", at_clone), "X(0.0)");
+
+        let ex = Extract::Boundary;
+        let ex_clone = ex.clone();
+        assert_eq!(format!("{:?}", ex_clone), "Boundary");
+    }
 }
