@@ -1,4 +1,4 @@
-use gemlab::mesh::{check_face_normals, At, Extract, Features, Find, Mesh};
+use gemlab::mesh::{At, Extract, Features, Find, Mesh};
 use gemlab::util::any_x;
 use gemlab::StrError;
 use std::collections::HashMap;
@@ -73,7 +73,7 @@ fn test_tetrahedra() -> Result<(), StrError> {
     ]);
 
     // check if the normal vectors at boundary are outward
-    check_face_normals(&mesh, &features.faces, &solutions, 1e-15).expect("ok");
+    mesh.check_face_normals(&features.faces, &solutions, 1e-15).expect("ok");
 
     // find points
     let find = Find::new(&mesh, None);

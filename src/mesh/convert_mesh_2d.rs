@@ -203,7 +203,7 @@ pub fn convert_mesh_2d(mesh: &Mesh, target: GeoKind) -> Result<Mesh, StrError> {
 #[cfg(test)]
 mod tests {
     use super::convert_mesh_2d;
-    use crate::mesh::{check_all, check_overlapping_points, Cell, Mesh, Point, Samples};
+    use crate::mesh::{Cell, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_chk::vec_approx_eq;
 
@@ -320,7 +320,7 @@ mod tests {
                 Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
         };
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_before.svg").unwrap();
@@ -332,8 +332,8 @@ mod tests {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_after.svg").unwrap();
         }
 
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.2).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.2).unwrap();
 
         assert_eq!(res.points.len(), 2 * 15 - 5);
         assert_eq!(res.cells[0].points, (0..15).collect::<Vec<_>>());
@@ -416,7 +416,7 @@ mod tests {
                 Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
         };
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
 
         if SAVE_FIGURE {
             draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri10_before.svg").unwrap();
@@ -428,8 +428,8 @@ mod tests {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri10_after.svg").unwrap();
         }
 
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.2).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.2).unwrap();
 
         assert_eq!(res.points.len(), 16);
 
@@ -491,7 +491,7 @@ mod tests {
                 Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
         };
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
 
         let res = convert_mesh_2d(&mesh, GeoKind::Tri3).unwrap();
 
@@ -499,8 +499,8 @@ mod tests {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri3_after.svg").unwrap();
         }
 
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.1).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.1).unwrap();
 
         assert_eq!(res.points.len(), 4);
         assert_eq!(res.cells[0].points, &[0, 1, 2]);
@@ -514,8 +514,8 @@ mod tests {
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri3_to_tri6_after.svg").unwrap();
         }
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.1).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.1).unwrap();
         assert_eq!(res.points.len(), 9);
         assert_eq!(res.cells[0].points, (0..6).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[6, 2, 1, 7, 4, 8]);
@@ -529,8 +529,8 @@ mod tests {
             let name = "/tmp/gemlab/test_four_tri3_to_tri6_after.svg";
             draw_mesh(&res, true, true, false, name).unwrap();
         }
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.1).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.1).unwrap();
         assert_eq!(res.points.len(), 13);
         assert_eq!(res.cells[0].points, (0..6).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[0, 6, 7, 8, 9, 10]);
@@ -545,8 +545,8 @@ mod tests {
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri3_to_tri10_after.svg").unwrap();
         }
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.1).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.1).unwrap();
         assert_eq!(res.points.len(), 16);
         assert_eq!(res.cells[0].points, (0..10).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[10, 2, 1, 11, 7, 12, 13, 4, 14, 15]);
@@ -560,8 +560,8 @@ mod tests {
             let name = "/tmp/gemlab/test_tri6_multi_shares_to_tri10_after.svg";
             draw_mesh(&res, true, true, false, name).unwrap();
         }
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.1).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.1).unwrap();
         assert_eq!(res.points.len(), 19);
         assert_eq!(res.cells[0].points, (0..10).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[2, 1, 10, 7, 11, 12, 4, 13, 14, 15]);
@@ -594,8 +594,8 @@ mod tests {
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua4_to_qua8_after.svg").unwrap();
         }
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.2).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.2).unwrap();
         assert_eq!(res.points.len(), 13);
         assert_eq!(res.cells[0].points, (0..8).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[1, 8, 9, 2, 10, 11, 12, 5]);
@@ -608,8 +608,8 @@ mod tests {
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua12_to_qua16_after.svg").unwrap();
         }
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.2).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.2).unwrap();
         assert_eq!(res.points.len(), 33 + 4 * 4);
         assert_eq!(res.cells[0].points, (0..16).collect::<Vec<_>>());
         assert_eq!(
@@ -633,8 +633,8 @@ mod tests {
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua12_to_qua17_after.svg").unwrap();
         }
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.2).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.2).unwrap();
         assert_eq!(res.points.len(), 3 * 9 + 6 * 3 + 4);
         assert_eq!(res.cells[0].points, (0..17).collect::<Vec<_>>());
         assert_eq!(
@@ -667,8 +667,8 @@ mod tests {
         if SAVE_FIGURE {
             draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua17_to_qua4_after.svg").unwrap();
         }
-        check_all(&res).unwrap();
-        check_overlapping_points(&res, 0.2).unwrap();
+        res.check_all().unwrap();
+        res.check_overlapping_points(0.2).unwrap();
         assert_eq!(res.points.len(), 9);
         let correct = Samples::block_2d_four_qua4();
         for i in 0..correct.cells.len() {

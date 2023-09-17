@@ -845,7 +845,6 @@ impl Structured {
 mod tests {
     use super::Structured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{check_all, check_overlapping_points};
     use crate::shapes::GeoKind;
     use russell_chk::{approx_eq, vec_approx_eq};
 
@@ -863,7 +862,7 @@ mod tests {
     #[test]
     fn quarter_ring_2d_works() {
         let mesh = Structured::quarter_ring_2d(3.0, 6.0, 1, 1, GeoKind::Qua16).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 1);
         for p in [0, 11, 7, 3] {
@@ -896,7 +895,7 @@ mod tests {
     #[test]
     fn quarter_ring_3d_works() {
         let mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 1, 2, 1, GeoKind::Hex32).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 52);
         assert_eq!(mesh.cells.len(), 2);
         for p in [0, 15, 14, 3, 41, 40, 33] {
@@ -913,7 +912,7 @@ mod tests {
     #[test]
     fn quarter_disk_2d_a_works_qua8() {
         let mesh = Structured::quarter_disk_2d_a(6.0, 1, 1, GeoKind::Qua8).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 3);
         for p in [8, 11, 9, 14, 13] {
@@ -926,7 +925,7 @@ mod tests {
     #[test]
     fn quarter_disk_2d_a_works_qua8_finer() {
         let mesh = Structured::quarter_disk_2d_a(6.0, 3, 3, GeoKind::Qua8).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 100);
         assert_eq!(mesh.cells.len(), 27);
         for p in [50, 53, 51, 62, 61, 71, 70, 99, 96, 98, 91, 94, 92] {
@@ -939,7 +938,7 @@ mod tests {
     #[test]
     fn quarter_disk_2d_a_works_qua16() {
         let mesh = Structured::quarter_disk_2d_a(6.0, 1, 1, GeoKind::Qua16).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 3);
         for p in [16, 19, 22, 17, 29, 31, 28] {
@@ -960,7 +959,7 @@ mod tests {
     #[test]
     fn quarter_disk_2d_b_works_qua8() {
         let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 1, 1, GeoKind::Qua8).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 3);
         for p in [8, 11, 9, 14, 13] {
@@ -973,7 +972,7 @@ mod tests {
     #[test]
     fn quarter_disk_2d_b_works_qua8_finer() {
         let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 3, 3, GeoKind::Qua8).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 100);
         assert_eq!(mesh.cells.len(), 27);
         for p in [50, 53, 51, 62, 61, 71, 70, 99, 96, 98, 91, 94, 92] {
@@ -986,7 +985,7 @@ mod tests {
     #[test]
     fn quarter_disk_2d_b_works_qua16() {
         let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 1, 1, GeoKind::Qua16).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 3);
         for p in [16, 19, 22, 17, 29, 31, 28] {
@@ -999,7 +998,7 @@ mod tests {
     #[test]
     fn quarter_disk_3d_a_works_hex32() {
         let mesh = Structured::quarter_disk_3d_a(6.0, 1.5, 1, 1, 1, GeoKind::Hex32).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.cells.len(), 3);
         for p in [
             32, 38, 39, 33, 54, 55, 52, // z-min
@@ -1024,7 +1023,7 @@ mod tests {
     #[test]
     fn quarter_disk_3d_b_works_hex32() {
         let mesh = Structured::quarter_disk_3d_b(3.0, 6.0, 1.5, 1, 1, 1, GeoKind::Hex32).unwrap();
-        check_overlapping_points(&mesh, 0.02).unwrap();
+        mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.cells.len(), 3);
         for p in [
             32, 38, 39, 33, 54, 55, 52, // z-min
@@ -1043,7 +1042,7 @@ mod tests {
         let mesh = Structured::quarter_plate_hole_2d(1.0, 1.0, 1.0, 1, 1, 1, GeoKind::Qua12).unwrap();
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
-        check_overlapping_points(&mesh, 0.18).unwrap();
+        mesh.check_overlapping_points(0.18).unwrap();
         for p in [0, 11, 7, 3, 19, 16, 13] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 1.0, 1e-15);
@@ -1061,7 +1060,7 @@ mod tests {
         let mesh = Structured::quarter_plate_hole_3d(1.0, 1.0, 1.0, 1.5, 1, 1, 1, 1, GeoKind::Hex32).unwrap();
         assert_eq!(mesh.points.len(), 66 + 18);
         assert_eq!(mesh.cells.len(), 4);
-        check_overlapping_points(&mesh, 0.13).unwrap();
+        mesh.check_overlapping_points(0.13).unwrap();
         // z-min
         for p in [0, 1, 2, 32, 33, 52, 53, 72] {
             assert_eq!(mesh.points[p].coords[2], 0.0);
@@ -1143,8 +1142,8 @@ mod tests {
 
         let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 5.0], &[1], &[10], target).unwrap();
         // draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_layered_rectangle_1.svg").unwrap();
-        check_overlapping_points(&mesh, 1e-2).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_overlapping_points(1e-2).unwrap();
+        mesh.check_all().unwrap();
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
@@ -1167,8 +1166,8 @@ mod tests {
 
         let mesh = Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 5.0], &[1], &[20], target).unwrap();
         // draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_layered_rectangle_2.svg").unwrap();
-        check_overlapping_points(&mesh, 1e-2).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_overlapping_points(1e-2).unwrap();
+        mesh.check_all().unwrap();
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
@@ -1194,8 +1193,8 @@ mod tests {
 
         let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
         // draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_layered_rectangle_3.svg").unwrap();
-        check_overlapping_points(&mesh, 1e-2).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_overlapping_points(1e-2).unwrap();
+        mesh.check_all().unwrap();
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
@@ -1222,8 +1221,8 @@ mod tests {
         let mesh =
             Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
         // draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_layered_rectangle_4.svg").unwrap();
-        check_overlapping_points(&mesh, 1e-2).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_overlapping_points(1e-2).unwrap();
+        mesh.check_all().unwrap();
         assert_eq!(
             format!("{}", mesh),
             "# header\n\

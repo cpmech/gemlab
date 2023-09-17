@@ -85,7 +85,7 @@ pub fn join_meshes(meshes: &[&Mesh]) -> Result<Mesh, StrError> {
 #[cfg(test)]
 mod tests {
     use super::{join_meshes, join_two_meshes};
-    use crate::mesh::{check_ids_and_kind, check_jacobian, check_overlapping_points, Samples};
+    use crate::mesh::Samples;
 
     #[test]
     fn join_two_meshes_handles_errors() {
@@ -138,9 +138,9 @@ mod tests {
         // 0.0  0-----------1-----------4  → x
         //     0.0         1.0         2.0
         let mesh = join_two_meshes(&a, &b).unwrap();
-        check_ids_and_kind(&mesh).unwrap();
-        check_jacobian(&mesh).unwrap();
-        check_overlapping_points(&mesh, 0.01).unwrap();
+        mesh.check_ids_and_kind().unwrap();
+        mesh.check_jacobian().unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         assert_eq!(mesh.points[0].coords, &[0.0, 0.0]);
         assert_eq!(mesh.points[1].coords, &[1.0, 0.0]);
         assert_eq!(mesh.points[2].coords, &[1.0, 1.0]);
@@ -216,9 +216,9 @@ mod tests {
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
-        check_ids_and_kind(&mesh).unwrap();
-        check_jacobian(&mesh).unwrap();
-        check_overlapping_points(&mesh, 0.01).unwrap();
+        mesh.check_ids_and_kind().unwrap();
+        mesh.check_jacobian().unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
 
         let sample = Samples::four_hex8();
         for i in 0..mesh.cells.len() {
@@ -284,7 +284,7 @@ mod tests {
         // 0.0  0-----------1-----------4  → x
         //     0.0         1.0         2.0
         let mesh = join_meshes(&[&a, &b, &c]).unwrap();
-        check_overlapping_points(&mesh, 0.01).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         assert_eq!(
             format!("{}", mesh),
             "# header\n\

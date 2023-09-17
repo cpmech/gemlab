@@ -7,7 +7,7 @@ use crate::shapes::Scratchpad;
 ///
 /// 1. Make sure `pad.kind.nnode() == points.len()`; otherwise a panic will occur
 /// 2. This function does not check for bounds on point indices and dimensions
-/// 3. Use [crate::mesh::check_all()] to capture (some) errors
+/// 3. Use [Mesh::check_all] to capture (some) errors
 #[inline]
 pub fn set_pad_coords(pad: &mut Scratchpad, points: &[PointId], mesh: &Mesh) {
     let nnode = pad.kind.nnode();

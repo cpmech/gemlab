@@ -976,7 +976,7 @@ impl Block {
 mod tests {
     use super::{ArgsRing, Block, Constraint2D, Constraint3D};
     use crate::geometry::point_point_distance;
-    use crate::mesh::{check_all, Samples};
+    use crate::mesh::Samples;
     use crate::shapes::GeoKind;
     use plotpy::Plot;
     use russell_chk::{approx_eq, vec_approx_eq};
@@ -1365,7 +1365,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         let correct = Samples::block_2d_four_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1409,7 +1409,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         let correct = Samples::block_2d_four_qua8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1437,7 +1437,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua9).unwrap();
         let correct = Samples::block_2d_four_qua9();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1472,7 +1472,7 @@ mod tests {
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
         }
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1507,7 +1507,7 @@ mod tests {
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
         }
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1539,7 +1539,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua17).unwrap();
         let correct = Samples::block_2d_four_qua17();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1601,7 +1601,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Hex8).unwrap();
         let correct = Samples::block_3d_eight_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1663,7 +1663,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
         let correct = Samples::block_3d_eight_hex20();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
     }
 
     #[test]
@@ -1681,7 +1681,7 @@ mod tests {
             }))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
         assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3]);
@@ -1731,7 +1731,7 @@ mod tests {
             }))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Qua16).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         for point in &mesh.points {
             let mut radius = 0.0;
             for i in 0..2 {
@@ -1775,7 +1775,7 @@ mod tests {
             }))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex8).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
         assert_eq!(mesh.cells[0].points, &[0, 1, 2, 3, 4, 5, 6, 7]);
@@ -1829,7 +1829,7 @@ mod tests {
             }))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex32).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         for point in &mesh.points {
             let mut radius = 0.0;
             for i in 0..2 {
@@ -1989,7 +1989,7 @@ mod tests {
             .set_edge_constraint(3, Some(Constraint2D::Circle(cen_minus, 0.0, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         // side 0
         for p in [0, 4, 1, 10, 8] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, cen_minus]).unwrap();
@@ -2068,7 +2068,7 @@ mod tests {
             .set_face_constraint(3, Some(Constraint3D::CylinderZ(0.0, cen_plus, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         // corner points
         for p in [0, 20, 33, 44] {
             assert_eq!(mesh.points[p].coords[2], -half_l);
@@ -2196,7 +2196,7 @@ mod tests {
             .set_face_constraint(5, Some(Constraint3D::CylinderY(0.0, cen_plus, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
-        check_all(&mesh).unwrap();
+        mesh.check_all().unwrap();
         // corner points
         for p in [0, 20, 33, 44] {
             assert_eq!(mesh.points[p].coords[2], -half_l);
