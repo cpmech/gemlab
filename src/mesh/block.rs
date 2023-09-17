@@ -1661,7 +1661,11 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            draw_ring(&mesh, &block.args_ring, "/tmp/gemlab/test_transform_into_ring_2d.svg");
+            draw_ring(
+                &mesh,
+                &block.args_ring,
+                "/tmp/gemlab/test_block_transform_into_ring_2d.svg",
+            );
         }
     }
 
@@ -1703,7 +1707,7 @@ mod tests {
             draw_ring(
                 &mesh,
                 &block.args_ring,
-                "/tmp/gemlab/test_transform_into_ring_2d_qua16.svg",
+                "/tmp/gemlab/test_block_transform_into_ring_2d_qua16.svg",
             );
         }
     }
@@ -1762,8 +1766,12 @@ mod tests {
         if SAVE_FIGURE {
             let mut fig = Figure::new();
             fig.figure_size = Some((600.0, 600.0));
-            mesh.draw(Some(fig), "/tmp/gemlab/test_transform_into_ring_3d.svg", |_, _| {})
-                .unwrap();
+            mesh.draw(
+                Some(fig),
+                "/tmp/gemlab/test_block_transform_into_ring_3d.svg",
+                |_, _| {},
+            )
+            .unwrap();
         }
     }
 
@@ -1806,7 +1814,7 @@ mod tests {
             fig.figure_size = Some((600.0, 600.0));
             mesh.draw(
                 Some(fig),
-                "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg",
+                "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg",
                 |_, _| {},
             )
             .unwrap();
@@ -1852,7 +1860,13 @@ mod tests {
             approx_eq(d, 1.0, 1e-15);
         }
         if SAVE_FIGURE {
-            draw(mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua4_1.svg", |_| {});
+            draw(
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_block_constraints_2d_qua4_1.svg",
+                |_| {},
+            );
         }
 
         // circle pulls point
@@ -1864,7 +1878,13 @@ mod tests {
             approx_eq(d, 0.5, 1e-15);
         }
         if SAVE_FIGURE {
-            draw(mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua4_2.svg", |_| {});
+            draw(
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_block_constraints_2d_qua4_2.svg",
+                |_| {},
+            );
         }
 
         // block touches constraint (also we need to move mid nodes)
@@ -1898,7 +1918,13 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            draw(mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua8.svg", |_| {});
+            draw(
+                mesh,
+                &block,
+                true,
+                "/tmp/gemlab/test_block_constraints_2d_qua8.svg",
+                |_| {},
+            );
         }
     }
 
@@ -1970,7 +1996,7 @@ mod tests {
                 mesh,
                 &block,
                 false,
-                "/tmp/gemlab/test_constraints_2d_multiple.svg",
+                "/tmp/gemlab/test_block_constraints_2d_multiple.svg",
                 |_| {},
             );
         }
@@ -2089,24 +2115,30 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         if SAVE_FIGURE {
-            draw(mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg", |plot| {
-                let mut surf = Surface::new();
-                const NP: usize = 81;
-                surf.set_solid_color("#ff000020");
-                surf.draw_cylinder(&[cen_minus, 0.0, -half_l], &[cen_minus, 0.0, half_l], r, 5, NP)
-                    .unwrap();
-                surf.set_solid_color("#00ff0020");
-                surf.draw_cylinder(&[cen_plus, 0.0, -half_l], &[cen_plus, 0.0, half_l], r, 5, NP)
-                    .unwrap();
-                surf.set_solid_color("#0000ff20");
-                surf.draw_cylinder(&[0.0, cen_minus, -half_l], &[0.0, cen_minus, half_l], r, 5, NP)
-                    .unwrap();
-                surf.set_solid_color("#ff00ff20");
-                surf.draw_cylinder(&[0.0, cen_plus, -half_l], &[0.0, cen_plus, half_l], r, 5, NP)
-                    .unwrap();
-                plot.add(&surf);
-                plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
-            });
+            draw(
+                mesh,
+                &block,
+                false,
+                "/tmp/gemlab/test_block_constraints_3d.svg",
+                |plot| {
+                    let mut surf = Surface::new();
+                    const NP: usize = 81;
+                    surf.set_solid_color("#ff000020");
+                    surf.draw_cylinder(&[cen_minus, 0.0, -half_l], &[cen_minus, 0.0, half_l], r, 5, NP)
+                        .unwrap();
+                    surf.set_solid_color("#00ff0020");
+                    surf.draw_cylinder(&[cen_plus, 0.0, -half_l], &[cen_plus, 0.0, half_l], r, 5, NP)
+                        .unwrap();
+                    surf.set_solid_color("#0000ff20");
+                    surf.draw_cylinder(&[0.0, cen_minus, -half_l], &[0.0, cen_minus, half_l], r, 5, NP)
+                        .unwrap();
+                    surf.set_solid_color("#ff00ff20");
+                    surf.draw_cylinder(&[0.0, cen_plus, -half_l], &[0.0, cen_plus, half_l], r, 5, NP)
+                        .unwrap();
+                    plot.add(&surf);
+                    plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
+                },
+            );
         }
     }
 
@@ -2191,7 +2223,7 @@ mod tests {
                 mesh,
                 &block,
                 false,
-                "/tmp/gemlab/test_constraints_3d_cylinder_xy.svg",
+                "/tmp/gemlab/test_block_constraints_3d_cylinder_xy.svg",
                 |plot| {
                     let mut surf = Surface::new();
                     const NP: usize = 81;
@@ -2229,7 +2261,7 @@ mod tests {
                 mesh,
                 &block,
                 true,
-                "/tmp/gemlab/test_constraints_imprecision_2d.svg",
+                "/tmp/gemlab/test_block_constraints_imprecision_2d.svg",
                 |_| {},
             );
         }
@@ -2260,7 +2292,7 @@ mod tests {
                 mesh,
                 &block,
                 true,
-                "/tmp/gemlab/test_constraints_interior_nodes_qua8.svg",
+                "/tmp/gemlab/test_block_constraints_interior_nodes_qua8.svg",
                 |_| {},
             );
         }
@@ -2291,7 +2323,7 @@ mod tests {
                 mesh,
                 &block,
                 true,
-                "/tmp/gemlab/test_constraints_interior_nodes_qua9.svg",
+                "/tmp/gemlab/test_block_constraints_interior_nodes_qua9.svg",
                 |_| {},
             );
         }
@@ -2332,7 +2364,7 @@ mod tests {
                 mesh,
                 &block,
                 true,
-                "/tmp/gemlab/test_constraints_interior_nodes_qua16.svg",
+                "/tmp/gemlab/test_block_constraints_interior_nodes_qua16.svg",
                 |_| {},
             );
         }
@@ -2359,7 +2391,7 @@ mod tests {
                 mesh,
                 &block,
                 true,
-                "/tmp/gemlab/test_constraints_interior_nodes_qua17.svg",
+                "/tmp/gemlab/test_block_constraints_interior_nodes_qua17.svg",
                 |_| {},
             );
         }
@@ -2405,7 +2437,7 @@ mod tests {
                 mesh,
                 &block,
                 true,
-                "/tmp/gemlab/test_constraints_interior_nodes_hex20.svg",
+                "/tmp/gemlab/test_block_constraints_interior_nodes_hex20.svg",
                 |_| {},
             );
         }
