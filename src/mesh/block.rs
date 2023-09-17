@@ -975,7 +975,7 @@ impl Block {
 mod tests {
     use super::{ArgsRing, Block, Constraint2D, Constraint3D};
     use crate::geometry::point_point_distance;
-    use crate::mesh::{draw_mesh, Draw, Extract, Features, Mesh, Samples};
+    use crate::mesh::{draw_mesh, Extract, Features, Figure, Mesh, Samples};
     use crate::shapes::GeoKind;
     use plotpy::{Canvas, Plot, Surface};
     use russell_chk::{approx_eq, vec_approx_eq};
@@ -1017,7 +1017,7 @@ mod tests {
         plot.add(&circle_mid);
         plot.add(&circle_out);
         // draw mesh
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.canvas_point_ids
             .set_bbox(false)
             .set_align_horizontal("left")
@@ -1041,7 +1041,7 @@ mod tests {
 
     fn draw_mesh_and_block(plot: &mut Plot, mesh: Mesh, block: &Block, set_range: bool, filename: &str) {
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         block.draw(plot, false, set_range).unwrap();
         draw.canvas_point_ids
             .set_bbox(false)

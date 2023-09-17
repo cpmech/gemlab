@@ -250,7 +250,7 @@ impl Unstructured {
 mod tests {
     use super::Unstructured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{At, Draw, Find, Mesh};
+    use crate::mesh::{At, Figure, Find, Mesh};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
     use plotpy::Plot;
@@ -466,7 +466,7 @@ mod tests {
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri15, None).unwrap();
         if SAVE_FIGURE {
             let mut plot = Plot::new();
-            let mut draw = Draw::new();
+            let mut draw = Figure::new();
             draw.cells(&mut plot, &mesh, true).unwrap();
             draw.point_ids(&mut plot, &mesh);
             plot.grid_and_labels("x", "y");

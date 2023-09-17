@@ -300,7 +300,7 @@ pub fn draw_cell(
 }
 
 /// Implements functions to draw cells, edges and faces
-pub struct Draw {
+pub struct Figure {
     /// Canvas to draw edges
     pub canvas_edges: Canvas,
 
@@ -320,7 +320,7 @@ pub struct Draw {
     pub canvas_lin_cells: Canvas,
 }
 
-impl Draw {
+impl Figure {
     /// Allocates a new instance
     pub fn new() -> Self {
         let mut canvas_edges = Canvas::new();
@@ -368,7 +368,7 @@ impl Draw {
             .set_face_color("None")
             .set_edge_color("#cd0000")
             .set_line_width(3.0);
-        Draw {
+        Figure {
             canvas_edges,
             canvas_points,
             canvas_point_ids,
@@ -582,7 +582,7 @@ where
     P: AsRef<OsStr> + ?Sized,
 {
     let mut plot = Plot::new();
-    let mut draw = Draw::new();
+    let mut draw = Figure::new();
     draw.cells(&mut plot, &mesh, true)?;
     if with_cell_ids {
         draw.cell_ids(&mut plot, mesh)?;
@@ -606,7 +606,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{add_curve, Draw};
+    use super::{add_curve, Figure};
     use crate::mesh::{Extract, Features, Mesh, Samples};
     use crate::shapes::GeoKind;
     use plotpy::{Canvas, Plot, Text};
@@ -708,7 +708,7 @@ mod tests {
         // lin cells
         let mesh = Samples::lin_cells();
         let mut plot = Plot::new();
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
 
@@ -732,7 +732,7 @@ mod tests {
         // lin cells in 3d
         let mesh = Samples::lin_cells_3d();
         let mut plot = Plot::new();
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
 
@@ -754,7 +754,7 @@ mod tests {
         // tri cells
         let mesh = Samples::tri_cells();
         let mut plot = Plot::new();
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
 
@@ -777,7 +777,7 @@ mod tests {
 
         let mesh = Samples::qua_cells();
         let mut plot = Plot::new();
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
 
@@ -802,7 +802,7 @@ mod tests {
 
         let mesh = Samples::tet_cells();
         let mut plot = Plot::new();
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
 
@@ -822,7 +822,7 @@ mod tests {
 
         let mesh = Samples::hex_cells();
         let mut plot = Plot::new();
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
 
@@ -842,7 +842,7 @@ mod tests {
 
         let mut plot = draw_reference_circles();
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.cells(&mut plot, &mesh, true).unwrap();
         draw.points(&mut plot, &mesh);
 
@@ -863,7 +863,7 @@ mod tests {
         // draw edges
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.edges(&mut plot, &mesh, &features, false).unwrap();
 
         // draw points and point ids
@@ -895,7 +895,7 @@ mod tests {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua12();
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
@@ -913,7 +913,7 @@ mod tests {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua16();
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
@@ -931,7 +931,7 @@ mod tests {
         let mut plot = Plot::new();
         let mesh = Samples::block_2d_four_qua17();
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
 
@@ -948,7 +948,7 @@ mod tests {
         let mut plot = Plot::new();
         let mesh = Samples::mixed_shapes_2d();
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
@@ -966,7 +966,7 @@ mod tests {
         let mut plot = Plot::new();
         let mesh = Samples::two_hex8();
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.canvas_point_ids
             .set_align_horizontal("left")
@@ -992,7 +992,7 @@ mod tests {
         let mut plot = Plot::new();
         let mesh = Samples::block_3d_eight_hex20();
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
@@ -1010,7 +1010,7 @@ mod tests {
         let mut plot = Plot::new();
         let mesh = Samples::mixed_shapes_3d();
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
         draw.cell_ids(&mut plot, &mesh).unwrap();
@@ -1028,7 +1028,7 @@ mod tests {
         let mut plot = Plot::new();
         let mesh = Samples::qua8_tri6_lin2();
         let features = Features::new(&mesh, Extract::All);
-        let mut draw = Draw::new();
+        let mut draw = Figure::new();
         draw.edges(&mut plot, &mesh, &features, true).unwrap();
         draw.point_ids(&mut plot, &mesh);
 
