@@ -1,5 +1,4 @@
 use super::{Cell, Features, Mesh, Point};
-use crate::mesh::Extract;
 use crate::util::GridSearch;
 use crate::StrError;
 
@@ -16,7 +15,7 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     }
 
     // find the boundary of mesh A
-    let boundary_a = Features::new(a, Extract::Boundary);
+    let boundary_a = Features::new(a, false);
 
     // allocate and prepare a GridSearch for mesh A
     let mut grid_a = GridSearch::new(&boundary_a.min, &boundary_a.max, None, None, None)?;
@@ -32,7 +31,7 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     let mut map_old_to_new_point_id_b = vec![0; b.points.len()];
     for m in 0..b.points.len() {
         let x = &b.points[m].coords;
-        let maybe_point_id_a = if grid_a.is_outside(x) { None } else { grid_a.find(x)? };
+        let maybe_point_id_a = if grid_a.is_outside(x) { None } else { grid_a.search(x)? };
         let id = match maybe_point_id_a {
             Some(point_id_a) => point_id_a,
             None => {

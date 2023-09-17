@@ -1,4 +1,4 @@
-use crate::mesh::{EdgeKey, Extract, Feature, MapEdge2dToCells, Mesh, PointId};
+use crate::mesh::{EdgeKey, Feature, MapEdge2dToCells, Mesh, PointId};
 use std::collections::{HashMap, HashSet};
 
 /// Extracts mesh features in 2D
@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 pub(crate) fn extract_features_2d(
     mesh: &Mesh,
     all_2d_edges: &MapEdge2dToCells,
-    extract: Extract,
+    extract_all: bool,
 ) -> (HashSet<PointId>, HashMap<EdgeKey, Feature>, Vec<f64>, Vec<f64>) {
     assert_eq!(mesh.ndim, 2);
 
@@ -23,10 +23,10 @@ pub(crate) fn extract_features_2d(
     // loop over all edges
     for (edge_key, shared_by) in all_2d_edges {
         // accept feature?
-        let accept = match extract {
-            Extract::All => true,
-            Extract::Boundary => shared_by.len() == 1, // boundary edge; with only one shared cell
-            Extract::Interior => shared_by.len() != 1, // interior edge; shared by multiple cells
+        let accept = if extract_all {
+            true
+        } else {
+            shared_by.len() == 1 // boundary edge; with only one shared cell
         };
         if !accept {
             continue;
@@ -64,7 +64,7 @@ pub(crate) fn extract_features_2d(
 mod tests {
     use super::extract_features_2d;
     use crate::mesh::algorithms::extract_all_2d_edges;
-    use crate::mesh::{EdgeKey, Extract, Feature, PointId, Samples};
+    use crate::mesh::{EdgeKey, Feature, PointId, Samples};
     use crate::util::AsArray2D;
     use russell_chk::vec_approx_eq;
     use std::collections::HashMap;
@@ -93,7 +93,7 @@ mod tests {
         //  0---------1---------4
         let mesh = Samples::two_qua4();
         let all_2d_edges = extract_all_2d_edges(&mesh);
-        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, Extract::Boundary);
+        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, false);
         let correct_keys = [(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [4, 1], [3, 2], [2, 5], [5, 4]];
         validate_edges(&edges, &correct_keys, &correct_points);
@@ -113,7 +113,7 @@ mod tests {
         //  0---------1---------4
         let mesh = Samples::two_qua4();
         let all_2d_edges = extract_all_2d_edges(&mesh);
-        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, Extract::All);
+        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, true);
         let correct_keys = [(0, 1), (0, 3), (1, 2), (1, 4), (2, 3), (2, 5), (4, 5)];
         let correct_points = [[1, 0], [0, 3], [2, 1], [4, 1], [3, 2], [2, 5], [5, 4]];
         validate_edges(&edges, &correct_keys, &correct_points);
@@ -125,26 +125,6 @@ mod tests {
     }
 
     #[test]
-    fn extract_features_2d_works_interior() {
-        //  3---------2---------5
-        //  |         |         |
-        //  |   [0]   |   [1]   |
-        //  |         |         |
-        //  0---------1---------4
-        let mesh = Samples::two_qua4();
-        let all_2d_edges = extract_all_2d_edges(&mesh);
-        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, Extract::Interior);
-        let correct_keys = [(1, 2)];
-        let correct_points = [[2, 1]];
-        validate_edges(&edges, &correct_keys, &correct_points);
-        assert_eq!(min, &[1.0, 0.0]);
-        assert_eq!(max, &[1.0, 1.0]);
-        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
-        points.sort();
-        assert_eq!(points, &[1, 2]);
-    }
-
-    #[test]
     fn extract_features_2d_mixed_works() {
         //           4---------3
         //           |         |
@@ -153,7 +133,7 @@ mod tests {
         //  0--------1---------2--------5
         let mesh = Samples::mixed_shapes_2d();
         let all_2d_edges = extract_all_2d_edges(&mesh);
-        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, Extract::Boundary);
+        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, false);
         let correct_keys = [(1, 2), (1, 4), (2, 3), (3, 4)];
         let correct_points = [[2, 1], [1, 4], [3, 2], [4, 3]];
         validate_edges(&edges, &correct_keys, &correct_points);
@@ -181,7 +161,7 @@ mod tests {
         //  0----4-----8----1---18---21----16
         let mesh = Samples::block_2d_four_qua16();
         let all_2d_edges = extract_all_2d_edges(&mesh);
-        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, Extract::Boundary);
+        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, false);
         let correct_keys = [(0, 1), (0, 3), (1, 16), (3, 29), (16, 17), (17, 40), (28, 29), (28, 40)];
         let correct_points = [
             [1, 0, 8, 4],
@@ -221,7 +201,7 @@ mod tests {
         //  0----4-----8----1---18---21----16
         let mesh = Samples::block_2d_four_qua16();
         let all_2d_edges = extract_all_2d_edges(&mesh);
-        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, Extract::All);
+        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, true);
         let correct_keys = [
             (0, 1),
             (0, 3),
@@ -285,7 +265,7 @@ mod tests {
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let all_2d_edges = extract_all_2d_edges(&mesh);
-        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, Extract::Boundary);
+        let (points, edges, min, max) = extract_features_2d(&mesh, &all_2d_edges, false);
         let correct_keys = [
             (0, 1),
             (0, 3),
@@ -322,61 +302,6 @@ mod tests {
         assert_eq!(
             points,
             &[0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 13, 14, 15, 16, 23, 24, 25, 27, 28, 30, 31, 33, 34, 36,]
-        );
-    }
-
-    #[test]
-    fn extract_features_2d_ring_interior_works() {
-        // 2.0   14---36--,__11
-        //        |          `,-..33
-        // 1.75  24   [7]   22     `-,
-        //        |         ,  [5]    ,8.
-        // 1.5   13--35--10/        20   `*
-        //        |       ,`*32    ,'      30
-        // 1.25  23 [6] 21     *.7     [3]   *
-        //        |     ,  [4]  , *.          5
-        // 1.0   12-34-9      19    29     18' *
-        //              `31. ,' [2]   *  _,     *
-        //                  6.       _.4'        *
-        //                   28  _.17   *   [1]  27
-        //                     3'  [0]  26        *
-        //                     25        *        *
-        //        +             0---15---1---16---2
-        //
-        //                     1.0 1.25  1.5 1.75  2.0
-        let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let all_2d_edges = extract_all_2d_edges(&mesh);
-        let (points, edges, _, _) = extract_features_2d(&mesh, &all_2d_edges, Extract::Interior);
-        let correct_keys = [
-            (1, 4),
-            (3, 4),
-            (4, 5),
-            (4, 7),
-            (6, 7),
-            (7, 8),
-            (7, 10),
-            (9, 10),
-            (10, 11),
-            (10, 13),
-        ];
-        let correct_points = [
-            [4, 1, 26],
-            [3, 4, 17],
-            [4, 5, 18],
-            [7, 4, 29],
-            [6, 7, 19],
-            [7, 8, 20],
-            [10, 7, 32],
-            [9, 10, 21],
-            [10, 11, 22],
-            [13, 10, 35],
-        ];
-        validate_edges(&edges, &correct_keys, &correct_points);
-        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
-        points.sort();
-        assert_eq!(
-            points,
-            &[1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 17, 18, 19, 20, 21, 22, 26, 29, 32, 35]
         );
     }
 }

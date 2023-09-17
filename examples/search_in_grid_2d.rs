@@ -76,21 +76,21 @@ fn main() -> Result<(), StrError> {
     grid.draw(&mut plot)?;
     plot.set_equal_axes(true)
         .set_figure_size_points(600.0, 600.0)
-        .save("/tmp/gemlab/example_find_in_grid_2d.svg")?;
+        .save("/tmp/gemlab/example_search_in_grid_2d.svg")?;
 
-    // find points on circles
+    // search points on circles
     let mut start_id = 0;
     let mut end_id = NPOINT;
     for c in &circles {
-        let res = grid.find_on_circle(&c.center, c.radius, |_| true)?;
+        let res = grid.search_on_circle(&c.center, c.radius, |_| true)?;
         check(&res, &(start_id..end_id).collect::<Vec<_>>());
         start_id += NPOINT;
         end_id += NPOINT;
     }
 
-    // find points on segments
+    // search points on segments
     for s in &segments {
-        let res = grid.find_on_line(&s.a, &s.b, |_| true)?;
+        let res = grid.search_on_line(&s.a, &s.b, |_| true)?;
         check(&res, &(start_id..end_id).collect::<Vec<_>>());
         start_id += NPOINT;
         end_id += NPOINT;

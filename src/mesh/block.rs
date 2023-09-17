@@ -653,7 +653,7 @@ impl Block {
 
                         // look up existent point in the reference space of the block
                         // or create new point
-                        let point_id = match grid_ksi.find(&ksi)? {
+                        let point_id = match grid_ksi.search(&ksi)? {
                             Some(point_id) => point_id,
                             None => {
                                 // insert point id in grid-search
@@ -981,7 +981,7 @@ mod tests {
     use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::math::{PI, SQRT_2};
 
-    const SAVE_FIGURE: bool = true;
+    const SAVE_FIGURE: bool = false;
 
     fn draw_ring(mesh: &Mesh, args: &ArgsRing, filename: &str) {
         let mut circle_in = Canvas::new();

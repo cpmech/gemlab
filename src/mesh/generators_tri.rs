@@ -250,14 +250,14 @@ impl Unstructured {
 mod tests {
     use super::Unstructured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{At, Figure, Find, Mesh};
+    use crate::mesh::{At, Features, Figure, Mesh};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
     use russell_chk::approx_eq;
 
     const RMIN: f64 = 3.0;
     const RMAX: f64 = 6.0;
-    const SAVE_FIGURE: bool = true;
+    const SAVE_FIGURE: bool = false;
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
@@ -285,20 +285,20 @@ mod tests {
     }
 
     fn check_corner_markers(mesh: &Mesh) {
-        let find = Find::new(mesh, None);
-        let res = find.point_ids(At::XY(RMIN, 0.0), any_x).unwrap();
+        let feat = Features::new(mesh, false);
+        let res = feat.search_point_ids(At::XY(RMIN, 0.0), any_x).unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(mesh.points[res[0]].marker, -1);
 
-        let res = find.point_ids(At::XY(RMAX, 0.0), any_x).unwrap();
+        let res = feat.search_point_ids(At::XY(RMAX, 0.0), any_x).unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(mesh.points[res[0]].marker, -2);
 
-        let res = find.point_ids(At::XY(0.0, RMAX), any_x).unwrap();
+        let res = feat.search_point_ids(At::XY(0.0, RMAX), any_x).unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(mesh.points[res[0]].marker, -3);
 
-        let res = find.point_ids(At::XY(0.0, RMIN), any_x).unwrap();
+        let res = feat.search_point_ids(At::XY(0.0, RMIN), any_x).unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(mesh.points[res[0]].marker, -4);
     }
