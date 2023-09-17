@@ -422,8 +422,8 @@ impl Find {
     ///
     /// * `at` -- the "main" constraint
     /// * `filter` -- function `fn(x) -> bool` that returns true to **keep** the coordinate just found
-    ///   (yields only the elements for which the closure returns true). Use [crate::util::any_x] to
-    ///   allow any point in the resulting array.
+    ///   (yields only the elements for which the closure returns true).
+    ///   Use `|_| true` or [crate::util::any_x] to allow any point in the resulting array.
     ///
     /// # Output
     ///
