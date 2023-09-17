@@ -1916,7 +1916,7 @@ mod tests {
     use super::Samples;
     use crate::mesh::{Figure, Mesh};
 
-    const SAVE_FIGURE: bool = true;
+    const SAVE_FIGURE: bool = false;
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();

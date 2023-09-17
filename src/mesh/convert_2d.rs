@@ -83,7 +83,7 @@ impl Mesh {
 
         // find neighbors in the original mesh
         let source_features = Features::new(self, Extract::All);
-        let source_edges = source_features.all_2d_edges.unwrap();
+        let source_edges = source_features.all_2d_edges;
 
         // flag indicating that a connectivity point has not been set
         const UNSET: usize = usize::MAX;
@@ -208,7 +208,7 @@ mod tests {
     use crate::shapes::GeoKind;
     use russell_chk::vec_approx_eq;
 
-    const SAVE_FIGURE: bool = true;
+    const SAVE_FIGURE: bool = false;
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
