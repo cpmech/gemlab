@@ -191,7 +191,7 @@ pub struct Features {
     /// 1. Here, a boundary point is such that it belongs to a boundary edge or a boundary face
     /// 2. An interior point is such that it belongs to an interior edge or an interior face
     /// 3. Thus, for the interior case, we save only the points on interior edges and faces
-    ///    and **not** inside cells. For example, the middle nodes of a Qua9 are not saved.
+    ///    and **not** inside cells. For example, the central nodes of a Qua9 are not saved.
     pub points: HashSet<PointId>,
 
     /// Set of edges on the mesh boundary, interior, or both boundary and interior
