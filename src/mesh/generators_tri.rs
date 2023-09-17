@@ -261,14 +261,14 @@ mod tests {
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
-        fig.param_cell_ids = true;
-        fig.param_point_ids = true;
+        fig.cell_ids = true;
+        fig.point_ids = true;
         if larger {
-            fig.param_figure_size = Some((800.0, 800.0));
+            fig.figure_size = Some((800.0, 800.0));
         } else {
-            fig.param_figure_size = Some((600.0, 600.0));
+            fig.figure_size = Some((600.0, 600.0));
         }
-        mesh.draw(Some(fig), filename).unwrap();
+        mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
     }
 
     fn check_constraints(mesh: &Mesh) {

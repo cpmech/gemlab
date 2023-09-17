@@ -8,46 +8,60 @@ use std::ffi::OsStr;
 /// Implements functions to draw cells, edges and faces
 pub struct Figure {
     /// The plotpy structure to draw figures (plots)
+    ///
+    /// **Note:** May be accessed externally to perform some additional configuration.
     pub plot: Plot,
 
     /// Canvas to draw edges
+    ///
+    /// **Note:** May be accessed externally to perform some additional configuration.
     pub canvas_edges: Canvas,
 
     /// Canvas to draw points (markers)
+    ///
+    /// **Note:** May be accessed externally to perform some additional configuration.
     pub canvas_points: Curve,
 
     /// Canvas to draw point ids
+    ///
+    /// **Note:** May be accessed externally to perform some additional configuration.
     pub canvas_point_ids: Text,
 
     /// Canvas to draw cell ids
+    ///
+    /// **Note:** May be accessed externally to perform some additional configuration.
     pub canvas_cell_ids: Text,
 
     /// Canvas to draw cells
+    ///
+    /// **Note:** May be accessed externally to perform some additional configuration.
     pub canvas_cells: Canvas,
 
     /// Canvas to draw lin cells
+    ///
+    /// **Note:** May be accessed externally to perform some additional configuration.
     pub canvas_lin_cells: Canvas,
 
     /// Parameter: draw cell ids
-    pub param_cell_ids: bool,
+    pub cell_ids: bool,
 
     /// Parameter: draw point ids
-    pub param_point_ids: bool,
+    pub point_ids: bool,
 
     /// Parameter: draw point dots
-    pub param_point_dots: bool,
+    pub point_dots: bool,
 
-    /// Parameter: plot without equal axes
-    pub param_not_equal_exes: bool,
+    /// Parameter: generate the plot without equal axes
+    pub not_equal_exes: bool,
 
     /// Parameter: specifies the plot range (xmin, xmax, ymin, ymax)
-    pub param_range_2d: Option<(f64, f64, f64, f64)>,
+    pub range_2d: Option<(f64, f64, f64, f64)>,
 
     /// Parameter: specifies the plot range (xmin, xmax, ymin, ymax, zmin, zmax)
-    pub param_range_3d: Option<(f64, f64, f64, f64, f64, f64)>,
+    pub range_3d: Option<(f64, f64, f64, f64, f64, f64)>,
 
-    /// Parameter: figure size in points
-    pub param_figure_size: Option<(f64, f64)>,
+    /// Parameter: specifies the figure size in points
+    pub figure_size: Option<(f64, f64)>,
 }
 
 impl Figure {
@@ -106,13 +120,13 @@ impl Figure {
             canvas_cell_ids,
             canvas_cells,
             canvas_lin_cells,
-            param_cell_ids: false,
-            param_point_ids: false,
-            param_point_dots: false,
-            param_not_equal_exes: false,
-            param_range_2d: None,
-            param_range_3d: None,
-            param_figure_size: None,
+            cell_ids: false,
+            point_ids: false,
+            point_dots: false,
+            not_equal_exes: false,
+            range_2d: None,
+            range_3d: None,
+            figure_size: None,
         }
     }
 }
@@ -255,39 +269,49 @@ impl Mesh {
     ///
     /// * `fig` -- the Figure struct (optional => use default configuration)
     /// * `filepath` -- may be a String, &str, or Path
-    pub fn draw<P>(&self, fig: Option<Figure>, filepath: &P) -> Result<(), StrError>
+    /// * `extra` -- is a function to perform some {pre,post}-drawing on the plot area.
+    ///   The two arguments of this function are:
+    ///     * `plot: &mut Plot` -- the `plot` reference that can be used perform some extra drawings.
+    ///     * `before: bool` -- **true** indicates that the function is being called before all other
+    ///       drawing functions. Otherwise, **false* indicates that the function is being called after
+    ///       all other drawing functions, and just before the `plot.save` call.
+    ///   For example, use `|_, _| {}` to do nothing.
+    pub fn draw<P, F>(&self, fig: Option<Figure>, filepath: &P, mut extra: F) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
+        F: FnMut(&mut Plot, bool),
     {
         let mut figure = if let Some(f) = fig { f } else { Figure::new() };
+        extra(&mut figure.plot, true);
         self.draw_cells(&mut figure, true)?;
-        if figure.param_cell_ids {
+        if figure.cell_ids {
             self.draw_cell_ids(&mut figure)?;
         }
-        if figure.param_point_dots {
+        if figure.point_dots {
             self.draw_point_dots(&mut figure);
         }
-        if figure.param_point_ids {
+        if figure.point_ids {
             self.draw_point_ids(&mut figure);
         }
         if self.ndim == 2 {
             figure.plot.grid_and_labels("x", "y");
         }
-        if !figure.param_not_equal_exes {
+        if !figure.not_equal_exes {
             figure.plot.set_equal_axes(true);
         }
         if self.ndim == 2 {
-            if let Some((xmin, xmax, ymin, ymax)) = figure.param_range_2d {
+            if let Some((xmin, xmax, ymin, ymax)) = figure.range_2d {
                 figure.plot.set_range(xmin, xmax, ymin, ymax);
             }
         } else {
-            if let Some((xmin, xmax, ymin, ymax, zmin, zmax)) = figure.param_range_3d {
+            if let Some((xmin, xmax, ymin, ymax, zmin, zmax)) = figure.range_3d {
                 figure.plot.set_range_3d(xmin, xmax, ymin, ymax, zmin, zmax);
             }
         }
-        if let Some((width, height)) = figure.param_figure_size {
+        if let Some((width, height)) = figure.figure_size {
             figure.plot.set_figure_size_points(width, height);
         }
+        extra(&mut figure.plot, false);
         figure.plot.save(filepath)
     }
 }
@@ -300,7 +324,7 @@ mod tests {
     use crate::mesh::{Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
-    const SAVE_FIGURE: bool = true;
+    const SAVE_FIGURE: bool = false;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
@@ -341,33 +365,9 @@ mod tests {
         plot.add(labels);
     }
 
-    fn draw_reference_circles(plot: &mut Plot) {
-        let mut circle_in = Canvas::new();
-        let mut circle_mi = Canvas::new();
-        let mut circle_ou = Canvas::new();
-        circle_in
-            .set_face_color("None")
-            .set_edge_color("#bfbfbf")
-            .set_line_width(7.0)
-            .draw_circle(0.0, 0.0, 1.0);
-        circle_mi
-            .set_face_color("None")
-            .set_edge_color("#bfbfbf")
-            .set_line_width(7.0)
-            .draw_circle(0.0, 0.0, 1.5);
-        circle_ou
-            .set_face_color("None")
-            .set_edge_color("#bfbfbf")
-            .set_line_width(7.0)
-            .draw_circle(0.0, 0.0, 2.0);
-        plot.add(&circle_in);
-        plot.add(&circle_mi);
-        plot.add(&circle_ou);
-    }
-
     #[test]
     fn draw_cells_and_points_work() {
-        // lin cells
+        // lin cells ---------------------------------------------------------------------------
         let mesh = Samples::lin_cells();
         let mut fig = Figure::new();
         mesh.draw_cells(&mut fig, true).unwrap();
@@ -391,7 +391,7 @@ mod tests {
                 .unwrap();
         }
 
-        // lin cells in 3d
+        // lin cells in 3d ---------------------------------------------------------------------
         let mesh = Samples::lin_cells_3d();
         let mut fig = Figure::new();
         mesh.draw_cells(&mut fig, true).unwrap();
@@ -413,7 +413,7 @@ mod tests {
                 .unwrap();
         }
 
-        // tri cells
+        // tri cells ---------------------------------------------------------------------------
         let mesh = Samples::tri_cells();
         let mut fig = Figure::new();
         mesh.draw_cells(&mut fig, true).unwrap();
@@ -437,6 +437,7 @@ mod tests {
                 .unwrap();
         }
 
+        // qua cells ---------------------------------------------------------------------------
         let mesh = Samples::qua_cells();
         let mut fig = Figure::new();
         mesh.draw_cells(&mut fig, true).unwrap();
@@ -462,6 +463,7 @@ mod tests {
                 .unwrap();
         }
 
+        // tet cells ---------------------------------------------------------------------------
         let mesh = Samples::tet_cells();
         let mut fig = Figure::new();
         mesh.draw_cells(&mut fig, true).unwrap();
@@ -482,6 +484,7 @@ mod tests {
                 .unwrap();
         }
 
+        // hex cells ---------------------------------------------------------------------------
         let mesh = Samples::hex_cells();
         let mut fig = Figure::new();
         mesh.draw_cells(&mut fig, true).unwrap();
@@ -490,9 +493,9 @@ mod tests {
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
             draw_cell_local_ids(&mut fig.plot, &mut labels, &mesh, 0.03, 0.0, 0.03);
-            caption.draw_3d(0.5, -0.15, 0.0, "Hex8");
-            caption.draw_3d(2.3, -0.15, 0.0, "Hex20");
-            caption.draw_3d(1.1, 1.1, 1.3, "Hex32");
+            caption.draw_3d(0.5, -0.25, 0.0, "Hex8");
+            caption.draw_3d(2.3, -0.25, 0.0, "Hex20");
+            caption.draw_3d(0.3, 1.1, 2.0, "Hex32");
             fig.plot.add(&caption);
             fig.plot
                 .set_figure_size_points(600.0, 600.0)
@@ -502,13 +505,34 @@ mod tests {
                 .unwrap();
         }
 
-        draw_reference_circles(&mut fig.plot);
+        // ring --------------------------------------------------------------------------------
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let mut fig = Figure::new();
         mesh.draw_cells(&mut fig, true).unwrap();
         mesh.draw_point_dots(&mut fig);
 
         if SAVE_FIGURE {
+            let mut circle_in = Canvas::new();
+            let mut circle_mi = Canvas::new();
+            let mut circle_ou = Canvas::new();
+            circle_in
+                .set_face_color("None")
+                .set_edge_color("#bfbfbfbb")
+                .set_line_width(7.0)
+                .draw_circle(0.0, 0.0, 1.0);
+            circle_mi
+                .set_face_color("None")
+                .set_edge_color("#bfbfbfbb")
+                .set_line_width(7.0)
+                .draw_circle(0.0, 0.0, 1.5);
+            circle_ou
+                .set_face_color("None")
+                .set_edge_color("#bfbfbfbb")
+                .set_line_width(7.0)
+                .draw_circle(0.0, 0.0, 2.0);
+            fig.plot.add(&circle_in);
+            fig.plot.add(&circle_mi);
+            fig.plot.add(&circle_ou);
             fig.plot
                 .set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)

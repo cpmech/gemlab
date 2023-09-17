@@ -1925,7 +1925,7 @@ mod tests {
         if larger {
             fig.figure_size = Some((600.0, 600.0));
         }
-        mesh.draw(Some(fig), filename, |_| {}).unwrap();
+        mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
     }
 
     #[test]

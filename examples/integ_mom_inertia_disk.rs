@@ -68,14 +68,14 @@ fn main() -> Result<(), StrError> {
 
     // draw meshes
     let mut fig_1 = Figure::new();
-    fig_1.param_cell_ids = true;
-    fig_1.param_point_ids = true;
-    fig_1.param_figure_size = Some((800.0, 800.0));
-    mesh_1.draw(Some(fig_1), "/tmp/gemlab/example_mom_inertia_disk_1.svg")?;
+    fig_1.cell_ids = true;
+    fig_1.point_ids = true;
+    fig_1.figure_size = Some((800.0, 800.0));
+    mesh_1.draw(Some(fig_1), "/tmp/gemlab/example_mom_inertia_disk_1.svg", |_, _| {})?;
 
     let mut fig_2 = Figure::new();
-    fig_2.param_cell_ids = true;
-    fig_2.param_point_ids = true;
-    fig_2.param_figure_size = Some((800.0, 800.0));
-    mesh_2.draw(Some(fig_2), "/tmp/gemlab/example_mom_inertia_disk_2.svg")
+    fig_2.cell_ids = true;
+    fig_2.point_ids = true;
+    fig_2.figure_size = Some((800.0, 800.0));
+    mesh_2.draw(Some(fig_2), "/tmp/gemlab/example_mom_inertia_disk_2.svg", |_, _| {})
 }

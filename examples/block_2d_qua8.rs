@@ -71,7 +71,7 @@ fn main() -> Result<(), StrError> {
     assert_eq!(format!("{}", mesh), correct);
 
     let mut fig = Figure::new();
-    fig.param_cell_ids = true;
-    fig.param_point_ids = true;
-    mesh.draw(Some(fig), "/tmp/gemlab/example_block_2d_qua8.svg")
+    fig.cell_ids = true;
+    fig.point_ids = true;
+    mesh.draw(Some(fig), "/tmp/gemlab/example_block_2d_qua8.svg", |_, _| {})
 }
