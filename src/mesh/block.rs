@@ -1,5 +1,5 @@
 use super::{Cell, Mesh, Point};
-use crate::mesh::{set_pad_coords, PointId};
+use crate::mesh::PointId;
 use crate::shapes::{GeoClass, GeoKind, Scratchpad, HEX_EDGE_TO_FACE};
 use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
@@ -712,10 +712,9 @@ impl Block {
                                     continue; // skip edge that doesn't contain the constrained point
                                 }
                                 // set Lin2 with the first two (corner) points of target's edge
-                                set_pad_coords(
+                                mesh.set_pad(
                                     &mut pad_lin2,
                                     &[points[target.edge_node_id(e, 0)], points[target.edge_node_id(e, 1)]],
-                                    &mesh,
                                 );
                                 // only change the coordinates of the middle edge nodes: idx >= 2
                                 for idx in 2..target_edge_nnode {
@@ -738,7 +737,7 @@ impl Block {
                             if let Some(ref mut pad_ser) = serendipity {
                                 let nn = pad_ser.interp.dim();
                                 let pts = points[0..nn].to_vec();
-                                set_pad_coords(pad_ser, &pts, &mesh);
+                                mesh.set_pad(pad_ser, &pts);
                                 for idx in 0..target_n_interior_nodes {
                                     let m = target.interior_node(idx);
                                     let ksi_interior = target.reference_coords(m);

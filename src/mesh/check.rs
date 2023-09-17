@@ -1,4 +1,4 @@
-use super::{get_mesh_limits, set_pad_coords, EdgeKey, FaceKey, Feature, Mesh};
+use super::{EdgeKey, FaceKey, Feature, Mesh};
 use crate::shapes::DET_JAC_NOT_AVAILABLE;
 use crate::shapes::{geo_case, GeoCase, Scratchpad};
 use crate::util::GridSearch;
@@ -45,7 +45,7 @@ impl Mesh {
         let ksi = [ONE_BY_3, ONE_BY_3, ONE_BY_3];
         for cell in &self.cells {
             let mut pad = Scratchpad::new(self.ndim, cell.kind)?;
-            set_pad_coords(&mut pad, &cell.points, self);
+            self.set_pad(&mut pad, &cell.points);
             let det_jac = pad.calc_jacobian(&ksi)?;
             if geo_case(cell.kind.ndim(), self.ndim) == GeoCase::Shell {
                 assert_eq!(det_jac, DET_JAC_NOT_AVAILABLE);
@@ -80,7 +80,7 @@ impl Mesh {
         for (edge_key, (correct_mag_n, correct_un)) in solutions {
             let edge = edges.get(edge_key).ok_or("cannot find edge_key in edges map")?;
             let mut pad = Scratchpad::new(self.ndim, edge.kind)?;
-            set_pad_coords(&mut pad, &edge.points, self);
+            self.set_pad(&mut pad, &edge.points);
             let mag_n = pad.calc_normal_vector(&mut un, ksi)?;
             approx_eq(mag_n, *correct_mag_n, tolerance);
             for i in 0..self.ndim {
@@ -106,7 +106,7 @@ impl Mesh {
         for (face_key, (correct_mag_n, correct_un)) in solutions {
             let face = faces.get(face_key).ok_or("cannot find face_key in faces map")?;
             let mut pad = Scratchpad::new(self.ndim, face.kind)?;
-            set_pad_coords(&mut pad, &face.points, self);
+            self.set_pad(&mut pad, &face.points);
             let mag_n = pad.calc_normal_vector(&mut un, ksi)?;
             approx_eq(mag_n, *correct_mag_n, tolerance);
             for i in 0..self.ndim {
@@ -120,7 +120,7 @@ impl Mesh {
 
     /// Checks if there are overlapping points
     pub fn check_overlapping_points(&self, tol: f64) -> Result<(), StrError> {
-        let (xmin, xmax) = get_mesh_limits(self);
+        let (xmin, xmax) = self.get_limits();
         let mut grid = GridSearch::new(&xmin, &xmax, Some(5), Some(tol), None)?;
         for point in &self.points {
             grid.insert(point.id, &point.coords)?;

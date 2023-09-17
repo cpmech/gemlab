@@ -1,5 +1,4 @@
 use gemlab::integ::{self, AnalyticalTri3, CommonArgs};
-use gemlab::mesh::set_pad_coords;
 use gemlab::prelude::*;
 use gemlab::shapes::{GeoClass, GeoKind, Scratchpad, Tri3};
 use russell_chk::vec_approx_eq;
@@ -26,9 +25,9 @@ fn generate_pads() -> (Scratchpad, Scratchpad, Scratchpad, AnalyticalTri3) {
     let mut pad_tri = Scratchpad::new(2, GeoKind::Tri3).unwrap();
     let mut pad_conv = Scratchpad::new(2, GeoKind::Lin2).unwrap();
     let mut pad_flux = Scratchpad::new(2, GeoKind::Lin2).unwrap();
-    set_pad_coords(&mut pad_tri, &mesh.cells[0].points, &mesh);
-    set_pad_coords(&mut pad_conv, &Tri3::EDGE_NODE_IDS[0], &mesh);
-    set_pad_coords(&mut pad_flux, &Tri3::EDGE_NODE_IDS[1], &mesh);
+    mesh.set_pad(&mut pad_tri, &mesh.cells[0].points);
+    mesh.set_pad(&mut pad_conv, &Tri3::EDGE_NODE_IDS[0]);
+    mesh.set_pad(&mut pad_flux, &Tri3::EDGE_NODE_IDS[1]);
     let ana = AnalyticalTri3::new(&pad_tri);
     (pad_tri, pad_conv, pad_flux, ana)
 }

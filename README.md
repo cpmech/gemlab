@@ -31,7 +31,7 @@ gemlab = "*"
 
 ```rust
 use gemlab::integ;
-use gemlab::mesh::{set_pad_coords, At, Extract, Features, Find, Mesh};
+use gemlab::mesh::{At, Extract, Features, Find, Mesh};
 use gemlab::shapes::Scratchpad;
 use gemlab::StrError;
 use std::collections::HashSet;
@@ -65,7 +65,7 @@ fn main() -> Result<(), StrError> {
     let ndim = 2;
     let cell_2 = &mesh.cells[2];
     let mut pad = Scratchpad::new(ndim, cell_2.kind)?;
-    set_pad_coords(&mut pad, &cell_2.points, &mesh);
+    mesh.set_pad(&mut pad, &cell_2.points);
     let ips = integ::default_points(cell_2.kind);
     let mut area = 0.0;
     for p in 0..ips.len() {
