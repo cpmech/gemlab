@@ -287,7 +287,7 @@ impl<'a> GridCells<'a> {
         return false; // TODO
     }
 
-    /// Finds the cell where the given point falls in
+    /// Searches the cell where the given point falls in
     ///
     /// # Input
     ///
@@ -298,7 +298,7 @@ impl<'a> GridCells<'a> {
     /// * `ksi_or_zeta` -- (len = 4) If Tri3 or Tet4, returns zeta; Otherwise returns ksi.
     ///   `ksi` are the natural coordinates (ndim) and `zeta` are the triangle/tetrahedron coordinates (ndim+1)
     /// * returns the index of the cell or None if no cell contains the point
-    pub fn find(&self, ksi_or_zeta: &mut [f64], x: &[f64]) -> Result<Option<CellId>, StrError> {
+    pub fn search(&self, ksi_or_zeta: &mut [f64], x: &[f64]) -> Result<Option<CellId>, StrError> {
         // check
         if ksi_or_zeta.len() != 4 {
             return Err("length of ksi_or_zeta must be equal to 4");
@@ -329,7 +329,7 @@ impl<'a> GridCells<'a> {
             None => return Ok(None), // no container with cells in it
         };
 
-        // find the cell where the point falls in
+        // search the cell where the point falls in
         for cell_id in container {
             if self.in_cell(ksi_or_zeta, x, *cell_id) {
                 return Ok(Some(*cell_id));
@@ -827,10 +827,10 @@ mod tests {
         );
         let mut ksi_or_zeta = vec![0.0; 4];
 
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.0, 0.2]).unwrap(), Some(0));
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.0, 0.2]).unwrap(), Some(0));
         assert_eq!(ksi_or_zeta, &[1.0, 0.0, 0.0, 0.0]);
 
-        match grid.find(&mut ksi_or_zeta, &[1.2, 0.0]).unwrap() {
+        match grid.search(&mut ksi_or_zeta, &[1.2, 0.0]).unwrap() {
             Some(cell_id) => match cell_id {
                 0 => assert_eq!(ksi_or_zeta, &[0.0, 1.0, 0.0, 0.0]),
                 1 => assert_eq!(ksi_or_zeta, &[1.0, 0.0, 0.0, 0.0]),
@@ -858,15 +858,15 @@ mod tests {
         let mesh = Samples::one_tri3();
         let grid = GridCells::new(&mesh, None, None, None, None).unwrap();
         assert_eq!(
-            grid.find(&mut [0.0], &[0.0]).err(),
+            grid.search(&mut [0.0], &[0.0]).err(),
             Some("length of ksi_or_zeta must be equal to 4")
         );
         assert_eq!(
-            grid.find(&mut [0.0, 0.0, 0.0, 0.0], &[0.0]).err(),
+            grid.search(&mut [0.0, 0.0, 0.0, 0.0], &[0.0]).err(),
             Some("length of x must be equal to ndim")
         );
         assert_eq!(
-            grid.find(&mut [0.0, 0.0, 0.0, 0.0], &[10.0, 10.0]).err(),
+            grid.search(&mut [0.0, 0.0, 0.0, 0.0], &[10.0, 10.0]).err(),
             Some("given point coordinates are outside the grid")
         );
     }
@@ -887,19 +887,19 @@ mod tests {
              ndiv = [2, 2]\n"
         );
         let mut ksi_or_zeta = vec![0.0; 4];
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.4, 0.2]).unwrap(), Some(11));
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.6, 0.3]).unwrap(), Some(7));
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.1, 0.7]).unwrap(), Some(2));
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.8, 0.8]).unwrap(), Some(8));
-        let res = grid.find(&mut ksi_or_zeta, &mesh.points[5].coords).unwrap();
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.4, 0.2]).unwrap(), Some(11));
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.6, 0.3]).unwrap(), Some(7));
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.1, 0.7]).unwrap(), Some(2));
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.8, 0.8]).unwrap(), Some(8));
+        let res = grid.search(&mut ksi_or_zeta, &mesh.points[5].coords).unwrap();
         if res != Some(7) {
             assert_eq!(res, Some(11));
         }
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.1, 0.1]).unwrap(), None);
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.6, 0.2]).unwrap(), None);
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.4, 1.0]).unwrap(), None);
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.1, 0.1]).unwrap(), None);
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.6, 0.2]).unwrap(), None);
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.4, 1.0]).unwrap(), None);
         assert_eq!(
-            grid.find(&mut ksi_or_zeta, &[10.0, 1.0]).err(),
+            grid.search(&mut ksi_or_zeta, &[10.0, 1.0]).err(),
             Some("given point coordinates are outside the grid")
         );
     }
@@ -925,22 +925,22 @@ mod tests {
         );
         let mut ksi_or_zeta = vec![0.0; 4];
 
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.0, 0.0, 0.0]).unwrap(), Some(0));
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.0, 0.0, 0.0]).unwrap(), Some(0));
         assert_eq!(ksi_or_zeta, &[1.0, 0.0, 0.0, 0.0]);
 
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[1.0, 0.0, 0.0]).unwrap(), Some(0));
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[1.0, 0.0, 0.0]).unwrap(), Some(0));
         assert_eq!(ksi_or_zeta, &[0.0, 1.0, 0.0, 0.0]);
 
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.0, 1.0, 0.0]).unwrap(), Some(0));
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.0, 1.0, 0.0]).unwrap(), Some(0));
         assert_eq!(ksi_or_zeta, &[0.0, 0.0, 1.0, 0.0]);
 
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[0.0, 0.0, 1.0]).unwrap(), Some(0));
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[0.0, 0.0, 1.0]).unwrap(), Some(0));
         assert_eq!(ksi_or_zeta, &[0.0, 0.0, 0.0, 1.0]);
 
-        assert_eq!(grid.find(&mut ksi_or_zeta, &[1.0, 1.0, 1.0]).ok(), Some(None));
+        assert_eq!(grid.search(&mut ksi_or_zeta, &[1.0, 1.0, 1.0]).ok(), Some(None));
 
         assert_eq!(
-            grid.find(&mut ksi_or_zeta, &[10.0, 1.0, 1.0]).err(),
+            grid.search(&mut ksi_or_zeta, &[10.0, 1.0, 1.0]).err(),
             Some("given point coordinates are outside the grid")
         );
 
