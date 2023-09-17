@@ -1,18 +1,19 @@
+use gemlab::integ::{default_points, points_coords, scalar_field};
+use gemlab::prelude::*;
 use gemlab::StrError;
-use gemlab::{integ, mesh, shapes};
 use russell_chk::approx_eq;
 use russell_lab::math::PI;
 
 fn main() -> Result<(), StrError> {
     // generate mesh
     let r = 3.0;
-    let kind = shapes::GeoKind::Qua17;
-    let mesh_1 = mesh::Structured::quarter_disk_2d_a(r, 3, 3, kind)?;
-    let mesh_2 = mesh::Structured::quarter_disk_2d_b(r / 2.0, r, 3, 3, kind)?;
+    let kind = GeoKind::Qua17;
+    let mesh_1 = Structured::quarter_disk_2d_a(r, 3, 3, kind)?;
+    let mesh_2 = Structured::quarter_disk_2d_b(r / 2.0, r, 3, 3, kind)?;
 
     // allocate integration points and Scratchpad
-    let ips = integ::default_points(kind);
-    let mut pad = shapes::Scratchpad::new(2, kind)?;
+    let ips = default_points(kind);
+    let mut pad = Scratchpad::new(2, kind)?;
 
     // mesh 1: sum contribution of all cells
     let mut second_mom_inertia_mesh_1 = 0.0; // second moment of inertia about the x-axis
@@ -21,10 +22,10 @@ fn main() -> Result<(), StrError> {
         mesh_1.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = integ::points_coords(&mut pad, ips)?;
+        let x_ips = points_coords(&mut pad, ips)?;
 
         // perform the integration over the domain of a single cell
-        second_mom_inertia_mesh_1 += integ::scalar_field(&mut pad, ips, |p| {
+        second_mom_inertia_mesh_1 += scalar_field(&mut pad, ips, |p| {
             let y = x_ips[p][1];
             Ok(y * y)
         })?;
@@ -38,10 +39,10 @@ fn main() -> Result<(), StrError> {
         mesh_2.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = integ::points_coords(&mut pad, ips)?;
+        let x_ips = points_coords(&mut pad, ips)?;
 
         // perform the integration over the domain of a single cell
-        second_mom_inertia_mesh_2 += integ::scalar_field(&mut pad, ips, |p| {
+        second_mom_inertia_mesh_2 += scalar_field(&mut pad, ips, |p| {
             let y = x_ips[p][1];
             Ok(y * y)
         })?;
@@ -66,18 +67,15 @@ fn main() -> Result<(), StrError> {
     approx_eq(second_mom_inertia_mesh_2, correct, 1e-5);
 
     // draw meshes
-    mesh::draw_mesh(
-        &mesh_1,
-        false,
-        true,
-        false,
-        "/tmp/gemlab/example_mom_inertia_disk_1.svg",
-    )?;
-    mesh::draw_mesh(
-        &mesh_2,
-        false,
-        true,
-        false,
-        "/tmp/gemlab/example_mom_inertia_disk_2.svg",
-    )
+    let mut fig_1 = Figure::new();
+    fig_1.param_cell_ids = true;
+    fig_1.param_point_ids = true;
+    fig_1.param_figure_size = Some((800.0, 800.0));
+    mesh_1.draw(Some(fig_1), "/tmp/gemlab/example_mom_inertia_disk_1.svg")?;
+
+    let mut fig_2 = Figure::new();
+    fig_2.param_cell_ids = true;
+    fig_2.param_point_ids = true;
+    fig_2.param_figure_size = Some((800.0, 800.0));
+    mesh_2.draw(Some(fig_2), "/tmp/gemlab/example_mom_inertia_disk_2.svg")
 }

@@ -1894,11 +1894,19 @@ impl Samples {
 #[cfg(test)]
 mod tests {
     use super::Samples;
-
-    #[allow(unused_imports)]
-    use crate::mesh::draw_mesh;
+    use crate::mesh::{Figure, Mesh};
 
     const SAVE_FIGURE: bool = false;
+
+    fn draw(mesh: &Mesh, larger: bool, filename: &str) {
+        let mut fig = Figure::new();
+        fig.param_cell_ids = true;
+        fig.param_point_ids = true;
+        if larger {
+            fig.param_figure_size = Some((600.0, 600.0));
+        }
+        mesh.draw(Some(fig), filename).unwrap();
+    }
 
     #[test]
     #[rustfmt::skip]
@@ -1945,7 +1953,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 1);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_lin2.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_one_lin2.svg");
         }
 
         let mesh = Samples::one_tri3();
@@ -1954,7 +1962,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 1);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_tri3.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_one_tri3.svg");
         }
 
         let mesh = Samples::one_tri6();
@@ -1963,7 +1971,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 1);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_tri6.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_one_tri6.svg");
         }
 
         let mesh = Samples::one_qua4();
@@ -1972,7 +1980,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 1);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_qua4.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_one_qua4.svg");
         }
 
         let mesh = Samples::two_tri3();
@@ -1981,7 +1989,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_two_tri3.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_two_tri3.svg");
         }
 
         let mesh = Samples::three_tri3();
@@ -1990,7 +1998,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_three_tri3.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_three_tri3.svg");
         }
 
         let mesh = Samples::three_tri3_multi_shares();
@@ -1999,7 +2007,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_three_tri3_multi_shares.svg").unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_three_tri3_multi_shares.svg")
         }
 
         let mesh = Samples::three_tri6_multi_shares();
@@ -2008,7 +2016,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_three_tri6_multi_shares.svg").unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_three_tri6_multi_shares.svg")
         }
 
         let mesh = Samples::four_tri3();
@@ -2017,7 +2025,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_four_tri3.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_four_tri3.svg");
         }
 
         let mesh = Samples::two_tri3_one_qua4();
@@ -2026,7 +2034,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_two_tri3_one_qua4.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_two_tri3_one_qua4.svg");
         }
 
         let mesh = Samples::one_qua8();
@@ -2035,7 +2043,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 1);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_qua8.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_one_qua8.svg");
         }
 
         let mesh = Samples::two_qua4();
@@ -2044,7 +2052,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_two_qua4.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_two_qua4.svg");
         }
 
         let mesh = Samples::qua8_tri6_lin2();
@@ -2053,7 +2061,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_qua8_tri6_lin2.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_qua8_tri6_lin2.svg");
         }
 
         let mesh = Samples::one_tet4();
@@ -2062,7 +2070,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 1);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_tet4.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_one_tet4.svg");
         }
 
         let mesh = Samples::one_hex8();
@@ -2071,7 +2079,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 1);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_one_hex8.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_one_hex8.svg");
         }
 
         let mesh = Samples::two_hex8();
@@ -2080,7 +2088,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_two_hex8.svg").unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_two_hex8.svg");
         }
 
         let mesh = Samples::four_hex8();
@@ -2089,7 +2097,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_four_hex8.svg").unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_four_hex8.svg");
         }
 
         let mesh = Samples::mixed_shapes_2d();
@@ -2098,7 +2106,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 3);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_mixed_shapes_2d.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_mixed_shapes_2d.svg");
         }
 
         let mesh = Samples::mixed_shapes_3d();
@@ -2107,7 +2115,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 5);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_mixed_shapes_3d.svg").unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_mixed_shapes_3d.svg");
         }
 
         let mesh = Samples::block_2d_four_qua4();
@@ -2116,7 +2124,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua4.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_block_2d_four_qua4.svg");
         }
 
         let mesh = Samples::block_2d_four_qua8();
@@ -2125,7 +2133,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua8.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_block_2d_four_qua8.svg");
         }
 
         let mesh = Samples::block_2d_four_qua9();
@@ -2134,7 +2142,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua9.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_block_2d_four_qua9.svg");
         }
 
         let mesh = Samples::block_2d_four_qua12();
@@ -2143,7 +2151,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua12.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_block_2d_four_qua12.svg");
         }
 
         let mesh = Samples::block_2d_four_qua16();
@@ -2152,7 +2160,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua16.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_block_2d_four_qua16.svg");
         }
 
         let mesh = Samples::block_2d_four_qua17();
@@ -2161,7 +2169,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_2d_four_qua17.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_block_2d_four_qua17.svg");
         }
 
         let mesh = Samples::block_3d_eight_hex8();
@@ -2170,7 +2178,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 8);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_3d_eight_hex8.svg").unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex8.svg");
         }
 
         let mesh = Samples::block_3d_eight_hex20();
@@ -2179,7 +2187,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 8);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_block_3d_eight_hex20.svg").unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_block_3d_eight_hex20.svg");
         }
 
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
@@ -2188,7 +2196,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 8);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_ring_eight_qua8_rad1_thick1.svg").unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_mesh_ring_eight_qua8_rad1_thick1.svg");
         }
 
         let mesh = Samples::tri3_from_delaunay();
@@ -2197,7 +2205,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 12);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_mesh_tri3_from_delaunay.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_tri3_from_delaunay.svg");
         }
     }
 }

@@ -321,6 +321,27 @@ pub struct Figure {
 
     /// Canvas to draw lin cells
     pub canvas_lin_cells: Canvas,
+
+    /// Parameter: draw cell ids
+    pub param_cell_ids: bool,
+
+    /// Parameter: draw point ids
+    pub param_point_ids: bool,
+
+    /// Parameter: draw point dots
+    pub param_point_dots: bool,
+
+    /// Parameter: plot without equal axes
+    pub param_not_equal_exes: bool,
+
+    /// Parameter: specifies the plot range (xmin, xmax, ymin, ymax)
+    pub param_range_2d: Option<(f64, f64, f64, f64)>,
+
+    /// Parameter: specifies the plot range (xmin, xmax, ymin, ymax, zmin, zmax)
+    pub param_range_3d: Option<(f64, f64, f64, f64, f64, f64)>,
+
+    /// Parameter: figure size in points
+    pub param_figure_size: Option<(f64, f64)>,
 }
 
 impl Figure {
@@ -351,7 +372,7 @@ impl Figure {
             .set_bbox(true)
             .set_bbox_facecolor("white")
             .set_bbox_edgecolor("None")
-            .set_bbox_style("circle,pad=0.15");
+            .set_bbox_style("round,pad=0.15");
         canvas_cell_ids
             .set_color("#22971f")
             .set_fontsize(9.0)
@@ -379,57 +400,54 @@ impl Figure {
             canvas_cell_ids,
             canvas_cells,
             canvas_lin_cells,
+            param_cell_ids: false,
+            param_point_ids: false,
+            param_point_dots: false,
+            param_not_equal_exes: false,
+            param_range_2d: None,
+            param_range_3d: None,
+            param_figure_size: None,
         }
     }
+}
 
-    /// Draws all points (markers)
-    ///
-    /// # Input
-    ///
-    /// * `plot` -- the plot instance (to be updated)
-    /// * `mesh` -- the mesh
-    pub fn points(&mut self, mesh: &Mesh) {
-        if mesh.ndim == 2 {
-            self.canvas_points.points_begin();
-            mesh.points.iter().for_each(|point| {
-                self.canvas_points.points_add(point.coords[0], point.coords[1]);
+impl Mesh {
+    /// Draws all points (dots)
+    pub fn draw_point_dots(&self, fig: &mut Figure) {
+        if self.ndim == 2 {
+            fig.canvas_points.points_begin();
+            self.points.iter().for_each(|point| {
+                fig.canvas_points.points_add(point.coords[0], point.coords[1]);
             });
-            self.canvas_points.points_end();
+            fig.canvas_points.points_end();
         } else {
-            self.canvas_points.points_3d_begin();
-            mesh.points.iter().for_each(|point| {
-                self.canvas_points
+            fig.canvas_points.points_3d_begin();
+            self.points.iter().for_each(|point| {
+                fig.canvas_points
                     .points_3d_add(point.coords[0], point.coords[1], point.coords[2]);
             });
-            self.canvas_points.points_3d_end();
+            fig.canvas_points.points_3d_end();
         }
-        self.plot.add(&self.canvas_points);
+        fig.plot.add(&fig.canvas_points);
     }
 
     /// Draws all point ids (labels)
     ///
-    /// # Input
-    ///
-    /// * `plot` -- the plot instance (to be updated)
-    /// * `mesh` -- the mesh
-    ///
-    /// # Note
-    ///
-    /// If the point marker is negative, this marker is show in parenthesis.
-    pub fn point_ids(&mut self, mesh: &Mesh) {
-        if mesh.ndim == 2 {
-            mesh.points.iter().for_each(|point| {
+    /// **Note:** Negative point markers are shown within parentheses.
+    pub fn draw_point_ids(&self, fig: &mut Figure) {
+        if self.ndim == 2 {
+            self.points.iter().for_each(|point| {
                 let msg = if point.marker < 0 {
                     format!("{}({})", point.id, point.marker)
                 } else {
                     format!("{}", point.id)
                 };
-                self.canvas_point_ids
+                fig.canvas_point_ids
                     .draw(point.coords[0], point.coords[1], msg.as_str());
             });
         } else {
-            mesh.points.iter().for_each(|point| {
-                self.canvas_point_ids.draw_3d(
+            self.points.iter().for_each(|point| {
+                fig.canvas_point_ids.draw_3d(
                     point.coords[0],
                     point.coords[1],
                     point.coords[2],
@@ -437,92 +455,92 @@ impl Figure {
                 );
             });
         }
-        self.plot.add(&self.canvas_point_ids);
+        fig.plot.add(&fig.canvas_point_ids);
     }
 
-    /// Draw cells
-    pub fn cells(&mut self, mesh: &Mesh, set_range: bool) -> Result<(), StrError> {
+    /// Draws cells
+    pub fn draw_cells(&self, fig: &mut Figure, set_range: bool) -> Result<(), StrError> {
         // limits
-        let mut xmin = vec![f64::MAX; mesh.ndim];
-        let mut xmax = vec![f64::MIN; mesh.ndim];
+        let mut xmin = vec![f64::MAX; self.ndim];
+        let mut xmax = vec![f64::MIN; self.ndim];
 
         // memoization of scratchpads
         let mut pads = HashMap::new();
 
         // loop over cells
-        for cell in &mesh.cells {
+        for cell in &self.cells {
             let canvas = if cell.kind.is_lin() {
-                &mut self.canvas_lin_cells
+                &mut fig.canvas_lin_cells
             } else {
-                &mut self.canvas_cells
+                &mut fig.canvas_cells
             };
-            draw_cell(canvas, &mesh, cell.kind, &cell.points, &mut pads)?;
+            draw_cell(canvas, self, cell.kind, &cell.points, &mut pads)?;
             for point_id in &cell.points {
-                for j in 0..mesh.ndim {
-                    xmin[j] = f64::min(xmin[j], mesh.points[*point_id].coords[j]);
-                    xmax[j] = f64::max(xmax[j], mesh.points[*point_id].coords[j]);
+                for j in 0..self.ndim {
+                    xmin[j] = f64::min(xmin[j], self.points[*point_id].coords[j]);
+                    xmax[j] = f64::max(xmax[j], self.points[*point_id].coords[j]);
                 }
             }
         }
 
         // add to plot
-        self.plot.add(&self.canvas_cells);
-        self.plot.add(&self.canvas_lin_cells);
+        fig.plot.add(&fig.canvas_cells);
+        fig.plot.add(&fig.canvas_lin_cells);
         if set_range {
-            self.plot.set_range(xmin[0], xmax[0], xmin[1], xmax[1]);
+            let dx = xmax[0] - xmin[0];
+            let dy = xmax[1] - xmin[1];
+            if dx > 0.0 && dy > 0.0 {
+                let gx = 0.05 * dx;
+                let gy = 0.05 * dy;
+                fig.plot
+                    .set_range(xmin[0] - gx, xmax[0] + gx, xmin[1] - gy, xmax[1] + gy);
+            }
         }
         Ok(())
     }
 
     /// Draws ids and attributes of cells
     ///
-    /// # Input
-    ///
-    /// * `plot` -- the plot instance (to be updated)
-    /// * `mesh` -- the mesh
-    ///
-    /// # Note
-    ///
-    /// The number in parenthesis is the cell attribute.
-    pub fn cell_ids(&mut self, mesh: &Mesh) -> Result<(), StrError> {
+    /// **Note:** Cell attributes are shown within parentheses.
+    pub fn draw_cell_ids(&self, fig: &mut Figure) -> Result<(), StrError> {
         // auxiliary
-        let mut x = Vector::new(mesh.ndim);
+        let mut x = Vector::new(self.ndim);
 
         // loop over all cells
-        for cell_id in 0..mesh.cells.len() {
+        for cell_id in 0..self.cells.len() {
             // compute coordinates of the label
-            let cell = &mesh.cells[cell_id];
+            let cell = &self.cells[cell_id];
             x.fill(0.0);
             if cell.kind == GeoKind::Qua9 || cell.kind == GeoKind::Qua17 {
-                for i in 0..mesh.ndim {
-                    x[i] = (3.0 * mesh.points[cell.points[0]].coords[i] + mesh.points[cell.points[2]].coords[i]) / 4.0;
+                for i in 0..self.ndim {
+                    x[i] = (3.0 * self.points[cell.points[0]].coords[i] + self.points[cell.points[2]].coords[i]) / 4.0;
                 }
             } else if cell.kind == GeoKind::Tri10 {
-                for i in 0..mesh.ndim {
-                    x[i] = (mesh.points[cell.points[0]].coords[i] + mesh.points[cell.points[9]].coords[i]) / 2.0;
+                for i in 0..self.ndim {
+                    x[i] = (self.points[cell.points[0]].coords[i] + self.points[cell.points[9]].coords[i]) / 2.0;
                 }
             } else {
                 for m in 0..cell.points.len() {
-                    for i in 0..mesh.ndim {
-                        x[i] += mesh.points[cell.points[m]].coords[i];
+                    for i in 0..self.ndim {
+                        x[i] += self.points[cell.points[m]].coords[i];
                     }
                 }
-                for i in 0..mesh.ndim {
+                for i in 0..self.ndim {
                     x[i] /= cell.points.len() as f64;
                 }
             }
 
             // add label
             let msg = format!("{}({})", cell.id, cell.attribute);
-            if mesh.ndim == 2 {
-                self.canvas_cell_ids.draw(x[0], x[1], msg.as_str());
+            if self.ndim == 2 {
+                fig.canvas_cell_ids.draw(x[0], x[1], msg.as_str());
             } else {
-                self.canvas_cell_ids.draw_3d(x[0], x[1], x[2], msg.as_str());
+                fig.canvas_cell_ids.draw_3d(x[0], x[1], x[2], msg.as_str());
             }
         }
 
         // add to plot
-        self.plot.add(&self.canvas_cell_ids);
+        fig.plot.add(&fig.canvas_cell_ids);
         Ok(())
     }
 
@@ -534,18 +552,18 @@ impl Figure {
     /// * `mesh` -- the mesh
     /// * `features` -- structure with edges and faces
     /// * `set_range` -- sets the range of `plot` to the limits of region; otherwise do not modifies the range/limits.
-    pub fn edges(&mut self, mesh: &Mesh, features: &Features, set_range: bool) -> Result<(), StrError> {
+    pub fn draw_edges(&self, fig: &mut Figure, features: &Features, set_range: bool) -> Result<(), StrError> {
         let mut pads = HashMap::new();
         for (_, edge) in &features.edges {
-            draw_cell(&mut &mut self.canvas_edges, &mesh, edge.kind, &edge.points, &mut pads)?;
+            draw_cell(&mut &mut fig.canvas_edges, self, edge.kind, &edge.points, &mut pads)?;
         }
-        self.plot.add(&self.canvas_edges);
+        fig.plot.add(&fig.canvas_edges);
         if set_range {
-            if mesh.ndim == 2 {
-                self.plot
+            if self.ndim == 2 {
+                fig.plot
                     .set_range(features.min[0], features.max[0], features.min[1], features.max[1]);
             } else {
-                self.plot.set_range_3d(
+                fig.plot.set_range_3d(
                     features.min[0],
                     features.max[0],
                     features.min[1],
@@ -557,48 +575,48 @@ impl Figure {
         }
         Ok(())
     }
-}
 
-/// Draws mesh
-///
-/// # Input
-///
-/// * `mesh` -- the mesh
-/// * `with_cell_ids` -- draw cell ids
-/// * `with_point_ids` -- draw point ids
-/// * `with_points` -- draw point markers (only if with_point_ids = false)
-/// * `filepath` -- may be a String, &str, or Path
-///
-/// **Note:** This is a high-level function calling Draw and others
-pub fn draw_mesh<P>(
-    mesh: &Mesh,
-    with_cell_ids: bool,
-    with_point_ids: bool,
-    with_points: bool,
-    filepath: &P,
-) -> Result<(), StrError>
-where
-    P: AsRef<OsStr> + ?Sized,
-{
-    let mut fig = Figure::new();
-    fig.cells(&mesh, true)?;
-    if with_cell_ids {
-        fig.cell_ids(mesh)?;
-    }
-    if with_point_ids {
-        fig.point_ids(mesh);
-    } else {
-        if with_points {
-            fig.points(mesh);
+    /// Draws the cells, points, attributes, and markers
+    ///
+    /// # Input
+    ///
+    /// * `fig` -- the Figure struct (optional => use default configuration)
+    /// * `filepath` -- may be a String, &str, or Path
+    pub fn draw<P>(&self, fig: Option<Figure>, filepath: &P) -> Result<(), StrError>
+    where
+        P: AsRef<OsStr> + ?Sized,
+    {
+        let mut figure = if let Some(f) = fig { f } else { Figure::new() };
+        self.draw_cells(&mut figure, true)?;
+        if figure.param_cell_ids {
+            self.draw_cell_ids(&mut figure)?;
         }
+        if figure.param_point_dots {
+            self.draw_point_dots(&mut figure);
+        }
+        if figure.param_point_ids {
+            self.draw_point_ids(&mut figure);
+        }
+        if self.ndim == 2 {
+            figure.plot.grid_and_labels("x", "y");
+        }
+        if !figure.param_not_equal_exes {
+            figure.plot.set_equal_axes(true);
+        }
+        if self.ndim == 2 {
+            if let Some((xmin, xmax, ymin, ymax)) = figure.param_range_2d {
+                figure.plot.set_range(xmin, xmax, ymin, ymax);
+            }
+        } else {
+            if let Some((xmin, xmax, ymin, ymax, zmin, zmax)) = figure.param_range_3d {
+                figure.plot.set_range_3d(xmin, xmax, ymin, ymax, zmin, zmax);
+            }
+        }
+        if let Some((width, height)) = figure.param_figure_size {
+            figure.plot.set_figure_size_points(width, height);
+        }
+        figure.plot.save(filepath)
     }
-    if mesh.ndim == 2 {
-        fig.plot.grid_and_labels("x", "y");
-    }
-    fig.plot
-        .set_equal_axes(true)
-        .set_figure_size_points(600.0, 600.0)
-        .save(filepath)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -692,8 +710,8 @@ mod tests {
         // lin cells
         let mesh = Samples::lin_cells();
         let mut fig = Figure::new();
-        fig.cells(&mesh, true).unwrap();
-        fig.points(&mesh);
+        mesh.draw_cells(&mut fig, true).unwrap();
+        mesh.draw_point_dots(&mut fig);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -716,8 +734,8 @@ mod tests {
         // lin cells in 3d
         let mesh = Samples::lin_cells_3d();
         let mut fig = Figure::new();
-        fig.cells(&mesh, true).unwrap();
-        fig.points(&mesh);
+        mesh.draw_cells(&mut fig, true).unwrap();
+        mesh.draw_point_dots(&mut fig);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -738,8 +756,8 @@ mod tests {
         // tri cells
         let mesh = Samples::tri_cells();
         let mut fig = Figure::new();
-        fig.cells(&mesh, true).unwrap();
-        fig.points(&mesh);
+        mesh.draw_cells(&mut fig, true).unwrap();
+        mesh.draw_point_dots(&mut fig);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -761,8 +779,8 @@ mod tests {
 
         let mesh = Samples::qua_cells();
         let mut fig = Figure::new();
-        fig.cells(&mesh, true).unwrap();
-        fig.points(&mesh);
+        mesh.draw_cells(&mut fig, true).unwrap();
+        mesh.draw_point_dots(&mut fig);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -786,8 +804,8 @@ mod tests {
 
         let mesh = Samples::tet_cells();
         let mut fig = Figure::new();
-        fig.cells(&mesh, true).unwrap();
-        fig.points(&mesh);
+        mesh.draw_cells(&mut fig, true).unwrap();
+        mesh.draw_point_dots(&mut fig);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -806,8 +824,8 @@ mod tests {
 
         let mesh = Samples::hex_cells();
         let mut fig = Figure::new();
-        fig.cells(&mesh, true).unwrap();
-        fig.points(&mesh);
+        mesh.draw_cells(&mut fig, true).unwrap();
+        mesh.draw_point_dots(&mut fig);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -827,8 +845,8 @@ mod tests {
         draw_reference_circles(&mut fig.plot);
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let mut fig = Figure::new();
-        fig.cells(&mesh, true).unwrap();
-        fig.points(&mesh);
+        mesh.draw_cells(&mut fig, true).unwrap();
+        mesh.draw_point_dots(&mut fig);
 
         if SAVE_FIGURE {
             fig.plot
@@ -847,7 +865,7 @@ mod tests {
         let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
         draw_reference_circles(&mut fig.plot);
-        fig.edges(&mesh, &features, false).unwrap();
+        mesh.draw_edges(&mut fig, &features, false).unwrap();
 
         // draw points and point ids
         fig.canvas_points.set_marker_color("red");
@@ -858,11 +876,11 @@ mod tests {
             .set_fontsize(9.0)
             .set_bbox_facecolor("black")
             .set_bbox_alpha(0.6);
-        fig.points(&mesh);
-        fig.point_ids(&mesh);
+        mesh.draw_point_dots(&mut fig);
+        mesh.draw_point_ids(&mut fig);
 
         // draw cell ids
-        fig.cell_ids(&mesh).unwrap();
+        mesh.draw_cell_ids(&mut fig).unwrap();
 
         if SAVE_FIGURE {
             fig.plot
@@ -879,9 +897,9 @@ mod tests {
         let mesh = Samples::block_2d_four_qua12();
         let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
-        fig.edges(&mesh, &features, true).unwrap();
-        fig.point_ids(&mesh);
-        fig.cell_ids(&mesh).unwrap();
+        mesh.draw_edges(&mut fig, &features, true).unwrap();
+        mesh.draw_point_ids(&mut fig);
+        mesh.draw_cell_ids(&mut fig).unwrap();
 
         if SAVE_FIGURE {
             fig.plot
@@ -897,9 +915,9 @@ mod tests {
         let mesh = Samples::block_2d_four_qua16();
         let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
-        fig.edges(&mesh, &features, true).unwrap();
-        fig.point_ids(&mesh);
-        fig.cell_ids(&mesh).unwrap();
+        mesh.draw_edges(&mut fig, &features, true).unwrap();
+        mesh.draw_point_ids(&mut fig);
+        mesh.draw_cell_ids(&mut fig).unwrap();
 
         if SAVE_FIGURE {
             fig.plot
@@ -915,8 +933,8 @@ mod tests {
         let mesh = Samples::block_2d_four_qua17();
         let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
-        fig.edges(&mesh, &features, true).unwrap();
-        fig.point_ids(&mesh);
+        mesh.draw_edges(&mut fig, &features, true).unwrap();
+        mesh.draw_point_ids(&mut fig);
 
         if SAVE_FIGURE {
             fig.plot
@@ -932,9 +950,9 @@ mod tests {
         let mesh = Samples::mixed_shapes_2d();
         let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
-        fig.edges(&mesh, &features, true).unwrap();
-        fig.point_ids(&mesh);
-        fig.cell_ids(&mesh).unwrap();
+        mesh.draw_edges(&mut fig, &features, true).unwrap();
+        mesh.draw_point_ids(&mut fig);
+        mesh.draw_cell_ids(&mut fig).unwrap();
 
         if SAVE_FIGURE {
             fig.plot
@@ -950,7 +968,7 @@ mod tests {
         let mesh = Samples::two_hex8();
         let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
-        fig.edges(&mesh, &features, true).unwrap();
+        mesh.draw_edges(&mut fig, &features, true).unwrap();
         fig.canvas_point_ids
             .set_align_horizontal("left")
             .set_align_vertical("bottom")
@@ -958,9 +976,9 @@ mod tests {
             .set_fontsize(10.0)
             .set_bbox_facecolor("gold")
             .set_bbox_alpha(0.5);
-        fig.points(&mesh);
-        fig.point_ids(&mesh);
-        fig.cell_ids(&mesh).unwrap();
+        mesh.draw_point_dots(&mut fig);
+        mesh.draw_point_ids(&mut fig);
+        mesh.draw_cell_ids(&mut fig).unwrap();
 
         if SAVE_FIGURE {
             fig.plot
@@ -976,9 +994,9 @@ mod tests {
         let mesh = Samples::block_3d_eight_hex20();
         let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
-        fig.edges(&mesh, &features, true).unwrap();
-        fig.point_ids(&mesh);
-        fig.cell_ids(&mesh).unwrap();
+        mesh.draw_edges(&mut fig, &features, true).unwrap();
+        mesh.draw_point_ids(&mut fig);
+        mesh.draw_cell_ids(&mut fig).unwrap();
 
         if SAVE_FIGURE {
             fig.plot
@@ -994,9 +1012,9 @@ mod tests {
         let mesh = Samples::mixed_shapes_3d();
         let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
-        fig.edges(&mesh, &features, true).unwrap();
-        fig.point_ids(&mesh);
-        fig.cell_ids(&mesh).unwrap();
+        mesh.draw_edges(&mut fig, &features, true).unwrap();
+        mesh.draw_point_ids(&mut fig);
+        mesh.draw_cell_ids(&mut fig).unwrap();
 
         if SAVE_FIGURE {
             fig.plot
@@ -1012,8 +1030,8 @@ mod tests {
         let mesh = Samples::qua8_tri6_lin2();
         let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
-        fig.edges(&mesh, &features, true).unwrap();
-        fig.point_ids(&mesh);
+        mesh.draw_edges(&mut fig, &features, true).unwrap();
+        mesh.draw_point_ids(&mut fig);
 
         if SAVE_FIGURE {
             fig.plot

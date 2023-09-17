@@ -975,7 +975,7 @@ impl Block {
 mod tests {
     use super::{ArgsRing, Block, Constraint2D, Constraint3D};
     use crate::geometry::point_point_distance;
-    use crate::mesh::{draw_mesh, Extract, Features, Figure, Mesh, Samples};
+    use crate::mesh::{Extract, Features, Figure, Mesh, Samples};
     use crate::shapes::GeoKind;
     use plotpy::{Canvas, Plot, Surface};
     use russell_chk::{approx_eq, vec_approx_eq};
@@ -983,16 +983,10 @@ mod tests {
 
     const SAVE_FIGURE: bool = false;
 
-    fn draw_ring_and_mesh(
-        mesh: &Mesh,
-        args: &ArgsRing,
-        with_ids: bool,
-        with_points: bool,
-        with_circle_mid: bool,
-        filename: &str,
-    ) {
+    fn draw_ring(mesh: &Mesh, args: &ArgsRing, filename: &str) {
         // fig struct
         let mut fig = Figure::new();
+        fig.param_figure_size = Some((600.0, 600.0));
 
         // draw reference circles
         let mut circle_in = Canvas::new();
@@ -1003,13 +997,11 @@ mod tests {
             .set_edge_color("#bfbfbf")
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, args.rmin);
-        if with_circle_mid {
-            circle_mid
-                .set_face_color("None")
-                .set_edge_color("#bfbfbf")
-                .set_line_width(7.0)
-                .draw_circle(0.0, 0.0, (args.rmax + args.rmin) / 2.0);
-        }
+        circle_mid
+            .set_face_color("None")
+            .set_edge_color("#bfbfbf")
+            .set_line_width(7.0)
+            .draw_circle(0.0, 0.0, (args.rmax + args.rmin) / 2.0);
         circle_out
             .set_face_color("None")
             .set_edge_color("#bfbfbf")
@@ -1025,14 +1017,10 @@ mod tests {
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
         let features = Features::new(mesh, Extract::Boundary);
-        fig.edges(mesh, &features, false).unwrap();
-        if with_ids {
-            fig.cell_ids(&mesh).unwrap();
-            fig.point_ids(&mesh);
-        }
-        if with_points {
-            fig.points(&mesh);
-        }
+        mesh.draw_edges(&mut fig, &features, false).unwrap();
+        mesh.draw_cell_ids(&mut fig).unwrap();
+        mesh.draw_point_ids(&mut fig);
+        mesh.draw_point_dots(&mut fig);
         let d = args.rmax * 0.05;
 
         // config plot
@@ -1048,7 +1036,7 @@ mod tests {
         // do nothing
     }
 
-    fn draw_mesh_and_block<F>(mut pre: F, mesh: Mesh, block: &Block, set_range: bool, filename: &str)
+    fn draw<F>(mut pre: F, mesh: Mesh, block: &Block, set_range: bool, filename: &str)
     where
         F: FnMut(&mut Plot),
     {
@@ -1060,10 +1048,10 @@ mod tests {
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
-        fig.edges(&mesh, &features, false).unwrap();
-        fig.cell_ids(&mesh).unwrap();
-        fig.point_ids(&mesh);
-        fig.points(&mesh);
+        mesh.draw_edges(&mut fig, &features, false).unwrap();
+        mesh.draw_cell_ids(&mut fig).unwrap();
+        mesh.draw_point_ids(&mut fig);
+        mesh.draw_point_dots(&mut fig);
         fig.plot
             .set_equal_axes(true)
             .set_figure_size_points(600.0, 600.0)
@@ -1708,14 +1696,7 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            draw_ring_and_mesh(
-                &mesh,
-                &block.args_ring,
-                true,
-                true,
-                true,
-                "/tmp/gemlab/test_transform_into_ring_2d.svg",
-            );
+            draw_ring(&mesh, &block.args_ring, "/tmp/gemlab/test_transform_into_ring_2d.svg");
         }
     }
 
@@ -1754,12 +1735,9 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            draw_ring_and_mesh(
+            draw_ring(
                 &mesh,
                 &block.args_ring,
-                true,
-                true,
-                true,
                 "/tmp/gemlab/test_transform_into_ring_2d_qua16.svg",
             );
         }
@@ -1817,7 +1795,10 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, false, false, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
+            mesh.draw(None, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
+            // let mut fig = Figure::new();
+            // fig.draw(&mesh, "/tmp/gemlab/test_transform_into_ring_3d.svg").unwrap();
+            // draw_mesh(&mesh, true, false, false, ).unwrap();
         }
     }
 
@@ -1856,14 +1837,8 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            draw_mesh(
-                &mesh,
-                true,
-                false,
-                false,
-                "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg",
-            )
-            .unwrap();
+            mesh.draw(None, "/tmp/gemlab/test_transform_into_ring_3d_hex32.svg")
+                .unwrap();
         }
     }
 
@@ -1906,7 +1881,7 @@ mod tests {
             approx_eq(d, 1.0, 1e-15);
         }
         if SAVE_FIGURE {
-            draw_mesh_and_block(pre, mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua4_1.svg");
+            draw(pre, mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua4_1.svg");
         }
 
         // circle pulls point
@@ -1918,7 +1893,7 @@ mod tests {
             approx_eq(d, 0.5, 1e-15);
         }
         if SAVE_FIGURE {
-            draw_mesh_and_block(pre, mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua4_2.svg");
+            draw(pre, mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua4_2.svg");
         }
 
         // block touches constraint (also we need to move mid nodes)
@@ -1952,7 +1927,7 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            draw_mesh_and_block(pre, mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua8.svg");
+            draw(pre, mesh, &block, true, "/tmp/gemlab/test_constraints_2d_qua8.svg");
         }
     }
 
@@ -2023,7 +1998,7 @@ mod tests {
             let pre = |plot: &mut Plot| {
                 plot.set_range(-4.0, 4.0, -4.0, 4.0);
             };
-            draw_mesh_and_block(pre, mesh, &block, false, "/tmp/gemlab/test_constraints_2d_multiple.svg");
+            draw(pre, mesh, &block, false, "/tmp/gemlab/test_constraints_2d_multiple.svg");
         }
     }
 
@@ -2158,7 +2133,7 @@ mod tests {
                 plot.add(&surf);
                 plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
             };
-            draw_mesh_and_block(pre, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg");
+            draw(pre, mesh, &block, false, "/tmp/gemlab/test_constraints_3d.svg");
         }
     }
 
@@ -2251,7 +2226,7 @@ mod tests {
                 plot.add(&surf);
                 plot.set_range_3d(-half_l, half_l, -half_l, half_l, -half_l, half_l);
             };
-            draw_mesh_and_block(
+            draw(
                 pre,
                 mesh,
                 &block,
@@ -2278,7 +2253,7 @@ mod tests {
             approx_eq(d, 6.0, 1e-15);
         }
         if SAVE_FIGURE {
-            draw_mesh_and_block(
+            draw(
                 pre,
                 mesh,
                 &block,
@@ -2309,7 +2284,7 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            draw_mesh_and_block(
+            draw(
                 pre,
                 mesh,
                 &block,
@@ -2340,7 +2315,7 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            draw_mesh_and_block(
+            draw(
                 pre,
                 mesh,
                 &block,
@@ -2381,7 +2356,7 @@ mod tests {
             vec_approx_eq(&mesh.points[d].coords, &[xd, yd], 1e-15);
         }
         if SAVE_FIGURE {
-            draw_mesh_and_block(
+            draw(
                 pre,
                 mesh,
                 &block,
@@ -2408,7 +2383,7 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
-            draw_mesh_and_block(
+            draw(
                 pre,
                 mesh,
                 &block,
@@ -2454,7 +2429,7 @@ mod tests {
             vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         if SAVE_FIGURE {
-            draw_mesh_and_block(
+            draw(
                 pre,
                 mesh,
                 &block,

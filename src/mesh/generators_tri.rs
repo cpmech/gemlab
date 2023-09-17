@@ -250,7 +250,6 @@ impl Unstructured {
 mod tests {
     use super::Unstructured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::draw_mesh;
     use crate::mesh::{At, Figure, Find, Mesh};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
@@ -260,10 +259,16 @@ mod tests {
     const RMAX: f64 = 6.0;
     const SAVE_FIGURE: bool = false;
 
-    fn filenames(fn_key: &str) -> (String, String) {
-        let fn_vtu = [fn_key, ".vtu"].concat();
-        let fn_svg = [fn_key, ".svg"].concat();
-        (fn_vtu, fn_svg)
+    fn draw(mesh: &Mesh, larger: bool, filename: &str) {
+        let mut fig = Figure::new();
+        fig.param_cell_ids = true;
+        fig.param_point_ids = true;
+        if larger {
+            fig.param_figure_size = Some((800.0, 800.0));
+        } else {
+            fig.param_figure_size = Some((600.0, 600.0));
+        }
+        mesh.draw(Some(fig), filename).unwrap();
     }
 
     fn check_constraints(mesh: &Mesh) {
@@ -325,11 +330,9 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_works() {
-        let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d");
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, None).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
-            mesh.write_vtu(&fn_vtu).unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_tri_quarter_ring_2d.svg");
         }
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 14);
@@ -350,11 +353,9 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_o2_works() {
-        let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_o2");
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, None).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, &fn_svg).unwrap();
-            mesh.write_vtu(&fn_vtu).unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_tri_quarter_ring_2d_o2.svg");
         }
         assert_eq!(mesh.points.len(), 41);
         assert_eq!(mesh.cells.len(), 14);
@@ -375,12 +376,10 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_global_max_area_works() {
-        let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_global_max_area");
         let global_max_area = Some(0.4);
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, global_max_area).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
-            mesh.write_vtu(&fn_vtu).unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_tri_quarter_ring_2d_global_max_area.svg");
         }
         assert_eq!(mesh.points.len(), 50);
         assert_eq!(mesh.cells.len(), 78);
@@ -401,12 +400,14 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_o2_global_max_area_works() {
-        let (fn_vtu, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_o2_global_max_area");
         let global_max_area = Some(0.4);
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, global_max_area).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
-            mesh.write_vtu(&fn_vtu).unwrap();
+            draw(
+                &mesh,
+                true,
+                "/tmp/gemlab/test_tri_quarter_ring_2d_o2_global_max_area.svg",
+            );
         }
         assert_eq!(mesh.points.len(), 177);
         assert_eq!(mesh.cells.len(), 78);
@@ -431,10 +432,9 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_tri10_works() {
-        let (_, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_tri10");
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri10, None).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&mesh, false, true, false, &fn_svg).unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_tri_quarter_ring_2d_tri10.svg");
         }
         assert_eq!(mesh.points.len(), 82);
         assert_eq!(mesh.cells.len(), 14);
@@ -459,18 +459,9 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_tri15_works() {
-        let (_, fn_svg) = filenames("/tmp/gemlab/test_tri_quarter_ring_2d_tri15");
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri15, None).unwrap();
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
-            fig.cells(&mesh, true).unwrap();
-            fig.point_ids(&mesh);
-            fig.plot.grid_and_labels("x", "y");
-            fig.plot
-                .set_equal_axes(true)
-                .set_figure_size_points(800.0, 800.0)
-                .save(&fn_svg)
-                .unwrap();
+            draw(&mesh, true, "/tmp/gemlab/test_tri_quarter_ring_2d_tri15.svg");
         }
         assert_eq!(mesh.points.len(), 137);
         assert_eq!(mesh.cells.len(), 14);
