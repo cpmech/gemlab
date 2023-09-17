@@ -31,7 +31,7 @@ gemlab = "*"
 
 ```rust
 use gemlab::integ;
-use gemlab::mesh::{At, Extract, Features, Find, Mesh};
+use gemlab::mesh::{At, Extract, Features, Mesh};
 use gemlab::shapes::Scratchpad;
 use gemlab::StrError;
 use std::collections::HashSet;
@@ -56,9 +56,9 @@ fn main() -> Result<(), StrError> {
     // Find entities along the boundary of the mesh given coordinates.
     // The `At` enum provides an easy way to define the type of the
     // constraint such as line, plane, circle, etc.
-    let find = Find::new(&mesh, None);
-    assert_eq!(find.point_ids(At::Y(0.5), |_| true)?, &[3, 4]);
-    assert_eq!(find.edge_keys(At::X(1.0), |_| true)?, &[(2, 4), (4, 7)]);
+    let feat = Features::new(&mesh, Extract::Boundary);
+    assert_eq!(feat.search_point_ids(At::Y(0.5), |_| true)?, &[3, 4]);
+    assert_eq!(feat.search_edge_keys(At::X(1.0), |_| true)?, &[(2, 4), (4, 7)]);
 
     // Perform numerical integration to compute
     // the area of cell # 2
