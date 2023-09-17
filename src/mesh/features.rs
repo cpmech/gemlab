@@ -1,5 +1,6 @@
 use super::{algorithms, CellId, Extract, Mesh, PointId};
 use crate::shapes::GeoKind;
+use crate::util::GridSearch;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
@@ -173,7 +174,7 @@ pub struct Features {
     ///
     /// * `cell_id` -- is he id of the cell sharing the edge
     /// * `e` -- is the cell's local edge index
-    pub all_2d_edges: Option<MapEdge2dToCells>,
+    pub all_2d_edges: MapEdge2dToCells,
 
     /// Maps all face keys to cells sharing the face (3D only)
     ///
@@ -181,7 +182,7 @@ pub struct Features {
     ///
     /// * `cell_id` -- is the id of the cell sharing the face
     /// * `f` -- is the cell's local face index
-    pub all_faces: Option<MapFaceToCells>,
+    pub all_faces: MapFaceToCells,
 
     /// Set of points on the boundary edges/faces, on the interior edges/faces, or both boundary and interior
     ///
@@ -216,6 +217,18 @@ pub struct Features {
 
     /// The maximum coordinates of the points (space_ndim)
     pub max: Vec<f64>,
+
+    /// Space number of dimension (needed for the find functions)
+    pub space_ndim: usize,
+
+    /// Tool to quickly find points by coordinates
+    pub grid: GridSearch,
+
+    /// Maps a point id to edges sharing the point
+    pub point_to_edges: HashMap<PointId, HashSet<EdgeKey>>,
+
+    /// Maps a point id to faces sharing the point
+    pub point_to_faces: HashMap<PointId, HashSet<FaceKey>>,
 }
 
 impl Features {
@@ -231,42 +244,94 @@ impl Features {
     /// * This function will panic if the mesh data is invalid. For instance, when
     ///   the cell points array doesn't contain enough points or the indices are incorrect
     pub fn new(mesh: &Mesh, extract: Extract) -> Self {
+        // options
         assert!(mesh.ndim >= 2 && mesh.ndim <= 3);
-        let two_dim = if mesh.ndim == 2 { true } else { false };
+        let space_ndim = mesh.ndim;
         let do_rods_and_shells = match extract {
             Extract::All => true,
             Extract::Boundary => true,
             Extract::Interior => false,
         };
-        let mut features = if two_dim {
-            let all_2d_edges = algorithms::extract_all_2d_edges(mesh);
-            let (points, edges, min, max) = algorithms::extract_features_2d(mesh, &all_2d_edges, extract);
-            Features {
-                all_2d_edges: Some(all_2d_edges),
-                all_faces: None,
-                points,
-                edges,
-                faces: HashMap::new(),
-                min,
-                max,
-            }
+
+        // define variables
+        let all_2d_edges: MapEdge2dToCells;
+        let all_faces: MapFaceToCells;
+        let mut points: HashSet<PointId>;
+        let edges: HashMap<EdgeKey, Feature>;
+        let faces: HashMap<FaceKey, Feature>;
+        let mut min: Vec<f64>;
+        let mut max: Vec<f64>;
+
+        // extract features
+        if space_ndim == 2 {
+            all_2d_edges = algorithms::extract_all_2d_edges(mesh);
+            all_faces = HashMap::new();
+            faces = HashMap::new();
+            (points, edges, min, max) = algorithms::extract_features_2d(mesh, &all_2d_edges, extract);
         } else {
-            let all_faces = algorithms::extract_all_faces(mesh);
-            let (points, edges, faces, min, max) = algorithms::extract_features_3d(mesh, &all_faces, extract);
-            Features {
-                all_2d_edges: None,
-                all_faces: Some(all_faces),
-                points,
-                edges,
-                faces,
-                min,
-                max,
-            }
+            all_2d_edges = HashMap::new();
+            all_faces = algorithms::extract_all_faces(mesh);
+            (points, edges, faces, min, max) = algorithms::extract_features_3d(mesh, &all_faces, extract);
         };
+
+        // handle rods and shells
         if do_rods_and_shells {
-            algorithms::extract_rods_and_shells(mesh, &mut features);
+            mesh.cells.iter().for_each(|cell| {
+                let geo_ndim = cell.kind.ndim();
+                if geo_ndim == 1 || (geo_ndim == 2 && mesh.ndim == 3) {
+                    cell.points.iter().for_each(|id| {
+                        points.insert(*id);
+                        for j in 0..mesh.ndim {
+                            min[j] = f64::min(min[j], mesh.points[*id].coords[j]);
+                            max[j] = f64::max(max[j], mesh.points[*id].coords[j]);
+                        }
+                    });
+                }
+            });
         }
-        features
+
+        // add point ids to grid
+        let mut grid = GridSearch::new(&min, &max, None, None, None).unwrap();
+        for point_id in &points {
+            grid.insert(*point_id, &mesh.points[*point_id].coords).unwrap();
+        }
+
+        // map point ids to edges
+        let mut point_to_edges: HashMap<PointId, HashSet<EdgeKey>> = HashMap::new();
+        for (edge_key, edge) in &edges {
+            for point_id in &edge.points {
+                point_to_edges
+                    .entry(*point_id)
+                    .or_insert(HashSet::new())
+                    .insert(*edge_key);
+            }
+        }
+
+        // map point ids to faces
+        let mut point_to_faces: HashMap<PointId, HashSet<FaceKey>> = HashMap::new();
+        for (face_key, face) in &faces {
+            for point_id in &face.points {
+                point_to_faces
+                    .entry(*point_id)
+                    .or_insert(HashSet::new())
+                    .insert(*face_key);
+            }
+        }
+
+        // results
+        Features {
+            all_2d_edges,
+            all_faces,
+            points,
+            edges,
+            faces,
+            min,
+            max,
+            space_ndim,
+            grid,
+            point_to_edges,
+            point_to_faces,
+        }
     }
 
     /// Returns an edge or panics
@@ -415,7 +480,7 @@ pub fn get_edge_key_2d(mesh: &Mesh, cell_id: CellId, e: usize) -> (usize, usize)
 ///     };
 ///
 ///     let features = Features::new(&mesh, Extract::All);
-///     let edges = features.all_2d_edges.unwrap();
+///     let edges = features.all_2d_edges;
 ///
 ///     let neighbors = get_neighbors_2d(&mesh, &edges, 0);
 ///     assert_eq!(neighbors.len(), 1);
@@ -581,7 +646,7 @@ mod tests {
     fn neighbors_are_correct_2d() {
         let mesh = Samples::block_2d_four_qua12().clone();
         let features = Features::new(&mesh, Extract::All);
-        let edges = features.all_2d_edges.unwrap();
+        let edges = features.all_2d_edges;
         let mut keys: Vec<_> = edges.keys().into_iter().collect();
         keys.sort();
         // for key in &keys {
@@ -623,7 +688,7 @@ mod tests {
     fn get_neighbors_2d_works() {
         let mesh = Samples::block_2d_four_qua4();
         let features = Features::new(&mesh, Extract::All);
-        let edges = features.all_2d_edges.unwrap();
+        let edges = features.all_2d_edges;
 
         let neighbors = get_neighbors_2d(&mesh, &edges, 0);
         assert_eq!(neighbors.len(), 2);
