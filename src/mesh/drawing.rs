@@ -584,4 +584,119 @@ mod tests {
                 .unwrap();
         }
     }
+
+    #[test]
+    fn draw_works_qua12() {
+        if SAVE_FIGURE {
+            let mesh = Samples::block_2d_four_qua12();
+            let mut fig = Figure::new();
+            fig.cell_ids = true;
+            fig.point_ids = true;
+            fig.point_dots = true;
+            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_works_qua16() {
+        if SAVE_FIGURE {
+            let mesh = Samples::block_2d_four_qua16();
+            let mut fig = Figure::new();
+            fig.cell_ids = true;
+            fig.point_ids = true;
+            fig.point_dots = true;
+            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua16.svg", |_, _| {})
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_works_qua17() {
+        if SAVE_FIGURE {
+            let mesh = Samples::block_2d_four_qua17();
+            let mut fig = Figure::new();
+            fig.cell_ids = true;
+            fig.point_ids = true;
+            fig.point_dots = true;
+            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua17.svg", |_, _| {})
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_works_mixed_2d() {
+        if SAVE_FIGURE {
+            let mesh = Samples::mixed_shapes_2d();
+            let mut fig = Figure::new();
+            fig.cell_ids = true;
+            fig.point_ids = true;
+            fig.point_dots = true;
+            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_mixed_2d.svg", |_, _| {})
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_works_hex8() {
+        if SAVE_FIGURE {
+            let mesh = Samples::two_hex8();
+            let mut fig = Figure::new();
+            fig.cell_ids = true;
+            fig.point_ids = true;
+            fig.point_dots = true;
+            fig.figure_size = Some((600.0, 600.0));
+            fig.canvas_point_ids
+                .set_align_horizontal("left")
+                .set_align_vertical("bottom")
+                .set_color("black")
+                .set_fontsize(10.0)
+                .set_bbox_facecolor("gold")
+                .set_bbox_alpha(0.5);
+            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_hex8.svg", |_, _| {})
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_works_hex20() {
+        if SAVE_FIGURE {
+            let mesh = Samples::block_3d_eight_hex20();
+            let mut fig = Figure::new();
+            fig.cell_ids = true;
+            fig.point_ids = true;
+            fig.point_dots = true;
+            fig.figure_size = Some((600.0, 600.0));
+            fig.canvas_point_ids
+                .set_align_horizontal("left")
+                .set_align_vertical("bottom")
+                .set_color("black")
+                .set_fontsize(10.0)
+                .set_bbox_facecolor("gold")
+                .set_bbox_alpha(0.5);
+            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_hex20.svg", |_, _| {})
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_works_mixed_3d() {
+        if SAVE_FIGURE {
+            let mesh = Samples::mixed_shapes_3d();
+            let mut fig = Figure::new();
+            fig.cell_ids = true;
+            fig.point_ids = true;
+            fig.point_dots = true;
+            fig.figure_size = Some((600.0, 600.0));
+            fig.canvas_point_ids
+                .set_align_horizontal("left")
+                .set_align_vertical("bottom")
+                .set_color("black")
+                .set_fontsize(10.0)
+                .set_bbox_facecolor("gold")
+                .set_bbox_alpha(0.5);
+            mesh.draw(Some(fig), "/tmp/gemlab/test_works_mixed_3d.svg", |_, _| {})
+                .unwrap();
+        }
+    }
 }
