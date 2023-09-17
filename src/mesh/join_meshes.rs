@@ -31,7 +31,7 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     let mut map_old_to_new_point_id_b = vec![0; b.points.len()];
     for m in 0..b.points.len() {
         let x = &b.points[m].coords;
-        let maybe_point_id_a = if grid_a.is_outside(x) { None } else { grid_a.find(x)? };
+        let maybe_point_id_a = if grid_a.is_outside(x) { None } else { grid_a.search(x)? };
         let id = match maybe_point_id_a {
             Some(point_id_a) => point_id_a,
             None => {

@@ -465,22 +465,22 @@ impl Features {
         match at {
             At::X(x) => {
                 if self.space_ndim == 2 {
-                    for id in self.grid.find_on_line(&[x, 0.0], &[x, 1.0], filter)? {
+                    for id in self.grid.search_on_line(&[x, 0.0], &[x, 1.0], filter)? {
                         point_ids.insert(id);
                     }
                 } else {
-                    for id in self.grid.find_on_plane_yz(x, filter)? {
+                    for id in self.grid.search_on_plane_yz(x, filter)? {
                         point_ids.insert(id);
                     }
                 }
             }
             At::Y(y) => {
                 if self.space_ndim == 2 {
-                    for id in self.grid.find_on_line(&[0.0, y], &[1.0, y], filter)? {
+                    for id in self.grid.search_on_line(&[0.0, y], &[1.0, y], filter)? {
                         point_ids.insert(id);
                     }
                 } else {
-                    for id in self.grid.find_on_plane_xz(y, filter)? {
+                    for id in self.grid.search_on_plane_xz(y, filter)? {
                         point_ids.insert(id);
                     }
                 }
@@ -489,18 +489,18 @@ impl Features {
                 if self.space_ndim == 2 {
                     return Err("At::Z works in 3D only");
                 } else {
-                    for id in self.grid.find_on_plane_xy(z, filter)? {
+                    for id in self.grid.search_on_plane_xy(z, filter)? {
                         point_ids.insert(id);
                     }
                 }
             }
             At::XY(x, y) => {
                 if self.space_ndim == 2 {
-                    if let Some(id) = self.grid.find(&[x, y])? {
+                    if let Some(id) = self.grid.search(&[x, y])? {
                         point_ids.insert(id);
                     }
                 } else {
-                    for id in self.grid.find_on_line(&[x, y, 0.0], &[x, y, 1.0], filter)? {
+                    for id in self.grid.search_on_line(&[x, y, 0.0], &[x, y, 1.0], filter)? {
                         point_ids.insert(id);
                     }
                 }
@@ -509,7 +509,7 @@ impl Features {
                 if self.space_ndim == 2 {
                     return Err("At::YZ works in 3D only");
                 } else {
-                    for id in self.grid.find_on_line(&[0.0, y, z], &[1.0, y, z], filter)? {
+                    for id in self.grid.search_on_line(&[0.0, y, z], &[1.0, y, z], filter)? {
                         point_ids.insert(id);
                     }
                 }
@@ -518,7 +518,7 @@ impl Features {
                 if self.space_ndim == 2 {
                     return Err("At::XZ works in 3D only");
                 } else {
-                    for id in self.grid.find_on_line(&[x, 0.0, z], &[x, 1.0, z], filter)? {
+                    for id in self.grid.search_on_line(&[x, 0.0, z], &[x, 1.0, z], filter)? {
                         point_ids.insert(id);
                     }
                 }
@@ -527,14 +527,14 @@ impl Features {
                 if self.space_ndim == 2 {
                     return Err("At::XYZ works in 3D only");
                 } else {
-                    if let Some(id) = self.grid.find(&[x, y, z])? {
+                    if let Some(id) = self.grid.search(&[x, y, z])? {
                         point_ids.insert(id);
                     }
                 }
             }
             At::Circle(x, y, r) => {
                 if self.space_ndim == 2 {
-                    for id in self.grid.find_on_circle(&[x, y], r, filter)? {
+                    for id in self.grid.search_on_circle(&[x, y], r, filter)? {
                         point_ids.insert(id);
                     }
                 } else {
@@ -545,7 +545,7 @@ impl Features {
                 if self.space_ndim == 2 {
                     return Err("At::Cylinder works in 3D only");
                 } else {
-                    for id in self.grid.find_on_cylinder(&[ax, ay, az], &[bx, by, bz], r, filter)? {
+                    for id in self.grid.search_on_cylinder(&[ax, ay, az], &[bx, by, bz], r, filter)? {
                         point_ids.insert(id);
                     }
                 }

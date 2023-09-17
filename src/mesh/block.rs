@@ -653,7 +653,7 @@ impl Block {
 
                         // look up existent point in the reference space of the block
                         // or create new point
-                        let point_id = match grid_ksi.find(&ksi)? {
+                        let point_id = match grid_ksi.search(&ksi)? {
                             Some(point_id) => point_id,
                             None => {
                                 // insert point id in grid-search

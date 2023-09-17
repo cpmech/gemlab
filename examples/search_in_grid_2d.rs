@@ -82,7 +82,7 @@ fn main() -> Result<(), StrError> {
     let mut start_id = 0;
     let mut end_id = NPOINT;
     for c in &circles {
-        let res = grid.find_on_circle(&c.center, c.radius, |_| true)?;
+        let res = grid.search_on_circle(&c.center, c.radius, |_| true)?;
         check(&res, &(start_id..end_id).collect::<Vec<_>>());
         start_id += NPOINT;
         end_id += NPOINT;
@@ -90,7 +90,7 @@ fn main() -> Result<(), StrError> {
 
     // search points on segments
     for s in &segments {
-        let res = grid.find_on_line(&s.a, &s.b, |_| true)?;
+        let res = grid.search_on_line(&s.a, &s.b, |_| true)?;
         check(&res, &(start_id..end_id).collect::<Vec<_>>());
         start_id += NPOINT;
         end_id += NPOINT;
