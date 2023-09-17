@@ -1,9 +1,8 @@
-use super::{Features, Mesh};
+use super::Mesh;
 use crate::shapes::GeoKind;
 use crate::StrError;
 use plotpy::{Canvas, Curve, Plot, Text};
 use russell_lab::Vector;
-use std::collections::HashMap;
 use std::ffi::OsStr;
 
 /// Implements functions to draw cells, edges and faces
@@ -171,21 +170,20 @@ impl Mesh {
         let mut xmin = vec![f64::MAX; self.ndim];
         let mut xmax = vec![f64::MIN; self.ndim];
 
-        // memoization of scratchpads
-        let mut pads = HashMap::new();
-
         // loop over cells
-        for cell in &self.cells {
-            let canvas = if cell.kind.is_lin() {
+        for cell_id in 0..self.cells.len() {
+            let canvas = if self.cells[cell_id].kind.is_lin() {
                 &mut fig.canvas_lin_cells
             } else {
                 &mut fig.canvas_cells
             };
-            self.draw_cell(canvas, cell.kind, &cell.points, &mut pads)?;
-            for point_id in &cell.points {
-                for j in 0..self.ndim {
-                    xmin[j] = f64::min(xmin[j], self.points[*point_id].coords[j]);
-                    xmax[j] = f64::max(xmax[j], self.points[*point_id].coords[j]);
+            self.draw_cell(canvas, cell_id)?;
+            if set_range {
+                for point_id in &self.cells[cell_id].points {
+                    for j in 0..self.ndim {
+                        xmin[j] = f64::min(xmin[j], self.points[*point_id].coords[j]);
+                        xmax[j] = f64::max(xmax[j], self.points[*point_id].coords[j]);
+                    }
                 }
             }
         }
@@ -251,38 +249,6 @@ impl Mesh {
         Ok(())
     }
 
-    /// Draws edges
-    ///
-    /// # Input
-    ///
-    /// * `plot` -- the plot instance (to be updated)
-    /// * `mesh` -- the mesh
-    /// * `features` -- structure with edges and faces
-    /// * `set_range` -- sets the range of `plot` to the limits of region; otherwise do not modifies the range/limits.
-    pub fn draw_edges(&self, fig: &mut Figure, features: &Features, set_range: bool) -> Result<(), StrError> {
-        let mut pads = HashMap::new();
-        for (_, edge) in &features.edges {
-            self.draw_cell(&mut &mut fig.canvas_edges, edge.kind, &edge.points, &mut pads)?;
-        }
-        fig.plot.add(&fig.canvas_edges);
-        if set_range {
-            if self.ndim == 2 {
-                fig.plot
-                    .set_range(features.min[0], features.max[0], features.min[1], features.max[1]);
-            } else {
-                fig.plot.set_range_3d(
-                    features.min[0],
-                    features.max[0],
-                    features.min[1],
-                    features.max[1],
-                    features.min[2],
-                    features.max[2],
-                );
-            }
-        }
-        Ok(())
-    }
-
     /// Draws the cells, points, attributes, and markers
     ///
     /// # Input
@@ -331,10 +297,10 @@ impl Mesh {
 #[cfg(test)]
 mod tests {
     use super::Figure;
-    use crate::mesh::{Extract, Features, Mesh, Samples};
+    use crate::mesh::{Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
-    const SAVE_FIGURE: bool = false;
+    const SAVE_FIGURE: bool = true;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
@@ -548,191 +514,6 @@ mod tests {
                 .set_equal_axes(true)
                 .set_range(-0.1, 2.1, -0.1, 2.1)
                 .save("/tmp/gemlab/test_draw_cells_and_points_work_6_ring.svg")
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn draw_edges_points_and_ids_work_2d_ring() {
-        // draw reference circles and edges
-        let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let features = Features::new(&mesh, Extract::All);
-        let mut fig = Figure::new();
-        draw_reference_circles(&mut fig.plot);
-        mesh.draw_edges(&mut fig, &features, false).unwrap();
-
-        // draw points and point ids
-        fig.canvas_points.set_marker_color("red");
-        fig.canvas_point_ids
-            .set_align_horizontal("left")
-            .set_align_vertical("bottom")
-            .set_color("gold")
-            .set_fontsize(9.0)
-            .set_bbox_facecolor("black")
-            .set_bbox_alpha(0.6);
-        mesh.draw_point_dots(&mut fig);
-        mesh.draw_point_ids(&mut fig);
-
-        // draw cell ids
-        mesh.draw_cell_ids(&mut fig).unwrap();
-
-        if SAVE_FIGURE {
-            fig.plot
-                .set_figure_size_points(600.0, 600.0)
-                .set_equal_axes(true)
-                .set_range(-0.1, 2.1, -0.1, 2.1)
-                .save("/tmp/gemlab/test_draw_edges_points_and_ids_work_2d_ring.svg")
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn draw_edges_and_ids_work_2d_qua12() {
-        let mesh = Samples::block_2d_four_qua12();
-        let features = Features::new(&mesh, Extract::All);
-        let mut fig = Figure::new();
-        mesh.draw_edges(&mut fig, &features, true).unwrap();
-        mesh.draw_point_ids(&mut fig);
-        mesh.draw_cell_ids(&mut fig).unwrap();
-
-        if SAVE_FIGURE {
-            fig.plot
-                .set_figure_size_points(600.0, 600.0)
-                .set_equal_axes(true)
-                .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua12.svg")
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn draw_edges_and_ids_work_2d_qua16() {
-        let mesh = Samples::block_2d_four_qua16();
-        let features = Features::new(&mesh, Extract::All);
-        let mut fig = Figure::new();
-        mesh.draw_edges(&mut fig, &features, true).unwrap();
-        mesh.draw_point_ids(&mut fig);
-        mesh.draw_cell_ids(&mut fig).unwrap();
-
-        if SAVE_FIGURE {
-            fig.plot
-                .set_figure_size_points(600.0, 600.0)
-                .set_equal_axes(true)
-                .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua16.svg")
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn draw_edges_and_ids_work_2d_qua17() {
-        let mesh = Samples::block_2d_four_qua17();
-        let features = Features::new(&mesh, Extract::All);
-        let mut fig = Figure::new();
-        mesh.draw_edges(&mut fig, &features, true).unwrap();
-        mesh.draw_point_ids(&mut fig);
-
-        if SAVE_FIGURE {
-            fig.plot
-                .set_figure_size_points(600.0, 600.0)
-                .set_equal_axes(true)
-                .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_qua17.svg")
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn draw_edges_and_ids_work_2d_mixed() {
-        let mesh = Samples::mixed_shapes_2d();
-        let features = Features::new(&mesh, Extract::All);
-        let mut fig = Figure::new();
-        mesh.draw_edges(&mut fig, &features, true).unwrap();
-        mesh.draw_point_ids(&mut fig);
-        mesh.draw_cell_ids(&mut fig).unwrap();
-
-        if SAVE_FIGURE {
-            fig.plot
-                .set_figure_size_points(600.0, 600.0)
-                .set_equal_axes(true)
-                .save("/tmp/gemlab/test_draw_edges_and_ids_work_2d_mixed.svg")
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn draw_edges_points_and_ids_work_3d() {
-        let mesh = Samples::two_hex8();
-        let features = Features::new(&mesh, Extract::All);
-        let mut fig = Figure::new();
-        mesh.draw_edges(&mut fig, &features, true).unwrap();
-        fig.canvas_point_ids
-            .set_align_horizontal("left")
-            .set_align_vertical("bottom")
-            .set_color("black")
-            .set_fontsize(10.0)
-            .set_bbox_facecolor("gold")
-            .set_bbox_alpha(0.5);
-        mesh.draw_point_dots(&mut fig);
-        mesh.draw_point_ids(&mut fig);
-        mesh.draw_cell_ids(&mut fig).unwrap();
-
-        if SAVE_FIGURE {
-            fig.plot
-                .set_figure_size_points(500.0, 500.0)
-                .set_equal_axes(true)
-                .save("/tmp/gemlab/test_draw_edges_points_and_ids_work_3d.svg")
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn draw_edges_and_ids_work_3d_1() {
-        let mesh = Samples::block_3d_eight_hex20();
-        let features = Features::new(&mesh, Extract::All);
-        let mut fig = Figure::new();
-        mesh.draw_edges(&mut fig, &features, true).unwrap();
-        mesh.draw_point_ids(&mut fig);
-        mesh.draw_cell_ids(&mut fig).unwrap();
-
-        if SAVE_FIGURE {
-            fig.plot
-                .set_figure_size_points(800.0, 800.0)
-                .set_equal_axes(true)
-                .save("/tmp/gemlab/test_draw_edges_and_ids_work_3d_1.svg")
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn draw_edges_and_ids_work_3d_2() {
-        let mesh = Samples::mixed_shapes_3d();
-        let features = Features::new(&mesh, Extract::All);
-        let mut fig = Figure::new();
-        mesh.draw_edges(&mut fig, &features, true).unwrap();
-        mesh.draw_point_ids(&mut fig);
-        mesh.draw_cell_ids(&mut fig).unwrap();
-
-        if SAVE_FIGURE {
-            fig.plot
-                .set_figure_size_points(800.0, 800.0)
-                .set_equal_axes(true)
-                .save("/tmp/gemlab/test_draw_edges_and_ids_work_3d_2.svg")
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn draw_point_markers_work_2d() {
-        let mesh = Samples::qua8_tri6_lin2();
-        let features = Features::new(&mesh, Extract::All);
-        let mut fig = Figure::new();
-        mesh.draw_edges(&mut fig, &features, true).unwrap();
-        mesh.draw_point_ids(&mut fig);
-
-        if SAVE_FIGURE {
-            fig.plot
-                .set_figure_size_points(600.0, 600.0)
-                .set_range(-0.1, 2.0, -0.1, 1.1)
-                .set_equal_axes(true)
-                .save("/tmp/gemlab/test_draw_point_markers_work_2d.svg")
                 .unwrap();
         }
     }

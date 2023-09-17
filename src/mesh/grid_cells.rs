@@ -377,12 +377,10 @@ impl<'a> GridCells<'a> {
         // draw cells and ids
         let mut canvas_cells = Canvas::new();
         canvas_cells.set_edge_color("#fcb827").set_face_color("#fefddc");
-        let mut pads = HashMap::new();
         for container in self.containers.values() {
             for cell_id in container {
                 let cell = &self.mesh.cells[*cell_id];
-                self.mesh
-                    .draw_cell(&mut canvas_cells, cell.kind, &cell.points, &mut pads)?;
+                self.mesh.draw_cell(&mut canvas_cells, *cell_id)?;
                 if with_ids {
                     draw_ids(cell);
                 }
@@ -391,8 +389,7 @@ impl<'a> GridCells<'a> {
         canvas_cells.set_face_color("#fffca3");
         for cell_id in &self.large_cells {
             let cell = &self.mesh.cells[*cell_id];
-            self.mesh
-                .draw_cell(&mut canvas_cells, cell.kind, &cell.points, &mut pads)?;
+            self.mesh.draw_cell(&mut canvas_cells, *cell_id)?;
             if with_ids {
                 draw_ids(cell);
             }

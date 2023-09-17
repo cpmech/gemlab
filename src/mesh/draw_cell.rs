@@ -1,107 +1,103 @@
-use super::{Mesh, PointId};
+use super::{CellId, Mesh, PointId};
 use crate::shapes::{GeoKind, Scratchpad};
 use crate::StrError;
 use plotpy::{Canvas, PolyCode};
 use russell_lab::math::ONE_BY_3;
 use russell_lab::Vector;
-use std::collections::HashMap;
 
 impl Mesh {
-    /// Draws a single cell specified by an array of point ids
+    /// Draws the boundaries of a single cell by using the associated Lin type
     ///
     /// # Input
     ///
     /// * `canvas` -- where to draw the cell
-    /// * `cell_kind` -- the GeoKind of the cell
-    /// * `cell_points` -- the connectivity list (IDs of points)
+    /// * `cell_id` -- the ID of the cell
     /// * `pads` -- an access to a map of Scratchpads (exploiting memoization)
     #[rustfmt::skip]
-    pub(crate) fn draw_cell(
-        &self,
-        canvas: &mut Canvas,
-        cell_kind: GeoKind,
-        cell_points: &Vec<PointId>,
-        pads: &mut HashMap<GeoKind, Scratchpad>,
-    ) -> Result<(), StrError> {
-        let ii = cell_points;
+    pub(crate) fn draw_cell(&self, canvas: &mut Canvas, cell_id: CellId) -> Result<(), StrError> {
+        if cell_id >= self.cells.len() {
+            return Err("cell_id is out-of-range");
+        }
+        let cell_kind = self.cells[cell_id].kind;
+        let ii = &self.cells[cell_id].points;
         match cell_kind {
             // Lin
             GeoKind::Lin2 => {
-                self.add_curve(canvas, cell_kind, cell_points, true, true, pads)?;
+                self.add_curve(canvas, cell_kind, ii, true, true);
             }
             GeoKind::Lin3 => {
-                self.add_curve(canvas, cell_kind, cell_points, true, true, pads)?;
+                self.add_curve(canvas, cell_kind, ii, true, true);
             }
             GeoKind::Lin4 => {
-                self.add_curve(canvas, cell_kind, cell_points, true, true, pads)?;
+                self.add_curve(canvas, cell_kind, ii, true, true);
             }
             GeoKind::Lin5 => {
-                self.add_curve(canvas, cell_kind, cell_points, true, true, pads)?;
+                self.add_curve(canvas, cell_kind, ii, true, true);
             }
             // Tri
             GeoKind::Tri3 => {
-                self.add_curve(canvas, GeoKind::Lin2, &[ii[0], ii[1]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin2, &[ii[1], ii[2]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin2, &[ii[2], ii[0]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin2, &[ii[0], ii[1]], true, false);
+                self.add_curve(canvas, GeoKind::Lin2, &[ii[1], ii[2]], false, false);
+                self.add_curve(canvas, GeoKind::Lin2, &[ii[2], ii[0]], false, true);
             }
             GeoKind::Tri6 => {
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[0], ii[1], ii[3]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[1], ii[2], ii[4]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[2], ii[0], ii[5]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[0], ii[1], ii[3]], true, false);
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[1], ii[2], ii[4]], false, false);
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[2], ii[0], ii[5]], false, true);
             }
             GeoKind::Tri10 => {
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[0], ii[1], ii[3], ii[6]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[1], ii[2], ii[4], ii[7]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[2], ii[0], ii[5], ii[8]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[0], ii[1], ii[3], ii[6]], true, false);
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[1], ii[2], ii[4], ii[7]], false, false);
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[2], ii[0], ii[5], ii[8]], false, true);
             }
             GeoKind::Tri15 => {
-                self.add_curve(canvas, GeoKind::Lin5, &[ii[0], ii[1], ii[3], ii[6], ii[7]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin5, &[ii[1], ii[2], ii[4], ii[8], ii[9]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin5, &[ii[2], ii[0], ii[5], ii[10], ii[11]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin5, &[ii[0], ii[1], ii[3], ii[6], ii[7]], true, false);
+                self.add_curve(canvas, GeoKind::Lin5, &[ii[1], ii[2], ii[4], ii[8], ii[9]], false, false);
+                self.add_curve(canvas, GeoKind::Lin5, &[ii[2], ii[0], ii[5], ii[10], ii[11]], false, true);
             }
             // Qua
             GeoKind::Qua4 => {
-                self.add_curve(canvas, GeoKind::Lin2, &[ii[0], ii[1]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin2, &[ii[1], ii[2]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin2, &[ii[2], ii[3]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin2, &[ii[3], ii[0]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin2, &[ii[0], ii[1]], true, false);
+                self.add_curve(canvas, GeoKind::Lin2, &[ii[1], ii[2]], false, false);
+                self.add_curve(canvas, GeoKind::Lin2, &[ii[2], ii[3]], false, false);
+                self.add_curve(canvas, GeoKind::Lin2, &[ii[3], ii[0]], false, true);
             }
             GeoKind::Qua8 => {
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[0], ii[1], ii[4]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[1], ii[2], ii[5]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[2], ii[3], ii[6]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[3], ii[0], ii[7]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[0], ii[1], ii[4]], true, false);
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[1], ii[2], ii[5]], false, false);
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[2], ii[3], ii[6]], false, false);
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[3], ii[0], ii[7]], false, true);
             }
             GeoKind::Qua9 => {
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[0], ii[1], ii[4]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[1], ii[2], ii[5]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[2], ii[3], ii[6]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin3, &[ii[3], ii[0], ii[7]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[0], ii[1], ii[4]], true, false);
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[1], ii[2], ii[5]], false, false);
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[2], ii[3], ii[6]], false, false);
+                self.add_curve(canvas, GeoKind::Lin3, &[ii[3], ii[0], ii[7]], false, true);
             }
             GeoKind::Qua12 => {
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[0], ii[1], ii[4], ii[8]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[1], ii[2], ii[5], ii[9]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[2], ii[3], ii[6], ii[10]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[3], ii[0], ii[7], ii[11]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[0], ii[1], ii[4], ii[8]], true, false);
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[1], ii[2], ii[5], ii[9]], false, false);
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[2], ii[3], ii[6], ii[10]], false, false);
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[3], ii[0], ii[7], ii[11]], false, true);
             }
             GeoKind::Qua16 => {
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[0], ii[1], ii[4], ii[8]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[1], ii[2], ii[5], ii[9]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[2], ii[3], ii[6], ii[10]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin4, &[ii[3], ii[0], ii[7], ii[11]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[0], ii[1], ii[4], ii[8]], true, false);
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[1], ii[2], ii[5], ii[9]], false, false);
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[2], ii[3], ii[6], ii[10]], false, false);
+                self.add_curve(canvas, GeoKind::Lin4, &[ii[3], ii[0], ii[7], ii[11]], false, true);
             }
             GeoKind::Qua17 => {
-                self.add_curve(canvas, GeoKind::Lin5, &[ii[0], ii[1], ii[4], ii[9], ii[10]], true, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin5, &[ii[1], ii[2], ii[5], ii[11], ii[12]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin5, &[ii[2], ii[3], ii[6], ii[13], ii[14]], false, false, pads)?;
-                self.add_curve(canvas, GeoKind::Lin5, &[ii[3], ii[0], ii[7], ii[15], ii[16]], false, true, pads)?;
+                self.add_curve(canvas, GeoKind::Lin5, &[ii[0], ii[1], ii[4], ii[9], ii[10]], true, false);
+                self.add_curve(canvas, GeoKind::Lin5, &[ii[1], ii[2], ii[5], ii[11], ii[12]], false, false);
+                self.add_curve(canvas, GeoKind::Lin5, &[ii[2], ii[3], ii[6], ii[13], ii[14]], false, false);
+                self.add_curve(canvas, GeoKind::Lin5, &[ii[3], ii[0], ii[7], ii[15], ii[16]], false, true);
             }
             // Tet
             GeoKind::Tet4 => {
                 for e in 0..cell_kind.nedge() {
                     let a = cell_kind.edge_node_id(e, 0);
                     let b = cell_kind.edge_node_id(e, 1);
-                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b]], true, true, pads)?;
+                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b]], true, true);
                 }
             }
             GeoKind::Tet10 => {
@@ -109,7 +105,7 @@ impl Mesh {
                     let a = cell_kind.edge_node_id(e, 0);
                     let b = cell_kind.edge_node_id(e, 1);
                     let c = cell_kind.edge_node_id(e, 2);
-                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b], ii[c]], true, true, pads)?;
+                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b], ii[c]], true, true);
                 }
             }
             GeoKind::Tet20 => {
@@ -118,7 +114,7 @@ impl Mesh {
                     let b = cell_kind.edge_node_id(e, 1);
                     let c = cell_kind.edge_node_id(e, 2);
                     let d = cell_kind.edge_node_id(e, 3);
-                    self.add_curve(canvas, GeoKind::Lin3, &[ii[a], ii[b], ii[c], ii[d]], true, true, pads)?;
+                    self.add_curve(canvas, GeoKind::Lin3, &[ii[a], ii[b], ii[c], ii[d]], true, true);
                 }
             }
             // Hex
@@ -126,7 +122,7 @@ impl Mesh {
                 for e in 0..cell_kind.nedge() {
                     let a = cell_kind.edge_node_id(e, 0);
                     let b = cell_kind.edge_node_id(e, 1);
-                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b]], true, true, pads)?;
+                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b]], true, true);
                 }
             }
             GeoKind::Hex20 => {
@@ -134,7 +130,7 @@ impl Mesh {
                     let a = cell_kind.edge_node_id(e, 0);
                     let b = cell_kind.edge_node_id(e, 1);
                     let c = cell_kind.edge_node_id(e, 2);
-                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b], ii[c]], true, true, pads)?;
+                    self.add_curve(canvas, GeoKind::Lin2, &[ii[a], ii[b], ii[c]], true, true);
                 }
             }
             GeoKind::Hex32 => {
@@ -143,7 +139,7 @@ impl Mesh {
                     let b = cell_kind.edge_node_id(e, 1);
                     let c = cell_kind.edge_node_id(e, 2);
                     let d = cell_kind.edge_node_id(e, 3);
-                    self.add_curve(canvas, GeoKind::Lin3, &[ii[a], ii[b], ii[c], ii[d]], true, true, pads)?;
+                    self.add_curve(canvas, GeoKind::Lin3, &[ii[a], ii[b], ii[c], ii[d]], true, true);
                 }
             }
         }
@@ -156,18 +152,10 @@ impl Mesh {
     ///
     /// * `canvas` -- the canvas
     /// * `lin_kind` -- the type of line
+    /// * `lin_points` -- the id of points of the line
     /// * `begin` -- a flag telling to begin the polyline/Bezier
     /// * `end` -- a flag telling to stop the polyline/Bezier
-    /// * `pads` -- an access to a map of Scratchpads (exploiting memoization)
-    fn add_curve(
-        &self,
-        canvas: &mut Canvas,
-        lin_kind: GeoKind,
-        lin_points: &[PointId],
-        begin: bool,
-        end: bool,
-        pads: &mut HashMap<GeoKind, Scratchpad>,
-    ) -> Result<(), StrError> {
+    fn add_curve(&self, canvas: &mut Canvas, lin_kind: GeoKind, lin_points: &[PointId], begin: bool, end: bool) {
         let pp = &self.points;
         let ii = lin_points;
         let mut x = Vector::new(self.ndim);
@@ -267,7 +255,7 @@ impl Mesh {
                     // add poly-curve points or control points (q..) for cubic Bezier
                     // (see file bezier-curves-math.pdf under data/derivations)
                     // in this case, we have to interpolate the Lin5 to make it a Lin4
-                    let pad = pads.entry(lin_kind).or_insert(Scratchpad::new(self.ndim, lin_kind)?);
+                    let mut pad = Scratchpad::new(self.ndim, lin_kind).unwrap();
                     for m in 0..lin_points.len() {
                         for j in 0..self.ndim {
                             pad.set_xx(m, j, pp[ii[m]].coords[j]);
@@ -309,9 +297,8 @@ impl Mesh {
                     }
                 }
             }
-            _ => return Err("lin_kind is not Lin"),
+            _ => panic!("INTERNAL ERROR: lin_kind is not Lin"),
         }
-        Ok(())
     }
 }
 
@@ -322,17 +309,12 @@ mod tests {
     use crate::mesh::Samples;
     use crate::shapes::GeoKind;
     use plotpy::Canvas;
-    use std::collections::HashMap;
 
     #[test]
+    #[should_panic(expected = "INTERNAL ERROR: lin_kind is not Lin")]
     fn add_curve_catches_errors() {
         let mesh = Samples::one_lin2();
-        let mut pads = HashMap::new();
         let mut canvas = Canvas::new();
-        assert_eq!(
-            mesh.add_curve(&mut canvas, GeoKind::Tri3, &[], true, true, &mut pads)
-                .err(),
-            Some("lin_kind is not Lin")
-        );
+        mesh.add_curve(&mut canvas, GeoKind::Tri3, &[], true, true);
     }
 }

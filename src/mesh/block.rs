@@ -975,13 +975,13 @@ impl Block {
 mod tests {
     use super::{ArgsRing, Block, Constraint2D, Constraint3D};
     use crate::geometry::point_point_distance;
-    use crate::mesh::{Extract, Features, Figure, Mesh, Samples};
+    use crate::mesh::{Figure, Mesh, Samples};
     use crate::shapes::GeoKind;
     use plotpy::{Canvas, Plot, Surface};
     use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::math::{PI, SQRT_2};
 
-    const SAVE_FIGURE: bool = false;
+    const SAVE_FIGURE: bool = true;
 
     fn draw_ring(mesh: &Mesh, args: &ArgsRing, filename: &str) {
         // fig struct
@@ -1016,8 +1016,8 @@ mod tests {
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
-        let features = Features::new(mesh, Extract::Boundary);
-        mesh.draw_edges(&mut fig, &features, false).unwrap();
+        // let features = Features::new(mesh, Extract::Boundary);
+        // mesh.draw_edges(&mut fig, &features, false).unwrap();
         mesh.draw_cell_ids(&mut fig).unwrap();
         mesh.draw_point_ids(&mut fig);
         mesh.draw_point_dots(&mut fig);
@@ -1040,7 +1040,7 @@ mod tests {
     where
         F: FnMut(&mut Plot),
     {
-        let features = Features::new(&mesh, Extract::All);
+        // let features = Features::new(&mesh, Extract::All);
         let mut fig = Figure::new();
         pre(&mut fig.plot);
         block.draw(&mut fig.plot, false, set_range).unwrap();
@@ -1048,7 +1048,7 @@ mod tests {
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
-        mesh.draw_edges(&mut fig, &features, false).unwrap();
+        // mesh.draw_edges(&mut fig, &features, false).unwrap();
         mesh.draw_cell_ids(&mut fig).unwrap();
         mesh.draw_point_ids(&mut fig);
         mesh.draw_point_dots(&mut fig);
