@@ -229,7 +229,7 @@ pub struct Features {
     /// The maximum coordinates of the points (space_ndim)
     pub max: Vec<f64>,
 
-    /// Space number of dimension (needed for the find functions)
+    /// Space number of dimension (needed for the search functions)
     pub space_ndim: usize,
 
     /// Total number of points in the mesh (needed to generate face keys of Tri3)
@@ -237,7 +237,7 @@ pub struct Features {
     /// **readonly**
     pub num_points: usize,
 
-    /// Tool to quickly find points by coordinates
+    /// Tool to quickly search points by coordinates
     pub grid: GridSearch,
 
     /// Maps a point id to edges sharing the point
@@ -578,7 +578,7 @@ impl Features {
         F: FnMut(&Vec<f64>) -> bool,
     {
         let mut edge_keys: HashSet<EdgeKey> = HashSet::new();
-        // find all points constrained by "at" and "filter"
+        // search all points constrained by "at" and "filter"
         let point_ids = self.search_point_ids(at, filter)?;
         for point_id in &point_ids {
             // select all edges connected to the found points
@@ -620,7 +620,7 @@ impl Features {
             return Err("cannot find face keys in 2D");
         }
         let mut face_keys: HashSet<FaceKey> = HashSet::new();
-        // find all points constrained by "at" and "filter"
+        // search all points constrained by "at" and "filter"
         let point_ids = self.search_point_ids(at, filter)?;
         for point_id in &point_ids {
             // select all faces connected to the found points
