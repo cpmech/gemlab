@@ -55,6 +55,13 @@ const I_MIN: usize = 0;
 const I_MAX: usize = 1;
 type BboxMinMax = Vec<Vec<f64>>; // [ndim][N_MIN_MAX]
 
+/// Implements a grid for fast searching cells where a point falls in
+///
+/// # Reference
+///
+/// * Durand, Farias, and Pedroso (2015) Computing intersections between
+///   non-compatible curves and finite elements, Computational Mechanics;
+///   DOI=10.1007/s00466-015-1181-y
 pub struct GridCells<'a> {
     mesh: &'a Mesh,                  // the mesh
     ndiv: Vec<usize>,                // (ndim) number of divisions along each direction
