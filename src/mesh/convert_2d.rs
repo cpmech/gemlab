@@ -204,14 +204,21 @@ impl Mesh {
 
 #[cfg(test)]
 mod tests {
-    use crate::mesh::{Cell, Mesh, Point, Samples};
+    use crate::mesh::{Cell, Figure, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_chk::vec_approx_eq;
 
-    #[allow(unused_imports)]
-    use crate::mesh::draw_mesh;
+    const SAVE_FIGURE: bool = true;
 
-    const SAVE_FIGURE: bool = false;
+    fn draw(mesh: &Mesh, larger: bool, filename: &str) {
+        let mut fig = Figure::new();
+        fig.cell_ids = true;
+        fig.point_ids = true;
+        if larger {
+            fig.figure_size = Some((600.0, 600.0));
+        }
+        mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
+    }
 
     #[test]
     fn convert_mesh_2d_captures_errors() {
@@ -298,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn convert_tri6_to_tri15_works_1() {
+    fn convert_tri6_to_tri15_works() {
         #[rustfmt::skip]
         let mesh = Mesh {
             ndim: 2,
@@ -321,13 +328,13 @@ mod tests {
         mesh.check_all().unwrap();
 
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_before.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_convert_2d_tri6_to_tri15_before.svg");
         }
 
         let res = mesh.convert_2d(GeoKind::Tri15).unwrap();
 
         if SAVE_FIGURE {
-            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri15_1_after.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_convert_2d_tri6_to_tri15_after.svg");
         }
 
         res.check_all().unwrap();
@@ -417,13 +424,13 @@ mod tests {
         mesh.check_all().unwrap();
 
         if SAVE_FIGURE {
-            draw_mesh(&mesh, true, true, false, "/tmp/gemlab/test_tri6_to_tri10_before.svg").unwrap();
+            draw(&mesh, false, "/tmp/gemlab/test_convert_2d_tri6_to_tri10_before.svg");
         }
 
         let res = mesh.convert_2d(GeoKind::Tri10).unwrap();
 
         if SAVE_FIGURE {
-            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri10_after.svg").unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_tri6_to_tri10_after.svg");
         }
 
         res.check_all().unwrap();
@@ -494,7 +501,7 @@ mod tests {
         let res = mesh.convert_2d(GeoKind::Tri3).unwrap();
 
         if SAVE_FIGURE {
-            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri6_to_tri3_after.svg").unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_tri6_to_tri3_after.svg");
         }
 
         res.check_all().unwrap();
@@ -510,7 +517,7 @@ mod tests {
         let mesh = Samples::two_tri3().clone();
         let res = mesh.convert_2d(GeoKind::Tri6).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri3_to_tri6_after.svg").unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_tri3_to_tri6_after.svg");
         }
         res.check_all().unwrap();
         res.check_overlapping_points(0.1).unwrap();
@@ -524,8 +531,7 @@ mod tests {
         let mesh = Samples::four_tri3().clone();
         let res = mesh.convert_2d(GeoKind::Tri6).unwrap();
         if SAVE_FIGURE {
-            let name = "/tmp/gemlab/test_four_tri3_to_tri6_after.svg";
-            draw_mesh(&res, true, true, false, name).unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_four_tri3_to_tri6_after.svg");
         }
         res.check_all().unwrap();
         res.check_overlapping_points(0.1).unwrap();
@@ -541,7 +547,7 @@ mod tests {
         let mesh = Samples::two_tri3().clone();
         let res = mesh.convert_2d(GeoKind::Tri10).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_tri3_to_tri10_after.svg").unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_tri3_to_tri10_after.svg");
         }
         res.check_all().unwrap();
         res.check_overlapping_points(0.1).unwrap();
@@ -551,12 +557,11 @@ mod tests {
     }
 
     #[test]
-    fn convert_tri6_multi_shares_to_tri10_works() {
-        let mesh = Samples::three_tri6_multi_shares().clone();
+    fn convert_tri6_arrow_to_tri10_works() {
+        let mesh = Samples::three_tri6_arrow().clone();
         let res = mesh.convert_2d(GeoKind::Tri10).unwrap();
         if SAVE_FIGURE {
-            let name = "/tmp/gemlab/test_tri6_multi_shares_to_tri10_after.svg";
-            draw_mesh(&res, true, true, false, name).unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_tri6_arrow_to_tri10_after.svg");
         }
         res.check_all().unwrap();
         res.check_overlapping_points(0.1).unwrap();
@@ -590,7 +595,7 @@ mod tests {
         let mesh = Samples::two_qua4().clone();
         let res = mesh.convert_2d(GeoKind::Qua8).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua4_to_qua8_after.svg").unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_qua4_to_qua8_after.svg");
         }
         res.check_all().unwrap();
         res.check_overlapping_points(0.2).unwrap();
@@ -604,7 +609,7 @@ mod tests {
         let mesh = Samples::block_2d_four_qua12().clone();
         let res = mesh.convert_2d(GeoKind::Qua16).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua12_to_qua16_after.svg").unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_qua12_to_qua16_after.svg");
         }
         res.check_all().unwrap();
         res.check_overlapping_points(0.2).unwrap();
@@ -629,7 +634,7 @@ mod tests {
         let mesh = Samples::block_2d_four_qua12().clone();
         let res = mesh.convert_2d(GeoKind::Qua17).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua12_to_qua17_after.svg").unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_qua12_to_qua17_after.svg");
         }
         res.check_all().unwrap();
         res.check_overlapping_points(0.2).unwrap();
@@ -663,7 +668,7 @@ mod tests {
         let mesh = Samples::block_2d_four_qua17().clone();
         let res = mesh.convert_2d(GeoKind::Qua4).unwrap();
         if SAVE_FIGURE {
-            draw_mesh(&res, true, true, false, "/tmp/gemlab/test_qua17_to_qua4_after.svg").unwrap();
+            draw(&res, false, "/tmp/gemlab/test_convert_2d_qua17_to_qua4_after.svg");
         }
         res.check_all().unwrap();
         res.check_overlapping_points(0.2).unwrap();

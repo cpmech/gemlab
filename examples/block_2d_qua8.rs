@@ -1,4 +1,4 @@
-use gemlab::mesh::{draw_mesh, Block};
+use gemlab::prelude::*;
 use gemlab::shapes::GeoKind;
 use gemlab::StrError;
 
@@ -69,6 +69,9 @@ fn main() -> Result<(), StrError> {
 ";
 
     assert_eq!(format!("{}", mesh), correct);
-    draw_mesh(&mesh, true, false, false, "/tmp/gemlab/example_block_2d_qua8.svg")?;
-    Ok(())
+
+    let mut fig = Figure::new();
+    fig.cell_ids = true;
+    fig.point_ids = true;
+    mesh.draw(Some(fig), "/tmp/gemlab/example_block_2d_qua8.svg", |_, _| {})
 }

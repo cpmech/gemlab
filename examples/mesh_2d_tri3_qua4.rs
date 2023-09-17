@@ -1,4 +1,4 @@
-use gemlab::mesh::{draw_mesh, Mesh};
+use gemlab::prelude::*;
 use gemlab::StrError;
 
 fn main() -> Result<(), StrError> {
@@ -38,10 +38,15 @@ fn main() -> Result<(), StrError> {
          ",
     )?;
     println!("{}", mesh);
+
     assert_eq!(mesh.points.len(), 8);
     assert_eq!(mesh.cells.len(), 5);
     assert_eq!(mesh.cells[0].points.len(), 3);
     assert_eq!(mesh.cells[2].points.len(), 4);
-    draw_mesh(&mesh, true, false, false, "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg")?;
-    Ok(())
+
+    let mut fig = Figure::new();
+    fig.cell_ids = true;
+    fig.point_ids = true;
+
+    mesh.draw(Some(fig), "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg", |_, _| {})
 }
