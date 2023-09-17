@@ -1,4 +1,4 @@
-use gemlab::mesh::{At, Extract, Features, Mesh};
+use gemlab::mesh::{At, Features, Mesh};
 use gemlab::util::any_x;
 use gemlab::StrError;
 use std::collections::HashMap;
@@ -7,7 +7,7 @@ use std::collections::HashMap;
 fn test_tetrahedra() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/five_tets_within_cube.msh")?;
-    let features = Features::new(&mesh, Extract::Boundary);
+    let features = Features::new(&mesh, false);
     let npoint = mesh.points.len();
     assert_eq!(npoint, 8);
     assert_eq!(mesh.cells.len(), 5);
@@ -76,7 +76,7 @@ fn test_tetrahedra() -> Result<(), StrError> {
     mesh.check_face_normals(&features.faces, &solutions, 1e-15).expect("ok");
 
     // search points
-    let feat = Features::new(&mesh, Extract::Boundary);
+    let feat = Features::new(&mesh, false);
     let points = feat.search_point_ids(At::X(0.0), any_x)?;
     assert_eq!(&points, &[0, 3, 4, 7]);
     let points = feat.search_point_ids(At::Y(2.0), any_x)?;

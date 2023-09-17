@@ -31,7 +31,7 @@ gemlab = "*"
 
 ```rust
 use gemlab::integ;
-use gemlab::mesh::{At, Extract, Features, Mesh};
+use gemlab::mesh::{At, Features, Mesh};
 use gemlab::shapes::Scratchpad;
 use gemlab::StrError;
 use std::collections::HashSet;
@@ -53,10 +53,10 @@ fn main() -> Result<(), StrError> {
     let mesh = Mesh::from_text_file(path)?;
 
     // Extract features such boundary edges and faces.
-    // Find entities along the boundary of the mesh given coordinates.
+    // Search entities along the boundary of the mesh given coordinates.
     // The `At` enum provides an easy way to define the type of the
     // constraint such as line, plane, circle, etc.
-    let feat = Features::new(&mesh, Extract::Boundary);
+    let feat = Features::new(&mesh, false);
     assert_eq!(feat.search_point_ids(At::Y(0.5), |_| true)?, &[3, 4]);
     assert_eq!(feat.search_edge_keys(At::X(1.0), |_| true)?, &[(2, 4), (4, 7)]);
 

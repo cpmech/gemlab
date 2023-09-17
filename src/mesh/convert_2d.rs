@@ -1,4 +1,4 @@
-use super::{Cell, Extract, Features, Mesh, Point};
+use super::{Cell, Features, Mesh, Point};
 use crate::prelude::PointId;
 use crate::shapes::{GeoClass, GeoKind, Scratchpad};
 use crate::StrError;
@@ -81,8 +81,8 @@ impl Mesh {
             }
         }
 
-        // find neighbors in the original mesh
-        let source_features = Features::new(self, Extract::All);
+        // to search neighbors in the original mesh
+        let source_features = Features::new(self, true);
 
         // flag indicating that a connectivity point has not been set
         const UNSET: usize = usize::MAX;

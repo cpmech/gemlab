@@ -1,4 +1,4 @@
-use crate::mesh::{EdgeKey, Extract, FaceKey, Feature, MapFaceToCells, Mesh, PointId};
+use crate::mesh::{EdgeKey, FaceKey, Feature, MapFaceToCells, Mesh, PointId};
 use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet};
 pub(crate) fn extract_features_3d(
     mesh: &Mesh,
     all_faces: &MapFaceToCells,
-    extract: Extract,
+    extract_all: bool,
 ) -> (
     HashSet<PointId>,
     HashMap<EdgeKey, Feature>,
@@ -37,10 +37,10 @@ pub(crate) fn extract_features_3d(
         let shared_by = all_faces.get(face_key).unwrap();
 
         // accept feature?
-        let accept = match extract {
-            Extract::All => true,
-            Extract::Boundary => shared_by.len() == 1, // boundary face; with only one shared cell
-            Extract::Interior => shared_by.len() != 1, // interior face; shared by multiple cells
+        let accept = if extract_all {
+            true
+        } else {
+            shared_by.len() == 1 // boundary face; with only one shared cell
         };
         if !accept {
             continue;
@@ -103,7 +103,7 @@ pub(crate) fn extract_features_3d(
 mod tests {
     use super::extract_features_3d;
     use crate::mesh::algorithms::extract_all_faces;
-    use crate::mesh::{EdgeKey, Extract, FaceKey, Feature, PointId, Samples};
+    use crate::mesh::{EdgeKey, FaceKey, Feature, PointId, Samples};
     use crate::util::AsArray2D;
     use std::collections::HashMap;
 
@@ -161,7 +161,7 @@ mod tests {
         // 1--------------2
         let mesh = Samples::two_hex8();
         let all_faces = extract_all_faces(&mesh);
-        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::Boundary);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, false);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -263,7 +263,7 @@ mod tests {
         // 1--------------2
         let mesh = Samples::two_hex8();
         let all_faces = extract_all_faces(&mesh);
-        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::All);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, true);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -344,44 +344,6 @@ mod tests {
     }
 
     #[test]
-    fn extract_features_3d_interior_works() {
-        //      8-------------11
-        //     /.             /|
-        //    / .            / |
-        //   /  .           /  |
-        //  /   .          /   |       id = 1
-        // 9-------------10    |       attribute = 2
-        // |    .         |    |
-        // |    4---------|----7
-        // |   /.         |   /|
-        // |  / .         |  / |
-        // | /  .         | /  |
-        // |/   .         |/   |
-        // 5--------------6    |       id = 0
-        // |    .         |    |       attribute = 1
-        // |    0---------|----3
-        // |   /          |   /
-        // |  /           |  /
-        // | /            | /
-        // |/             |/
-        // 1--------------2
-        let mesh = Samples::two_hex8();
-        let all_faces = extract_all_faces(&mesh);
-        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::Interior);
-        let correct_edge_keys = [(4, 5), (4, 7), (5, 6), (6, 7)];
-        let correct_edge_points = [[5, 4], [4, 7], [6, 5], [7, 6]];
-        validate_edges(&edges, &correct_edge_keys, &correct_edge_points);
-        let correct_face_keys = [(4, 5, 6, 7)];
-        let correct_face_points = [[4, 5, 6, 7]];
-        validate_faces(&faces, &correct_face_keys, &correct_face_points);
-        assert_eq!(min, &[0.0, 0.0, 1.0]);
-        assert_eq!(max, &[1.0, 1.0, 1.0]);
-        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
-        points.sort();
-        assert_eq!(points, &[4, 5, 6, 7]);
-    }
-
-    #[test]
     fn extract_features_3d_mixed_works() {
         //                       4------------7-----------10
         //                      /.           /|            |
@@ -399,7 +361,7 @@ mod tests {
         //
         let mesh = Samples::mixed_shapes_3d();
         let all_faces = extract_all_faces(&mesh);
-        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::Boundary);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, false);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -516,7 +478,7 @@ mod tests {
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
         let all_faces = extract_all_faces(&mesh);
-        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::Boundary);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, false);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),
@@ -732,7 +694,7 @@ mod tests {
         //  20========25========21========46========44
         let mesh = Samples::block_3d_eight_hex20();
         let all_faces = extract_all_faces(&mesh);
-        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, Extract::All);
+        let (points, edges, faces, min, max) = extract_features_3d(&mesh, &all_faces, true);
         let correct_edge_keys = [
             (0, 1),
             (0, 3),

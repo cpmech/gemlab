@@ -1,4 +1,5 @@
-use super::{algorithms, At, CellId, Extract, Mesh, PointId};
+use super::algorithms::{extract_all_2d_edges, extract_all_faces, extract_features_2d, extract_features_3d};
+use super::{At, CellId, Mesh, PointId};
 use crate::shapes::GeoKind;
 use crate::util::GridSearch;
 use crate::StrError;
@@ -64,7 +65,7 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 /// ## Two-dimensions
 ///
 /// ```
-/// use gemlab::mesh::{At, Cell, Extract, Features, Mesh, Point};
+/// use gemlab::mesh::{At, Cell, Features, Mesh, Point};
 /// use gemlab::shapes::GeoKind;
 /// use gemlab::StrError;
 ///
@@ -91,7 +92,7 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 ///         ],
 ///     };
 ///
-///     let features = Features::new(&mesh, Extract::Boundary);
+///     let features = Features::new(&mesh, false);
 ///
 ///     let mut points: Vec<_> = features.points.iter().copied().collect();
 ///     points.sort();
@@ -107,7 +108,7 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 /// ## Three-dimensions
 ///
 /// ```
-/// use gemlab::mesh::{At, Cell, Extract, Features, Mesh, Point};
+/// use gemlab::mesh::{At, Cell, Features, Mesh, Point};
 /// use gemlab::shapes::GeoKind;
 /// use gemlab::StrError;
 ///
@@ -143,7 +144,7 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 ///          ],
 ///      };
 ///
-///     let features = Features::new(&mesh, Extract::Boundary);
+///     let features = Features::new(&mesh, false);
 ///
 ///     let mut points: Vec<_> = features.points.iter().copied().collect();
 ///     points.sort();
@@ -249,23 +250,23 @@ pub struct Features {
 impl Features {
     /// Extracts features
     ///
+    /// # Input
+    ///
+    /// * `mesh` -- the mesh
+    /// * `extract_all` -- if true, will extract the boundary and the interior features.
+    ///    Otherwise, if false, will extract the **boundary only**
+    ///
     /// # Notes
     ///
-    /// * The points of rods or shells are only extracted when either the All or Boundary option is selected
     /// * You may want to call [Mesh::check_all] to capture (some) errors of the mesh first
     ///
     /// # Panics
     ///
     /// * This function will panic if the mesh data is invalid. For instance, when
     ///   the cell points array doesn't contain enough points or the indices are incorrect
-    pub fn new(mesh: &Mesh, extract: Extract) -> Self {
+    pub fn new(mesh: &Mesh, extract_all: bool) -> Self {
         // options
         assert!(mesh.ndim >= 2 && mesh.ndim <= 3);
-        let do_rods_and_shells = match extract {
-            Extract::All => true,
-            Extract::Boundary => true,
-            Extract::Interior => false,
-        };
 
         // define variables
         let all_2d_edges: MapEdge2dToCells;
@@ -278,31 +279,29 @@ impl Features {
 
         // extract features
         if mesh.ndim == 2 {
-            all_2d_edges = algorithms::extract_all_2d_edges(mesh);
+            all_2d_edges = extract_all_2d_edges(mesh);
             all_faces = HashMap::new();
             faces = HashMap::new();
-            (points, edges, min, max) = algorithms::extract_features_2d(mesh, &all_2d_edges, extract);
+            (points, edges, min, max) = extract_features_2d(mesh, &all_2d_edges, extract_all);
         } else {
             all_2d_edges = HashMap::new();
-            all_faces = algorithms::extract_all_faces(mesh);
-            (points, edges, faces, min, max) = algorithms::extract_features_3d(mesh, &all_faces, extract);
+            all_faces = extract_all_faces(mesh);
+            (points, edges, faces, min, max) = extract_features_3d(mesh, &all_faces, extract_all);
         };
 
         // handle rods and shells
-        if do_rods_and_shells {
-            mesh.cells.iter().for_each(|cell| {
-                let geo_ndim = cell.kind.ndim();
-                if geo_ndim == 1 || (geo_ndim == 2 && mesh.ndim == 3) {
-                    cell.points.iter().for_each(|id| {
-                        points.insert(*id);
-                        for j in 0..mesh.ndim {
-                            min[j] = f64::min(min[j], mesh.points[*id].coords[j]);
-                            max[j] = f64::max(max[j], mesh.points[*id].coords[j]);
-                        }
-                    });
-                }
-            });
-        }
+        mesh.cells.iter().for_each(|cell| {
+            let geo_ndim = cell.kind.ndim();
+            if geo_ndim == 1 || (geo_ndim == 2 && mesh.ndim == 3) {
+                cell.points.iter().for_each(|id| {
+                    points.insert(*id);
+                    for j in 0..mesh.ndim {
+                        min[j] = f64::min(min[j], mesh.points[*id].coords[j]);
+                        max[j] = f64::max(max[j], mesh.points[*id].coords[j]);
+                    }
+                });
+            }
+        });
 
         // add point ids to grid
         let mut grid = GridSearch::new(&min, &max, None, None, None).unwrap();
@@ -378,7 +377,7 @@ impl Features {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::mesh::{Cell, Extract, Features, Mesh, Point};
+    /// use gemlab::mesh::{Cell, Features, Mesh, Point};
     /// use gemlab::shapes::GeoKind;
     /// use gemlab::StrError;
     ///
@@ -405,7 +404,7 @@ impl Features {
     ///         ],
     ///     };
     ///
-    ///     let features = Features::new(&mesh, Extract::All);
+    ///     let features = Features::new(&mesh, true);
     ///
     ///     let neighbors = features.get_neighbors_2d(&mesh, 0);
     ///     assert_eq!(neighbors.len(), 1);
@@ -794,7 +793,7 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::{Feature, Features};
-    use crate::mesh::{At, Extract, Samples};
+    use crate::mesh::{At, Samples};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
     use plotpy::Plot;
@@ -818,7 +817,7 @@ mod tests {
         // |/             |/
         // 1--------------2   1.0
         let mesh = Samples::one_hex8();
-        let features = Features::new(&mesh, Extract::Boundary);
+        let features = Features::new(&mesh, false);
         let edge = features.get_edge(4, 5);
         let face = features.get_face(0, 1, 4, 5);
         assert_eq!(edge.points, &[4, 5]);
@@ -828,7 +827,7 @@ mod tests {
     #[test]
     fn new_method_allocates_grid_2d() {
         let mesh = Samples::two_qua4();
-        let feat = Features::new(&mesh, Extract::Boundary);
+        let feat = Features::new(&mesh, false);
         assert_eq!(
             format!("{}", feat.grid),
             "0: [0]\n\
@@ -853,7 +852,7 @@ mod tests {
     #[test]
     fn new_method_allocates_grid_3d() {
         let mesh = Samples::two_hex8();
-        let feat = Features::new(&mesh, Extract::Boundary);
+        let feat = Features::new(&mesh, false);
         assert_eq!(
             format!("{}", feat.grid),
             "0: [0]\n\
@@ -885,7 +884,7 @@ mod tests {
     #[should_panic(expected = "cannot find edge with given key")]
     fn get_edge_panics_on_error() {
         let mesh = Samples::one_tri3();
-        let features = Features::new(&mesh, Extract::Boundary);
+        let features = Features::new(&mesh, false);
         features.get_edge(4, 5);
     }
 
@@ -893,7 +892,7 @@ mod tests {
     #[should_panic(expected = "cannot find face with given key")]
     fn get_face_panics_on_error() {
         let mesh = Samples::one_tet4();
-        let features = Features::new(&mesh, Extract::Boundary);
+        let features = Features::new(&mesh, false);
         features.get_face(4, 5, 6, 100);
     }
 
@@ -918,7 +917,7 @@ mod tests {
     #[test]
     fn neighbors_are_correct_2d() {
         let mesh = Samples::block_2d_four_qua12().clone();
-        let features = Features::new(&mesh, Extract::All);
+        let features = Features::new(&mesh, true);
         let edges = features.all_2d_edges;
         let mut keys: Vec<_> = edges.keys().into_iter().collect();
         keys.sort();
@@ -957,7 +956,7 @@ mod tests {
     #[test]
     fn get_neighbors_2d_works() {
         let mesh = Samples::block_2d_four_qua4();
-        let features = Features::new(&mesh, Extract::All);
+        let features = Features::new(&mesh, true);
 
         let neighbors = features.get_neighbors_2d(&mesh, 0);
         assert_eq!(neighbors.len(), 2);
@@ -987,7 +986,7 @@ mod tests {
 
         // 2d
         let mesh = Samples::two_qua4();
-        let feat = Features::new(&mesh, Extract::Boundary);
+        let feat = Features::new(&mesh, false);
         assert_eq!(
             feat.search_point_ids(At::Z(0.0), any_x).err(),
             Some("At::Z works in 3D only")
@@ -1012,7 +1011,7 @@ mod tests {
 
         // 3d
         let mesh = Samples::two_hex8();
-        let boundary = Features::new(&mesh, Extract::Boundary);
+        let boundary = Features::new(&mesh, false);
         assert_eq!(
             boundary.search_point_ids(At::Circle(0.0, 0.0, 0.0), any_x).err(),
             Some("At::Circle works in 2D only")
@@ -1029,7 +1028,7 @@ mod tests {
         //   0--------1--------4
         //           circle
         let mesh = Samples::two_qua4();
-        let feat = Features::new(&mesh, Extract::All);
+        let feat = Features::new(&mesh, true);
         assert_eq!(feat.search_point_ids(At::XY(0.0, 0.0), any_x).unwrap(), &[0]);
         assert_eq!(feat.search_point_ids(At::XY(2.0, 1.0), any_x).unwrap(), &[5]);
         assert_eq!(
@@ -1071,7 +1070,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_hex8();
-        let feat = Features::new(&mesh, Extract::Boundary);
+        let feat = Features::new(&mesh, false);
         assert_eq!(feat.search_point_ids(At::X(0.0), any_x).unwrap(), &[0, 3, 4, 7, 8, 11]);
         assert_eq!(feat.search_point_ids(At::X(1.0), any_x).unwrap(), &[1, 2, 5, 6, 9, 10]);
         assert_eq!(
@@ -1133,7 +1132,7 @@ mod tests {
         // |        |        |
         // 0--------1--------4
         let mesh = Samples::two_qua4();
-        let feat = Features::new(&mesh, Extract::Boundary);
+        let feat = Features::new(&mesh, false);
         assert_eq!(feat.search_edge_keys(At::Y(0.0), any_x).unwrap(), &[(0, 1), (1, 4)]);
         assert_eq!(feat.search_edge_keys(At::Y(0.0), |x| x[0] <= 1.0).unwrap(), &[(0, 1)]);
         assert_eq!(feat.search_edge_keys(At::X(2.0), any_x).unwrap(), &[(4, 5)]);
@@ -1193,7 +1192,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_hex8();
-        let feat = Features::new(&mesh, Extract::Boundary);
+        let feat = Features::new(&mesh, false);
         assert_eq!(
             feat.search_edge_keys(At::X(0.0), any_x).unwrap(),
             &[(0, 3), (0, 4), (3, 7), (4, 7), (4, 8), (7, 11), (8, 11)],
@@ -1319,7 +1318,7 @@ mod tests {
         // |        |        |
         // 0--------1--------4
         let mesh = Samples::two_qua4();
-        let feat = Features::new(&mesh, Extract::Boundary);
+        let feat = Features::new(&mesh, false);
         assert_eq!(
             feat.search_face_keys(At::X(0.0), any_x).err(),
             Some("cannot find face keys in 2D")
@@ -1347,7 +1346,7 @@ mod tests {
         //  1------------2   1.0
         // 0.0          1.0
         let mesh = Samples::two_hex8();
-        let feat = Features::new(&mesh, Extract::Boundary);
+        let feat = Features::new(&mesh, false);
         assert_eq!(
             feat.search_face_keys(At::X(0.0), any_x).unwrap(),
             &[(0, 3, 4, 7), (4, 7, 8, 11)]
@@ -1481,7 +1480,7 @@ mod tests {
         //
         //                     1.0 1.25  1.5 1.75  2.0
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let feat = Features::new(&mesh, Extract::Boundary);
+        let feat = Features::new(&mesh, false);
         let (r, rr) = (1.0, 2.0);
         assert_eq!(feat.search_point_ids(At::XY(1.00, 0.00), any_x).unwrap(), &[0]);
         assert_eq!(feat.search_point_ids(At::XY(1.25, 0.00), any_x).unwrap(), &[15]);

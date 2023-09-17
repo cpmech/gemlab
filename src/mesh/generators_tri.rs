@@ -250,7 +250,7 @@ impl Unstructured {
 mod tests {
     use super::Unstructured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{At, Extract, Features, Figure, Mesh};
+    use crate::mesh::{At, Features, Figure, Mesh};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
     use russell_chk::approx_eq;
@@ -285,7 +285,7 @@ mod tests {
     }
 
     fn check_corner_markers(mesh: &Mesh) {
-        let feat = Features::new(mesh, Extract::Boundary);
+        let feat = Features::new(mesh, false);
         let res = feat.search_point_ids(At::XY(RMIN, 0.0), any_x).unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(mesh.points[res[0]].marker, -1);

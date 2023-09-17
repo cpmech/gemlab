@@ -1,5 +1,5 @@
 use gemlab::integ;
-use gemlab::mesh::{At, Extract, Features, Mesh};
+use gemlab::mesh::{At, Features, Mesh};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::any_x;
 use gemlab::StrError;
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/column_distorted_tris_quads.msh")?;
-    let features = Features::new(&mesh, Extract::Boundary);
+    let features = Features::new(&mesh, false);
 
     // check sizes
     assert_eq!(mesh.points.len(), 13);
@@ -64,7 +64,7 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
         .expect("ok");
 
     // search points
-    let feat = Features::new(&mesh, Extract::Boundary);
+    let feat = Features::new(&mesh, false);
     let points = feat.search_point_ids(At::X(0.0), any_x)?;
     assert_eq!(&points, &[0, 1, 2, 3, 4, 5, 6]);
     let points = feat.search_point_ids(At::X(1.0), any_x)?;
@@ -88,7 +88,7 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
 fn test_rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
     let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
-    let features = Features::new(&mesh, Extract::Boundary);
+    let features = Features::new(&mesh, false);
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
     // for both tris or quas where 2.0 corresponds to the edge_length in the reference system
@@ -111,7 +111,7 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
         .expect("ok");
 
     // search edges
-    let feat = Features::new(&mesh, Extract::Boundary);
+    let feat = Features::new(&mesh, false);
     let edges = feat.search_edge_keys(At::X(0.0), any_x)?;
     assert_eq!(&edges, &[(0, 3), (3, 7), (7, 10), (10, 14)]);
     let edges = feat.search_edge_keys(At::X(4.0), any_x)?;
