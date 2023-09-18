@@ -684,6 +684,7 @@ impl Samples {
     /// ```text
     ///      y
     ///      ^
+    ///     +2           +2           +2
     /// 1.0  3------------2------------5
     ///      |`.      [1] |            |    [#] indicates id
     ///      |  `.    (1) |            |    (#) indicates attribute
@@ -693,6 +694,7 @@ impl Samples {
     ///      | (1)      `.|            |
     /// 0.0  0------------1------------4 -> x
     ///     0.0          1.0          2.0
+    ///     +1           +1           +1
     /// ```
     ///
     /// ![two_tri3_one_qua4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_tri3_one_qua4.svg)
@@ -701,12 +703,12 @@ impl Samples {
         Mesh {
             ndim: 2,
             points: vec![
-                Point { id: 0, marker: 0, coords: vec![0.0, 0.0] },
-                Point { id: 1, marker: 0, coords: vec![1.0, 0.0] },
-                Point { id: 2, marker: 0, coords: vec![1.0, 1.0] },
-                Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
-                Point { id: 4, marker: 0, coords: vec![2.0, 0.0] },
-                Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
+                Point { id: 0, marker: 1, coords: vec![0.0, 0.0] },
+                Point { id: 1, marker: 1, coords: vec![1.0, 0.0] },
+                Point { id: 2, marker: 2, coords: vec![1.0, 1.0] },
+                Point { id: 3, marker: 2, coords: vec![0.0, 1.0] },
+                Point { id: 4, marker: 1, coords: vec![2.0, 0.0] },
+                Point { id: 5, marker: 2, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },

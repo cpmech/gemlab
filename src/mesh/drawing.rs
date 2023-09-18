@@ -153,11 +153,11 @@ impl Mesh {
 
     /// Draws all point ids (labels)
     ///
-    /// **Note:** Negative point markers are shown within parentheses.
+    /// **Note:** Non-zero point markers are shown within parentheses.
     pub fn draw_point_ids(&self, fig: &mut Figure) {
         if self.ndim == 2 {
             self.points.iter().for_each(|point| {
-                let msg = if point.marker < 0 {
+                let msg = if point.marker != 0 {
                     format!("{}({})", point.id, point.marker)
                 } else {
                     format!("{}", point.id)
