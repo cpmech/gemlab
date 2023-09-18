@@ -269,7 +269,7 @@ impl Mesh {
     ///
     /// * `fig` -- the Figure struct (optional => use default configuration)
     /// * `filepath` -- may be a String, &str, or Path
-    /// * `extra` -- is a function to perform some {pre,post}-drawing on the plot area.
+    /// * `extra` -- is a function `|plot, before| {}` to perform some {pre,post}-drawing on the plot area.
     ///   The two arguments of this function are:
     ///     * `plot: &mut Plot` -- the `plot` reference that can be used perform some extra drawings.
     ///     * `before: bool` -- **true** indicates that the function is being called before all other
