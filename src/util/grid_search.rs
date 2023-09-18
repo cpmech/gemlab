@@ -14,7 +14,7 @@ use std::fmt;
 /// ```text
 /// |_| true
 /// ```
-pub fn any_x(_: &Vec<f64>) -> bool {
+pub fn any_x(_: &[f64]) -> bool {
     true
 }
 
@@ -355,7 +355,7 @@ impl GridSearch {
     /// Returns the ids of points.
     pub fn search_on_line<F>(&self, a: &[f64], b: &[f64], mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         // check
         if a.len() != self.ndim {
@@ -400,7 +400,7 @@ impl GridSearch {
     /// This works in 2D only.
     pub fn search_on_circle<F>(&self, center: &[f64], radius: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         // check
         if self.ndim != 2 {
@@ -452,7 +452,7 @@ impl GridSearch {
         mut filter: F,
     ) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         // check
         if self.ndim != 3 {
@@ -499,7 +499,7 @@ impl GridSearch {
     /// This works in 3D only.
     pub fn search_on_plane_xy<F>(&self, z: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         // check
         if self.ndim != 3 {
@@ -540,7 +540,7 @@ impl GridSearch {
     /// This works in 3D only.
     pub fn search_on_plane_yz<F>(&self, x: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         // check
         if self.ndim != 3 {
@@ -581,7 +581,7 @@ impl GridSearch {
     /// This works in 3D only.
     pub fn search_on_plane_xz<F>(&self, y: f64, mut filter: F) -> Result<HashSet<usize>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         // check
         if self.ndim != 3 {

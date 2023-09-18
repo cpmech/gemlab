@@ -209,7 +209,7 @@ impl Mesh {
     /// ```
     pub fn search_marked_points<F>(&self, marker: PointMarker, mut filter: F) -> Result<Vec<PointId>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         let mut point_ids: Vec<_> = self
             .points

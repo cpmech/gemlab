@@ -459,7 +459,7 @@ impl Features {
     /// * Otherwise, returns an error
     pub fn search_point_ids<F>(&self, at: At, filter: F) -> Result<Vec<PointId>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         let mut point_ids: HashSet<PointId> = HashSet::new();
         match at {
@@ -575,7 +575,7 @@ impl Features {
     /// * Otherwise, returns an error
     pub fn search_edge_keys<F>(&self, at: At, filter: F) -> Result<Vec<EdgeKey>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         let mut edge_keys: HashSet<EdgeKey> = HashSet::new();
         // search all points constrained by "at" and "filter"
@@ -614,7 +614,7 @@ impl Features {
     /// * Otherwise, returns an error
     pub fn search_face_keys<F>(&self, at: At, filter: F) -> Result<Vec<FaceKey>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         if self.space_ndim != 3 {
             return Err("cannot find face keys in 2D");
@@ -665,7 +665,7 @@ impl Features {
     /// * Otherwise, returns an error
     pub fn search_edges<F>(&self, at: At, filter: F) -> Result<Vec<&Feature>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         let results: Result<Vec<_>, _> = self
             .search_edge_keys(at, filter)?
@@ -695,7 +695,7 @@ impl Features {
     /// * Otherwise, returns an error
     pub fn search_faces<F>(&self, at: At, filter: F) -> Result<Vec<&Feature>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         let results: Result<Vec<_>, _> = self
             .search_face_keys(at, filter)?
@@ -726,7 +726,7 @@ impl Features {
     ///   otherwise an error will occur.
     pub fn search_many_edges<F>(&self, ats: &[At], mut filter: F) -> Result<Vec<&Feature>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         let mut edge_keys: HashSet<EdgeKey> = HashSet::new();
         for at in ats {
@@ -765,7 +765,7 @@ impl Features {
     ///   otherwise an error will occur.
     pub fn search_many_faces<F>(&self, ats: &[At], mut filter: F) -> Result<Vec<&Feature>, StrError>
     where
-        F: FnMut(&Vec<f64>) -> bool,
+        F: FnMut(&[f64]) -> bool,
     {
         let mut face_keys: HashSet<FaceKey> = HashSet::new();
         for at in ats {
