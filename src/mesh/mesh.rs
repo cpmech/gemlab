@@ -223,10 +223,87 @@ impl Mesh {
             })
             .collect();
         if point_ids.len() == 0 {
-            return Err("cannot find any point with given mark (and filter)");
+            return Err("cannot find at least one point with the given mark (and filter)");
         }
         point_ids.sort();
         Ok(point_ids)
+    }
+
+    /// Searches the first marked point for a given mark
+    ///
+    /// # Input
+    ///
+    /// * `mark` -- the point marker
+    /// * `filter` -- function `fn(x) -> bool` that returns true to **keep** the coordinate just found
+    ///   (yields only the elements for which the closure returns true).
+    ///   Use `|_| true` or [crate::util::any_x] to allow any point in the resulting array.
+    ///   Another example of filter: `|x| x[0] > 1.4 && x[0] < 1.6`
+    ///
+    /// # Output
+    ///
+    /// * If **one** point has been found, returns its ID
+    /// * Otherwise, returns an error
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::prelude::*;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     // ```text
+    ///     // +3     +3     +3
+    ///     //  8------7------6._
+    ///     //  |       [3](3)|  '-.5
+    ///     //  |  [0]        |     '-._
+    ///     //  9  (1)       10  [1]    '4 +2
+    ///     //  |             |  (2)  .-'
+    ///     //  |       [2](3)|   _.3'
+    ///     //  0------1------2.-'
+    ///     // +1     +1     +1
+    ///     // ```
+    ///     let h = 0.866; // ~ SQRT_3 / 2
+    ///     let m = h / 2.0;
+    ///     #[rustfmt::skip]
+    ///     let mesh = Mesh {
+    ///         ndim: 2,
+    ///         points: vec![
+    ///             Point { id:  0, marker: 1, coords: vec![0.0,   0.0 ] },
+    ///             Point { id:  1, marker: 1, coords: vec![0.5,   0.0 ] },
+    ///             Point { id:  2, marker: 1, coords: vec![1.0,   0.0 ] },
+    ///             Point { id:  3, marker: 0, coords: vec![1.0+m, 0.25] },
+    ///             Point { id:  4, marker: 2, coords: vec![1.0+h, 0.5 ] },
+    ///             Point { id:  5, marker: 0, coords: vec![1.0+m, 0.75] },
+    ///             Point { id:  6, marker: 3, coords: vec![1.0,   1.0 ] },
+    ///             Point { id:  7, marker: 3, coords: vec![0.5,   1.0 ] },
+    ///             Point { id:  8, marker: 3, coords: vec![0.0,   1.0 ] },
+    ///             Point { id:  9, marker: 0, coords: vec![0.0,   0.5 ] },
+    ///             Point { id: 10, marker: 0, coords: vec![1.0,   0.5 ] },
+    ///         ],
+    ///         cells: vec![
+    ///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
+    ///             Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
+    ///             Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
+    ///             Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
+    ///         ],
+    ///     };
+    ///     assert_eq!(mesh.search_first_marked_point(1, |_| true)?, 0);
+    ///     assert_eq!(mesh.search_first_marked_point(2, |_| true)?, 4);
+    ///     assert_eq!(mesh.search_first_marked_point(3, |_| true)?, 6);
+    ///     assert_eq!(mesh.search_first_marked_point(3, |x| x[0] > 0.49 && x[0] < 0.51)?, 7);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn search_first_marked_point<F>(&self, marker: PointMarker, mut filter: F) -> Result<PointId, StrError>
+    where
+        F: FnMut(&[f64]) -> bool,
+    {
+        for i in 0..self.points.len() {
+            if self.points[i].marker == marker && filter(&self.points[i].coords) {
+                return Ok(self.points[i].id);
+            }
+        }
+        return Err("cannot find at least one point with the given mark (and filter)");
     }
 
     /// Sets the pad's matrix of coordinates X given a list of point ids
@@ -461,7 +538,7 @@ mod tests {
     }
 
     #[test]
-    fn marked_points_works() {
+    fn search_marked_points_works() {
         let mesh = Samples::four_tri3();
         assert_eq!(mesh.search_marked_points(-1, |_| true).unwrap(), &[0]);
         assert_eq!(mesh.search_marked_points(-3, |_| true).unwrap(), &[2]);
@@ -469,7 +546,7 @@ mod tests {
         assert_eq!(mesh.search_marked_points(-5, |_| true).unwrap(), &[4]);
         assert_eq!(
             mesh.search_marked_points(-10, |_| true).err(),
-            Some("cannot find any point with given mark (and filter)")
+            Some("cannot find at least one point with the given mark (and filter)")
         );
 
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
@@ -493,15 +570,51 @@ mod tests {
         );
         assert_eq!(
             mesh.search_marked_points(8, |_| true).err(),
-            Some("cannot find any point with given mark (and filter)")
+            Some("cannot find at least one point with the given mark (and filter)")
         );
         assert_eq!(
             mesh.search_marked_points(-30, |x| x[0] > 10.0).err(),
-            Some("cannot find any point with given mark (and filter)")
+            Some("cannot find at least one point with the given mark (and filter)")
         );
         assert_eq!(
             mesh.search_marked_points(-30, |x| x[0] > 1.4 && x[0] < 1.6).unwrap(),
             &[1]
+        );
+    }
+
+    #[test]
+    fn search_first_marked_point_works() {
+        let mesh = Samples::two_tri3_one_qua4();
+        assert_eq!(mesh.search_first_marked_point(1, |_| true).unwrap(), 0);
+        assert_eq!(mesh.search_first_marked_point(2, |_| true).unwrap(), 2);
+        assert_eq!(mesh.search_first_marked_point(2, |x| x[0] > 1.5).unwrap(), 5);
+        assert_eq!(
+            mesh.search_first_marked_point(-10, |_| true).err(),
+            Some("cannot find at least one point with the given mark (and filter)")
+        );
+
+        let mesh = Samples::ring_eight_qua8_rad1_thick1();
+        assert_eq!(mesh.search_first_marked_point(-1, |_| true).unwrap(), 0);
+        assert_eq!(mesh.search_first_marked_point(-2, |_| true).unwrap(), 2);
+        assert_eq!(mesh.search_first_marked_point(-3, |_| true).unwrap(), 14);
+        assert_eq!(mesh.search_first_marked_point(-4, |_| true).unwrap(), 12);
+        assert_eq!(mesh.search_first_marked_point(-10, |_| true).unwrap(), 3);
+        assert_eq!(mesh.search_first_marked_point(-20, |_| true).unwrap(), 5);
+        assert_eq!(mesh.search_first_marked_point(-30, |_| true).unwrap(), 1);
+        assert_eq!(mesh.search_first_marked_point(-40, |_| true).unwrap(), 13);
+        assert_eq!(mesh.search_first_marked_point(0, |_| true).unwrap(), 4);
+        assert_eq!(
+            mesh.search_first_marked_point(8, |_| true).err(),
+            Some("cannot find at least one point with the given mark (and filter)")
+        );
+        assert_eq!(
+            mesh.search_first_marked_point(-30, |x| x[0] > 10.0).err(),
+            Some("cannot find at least one point with the given mark (and filter)")
+        );
+        assert_eq!(
+            mesh.search_first_marked_point(-30, |x| x[0] > 1.24 && x[0] < 1.26)
+                .unwrap(),
+            15
         );
     }
 
