@@ -47,7 +47,7 @@ impl Mesh {
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
-    pub fn write_text_file<P>(&self, filepath: &P) -> Result<(), StrError>
+    pub fn write_text_file<P>(&self, full_path: &P) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
@@ -61,7 +61,7 @@ impl Mesh {
         write!(&mut buffer, "{}", self).map_err(|_| "cannot write to buffer")?;
 
         // create directory
-        let path = Path::new(filepath);
+        let path = Path::new(full_path);
         if let Some(p) = path.parent() {
             fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
         }

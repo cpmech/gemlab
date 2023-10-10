@@ -153,11 +153,11 @@ impl Mesh {
 
     /// Draws all point ids (labels)
     ///
-    /// **Note:** Negative point markers are shown within parentheses.
+    /// **Note:** Non-zero point markers are shown within parentheses.
     pub fn draw_point_ids(&self, fig: &mut Figure) {
         if self.ndim == 2 {
             self.points.iter().for_each(|point| {
-                let msg = if point.marker < 0 {
+                let msg = if point.marker != 0 {
                     format!("{}({})", point.id, point.marker)
                 } else {
                     format!("{}", point.id)
@@ -269,7 +269,7 @@ impl Mesh {
     ///
     /// * `fig` -- the Figure struct (optional => use default configuration)
     /// * `filepath` -- may be a String, &str, or Path
-    /// * `extra` -- is a function to perform some {pre,post}-drawing on the plot area.
+    /// * `extra` -- is a function `|plot, before| {}` to perform some {pre,post}-drawing on the plot area.
     ///   The two arguments of this function are:
     ///     * `plot: &mut Plot` -- the `plot` reference that can be used perform some extra drawings.
     ///     * `before: bool` -- **true** indicates that the function is being called before all other

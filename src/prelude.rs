@@ -4,8 +4,8 @@
 //! access to commonly used functionality.
 
 pub use crate::mesh::{
-    join_meshes, At, Block, Cell, CellAttribute, CellId, Feature, Features, Figure, Mesh, Point, PointId, Structured,
-    Unstructured,
+    join_meshes, At, Block, Cell, CellAttribute, CellId, Feature, Features, Figure, Mesh, Point, PointId, PointMarker,
+    Structured, Unstructured,
 };
 pub use crate::shapes::{GeoClass, GeoKind, Scratchpad};
 pub use crate::util::any_x;
