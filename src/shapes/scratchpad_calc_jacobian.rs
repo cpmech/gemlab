@@ -208,6 +208,7 @@ mod tests {
 
         // loop over shapes
         for (kind, tol) in problem {
+            println!("calc_jacobian: kind = {:?}", kind);
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);
