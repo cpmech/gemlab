@@ -12,15 +12,14 @@ categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
 
 [dependencies]
-plotpy = { path = "../plotpy", version = "0.4" }
-russell_chk = { path = "../russell/russell_chk", version = "0.5" }
-russell_lab = { path = "../russell/russell_lab", version = "0.5" }
-russell_sparse = { path = "../russell/russell_sparse", version = "0.5" }
-russell_tensor = { path = "../russell/russell_tensor", version = "0.5" }
-russell_stat = { path = "../russell/russell_stat", version = "0.5" }
+plotpy = "0.5"
+russell_lab = "0.6"
+russell_sparse = "0.6"
+russell_tensor = "0.6"
+russell_stat = "0.6"
 rmp-serde = "1.1"
 serde = { version = "1.0", features = ["derive"] }
-tritet = { path = "../tritet", version = "0.2" }
+tritet = "0.3"
 
 [dev-dependencies]
 criterion = "0.5"
