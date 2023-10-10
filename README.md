@@ -1,5 +1,8 @@
 # Geometry, meshes, and numerical integration for finite element analyses
 
+[![codecov](https://codecov.io/gh/cpmech/gemlab/graph/badge.svg?token=OjQKQ0PrNF)](https://codecov.io/gh/cpmech/gemlab)
+[![Test & Coverage](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml)
+
 ## Contents
 
 * [Introduction](#introduction)
