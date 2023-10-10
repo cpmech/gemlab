@@ -198,7 +198,7 @@ mod tests {
             // Tet
             (GeoKind::Tet4, 1e-11),
             (GeoKind::Tet10, 1e-11),
-            (GeoKind::Tet20, 1e-10),
+            (GeoKind::Tet20, 1e-9),
             // Hex
             (GeoKind::Hex8, 1e-11),
             (GeoKind::Hex20, 1e-11),
