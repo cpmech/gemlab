@@ -1,22 +1,25 @@
 # Geometry, meshes, and numerical integration for finite element analyses
 
-This repository contains structures and functions to perform geometry computations, generate meshes, and perform numerical integration for finite element analyses (FEM/FEA).
+## Contents
 
-We use `Vector` and `Matrix` from [Russell Lab](https://github.com/cpmech/russell), thus some Debian packages are required.
+* [Introduction](#introduction)
+* [Installation](#installation)
+* [Setting Cargo.toml](#cargo)
+* [Examples](#examples)
 
-Documentation:
+## <a name="introduction"></a> Introduction
 
-- [API reference (docs.rs)](https://docs.rs/gemlab)
+This crate contains structures and functions for geometry computations, generate meshes, and perform numerical integration for finite element analyses (FEM/FEA).
 
-## Installation
+See the documentation for further information:
 
-Install some libraries:
+- [gemlab documentation](https://docs.rs/gemlab) - Contains the API reference and examples
 
-```bash
-sudo apt-get install \
-    liblapacke-dev \
-    libopenblas-dev
-```
+## <a name="installation"></a> Installation
+
+This crates depends on `russell_lab` and, hence, needs some external libraries. See the [installation of required dependencies](https://github.com/cpmech/russell) on `russell_lab`.
+
+## <a name="cargo"></a> Setting Cargo.toml
 
 [![Crates.io](https://img.shields.io/crates/v/gemlab.svg)](https://crates.io/crates/gemlab)
 
@@ -27,7 +30,7 @@ sudo apt-get install \
 gemlab = "*"
 ```
 
-## Examples
+## <a name="examples"></a> Examples
 
 ```rust
 use gemlab::integ;
@@ -125,11 +128,3 @@ space-number-of-dimensions (`space_ndim`) are possible. There are three cases:
 |     1      |     `CABLE`      |     `CABLE`      |
 |     2      |     `SOLID`      |     `SHELL`      |
 |     3      |    impossible    |     `SOLID`      |
-
-### Coverage tool
-
-The coverage tool cannot properly handle the macros in russell_chk such as approx_eq
-and vec_approx_eq We could use the `#[no_coverage]` decorator on
-the testing function to stop the coverage tool assessing the region coverage within the test function.
-However, we let the coverage tool report incorrect Region Coverage anyway. Sometimes, the coverage
-tool also fails to report line coverage even when all lines have been run.
