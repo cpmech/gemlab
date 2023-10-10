@@ -16,8 +16,8 @@ use crate::StrError;
 /// ```
 /// use gemlab::geometry::point_point_distance;
 /// use gemlab::StrError;
+/// use russell_lab::approx_eq;
 /// use russell_lab::math::SQRT_2;
-/// use russell_chk::approx_eq;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let d = point_point_distance(&[0.0, 0.0], &[1.0, 1.0])?;
@@ -75,8 +75,8 @@ pub fn point_point_distance(a: &[f64], b: &[f64]) -> Result<f64, StrError> {
 /// ```
 /// use gemlab::geometry::point_line_distance;
 /// use gemlab::StrError;
+/// use russell_lab::approx_eq;
 /// use russell_lab::math::{SQRT_2, SQRT_3};
-/// use russell_chk::approx_eq;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let a = &[-10.0, -10.0, -10.0];
@@ -156,8 +156,8 @@ pub fn point_line_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrEr
 /// ```
 /// use gemlab::geometry::point_circle_distance;
 /// use gemlab::StrError;
+/// use russell_lab::approx_eq;
 /// use russell_lab::math::SQRT_2;
-/// use russell_chk::approx_eq;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let center = &[3.0, 4.0];
@@ -211,8 +211,8 @@ pub fn point_circle_distance(center: &[f64], radius: f64, p: &[f64]) -> Result<f
 /// ```
 /// use gemlab::geometry::point_cylinder_distance;
 /// use gemlab::StrError;
+/// use russell_lab::approx_eq;
 /// use russell_lab::math::{SQRT_2, SQRT_3};
-/// use russell_chk::approx_eq;
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let a = &[-10.0, -10.0, -10.0];
@@ -251,7 +251,7 @@ pub fn point_cylinder_distance(a: &[f64], b: &[f64], radius: f64, p: &[f64]) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use russell_chk::approx_eq;
+    use russell_lab::approx_eq;
     use russell_lab::math::{SQRT_2, SQRT_2_BY_3, SQRT_3};
 
     #[test]

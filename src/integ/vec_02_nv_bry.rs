@@ -129,9 +129,8 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, CommonArgs};
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::vec_approx_eq;
     use russell_lab::math::SQRT_2;
-    use russell_lab::Vector;
+    use russell_lab::{vec_approx_eq, Vector};
 
     // to test if variables are cleared before sum
     const NOISE: f64 = 1234.56;

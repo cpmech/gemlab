@@ -978,8 +978,8 @@ mod tests {
     use crate::mesh::{Figure, Mesh, Samples};
     use crate::shapes::GeoKind;
     use plotpy::{Canvas, Plot, Surface};
-    use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::math::{PI, SQRT_2};
+    use russell_lab::{approx_eq, vec_approx_eq};
 
     const SAVE_FIGURE: bool = false;
 

@@ -237,7 +237,7 @@ mod tests {
         gen_scratchpad_with_coords_aligned,
     };
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::{approx_eq, deriv_approx_eq};
+    use russell_lab::{approx_eq, deriv_approx_eq};
 
     #[test]
     #[allow(unused_variables, unused_mut)]

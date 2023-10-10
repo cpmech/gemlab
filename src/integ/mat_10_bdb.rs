@@ -240,8 +240,7 @@ mod tests {
         self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TET_INTERNAL_1, IP_TRI_INTERNAL_1,
     };
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::vec_approx_eq;
-    use russell_lab::{mat_approx_eq, Matrix, Vector};
+    use russell_lab::{mat_approx_eq, vec_approx_eq, Matrix, Vector};
     use russell_tensor::{copy_tensor4, LinElasticity, Mandel, Tensor4};
 
     #[test]

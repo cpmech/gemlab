@@ -447,8 +447,7 @@ impl AnalyticalTet4 {
 mod tests {
     use super::AnalyticalTet4;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::vec_approx_eq;
-    use russell_lab::Matrix;
+    use russell_lab::{vec_approx_eq, Matrix};
 
     #[test]
     fn analytical_tet4_works() {

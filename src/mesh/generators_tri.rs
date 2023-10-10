@@ -253,7 +253,7 @@ mod tests {
     use crate::mesh::{At, Features, Figure, Mesh};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
-    use russell_chk::approx_eq;
+    use russell_lab::approx_eq;
 
     const RMIN: f64 = 3.0;
     const RMAX: f64 = 6.0;

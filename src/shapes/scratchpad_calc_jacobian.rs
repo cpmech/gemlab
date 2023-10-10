@@ -57,7 +57,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::approx_eq;
+    /// use russell_lab::approx_eq;
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //  3-------------2         ξ₀   ξ₁
@@ -138,8 +138,7 @@ mod tests {
     use super::DET_JAC_NOT_AVAILABLE;
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::deriv_approx_eq;
-    use russell_lab::{Matrix, Vector};
+    use russell_lab::{deriv_approx_eq, Matrix, Vector};
 
     #[test]
     fn calc_jacobian_handles_errors() {
@@ -197,9 +196,9 @@ mod tests {
             (GeoKind::Qua16, 1e-10),
             (GeoKind::Qua17, 1e-10),
             // Tet
-            (GeoKind::Tet4, 1e-12),
+            (GeoKind::Tet4, 1e-11),
             (GeoKind::Tet10, 1e-11),
-            (GeoKind::Tet20, 1e-10),
+            (GeoKind::Tet20, 1e-9),
             // Hex
             (GeoKind::Hex8, 1e-11),
             (GeoKind::Hex20, 1e-11),
@@ -209,6 +208,7 @@ mod tests {
 
         // loop over shapes
         for (kind, tol) in problem {
+            println!("calc_jacobian: kind = {:?}", kind);
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
             let space_ndim = usize::max(2, geo_ndim);

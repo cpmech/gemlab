@@ -1,22 +1,28 @@
 # Geometry, meshes, and numerical integration for finite element analyses
 
-This repository contains structures and functions to perform geometry computations, generate meshes, and perform numerical integration for finite element analyses (FEM/FEA).
+[![codecov](https://codecov.io/gh/cpmech/gemlab/graph/badge.svg?token=OjQKQ0PrNF)](https://codecov.io/gh/cpmech/gemlab)
+[![Test & Coverage](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml)
 
-We use `Vector` and `Matrix` from [Russell Lab](https://github.com/cpmech/russell), thus some Debian packages are required.
+## Contents
 
-Documentation:
+* [Introduction](#introduction)
+* [Installation](#installation)
+* [Setting Cargo.toml](#cargo)
+* [Examples](#examples)
 
-- [API reference (docs.rs)](https://docs.rs/gemlab)
+## <a name="introduction"></a> Introduction
 
-## Installation
+This crate contains structures and functions for geometry computations, generate meshes, and perform numerical integration for finite element analyses (FEM/FEA).
 
-Install some libraries:
+See the documentation for further information:
 
-```bash
-sudo apt-get install \
-    liblapacke-dev \
-    libopenblas-dev
-```
+- [gemlab documentation](https://docs.rs/gemlab) - Contains the API reference and examples
+
+## <a name="installation"></a> Installation
+
+This crates depends on `russell_lab` and, hence, needs some external libraries. See the [installation of required dependencies](https://github.com/cpmech/russell) on `russell_lab`.
+
+## <a name="cargo"></a> Setting Cargo.toml
 
 [![Crates.io](https://img.shields.io/crates/v/gemlab.svg)](https://crates.io/crates/gemlab)
 
@@ -27,7 +33,7 @@ sudo apt-get install \
 gemlab = "*"
 ```
 
-## Examples
+## <a name="examples"></a> Examples
 
 ```rust
 use gemlab::integ;
@@ -125,11 +131,3 @@ space-number-of-dimensions (`space_ndim`) are possible. There are three cases:
 |     1      |     `CABLE`      |     `CABLE`      |
 |     2      |     `SOLID`      |     `SHELL`      |
 |     3      |    impossible    |     `SOLID`      |
-
-### Coverage tool
-
-The coverage tool cannot properly handle the macros in russell_chk such as approx_eq
-and vec_approx_eq We could use the `#[no_coverage]` decorator on
-the testing function to stop the coverage tool assessing the region coverage within the test function.
-However, we let the coverage tool report incorrect Region Coverage anyway. Sometimes, the coverage
-tool also fails to report line coverage even when all lines have been run.

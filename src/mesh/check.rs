@@ -3,9 +3,8 @@ use crate::shapes::DET_JAC_NOT_AVAILABLE;
 use crate::shapes::{geo_case, GeoCase, Scratchpad};
 use crate::util::GridSearch;
 use crate::StrError;
-use russell_chk::approx_eq;
 use russell_lab::math::ONE_BY_3;
-use russell_lab::Vector;
+use russell_lab::{approx_eq, Vector};
 use std::collections::HashMap;
 
 impl Mesh {

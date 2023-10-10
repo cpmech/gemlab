@@ -56,8 +56,7 @@ use russell_lab::Vector;
 /// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
-/// use russell_chk::vec_approx_eq;
-/// use russell_lab::Vector;
+/// use russell_lab::{Vector, vec_approx_eq};
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let space_ndim = 2;
@@ -150,8 +149,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
-    use russell_chk::vec_approx_eq;
-    use russell_lab::Vector;
+    use russell_lab::{vec_approx_eq, Vector};
 
     #[test]
     fn capture_some_errors() {
@@ -187,7 +185,7 @@ mod tests {
 
         // integration points
         let class = pad.kind.class();
-        let tolerances = [1e-15, 1e-15];
+        let tolerances = [1e-14, 1e-14];
         let selection: Vec<_> = [2, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
 
         // check

@@ -139,8 +139,7 @@ mod tests {
         self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1,
         IP_TRI_INTERNAL_1,
     };
-    use russell_chk::vec_approx_eq;
-    use russell_lab::{Matrix, Vector};
+    use russell_lab::{vec_approx_eq, Matrix, Vector};
     use russell_tensor::{copy_tensor2, Mandel, Tensor2};
 
     #[test]

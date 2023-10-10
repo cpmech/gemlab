@@ -869,7 +869,7 @@ mod tests {
     use crate::geometry::point_point_distance;
     use crate::mesh::{Figure, Mesh};
     use crate::shapes::GeoKind;
-    use russell_chk::{approx_eq, vec_approx_eq};
+    use russell_lab::{approx_eq, vec_approx_eq};
 
     const SAVE_FIGURE: bool = false;
 

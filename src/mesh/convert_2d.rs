@@ -205,7 +205,7 @@ impl Mesh {
 mod tests {
     use crate::mesh::{Cell, Figure, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
-    use russell_chk::vec_approx_eq;
+    use russell_lab::vec_approx_eq;
 
     const SAVE_FIGURE: bool = false;
 

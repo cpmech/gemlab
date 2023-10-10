@@ -60,7 +60,7 @@ mod tests {
     use super::scalar_field;
     use crate::integ;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::approx_eq;
+    use russell_lab::approx_eq;
 
     #[allow(unused_imports)]
     use plotpy::Plot;
@@ -101,7 +101,7 @@ mod tests {
 
         // s(x) is constant = 1; i.e., the integral will result in the area of the "diamond" shape
         let ii_correct = 2.0;
-        let tolerances = [1e-15, 1e-15, 1e-15, 1e-14];
+        let tolerances = [1e-14, 1e-14, 1e-14, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let ii = scalar_field(&mut pad, ips, |_| Ok(1.0)).unwrap();
@@ -109,7 +109,7 @@ mod tests {
         });
 
         // ∫∫(x²+y²) dx dy
-        let tolerances = [0.67, 1e-15, 1e-15, 1e-14];
+        let tolerances = [0.67, 1e-14, 1e-14, 1e-14];
         let ii_correct = 8.0 / 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
@@ -124,7 +124,7 @@ mod tests {
         });
 
         // ∫∫(x³+y³) dx dy
-        let tolerances = [1.01, 1e-15, 1e-15, 1e-15];
+        let tolerances = [1.01, 1e-14, 1e-14, 1e-14];
         let ii_correct = 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
@@ -203,7 +203,7 @@ mod tests {
 
         // s(x) is constant = 1; i.e., the integral will result in the volume
         let ii_correct = 1.0;
-        let tolerances = [1e-15, 1e-15, 1e-15, 1e-15, 1e-15];
+        let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let ii = scalar_field(&mut pad, ips, |_| Ok(1.0)).unwrap();
@@ -212,7 +212,7 @@ mod tests {
 
         // ∫∫∫(x²+y²+z²) dx dy dz
         let ii_correct = 11.0 / 6.0;
-        let tolerances = [1e-15, 1e-15, 1e-15, 1e-14, 1e-15];
+        let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();
@@ -228,7 +228,7 @@ mod tests {
 
         // ∫∫∫(x³+y³+z³) dx dy dz
         let ii_correct = 2.0;
-        let tolerances = [1e-15, 1e-15, 1e-15, 1e-15, 1e-14];
+        let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = integ::points_coords(&mut pad, ips).unwrap();

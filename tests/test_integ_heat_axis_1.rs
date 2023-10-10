@@ -1,8 +1,7 @@
 use gemlab::integ::{self, AnalyticalTri3, CommonArgs};
 use gemlab::prelude::*;
 use gemlab::shapes::{GeoClass, GeoKind, Scratchpad, Tri3};
-use russell_chk::vec_approx_eq;
-use russell_lab::{mat_approx_eq, Matrix, Vector};
+use russell_lab::{mat_approx_eq, vec_approx_eq, Matrix, Vector};
 
 // Example 5.6.1 from Lewis et al. Page 146
 // Lewis RW, Nithiarasu R, Seetharamu KN (2004) Fundamentals of
