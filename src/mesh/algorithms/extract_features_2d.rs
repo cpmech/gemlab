@@ -66,7 +66,7 @@ mod tests {
     use crate::mesh::algorithms::extract_all_2d_edges;
     use crate::mesh::{EdgeKey, Feature, PointId, Samples};
     use crate::util::AsArray2D;
-    use russell_chk::vec_approx_eq;
+    use russell_lab::vec_approx_eq;
     use std::collections::HashMap;
 
     fn validate_edges<'a, T>(

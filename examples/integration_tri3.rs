@@ -1,8 +1,7 @@
 use gemlab::integ;
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
-use russell_chk::vec_approx_eq;
-use russell_lab::Vector;
+use russell_lab::{vec_approx_eq, Vector};
 use russell_tensor::{Mandel, Tensor2};
 
 fn main() -> Result<(), StrError> {

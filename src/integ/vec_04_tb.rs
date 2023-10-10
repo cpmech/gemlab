@@ -58,8 +58,7 @@ use russell_tensor::{Mandel, Tensor2};
 /// use gemlab::integ;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
-/// use russell_chk::vec_approx_eq;
-/// use russell_lab::Vector;
+/// use russell_lab::{Vector, vec_approx_eq};
 ///
 /// fn main() -> Result<(), StrError> {
 ///     let space_ndim = 2;
@@ -183,8 +182,7 @@ fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Ten
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
-    use russell_chk::vec_approx_eq;
-    use russell_lab::{Matrix, Vector};
+    use russell_lab::{vec_approx_eq, Matrix, Vector};
     use russell_tensor::{copy_tensor2, Mandel, Tensor2};
 
     #[test]

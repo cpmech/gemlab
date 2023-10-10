@@ -179,9 +179,8 @@ impl Scratchpad {
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::math::{ONE_BY_3, SQRT_2, SQRT_3};
-    use russell_lab::{vec_norm, Norm, Vector};
+    use russell_lab::{approx_eq, vec_approx_eq, vec_norm, Norm, Vector};
 
     #[test]
     fn calc_normal_vector_handles_errors() {

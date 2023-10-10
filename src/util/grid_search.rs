@@ -853,8 +853,8 @@ impl fmt::Display for GridSearch {
 mod tests {
     use super::{any_x, GridSearch, GS_DEFAULT_TOLERANCE};
     use plotpy::Plot;
-    use russell_chk::{approx_eq, vec_approx_eq};
     use russell_lab::math::{SQRT_2, SQRT_3};
+    use russell_lab::{approx_eq, vec_approx_eq};
 
     #[allow(unused_imports)]
     use plotpy::{Canvas, Curve, RayEndpoint, Surface};

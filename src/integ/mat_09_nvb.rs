@@ -138,8 +138,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
-    use russell_chk::vec_approx_eq;
-    use russell_lab::{Matrix, Vector};
+    use russell_lab::{vec_approx_eq, Matrix, Vector};
 
     #[test]
     fn capture_some_errors() {

@@ -29,8 +29,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::vec_approx_eq;
-    /// use russell_lab::Vector;
+    /// use russell_lab::{Vector, vec_approx_eq};
     ///
     /// fn main() -> Result<(), StrError> {
     ///     // 7.0        2                ξ₀   ξ₁
@@ -136,9 +135,8 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::GeoKind;
     use crate::shapes::Scratchpad;
-    use russell_chk::vec_approx_eq;
     use russell_lab::math::{ONE_BY_3, SQRT_3};
-    use russell_lab::Vector;
+    use russell_lab::{vec_approx_eq, Vector};
 
     #[test]
     fn approximate_ksi_handles_errors() {
@@ -291,8 +289,8 @@ mod tests {
             (0, [5.5, 4.0], 1e-15),
             (1, [6.75, 6.17], 1e-14),
             (1, [4.25, 6.17], 1e-14),
-            (4, [10.0, 10.0], 1e-14),
-            (2, [-10.0, -10.0], 1e-13),
+            (1, [10.0, 10.0], 1e-13),
+            (3, [-10.0, -10.0], 1e-13),
             (1, [100.0, 100.0], 1e-11),
         ] {
             let x = Vector::from(x_data);

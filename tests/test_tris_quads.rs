@@ -3,7 +3,7 @@ use gemlab::mesh::{At, Features, Mesh};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::any_x;
 use gemlab::StrError;
-use russell_chk::approx_eq;
+use russell_lab::approx_eq;
 use russell_lab::math::SQRT_2;
 use std::collections::HashMap;
 

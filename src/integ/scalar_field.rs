@@ -60,7 +60,7 @@ mod tests {
     use super::scalar_field;
     use crate::integ;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::approx_eq;
+    use russell_lab::approx_eq;
 
     #[allow(unused_imports)]
     use plotpy::Plot;

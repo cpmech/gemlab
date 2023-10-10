@@ -81,7 +81,7 @@ mod tests {
     use super::points_coords;
     use crate::integ::IP_QUA_LEGENDRE_4;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::approx_eq;
+    use russell_lab::approx_eq;
 
     #[test]
     pub fn points_coords_works() {

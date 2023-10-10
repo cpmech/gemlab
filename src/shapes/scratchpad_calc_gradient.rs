@@ -40,8 +40,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_chk::vec_approx_eq;
-    /// use russell_lab::Matrix;
+    /// use russell_lab::{vec_approx_eq, Matrix};
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //  3-------------2         ξ₀   ξ₁
@@ -98,9 +97,8 @@ impl Scratchpad {
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_chk::deriv_approx_eq;
     use russell_lab::math::ONE_BY_3;
-    use russell_lab::{vec_copy, Vector};
+    use russell_lab::{deriv_approx_eq, vec_copy, Vector};
 
     #[test]
     fn calc_gradient_handles_errors() {

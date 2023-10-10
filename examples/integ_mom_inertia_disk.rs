@@ -1,7 +1,7 @@
 use gemlab::integ::{default_points, points_coords, scalar_field};
 use gemlab::prelude::*;
 use gemlab::StrError;
-use russell_chk::approx_eq;
+use russell_lab::approx_eq;
 use russell_lab::math::PI;
 
 fn main() -> Result<(), StrError> {

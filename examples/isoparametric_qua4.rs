@@ -1,7 +1,6 @@
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
-use russell_chk::vec_approx_eq;
-use russell_lab::Vector;
+use russell_lab::{vec_approx_eq, Vector};
 
 fn main() -> Result<(), StrError> {
     //    3-------------2         ξ₀   ξ₁

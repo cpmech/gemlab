@@ -171,8 +171,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs};
-    use russell_chk::vec_approx_eq;
-    use russell_lab::{Matrix, Vector};
+    use russell_lab::{vec_approx_eq, Matrix, Vector};
     use russell_tensor::{copy_tensor2, Mandel, Tensor2};
 
     #[test]
