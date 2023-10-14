@@ -592,19 +592,6 @@ mod tests {
         mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
     }
 
-    fn check_constraints(mesh: &Mesh) {
-        let inner: Vec<_> = mesh.points.iter().filter(|p| p.marker == -10).collect();
-        let outer: Vec<_> = mesh.points.iter().filter(|p| p.marker == -20).collect();
-        for point in inner {
-            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, RMIN, 1e-15);
-        }
-        for point in outer {
-            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
-            approx_eq(d, RMAX, 1e-15);
-        }
-    }
-
     fn check_corner_markers(mesh: &Mesh) {
         //  -3 ==---__
         //   |        '*._
@@ -680,6 +667,19 @@ mod tests {
         }
     }
 
+    fn check_constraints(mesh: &Mesh) {
+        let inner: Vec<_> = mesh.points.iter().filter(|p| p.marker == -10).collect();
+        let outer: Vec<_> = mesh.points.iter().filter(|p| p.marker == -20).collect();
+        for point in inner {
+            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMIN, 1e-15);
+        }
+        for point in outer {
+            let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMAX, 1e-15);
+        }
+    }
+
     #[test]
     fn tri_quarter_ring_2d_captures_errors() {
         assert_eq!(
@@ -706,9 +706,9 @@ mod tests {
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.18).unwrap();
-        check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5], &[1], &[7]);
+        check_constraints(&mesh);
         for p in [0, 11, 10, 9, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -729,7 +729,6 @@ mod tests {
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.18).unwrap();
-        check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_point_markers(
             &mesh,
@@ -738,6 +737,7 @@ mod tests {
             &[30, 1, 33],
             &[24, 7, 27],
         );
+        check_constraints(&mesh);
         for p in [0, 32, 11, 36, 10, 21, 9, 22, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -759,7 +759,6 @@ mod tests {
         assert_eq!(mesh.cells.len(), 78);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.18).unwrap();
-        check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_point_markers(
             &mesh,
@@ -768,6 +767,7 @@ mod tests {
             &[14, 1, 42],
             &[13, 7],
         );
+        check_constraints(&mesh);
         for p in [0, 11, 10, 17, 9, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -793,7 +793,6 @@ mod tests {
         assert_eq!(mesh.cells.len(), 78);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.1).unwrap();
-        check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_point_markers(
             &mesh,
@@ -802,6 +801,7 @@ mod tests {
             &[89, 14, 78, 1, 167, 42, 163],
             &[67, 13, 140, 7, 145],
         );
+        check_constraints(&mesh);
         for p in [0, 150, 11, 81, 10, 58, 17, 99, 9, 146, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -822,7 +822,6 @@ mod tests {
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.1).unwrap();
-        check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_point_markers(
             &mesh,
@@ -831,6 +830,7 @@ mod tests {
             &[52, 55, 50, 61, 64],
             &[32, 29, 26, 40, 37],
         );
+        check_constraints(&mesh);
         for p in [49, 57, 54, 51, 70, 68, 2, 23, 21, 19, 30, 27, 25] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -851,7 +851,6 @@ mod tests {
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.1).unwrap();
-        check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_point_markers(
             &mesh,
@@ -860,6 +859,7 @@ mod tests {
             &[87, 84, 88, 82, 101, 98, 102],
             &[49, 43, 48, 40, 62, 56, 61],
         );
+        check_constraints(&mesh);
         for p in [81, 92, 86, 91, 83, 113, 110, 112, 2, 35, 31, 34, 29, 45, 41, 44, 39] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -898,7 +898,6 @@ mod tests {
         assert_eq!(mesh.cells.len(), 30);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.2).unwrap();
-        check_constraints(&mesh);
         check_corner_markers(&mesh);
         check_point_markers(
             &mesh,
@@ -907,6 +906,7 @@ mod tests {
             &[1, 13],
             &[7, 19],
         );
+        check_constraints(&mesh);
         // for p in [0, 11, 10, 9, 8] {
         //     let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
         //     approx_eq(d, RMIN, 1e-15);
