@@ -335,6 +335,9 @@ impl Unstructured {
         if target.class() != GeoClass::Tet {
             return Err("the GeoClass of target must be Tet");
         }
+        if target != GeoKind::Tet4 && target != GeoKind::Tet10 {
+            return Err("only Tet4 and Tet10 are available currently");
+        }
 
         // generate o2 triangles (i.e., Tet10) (need to use o2 for others too, e.g.,
         // Tet20, because the the middle-edge markers will be replicated by tetgen
@@ -559,17 +562,8 @@ impl Unstructured {
             }
         }
 
-        // apply constraints (need to be done before the upgrade because
-        // Steiner points may be added even for Tri3)
-        // apply_constraints(&mut mesh, rmin, rmax);
-
-        // upgrade mesh (need to apply constraints again because
-        // new mid-edge points may be created)
-        // if target.nnode() > 10 {
-        //     let mut new_mesh = mesh.convert_2d(target)?;
-        //     apply_constraints(&mut new_mesh, rmin, rmax);
-        //     return Ok(new_mesh);
-        // }
+        // apply constraints
+        apply_constraints(&mut mesh, rmin, rmax);
 
         // results
         Ok(mesh)
@@ -861,29 +855,54 @@ mod tests {
     }
 
     #[test]
+    fn tri_quarter_ring_3d_handles_errors() {
+        assert_eq!(
+            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 0, 4, GeoKind::Tet4, None).err(),
+            Some("number of divisions along the radius must be ≥ 1")
+        );
+        assert_eq!(
+            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 0, GeoKind::Tet4, None).err(),
+            Some("number of divisions along alpha must be ≥ 1")
+        );
+        assert_eq!(
+            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 2, GeoKind::Qua4, None).err(),
+            Some("the GeoClass of target must be Tet")
+        );
+        assert_eq!(
+            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet20, None).err(),
+            Some("only Tet4 and Tet10 are available currently")
+        )
+    }
+
+    fn draw_ring_3d_with_cylin(mesh: &Mesh, filename: &str) {
+        let mut cylin_in = Surface::new();
+        let mut cylin_out = Surface::new();
+        cylin_in.set_solid_color("#ff000020");
+        cylin_out.set_solid_color("#ff000020");
+        cylin_in
+            .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMIN, 5, 81)
+            .unwrap();
+        cylin_out
+            .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMAX, 5, 81)
+            .unwrap();
+
+        let mut fig = Figure::new();
+        fig.figure_size = Some((800.0, 800.0));
+        fig.point_ids = false;
+        fig.point_dots = true;
+        mesh.draw(Some(fig), filename, |plot, before| {
+            if before {
+                plot.add(&cylin_in).add(&cylin_out);
+            }
+        })
+        .unwrap();
+    }
+
+    #[test]
     fn tri_quarter_ring_3d_works() {
         let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet4, None).unwrap();
         if SAVE_FIGURE {
-            let mut cylin_in = Surface::new();
-            let mut cylin_out = Surface::new();
-            cylin_in.set_solid_color("#ff000020");
-            cylin_out.set_solid_color("#ff000020");
-            cylin_in
-                .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMIN, 5, 81)
-                .unwrap();
-            cylin_out
-                .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMAX, 5, 81)
-                .unwrap();
-
-            let mut fig = Figure::new();
-            fig.figure_size = Some((800.0, 800.0));
-            fig.point_ids = true;
-            mesh.draw(Some(fig), "/tmp/gemlab/test_tri_quarter_ring_3d.svg", |plot, before| {
-                if before {
-                    plot.add(&cylin_in).add(&cylin_out);
-                }
-            })
-            .unwrap();
+            draw_ring_3d_with_cylin(&mesh, "/tmp/gemlab/test_tri_quarter_ring_3d.svg");
         }
         assert_eq!(mesh.points.len(), 24);
         assert_eq!(mesh.cells.len(), 30);
@@ -912,31 +931,7 @@ mod tests {
     fn tri_quarter_ring_3d_o2_works() {
         let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet10, None).unwrap();
         if SAVE_FIGURE {
-            let mut cylin_in = Surface::new();
-            let mut cylin_out = Surface::new();
-            cylin_in.set_solid_color("#ff000020");
-            cylin_out.set_solid_color("#ff000020");
-            cylin_in
-                .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMIN, 5, 81)
-                .unwrap();
-            cylin_out
-                .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMAX, 5, 81)
-                .unwrap();
-
-            let mut fig = Figure::new();
-            fig.figure_size = Some((800.0, 800.0));
-            fig.point_ids = false;
-            fig.point_dots = true;
-            mesh.draw(
-                Some(fig),
-                "/tmp/gemlab/test_tri_quarter_ring_3d_o2.svg",
-                |plot, before| {
-                    if before {
-                        plot.add(&cylin_in).add(&cylin_out);
-                    }
-                },
-            )
-            .unwrap();
+            draw_ring_3d_with_cylin(&mesh, "/tmp/gemlab/test_tri_quarter_ring_3d_o2.svg");
         }
         assert_eq!(mesh.points.len(), 99);
         assert_eq!(mesh.cells.len(), 30);
@@ -960,6 +955,6 @@ mod tests {
         for p in &[26, 89, 92, 52, 53, 68, 65, 48, 35] {
             assert_eq!(mesh.points[*p].marker, MARKER_ZMAX);
         }
-        // check_constraints(&mesh);
+        check_constraints(&mesh);
     }
 }
