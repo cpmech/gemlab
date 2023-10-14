@@ -269,9 +269,9 @@ impl Unstructured {
     ///
     /// ```text
     /// Point markers:
-    ///
-    ///  -3 ==---__
-    ///   |        '*._
+    ///                 z=0 facet => -50
+    ///  -3 ==---__     z=thickness => -60   
+    ///   |        '*._   (only interior)    
     ///   | -40        *._
     ///   |               *.  -20
     ///  -4 ==-__           *.
@@ -413,6 +413,7 @@ impl Unstructured {
         // * The order of the vertices can be in either clockwise or counterclockwise order.
 
         // cap facet @ z = 0
+        tetgen.set_facet_marker(0, -50)?;
         for i in 0..npoint_cap_facets {
             m = i;
             p = p_pivot_a + i;
@@ -420,6 +421,7 @@ impl Unstructured {
         }
 
         // cap facet @ z = thickness
+        tetgen.set_facet_marker(1, -60)?;
         for i in 0..npoint_cap_facets {
             m = i;
             p = p_pivot_aa + i;
@@ -427,6 +429,7 @@ impl Unstructured {
         }
 
         // sym facet parallel to x (y=0)
+        tetgen.set_facet_marker(2, -30)?;
         for i in 0..(nr + 1) {
             m = i;
             p = p_pivot_a + i;
@@ -437,6 +440,7 @@ impl Unstructured {
         }
 
         // sym facet parallel to y
+        tetgen.set_facet_marker(3, -40)?;
         for i in 0..(nr + 1) {
             m = i;
             p = p_pivot_b - i;
@@ -449,12 +453,14 @@ impl Unstructured {
         // inner cyl facets
         let pp = [p_pivot_b, p_pivot_b + 1, p_pivot_bb + 1, p_pivot_bb];
         for i in 0..(na - 1) {
+            tetgen.set_facet_marker(4 + i, -10)?;
             for m in 0..4 {
                 p = pp[m] + i;
                 tetgen.set_facet_point(4 + i, m, p)?;
             }
         }
         let last = 4 + na - 1;
+        tetgen.set_facet_marker(last, -10)?;
         tetgen.set_facet_point(last, 0, p_pivot_b + na - 1)?;
         tetgen.set_facet_point(last, 1, p_pivot_a)?;
         tetgen.set_facet_point(last, 2, p_pivot_aa)?;
@@ -463,12 +469,14 @@ impl Unstructured {
         // outer cyl facets
         let pp = [p_pivot_c, p_pivot_c + 1, p_pivot_cc + 1, p_pivot_cc];
         for i in 0..(na - 1) {
+            tetgen.set_facet_marker(4 + na + i, -20)?;
             for m in 0..4 {
                 p = pp[m] + i;
                 tetgen.set_facet_point(4 + na + i, m, p)?;
             }
         }
         let last = 4 + na + na - 1;
+        tetgen.set_facet_marker(last, -20)?;
         tetgen.set_facet_point(last, 0, p_pivot_c + na - 1)?;
         tetgen.set_facet_point(last, 1, p_pivot_d)?;
         tetgen.set_facet_point(last, 2, p_pivot_dd)?;
@@ -479,7 +487,6 @@ impl Unstructured {
 
         // generate mesh
         tetgen.generate_mesh(false, o2, global_max_volume, None)?;
-        // tetgen.generate_delaunay(true)?;
 
         // allocate data
         const NDIM: usize = 3;
@@ -520,6 +527,24 @@ impl Unstructured {
             for m in 0..nnode {
                 mesh.cells[i].points[m] = tetgen.out_cell_point(i, m);
             }
+        }
+
+        println!();
+
+        // handle marked faces (do not replace corner markers)
+        for i in 0..tetgen.out_n_marked_face() {
+            let (a, b, c, marker, _) = tetgen.out_marked_face(i);
+            if marker != -50 && marker != -60 {
+                for p in [a, b, c] {
+                    if mesh.points[p].marker == 0 {
+                        mesh.points[p].marker = marker;
+                    }
+                }
+            }
+        }
+
+        for i in 0..npoint {
+            println!("{}: marker = {}", i, mesh.points[i].marker);
         }
 
         // apply constraints (need to be done before the upgrade because
@@ -581,6 +606,19 @@ mod tests {
     }
 
     fn check_corner_markers(mesh: &Mesh) {
+        //  -3 ==---__
+        //   |        '*._
+        //   | -40        *._
+        //   |               *.  -20
+        //  -4 ==-__           *.
+        //          '-.          *
+        //             *.         *
+        //          -10  *         *
+        //                *         *
+        //                 *         *
+        //                 #   -30   #
+        //                -1 ------- -2
+
         let feat = Features::new(mesh, false);
         let res = feat.search_point_ids(At::XY(RMIN, 0.0), any_x).unwrap();
         let n = if mesh.ndim == 3 { 2 } else { 1 };
@@ -609,12 +647,36 @@ mod tests {
         }
     }
 
-    fn check_point_markers(mesh: &Mesh, inner: &[usize], outer: &[usize]) {
+    fn check_point_markers(
+        mesh: &Mesh,
+        inner: &[usize],
+        outer: &[usize],
+        sym_line_horiz: &[usize],
+        sym_line_vert: &[usize],
+    ) {
+        //  -3 ==---__
+        //   |        '*._
+        //   | -40        *._
+        //   |               *.  -20
+        //  -4 ==-__           *.
+        //          '-.          *
+        //             *.         *
+        //          -10  *         *
+        //                *         *
+        //                 *         *
+        //                 #   -30   #
+        //                -1 ------- -2
         for p in inner {
             assert_eq!(mesh.points[*p].marker, -10);
         }
         for p in outer {
             assert_eq!(mesh.points[*p].marker, -20);
+        }
+        for p in sym_line_horiz {
+            assert_eq!(mesh.points[*p].marker, -30);
+        }
+        for p in sym_line_vert {
+            assert_eq!(mesh.points[*p].marker, -40);
         }
     }
 
@@ -646,7 +708,7 @@ mod tests {
         mesh.check_overlapping_points(0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        check_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5]);
+        check_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5], &[1], &[7]);
         for p in [0, 11, 10, 9, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -669,7 +731,13 @@ mod tests {
         mesh.check_overlapping_points(0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        check_point_markers(&mesh, &[32, 11, 36, 10, 21, 9, 22], &[34, 3, 40, 4, 17, 5, 26]);
+        check_point_markers(
+            &mesh,
+            &[32, 11, 36, 10, 21, 9, 22],
+            &[34, 3, 40, 4, 17, 5, 26],
+            &[30, 1, 33],
+            &[24, 7, 27],
+        );
         for p in [0, 32, 11, 36, 10, 21, 9, 22, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -693,7 +761,13 @@ mod tests {
         mesh.check_overlapping_points(0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        check_point_markers(&mesh, &[11, 10, 17, 9], &[40, 3, 25, 4, 24, 5, 33]);
+        check_point_markers(
+            &mesh,
+            &[11, 10, 17, 9],
+            &[40, 3, 25, 4, 24, 5, 33],
+            &[14, 1, 42],
+            &[13, 7],
+        );
         for p in [0, 11, 10, 17, 9, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -725,6 +799,8 @@ mod tests {
             &mesh,
             &[150, 11, 81, 10, 58, 17, 99, 9, 146],
             &[154, 40, 176, 3, 174, 25, 130, 4, 118, 24, 136, 5, 124, 33, 134],
+            &[89, 14, 78, 1, 167, 42, 163],
+            &[67, 13, 140, 7, 145],
         );
         for p in [0, 150, 11, 81, 10, 58, 17, 99, 9, 146, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
@@ -752,6 +828,8 @@ mod tests {
             &mesh,
             &[57, 54, 51, 70, 68, 2, 23, 21, 19, 30, 27],
             &[62, 65, 60, 79, 80, 10, 12, 15, 11, 36, 39],
+            &[52, 55, 50, 61, 64],
+            &[32, 29, 26, 40, 37],
         );
         for p in [49, 57, 54, 51, 70, 68, 2, 23, 21, 19, 30, 27, 25] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
@@ -779,6 +857,8 @@ mod tests {
             &mesh,
             &[92, 86, 91, 83, 113, 110, 112, 2, 35, 31, 34, 29, 45, 41, 44],
             &[103, 99, 104, 97, 132, 131, 133, 15, 20, 17, 21, 16, 59, 55, 60],
+            &[87, 84, 88, 82, 101, 98, 102],
+            &[49, 43, 48, 40, 62, 56, 61],
         );
         for p in [81, 92, 86, 91, 83, 113, 110, 112, 2, 35, 31, 34, 29, 45, 41, 44, 39] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
@@ -820,7 +900,13 @@ mod tests {
         mesh.check_overlapping_points(0.2).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        // check_edge_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5]);
+        check_point_markers(
+            &mesh,
+            &[9, 10, 11, 21, 22, 23],
+            &[3, 4, 5, 15, 16, 17],
+            &[1, 13],
+            &[7, 19],
+        );
         // for p in [0, 11, 10, 9, 8] {
         //     let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
         //     approx_eq(d, RMIN, 1e-15);
