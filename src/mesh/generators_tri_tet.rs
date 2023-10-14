@@ -507,6 +507,7 @@ impl Unstructured {
         // set mesh data
         for i in 0..npoint {
             let marker = tetgen.out_point_marker(i);
+            println!("{}: marker = {}", i, marker);
             mesh.points[i].id = i;
             mesh.points[i].marker = marker;
             mesh.points[i].coords[0] = tetgen.out_point(i, 0);
@@ -582,23 +583,33 @@ mod tests {
     fn check_corner_markers(mesh: &Mesh) {
         let feat = Features::new(mesh, false);
         let res = feat.search_point_ids(At::XY(RMIN, 0.0), any_x).unwrap();
-        assert_eq!(res.len(), 1);
-        assert_eq!(mesh.points[res[0]].marker, -1);
+        let n = if mesh.ndim == 3 { 2 } else { 1 };
+
+        assert_eq!(res.len(), n);
+        for i in 0..n {
+            assert_eq!(mesh.points[res[i]].marker, -1);
+        }
 
         let res = feat.search_point_ids(At::XY(RMAX, 0.0), any_x).unwrap();
-        assert_eq!(res.len(), 1);
-        assert_eq!(mesh.points[res[0]].marker, -2);
+        assert_eq!(res.len(), n);
+        for i in 0..n {
+            assert_eq!(mesh.points[res[i]].marker, -2);
+        }
 
         let res = feat.search_point_ids(At::XY(0.0, RMAX), any_x).unwrap();
-        assert_eq!(res.len(), 1);
-        assert_eq!(mesh.points[res[0]].marker, -3);
+        assert_eq!(res.len(), n);
+        for i in 0..n {
+            assert_eq!(mesh.points[res[i]].marker, -3);
+        }
 
         let res = feat.search_point_ids(At::XY(0.0, RMIN), any_x).unwrap();
-        assert_eq!(res.len(), 1);
-        assert_eq!(mesh.points[res[0]].marker, -4);
+        assert_eq!(res.len(), n);
+        for i in 0..n {
+            assert_eq!(mesh.points[res[i]].marker, -4);
+        }
     }
 
-    fn check_edge_point_markers(mesh: &Mesh, inner: &[usize], outer: &[usize]) {
+    fn check_point_markers(mesh: &Mesh, inner: &[usize], outer: &[usize]) {
         for p in inner {
             assert_eq!(mesh.points[*p].marker, -10);
         }
@@ -611,11 +622,11 @@ mod tests {
     fn tri_quarter_ring_2d_captures_errors() {
         assert_eq!(
             Unstructured::quarter_ring_2d(RMIN, RMAX, 0, 4, GeoKind::Tri3, None).err(),
-            Some("number of divisions along the radius must be > 0")
+            Some("number of divisions along the radius must be ≥ 1")
         );
         assert_eq!(
             Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 0, GeoKind::Tri3, None).err(),
-            Some("number of divisions along alpha must be > 0")
+            Some("number of divisions along alpha must be ≥ 1")
         );
         assert_eq!(
             Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 2, GeoKind::Qua4, None).err(),
@@ -635,7 +646,7 @@ mod tests {
         mesh.check_overlapping_points(0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        check_edge_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5]);
+        check_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5]);
         for p in [0, 11, 10, 9, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -658,7 +669,7 @@ mod tests {
         mesh.check_overlapping_points(0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        check_edge_point_markers(&mesh, &[32, 11, 36, 10, 21, 9, 22], &[34, 3, 40, 4, 17, 5, 26]);
+        check_point_markers(&mesh, &[32, 11, 36, 10, 21, 9, 22], &[34, 3, 40, 4, 17, 5, 26]);
         for p in [0, 32, 11, 36, 10, 21, 9, 22, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -682,7 +693,7 @@ mod tests {
         mesh.check_overlapping_points(0.18).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        check_edge_point_markers(&mesh, &[11, 10, 17, 9], &[40, 3, 25, 4, 24, 5, 33]);
+        check_point_markers(&mesh, &[11, 10, 17, 9], &[40, 3, 25, 4, 24, 5, 33]);
         for p in [0, 11, 10, 17, 9, 8] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -710,7 +721,7 @@ mod tests {
         mesh.check_overlapping_points(0.1).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        check_edge_point_markers(
+        check_point_markers(
             &mesh,
             &[150, 11, 81, 10, 58, 17, 99, 9, 146],
             &[154, 40, 176, 3, 174, 25, 130, 4, 118, 24, 136, 5, 124, 33, 134],
@@ -737,7 +748,7 @@ mod tests {
         mesh.check_overlapping_points(0.1).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        check_edge_point_markers(
+        check_point_markers(
             &mesh,
             &[57, 54, 51, 70, 68, 2, 23, 21, 19, 30, 27],
             &[62, 65, 60, 79, 80, 10, 12, 15, 11, 36, 39],
@@ -764,7 +775,7 @@ mod tests {
         mesh.check_overlapping_points(0.1).unwrap();
         check_constraints(&mesh);
         check_corner_markers(&mesh);
-        check_edge_point_markers(
+        check_point_markers(
             &mesh,
             &[92, 86, 91, 83, 113, 110, 112, 2, 35, 31, 34, 29, 45, 41, 44],
             &[103, 99, 104, 97, 132, 131, 133, 15, 20, 17, 21, 16, 59, 55, 60],
@@ -782,7 +793,7 @@ mod tests {
     #[test]
     fn tri_quarter_ring_3d_works() {
         let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet4, None).unwrap();
-        if true {
+        if SAVE_FIGURE {
             let mut cylin_in = Surface::new();
             let mut cylin_out = Surface::new();
             cylin_in.set_solid_color("#ff000020");
@@ -795,7 +806,7 @@ mod tests {
                 .unwrap();
 
             let mut fig = Figure::new();
-            fig.figure_size = Some((1000.0, 1000.0));
+            fig.figure_size = Some((800.0, 800.0));
             fig.point_ids = true;
             mesh.draw(Some(fig), "/tmp/gemlab/test_tri_quarter_ring_3d.svg", |plot, before| {
                 if before {
@@ -803,12 +814,12 @@ mod tests {
                 }
             });
         }
-        // assert_eq!(mesh.points.len(), 14);
-        // assert_eq!(mesh.cells.len(), 14);
-        // mesh.check_all().unwrap();
-        // mesh.check_overlapping_points(0.18).unwrap();
-        // check_constraints(&mesh);
-        // check_corner_markers(&mesh);
+        assert_eq!(mesh.points.len(), 24);
+        assert_eq!(mesh.cells.len(), 30);
+        mesh.check_all().unwrap();
+        mesh.check_overlapping_points(0.2).unwrap();
+        check_constraints(&mesh);
+        check_corner_markers(&mesh);
         // check_edge_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5]);
         // for p in [0, 11, 10, 9, 8] {
         //     let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
