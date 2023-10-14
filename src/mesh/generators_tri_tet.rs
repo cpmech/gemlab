@@ -907,13 +907,13 @@ mod tests {
             &[7, 19],
         );
         check_constraints(&mesh);
-        // for p in [0, 11, 10, 9, 8] {
-        //     let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-        //     approx_eq(d, RMIN, 1e-15);
-        // }
-        // for p in [2, 3, 4, 5, 6] {
-        //     let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
-        //     approx_eq(d, RMAX, 1e-15);
-        // }
+        for p in [0, 11, 10, 9, 8, 20, 21, 22, 23, 12] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMIN, 1e-15);
+        }
+        for p in [2, 3, 4, 5, 6, 14, 15, 16, 17, 18] {
+            let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
+            approx_eq(d, RMAX, 1e-15);
+        }
     }
 }
