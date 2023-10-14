@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use super::{Cell, Mesh, Point};
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
@@ -9,25 +7,38 @@ use tritet::{Tetgen, Trigen};
 /// Groups generators of unstructured meshes (Tri and Tet only)
 pub struct Unstructured {}
 
+const MARKER_A: i32 = 1;
+const MARKER_B: i32 = 2;
+const MARKER_C: i32 = 3;
+const MARKER_D: i32 = 4;
+const MARKER_INNER: i32 = 5;
+const MARKER_OUTER: i32 = 6;
+const MARKER_SYM_X: i32 = 7;
+const MARKER_SYM_Y: i32 = 8;
+const MARKER_ZMIN: i32 = 9;
+const MARKER_ZMAX: i32 = 10;
+
 fn apply_constraints(mesh: &mut Mesh, rmin: f64, rmax: f64) {
-    //  -3 =---__
-    //   |        '*._
-    //   | -40        *._
-    //   |               *.  -20
-    //  -4 ==-__           *.
-    //          '-.          *
-    //             *.         *
-    //          -10  *         *
-    //                *         *
-    //                 *         *
-    //                 #   -30   #
-    //                -1 ------- -2
+    // Point markers:
+    //                              lower marker values
+    //  D ==---__                   have PRIORITY over
+    //  |        '*._               higher marker values
+    //  | SYM_Y      *._
+    //  |               *.  OUTER   A: 1    INNER: 5
+    //  B ==-__           *.        B: 2    OUTER: 6
+    //         '-.          *       C: 3    SYM_X: 7
+    //            *.         *      D: 4    SYM_Y: 8
+    //       INNER  *         *
+    //               *         *    ZMIN: 9
+    //                *         *   ZMAX: 10
+    //                #  SYM_X  #
+    //                A ------- C
 
     // apply constraints
     const TOL: f64 = 1e-15;
     for i in 0..mesh.points.len() {
         // points on inner circle
-        if mesh.points[i].marker == -10 {
+        if mesh.points[i].marker == MARKER_INNER {
             let dx = mesh.points[i].coords[0] - 0.0;
             let dy = mesh.points[i].coords[1] - 0.0;
             let d = f64::sqrt(dx * dx + dy * dy);
@@ -40,7 +51,7 @@ fn apply_constraints(mesh: &mut Mesh, rmin: f64, rmax: f64) {
             }
         }
         // points on outer circle
-        if mesh.points[i].marker == -20 {
+        if mesh.points[i].marker == MARKER_OUTER {
             let dx = mesh.points[i].coords[0] - 0.0;
             let dy = mesh.points[i].coords[1] - 0.0;
             let d = f64::sqrt(dx * dx + dy * dy);
@@ -81,18 +92,20 @@ impl Unstructured {
     /// ```text
     /// Point markers:
     ///
-    ///  -3 ==---__
-    ///   |        '*._
-    ///   | -40        *._
-    ///   |               *.  -20
-    ///  -4 ==-__           *.
-    ///          '-.          *
-    ///             *.         *
-    ///          -10  *         *
-    ///                *         *
-    ///                 *         *
-    ///                 #   -30   #
-    ///                -1 ------- -2
+    /// (4)                          lower marker values
+    ///  D ==---__                   have PRIORITY over
+    ///  |        '*._               higher marker values
+    ///  | SYM_Y(8)   *._     (6)
+    ///  |               *.  OUTER   A: 1    INNER: 5
+    ///  B ==-__           *.        B: 2    OUTER: 6
+    /// (2)     '-.          *       C: 3    SYM_X: 7
+    ///            *.         *      D: 4    SYM_Y: 8
+    ///       INNER  *         *
+    ///        (5)    *         *    ZMIN: 9
+    ///                *   (7)   *   ZMAX: 10
+    ///                #  SYM_X  #
+    ///                A ------- C
+    ///               (1)       (3)
     /// ```
     ///
     /// # Input
@@ -139,38 +152,41 @@ impl Unstructured {
         let dr = (rmax - rmin) / (nr as f64);
         let da = (AMAX - AMIN) / (na as f64);
 
-        // counters
-        let mut index = 0;
+        // global index of point
+        let mut p = 0;
 
-        // horizontal line
-        trigen.set_point(index, -1, rmin, 0.0)?;
-        index += 1;
+        // y=0 line (horizontal line)
+        trigen.set_point(p, MARKER_A, rmin, 0.0)?;
+        p += 1;
         for i in 1..(nr + 1) {
-            let marker = if i == nr { -2 } else { 0 };
+            let marker = if i == nr { MARKER_C } else { 0 };
             let r = rmin + (i as f64) * dr;
-            trigen.set_point(index, marker, r, 0.0)?;
-            trigen.set_segment(index - 1, -30, index - 1, index)?;
-            index += 1;
+            trigen.set_point(p, marker, r, 0.0)?;
+            trigen.set_segment(p - 1, MARKER_SYM_X, p - 1, p)?;
+            p += 1;
         }
 
         // outer circle
         for i in 1..(na + 1) {
-            let marker = if i == na { -3 } else { 0 };
+            let marker = if i == na { MARKER_D } else { 0 };
             let a = AMIN + (i as f64) * da;
-            let x = rmax * f64::cos(a);
-            let y = rmax * f64::sin(a);
-            trigen.set_point(index, marker, x, y)?;
-            trigen.set_segment(index - 1, -20, index - 1, index)?;
-            index += 1;
+            let (x, y) = if i == na {
+                (0.0, rmax)
+            } else {
+                (rmax * f64::cos(a), rmax * f64::sin(a))
+            };
+            trigen.set_point(p, marker, x, y)?;
+            trigen.set_segment(p - 1, MARKER_OUTER, p - 1, p)?;
+            p += 1;
         }
 
-        // vertical line
+        // x=0 line (vertical line)
         for i in 1..(nr + 1) {
-            let marker = if i == nr { -4 } else { 0 };
+            let marker = if i == nr { MARKER_B } else { 0 };
             let r = rmin + ((nr - i) as f64) * dr;
-            trigen.set_point(index, marker, 0.0, r)?;
-            trigen.set_segment(index - 1, -40, index - 1, index)?;
-            index += 1;
+            trigen.set_point(p, marker, 0.0, r)?;
+            trigen.set_segment(p - 1, MARKER_SYM_Y, p - 1, p)?;
+            p += 1;
         }
 
         // inner circle
@@ -178,11 +194,11 @@ impl Unstructured {
             let a = AMIN + ((na - i) as f64) * da;
             let x = rmin * f64::cos(a);
             let y = rmin * f64::sin(a);
-            trigen.set_point(index, 0, x, y)?;
-            trigen.set_segment(index - 1, -10, index - 1, index)?;
-            index += 1;
+            trigen.set_point(p, 0, x, y)?;
+            trigen.set_segment(p - 1, MARKER_INNER, p - 1, p)?;
+            p += 1;
         }
-        trigen.set_segment(index - 1, -10, index - 1, 0)?;
+        trigen.set_segment(p - 1, MARKER_INNER, p - 1, 0)?;
 
         // region
         trigen.set_region(0, 1, rmin + 1e-4, 1e-4, None)?;
@@ -269,19 +285,21 @@ impl Unstructured {
     ///
     /// ```text
     /// Point markers:
-    ///                 z=0 facet => -50
-    ///  -3 ==---__     z=thickness => -60   
-    ///   |        '*._   (only interior)    
-    ///   | -40        *._
-    ///   |               *.  -20
-    ///  -4 ==-__           *.
-    ///          '-.          *
-    ///             *.         *
-    ///          -10  *         *
-    ///                *         *
-    ///                 *         *
-    ///                 #   -30   #
-    ///                -1 ------- -2
+    ///
+    /// (4)                          lower marker values
+    ///  D ==---__                   have PRIORITY over
+    ///  |        '*._               higher marker values
+    ///  | SYM_Y(8)   *._     (6)
+    ///  |               *.  OUTER   A: 1    INNER: 5
+    ///  B ==-__           *.        B: 2    OUTER: 6
+    /// (2)     '-.          *       C: 3    SYM_X: 7
+    ///            *.         *      D: 4    SYM_Y: 8
+    ///       INNER  *         *
+    ///        (5)    *         *    ZMIN: 9
+    ///                *   (7)   *   ZMAX: 10
+    ///                #  SYM_X  #
+    ///                A ------- C
+    ///               (1)       (3)
     /// ```
     ///
     /// # Input
@@ -326,7 +344,6 @@ impl Unstructured {
         let nz = 1;
         let npoint_cap_facets = 2 * (nr + 1) + 2 * (na - 1);
         let npoint_sym_facets = 2 * (nr + 1); // + 2 * (nz - 1)
-        let npoint_cyl_facets = 2 * (na + 1); // + 2 * (nz - 1)
         let npoint = 2 * npoint_cap_facets;
         let nfacet = 2 + 2 + 2 * na;
         let mut facets_npoint = vec![0; nfacet];
@@ -357,10 +374,10 @@ impl Unstructured {
             let z = (k as f64) * dz;
 
             // y=0 line
-            tetgen.set_point(p, -1, rmin, 0.0, z)?;
+            tetgen.set_point(p, MARKER_A, rmin, 0.0, z)?;
             p += 1;
             for i in 1..(nr + 1) {
-                let marker = if i == nr { -2 } else { 0 };
+                let marker = if i == nr { MARKER_C } else { 0 };
                 let r = rmin + (i as f64) * dr;
                 tetgen.set_point(p, marker, r, 0.0, z)?;
                 p += 1;
@@ -368,7 +385,7 @@ impl Unstructured {
 
             // outer circle
             for i in 1..(na + 1) {
-                let marker = if i == na { -3 } else { 0 };
+                let marker = if i == na { MARKER_D } else { 0 };
                 let a = AMIN + (i as f64) * da;
                 let (x, y) = if i == na {
                     (0.0, rmax)
@@ -381,7 +398,7 @@ impl Unstructured {
 
             // x=0 line
             for i in 1..(nr + 1) {
-                let marker = if i == nr { -4 } else { 0 };
+                let marker = if i == nr { MARKER_B } else { 0 };
                 let r = rmin + ((nr - i) as f64) * dr;
                 tetgen.set_point(p, marker, 0.0, r, z)?;
                 p += 1;
@@ -413,7 +430,7 @@ impl Unstructured {
         // * The order of the vertices can be in either clockwise or counterclockwise order.
 
         // cap facet @ z = 0
-        tetgen.set_facet_marker(0, -50)?;
+        tetgen.set_facet_marker(0, MARKER_ZMIN)?;
         for i in 0..npoint_cap_facets {
             m = i;
             p = p_pivot_a + i;
@@ -421,7 +438,7 @@ impl Unstructured {
         }
 
         // cap facet @ z = thickness
-        tetgen.set_facet_marker(1, -60)?;
+        tetgen.set_facet_marker(1, MARKER_ZMAX)?;
         for i in 0..npoint_cap_facets {
             m = i;
             p = p_pivot_aa + i;
@@ -429,7 +446,7 @@ impl Unstructured {
         }
 
         // sym facet parallel to x (y=0)
-        tetgen.set_facet_marker(2, -30)?;
+        tetgen.set_facet_marker(2, MARKER_SYM_X)?;
         for i in 0..(nr + 1) {
             m = i;
             p = p_pivot_a + i;
@@ -440,7 +457,7 @@ impl Unstructured {
         }
 
         // sym facet parallel to y
-        tetgen.set_facet_marker(3, -40)?;
+        tetgen.set_facet_marker(3, MARKER_SYM_Y)?;
         for i in 0..(nr + 1) {
             m = i;
             p = p_pivot_b - i;
@@ -453,14 +470,14 @@ impl Unstructured {
         // inner cyl facets
         let pp = [p_pivot_b, p_pivot_b + 1, p_pivot_bb + 1, p_pivot_bb];
         for i in 0..(na - 1) {
-            tetgen.set_facet_marker(4 + i, -10)?;
+            tetgen.set_facet_marker(4 + i, MARKER_INNER)?;
             for m in 0..4 {
                 p = pp[m] + i;
                 tetgen.set_facet_point(4 + i, m, p)?;
             }
         }
         let last = 4 + na - 1;
-        tetgen.set_facet_marker(last, -10)?;
+        tetgen.set_facet_marker(last, MARKER_INNER)?;
         tetgen.set_facet_point(last, 0, p_pivot_b + na - 1)?;
         tetgen.set_facet_point(last, 1, p_pivot_a)?;
         tetgen.set_facet_point(last, 2, p_pivot_aa)?;
@@ -469,14 +486,14 @@ impl Unstructured {
         // outer cyl facets
         let pp = [p_pivot_c, p_pivot_c + 1, p_pivot_cc + 1, p_pivot_cc];
         for i in 0..(na - 1) {
-            tetgen.set_facet_marker(4 + na + i, -20)?;
+            tetgen.set_facet_marker(4 + na + i, MARKER_OUTER)?;
             for m in 0..4 {
                 p = pp[m] + i;
                 tetgen.set_facet_point(4 + na + i, m, p)?;
             }
         }
         let last = 4 + na + na - 1;
-        tetgen.set_facet_marker(last, -20)?;
+        tetgen.set_facet_marker(last, MARKER_OUTER)?;
         tetgen.set_facet_point(last, 0, p_pivot_c + na - 1)?;
         tetgen.set_facet_point(last, 1, p_pivot_d)?;
         tetgen.set_facet_point(last, 2, p_pivot_dd)?;
@@ -514,7 +531,6 @@ impl Unstructured {
         // set mesh data
         for i in 0..npoint {
             let marker = tetgen.out_point_marker(i);
-            println!("{}: marker = {}", i, marker);
             mesh.points[i].id = i;
             mesh.points[i].marker = marker;
             mesh.points[i].coords[0] = tetgen.out_point(i, 0);
@@ -529,22 +545,18 @@ impl Unstructured {
             }
         }
 
-        println!();
-
-        // handle marked faces (do not replace corner markers)
+        // set markers of points on marked faces
+        let n_face_point = if o2 { 6 } else { 3 };
+        let mut face_points = [0; 6];
         for i in 0..tetgen.out_n_marked_face() {
-            let (a, b, c, marker, _) = tetgen.out_marked_face(i);
-            if marker != -50 && marker != -60 {
-                for p in [a, b, c] {
-                    if mesh.points[p].marker == 0 {
-                        mesh.points[p].marker = marker;
-                    }
+            let (marker, _) = tetgen.out_marked_face(i, &mut face_points);
+            for m in 0..n_face_point {
+                let p = face_points[m] as usize;
+                if mesh.points[p].marker == 0 || mesh.points[p].marker > marker {
+                    // set only if it has a higher priority (smaller marker == higher priority)
+                    mesh.points[p].marker = marker;
                 }
             }
-        }
-
-        for i in 0..npoint {
-            println!("{}: marker = {}", i, mesh.points[i].marker);
         }
 
         // apply constraints (need to be done before the upgrade because
@@ -568,7 +580,7 @@ impl Unstructured {
 
 #[cfg(test)]
 mod tests {
-    use super::Unstructured;
+    use super::*;
     use crate::geometry::point_point_distance;
     use crate::mesh::{At, Features, Figure, Mesh};
     use crate::shapes::GeoKind;
@@ -592,84 +604,62 @@ mod tests {
         mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
     }
 
-    fn check_corner_markers(mesh: &Mesh) {
-        //  -3 ==---__
-        //   |        '*._
-        //   | -40        *._
-        //   |               *.  -20
-        //  -4 ==-__           *.
-        //          '-.          *
-        //             *.         *
-        //          -10  *         *
-        //                *         *
-        //                 *         *
-        //                 #   -30   #
-        //                -1 ------- -2
+    fn check_corner_markers(mesh: &Mesh, o2_3d: bool) {
+        let (m, n) = if mesh.ndim == 3 {
+            if o2_3d {
+                (3, 2)
+            } else {
+                (2, 2)
+            }
+        } else {
+            (1, 1)
+        };
 
         let feat = Features::new(mesh, false);
-        let res = feat.search_point_ids(At::XY(RMIN, 0.0), any_x).unwrap();
-        let n = if mesh.ndim == 3 { 2 } else { 1 };
 
-        assert_eq!(res.len(), n);
+        let res = feat.search_point_ids(At::XY(RMIN, 0.0), any_x).unwrap();
+        assert_eq!(res.len(), m);
         for i in 0..n {
-            assert_eq!(mesh.points[res[i]].marker, -1);
+            assert_eq!(mesh.points[res[i]].marker, MARKER_A);
         }
 
         let res = feat.search_point_ids(At::XY(RMAX, 0.0), any_x).unwrap();
-        assert_eq!(res.len(), n);
+        assert_eq!(res.len(), m);
         for i in 0..n {
-            assert_eq!(mesh.points[res[i]].marker, -2);
+            assert_eq!(mesh.points[res[i]].marker, MARKER_C);
         }
 
         let res = feat.search_point_ids(At::XY(0.0, RMAX), any_x).unwrap();
-        assert_eq!(res.len(), n);
+        assert_eq!(res.len(), m);
         for i in 0..n {
-            assert_eq!(mesh.points[res[i]].marker, -3);
+            assert_eq!(mesh.points[res[i]].marker, MARKER_D);
         }
 
         let res = feat.search_point_ids(At::XY(0.0, RMIN), any_x).unwrap();
-        assert_eq!(res.len(), n);
+        assert_eq!(res.len(), m);
         for i in 0..n {
-            assert_eq!(mesh.points[res[i]].marker, -4);
+            assert_eq!(mesh.points[res[i]].marker, MARKER_B);
         }
     }
 
-    fn check_point_markers(
-        mesh: &Mesh,
-        inner: &[usize],
-        outer: &[usize],
-        sym_line_horiz: &[usize],
-        sym_line_vert: &[usize],
-    ) {
-        //  -3 ==---__
-        //   |        '*._
-        //   | -40        *._
-        //   |               *.  -20
-        //  -4 ==-__           *.
-        //          '-.          *
-        //             *.         *
-        //          -10  *         *
-        //                *         *
-        //                 *         *
-        //                 #   -30   #
-        //                -1 ------- -2
+    fn check_point_markers(mesh: &Mesh, inner: &[usize], outer: &[usize], sym_x: &[usize], sym_y: &[usize]) {
         for p in inner {
-            assert_eq!(mesh.points[*p].marker, -10);
+            assert_eq!(mesh.points[*p].marker, MARKER_INNER);
         }
         for p in outer {
-            assert_eq!(mesh.points[*p].marker, -20);
+            assert_eq!(mesh.points[*p].marker, MARKER_OUTER);
         }
-        for p in sym_line_horiz {
-            assert_eq!(mesh.points[*p].marker, -30);
+        for p in sym_x {
+            assert_eq!(mesh.points[*p].marker, MARKER_SYM_X);
         }
-        for p in sym_line_vert {
-            assert_eq!(mesh.points[*p].marker, -40);
+        for p in sym_y {
+            assert_eq!(mesh.points[*p].marker, MARKER_SYM_Y);
         }
     }
 
     fn check_constraints(mesh: &Mesh) {
-        let inner: Vec<_> = mesh.points.iter().filter(|p| p.marker == -10).collect();
-        let outer: Vec<_> = mesh.points.iter().filter(|p| p.marker == -20).collect();
+        let inner: Vec<_> = mesh.points.iter().filter(|p| p.marker == MARKER_INNER).collect();
+        let outer: Vec<_> = mesh.points.iter().filter(|p| p.marker == MARKER_OUTER).collect();
         for point in inner {
             let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMIN, 1e-15);
@@ -706,7 +696,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.18).unwrap();
-        check_corner_markers(&mesh);
+        check_corner_markers(&mesh, false);
         check_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5], &[1], &[7]);
         check_constraints(&mesh);
         for p in [0, 11, 10, 9, 8] {
@@ -729,7 +719,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.18).unwrap();
-        check_corner_markers(&mesh);
+        check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
             &[32, 11, 36, 10, 21, 9, 22],
@@ -759,7 +749,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 78);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.18).unwrap();
-        check_corner_markers(&mesh);
+        check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
             &[11, 10, 17, 9],
@@ -793,7 +783,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 78);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.1).unwrap();
-        check_corner_markers(&mesh);
+        check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
             &[150, 11, 81, 10, 58, 17, 99, 9, 146],
@@ -822,7 +812,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.1).unwrap();
-        check_corner_markers(&mesh);
+        check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
             &[57, 54, 51, 70, 68, 2, 23, 21, 19, 30, 27],
@@ -851,7 +841,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.1).unwrap();
-        check_corner_markers(&mesh);
+        check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
             &[92, 86, 91, 83, 113, 110, 112, 2, 35, 31, 34, 29, 45, 41, 44],
@@ -892,13 +882,14 @@ mod tests {
                 if before {
                     plot.add(&cylin_in).add(&cylin_out);
                 }
-            });
+            })
+            .unwrap();
         }
         assert_eq!(mesh.points.len(), 24);
         assert_eq!(mesh.cells.len(), 30);
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.2).unwrap();
-        check_corner_markers(&mesh);
+        check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
             &[9, 10, 11, 21, 22, 23],
@@ -915,5 +906,60 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
         }
+    }
+
+    #[test]
+    fn tri_quarter_ring_3d_o2_works() {
+        let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet10, None).unwrap();
+        if SAVE_FIGURE {
+            let mut cylin_in = Surface::new();
+            let mut cylin_out = Surface::new();
+            cylin_in.set_solid_color("#ff000020");
+            cylin_out.set_solid_color("#ff000020");
+            cylin_in
+                .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMIN, 5, 81)
+                .unwrap();
+            cylin_out
+                .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMAX, 5, 81)
+                .unwrap();
+
+            let mut fig = Figure::new();
+            fig.figure_size = Some((800.0, 800.0));
+            fig.point_ids = false;
+            fig.point_dots = true;
+            mesh.draw(
+                Some(fig),
+                "/tmp/gemlab/test_tri_quarter_ring_3d_o2.svg",
+                |plot, before| {
+                    if before {
+                        plot.add(&cylin_in).add(&cylin_out);
+                    }
+                },
+            )
+            .unwrap();
+        }
+        assert_eq!(mesh.points.len(), 99);
+        assert_eq!(mesh.cells.len(), 30);
+        mesh.check_all().unwrap();
+        mesh.check_overlapping_points(0.2).unwrap();
+        check_corner_markers(&mesh, true);
+        check_point_markers(
+            &mesh,
+            &[
+                9, 10, 11, 21, 22, 23, 64, 45, 30, 62, 58, 57, 67, 60, 98, 97, 96, 72, 74, 28, 76,
+            ],
+            &[
+                3, 4, 5, 15, 16, 17, 85, 83, 90, 51, 69, 50, 55, 71, 79, 80, 81, 49, 36, 43, 47,
+            ],
+            &[1, 13, 24, 25, 77, 29, 84, 87, 88],
+            &[7, 19, 44, 34, 31, 32, 37, 39, 42],
+        );
+        for p in &[73, 82, 95, 93, 78, 59, 61, 40, 63] {
+            assert_eq!(mesh.points[*p].marker, MARKER_ZMIN);
+        }
+        for p in &[26, 89, 92, 52, 53, 68, 65, 48, 35] {
+            assert_eq!(mesh.points[*p].marker, MARKER_ZMAX);
+        }
+        // check_constraints(&mesh);
     }
 }
