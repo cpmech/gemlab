@@ -356,14 +356,12 @@ impl Unstructured {
             // calc z
             let z = (k as f64) * dz;
 
-            // horizontal line
+            // y=0 line
             tetgen.set_point(p, -1, rmin, 0.0, z)?;
-            println!("p={} x={:?}, y={:?}, z={:?}", p, rmin, 0.0, z);
             p += 1;
             for i in 1..(nr + 1) {
                 let marker = if i == nr { -2 } else { 0 };
                 let r = rmin + (i as f64) * dr;
-                println!("p={} x={:?}, y={:?}, z={:?}", p, r, 0.0, z);
                 tetgen.set_point(p, marker, r, 0.0, z)?;
                 p += 1;
             }
@@ -377,16 +375,14 @@ impl Unstructured {
                 } else {
                     (rmax * f64::cos(a), rmax * f64::sin(a))
                 };
-                println!("p={} x={:?}, y={:?}, z={:?}", p, x, y, z);
                 tetgen.set_point(p, marker, x, y, z)?;
                 p += 1;
             }
 
-            // vertical line
+            // x=0 line
             for i in 1..(nr + 1) {
                 let marker = if i == nr { -4 } else { 0 };
                 let r = rmin + ((nr - i) as f64) * dr;
-                println!("p={} x={:?}, y={:?}, z={:?}", p, 0.0, r, z);
                 tetgen.set_point(p, marker, 0.0, r, z)?;
                 p += 1;
             }
@@ -396,7 +392,6 @@ impl Unstructured {
                 let a = AMIN + ((na - i) as f64) * da;
                 let x = rmin * f64::cos(a);
                 let y = rmin * f64::sin(a);
-                println!("p={} x={:?}, y={:?}, z={:?}", p, x, y, z);
                 tetgen.set_point(p, 0, x, y, z)?;
                 p += 1;
             }
@@ -410,86 +405,74 @@ impl Unstructured {
         let p_pivot_d = p_pivot_b - nr; // pivot point @ (0, rmax, 0)
         let p_pivot_aa = p_pivot_a + npoint_cap_facets; // pivot point @ (rmin, 0, thickness)
         let p_pivot_bb = p_pivot_b + npoint_cap_facets; // pivot point @ (0, rmin, thickness)
-        let p_pivot_cc = p_pivot_aa + nr; // pivot point @ (rmax, 0, thickness)
-        let p_pivot_dd = p_pivot_bb - nr; // pivot point @ (rmax, 0, thickness)
+        let p_pivot_cc = p_pivot_c + npoint_cap_facets; // pivot point @ (rmax, 0, thickness)
+        let p_pivot_dd = p_pivot_d + npoint_cap_facets; // pivot point @ (0, rmax, thickness)
 
         // On page 52 of TetGen's manual:
         // * Each polygon of a facet is described by an ordered list of vertices.
         // * The order of the vertices can be in either clockwise or counterclockwise order.
 
         // cap facet @ z = 0
-        println!("cap facet @ z = 0");
         for i in 0..npoint_cap_facets {
             m = i;
             p = p_pivot_a + i;
-            println!("m={} p={}", m, p);
             tetgen.set_facet_point(0, m, p)?;
         }
 
         // cap facet @ z = thickness
-        println!("cap facet @ z = thickness");
         for i in 0..npoint_cap_facets {
             m = i;
             p = p_pivot_aa + i;
-            println!("m={} p={}", m, p);
             tetgen.set_facet_point(1, m, p)?;
         }
 
-        // sym facet parallel to x
-        println!("sym facet parallel to x");
+        // sym facet parallel to x (y=0)
         for i in 0..(nr + 1) {
             m = i;
             p = p_pivot_a + i;
-            print!("m={} p={}", m, p);
             tetgen.set_facet_point(2, m, p)?;
             m = nr + 1 + nr - i;
             p = p_pivot_aa + i;
-            println!("   m={} p={}", m, p);
             tetgen.set_facet_point(2, m, p)?;
         }
 
         // sym facet parallel to y
-        println!("sym facet parallel to y");
         for i in 0..(nr + 1) {
             m = i;
             p = p_pivot_b - i;
-            print!("m={} p={}", m, p);
             tetgen.set_facet_point(3, m, p)?;
             m = nr + 1 + nr - i;
             p = p_pivot_bb - i;
-            println!("   m={} p={}", m, p);
             tetgen.set_facet_point(3, m, p)?;
         }
 
         // inner cyl facets
-        println!("inner cyl facet");
         let pp = [p_pivot_b, p_pivot_b + 1, p_pivot_bb + 1, p_pivot_bb];
         for i in 0..(na - 1) {
             for m in 0..4 {
                 p = pp[m] + i;
-                println!("m={} p={}", m, p);
                 tetgen.set_facet_point(4 + i, m, p)?;
             }
         }
-        tetgen.set_facet_point(4 + na - 1, 0, p_pivot_b + na - 1)?;
-        tetgen.set_facet_point(4 + na - 1, 1, p_pivot_a)?;
-        tetgen.set_facet_point(4 + na - 1, 2, p_pivot_aa)?;
-        tetgen.set_facet_point(4 + na - 1, 3, p_pivot_bb + na - 1)?;
+        let last = 4 + na - 1;
+        tetgen.set_facet_point(last, 0, p_pivot_b + na - 1)?;
+        tetgen.set_facet_point(last, 1, p_pivot_a)?;
+        tetgen.set_facet_point(last, 2, p_pivot_aa)?;
+        tetgen.set_facet_point(last, 3, p_pivot_bb + na - 1)?;
 
         // outer cyl facets
-        println!("outer cyl facet");
         let pp = [p_pivot_c, p_pivot_c + 1, p_pivot_cc + 1, p_pivot_cc];
         for i in 0..(na - 1) {
             for m in 0..4 {
                 p = pp[m] + i;
-                println!("m={} p={}", m, p);
                 tetgen.set_facet_point(4 + na + i, m, p)?;
             }
         }
-        tetgen.set_facet_point(4 + 2 * na - 1, 0, p_pivot_c + na - 1)?;
-        tetgen.set_facet_point(4 + 2 * na - 1, 1, p_pivot_d)?;
-        tetgen.set_facet_point(4 + 2 * na - 1, 2, p_pivot_dd)?;
-        tetgen.set_facet_point(4 + 2 * na - 1, 3, p_pivot_cc + na - 1)?;
+        let last = 4 + na + na - 1;
+        tetgen.set_facet_point(last, 0, p_pivot_c + na - 1)?;
+        tetgen.set_facet_point(last, 1, p_pivot_d)?;
+        tetgen.set_facet_point(last, 2, p_pivot_dd)?;
+        tetgen.set_facet_point(last, 3, p_pivot_cc + na - 1)?;
 
         // region
         tetgen.set_region(0, 1, rmin + 1e-4, 1e-4, 1e-4, None)?;
