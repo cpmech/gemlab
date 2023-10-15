@@ -13,13 +13,13 @@ keywords = ["geometry", "mesh", "fem"]
 
 [dependencies]
 plotpy = "0.5"
-russell_lab = { path = "../russell/russell_lab", version = "0.6" }
-russell_sparse = { path = "../russell/russell_sparse", version = "0.6" }
-russell_stat = { path = "../russell/russell_stat", version = "0.6" }
-russell_tensor = { path = "../russell/russell_tensor", version = "0.6" }
+russell_lab = "0.6"
+russell_sparse = "0.7"
+russell_stat = "0.6"
+russell_tensor = "0.6"
 rmp-serde = "1.1"
 serde = { version = "1.0", features = ["derive"] }
-tritet = "0.3"
+tritet = "0.4"
 
 [dev-dependencies]
 criterion = "0.5"
