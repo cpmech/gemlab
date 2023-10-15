@@ -162,17 +162,17 @@ impl Mesh {
                 } else {
                     format!("{}", point.id)
                 };
-                fig.canvas_point_ids
-                    .draw(point.coords[0], point.coords[1], msg.as_str());
+                fig.canvas_point_ids.draw(point.coords[0], point.coords[1], &msg);
             });
         } else {
             self.points.iter().for_each(|point| {
-                fig.canvas_point_ids.draw_3d(
-                    point.coords[0],
-                    point.coords[1],
-                    point.coords[2],
-                    format!("{}", point.id).as_str(),
-                );
+                let msg = if point.marker != 0 {
+                    format!("{}({})", point.id, point.marker)
+                } else {
+                    format!("{}", point.id)
+                };
+                fig.canvas_point_ids
+                    .draw_3d(point.coords[0], point.coords[1], point.coords[2], &msg);
             });
         }
         fig.plot.add(&fig.canvas_point_ids);
