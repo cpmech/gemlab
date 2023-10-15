@@ -7,30 +7,30 @@ use tritet::{Tetgen, Trigen};
 /// Groups generators of unstructured meshes (Tri and Tet only)
 pub struct Unstructured {}
 
-const MARKER_A: i32 = 1;
-const MARKER_B: i32 = 2;
-const MARKER_C: i32 = 3;
-const MARKER_D: i32 = 4;
-const MARKER_INNER: i32 = 5;
-const MARKER_OUTER: i32 = 6;
-const MARKER_SYM_X: i32 = 7;
-const MARKER_SYM_Y: i32 = 8;
-const MARKER_ZMIN: i32 = 9;
-const MARKER_ZMAX: i32 = 10;
+const MARKER_A: i32 = -1;
+const MARKER_B: i32 = -2;
+const MARKER_C: i32 = -3;
+const MARKER_D: i32 = -4;
+const MARKER_INNER: i32 = -5;
+const MARKER_OUTER: i32 = -6;
+const MARKER_SYM_X: i32 = -7;
+const MARKER_SYM_Y: i32 = -8;
+const MARKER_ZMIN: i32 = -9;
+const MARKER_ZMAX: i32 = -10;
 
 fn apply_constraints(mesh: &mut Mesh, rmin: f64, rmax: f64) {
     // Point markers:
-    //                              lower marker values
+    //                              higher marker values
     //  D ==---__                   have PRIORITY over
-    //  |        '*._               higher marker values
+    //  |        '*._               lower marker values
     //  | SYM_Y      *._
-    //  |               *.  OUTER   A: 1    INNER: 5
-    //  B ==-__           *.        B: 2    OUTER: 6
-    //         '-.          *       C: 3    SYM_X: 7
-    //            *.         *      D: 4    SYM_Y: 8
+    //  |               *.  OUTER   A: -1    INNER: -5
+    //  B ==-__           *.        B: -2    OUTER: -6
+    //         '-.          *       C: -3    SYM_X: -7
+    //            *.         *      D: -4    SYM_Y: -8
     //       INNER  *         *
-    //               *         *    ZMIN: 9
-    //                *         *   ZMAX: 10
+    //               *         *    ZMIN:  -9
+    //                *         *   ZMAX: -10
     //                #  SYM_X  #
     //                A ------- C
 
@@ -92,20 +92,20 @@ impl Unstructured {
     /// ```text
     /// Point markers:
     ///
-    /// (4)                          lower marker values
-    ///  D ==---__                   have PRIORITY over
-    ///  |        '*._               higher marker values
-    ///  | SYM_Y(8)   *._     (6)
-    ///  |               *.  OUTER   A: 1    INNER: 5
-    ///  B ==-__           *.        B: 2    OUTER: 6
-    /// (2)     '-.          *       C: 3    SYM_X: 7
-    ///            *.         *      D: 4    SYM_Y: 8
-    ///       INNER  *         *
-    ///        (5)    *         *    ZMIN: 9
-    ///                *   (7)   *   ZMAX: 10
-    ///                #  SYM_X  #
-    ///                A ------- C
-    ///               (1)       (3)
+    /// (-4)                          higher marker values
+    ///   D ==---__                   have PRIORITY over
+    ///   |        '*._               lower marker values
+    ///   | SYM_Y(-8)   *._   (-6)
+    ///   |               *.  OUTER   A: -1    INNER: -5
+    ///   B ==-__           *.        B: -2    OUTER: -6
+    /// (-2)     '-.          *       C: -3    SYM_X: -7
+    ///             *.         *      D: -4    SYM_Y: -8
+    ///        INNER  *         *
+    ///         (-5)    *        *    ZMIN:  -9
+    ///                 *  (-7)   *   ZMAX: -10
+    ///                 #  SYM_X  #
+    ///                 A ------- C
+    ///               (-1)      (-3)
     /// ```
     ///
     /// # Input
@@ -286,20 +286,20 @@ impl Unstructured {
     /// ```text
     /// Point markers:
     ///
-    /// (4)                          lower marker values
-    ///  D ==---__                   have PRIORITY over
-    ///  |        '*._               higher marker values
-    ///  | SYM_Y(8)   *._     (6)
-    ///  |               *.  OUTER   A: 1    INNER: 5
-    ///  B ==-__           *.        B: 2    OUTER: 6
-    /// (2)     '-.          *       C: 3    SYM_X: 7
-    ///            *.         *      D: 4    SYM_Y: 8
-    ///       INNER  *         *
-    ///        (5)    *         *    ZMIN: 9
-    ///                *   (7)   *   ZMAX: 10
-    ///                #  SYM_X  #
-    ///                A ------- C
-    ///               (1)       (3)
+    /// (-4)                          higher marker values
+    ///   D ==---__                   have PRIORITY over
+    ///   |        '*._               lower marker values
+    ///   | SYM_Y(-8)   *._   (-6)
+    ///   |               *.  OUTER   A: -1    INNER: -5
+    ///   B ==-__           *.        B: -2    OUTER: -6
+    /// (-2)     '-.          *       C: -3    SYM_X: -7
+    ///             *.         *      D: -4    SYM_Y: -8
+    ///        INNER  *         *
+    ///         (-5)    *        *    ZMIN:  -9
+    ///                 *  (-7)   *   ZMAX: -10
+    ///                 #  SYM_X  #
+    ///                 A ------- C
+    ///               (-1)      (-3)
     /// ```
     ///
     /// # Input
@@ -533,7 +533,10 @@ impl Unstructured {
 
         // set mesh data
         for i in 0..npoint {
-            let marker = tetgen.out_point_marker(i);
+            // note: TetGen automatically assigns the marker 1 for points on the boundary
+            // thus, we cannot use the marker 1 to identify corner points
+            let tet_mark = tetgen.out_point_marker(i);
+            let marker = if tet_mark == 1 { 0 } else { tet_mark };
             mesh.points[i].id = i;
             mesh.points[i].marker = marker;
             mesh.points[i].coords[0] = tetgen.out_point(i, 0);
@@ -555,8 +558,8 @@ impl Unstructured {
             let (marker, _) = tetgen.out_marked_face(i, &mut face_points);
             for m in 0..n_face_point {
                 let p = face_points[m] as usize;
-                if mesh.points[p].marker == 0 || mesh.points[p].marker > marker {
-                    // set only if it has a higher priority (smaller marker == higher priority)
+                if mesh.points[p].marker == 0 || mesh.points[p].marker < marker {
+                    // set only if it has a higher priority (higher marker == higher priority)
                     mesh.points[p].marker = marker;
                 }
             }
@@ -888,7 +891,7 @@ mod tests {
 
         let mut fig = Figure::new();
         fig.figure_size = Some((800.0, 800.0));
-        fig.point_ids = false;
+        fig.point_ids = true;
         fig.point_dots = true;
         mesh.draw(Some(fig), filename, |plot, before| {
             if before {
@@ -955,6 +958,18 @@ mod tests {
         for p in &[26, 89, 92, 52, 53, 68, 65, 48, 35] {
             assert_eq!(mesh.points[*p].marker, MARKER_ZMAX);
         }
+        check_constraints(&mesh);
+    }
+
+    #[test]
+    fn tri_quarter_ring_3d_o2_max_vol_works() {
+        let global_max_volume = Some(0.5);
+        let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet10, global_max_volume).unwrap();
+        if SAVE_FIGURE {
+            draw_ring_3d_with_cylin(&mesh, "/tmp/gemlab/test_tri_quarter_ring_3d_o2_max_vol.svg");
+        }
+        mesh.check_all().unwrap();
+        mesh.check_overlapping_points(0.1).unwrap();
         check_constraints(&mesh);
     }
 }
