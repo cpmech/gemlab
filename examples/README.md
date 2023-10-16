@@ -84,107 +84,115 @@ Results:
 
 grid.ndiv       = 5
 max vol         = Some(4.5)
-mesh generation : 466.83µs
-check_all       : 9.742772ms
-grid.new        : 2.032µs
-grid.insert     : 42.2µs
-grid.search     : 10.139µs
+mesh generation : 471.974µs
+check_all       : 10.265173ms
+check_overlap.  : 95.04µs
+grid.new        : 465ns
+grid.insert     : 53.236µs
+grid.search     : 12.491µs
 
 grid.ndiv       = 20
 max vol         = Some(4.5)
-mesh generation : 540.816µs
-check_all       : 15.176µs
-grid.new        : 421ns
-grid.insert     : 34.775µs
-grid.search     : 4.304µs
+mesh generation : 645.302µs
+check_all       : 27.15µs
+check_overlap.  : 63.005µs
+grid.new        : 321ns
+grid.insert     : 46.117µs
+grid.search     : 5.483µs
 
 grid.ndiv       = 40
 max vol         = Some(4.5)
-mesh generation : 357.4µs
-check_all       : 12.217µs
-grid.new        : 281ns
-grid.insert     : 39.328µs
-grid.search     : 4.409µs
+mesh generation : 386.923µs
+check_all       : 12.842µs
+check_overlap.  : 46.267µs
+grid.new        : 229ns
+grid.insert     : 39.291µs
+grid.search     : 4.482µs
 
 grid.ndiv       = 100
 max vol         = Some(4.5)
-mesh generation : 375.32µs
-check_all       : 11.53µs
-grid.new        : 231ns
-grid.insert     : 38.029µs
-grid.search     : 4.491µs
+mesh generation : 347.954µs
+check_all       : 12.895µs
+check_overlap.  : 46.404µs
+grid.new        : 173ns
+grid.insert     : 41.44µs
+grid.search     : 4.489µs
 
 ......................... nr = 4 na = 8 .........................
 
 grid.ndiv       = 5
 max vol         = Some(0.0703125)
-mesh generation : 3.762449ms
-check_all       : 230.732µs
-grid.new        : 509ns
-grid.insert     : 409.104µs
-grid.search     : 230.543µs
+mesh generation : 3.848926ms
+check_all       : 366.83µs
+check_overlap.  : 688.255µs
+grid.new        : 889ns
+grid.insert     : 408.958µs
+grid.search     : 239.396µs
 
 grid.ndiv       = 20
 max vol         = Some(0.0703125)
-mesh generation : 3.46261ms
-check_all       : 384.792µs
-grid.new        : 677ns
-grid.insert     : 632.343µs
-grid.search     : 129.908µs
+mesh generation : 3.736197ms
+check_all       : 272.142µs
+check_overlap.  : 646.482µs
+grid.new        : 733ns
+grid.insert     : 411.393µs
+grid.search     : 103.026µs
 
 grid.ndiv       = 40
 max vol         = Some(0.0703125)
-mesh generation : 4.91249ms
-check_all       : 273.255µs
-grid.new        : 874ns
-grid.insert     : 489.395µs
-grid.search     : 82.905µs
+mesh generation : 3.588525ms
+check_all       : 266.499µs
+check_overlap.  : 638.451µs
+grid.new        : 718ns
+grid.insert     : 502.294µs
+grid.search     : 74.603µs
 
 grid.ndiv       = 100
 max vol         = Some(0.0703125)
-mesh generation : 3.72483ms
-check_all       : 273.54µs
-grid.new        : 937ns
-grid.insert     : 495.246µs
-grid.search     : 67.958µs
+mesh generation : 3.693314ms
+check_all       : 254.096µs
+check_overlap.  : 643.18µs
+grid.new        : 946ns
+grid.insert     : 488.086µs
+grid.search     : 64.748µs
 
 ......................... nr = 50 na = 100 .........................
 
 grid.ndiv       = 5
 max vol         = Some(3.6e-5)
-mesh generation : 2.842680419s
-check_all       : 460.502869ms
-grid.new        : 1.687µs
-grid.insert     : 348.69705ms
-grid.search     : 6m49.074871907s    ← ← ← ← ← ← ← ← ← ← ← ← ← ← ←
+mesh generation : 2.808792394s
+check_all       : 469.93421ms
+check_overlap.  : 1.072179757s
+grid.new        : 5.718µs
+grid.insert     : 355.420318ms
+grid.search     : 6m16.008905797s    ← ← ← ← ← ← ← ← ← ← ← ← ← ← ←
 
 grid.ndiv       = 20
 max vol         = Some(3.6e-5)
-mesh generation : 2.682337173s
-check_all       : 473.365313ms
-grid.new        : 1.745µs
-grid.insert     : 342.626767ms
-grid.search     : 10.044558228s
+mesh generation : 2.646534618s
+check_all       : 468.895862ms
+check_overlap.  : 1.042336842s
+grid.new        : 6.213µs
+grid.insert     : 336.348302ms
+grid.search     : 10.027990761s
 
 grid.ndiv       = 40
 max vol         = Some(3.6e-5)
-mesh generation : 2.619548415s
-check_all       : 465.729437ms
-grid.new        : 1.953µs
-grid.insert     : 350.868761ms
-grid.search     : 1.590503646s
+mesh generation : 2.621904809s
+check_all       : 467.453497ms
+check_overlap.  : 1.035710922s
+grid.new        : 5.561µs
+grid.insert     : 350.267471ms
+grid.search     : 1.632270955s
 
 grid.ndiv       = 100
 max vol         = Some(3.6e-5)
-mesh generation : 2.628580189s
-check_all       : 465.744169ms
-grid.new        : 2.358µs
-grid.insert     : 489.830661ms
-grid.search     : 455.355858ms
-
-real    7m16.124s
-user    7m15.685s
-sys     0m0.415s
+mesh generation : 2.610841122s
+check_all       : 467.56941ms
+check_overlap.  : 1.03700237s
+grid.new        : 5.751µs
+grid.insert     : 472.889228ms
+grid.search     : 451.273946ms
 ```
 
 Thus, with finer meshes, the performance of GridSearch is significantly better with more grid divisions. Note the line indicate with arrows.
