@@ -73,7 +73,7 @@ fn main() -> Result<(), StrError> {
 
     // draw grid
     let mut plot = Plot::new();
-    grid.draw(&mut plot)?;
+    grid.draw(&mut plot, false)?;
     plot.set_equal_axes(true)
         .set_figure_size_points(600.0, 600.0)
         .save("/tmp/gemlab/example_search_in_grid_2d.svg")?;

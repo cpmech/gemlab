@@ -1094,7 +1094,7 @@ mod tests {
         let mesh = Structured::quarter_plate_hole_2d(1.0, 1.0, 1.0, 1, 1, 1, GeoKind::Qua12).unwrap();
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
-        mesh.check_overlapping_points(0.18).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         for p in [0, 11, 7, 3, 19, 16, 13] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
             approx_eq(d, 1.0, 1e-15);
@@ -1114,7 +1114,7 @@ mod tests {
         let mesh = Structured::quarter_plate_hole_3d(1.0, 1.0, 1.0, 1.5, 1, 1, 1, 1, GeoKind::Hex32).unwrap();
         assert_eq!(mesh.points.len(), 66 + 18);
         assert_eq!(mesh.cells.len(), 4);
-        mesh.check_overlapping_points(0.13).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         // z-min
         for p in [0, 1, 2, 32, 33, 52, 53, 72] {
             assert_eq!(mesh.points[p].coords[2], 0.0);

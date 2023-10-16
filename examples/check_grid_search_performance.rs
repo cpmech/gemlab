@@ -24,10 +24,9 @@ fn run(grid_search_ndiv: usize, nr: usize, na: usize) -> Result<(), StrError> {
     mesh.check_all()?;
     println!("check_all       : {}", format_nanoseconds(sw.stop()));
 
-    // // too slow
-    // sw.reset();
-    // mesh.check_overlapping_points(0.001)?;
-    // println!("check_overlapping_points: {}", format_nanoseconds(sw.stop()));
+    sw.reset();
+    mesh.check_overlapping_points(0.001)?;
+    println!("check_overlap.  : {}", format_nanoseconds(sw.stop()));
 
     let tol = 0.001;
 

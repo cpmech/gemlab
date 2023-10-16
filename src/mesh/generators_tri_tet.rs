@@ -692,7 +692,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 14);
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
-        mesh.check_overlapping_points(0.18).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         check_corner_markers(&mesh, false);
         check_point_markers(&mesh, &[11, 10, 9], &[3, 4, 5], &[1], &[7]);
         check_constraints(&mesh);
@@ -715,7 +715,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 41);
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
-        mesh.check_overlapping_points(0.18).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
@@ -745,7 +745,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 50);
         assert_eq!(mesh.cells.len(), 78);
         mesh.check_all().unwrap();
-        mesh.check_overlapping_points(0.18).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
@@ -779,7 +779,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 177);
         assert_eq!(mesh.cells.len(), 78);
         mesh.check_all().unwrap();
-        mesh.check_overlapping_points(0.1).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
@@ -808,7 +808,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 82);
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
-        mesh.check_overlapping_points(0.1).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
@@ -837,7 +837,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 137);
         assert_eq!(mesh.cells.len(), 14);
         mesh.check_all().unwrap();
-        mesh.check_overlapping_points(0.1).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
@@ -910,7 +910,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 24);
         assert_eq!(mesh.cells.len(), 30);
         mesh.check_all().unwrap();
-        mesh.check_overlapping_points(0.2).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         check_corner_markers(&mesh, false);
         check_point_markers(
             &mesh,
@@ -939,7 +939,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 99);
         assert_eq!(mesh.cells.len(), 30);
         mesh.check_all().unwrap();
-        mesh.check_overlapping_points(0.2).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         check_corner_markers(&mesh, true);
         check_point_markers(
             &mesh,
@@ -969,7 +969,7 @@ mod tests {
             draw_ring_3d_with_cylin(&mesh, "/tmp/gemlab/test_tri_quarter_ring_3d_o2_max_vol.svg");
         }
         mesh.check_all().unwrap();
-        mesh.check_overlapping_points(0.1).unwrap();
+        mesh.check_overlapping_points(0.01).unwrap();
         check_constraints(&mesh);
     }
 }

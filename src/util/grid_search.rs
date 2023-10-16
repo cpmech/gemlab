@@ -19,7 +19,7 @@ pub fn any_x(_: &[f64]) -> bool {
 }
 
 /// Default GridSearch number of divisions for the longest direction
-pub const GS_DEFAULT_NDIV: usize = 20;
+pub const GS_DEFAULT_NDIV: usize = 100;
 
 /// Default GridSearch tolerance for all directions
 pub const GS_DEFAULT_TOLERANCE: f64 = 1e-4;
@@ -85,7 +85,7 @@ type Containers = HashMap<ContainerKey, Container>;
 ///     assert_eq!(grid.search(&[5.501, SQRT_2])?, None);
 ///     if false {
 ///         let mut plot = Plot::new();
-///         grid.draw(&mut plot)?;
+///         grid.draw(&mut plot, true)?;
 ///         plot.set_equal_axes(true).save("/tmp/gemlab/doc_grid_search.svg")?;
 ///     }
 ///     Ok(())
@@ -606,7 +606,7 @@ impl GridSearch {
     }
 
     /// Draws grid and items
-    pub fn draw(&self, plot: &mut Plot) -> Result<(), StrError> {
+    pub fn draw(&self, plot: &mut Plot, with_ids: bool) -> Result<(), StrError> {
         // draw grid
         let mut xmin = vec![0.0; self.ndim];
         let mut xmax = vec![0.0; self.ndim];
@@ -619,7 +619,7 @@ impl GridSearch {
         let mut canvas = Canvas::new();
         canvas
             .set_alt_text_color("#5d5d5d")
-            .draw_grid(&xmin, &xmax, &ndiv, false, true)?;
+            .draw_grid(&xmin, &xmax, &ndiv, false, with_ids)?;
         plot.add(&canvas);
 
         // draw items
@@ -636,10 +636,14 @@ impl GridSearch {
                 let txt = format!("{}", id);
                 if self.ndim == 2 {
                     curve.draw(&[x[0]], &[x[1]]);
-                    text.draw(x[0], x[1], &txt);
+                    if with_ids {
+                        text.draw(x[0], x[1], &txt);
+                    }
                 } else {
                     curve.draw_3d(&[x[0]], &[x[1]], &[x[2]]);
-                    text.draw_3d(x[0], x[1], x[2], &txt);
+                    if with_ids {
+                        text.draw_3d(x[0], x[1], x[2], &txt);
+                    }
                 }
             }
         }
@@ -980,7 +984,7 @@ mod tests {
 
     #[test]
     fn new_works() {
-        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], None, None, None).unwrap();
+        let grid = GridSearch::new(&[-0.2, -0.2], &[0.8, 1.8], Some(20), None, None).unwrap();
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.ndiv, [10, 20]);
         approx_eq(grid.side_length, 0.102, 1e-15);
@@ -1049,7 +1053,8 @@ mod tests {
         let mut grid = sample_grid_2d();
         add_sample_points_to_grid_2d(&mut grid);
         let mut plot = Plot::new();
-        grid.draw(&mut plot).unwrap();
+        grid.draw(&mut plot, true).unwrap();
+        grid.draw(&mut plot, false).unwrap();
 
         // DO NOT DELETE THE CODE BELOW (to generate figure)
         /*
@@ -1095,7 +1100,8 @@ mod tests {
         let mut grid = sample_grid_3d();
         add_sample_points_to_grid_3d(&mut grid);
         let mut plot = Plot::new();
-        grid.draw(&mut plot).unwrap();
+        grid.draw(&mut plot, true).unwrap();
+        grid.draw(&mut plot, false).unwrap();
 
         // DO NOT DELETE THE CODE BELOW (to generate figure)
         /*

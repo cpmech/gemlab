@@ -120,7 +120,7 @@ impl Mesh {
     /// Checks if there are overlapping points
     pub fn check_overlapping_points(&self, tol: f64) -> Result<(), StrError> {
         let (xmin, xmax) = self.get_limits();
-        let mut grid = GridSearch::new(&xmin, &xmax, Some(5), Some(tol), None)?;
+        let mut grid = GridSearch::new(&xmin, &xmax, None, Some(tol), None)?;
         for point in &self.points {
             grid.insert(point.id, &point.coords)?;
         }
