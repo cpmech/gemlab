@@ -1,6 +1,7 @@
 # Gemlab examples
 
 * [block_2d_qua8](#block_2d_qua8) -- Shows how to subdivide a rectangle (Block) into Qua8 cells
+* [check_grid_search_performance](#check_grid_search_performance) -- Investigates the performance of Grid Search when checking a very fine mesh
 * [find_in_grid_2d](#find_in_grid_2d) -- Uses GridSearch to assist in finding points in the x-y space
 * [integ_mom_inertia_disk](#integ_mom_inertia_disk) -- Approximates the second moment of inertia of a disk (circle)
 * [integ_mom_inertia_ring](#integ_mom_inertia_ring) -- Approximates the second moment of inertia of a ring
@@ -10,7 +11,7 @@
 * [mesh_2d_tri3_qua4](#mesh_2d_tri3_qua4) -- Converts a string into a Mesh of Tri3 and Qua4
 * [grid_search_triangles](#grid_search_triangles) -- Fast-search triangles in a mesh using the GridSearchCell tool
 
-## block_2d_qua8
+## block_2d_qua8 
 
 Shows how to subdivide a rectangle (Block) into Qua8 cells.
 
@@ -56,6 +57,141 @@ The output is:
 ```
 
 ![mesh](https://github.com/cpmech/gemlab/raw/main/data/figures/example_block_2d_qua8.svg)
+
+
+## check_grid_search_performance
+
+Investigates the performance of Grid Search when checking a very fine mesh.
+
+[Source code](https://github.com/cpmech/gemlab/blob/main/examples/check_grid_search_performance.rs)
+
+Must run with (it will take +7 min):
+
+```bash
+cargo run --release --example check_grid_search_performance
+```
+
+Or:
+
+```bash
+bash zscripts/ex_check_grid_search_performance.bash
+```
+
+Results:
+
+```text
+......................... nr = 1 na = 2 .........................
+
+grid.ndiv       = 5
+max vol         = Some(4.5)
+mesh generation : 466.83µs
+check_all       : 9.742772ms
+grid.new        : 2.032µs
+grid.insert     : 42.2µs
+grid.search     : 10.139µs
+
+grid.ndiv       = 20
+max vol         = Some(4.5)
+mesh generation : 540.816µs
+check_all       : 15.176µs
+grid.new        : 421ns
+grid.insert     : 34.775µs
+grid.search     : 4.304µs
+
+grid.ndiv       = 40
+max vol         = Some(4.5)
+mesh generation : 357.4µs
+check_all       : 12.217µs
+grid.new        : 281ns
+grid.insert     : 39.328µs
+grid.search     : 4.409µs
+
+grid.ndiv       = 100
+max vol         = Some(4.5)
+mesh generation : 375.32µs
+check_all       : 11.53µs
+grid.new        : 231ns
+grid.insert     : 38.029µs
+grid.search     : 4.491µs
+
+......................... nr = 4 na = 8 .........................
+
+grid.ndiv       = 5
+max vol         = Some(0.0703125)
+mesh generation : 3.762449ms
+check_all       : 230.732µs
+grid.new        : 509ns
+grid.insert     : 409.104µs
+grid.search     : 230.543µs
+
+grid.ndiv       = 20
+max vol         = Some(0.0703125)
+mesh generation : 3.46261ms
+check_all       : 384.792µs
+grid.new        : 677ns
+grid.insert     : 632.343µs
+grid.search     : 129.908µs
+
+grid.ndiv       = 40
+max vol         = Some(0.0703125)
+mesh generation : 4.91249ms
+check_all       : 273.255µs
+grid.new        : 874ns
+grid.insert     : 489.395µs
+grid.search     : 82.905µs
+
+grid.ndiv       = 100
+max vol         = Some(0.0703125)
+mesh generation : 3.72483ms
+check_all       : 273.54µs
+grid.new        : 937ns
+grid.insert     : 495.246µs
+grid.search     : 67.958µs
+
+......................... nr = 50 na = 100 .........................
+
+grid.ndiv       = 5
+max vol         = Some(3.6e-5)
+mesh generation : 2.842680419s
+check_all       : 460.502869ms
+grid.new        : 1.687µs
+grid.insert     : 348.69705ms
+grid.search     : 6m49.074871907s    ← ← ← ← ← ← ← ← ← ← ← ← ← ← ←
+
+grid.ndiv       = 20
+max vol         = Some(3.6e-5)
+mesh generation : 2.682337173s
+check_all       : 473.365313ms
+grid.new        : 1.745µs
+grid.insert     : 342.626767ms
+grid.search     : 10.044558228s
+
+grid.ndiv       = 40
+max vol         = Some(3.6e-5)
+mesh generation : 2.619548415s
+check_all       : 465.729437ms
+grid.new        : 1.953µs
+grid.insert     : 350.868761ms
+grid.search     : 1.590503646s
+
+grid.ndiv       = 100
+max vol         = Some(3.6e-5)
+mesh generation : 2.628580189s
+check_all       : 465.744169ms
+grid.new        : 2.358µs
+grid.insert     : 489.830661ms
+grid.search     : 455.355858ms
+
+real    7m16.124s
+user    7m15.685s
+sys     0m0.415s
+```
+
+Thus, with finer meshes, the performance of GridSearch is significantly better with more grid divisions. Note the line indicate with arrows.
+
+For coarser meshes, the larger number of grid divisions has no significant impact on the performance.
+
+Thus, it seems best to use the NDIV = 100 as the default for GridSearch.
 
 ## find_in_grid_2d
 
