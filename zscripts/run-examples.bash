@@ -3,5 +3,7 @@
 for example in examples/*.rs; do
     filename="$(basename "$example")"
     filekey="${filename%%.*}"
-    cargo run --example $filekey
+    if ! [ "$filekey" = "check_grid_search_performance" ]; then
+        cargo run --example $filekey
+    fi
 done

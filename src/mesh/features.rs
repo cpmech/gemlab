@@ -828,22 +828,23 @@ mod tests {
     fn new_method_allocates_grid_2d() {
         let mesh = Samples::two_qua4();
         let feat = Features::new(&mesh, false);
+        println!("{}", feat.grid);
         assert_eq!(
             format!("{}", feat.grid),
             "0: [0]\n\
-             9: [1]\n\
-             19: [4]\n\
-             180: [3]\n\
-             189: [2]\n\
-             199: [5]\n\
+             49: [1]\n\
+             98: [4]\n\
+             4900: [3]\n\
+             4949: [2]\n\
+             4998: [5]\n\
              ids = [0, 1, 2, 3, 4, 5]\n\
              nitem = 6\n\
              ncontainer = 6\n\
-             ndiv = [20, 10]\n"
+             ndiv = [100, 50]\n"
         );
         if SAVE_FIGURE {
             let mut plot = Plot::new();
-            feat.grid.draw(&mut plot).unwrap();
+            feat.grid.draw(&mut plot, false).unwrap();
             plot.set_equal_axes(true).set_figure_size_points(800.0, 400.0);
             plot.save("/tmp/gemlab/test_features_grid_two_qua4.svg").unwrap();
         }
@@ -853,31 +854,26 @@ mod tests {
     fn new_method_allocates_grid_3d() {
         let mesh = Samples::two_hex8();
         let feat = Features::new(&mesh, false);
+        println!("{}", feat.grid);
         assert_eq!(
             format!("{}", feat.grid),
             "0: [0]\n\
-             9: [1]\n\
-             90: [3]\n\
-             99: [2]\n\
-             900: [4]\n\
-             909: [5]\n\
-             990: [7]\n\
-             999: [6]\n\
-             1900: [8]\n\
-             1909: [9]\n\
-             1990: [11]\n\
-             1999: [10]\n\
+             49: [1]\n\
+             2450: [3]\n\
+             2499: [2]\n\
+             122500: [4]\n\
+             122549: [5]\n\
+             124950: [7]\n\
+             124999: [6]\n\
+             245000: [8]\n\
+             245049: [9]\n\
+             247450: [11]\n\
+             247499: [10]\n\
              ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n\
              nitem = 12\n\
              ncontainer = 12\n\
-             ndiv = [10, 10, 20]\n"
+             ndiv = [50, 50, 100]\n"
         );
-        if SAVE_FIGURE {
-            let mut plot = Plot::new();
-            feat.grid.draw(&mut plot).unwrap();
-            plot.set_equal_axes(true).set_figure_size_points(800.0, 800.0);
-            plot.save("/tmp/gemlab/test_features_grid_two_hex8.svg").unwrap();
-        }
     }
 
     #[test]

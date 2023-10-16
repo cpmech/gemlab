@@ -54,7 +54,7 @@ fn test_grid_search_2d() -> Result<(), StrError> {
     // draw grid
     if false {
         let mut plot = Plot::new();
-        grid.draw(&mut plot)?;
+        grid.draw(&mut plot, false)?;
         plot.set_equal_axes(true)
             .set_xrange(-0.2, 1.2)
             .set_figure_size_points(400.0, 800.0)

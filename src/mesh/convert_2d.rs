@@ -337,7 +337,7 @@ mod tests {
         }
 
         res.check_all().unwrap();
-        res.check_overlapping_points(0.2).unwrap();
+        res.check_overlapping_points(0.02).unwrap();
 
         assert_eq!(res.points.len(), 2 * 15 - 5);
         assert_eq!(res.cells[0].points, (0..15).collect::<Vec<_>>());
@@ -433,7 +433,7 @@ mod tests {
         }
 
         res.check_all().unwrap();
-        res.check_overlapping_points(0.2).unwrap();
+        res.check_overlapping_points(0.02).unwrap();
 
         assert_eq!(res.points.len(), 16);
 
@@ -504,7 +504,7 @@ mod tests {
         }
 
         res.check_all().unwrap();
-        res.check_overlapping_points(0.1).unwrap();
+        res.check_overlapping_points(0.01).unwrap();
 
         assert_eq!(res.points.len(), 4);
         assert_eq!(res.cells[0].points, &[0, 1, 2]);
@@ -519,7 +519,7 @@ mod tests {
             draw(&res, false, "/tmp/gemlab/test_convert_2d_tri3_to_tri6_after.svg");
         }
         res.check_all().unwrap();
-        res.check_overlapping_points(0.1).unwrap();
+        res.check_overlapping_points(0.001).unwrap();
         assert_eq!(res.points.len(), 9);
         assert_eq!(res.cells[0].points, (0..6).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[6, 2, 1, 7, 4, 8]);
@@ -533,7 +533,7 @@ mod tests {
             draw(&res, false, "/tmp/gemlab/test_convert_2d_four_tri3_to_tri6_after.svg");
         }
         res.check_all().unwrap();
-        res.check_overlapping_points(0.1).unwrap();
+        res.check_overlapping_points(0.001).unwrap();
         assert_eq!(res.points.len(), 13);
         assert_eq!(res.cells[0].points, (0..6).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[0, 6, 7, 8, 9, 10]);
@@ -549,7 +549,7 @@ mod tests {
             draw(&res, false, "/tmp/gemlab/test_convert_2d_tri3_to_tri10_after.svg");
         }
         res.check_all().unwrap();
-        res.check_overlapping_points(0.1).unwrap();
+        res.check_overlapping_points(0.001).unwrap();
         assert_eq!(res.points.len(), 16);
         assert_eq!(res.cells[0].points, (0..10).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[10, 2, 1, 11, 7, 12, 13, 4, 14, 15]);
@@ -563,7 +563,7 @@ mod tests {
             draw(&res, false, "/tmp/gemlab/test_convert_2d_tri6_arrow_to_tri10_after.svg");
         }
         res.check_all().unwrap();
-        res.check_overlapping_points(0.1).unwrap();
+        res.check_overlapping_points(0.001).unwrap();
         assert_eq!(res.points.len(), 19);
         assert_eq!(res.cells[0].points, (0..10).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[2, 1, 10, 7, 11, 12, 4, 13, 14, 15]);
@@ -597,7 +597,7 @@ mod tests {
             draw(&res, false, "/tmp/gemlab/test_convert_2d_qua4_to_qua8_after.svg");
         }
         res.check_all().unwrap();
-        res.check_overlapping_points(0.2).unwrap();
+        res.check_overlapping_points(0.002).unwrap();
         assert_eq!(res.points.len(), 13);
         assert_eq!(res.cells[0].points, (0..8).collect::<Vec<_>>());
         assert_eq!(res.cells[1].points, &[1, 8, 9, 2, 10, 11, 12, 5]);
@@ -611,7 +611,7 @@ mod tests {
             draw(&res, false, "/tmp/gemlab/test_convert_2d_qua12_to_qua16_after.svg");
         }
         res.check_all().unwrap();
-        res.check_overlapping_points(0.2).unwrap();
+        res.check_overlapping_points(0.002).unwrap();
         assert_eq!(res.points.len(), 33 + 4 * 4);
         assert_eq!(res.cells[0].points, (0..16).collect::<Vec<_>>());
         assert_eq!(
@@ -636,7 +636,7 @@ mod tests {
             draw(&res, false, "/tmp/gemlab/test_convert_2d_qua12_to_qua17_after.svg");
         }
         res.check_all().unwrap();
-        res.check_overlapping_points(0.2).unwrap();
+        res.check_overlapping_points(0.002).unwrap();
         assert_eq!(res.points.len(), 3 * 9 + 6 * 3 + 4);
         assert_eq!(res.cells[0].points, (0..17).collect::<Vec<_>>());
         assert_eq!(
@@ -670,7 +670,7 @@ mod tests {
             draw(&res, false, "/tmp/gemlab/test_convert_2d_qua17_to_qua4_after.svg");
         }
         res.check_all().unwrap();
-        res.check_overlapping_points(0.2).unwrap();
+        res.check_overlapping_points(0.002).unwrap();
         assert_eq!(res.points.len(), 9);
         let correct = Samples::block_2d_four_qua4();
         for i in 0..correct.cells.len() {
