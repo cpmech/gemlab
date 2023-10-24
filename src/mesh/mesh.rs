@@ -335,6 +335,48 @@ impl Mesh {
         }
         (min, max)
     }
+
+    /// Renumber all points (reordering)
+    ///
+    /// # Input
+    ///
+    /// * `old_to_new` -- maps old point ids to new point ids. Must have `len = npoint`
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if old_to_new.len() != points.len()
+    pub fn renumber_points(&mut self, old_to_new: &[PointId]) -> Result<(), StrError> {
+        let npoint = self.points.len();
+        if old_to_new.len() != npoint {
+            return Err("old_to_new.len() must be equal to the number of points");
+        }
+        let mut updated = vec![false; npoint];
+        let points = self.points.clone();
+        for old in 0..npoint {
+            let new = old_to_new[old];
+            if new >= npoint {
+                return Err("new point id is out of range");
+            }
+            self.points[new].id = new;
+            self.points[new].marker = points[old].marker;
+            for k in 0..self.ndim {
+                self.points[new].coords[k] = points[old].coords[k];
+            }
+            updated[new] = true;
+        }
+        for ok in &updated {
+            if !ok {
+                return Err("not all points have been updated");
+            }
+        }
+        for cell in &mut self.cells {
+            for i in 0..cell.points.len() {
+                let old = cell.points[i];
+                cell.points[i] = old_to_new[old];
+            }
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Display for Mesh {
@@ -409,9 +451,9 @@ mod tests {
     fn read_and_write_work() {
         //
         //  3--------2--------5
+        //  |(-4)    |(-3)    |(-6)
         //  |        |        |
-        //  |        |        |
-        //  |        |        |
+        //  |(-1)    |(-2)    |(-5)
         //  0--------1--------4
         //
         let mesh = Mesh::from_text(
@@ -421,12 +463,12 @@ mod tests {
             
             # points
             # id marker x y
-               0 0 0.0 0.0
-               1 0 1.0 0.0
-               2 0 1.0 1.0
-               3 0 0.0 1.0
-               4 0 2.0 0.0
-               5 0 2.0 1.0
+               0 -1 0.0 0.0
+               1 -2 1.0 0.0
+               2 -3 1.0 1.0
+               3 -4 0.0 1.0
+               4 -5 2.0 0.0
+               5 -6 2.0 1.0
             
             # cells
             # id attribute kind point_ids...
@@ -443,7 +485,7 @@ mod tests {
     fn derive_works() {
         let mesh = Samples::two_qua4();
         let mesh_clone = mesh.clone();
-        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: 0, coords: [0.0, 0.0] }, Point { id: 1, marker: 0, coords: [1.0, 0.0] }, Point { id: 2, marker: 0, coords: [1.0, 1.0] }, Point { id: 3, marker: 0, coords: [0.0, 1.0] }, Point { id: 4, marker: 0, coords: [2.0, 0.0] }, Point { id: 5, marker: 0, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
+        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: -1, coords: [0.0, 0.0] }, Point { id: 1, marker: -2, coords: [1.0, 0.0] }, Point { id: 2, marker: -3, coords: [1.0, 1.0] }, Point { id: 3, marker: -4, coords: [0.0, 1.0] }, Point { id: 4, marker: -5, coords: [2.0, 0.0] }, Point { id: 5, marker: -6, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
         assert_eq!(format!("{:?}", mesh), correct);
         assert_eq!(mesh_clone.ndim, mesh.ndim);
         assert_eq!(mesh_clone.points.len(), mesh.points.len());
@@ -467,12 +509,12 @@ mod tests {
              \n\
              # points\n\
              # id marker x y {z}\n\
-             0 0 0.0 0.0\n\
-             1 0 1.0 0.0\n\
-             2 0 1.0 1.0\n\
-             3 0 0.0 1.0\n\
-             4 0 2.0 0.0\n\
-             5 0 2.0 1.0\n\
+             0 -1 0.0 0.0\n\
+             1 -2 1.0 0.0\n\
+             2 -3 1.0 1.0\n\
+             3 -4 0.0 1.0\n\
+             4 -5 2.0 0.0\n\
+             5 -6 2.0 1.0\n\
              \n\
              # cells\n\
              # id attribute kind points\n\
@@ -706,5 +748,58 @@ mod tests {
         let (min, max) = mesh.get_limits();
         assert_eq!(min, &[0.0, 0.0, 0.0]);
         assert_eq!(max, &[1.0, 1.0, 2.0]);
+    }
+
+    #[test]
+    fn reorder_vertices_works() {
+        //  0        1        2 (new)
+        //  ↑        ↑        ↑
+        //  3--------2--------5
+        //  |(-4)    |(-3)    |(-6)
+        //  |        |        |
+        //  |(-1)    |(-2)    |(-5)
+        //  0--------1--------4
+        //  ↓        ↓        ↓
+        //  3        4        5 (new)
+        let mut mesh = Samples::two_qua4();
+        //                 0  1  2  3  4  5   // old
+        let old_to_new = &[3, 4, 1, 0, 5, 2]; // new
+        mesh.renumber_points(old_to_new).unwrap();
+
+        // check
+        assert_eq!(mesh.cells[0].points, &[3, 4, 1, 0]);
+        assert_eq!(mesh.cells[1].points, &[4, 5, 2, 1]);
+        assert_eq!(mesh.points[0].id, 0);
+        assert_eq!(mesh.points[0].marker, -4);
+        assert_eq!(mesh.points[0].coords, &[0.0, 1.0]);
+        assert_eq!(mesh.points[1].id, 1);
+        assert_eq!(mesh.points[1].marker, -3);
+        assert_eq!(mesh.points[1].coords, &[1.0, 1.0]);
+        assert_eq!(mesh.points[2].id, 2);
+        assert_eq!(mesh.points[2].marker, -6);
+        assert_eq!(mesh.points[2].coords, &[2.0, 1.0]);
+        assert_eq!(mesh.points[3].id, 3);
+        assert_eq!(mesh.points[3].marker, -1);
+        assert_eq!(mesh.points[3].coords, &[0.0, 0.0]);
+        assert_eq!(mesh.points[4].id, 4);
+        assert_eq!(mesh.points[4].marker, -2);
+        assert_eq!(mesh.points[4].coords, &[1.0, 0.0]);
+        assert_eq!(mesh.points[5].id, 5);
+        assert_eq!(mesh.points[5].marker, -5);
+        assert_eq!(mesh.points[5].coords, &[2.0, 0.0]);
+
+        // catch errors
+        assert_eq!(
+            mesh.renumber_points(&[1, 2]).err(),
+            Some("old_to_new.len() must be equal to the number of points")
+        );
+        assert_eq!(
+            mesh.renumber_points(&[0, 0, 6, 0, 0, 0]).err(),
+            Some("new point id is out of range")
+        );
+        assert_eq!(
+            mesh.renumber_points(&[0, 0, 0, 0, 0, 0]).err(),
+            Some("not all points have been updated")
+        );
     }
 }
