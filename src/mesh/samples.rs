@@ -397,6 +397,36 @@ impl Samples {
         }
     }
 
+    /// Returns a mesh with Lin2 representing a graph
+    ///
+    /// ![lin2_graph](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_lin2_graph.svg)
+    #[rustfmt::skip]
+    pub fn lin2_graph() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: 0, coords: vec![2.0, 2.0] },
+                Point { id: 1, marker: 0, coords: vec![1.0, 3.0] },
+                Point { id: 2, marker: 0, coords: vec![2.0, 3.0] },
+                Point { id: 3, marker: 0, coords: vec![3.0, 0.5] },
+                Point { id: 4, marker: 0, coords: vec![3.0, 1.5] },
+                Point { id: 5, marker: 0, coords: vec![2.0, 0.0] },
+                Point { id: 6, marker: 0, coords: vec![2.0, 1.0] },
+                Point { id: 7, marker: 0, coords: vec![1.0, 0.0] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Lin2, points: vec![0, 4] },
+                Cell { id: 1, attribute: 1, kind: GeoKind::Lin2, points: vec![1, 2] },
+                Cell { id: 2, attribute: 1, kind: GeoKind::Lin2, points: vec![1, 5] },
+                Cell { id: 3, attribute: 1, kind: GeoKind::Lin2, points: vec![1, 7] },
+                Cell { id: 4, attribute: 1, kind: GeoKind::Lin2, points: vec![2, 4] },
+                Cell { id: 5, attribute: 1, kind: GeoKind::Lin2, points: vec![3, 6] },
+                Cell { id: 6, attribute: 1, kind: GeoKind::Lin2, points: vec![5, 7] },
+                Cell { id: 7, attribute: 1, kind: GeoKind::Lin2, points: vec![3, 4] },
+            ],
+        }
+    }
+
     /// Returns a mesh with one Tri3
     ///
     /// ```text
@@ -714,6 +744,29 @@ impl Samples {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
                 Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![2, 3, 1] },
                 Cell { id: 2, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with a tri3, a qua4, and a lin2
+    ///
+    /// ![tri3_qua4_lin2](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_tri3_qua4_lin2.svg)
+    #[rustfmt::skip]
+    pub fn tri3_qua4_lin2() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: 0, coords: vec![0.5, 0.0 ] },
+                Point { id: 1, marker: 0, coords: vec![0.0, 0.85] },
+                Point { id: 2, marker: 0, coords: vec![0.1, 1.7 ] },
+                Point { id: 3, marker: 0, coords: vec![1.1, 1.6 ] },
+                Point { id: 4, marker: 0, coords: vec![1.0, 0.75] },
+                Point { id: 5, marker: 0, coords: vec![1.5, 1.8 ] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 4, 1] },
+                Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![1, 4, 3, 2] },
+                Cell { id: 2, attribute: 1, kind: GeoKind::Lin2, points: vec![3, 5] },
             ],
         }
     }
@@ -1978,6 +2031,15 @@ mod tests {
             draw(&mesh, false, "/tmp/gemlab/test_mesh_one_lin2.svg");
         }
 
+        let mesh = Samples::lin2_graph();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 8);
+        assert_eq!(mesh.cells.len(), 8);
+        mesh.check_all().unwrap();
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_lin2_graph.svg");
+        }
+
         let mesh = Samples::one_tri3();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 3);
@@ -2012,6 +2074,15 @@ mod tests {
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_mesh_two_tri3.svg");
+        }
+
+        let mesh = Samples::tri3_qua4_lin2();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 6);
+        assert_eq!(mesh.cells.len(), 3);
+        mesh.check_all().unwrap();
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_tri3_qua4_lin2.svg");
         }
 
         let mesh = Samples::three_tri3();
