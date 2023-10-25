@@ -48,6 +48,7 @@ mod paraview;
 mod read_text_mesh;
 mod samples;
 mod write_text_file;
+pub use crate::mesh::algorithms::*;
 pub use crate::mesh::block::*;
 pub use crate::mesh::check::*;
 pub use crate::mesh::convert_2d::*;
