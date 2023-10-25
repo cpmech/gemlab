@@ -397,11 +397,11 @@ impl Samples {
         }
     }
 
-    /// Returns a mesh with Lin2 representing a graph
+    /// Returns a mesh with Lin2 representing a graph with 8 edges
     ///
-    /// ![lin2_graph](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_lin2_graph.svg)
+    /// ![graph_8_edges](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_graph_8_edges.svg)
     #[rustfmt::skip]
-    pub fn lin2_graph() -> Mesh {
+    pub fn graph_8_edges() -> Mesh {
         Mesh {
             ndim: 2,
             points: vec![
@@ -423,6 +423,51 @@ impl Samples {
                 Cell { id: 5, attribute: 1, kind: GeoKind::Lin2, points: vec![3, 6] },
                 Cell { id: 6, attribute: 1, kind: GeoKind::Lin2, points: vec![5, 7] },
                 Cell { id: 7, attribute: 1, kind: GeoKind::Lin2, points: vec![3, 4] },
+            ],
+        }
+    }
+
+    /// Returns a mesh with Lin2 representing a graph with 12 edges
+    ///
+    /// ```text
+    ///        4------6------5
+    ///        |      |    .'
+    ///        |      |  .'
+    /// 3------7------1.'
+    /// |      |      |
+    /// |      |      |
+    /// 8------0------2
+    /// ```
+    ///
+    /// ![graph_12_edges](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_graph_12_edges.svg)
+    #[rustfmt::skip]
+    pub fn graph_12_edges() -> Mesh {
+        Mesh {
+            ndim: 2,
+            points: vec![
+                Point { id: 0, marker: 0, coords: vec![1.0, 0.0] },
+                Point { id: 1, marker: 0, coords: vec![2.0, 1.0] },
+                Point { id: 2, marker: 0, coords: vec![2.0, 0.0] },
+                Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
+                Point { id: 4, marker: 0, coords: vec![1.0, 2.0] },
+                Point { id: 5, marker: 0, coords: vec![3.0, 2.0] },
+                Point { id: 6, marker: 0, coords: vec![2.0, 2.0] },
+                Point { id: 7, marker: 0, coords: vec![1.0, 1.0] },
+                Point { id: 8, marker: 0, coords: vec![0.0, 0.0] },
+            ],
+            cells: vec![
+                Cell { id:  0, attribute: 1, kind: GeoKind::Lin2, points: vec![8, 0] },
+                Cell { id:  1, attribute: 1, kind: GeoKind::Lin2, points: vec![0, 2] },
+                Cell { id:  2, attribute: 1, kind: GeoKind::Lin2, points: vec![3, 7] },
+                Cell { id:  3, attribute: 1, kind: GeoKind::Lin2, points: vec![7, 1] },
+                Cell { id:  4, attribute: 1, kind: GeoKind::Lin2, points: vec![4, 6] },
+                Cell { id:  5, attribute: 1, kind: GeoKind::Lin2, points: vec![6, 5] },
+                Cell { id:  6, attribute: 1, kind: GeoKind::Lin2, points: vec![8, 3] },
+                Cell { id:  7, attribute: 1, kind: GeoKind::Lin2, points: vec![0, 7] },
+                Cell { id:  8, attribute: 1, kind: GeoKind::Lin2, points: vec![2, 1] },
+                Cell { id:  9, attribute: 1, kind: GeoKind::Lin2, points: vec![7, 4] },
+                Cell { id: 10, attribute: 1, kind: GeoKind::Lin2, points: vec![1, 6] },
+                Cell { id: 11, attribute: 1, kind: GeoKind::Lin2, points: vec![1, 5] },
             ],
         }
     }
@@ -2031,13 +2076,22 @@ mod tests {
             draw(&mesh, false, "/tmp/gemlab/test_mesh_one_lin2.svg");
         }
 
-        let mesh = Samples::lin2_graph();
+        let mesh = Samples::graph_8_edges();
         assert_eq!(mesh.ndim, 2);
         assert_eq!(mesh.points.len(), 8);
         assert_eq!(mesh.cells.len(), 8);
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
-            draw(&mesh, false, "/tmp/gemlab/test_mesh_lin2_graph.svg");
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_graph_8_edges.svg");
+        }
+
+        let mesh = Samples::graph_12_edges();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 9);
+        assert_eq!(mesh.cells.len(), 12);
+        mesh.check_all().unwrap();
+        if true {
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_graph_12_edges.svg");
         }
 
         let mesh = Samples::one_tri3();

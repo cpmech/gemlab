@@ -172,7 +172,11 @@ impl Graph {
     /// # Input
     ///
     /// * `root` -- The root point
-    pub fn calc_distance(&mut self, root: usize) {
+    ///
+    /// # Output
+    ///
+    /// Returns the `max_distance`
+    pub fn calc_distance(&mut self, root: usize) -> usize {
         // clear auxiliary structures
         self.queue.clear();
         let npoint = self.adjacency.len();
@@ -195,6 +199,76 @@ impl Graph {
                 }
             }
         }
+
+        // calculate max distance
+        let mut max_distance = 0;
+        for i in 0..npoint {
+            if self.distance[i] > max_distance {
+                max_distance = self.distance[i];
+            }
+        }
+        max_distance
+    }
+
+    /// Finds a pseudo-peripheral point
+    ///
+    /// # Input
+    ///
+    /// * `start_point` -- (root) the first point id, which will not be renumbered. Should have a low degree.
+    ///   If None, a point with a minimum degree will be used.
+    pub fn pseudo_peripheral(&mut self, start_point: Option<PointId>) -> usize {
+        // root point
+        let mut root = match start_point {
+            Some(p) => p,
+            None => self.p_min_degree,
+        };
+
+        // first distances
+        let mut max_distance = self.calc_distance(root);
+
+        // auxiliary
+        const MAX_ITERATIONS: usize = 10;
+        let npoint = self.adjacency.len();
+        let mut success = false;
+
+        // perform iterations
+        for _ in 0..MAX_ITERATIONS {
+            // loop over all points, consider only the points with max distance
+            // equal to root's max distance, and select the point with the minimum degree
+            let mut next_root = None;
+            let mut min_deg = usize::MAX; // min degree among potential roots
+            for i in 0..npoint {
+                if self.distance[i] == max_distance {
+                    let deg = self.degree[i];
+                    if deg < min_deg {
+                        min_deg = deg;
+                        next_root = Some(i);
+                    }
+                }
+            }
+            // handle next root
+            match next_root {
+                None => {
+                    // converged with no next root
+                    success = true;
+                    break;
+                }
+                Some(r) => {
+                    root = r;
+                    let next_max_distance = self.calc_distance(root);
+                    if next_max_distance == max_distance {
+                        // converged with next root having the same distance and ≤ degree
+                        success = true;
+                        break;
+                    }
+                    max_distance = next_max_distance;
+                }
+            }
+        }
+        if !success {
+            panic!("INTERNAL ERROR: iterations did not converge");
+        }
+        root
     }
 }
 
@@ -210,7 +284,7 @@ mod tests {
     #[test]
     fn graph_new_works_1() {
         // lin2_graph
-        let mesh = Samples::lin2_graph();
+        let mesh = Samples::graph_8_edges();
         let graph = Graph::new(&mesh).unwrap();
 
         //                         0  1  2  3  4  5  6  7 (point)
@@ -290,7 +364,7 @@ mod tests {
     #[test]
     fn cuthill_mckee_works() {
         // lin2_graph
-        let mesh = Samples::lin2_graph();
+        let mesh = Samples::graph_8_edges();
         let mut graph = Graph::new(&mesh).unwrap();
         let ordering = graph.cuthill_mckee(Some(0)).unwrap();
         // println!("ordering = {:?}", ordering);
@@ -298,44 +372,43 @@ mod tests {
     }
 
     #[test]
-    fn pseudo_peripheral_works() {
+    fn distance_works() {
         // lin2_graph
-        let mesh = Samples::lin2_graph();
+        let mesh = Samples::graph_8_edges();
         let mut graph = Graph::new(&mesh).unwrap();
 
-        let mut _npoint = graph.adjacency.len();
-        let root = 0;
-        graph.calc_distance(root);
-        let max_distance = *graph.distance.iter().max().unwrap();
-        println!("distance = {:?}", graph.distance);
-        println!("max_distance = {}", max_distance);
+        let max_distance = graph.calc_distance(0);
         assert_eq!(graph.distance, &[0, 3, 2, 2, 1, 4, 3, 4]);
+        assert_eq!(max_distance, 4);
 
-        /*
-        loop {
-            // loop over all points, consider only those with max distance
-            // and select the one with the minimum degree
-            let mut min_degree = usize::MAX;
-            let mut next_root = 0;
-            for i in 0..npoint {
-                if graph.distance[i] == max_distance {
-                    if graph.degree[i] < min_degree {
-                        min_degree = graph.degree[i];
-                        next_root = i;
-                    }
-                }
-            }
-            println!("next_root = {}", next_root);
-            if next_root == root {
-                break;
-            }
+        let max_distance = graph.calc_distance(4);
+        assert_eq!(graph.distance, &[1, 2, 1, 1, 0, 3, 2, 3]);
+        assert_eq!(max_distance, 3);
 
-            graph.calc_distance(next_root);
-            let max_distance = *graph.distance.iter().max().unwrap();
-            println!("distance = {:?}", graph.distance);
-            println!("max_distance = {}", max_distance);
-            root = next_root;
-        }
-        */
+        let max_distance = graph.calc_distance(5);
+        assert_eq!(graph.distance, &[4, 1, 2, 4, 3, 0, 5, 1]);
+        assert_eq!(max_distance, 5);
+
+        let max_distance = graph.calc_distance(6);
+        assert_eq!(graph.distance, &[3, 4, 3, 1, 2, 5, 0, 5]);
+        assert_eq!(max_distance, 5);
+    }
+
+    #[test]
+    fn pseudo_peripheral_works() {
+        // graph_8_edges
+        let mesh = Samples::graph_8_edges();
+        let mut graph = Graph::new(&mesh).unwrap();
+        assert_eq!(graph.pseudo_peripheral(None), 6);
+        assert_eq!(graph.pseudo_peripheral(Some(4)), 6);
+        assert_eq!(graph.pseudo_peripheral(Some(7)), 6);
+        assert_eq!(graph.pseudo_peripheral(Some(6)), 5);
+
+        // graph_12_edges
+        let mesh = Samples::graph_12_edges();
+        let mut graph = Graph::new(&mesh).unwrap();
+        assert_eq!(graph.pseudo_peripheral(Some(0)), 8);
+        assert_eq!(graph.pseudo_peripheral(Some(4)), 2);
+        assert_eq!(graph.pseudo_peripheral(None), 3);
     }
 }
