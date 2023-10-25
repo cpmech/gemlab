@@ -1730,6 +1730,21 @@ mod tests {
     }
 
     #[test]
+    fn point_degree_works() {
+        // lin2_graph
+        let mesh = Samples::lin2_graph();
+        let feat = Features::new(&mesh, true);
+        let adjacency = feat.adjacency();
+        let (degree, p_min_degree, p_max_degree) = feat.point_degree(&adjacency);
+        // println!("{:?}", degree);
+        // println!("p_min_degree = {}", p_min_degree);
+        // println!("p_max_degree = {}", p_max_degree);
+        assert_eq!(degree, &[1, 3, 2, 2, 3, 2, 1, 2]);
+        assert_eq!(p_min_degree, 0);
+        assert_eq!(p_max_degree, 1);
+    }
+
+    #[test]
     fn cuthill_mckee_works() {
         // lin2_graph
         let mesh = Samples::lin2_graph();
