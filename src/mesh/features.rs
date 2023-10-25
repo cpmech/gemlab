@@ -880,7 +880,7 @@ impl<'a> Features<'a> {
     ///
     /// * `start_point` -- (root) the first point id, which will not be renumbered. Should have a low degree.
     ///   If None, a point with a minimum degree will be used.
-    /// * `adjacency` -- the adjacency (sparse) matrix computed by the [adjacency] function
+    /// * `adjacency` -- the adjacency (sparse) matrix computed by the [Features::adjacency] function
     ///   **Note:** the adjacency matrix will have the rows sorted in ascending order of the degree (number of connections)
     ///
     /// # Output
@@ -942,6 +942,47 @@ impl<'a> Features<'a> {
         // reverse ordering
         ordering.reverse();
         Ok(ordering)
+    }
+
+    /// Runs a BFS search to compute the distances (levels) from every vertex to the root vertex
+    ///
+    /// **Note:** The graph must be connected.
+    ///
+    /// # Input
+    ///
+    /// * `root` -- The root point
+    /// * `adjacency` -- the adjacency (sparse) matrix computed by the [Features::adjacency] function
+    ///
+    /// # Panics
+    ///
+    /// This function does not check the indices in the adjacency (sparse) matrix,
+    /// thus it may panic if the input data is incorrect.
+    ///
+    /// # Warning
+    ///
+    /// This function does not check whether the graph is connected or not.
+    /// The results will be incorrect if the graph is incorrect.
+    pub fn graph_breadth_first_search_distance(&self, root: usize, adjacency: &Vec<Vec<PointId>>) -> Vec<usize> {
+        let npoint = self.mesh.points.len();
+        let mut queue = VecDeque::<usize>::new();
+        let mut explored = vec![false; npoint];
+        let mut distance = vec![0; npoint];
+        distance[root] = 0; // not really necessary, but serves as a reminder
+        explored[root] = true;
+        queue.push_back(root);
+        while queue.len() != 0 {
+            if let Some(a) = queue.pop_front() {
+                println!("{}", a);
+                for b in &adjacency[a] {
+                    if !explored[*b] {
+                        explored[*b] = true;
+                        queue.push_back(*b);
+                        distance[*b] = distance[a] + 1;
+                    }
+                }
+            }
+        }
+        distance
     }
 }
 
@@ -1752,5 +1793,47 @@ mod tests {
         let mut adjacency = feat.adjacency();
         let ordering = feat.cuthill_mckee(&mut adjacency, None).unwrap();
         assert_eq!(ordering, &[7, 5, 6, 1, 3, 2, 4, 0]);
+    }
+
+    #[test]
+    fn pseudo_peripheral_works() {
+        // lin2_graph
+        let mesh = Samples::lin2_graph();
+        let feat = Features::new(&mesh, true);
+        let adjacency = feat.adjacency();
+        let (degree, _, _) = feat.point_degree(&adjacency);
+
+        let npoint = mesh.points.len();
+
+        let mut root = 0;
+        let distance = feat.graph_breadth_first_search_distance(root, &adjacency);
+        let max_distance = *distance.iter().max().unwrap();
+        println!("distance = {:?}", distance);
+        println!("max_distance = {}", max_distance);
+
+        loop {
+            // loop over all points, consider only those with max distance
+            // and select the one with the minimum degree
+            let mut min_degree = usize::MAX;
+            let mut next_root = 0;
+            for i in 0..npoint {
+                if distance[i] == max_distance {
+                    if degree[i] < min_degree {
+                        min_degree = degree[i];
+                        next_root = i;
+                    }
+                }
+            }
+            println!("next_root = {}", next_root);
+            if next_root == root {
+                break;
+            }
+
+            let distance = feat.graph_breadth_first_search_distance(next_root, &adjacency);
+            let max_distance = *distance.iter().max().unwrap();
+            println!("distance = {:?}", distance);
+            println!("max_distance = {}", max_distance);
+            root = next_root;
+        }
     }
 }
