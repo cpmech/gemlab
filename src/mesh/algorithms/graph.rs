@@ -6,7 +6,7 @@ use std::collections::{HashSet, VecDeque};
 pub struct Graph {
     /// Holds the adjacency (sparse) matrix (point connections)
     ///
-    /// Note: each row in this matrix is sorted in ascending order of degree
+    /// Note: each row in this matrix is sorted in ascending order of degree, followed by id
     pub adjacency: Vec<Vec<PointId>>,
 
     /// Holds all point degrees (the number of connections of a vertex)
@@ -92,11 +92,11 @@ impl Graph {
             }
         }
 
-        // sort each row of the adjacency matrix by the degree
+        // sort each row of the adjacency matrix by the degree, and then by id
         let mut adjacency = Vec::new();
         for row_set in adjacency_set.iter() {
             let mut row: Vec<_> = row_set.iter().copied().collect();
-            row.sort_by(|a, b| degree[*a].cmp(&degree[*b]));
+            row.sort_unstable_by_key(|p| (degree[*p], *p));
             adjacency.push(row);
         }
 
@@ -218,22 +218,15 @@ mod tests {
         assert_eq!(graph.p_min_degree, 0);
         assert_eq!(graph.p_max_degree, 1);
 
-        assert_eq!(graph.adjacency[0], &[4]);
-        assert!(
-            graph.adjacency[1] == &[2, 5, 7]
-                || graph.adjacency[1] == &[5, 7, 2]
-                || graph.adjacency[1] == &[7, 2, 5]
-                || graph.adjacency[1] == &[2, 7, 5]
-                || graph.adjacency[1] == &[7, 5, 2]
-                || graph.adjacency[1] == &[5, 2, 7] // sorted, but any ok
-        );
+        // for (i, row) in graph.adjacency.iter().enumerate() { println!("{}: {:?}", i, row); }
 
-        assert!(graph.adjacency[2] == &[1, 4] || graph.adjacency[2] == &[4, 1]); // sorted, but any ok
-        assert_eq!(graph.adjacency[3], &[6, 4]); // sorted
-        assert!(graph.adjacency[4] == &[0, 2, 3] || graph.adjacency[4] == &[0, 3, 2]); // first sorted, others: any ok
-        assert_eq!(graph.adjacency[5], &[7, 1]); // sorted
+        assert_eq!(graph.adjacency[1], &[2, 5, 7]); // sorted by id
+        assert_eq!(graph.adjacency[2], &[1, 4]); // sorted by id
+        assert_eq!(graph.adjacency[3], &[6, 4]); // sorted by degree
+        assert_eq!(graph.adjacency[4], &[0, 2, 3]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[5], &[7, 1]); // sorted by degree
         assert_eq!(graph.adjacency[6], &[3]);
-        assert_eq!(graph.adjacency[7], &[5, 1]); // sorted
+        assert_eq!(graph.adjacency[7], &[5, 1]); // sorted by degree
     }
 
     #[test]
@@ -265,6 +258,13 @@ mod tests {
 
         // for (i, row) in graph.adjacency.iter().enumerate() { println!("{}: {:?}", i, row); }
 
+        assert_eq!(graph.adjacency[0], &[5, 1, 4]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[1], &[0, 2, 3, 5, 4]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[2], &[3, 1, 4]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[3], &[2, 1, 4]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[4], &[0, 2, 3, 5, 1]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[5], &[0, 1, 4]); // sorted by degree, then id
+
         let npoint = mesh.points.len();
         let mut incidence = NumMatrix::<usize>::new(npoint, npoint);
         for i in 0..npoint {
@@ -292,8 +292,9 @@ mod tests {
         // lin2_graph
         let mesh = Samples::lin2_graph();
         let mut graph = Graph::new(&mesh).unwrap();
-        let _ordering = graph.cuthill_mckee(Some(0)).unwrap();
-        // assert_eq!(ordering, &[7, 5, 6, 1, 3, 2, 4, 0]);
+        let ordering = graph.cuthill_mckee(Some(0)).unwrap();
+        // println!("ordering = {:?}", ordering);
+        assert_eq!(ordering, &[7, 5, 6, 1, 3, 2, 4, 0]);
     }
 
     #[test]
