@@ -844,6 +844,34 @@ impl<'a> Features<'a> {
         adjacency
     }
 
+    /// Computes the point degree (number of edges meeting at each point)
+    ///
+    /// Returns `(degree_array, p_min_degree, p_max_degree)` where:
+    ///
+    /// * `degree` -- array of len = npoint with all point degrees
+    /// * `p_min_degree` -- id of point with the minimum degree
+    /// * `p_max_degree` -- id of point with the maximum degree
+    pub fn point_degree(&self, adjacency: &Vec<Vec<PointId>>) -> (Vec<usize>, usize, usize) {
+        let npoint = self.mesh.points.len();
+        let mut degree = vec![0; npoint];
+        let mut p_min_degree = 0;
+        let mut p_max_degree = 0;
+        let mut min_degree = usize::MAX;
+        let mut max_degree = 0;
+        for (p, row) in adjacency.iter().enumerate() {
+            degree[p] = row.len();
+            if degree[p] < min_degree {
+                p_min_degree = p;
+                min_degree = degree[p];
+            }
+            if degree[p] > max_degree {
+                p_max_degree = p;
+                max_degree = degree[p];
+            }
+        }
+        (degree, p_min_degree, p_max_degree)
+    }
+
     /// Computes the ordering array to renumber the vertices according to the (reverse) Cuthill-McKee algorithm
     ///
     /// **Note:** All nodes must be reachable from the root; i.e., the corresponding graph must be connected.
@@ -864,17 +892,7 @@ impl<'a> Features<'a> {
         start_point: Option<PointId>,
     ) -> Result<Vec<PointId>, StrError> {
         // compute the degree (number of neighbors) of all points
-        let npoint = self.mesh.points.len();
-        let mut degree = vec![0; npoint];
-        let mut p_min_degree = 0;
-        let mut min_degree = usize::MAX;
-        for (p, row) in adjacency.iter().enumerate() {
-            degree[p] = row.len();
-            if degree[p] < min_degree {
-                p_min_degree = p;
-                min_degree = degree[p];
-            }
-        }
+        let (degree, p_min_degree, _) = self.point_degree(adjacency);
 
         // root point
         let root = match start_point {
@@ -888,6 +906,7 @@ impl<'a> Features<'a> {
         }
 
         // allocate auxiliary structures
+        let npoint = self.mesh.points.len();
         let mut explored = vec![false; npoint];
         let mut ordering = vec![0; npoint];
         let mut queue = VecDeque::<usize>::new();
@@ -916,7 +935,7 @@ impl<'a> Features<'a> {
         // check if all vertices have been explored
         for exp in &explored {
             if !exp {
-                return Err("there are hanging vertices/edges in the mesh");
+                return Err("there are hanging vertices/edges in the mesh (graph is disconnected)");
             }
         }
 

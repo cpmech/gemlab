@@ -405,14 +405,14 @@ impl Samples {
         Mesh {
             ndim: 2,
             points: vec![
-                Point { id: 0, marker: 0, coords: vec![2.0, 2.0] },
-                Point { id: 1, marker: 0, coords: vec![1.0, 3.0] },
-                Point { id: 2, marker: 0, coords: vec![2.0, 3.0] },
-                Point { id: 3, marker: 0, coords: vec![3.0, 0.5] },
-                Point { id: 4, marker: 0, coords: vec![3.0, 1.5] },
-                Point { id: 5, marker: 0, coords: vec![2.0, 0.0] },
-                Point { id: 6, marker: 0, coords: vec![2.0, 1.0] },
-                Point { id: 7, marker: 0, coords: vec![1.0, 0.0] },
+                Point { id: 0, marker: 0, coords: vec![314.0, 500.0 - 287.0] },
+                Point { id: 1, marker: 0, coords: vec![133.0, 500.0 - 250.0] },
+                Point { id: 2, marker: 0, coords: vec![205.0, 500.0 - 232.0] },
+                Point { id: 3, marker: 0, coords: vec![332.0, 500.0 - 136.0] },
+                Point { id: 4, marker: 0, coords: vec![280.0, 500.0 - 212.0] },
+                Point { id: 5, marker: 0, coords: vec![ 79.0, 500.0 - 230.0] },
+                Point { id: 6, marker: 0, coords: vec![375.0, 500.0 -  74.0] },
+                Point { id: 7, marker: 0, coords: vec![ 86.0, 500.0 - 294.0] },
             ],
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Lin2, points: vec![0, 4] },
