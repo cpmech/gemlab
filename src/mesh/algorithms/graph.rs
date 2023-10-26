@@ -37,8 +37,10 @@ pub struct Graph {
 impl Graph {
     /// Allocates a new instance
     ///
-    /// **Note:** The graph must be connected.
-    pub fn new(mesh: &Mesh) -> Result<Self, StrError> {
+    /// # Input
+    ///
+    /// * `check_connectivity` -- checks if the graph is connected
+    pub fn new(mesh: &Mesh, check_connectivity: bool) -> Result<Self, StrError> {
         // find the adjacency (sparse) matrix of nodes' connections
         let npoint = mesh.points.len();
         let mut adjacency_set = vec![HashSet::new(); npoint];
@@ -56,21 +58,23 @@ impl Graph {
         // check the connectivity of the graph (all vertices must be explored)
         let mut queue = VecDeque::new();
         let mut explored = vec![false; npoint];
-        explored[0] = true;
-        queue.push_back(0);
-        while queue.len() != 0 {
-            if let Some(a) = queue.pop_front() {
-                for b in &adjacency_set[a] {
-                    if !explored[*b] {
-                        explored[*b] = true;
-                        queue.push_back(*b);
+        if check_connectivity {
+            explored[0] = true;
+            queue.push_back(0);
+            while queue.len() != 0 {
+                if let Some(a) = queue.pop_front() {
+                    for b in &adjacency_set[a] {
+                        if !explored[*b] {
+                            explored[*b] = true;
+                            queue.push_back(*b);
+                        }
                     }
                 }
             }
-        }
-        for exp in &explored {
-            if !exp {
-                return Err("there are hanging vertices/edges in the mesh (graph is disconnected)");
+            for exp in &explored {
+                if !exp {
+                    return Err("there are hanging vertices/edges in the mesh (graph is disconnected)");
+                }
             }
         }
 
@@ -166,22 +170,6 @@ impl Graph {
         // reverse ordering
         ordering.reverse();
         Ok(ordering)
-    }
-
-    /// Converts the ordering array to the old_to_new map
-    ///
-    /// ```text
-    /// old = ordering[new]
-    /// new = old_to_new[old]
-    /// Returns the ordering array such that `ordering[new_point_id] = old_point_id`
-    /// ```
-    pub fn get_old_to_new_map(ordering: &[PointId]) -> Vec<PointId> {
-        let n = ordering.len();
-        let mut old_to_new = vec![0; n];
-        for new in 0..n {
-            old_to_new[ordering[new]] = new;
-        }
-        old_to_new
     }
 
     /// Runs a BFS to compute the distances (levels) from every vertex to the root vertex
@@ -347,6 +335,34 @@ impl Graph {
         }
         println!("└{:1$}┘", " ", width);
     }
+
+    /// Converts the ordering array to the old_to_new map
+    ///
+    /// ```text
+    /// old = ordering[new]
+    /// new = old_to_new[old]
+    /// Returns the ordering array such that `ordering[new_point_id] = old_point_id`
+    /// ```
+    pub fn get_old_to_new_map(ordering: &[PointId]) -> Vec<PointId> {
+        let n = ordering.len();
+        let mut old_to_new = vec![0; n];
+        for new in 0..n {
+            old_to_new[ordering[new]] = new;
+        }
+        old_to_new
+    }
+
+    /// Renumbers a mesh using Cuthill-McKey algorithm with pseudo-peripheral starting point
+    ///
+    /// # Input
+    ///
+    /// * `check_connectivity` -- checks if the associated graph is connected
+    pub fn renumber_mesh(mesh: &mut Mesh, check_connectivity: bool) -> Result<(), StrError> {
+        let mut graph = Graph::new(&mesh, check_connectivity)?;
+        let ordering = graph.cuthill_mckee(None)?;
+        let old_to_new = Graph::get_old_to_new_map(&ordering);
+        mesh.renumber_points(&old_to_new)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -364,7 +380,7 @@ mod tests {
     fn graph_new_works_1() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
-        let graph = Graph::new(&mesh).unwrap();
+        let graph = Graph::new(&mesh, false).unwrap();
 
         //                         0  1  2  3  4  5  6  7 (point)
         assert_eq!(graph.degree, &[1, 3, 2, 2, 3, 2, 1, 2]);
@@ -404,7 +420,7 @@ mod tests {
                 Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![1, 2, 3, 4] },
             ],
         };
-        let graph = Graph::new(&mesh).unwrap();
+        let graph = Graph::new(&mesh, false).unwrap();
 
         //                         0  1  2  3  4  5 (point)
         assert_eq!(graph.degree, &[3, 5, 3, 3, 5, 3]);
@@ -444,7 +460,7 @@ mod tests {
     fn cuthill_mckee_works() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
-        let mut graph = Graph::new(&mesh).unwrap();
+        let mut graph = Graph::new(&mesh, false).unwrap();
         let ordering = graph.cuthill_mckee(Some(0)).unwrap();
         // println!("ordering = {:?}", ordering);
         assert_eq!(ordering, &[7, 5, 6, 1, 3, 2, 4, 0]);
@@ -454,7 +470,7 @@ mod tests {
     fn distance_works() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
-        let mut graph = Graph::new(&mesh).unwrap();
+        let mut graph = Graph::new(&mesh, false).unwrap();
 
         let max_distance = graph.calc_distance(0);
         assert_eq!(graph.distance, &[0, 3, 2, 2, 1, 4, 3, 4]);
@@ -477,7 +493,7 @@ mod tests {
     fn pseudo_peripheral_works() {
         // graph_8_edges
         let mesh = Samples::graph_8_edges();
-        let mut graph = Graph::new(&mesh).unwrap();
+        let mut graph = Graph::new(&mesh, false).unwrap();
         assert_eq!(graph.pseudo_peripheral(None), 6);
         assert_eq!(graph.pseudo_peripheral(Some(4)), 6);
         assert_eq!(graph.pseudo_peripheral(Some(7)), 6);
@@ -485,7 +501,7 @@ mod tests {
 
         // graph_12_edges
         let mesh = Samples::graph_12_edges();
-        let mut graph = Graph::new(&mesh).unwrap();
+        let mut graph = Graph::new(&mesh, false).unwrap();
         assert_eq!(graph.pseudo_peripheral(Some(0)), 8);
         assert_eq!(graph.pseudo_peripheral(Some(4)), 2);
         assert_eq!(graph.pseudo_peripheral(None), 3);
@@ -535,7 +551,7 @@ mod tests {
         let npoint = mesh.points.len();
 
         // original graph
-        let mut graph = Graph::new(&mesh).unwrap();
+        let mut graph = Graph::new(&mesh, false).unwrap();
         let band = graph.calc_bandwidth();
         graph.print_non_zero_pattern();
         println!("band (original) = {}", band);
@@ -562,20 +578,18 @@ mod tests {
         }
 
         // print pattern with updated mesh (cm_8)
-        let graph_cm_8 = Graph::new(&mesh_cm_8).unwrap();
+        let graph_cm_8 = Graph::new(&mesh_cm_8, false).unwrap();
         let band = graph_cm_8.calc_bandwidth();
         graph_cm_8.print_non_zero_pattern();
         println!("band (cm_8) = {}", band);
         assert_eq!(band, 9);
 
         // CM algo with pseudo-peripheral root
-        let mut graph = Graph::new(&mesh).unwrap();
-        let ordering = graph.cuthill_mckee(None).unwrap();
+        let mut graph = Graph::new(&mesh, false).unwrap();
 
         // renumber mesh nodes (cuthill-mckee + pseudo-peripheral)
         let mut mesh_cm_pp = mesh.clone();
-        let old_to_new = Graph::get_old_to_new_map(&ordering);
-        mesh_cm_pp.renumber_points(&old_to_new).unwrap();
+        Graph::renumber_mesh(&mut mesh_cm_pp, false).unwrap();
 
         // generate figure with levels/distance and mesh
         if SAVE_FIGURE {
@@ -591,7 +605,7 @@ mod tests {
         }
 
         // print pattern with updated mesh (cm_pp)
-        let graph_cm_pp = Graph::new(&mesh_cm_pp).unwrap();
+        let graph_cm_pp = Graph::new(&mesh_cm_pp, false).unwrap();
         let band = graph_cm_pp.calc_bandwidth();
         graph_cm_pp.print_non_zero_pattern();
         println!("band (cm_pp) = {}", band);

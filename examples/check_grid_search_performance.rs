@@ -17,7 +17,7 @@ fn run(grid_search_ndiv: usize, nr: usize, na: usize) -> Result<(), StrError> {
     let delta_x = (R2 - R1) / (nr as f64);
     let global_max_volume = Some(delta_x * delta_x * delta_x / den);
     println!("max vol         = {:?}", global_max_volume);
-    let mesh = Unstructured::quarter_ring_3d(R1, R2, THICKNESS, nr, na, GeoKind::Tet10, global_max_volume)?;
+    let mesh = Unstructured::quarter_ring_3d(R1, R2, THICKNESS, nr, na, GeoKind::Tet10, global_max_volume, false)?;
     println!("mesh generation : {}", format_nanoseconds(sw.stop()));
 
     sw.reset();
