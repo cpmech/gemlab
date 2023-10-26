@@ -596,6 +596,21 @@ mod tests {
     const RMIN: f64 = 3.0;
     const RMAX: f64 = 6.0;
     const SAVE_FIGURE: bool = false;
+    const MAX_NPOINT_PRINT: usize = 200;
+
+    fn print_bandwidth(mesh: &mut Mesh) {
+        let graph = Graph::new(&mesh, false).unwrap();
+        if mesh.points.len() < MAX_NPOINT_PRINT {
+            graph.print_non_zero_pattern();
+        }
+        Graph::renumber_mesh(mesh, false).unwrap();
+        let graph_after = Graph::new(&mesh, false).unwrap();
+        if mesh.points.len() < MAX_NPOINT_PRINT {
+            graph_after.print_non_zero_pattern();
+        }
+        println!("bandwidth (before) = {}", graph.calc_bandwidth());
+        println!("bandwidth (after)  = {}", graph_after.calc_bandwidth());
+    }
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
@@ -693,7 +708,7 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_works() {
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, None, false).unwrap();
+        let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, None, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_tri_quarter_ring_2d.svg");
         }
@@ -712,11 +727,14 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
         }
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 
     #[test]
     fn tri_quarter_ring_2d_o2_works() {
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, None, false).unwrap();
+        let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, None, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_tri_quarter_ring_2d_o2.svg");
         }
@@ -741,12 +759,15 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
         }
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 
     #[test]
     fn tri_quarter_ring_2d_global_max_area_works() {
         let global_max_area = Some(0.4);
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, global_max_area, false).unwrap();
+        let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, global_max_area, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, true, "/tmp/gemlab/test_tri_quarter_ring_2d_global_max_area.svg");
         }
@@ -770,6 +791,9 @@ mod tests {
         for p in [2, 40, 3, 25, 4, 24, 5, 33, 6] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
+        }
+        if false {
+            print_bandwidth(&mut mesh);
         }
     }
 
@@ -809,7 +833,7 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_tri10_works() {
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri10, None, false).unwrap();
+        let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri10, None, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_tri_quarter_ring_2d_tri10.svg");
         }
@@ -833,6 +857,9 @@ mod tests {
         for p in [59, 62, 65, 60, 79, 80, 10, 12, 15, 11, 36, 39, 34] {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
+        }
+        if false {
+            print_bandwidth(&mut mesh);
         }
     }
 
@@ -972,7 +999,7 @@ mod tests {
     #[test]
     fn tri_quarter_ring_3d_o2_max_vol_works() {
         let global_max_volume = Some(0.5);
-        let mesh =
+        let mut mesh =
             Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet10, global_max_volume, false).unwrap();
         if SAVE_FIGURE {
             draw_ring_3d_with_cylin(&mesh, "/tmp/gemlab/test_tri_quarter_ring_3d_o2_max_vol.svg");
@@ -980,5 +1007,8 @@ mod tests {
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.01).unwrap();
         check_constraints(&mesh);
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 }

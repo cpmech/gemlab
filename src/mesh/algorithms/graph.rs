@@ -321,17 +321,13 @@ impl Graph {
             }
         }
         let width = npoint * 2 + 1;
-        print!(" ");
-        for i in 0..npoint {
-            print!(" {}", i % 10);
-        }
         println!("\n┌{:1$}┐", " ", width);
         for i in 0..npoint {
             print!("│");
             for j in 0..npoint {
                 print!(" {}", non_zeros_pattern[i][j])
             }
-            print!(" │{}\n", i);
+            print!(" │\n");
         }
         println!("└{:1$}┘", " ", width);
     }

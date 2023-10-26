@@ -932,11 +932,26 @@ impl Structured {
 mod tests {
     use super::Structured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{Figure, Mesh};
+    use crate::mesh::{Figure, Graph, Mesh};
     use crate::shapes::GeoKind;
     use russell_lab::{approx_eq, vec_approx_eq};
 
     const SAVE_FIGURE: bool = false;
+    const MAX_NPOINT_PRINT: usize = 200;
+
+    fn print_bandwidth(mesh: &mut Mesh) {
+        let graph = Graph::new(&mesh, false).unwrap();
+        if mesh.points.len() < MAX_NPOINT_PRINT {
+            graph.print_non_zero_pattern();
+        }
+        Graph::renumber_mesh(mesh, false).unwrap();
+        let graph_after = Graph::new(&mesh, false).unwrap();
+        if mesh.points.len() < MAX_NPOINT_PRINT {
+            graph_after.print_non_zero_pattern();
+        }
+        println!("bandwidth (before) = {}", graph.calc_bandwidth());
+        println!("bandwidth (after)  = {}", graph_after.calc_bandwidth());
+    }
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
@@ -993,7 +1008,7 @@ mod tests {
 
     #[test]
     fn quarter_ring_3d_works() {
-        let mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 1, 2, 1, GeoKind::Hex32, false).unwrap();
+        let mut mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 1, 2, 1, GeoKind::Hex32, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 52);
         assert_eq!(mesh.cells.len(), 2);
@@ -1007,6 +1022,9 @@ mod tests {
         }
         if SAVE_FIGURE {
             draw(&mesh, true, "/tmp/gemlab/test_quarter_ring_3d.svg");
+        }
+        if false {
+            print_bandwidth(&mut mesh);
         }
     }
 
@@ -1393,7 +1411,7 @@ mod tests {
 
         // two columns / two layers = four cells -------------------------------
 
-        let mesh = Structured::rectangle(
+        let mut mesh = Structured::rectangle(
             xa,
             Some(1.5),
             xc,
@@ -1436,5 +1454,8 @@ mod tests {
              2 20 qua4 3 2 6 7\n\
              3 20 qua4 2 5 8 6\n"
         );
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 }
