@@ -1,6 +1,6 @@
 [package]
 name = "gemlab"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 license = "MIT"
 description = "Geometry and meshes laboratory for finite element analyses"
