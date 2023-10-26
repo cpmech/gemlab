@@ -119,16 +119,17 @@ impl Graph {
     /// # Input
     ///
     /// * `start_point` -- (root) the first point id, which will not be renumbered. Should have a low degree.
-    ///   If None, a point with a minimum degree will be used.
+    ///   If None, a pseudo-peripheral point is determined and used as root.
     ///
     /// # Output
     ///
-    /// Returns the ordering array such that `ordering[new_point_id] = old_point_id`
+    /// Returns the ordering array such that `old = ordering[new]` where `old` is the original
+    /// point id and `new` is the new point id. See the function [Graph::get_old_to_new_map]
     pub fn cuthill_mckee(&mut self, start_point: Option<PointId>) -> Result<Vec<PointId>, StrError> {
         // root point
         let root = match start_point {
             Some(p) => p,
-            None => self.p_min_degree,
+            None => self.pseudo_peripheral(None),
         };
 
         // clear auxiliary structures
@@ -165,6 +166,22 @@ impl Graph {
         // reverse ordering
         ordering.reverse();
         Ok(ordering)
+    }
+
+    /// Converts the ordering array to the old_to_new map
+    ///
+    /// ```text
+    /// old = ordering[new]
+    /// new = old_to_new[old]
+    /// Returns the ordering array such that `ordering[new_point_id] = old_point_id`
+    /// ```
+    pub fn get_old_to_new_map(ordering: &[PointId]) -> Vec<PointId> {
+        let n = ordering.len();
+        let mut old_to_new = vec![0; n];
+        for new in 0..n {
+            old_to_new[ordering[new]] = new;
+        }
+        old_to_new
     }
 
     /// Runs a BFS to compute the distances (levels) from every vertex to the root vertex
@@ -270,6 +287,66 @@ impl Graph {
         }
         root
     }
+
+    /// Calculates the (half) bandwidth (with diagonal) of the adjacency matrix
+    ///
+    /// ```text
+    /// band = max{band_i, 0 ≤ n ≤ npoint-1}
+    /// band_i = max{|i - j| + 1, any j > i}
+    /// ```
+    pub fn calc_bandwidth(&self) -> usize {
+        let npoint = self.adjacency.len();
+        let mut band = 0;
+        for i in 0..npoint {
+            let mut band_i = 1;
+            for j in &self.adjacency[i] {
+                if *j > i {
+                    let delta = i.abs_diff(*j) + 1;
+                    if delta > band_i {
+                        band_i = delta
+                    }
+                }
+            }
+            if band_i > band {
+                band = band_i;
+            }
+        }
+        band
+    }
+
+    /// Prints the non-zero pattern of the laplacian matrix
+    ///
+    /// ```text
+    /// L = D - A
+    ///
+    /// L: Laplacian matrix
+    /// A: Adjacency matrix
+    /// D: Diagonal matrix with the degrees
+    /// ```
+    pub fn print_non_zero_pattern(&self) {
+        let npoint = self.adjacency.len();
+        let mut non_zeros_pattern = vec![vec!["."; npoint]; npoint];
+        for i in 0..npoint {
+            non_zeros_pattern[i][i] = "D";
+            for j in &self.adjacency[i] {
+                non_zeros_pattern[i][*j] = "#";
+            }
+        }
+        let width = npoint * 2 + 1;
+        print!(" ");
+        for i in 0..npoint {
+            print!(" {}", i % 10);
+        }
+        println!("\n┌{:1$}┐", " ", width);
+        for i in 0..npoint {
+            print!("│");
+            for j in 0..npoint {
+                print!(" {}", non_zeros_pattern[i][j])
+            }
+            print!(" │{}\n", i);
+        }
+        println!("└{:1$}┘", " ", width);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -277,9 +354,11 @@ impl Graph {
 #[cfg(test)]
 mod tests {
     use super::Graph;
-    use crate::mesh::{Cell, Mesh, Point, Samples};
+    use crate::mesh::{Block, Cell, Figure, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_lab::NumMatrix;
+
+    const SAVE_FIGURE: bool = false;
 
     #[test]
     fn graph_new_works_1() {
@@ -410,5 +489,112 @@ mod tests {
         assert_eq!(graph.pseudo_peripheral(Some(0)), 8);
         assert_eq!(graph.pseudo_peripheral(Some(4)), 2);
         assert_eq!(graph.pseudo_peripheral(None), 3);
+    }
+
+    #[test]
+    fn gibbs_poole_stock_example() {
+        // use graph example from:
+        // Gibbs NW, Poole WG JR, and Stockmeyer PK (1976) An algorithm for reducing the bandwidth
+        // and profile of a sparse matrix, SIAM Journal on Numerical Analysis, 13(2):236-250
+        let mut block = Block::new(&[[0.0, 0.0], [5.0, 0.0], [5.0, 3.0], [0.0, 3.0]]).unwrap();
+        block.set_ndiv(&[5, 3]).unwrap();
+        let mut mesh = block.subdivide(GeoKind::Qua4).unwrap();
+        let old_to_new = &[
+            22, //  0
+            20, //  1
+            21, //  2
+            2,  //  3
+            10, //  4
+            19, //  5
+            3,  //  6
+            18, //  7
+            15, //  8
+            7,  //  9
+            16, // 10
+            4,  // 11
+            6,  // 12
+            11, // 13
+            0,  // 14
+            17, // 15
+            9,  // 16
+            14, // 17
+            12, // 18
+            23, // 19
+            5,  // 20
+            13, // 21
+            1,  // 22
+            8,  // 23
+        ];
+        mesh.renumber_points(old_to_new).unwrap(); // this is to match the paper's numbers
+        if SAVE_FIGURE {
+            let mut fig = Figure::new();
+            fig.point_ids = true;
+            mesh.draw(Some(fig), "/tmp/gemlab/test_graph_gps_example.svg", |_, _| {})
+                .unwrap();
+        }
+        let npoint = mesh.points.len();
+
+        // original graph
+        let mut graph = Graph::new(&mesh).unwrap();
+        let band = graph.calc_bandwidth();
+        graph.print_non_zero_pattern();
+        println!("band (original) = {}", band);
+        assert_eq!(band, 22);
+
+        // cuthill-mckee with fixed root = 8 (cm_8)
+        let ordering = graph.cuthill_mckee(Some(8)).unwrap();
+
+        // renumber mesh nodes
+        let mut mesh_cm_8 = mesh.clone();
+        let old_to_new = Graph::get_old_to_new_map(&ordering);
+        mesh_cm_8.renumber_points(&old_to_new).unwrap();
+
+        // generate figure with levels/distance and mesh
+        if SAVE_FIGURE {
+            graph.calc_distance(8);
+            for i in 0..npoint {
+                mesh.points[i].marker = 1 + graph.distance[i] as i32; // use markers for the distance
+            }
+            let mut fig = Figure::new();
+            fig.point_ids = true;
+            mesh.draw(Some(fig), "/tmp/gemlab/test_graph_gps_example_cm_8.svg", |_, _| {})
+                .unwrap();
+        }
+
+        // print pattern with updated mesh (cm_8)
+        let graph_cm_8 = Graph::new(&mesh_cm_8).unwrap();
+        let band = graph_cm_8.calc_bandwidth();
+        graph_cm_8.print_non_zero_pattern();
+        println!("band (cm_8) = {}", band);
+        assert_eq!(band, 9);
+
+        // CM algo with pseudo-peripheral root
+        let mut graph = Graph::new(&mesh).unwrap();
+        let ordering = graph.cuthill_mckee(None).unwrap();
+
+        // renumber mesh nodes (cuthill-mckee + pseudo-peripheral)
+        let mut mesh_cm_pp = mesh.clone();
+        let old_to_new = Graph::get_old_to_new_map(&ordering);
+        mesh_cm_pp.renumber_points(&old_to_new).unwrap();
+
+        // generate figure with levels/distance and mesh
+        if SAVE_FIGURE {
+            let root = graph.pseudo_peripheral(None);
+            graph.calc_distance(root);
+            for i in 0..npoint {
+                mesh.points[i].marker = 1 + graph.distance[i] as i32; // use markers for the distance
+            }
+            let mut fig = Figure::new();
+            fig.point_ids = true;
+            mesh.draw(Some(fig), "/tmp/gemlab/test_graph_gps_example_cm_pp.svg", |_, _| {})
+                .unwrap();
+        }
+
+        // print pattern with updated mesh (cm_pp)
+        let graph_cm_pp = Graph::new(&mesh_cm_pp).unwrap();
+        let band = graph_cm_pp.calc_bandwidth();
+        graph_cm_pp.print_non_zero_pattern();
+        println!("band (cm_pp) = {}", band);
+        assert_eq!(band, 8);
     }
 }
