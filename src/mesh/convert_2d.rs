@@ -161,7 +161,7 @@ impl Mesh {
 
             // consult neighbors to see if there are points (in the middle of the edge) set already
             if target_edge_nnode > 2 {
-                let neighbors = source_features.get_neighbors_2d(self, cell_id);
+                let neighbors = source_features.get_neighbors_2d(cell_id);
                 for (e, neigh_cell_id, neigh_e) in neighbors {
                     // only deal with the centre edge points, not the corner ones (start at 2)
                     for i in 2..target_edge_nnode {

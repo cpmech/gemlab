@@ -1,4 +1,4 @@
-use super::{Cell, Mesh, Point};
+use super::{Cell, Graph, Mesh, Point};
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 use russell_lab::math::PI;
@@ -124,6 +124,7 @@ impl Unstructured {
         na: usize,
         target: GeoKind,
         global_max_area: Option<f64>,
+        renumber: bool,
     ) -> Result<Mesh, StrError> {
         // check
         if nr < 1 {
@@ -258,6 +259,9 @@ impl Unstructured {
         }
 
         // results
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
         Ok(mesh)
     }
 
@@ -321,6 +325,7 @@ impl Unstructured {
         na: usize,
         target: GeoKind,
         global_max_volume: Option<f64>,
+        renumber: bool,
     ) -> Result<Mesh, StrError> {
         // check
         if nr < 1 {
@@ -569,6 +574,9 @@ impl Unstructured {
         apply_constraints(&mut mesh, rmin, rmax);
 
         // results
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
         Ok(mesh)
     }
 }
@@ -588,6 +596,21 @@ mod tests {
     const RMIN: f64 = 3.0;
     const RMAX: f64 = 6.0;
     const SAVE_FIGURE: bool = false;
+    const MAX_NPOINT_PRINT: usize = 200;
+
+    fn print_bandwidth(mesh: &mut Mesh) {
+        let graph = Graph::new(&mesh, false).unwrap();
+        if mesh.points.len() < MAX_NPOINT_PRINT {
+            graph.print_non_zero_pattern();
+        }
+        Graph::renumber_mesh(mesh, false).unwrap();
+        let graph_after = Graph::new(&mesh, false).unwrap();
+        if mesh.points.len() < MAX_NPOINT_PRINT {
+            graph_after.print_non_zero_pattern();
+        }
+        println!("bandwidth (before) = {}", graph.calc_bandwidth());
+        println!("bandwidth (after)  = {}", graph_after.calc_bandwidth());
+    }
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
@@ -670,22 +693,22 @@ mod tests {
     #[test]
     fn tri_quarter_ring_2d_captures_errors() {
         assert_eq!(
-            Unstructured::quarter_ring_2d(RMIN, RMAX, 0, 4, GeoKind::Tri3, None).err(),
+            Unstructured::quarter_ring_2d(RMIN, RMAX, 0, 4, GeoKind::Tri3, None, false).err(),
             Some("number of divisions along the radius must be ≥ 1")
         );
         assert_eq!(
-            Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 0, GeoKind::Tri3, None).err(),
+            Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 0, GeoKind::Tri3, None, false).err(),
             Some("number of divisions along alpha must be ≥ 1")
         );
         assert_eq!(
-            Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 2, GeoKind::Qua4, None).err(),
+            Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 2, GeoKind::Qua4, None, false).err(),
             Some("the GeoClass of target must be Tri")
         );
     }
 
     #[test]
     fn tri_quarter_ring_2d_works() {
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, None).unwrap();
+        let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, None, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_tri_quarter_ring_2d.svg");
         }
@@ -704,11 +727,14 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
         }
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 
     #[test]
     fn tri_quarter_ring_2d_o2_works() {
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, None).unwrap();
+        let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, None, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_tri_quarter_ring_2d_o2.svg");
         }
@@ -733,12 +759,15 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
         }
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 
     #[test]
     fn tri_quarter_ring_2d_global_max_area_works() {
         let global_max_area = Some(0.4);
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, global_max_area).unwrap();
+        let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, global_max_area, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, true, "/tmp/gemlab/test_tri_quarter_ring_2d_global_max_area.svg");
         }
@@ -763,12 +792,15 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
         }
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 
     #[test]
     fn tri_quarter_ring_2d_o2_global_max_area_works() {
         let global_max_area = Some(0.4);
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, global_max_area).unwrap();
+        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, global_max_area, false).unwrap();
         if SAVE_FIGURE {
             draw(
                 &mesh,
@@ -801,7 +833,7 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_2d_tri10_works() {
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri10, None).unwrap();
+        let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri10, None, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_tri_quarter_ring_2d_tri10.svg");
         }
@@ -826,11 +858,14 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
         }
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 
     #[test]
     fn tri_quarter_ring_2d_tri15_works() {
-        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri15, None).unwrap();
+        let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri15, None, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, true, "/tmp/gemlab/test_tri_quarter_ring_2d_tri15.svg");
         }
@@ -860,19 +895,19 @@ mod tests {
     #[test]
     fn tri_quarter_ring_3d_handles_errors() {
         assert_eq!(
-            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 0, 4, GeoKind::Tet4, None).err(),
+            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 0, 4, GeoKind::Tet4, None, false).err(),
             Some("number of divisions along the radius must be ≥ 1")
         );
         assert_eq!(
-            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 0, GeoKind::Tet4, None).err(),
+            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 0, GeoKind::Tet4, None, false).err(),
             Some("number of divisions along alpha must be ≥ 1")
         );
         assert_eq!(
-            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 2, GeoKind::Qua4, None).err(),
+            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 2, GeoKind::Qua4, None, false).err(),
             Some("the GeoClass of target must be Tet")
         );
         assert_eq!(
-            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet20, None).err(),
+            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet20, None, false).err(),
             Some("only Tet4 and Tet10 are available currently")
         )
     }
@@ -903,7 +938,7 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_3d_works() {
-        let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet4, None).unwrap();
+        let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet4, None, false).unwrap();
         if SAVE_FIGURE {
             draw_ring_3d_with_cylin(&mesh, "/tmp/gemlab/test_tri_quarter_ring_3d.svg");
         }
@@ -932,7 +967,7 @@ mod tests {
 
     #[test]
     fn tri_quarter_ring_3d_o2_works() {
-        let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet10, None).unwrap();
+        let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet10, None, false).unwrap();
         if SAVE_FIGURE {
             draw_ring_3d_with_cylin(&mesh, "/tmp/gemlab/test_tri_quarter_ring_3d_o2.svg");
         }
@@ -964,12 +999,16 @@ mod tests {
     #[test]
     fn tri_quarter_ring_3d_o2_max_vol_works() {
         let global_max_volume = Some(0.5);
-        let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet10, global_max_volume).unwrap();
+        let mut mesh =
+            Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet10, global_max_volume, false).unwrap();
         if SAVE_FIGURE {
             draw_ring_3d_with_cylin(&mesh, "/tmp/gemlab/test_tri_quarter_ring_3d_o2_max_vol.svg");
         }
         mesh.check_all().unwrap();
         mesh.check_overlapping_points(0.01).unwrap();
         check_constraints(&mesh);
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 }

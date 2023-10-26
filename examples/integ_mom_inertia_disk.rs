@@ -8,8 +8,8 @@ fn main() -> Result<(), StrError> {
     // generate mesh
     let r = 3.0;
     let kind = GeoKind::Qua17;
-    let mesh_1 = Structured::quarter_disk_2d_a(r, 3, 3, kind)?;
-    let mesh_2 = Structured::quarter_disk_2d_b(r / 2.0, r, 3, 3, kind)?;
+    let mesh_1 = Structured::quarter_disk_2d_a(r, 3, 3, kind, false)?;
+    let mesh_2 = Structured::quarter_disk_2d_b(r / 2.0, r, 3, 3, kind, false)?;
 
     // allocate integration points and Scratchpad
     let ips = default_points(kind);

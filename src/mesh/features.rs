@@ -1,5 +1,6 @@
 use super::algorithms::{extract_all_2d_edges, extract_all_faces, extract_features_2d, extract_features_3d};
 use super::{At, CellId, Mesh, PointId};
+use crate::prelude::GeoClass;
 use crate::shapes::GeoKind;
 use crate::util::GridSearch;
 use crate::StrError;
@@ -178,7 +179,10 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 ///     Ok(())
 /// }
 /// ```
-pub struct Features {
+pub struct Features<'a> {
+    /// Holds an access to the mesh
+    mesh: &'a Mesh,
+
     /// Maps all edge keys to cells sharing the edge (2D only)
     ///
     /// Relates edge keys to `Vec<(cell_id, e)>` where:
@@ -223,19 +227,14 @@ pub struct Features {
     /// 2. An interior face is such that it is shared by **more** than one 3D cell (2D cells are ignored)
     pub faces: HashMap<FaceKey, Feature>,
 
+    /// Holds the ids of linear cells (GeoKind::Lin) in 2D or 3D
+    pub lines: Vec<CellId>,
+
     /// The minimum coordinates of the points (space_ndim)
     pub min: Vec<f64>,
 
     /// The maximum coordinates of the points (space_ndim)
     pub max: Vec<f64>,
-
-    /// Space number of dimension (needed for the search functions)
-    pub space_ndim: usize,
-
-    /// Total number of points in the mesh (needed to generate face keys of Tri3)
-    ///
-    /// **readonly**
-    pub num_points: usize,
 
     /// Tool to quickly search points by coordinates
     pub grid: GridSearch,
@@ -247,7 +246,7 @@ pub struct Features {
     pub point_to_faces: MapPointToFaces,
 }
 
-impl Features {
+impl<'a> Features<'a> {
     /// Extracts features
     ///
     /// # Input
@@ -264,7 +263,7 @@ impl Features {
     ///
     /// * This function will panic if the mesh data is invalid. For instance, when
     ///   the cell points array doesn't contain enough points or the indices are incorrect
-    pub fn new(mesh: &Mesh, extract_all: bool) -> Self {
+    pub fn new(mesh: &'a Mesh, extract_all: bool) -> Self {
         // options
         assert!(mesh.ndim >= 2 && mesh.ndim <= 3);
 
@@ -331,17 +330,30 @@ impl Features {
             }
         }
 
+        // linear cells
+        let lines: Vec<_> = mesh
+            .cells
+            .iter()
+            .filter_map(|cell| {
+                if cell.kind.class() == GeoClass::Lin {
+                    Some(cell.id)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
         // results
         Features {
+            mesh,
             all_2d_edges,
             all_faces,
             points,
             edges,
             faces,
+            lines,
             min,
             max,
-            space_ndim: mesh.ndim,
-            num_points: mesh.points.len(),
             grid,
             point_to_edges,
             point_to_faces,
@@ -406,21 +418,20 @@ impl Features {
     ///
     ///     let features = Features::new(&mesh, true);
     ///
-    ///     let neighbors = features.get_neighbors_2d(&mesh, 0);
+    ///     let neighbors = features.get_neighbors_2d(0);
     ///     assert_eq!(neighbors.len(), 1);
     ///     assert!(neighbors.contains(&(1, 1, 3)));
     ///
-    ///     let neighbors = features.get_neighbors_2d(&mesh, 1);
+    ///     let neighbors = features.get_neighbors_2d(1);
     ///     assert_eq!(neighbors.len(), 1);
     ///     assert!(neighbors.contains(&(3, 0, 1)));
     ///
     ///     Ok(())
     /// }
     /// ```
-    pub fn get_neighbors_2d(&self, mesh: &Mesh, cell_id: CellId) -> Vec<(usize, CellId, usize)> {
-        assert_eq!(mesh.ndim, 2);
-        assert_eq!(self.space_ndim, 2);
-        let cell = &mesh.cells[cell_id];
+    pub fn get_neighbors_2d(&self, cell_id: CellId) -> Vec<(usize, CellId, usize)> {
+        assert_eq!(self.mesh.ndim, 2);
+        let cell = &self.mesh.cells[cell_id];
         let nedge = cell.kind.nedge();
         let mut res = Vec::new();
         for e in 0..nedge {
@@ -464,7 +475,7 @@ impl Features {
         let mut point_ids: HashSet<PointId> = HashSet::new();
         match at {
             At::X(x) => {
-                if self.space_ndim == 2 {
+                if self.mesh.ndim == 2 {
                     for id in self.grid.search_on_line(&[x, 0.0], &[x, 1.0], filter)? {
                         point_ids.insert(id);
                     }
@@ -475,7 +486,7 @@ impl Features {
                 }
             }
             At::Y(y) => {
-                if self.space_ndim == 2 {
+                if self.mesh.ndim == 2 {
                     for id in self.grid.search_on_line(&[0.0, y], &[1.0, y], filter)? {
                         point_ids.insert(id);
                     }
@@ -486,7 +497,7 @@ impl Features {
                 }
             }
             At::Z(z) => {
-                if self.space_ndim == 2 {
+                if self.mesh.ndim == 2 {
                     return Err("At::Z works in 3D only");
                 } else {
                     for id in self.grid.search_on_plane_xy(z, filter)? {
@@ -495,7 +506,7 @@ impl Features {
                 }
             }
             At::XY(x, y) => {
-                if self.space_ndim == 2 {
+                if self.mesh.ndim == 2 {
                     if let Some(id) = self.grid.search(&[x, y])? {
                         point_ids.insert(id);
                     }
@@ -506,7 +517,7 @@ impl Features {
                 }
             }
             At::YZ(y, z) => {
-                if self.space_ndim == 2 {
+                if self.mesh.ndim == 2 {
                     return Err("At::YZ works in 3D only");
                 } else {
                     for id in self.grid.search_on_line(&[0.0, y, z], &[1.0, y, z], filter)? {
@@ -515,7 +526,7 @@ impl Features {
                 }
             }
             At::XZ(x, z) => {
-                if self.space_ndim == 2 {
+                if self.mesh.ndim == 2 {
                     return Err("At::XZ works in 3D only");
                 } else {
                     for id in self.grid.search_on_line(&[x, 0.0, z], &[x, 1.0, z], filter)? {
@@ -524,7 +535,7 @@ impl Features {
                 }
             }
             At::XYZ(x, y, z) => {
-                if self.space_ndim == 2 {
+                if self.mesh.ndim == 2 {
                     return Err("At::XYZ works in 3D only");
                 } else {
                     if let Some(id) = self.grid.search(&[x, y, z])? {
@@ -533,7 +544,7 @@ impl Features {
                 }
             }
             At::Circle(x, y, r) => {
-                if self.space_ndim == 2 {
+                if self.mesh.ndim == 2 {
                     for id in self.grid.search_on_circle(&[x, y], r, filter)? {
                         point_ids.insert(id);
                     }
@@ -542,7 +553,7 @@ impl Features {
                 }
             }
             At::Cylinder(ax, ay, az, bx, by, bz, r) => {
-                if self.space_ndim == 2 {
+                if self.mesh.ndim == 2 {
                     return Err("At::Cylinder works in 3D only");
                 } else {
                     for id in self.grid.search_on_cylinder(&[ax, ay, az], &[bx, by, bz], r, filter)? {
@@ -616,9 +627,10 @@ impl Features {
     where
         F: FnMut(&[f64]) -> bool,
     {
-        if self.space_ndim != 3 {
+        if self.mesh.ndim != 3 {
             return Err("cannot find face keys in 2D");
         }
+        let npoint = self.mesh.points.len();
         let mut face_keys: HashSet<FaceKey> = HashSet::new();
         // search all points constrained by "at" and "filter"
         let point_ids = self.search_point_ids(at, filter)?;
@@ -627,7 +639,7 @@ impl Features {
             let faces = self.point_to_faces.get(point_id).unwrap(); // unwrap here because there should be no hanging faces
             for face_key in faces {
                 // accept face when at least four face points validate "At"
-                let fourth_is_ok = if face_key.3 == self.num_points {
+                let fourth_is_ok = if face_key.3 == npoint {
                     true
                 } else {
                     point_ids.contains(&face_key.3)
@@ -954,22 +966,22 @@ mod tests {
         let mesh = Samples::block_2d_four_qua4();
         let features = Features::new(&mesh, true);
 
-        let neighbors = features.get_neighbors_2d(&mesh, 0);
+        let neighbors = features.get_neighbors_2d(0);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(1, 1, 3)));
         assert!(neighbors.contains(&(2, 2, 0)));
 
-        let neighbors = features.get_neighbors_2d(&mesh, 1);
+        let neighbors = features.get_neighbors_2d(1);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(3, 0, 1)));
         assert!(neighbors.contains(&(2, 3, 0)));
 
-        let neighbors = features.get_neighbors_2d(&mesh, 2);
+        let neighbors = features.get_neighbors_2d(2);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 0, 2)));
         assert!(neighbors.contains(&(1, 3, 3)));
 
-        let neighbors = features.get_neighbors_2d(&mesh, 3);
+        let neighbors = features.get_neighbors_2d(3);
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 1, 2)));
         assert!(neighbors.contains(&(3, 2, 1)));

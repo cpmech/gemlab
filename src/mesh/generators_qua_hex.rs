@@ -1,4 +1,4 @@
-use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Mesh};
+use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Graph, Mesh};
 use crate::shapes::GeoKind;
 use crate::StrError;
 use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
@@ -34,7 +34,15 @@ impl Structured {
     /// * `nr` -- number of divisions along the radius (must be > 0)
     /// * `na` -- number of divisions along alpha (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
-    pub fn quarter_ring_2d(rmin: f64, rmax: f64, nr: usize, na: usize, target: GeoKind) -> Result<Mesh, StrError> {
+    /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
+    pub fn quarter_ring_2d(
+        rmin: f64,
+        rmax: f64,
+        nr: usize,
+        na: usize,
+        target: GeoKind,
+        renumber: bool,
+    ) -> Result<Mesh, StrError> {
         let mut block = Block::new_square(1.0);
         block.set_ndiv(&[nr, na])?;
         block.set_transform_into_ring(Some(ArgsRing {
@@ -45,7 +53,11 @@ impl Structured {
             zmin: 0.0, // ignored
             zmax: 1.0, // ignored
         }))?;
-        block.subdivide(target)
+        let mut mesh = block.subdivide(target)?;
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 
     /// Generates a mesh representing a quarter of a ring in 3D (extrusion along z)
@@ -77,6 +89,7 @@ impl Structured {
     /// * `na` -- number of divisions along alpha (must be > 0)
     /// * `nz` -- number of divisions along z (thickness) (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
+    /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn quarter_ring_3d(
         rmin: f64,
         rmax: f64,
@@ -85,6 +98,7 @@ impl Structured {
         na: usize,
         nz: usize,
         target: GeoKind,
+        renumber: bool,
     ) -> Result<Mesh, StrError> {
         let mut block = Block::new_cube(1.0);
         block.set_ndiv(&[nr, na, nz])?;
@@ -96,7 +110,11 @@ impl Structured {
             zmin: 0.0,
             zmax: z,
         }))?;
-        block.subdivide(target)
+        let mut mesh = block.subdivide(target)?;
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 
     /// Generates a mesh representing a quarter of a disk in 2D (A-version)
@@ -127,7 +145,8 @@ impl Structured {
     /// * `na` -- number of divisions along 'a' (must be > 0)
     /// * `nb` -- number of divisions along 'b' (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
-    pub fn quarter_disk_2d_a(r: f64, na: usize, nb: usize, target: GeoKind) -> Result<Mesh, StrError> {
+    /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
+    pub fn quarter_disk_2d_a(r: f64, na: usize, nb: usize, target: GeoKind, renumber: bool) -> Result<Mesh, StrError> {
         let m = r / 2.0;
         let n = r / SQRT_2;
         let p = 1.15 * m / SQRT_2;
@@ -143,7 +162,11 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        join_meshes(&[&mesh_1, &mesh_2, &mesh_3])
+        let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 
     /// Generates a mesh representing a quarter of a disk in 2D (B-version)
@@ -175,7 +198,15 @@ impl Structured {
     /// * `na` -- number of divisions along 'a' (must be > 0)
     /// * `nb` -- number of divisions along 'b' (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
-    pub fn quarter_disk_2d_b(a: f64, r: f64, na: usize, nb: usize, target: GeoKind) -> Result<Mesh, StrError> {
+    /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
+    pub fn quarter_disk_2d_b(
+        a: f64,
+        r: f64,
+        na: usize,
+        nb: usize,
+        target: GeoKind,
+        renumber: bool,
+    ) -> Result<Mesh, StrError> {
         if a >= r {
             return Err("'a' must be smaller than 'r'");
         }
@@ -232,7 +263,11 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        join_meshes(&[&mesh_1, &mesh_2, &mesh_3])
+        let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 
     /// Generates a mesh representing a quarter of a disk in 3D (extrusion along z) (A-version)
@@ -265,6 +300,7 @@ impl Structured {
     /// * `nb` -- number of divisions along 'b' on the x-y plane (must be > 0)
     /// * `nz` -- number of divisions along 'z' (thickness) (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Hex] shapes only
+    /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn quarter_disk_3d_a(
         r: f64,
         z: f64,
@@ -272,6 +308,7 @@ impl Structured {
         nb: usize,
         nz: usize,
         target: GeoKind,
+        renumber: bool,
     ) -> Result<Mesh, StrError> {
         let m = r / 2.0;
         let n = r / SQRT_2;
@@ -318,7 +355,11 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        join_meshes(&[&mesh_1, &mesh_2, &mesh_3])
+        let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 
     /// Generates a mesh representing a quarter of a disk in 3D (extrusion along z) (B-version)
@@ -352,6 +393,7 @@ impl Structured {
     /// * `nb` -- number of divisions along 'b' on the x-y plane (must be > 0)
     /// * `nz` -- number of divisions along 'z' (thickness) (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Hex] shapes only
+    /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn quarter_disk_3d_b(
         a: f64,
         r: f64,
@@ -360,6 +402,7 @@ impl Structured {
         nb: usize,
         nz: usize,
         target: GeoKind,
+        renumber: bool,
     ) -> Result<Mesh, StrError> {
         if a >= r {
             return Err("'a' must be smaller than 'r'");
@@ -454,7 +497,11 @@ impl Structured {
         let mesh_1 = block_1.subdivide(target)?;
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
-        join_meshes(&[&mesh_1, &mesh_2, &mesh_3])
+        let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 
     /// Generates a mesh representing a quarter of a plate with a hole in 2D
@@ -491,6 +538,7 @@ impl Structured {
     /// * `nb` -- number of divisions along 'b' (must be > 0)
     /// * `n45` -- number of divisions along the 45 degrees angle
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
+    /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn quarter_plate_hole_2d(
         r: f64,
         a: f64,
@@ -499,6 +547,7 @@ impl Structured {
         nb: usize,
         n45: usize,
         target: GeoKind,
+        renumber: bool,
     ) -> Result<Mesh, StrError> {
         const COS_PI_BY_4: f64 = ONE_BY_SQRT_2;
         let ra = r + a;
@@ -574,7 +623,11 @@ impl Structured {
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
         let mesh_4 = block_4.subdivide(target)?;
-        join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])
+        let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])?;
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 
     /// Generates a mesh representing a quarter of a plate with a hole in 3D (extrusion along z)
@@ -613,6 +666,7 @@ impl Structured {
     /// * `n45` -- number of divisions along the 45 degrees angle
     /// * `nz` -- number of divisions along 'z' (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Hex] shapes only
+    /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn quarter_plate_hole_3d(
         r: f64,
         a: f64,
@@ -623,6 +677,7 @@ impl Structured {
         n45: usize,
         nz: usize,
         target: GeoKind,
+        renumber: bool,
     ) -> Result<Mesh, StrError> {
         const COS_PI_BY_4: f64 = ONE_BY_SQRT_2;
         let ra = r + a;
@@ -747,7 +802,11 @@ impl Structured {
         let mesh_2 = block_2.subdivide(target)?;
         let mesh_3 = block_3.subdivide(target)?;
         let mesh_4 = block_4.subdivide(target)?;
-        join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])
+        let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])?;
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 
     /// Generates a rectangle with horizontal layers
@@ -790,6 +849,7 @@ impl Structured {
     ///   `n_layer = ny.len() = y.len() - 1`
     /// * `attributes` -- is a list of attributes for each layer; it's length is equal to `n_layer`
     /// * `target` -- is the resulting GeoKind and must be a [crate::shapes::GeoClass::Qua]
+    /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn rectangle(
         xa: f64,
         xb: Option<f64>,
@@ -800,6 +860,7 @@ impl Structured {
         ny: &[usize],
         attributes: &[usize],
         target: GeoKind,
+        renumber: bool,
     ) -> Result<Mesh, StrError> {
         if xc <= xa {
             return Err("xc must be > xa");
@@ -857,7 +918,11 @@ impl Structured {
                 ya = yb;
             }
         }
-        join_meshes(&meshes.iter().collect::<Vec<_>>())
+        let mut mesh = join_meshes(&meshes.iter().collect::<Vec<_>>())?;
+        if renumber {
+            Graph::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 }
 
@@ -867,11 +932,26 @@ impl Structured {
 mod tests {
     use super::Structured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{Figure, Mesh};
+    use crate::mesh::{Figure, Graph, Mesh};
     use crate::shapes::GeoKind;
     use russell_lab::{approx_eq, vec_approx_eq};
 
     const SAVE_FIGURE: bool = false;
+    const MAX_NPOINT_PRINT: usize = 200;
+
+    fn print_bandwidth(mesh: &mut Mesh) {
+        let graph = Graph::new(&mesh, false).unwrap();
+        if mesh.points.len() < MAX_NPOINT_PRINT {
+            graph.print_non_zero_pattern();
+        }
+        Graph::renumber_mesh(mesh, false).unwrap();
+        let graph_after = Graph::new(&mesh, false).unwrap();
+        if mesh.points.len() < MAX_NPOINT_PRINT {
+            graph_after.print_non_zero_pattern();
+        }
+        println!("bandwidth (before) = {}", graph.calc_bandwidth());
+        println!("bandwidth (after)  = {}", graph_after.calc_bandwidth());
+    }
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
@@ -886,14 +966,14 @@ mod tests {
     #[test]
     fn quarter_ring_2d_captures_errors() {
         assert_eq!(
-            Structured::quarter_ring_2d(3.0, 6.0, 0, 1, GeoKind::Qua16).err(),
+            Structured::quarter_ring_2d(3.0, 6.0, 0, 1, GeoKind::Qua16, false).err(),
             Some("ndiv must be ≥ 1")
         );
     }
 
     #[test]
     fn quarter_ring_2d_works() {
-        let mesh = Structured::quarter_ring_2d(3.0, 6.0, 1, 1, GeoKind::Qua16).unwrap();
+        let mesh = Structured::quarter_ring_2d(3.0, 6.0, 1, 1, GeoKind::Qua16, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 1);
@@ -921,14 +1001,14 @@ mod tests {
     #[test]
     fn quarter_ring_3d_captures_errors() {
         assert_eq!(
-            Structured::quarter_ring_3d(3.0, 6.0, 2.0, 0, 1, 1, GeoKind::Hex8).err(),
+            Structured::quarter_ring_3d(3.0, 6.0, 2.0, 0, 1, 1, GeoKind::Hex8, false).err(),
             Some("ndiv must be ≥ 1")
         );
     }
 
     #[test]
     fn quarter_ring_3d_works() {
-        let mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 1, 2, 1, GeoKind::Hex32).unwrap();
+        let mut mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 1, 2, 1, GeoKind::Hex32, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 52);
         assert_eq!(mesh.cells.len(), 2);
@@ -943,11 +1023,14 @@ mod tests {
         if SAVE_FIGURE {
             draw(&mesh, true, "/tmp/gemlab/test_quarter_ring_3d.svg");
         }
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 
     #[test]
     fn quarter_disk_2d_a_works_qua8() {
-        let mesh = Structured::quarter_disk_2d_a(6.0, 1, 1, GeoKind::Qua8).unwrap();
+        let mesh = Structured::quarter_disk_2d_a(6.0, 1, 1, GeoKind::Qua8, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 3);
@@ -962,7 +1045,7 @@ mod tests {
 
     #[test]
     fn quarter_disk_2d_a_works_qua8_finer() {
-        let mesh = Structured::quarter_disk_2d_a(6.0, 3, 3, GeoKind::Qua8).unwrap();
+        let mesh = Structured::quarter_disk_2d_a(6.0, 3, 3, GeoKind::Qua8, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 100);
         assert_eq!(mesh.cells.len(), 27);
@@ -977,7 +1060,7 @@ mod tests {
 
     #[test]
     fn quarter_disk_2d_a_works_qua16() {
-        let mesh = Structured::quarter_disk_2d_a(6.0, 1, 1, GeoKind::Qua16).unwrap();
+        let mesh = Structured::quarter_disk_2d_a(6.0, 1, 1, GeoKind::Qua16, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 3);
@@ -993,14 +1076,14 @@ mod tests {
     #[test]
     fn quarter_disk_2d_b_captures_errors() {
         assert_eq!(
-            Structured::quarter_disk_2d_b(6.1, 6.0, 1, 1, GeoKind::Qua8).err(),
+            Structured::quarter_disk_2d_b(6.1, 6.0, 1, 1, GeoKind::Qua8, false).err(),
             Some("'a' must be smaller than 'r'")
         );
     }
 
     #[test]
     fn quarter_disk_2d_b_works_qua8() {
-        let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 1, 1, GeoKind::Qua8).unwrap();
+        let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 1, 1, GeoKind::Qua8, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 3);
@@ -1015,7 +1098,7 @@ mod tests {
 
     #[test]
     fn quarter_disk_2d_b_works_qua8_finer() {
-        let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 3, 3, GeoKind::Qua8).unwrap();
+        let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 3, 3, GeoKind::Qua8, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 100);
         assert_eq!(mesh.cells.len(), 27);
@@ -1030,7 +1113,7 @@ mod tests {
 
     #[test]
     fn quarter_disk_2d_b_works_qua16() {
-        let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 1, 1, GeoKind::Qua16).unwrap();
+        let mesh = Structured::quarter_disk_2d_b(3.0, 6.0, 1, 1, GeoKind::Qua16, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 37);
         assert_eq!(mesh.cells.len(), 3);
@@ -1045,7 +1128,7 @@ mod tests {
 
     #[test]
     fn quarter_disk_3d_a_works_hex32() {
-        let mesh = Structured::quarter_disk_3d_a(6.0, 1.5, 1, 1, 1, GeoKind::Hex32).unwrap();
+        let mesh = Structured::quarter_disk_3d_a(6.0, 1.5, 1, 1, 1, GeoKind::Hex32, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.cells.len(), 3);
         for p in [
@@ -1065,14 +1148,14 @@ mod tests {
     #[test]
     fn quarter_disk_3d_b_captures_errors() {
         assert_eq!(
-            Structured::quarter_disk_3d_b(6.1, 6.0, 1.5, 1, 1, 1, GeoKind::Hex32).err(),
+            Structured::quarter_disk_3d_b(6.1, 6.0, 1.5, 1, 1, 1, GeoKind::Hex32, false).err(),
             Some("'a' must be smaller than 'r'")
         );
     }
 
     #[test]
     fn quarter_disk_3d_b_works_hex32() {
-        let mesh = Structured::quarter_disk_3d_b(3.0, 6.0, 1.5, 1, 1, 1, GeoKind::Hex32).unwrap();
+        let mesh = Structured::quarter_disk_3d_b(3.0, 6.0, 1.5, 1, 1, 1, GeoKind::Hex32, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.cells.len(), 3);
         for p in [
@@ -1091,7 +1174,7 @@ mod tests {
 
     #[test]
     fn quarter_plate_hole_2d_works() {
-        let mesh = Structured::quarter_plate_hole_2d(1.0, 1.0, 1.0, 1, 1, 1, GeoKind::Qua12).unwrap();
+        let mesh = Structured::quarter_plate_hole_2d(1.0, 1.0, 1.0, 1, 1, 1, GeoKind::Qua12, false).unwrap();
         assert_eq!(mesh.points.len(), 33);
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_overlapping_points(0.01).unwrap();
@@ -1111,7 +1194,7 @@ mod tests {
 
     #[test]
     fn quarter_plate_hole_3d_works() {
-        let mesh = Structured::quarter_plate_hole_3d(1.0, 1.0, 1.0, 1.5, 1, 1, 1, 1, GeoKind::Hex32).unwrap();
+        let mesh = Structured::quarter_plate_hole_3d(1.0, 1.0, 1.0, 1.5, 1, 1, 1, 1, GeoKind::Hex32, false).unwrap();
         assert_eq!(mesh.points.len(), 66 + 18);
         assert_eq!(mesh.cells.len(), 4);
         mesh.check_overlapping_points(0.01).unwrap();
@@ -1144,47 +1227,83 @@ mod tests {
     #[test]
     fn rectangle_handles_errors() {
         assert_eq!(
-            Structured::rectangle(0.0, None, -1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Structured::rectangle(0.0, None, -1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4, false).err(),
             Some("xc must be > xa")
         );
         assert_eq!(
-            Structured::rectangle(0.0, Some(0.0), 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Structured::rectangle(
+                0.0,
+                Some(0.0),
+                1.0,
+                1,
+                1,
+                &[1.0, 2.0],
+                &[1],
+                &[10],
+                GeoKind::Qua4,
+                false
+            )
+            .err(),
             Some("xb must satisfy: xa < xb < xc")
         );
         assert_eq!(
-            Structured::rectangle(0.0, None, 1.0, 0, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Structured::rectangle(0.0, None, 1.0, 0, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4, false).err(),
             Some("na and nb must be > 0")
         );
         assert_eq!(
-            Structured::rectangle(0.0, None, 1.0, 1, 0, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Structured::rectangle(0.0, None, 1.0, 1, 0, &[1.0, 2.0], &[1], &[10], GeoKind::Qua4, false).err(),
             Some("na and nb must be > 0")
         );
         assert_eq!(
-            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0], &[1], &[10], GeoKind::Qua4).err(),
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0], &[1], &[10], GeoKind::Qua4, false).err(),
             Some("y.len() must be ≥ 2")
         );
         assert_eq!(
-            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[], &[10], GeoKind::Qua4).err(),
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[], &[10], GeoKind::Qua4, false).err(),
             Some("ny.len() must be equal to n_layer = y.len() - 1")
         );
         assert_eq!(
-            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[], GeoKind::Qua4).err(),
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[], GeoKind::Qua4, false).err(),
             Some("attributes.len() must be equal to n_layer = y.len() - 1")
         );
         assert_eq!(
-            Structured::rectangle(0.0, None, 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4, false).err(),
             Some("y values must be sorted ascending")
         );
         assert_eq!(
-            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Tri3).err(),
+            Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Tri3, false).err(),
             Some("in 2D, the GeoClass of target must be Qua")
         );
         assert_eq!(
-            Structured::rectangle(0.0, Some(0.5), 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4).err(),
+            Structured::rectangle(
+                0.0,
+                Some(0.5),
+                1.0,
+                1,
+                1,
+                &[2.0, 2.0],
+                &[1],
+                &[10],
+                GeoKind::Qua4,
+                false
+            )
+            .err(),
             Some("y values must be sorted ascending")
         );
         assert_eq!(
-            Structured::rectangle(0.0, Some(0.5), 1.0, 1, 1, &[1.0, 2.0], &[1], &[10], GeoKind::Tri3).err(),
+            Structured::rectangle(
+                0.0,
+                Some(0.5),
+                1.0,
+                1,
+                1,
+                &[1.0, 2.0],
+                &[1],
+                &[10],
+                GeoKind::Tri3,
+                false
+            )
+            .err(),
             Some("in 2D, the GeoClass of target must be Qua")
         );
     }
@@ -1196,7 +1315,7 @@ mod tests {
 
         // one column / one layer = single cell -------------------------------
 
-        let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 5.0], &[1], &[10], target).unwrap();
+        let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 5.0], &[1], &[10], target, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_layered_rectangle_1.svg");
         }
@@ -1222,7 +1341,7 @@ mod tests {
 
         // two columns / one layer = two cells -------------------------------
 
-        let mesh = Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 5.0], &[1], &[20], target).unwrap();
+        let mesh = Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 5.0], &[1], &[20], target, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_layered_rectangle_2.svg");
         }
@@ -1251,7 +1370,19 @@ mod tests {
 
         // one column / two layers = two cells -------------------------------
 
-        let mesh = Structured::rectangle(xa, None, xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
+        let mesh = Structured::rectangle(
+            xa,
+            None,
+            xc,
+            na,
+            nb,
+            &[2.0, 3.0, 5.0],
+            &[1, 1],
+            &[10, 20],
+            target,
+            false,
+        )
+        .unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_layered_rectangle_3.svg");
         }
@@ -1280,8 +1411,19 @@ mod tests {
 
         // two columns / two layers = four cells -------------------------------
 
-        let mesh =
-            Structured::rectangle(xa, Some(1.5), xc, na, nb, &[2.0, 3.0, 5.0], &[1, 1], &[10, 20], target).unwrap();
+        let mut mesh = Structured::rectangle(
+            xa,
+            Some(1.5),
+            xc,
+            na,
+            nb,
+            &[2.0, 3.0, 5.0],
+            &[1, 1],
+            &[10, 20],
+            target,
+            false,
+        )
+        .unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_layered_rectangle_4.svg");
         }
@@ -1312,5 +1454,8 @@ mod tests {
              2 20 qua4 3 2 6 7\n\
              3 20 qua4 2 5 8 6\n"
         );
+        if false {
+            print_bandwidth(&mut mesh);
+        }
     }
 }
