@@ -172,7 +172,7 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs};
     use russell_lab::{vec_approx_eq, Matrix, Vector};
-    use russell_tensor::{copy_tensor2, Mandel, Tensor2};
+    use russell_tensor::{Mandel, Tensor2};
 
     #[test]
     fn capture_some_errors() {
@@ -222,7 +222,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
-                copy_tensor2(ten, &tt)?;
+                ten.mirror(&tt)?;
                 Ok(())
             })
             .unwrap();
@@ -252,7 +252,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
-                copy_tensor2(ten, &tt)?;
+                ten.mirror(&tt)?;
                 Ok(())
             })
             .unwrap();

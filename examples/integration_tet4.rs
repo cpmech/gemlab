@@ -2,7 +2,7 @@ use gemlab::integ;
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
 use russell_lab::Matrix;
-use russell_tensor::{copy_tensor4, LinElasticity};
+use russell_tensor::LinElasticity;
 
 fn main() -> Result<(), StrError> {
     // scratchpad
@@ -35,7 +35,7 @@ fn main() -> Result<(), StrError> {
     let ips = integ::default_points(pad.kind);
     let mut args = integ::CommonArgs::new(&mut pad, ips);
     integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-        copy_tensor4(dd, model.get_modulus()).unwrap();
+        dd.mirror(model.get_modulus()).unwrap();
         Ok(())
     })?;
 

@@ -17,10 +17,10 @@ russell_lab = { path = "../russell/russell_lab", version = "0.7" }
 russell_sparse = { path = "../russell/russell_sparse", version = "0.7" }
 russell_stat = { path = "../russell/russell_stat", version = "0.7" }
 russell_tensor = { path = "../russell/russell_tensor", version = "0.7" }
-rmp-serde = "1.1"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 tritet = "0.4"
 
 [dev-dependencies]
 criterion = "0.5"
-serde_json = "1.0"
+
