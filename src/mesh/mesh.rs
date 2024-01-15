@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
 use std::fmt::{self, Write as FmtWrite};
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::BufReader;
 use std::path::Path;
 
 /// Aliases usize as Point ID
@@ -103,31 +103,28 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    /// Reads a binary file containing the mesh data
+    /// Reads a JSON file containing the mesh data
     ///
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
-    pub fn read<P>(full_path: &P) -> Result<Self, StrError>
+    pub fn read_json<P>(full_path: &P) -> Result<Self, StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
         let path = Path::new(full_path).to_path_buf();
-        let mut file = File::open(&path).map_err(|_| "file not found")?;
-        let metadata = fs::metadata(&path).map_err(|_| "unable to read metadata")?;
-        let mut bin = vec![0; metadata.len() as usize];
-        file.read(&mut bin).expect("buffer overflow");
-        let mut des = rmp_serde::Deserializer::new(&bin[..]);
-        let mesh: Mesh = Deserialize::deserialize(&mut des).map_err(|_| "deserialize failed")?;
+        let input = File::open(path).map_err(|_| "cannot open file")?;
+        let buffered = BufReader::new(input);
+        let mesh = serde_json::from_reader(buffered).map_err(|_| "cannot parse JSON file")?;
         Ok(mesh)
     }
 
-    /// Writes a binary file with the mesh data
+    /// Writes a JSON file with the mesh data
     ///
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
-    pub fn write<P>(&self, full_path: &P) -> Result<(), StrError>
+    pub fn write_json<P>(&self, full_path: &P) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
@@ -135,11 +132,8 @@ impl Mesh {
         if let Some(p) = path.parent() {
             fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
         }
-        let mut bin = Vec::new();
-        let mut ser = rmp_serde::Serializer::new(&mut bin);
-        self.serialize(&mut ser).map_err(|_| "serialize failed")?;
         let mut file = File::create(&path).map_err(|_| "cannot create file")?;
-        file.write_all(&bin).map_err(|_| "cannot write file")?;
+        serde_json::to_writer(&mut file, &self).map_err(|_| "cannot write file")?;
         Ok(())
     }
 
@@ -434,17 +428,17 @@ mod tests {
 
     #[test]
     fn read_and_write_capture_errors() {
-        assert_eq!(Mesh::read("/tmp/not_found").err(), Some("file not found"));
+        assert_eq!(Mesh::read_json("/tmp/not_found").err(), Some("cannot open file"));
         assert_eq!(
-            Mesh::read("./data/meshes/two_quads_horizontal.msh").err(),
-            Some("deserialize failed")
+            Mesh::read_json("./data/meshes/two_quads_horizontal.msh").err(),
+            Some("cannot parse JSON file")
         );
         let mesh = Mesh {
             ndim: 2,
             points: Vec::new(),
             cells: Vec::new(),
         };
-        assert_eq!(mesh.write("/tmp/").err(), Some("cannot create file"));
+        assert_eq!(mesh.write_json("/tmp/").err(), Some("cannot create file"));
     }
 
     #[test]
@@ -476,8 +470,8 @@ mod tests {
                1   0 qua4 1 4 5 2",
         )
         .unwrap();
-        mesh.write("/tmp/gemlab/test.msh").unwrap();
-        let mesh_read = Mesh::read("/tmp/gemlab/test.msh").unwrap();
+        mesh.write_json("/tmp/gemlab/test.json").unwrap();
+        let mesh_read = Mesh::read_json("/tmp/gemlab/test.json").unwrap();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", mesh_read));
     }
 

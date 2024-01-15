@@ -140,7 +140,7 @@ mod tests {
         IP_TRI_INTERNAL_1,
     };
     use russell_lab::{vec_approx_eq, Matrix, Vector};
-    use russell_tensor::{copy_tensor2, Mandel, Tensor2};
+    use russell_tensor::{Mandel, Tensor2};
 
     #[test]
     fn capture_some_errors() {
@@ -270,7 +270,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_03_btb(&mut kk, &mut args, |tt, _, _, _| {
-                copy_tensor2(tt, &sig)?;
+                tt.mirror(&sig)?;
                 Ok(())
             })
             .unwrap();
