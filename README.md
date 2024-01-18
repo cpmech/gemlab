@@ -15,9 +15,9 @@
 
 This crate contains structures and functions for geometry computations, generate meshes, and perform numerical integration for finite element analyses (FEM/FEA).
 
-See the documentation for further information:
+**Documentation:**
 
-- [![Documentation](https://docs.rs/gemlab/badge.svg)](https://docs.rs/gemlab) - Contains the API reference and examples
+[![Documentation](https://docs.rs/gemlab/badge.svg)](https://docs.rs/gemlab)
 
 ## <a name="installation"></a> Installation
 
