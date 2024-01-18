@@ -1,5 +1,6 @@
 # Geometry, meshes, and numerical integration for finite element analyses
 
+[![Documentation](https://docs.rs/gemlab/badge.svg)](https://docs.rs/gemlab)
 [![codecov](https://codecov.io/gh/cpmech/gemlab/graph/badge.svg?token=OjQKQ0PrNF)](https://codecov.io/gh/cpmech/gemlab)
 [![Test & Coverage](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml)
 
@@ -16,7 +17,7 @@ This crate contains structures and functions for geometry computations, generate
 
 See the documentation for further information:
 
-- [gemlab documentation](https://docs.rs/gemlab) - Contains the API reference and examples
+- [![Documentation](https://docs.rs/gemlab/badge.svg)](https://docs.rs/gemlab) - Contains the API reference and examples
 
 ## <a name="installation"></a> Installation
 
