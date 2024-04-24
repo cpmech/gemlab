@@ -424,7 +424,6 @@ impl fmt::Display for Mesh {
 mod tests {
     use crate::mesh::{Mesh, Samples};
     use crate::shapes::Scratchpad;
-    use serde_json;
 
     #[test]
     fn read_and_write_capture_errors() {

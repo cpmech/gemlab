@@ -240,7 +240,7 @@ mod tests {
         self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TET_INTERNAL_1, IP_TRI_INTERNAL_1,
     };
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_lab::{mat_approx_eq, vec_approx_eq, Matrix, Vector};
+    use russell_lab::{mat_approx_eq, Matrix, Vector};
     use russell_tensor::{LinElasticity, Mandel, Tensor4};
 
     #[test]
@@ -347,7 +347,7 @@ mod tests {
             [  0.000000000000000e+00, -5.208333333333334e+02, -6.944444444444445e+02,  5.208333333333334e+02,  6.944444444444445e+02,  0.000000000000000e+00],
             [ -2.604166666666667e+02,  0.000000000000000e+00,  2.604166666666667e+02, -1.736111111111111e+03,  0.000000000000000e+00,  1.736111111111111e+03],
         ]);
-        vec_approx_eq(kk.as_data(), kk_bhatti.as_data(), 1e-12);
+        mat_approx_eq(&kk, &kk_bhatti, 1e-12);
 
         // analytical solution
         let ana = AnalyticalTri3::new(&pad);
@@ -368,7 +368,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(kk_correct.as_data(), kk.as_data(), tol); // 1e-12
+            mat_approx_eq(&kk_correct, &kk, tol); // 1e-12
         });
     }
 
@@ -404,7 +404,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol); //1e-12
+            mat_approx_eq(&kk, &kk_correct, tol); //1e-12
         });
     }
 

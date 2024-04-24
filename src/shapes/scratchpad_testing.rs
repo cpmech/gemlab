@@ -237,7 +237,8 @@ mod tests {
         gen_scratchpad_with_coords_aligned,
     };
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_lab::{approx_eq, deriv_approx_eq};
+    use crate::StrError;
+    use russell_lab::{approx_eq, deriv1_approx_eq};
 
     #[test]
     #[allow(unused_variables, unused_mut)]
@@ -437,11 +438,11 @@ mod tests {
     }
 
     // Computes Nᵐ(ξ) with variable v := ξⱼ
-    fn nn_given_ksi(v: f64, args: &mut ArgsNumDeriv) -> f64 {
+    fn nn_given_ksi(v: f64, args: &mut ArgsNumDeriv) -> Result<f64, StrError> {
         args.ksi.copy_from_slice(&args.at_ksi);
         args.ksi[args.j] = v;
         (args.pad.fn_interp)(&mut args.pad.interp, &args.ksi);
-        args.pad.interp[args.m]
+        Ok(args.pad.interp[args.m])
     }
 
     #[test]
@@ -503,7 +504,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Lᵐⱼ := dNᵐ/dξⱼ
-                    deriv_approx_eq(pad.deriv.get(m, j), args.at_ksi[j], args, tol, nn_given_ksi);
+                    deriv1_approx_eq(pad.deriv.get(m, j), args.at_ksi[j], args, tol, nn_given_ksi);
                 }
             }
         }

@@ -205,7 +205,7 @@ impl Mesh {
 mod tests {
     use crate::mesh::{Cell, Figure, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
-    use russell_lab::vec_approx_eq;
+    use russell_lab::array_approx_eq;
 
     const SAVE_FIGURE: bool = false;
 
@@ -346,31 +346,31 @@ mod tests {
             &[2, 15, 0, 16, 17, 5, 18, 19, 20, 21, 11, 10, 22, 23, 24],
         );
 
-        vec_approx_eq(&res.points[0].coords, &[4.0, 0.0], 1e-15);
-        vec_approx_eq(&res.points[1].coords, &[0.0, 4.0], 1e-15);
-        vec_approx_eq(&res.points[2].coords, &[0.0, 0.0], 1e-15);
-        vec_approx_eq(&res.points[3].coords, &[2.0, 2.0], 1e-15);
-        vec_approx_eq(&res.points[4].coords, &[0.0, 2.0], 1e-15);
-        vec_approx_eq(&res.points[5].coords, &[2.0, 0.0], 1e-15);
-        vec_approx_eq(&res.points[6].coords, &[3.0, 1.0], 1e-15);
-        vec_approx_eq(&res.points[7].coords, &[1.0, 3.0], 1e-15);
-        vec_approx_eq(&res.points[8].coords, &[0.0, 3.0], 1e-15);
-        vec_approx_eq(&res.points[9].coords, &[0.0, 1.0], 1e-15);
-        vec_approx_eq(&res.points[10].coords, &[1.0, 0.0], 1e-15);
-        vec_approx_eq(&res.points[11].coords, &[3.0, 0.0], 1e-15);
-        vec_approx_eq(&res.points[12].coords, &[2.0, 1.0], 1e-15);
-        vec_approx_eq(&res.points[13].coords, &[1.0, 2.0], 1e-15);
-        vec_approx_eq(&res.points[14].coords, &[1.0, 1.0], 1e-15);
-        vec_approx_eq(&res.points[15].coords, &[0.0, -4.0], 1e-15);
-        vec_approx_eq(&res.points[16].coords, &[0.0, -2.0], 1e-15);
-        vec_approx_eq(&res.points[17].coords, &[2.0, -2.0], 1e-15);
-        vec_approx_eq(&res.points[18].coords, &[0.0, -1.0], 1e-15);
-        vec_approx_eq(&res.points[19].coords, &[0.0, -3.0], 1e-15);
-        vec_approx_eq(&res.points[20].coords, &[1.0, -3.0], 1e-15);
-        vec_approx_eq(&res.points[21].coords, &[3.0, -1.0], 1e-15);
-        vec_approx_eq(&res.points[22].coords, &[1.0, -1.0], 1e-15);
-        vec_approx_eq(&res.points[23].coords, &[1.0, -2.0], 1e-15);
-        vec_approx_eq(&res.points[24].coords, &[2.0, -1.0], 1e-15);
+        array_approx_eq(&res.points[0].coords, &[4.0, 0.0], 1e-15);
+        array_approx_eq(&res.points[1].coords, &[0.0, 4.0], 1e-15);
+        array_approx_eq(&res.points[2].coords, &[0.0, 0.0], 1e-15);
+        array_approx_eq(&res.points[3].coords, &[2.0, 2.0], 1e-15);
+        array_approx_eq(&res.points[4].coords, &[0.0, 2.0], 1e-15);
+        array_approx_eq(&res.points[5].coords, &[2.0, 0.0], 1e-15);
+        array_approx_eq(&res.points[6].coords, &[3.0, 1.0], 1e-15);
+        array_approx_eq(&res.points[7].coords, &[1.0, 3.0], 1e-15);
+        array_approx_eq(&res.points[8].coords, &[0.0, 3.0], 1e-15);
+        array_approx_eq(&res.points[9].coords, &[0.0, 1.0], 1e-15);
+        array_approx_eq(&res.points[10].coords, &[1.0, 0.0], 1e-15);
+        array_approx_eq(&res.points[11].coords, &[3.0, 0.0], 1e-15);
+        array_approx_eq(&res.points[12].coords, &[2.0, 1.0], 1e-15);
+        array_approx_eq(&res.points[13].coords, &[1.0, 2.0], 1e-15);
+        array_approx_eq(&res.points[14].coords, &[1.0, 1.0], 1e-15);
+        array_approx_eq(&res.points[15].coords, &[0.0, -4.0], 1e-15);
+        array_approx_eq(&res.points[16].coords, &[0.0, -2.0], 1e-15);
+        array_approx_eq(&res.points[17].coords, &[2.0, -2.0], 1e-15);
+        array_approx_eq(&res.points[18].coords, &[0.0, -1.0], 1e-15);
+        array_approx_eq(&res.points[19].coords, &[0.0, -3.0], 1e-15);
+        array_approx_eq(&res.points[20].coords, &[1.0, -3.0], 1e-15);
+        array_approx_eq(&res.points[21].coords, &[3.0, -1.0], 1e-15);
+        array_approx_eq(&res.points[22].coords, &[1.0, -1.0], 1e-15);
+        array_approx_eq(&res.points[23].coords, &[1.0, -2.0], 1e-15);
+        array_approx_eq(&res.points[24].coords, &[2.0, -1.0], 1e-15);
 
         assert_eq!(res.points[0].marker, 0);
         assert_eq!(res.points[1].marker, 0);
@@ -439,22 +439,22 @@ mod tests {
 
         let ft = 4.0 / 3.0;
         let et = 8.0 / 3.0;
-        vec_approx_eq(&res.points[0].coords, &[4.0, 0.0], 1e-15);
-        vec_approx_eq(&res.points[1].coords, &[0.0, 4.0], 1e-15);
-        vec_approx_eq(&res.points[2].coords, &[0.0, 0.0], 1e-15);
-        vec_approx_eq(&res.points[3].coords, &[et, ft], 1e-15);
-        vec_approx_eq(&res.points[4].coords, &[0.0, et], 1e-15);
-        vec_approx_eq(&res.points[5].coords, &[ft, 0.0], 1e-15);
-        vec_approx_eq(&res.points[6].coords, &[ft, et], 1e-15);
-        vec_approx_eq(&res.points[7].coords, &[0.0, ft], 1e-15);
-        vec_approx_eq(&res.points[8].coords, &[et, 0.0], 1e-15);
-        vec_approx_eq(&res.points[9].coords, &[ft, ft], 1e-15);
-        vec_approx_eq(&res.points[10].coords, &[0.0, -4.0], 1e-15);
-        vec_approx_eq(&res.points[11].coords, &[0.0, -ft], 1e-15);
-        vec_approx_eq(&res.points[12].coords, &[ft, -et], 1e-15);
-        vec_approx_eq(&res.points[13].coords, &[0.0, -et], 1e-15);
-        vec_approx_eq(&res.points[14].coords, &[et, -ft], 1e-15);
-        vec_approx_eq(&res.points[15].coords, &[ft, -ft], 1e-15);
+        array_approx_eq(&res.points[0].coords, &[4.0, 0.0], 1e-15);
+        array_approx_eq(&res.points[1].coords, &[0.0, 4.0], 1e-15);
+        array_approx_eq(&res.points[2].coords, &[0.0, 0.0], 1e-15);
+        array_approx_eq(&res.points[3].coords, &[et, ft], 1e-15);
+        array_approx_eq(&res.points[4].coords, &[0.0, et], 1e-15);
+        array_approx_eq(&res.points[5].coords, &[ft, 0.0], 1e-15);
+        array_approx_eq(&res.points[6].coords, &[ft, et], 1e-15);
+        array_approx_eq(&res.points[7].coords, &[0.0, ft], 1e-15);
+        array_approx_eq(&res.points[8].coords, &[et, 0.0], 1e-15);
+        array_approx_eq(&res.points[9].coords, &[ft, ft], 1e-15);
+        array_approx_eq(&res.points[10].coords, &[0.0, -4.0], 1e-15);
+        array_approx_eq(&res.points[11].coords, &[0.0, -ft], 1e-15);
+        array_approx_eq(&res.points[12].coords, &[ft, -et], 1e-15);
+        array_approx_eq(&res.points[13].coords, &[0.0, -et], 1e-15);
+        array_approx_eq(&res.points[14].coords, &[et, -ft], 1e-15);
+        array_approx_eq(&res.points[15].coords, &[ft, -ft], 1e-15);
 
         assert_eq!(res.points[0].marker, 0);
         assert_eq!(res.points[1].marker, 0);
@@ -658,7 +658,7 @@ mod tests {
         let sf = 3.0 / 4.0;
         for i in 0..correct.points.len() {
             let scaled = &[sf * correct.points[i].coords[0], sf * correct.points[i].coords[1]];
-            vec_approx_eq(&res.points[i].coords, scaled, 1e-15);
+            array_approx_eq(&res.points[i].coords, scaled, 1e-15);
         }
     }
 
@@ -679,7 +679,7 @@ mod tests {
         let sf = 4.0 / 2.0;
         for i in 0..correct.points.len() {
             let scaled = &[sf * correct.points[i].coords[0], sf * correct.points[i].coords[1]];
-            vec_approx_eq(&res.points[i].coords, scaled, 1e-15);
+            array_approx_eq(&res.points[i].coords, scaled, 1e-15);
         }
     }
 }

@@ -188,7 +188,7 @@ mod tests {
             Ok(())
         })
         .unwrap();
-        vec_approx_eq(b.as_data(), &[0.0, -2.0, 0.0, -2.0], 1e-15);
+        vec_approx_eq(&b, &[0.0, -2.0, 0.0, -2.0], 1e-15);
         // triangular (see @sgm:14\page{605})
         let mut args = CommonArgs::new(&mut pad, ips);
         let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
@@ -199,7 +199,7 @@ mod tests {
             Ok(())
         })
         .unwrap();
-        vec_approx_eq(b.as_data(), &[0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
+        vec_approx_eq(&b, &[0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
 
         // example from @sgm:14\page{183}
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin3).unwrap();
@@ -220,7 +220,7 @@ mod tests {
             Ok(())
         })
         .unwrap();
-        vec_approx_eq(b.as_data(), &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
+        vec_approx_eq(&b, &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
         // triangular (see @sgm:14\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
         let mut args = CommonArgs::new(&mut pad, ips);
@@ -231,7 +231,7 @@ mod tests {
             Ok(())
         })
         .unwrap();
-        vec_approx_eq(b.as_data(), &[0.0, 0.0, 0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
+        vec_approx_eq(&b, &[0.0, 0.0, 0.0, -ll / 6.0, 0.0, -ll / 3.0], 1e-15);
 
         // example from @sgm:14\page{183}
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Lin5).unwrap();
@@ -268,7 +268,7 @@ mod tests {
             0.0,
             -ll * 16.0 / 45.0, // 4
         ];
-        vec_approx_eq(b.as_data(), correct, 1e-15);
+        vec_approx_eq(&b, correct, 1e-15);
         // triangular (see @sgm:14\page{605})
         let x_ips = integ::points_coords(&mut pad, ips).unwrap();
         let mut args = CommonArgs::new(&mut pad, ips);
@@ -291,7 +291,7 @@ mod tests {
             0.0,
             -ll * 4.0 / 15.0, // 4
         ];
-        vec_approx_eq(b.as_data(), correct, 1e-15);
+        vec_approx_eq(&b, correct, 1e-15);
     }
 
     #[test]
@@ -336,7 +336,7 @@ mod tests {
             0.0,
             -aa / 4.0, // 3
         ];
-        vec_approx_eq(b.as_data(), correct, 1e-15);
+        vec_approx_eq(&b, correct, 1e-15);
 
         // example from @sgm:14\page{195}
         // @sgm:14 Smith, Griffiths, Margetts (2014) Programming the Finite Element Method, 5th ed.
@@ -401,7 +401,7 @@ mod tests {
             0.0,
             -aa / 3.0, // 7
         ];
-        vec_approx_eq(b.as_data(), correct, 1e-15);
+        vec_approx_eq(&b, correct, 1e-15);
     }
 
     #[test]
@@ -432,6 +432,6 @@ mod tests {
             2.85955, 30.4738, // 1
             66.6667, 66.6667, // 2
         ];
-        vec_approx_eq(b.as_data(), correct, 1e-4);
+        vec_approx_eq(&b, correct, 1e-4);
     }
 }

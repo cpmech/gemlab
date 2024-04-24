@@ -108,7 +108,7 @@ impl Scratchpad {
         (self.fn_deriv)(&mut self.deriv, ksi);
 
         // matrix J: dx/dξ
-        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv)?;
+        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv, 0.0)?;
 
         // inverse Jacobian and determinant/norm (or not possible)
         let (space_ndim, geo_ndim) = self.jacobian.dims();
@@ -138,7 +138,8 @@ mod tests {
     use super::DET_JAC_NOT_AVAILABLE;
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_lab::{deriv_approx_eq, Matrix, Vector};
+    use crate::StrError;
+    use russell_lab::{deriv1_approx_eq, Matrix, Vector};
 
     #[test]
     fn calc_jacobian_handles_errors() {
@@ -167,11 +168,11 @@ mod tests {
     }
 
     // Computes xᵢ(ξ) with variable v := ξⱼ
-    fn x_given_ksi(v: f64, args: &mut ArgsNumJac) -> f64 {
+    fn x_given_ksi(v: f64, args: &mut ArgsNumJac) -> Result<f64, StrError> {
         args.ksi.copy_from_slice(&args.at_ksi);
         args.ksi[args.j] = v;
         args.pad.calc_coords(&mut args.x, &args.ksi).unwrap();
-        args.x[args.i]
+        Ok(args.x[args.i])
     }
 
     #[test]
@@ -237,7 +238,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Jᵢⱼ := dxᵢ/dξⱼ
-                    deriv_approx_eq(pad.jacobian.get(i, j), args.at_ksi[j], args, tol, x_given_ksi);
+                    deriv1_approx_eq(pad.jacobian.get(i, j), args.at_ksi[j], args, tol, x_given_ksi);
                 }
             }
         }

@@ -40,7 +40,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_lab::{vec_approx_eq, Matrix};
+    /// use russell_lab::{mat_approx_eq, Matrix};
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //  3-------------2         ξ₀   ξ₁
@@ -71,7 +71,7 @@ impl Scratchpad {
     ///         [1.0 / (4.0 * a), 1.0 / (2.0 * a)],
     ///         [-1.0 / (4.0 * a), 1.0 / (2.0 * a)],
     ///     ]);
-    ///     vec_approx_eq(pad.gradient.as_data(), correct_gg.as_data(), 1e-15);
+    ///     mat_approx_eq(&pad.gradient, &correct_gg, 1e-15);
     ///     Ok(())
     /// }
     /// ```
@@ -86,7 +86,7 @@ impl Scratchpad {
         let det_jac = self.calc_jacobian(ksi)?;
 
         // gradient: B = L · J⁻¹
-        mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian).unwrap(); // cannot fail because the dims are checked
+        mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian, 0.0).unwrap(); // cannot fail because the dims are checked
         Ok(det_jac)
     }
 }
@@ -97,8 +97,9 @@ impl Scratchpad {
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
+    use crate::StrError;
     use russell_lab::math::ONE_BY_3;
-    use russell_lab::{deriv_approx_eq, vec_copy, Vector};
+    use russell_lab::{deriv1_approx_eq, vec_copy, Vector};
 
     #[test]
     fn calc_gradient_handles_errors() {
@@ -126,12 +127,12 @@ mod tests {
     }
 
     // Computes Nᵐ(ξ(x)) with variable v := xⱼ
-    fn nn_given_x(v: f64, args: &mut ArgsNumGrad) -> f64 {
+    fn nn_given_x(v: f64, args: &mut ArgsNumGrad) -> Result<f64, StrError> {
         vec_copy(&mut args.x, &args.at_x).unwrap();
         args.x[args.j] = v;
         args.pad.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-14).unwrap();
         (args.pad.fn_interp)(&mut args.pad.interp, &args.ksi);
-        args.pad.interp[args.m]
+        Ok(args.pad.interp[args.m])
     }
 
     #[test]
@@ -196,7 +197,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Bᵐⱼ := dNᵐ/dxⱼ
-                    deriv_approx_eq(pad.gradient.get(m, j), args.at_x[j], args, tol, nn_given_x);
+                    deriv1_approx_eq(pad.gradient.get(m, j), args.at_x[j], args, tol, nn_given_x);
                 }
             }
         }

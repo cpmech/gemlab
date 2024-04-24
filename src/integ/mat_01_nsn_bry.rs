@@ -117,7 +117,7 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1};
     use crate::shapes::{GeoClass, GeoKind, Scratchpad};
-    use russell_lab::{vec_approx_eq, Matrix, Vector};
+    use russell_lab::{mat_approx_eq, Matrix, Vector};
 
     #[test]
     fn capture_some_errors() {
@@ -187,20 +187,20 @@ mod tests {
         let mut kk = Matrix::new(2, 2);
         let mut args = CommonArgs::new(&mut pad_side, ips);
         integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Ok(s)).unwrap();
-        vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-15);
+        mat_approx_eq(&kk, &kk_correct, 1e-15);
 
         // side # 1
         let mut pad_side = tri3_extract_pad_side(&pad, 1);
         let kk_correct = ana.mat_01_nsn_bry(1, s, false);
         let mut args = CommonArgs::new(&mut pad_side, ips);
         integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Ok(s)).unwrap();
-        vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);
+        mat_approx_eq(&kk, &kk_correct, 1e-14);
 
         // side # 2
         let mut pad_side = tri3_extract_pad_side(&pad, 2);
         let kk_correct = ana.mat_01_nsn_bry(2, s, false);
         let mut args = CommonArgs::new(&mut pad_side, ips);
         integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Ok(s)).unwrap();
-        vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);
+        mat_approx_eq(&kk, &kk_correct, 1e-14);
     }
 }

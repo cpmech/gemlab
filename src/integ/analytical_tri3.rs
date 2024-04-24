@@ -340,8 +340,8 @@ impl AnalyticalTri3 {
         let dim_kk = 6;
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd.mat).unwrap();
-        mat_mat_mul(&mut kk, th * self.area, &bb_t_dd, &self.bbe).unwrap();
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd.mat, 0.0).unwrap();
+        mat_mat_mul(&mut kk, th * self.area, &bb_t_dd, &self.bbe, 0.0).unwrap();
         Ok(kk)
     }
 }

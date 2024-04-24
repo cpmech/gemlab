@@ -934,7 +934,7 @@ mod tests {
     use crate::geometry::point_point_distance;
     use crate::mesh::{Figure, Graph, Mesh};
     use crate::shapes::GeoKind;
-    use russell_lab::{approx_eq, vec_approx_eq};
+    use russell_lab::{approx_eq, array_approx_eq};
 
     const SAVE_FIGURE: bool = false;
     const MAX_NPOINT_PRINT: usize = 200;
@@ -1216,9 +1216,9 @@ mod tests {
             let d = point_point_distance(&mesh.points[p].coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, 2.0, 1e-15);
         }
-        vec_approx_eq(&mesh.points[26].coords, &[2.0, 0.0, 0.5], 1e-15);
-        vec_approx_eq(&mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
-        vec_approx_eq(&mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
+        array_approx_eq(&mesh.points[26].coords, &[2.0, 0.0, 0.5], 1e-15);
+        array_approx_eq(&mesh.points[49].coords, &[0.0, 2.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[70].coords, &[3.0, 3.0, 0.5], 1e-15);
         if SAVE_FIGURE {
             draw(&mesh, true, "/tmp/gemlab/test_quarter_plate_hole_3d.svg");
         }

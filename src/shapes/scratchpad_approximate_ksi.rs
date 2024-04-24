@@ -29,7 +29,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_lab::{Vector, vec_approx_eq};
+    /// use russell_lab::{Vector, array_approx_eq};
     ///
     /// fn main() -> Result<(), StrError> {
     ///     // 7.0        2                ξ₀   ξ₁
@@ -56,7 +56,7 @@ impl Scratchpad {
     ///     // find ξ corresponding to x @ middle of edge (0,2)
     ///     let mut ksi = vec![0.0; 2];
     ///     pad.approximate_ksi(&mut ksi, &x, 10, 1e-8)?;
-    ///     vec_approx_eq(&ksi, &[0.0, 0.5], 1e-8);
+    ///     array_approx_eq(&ksi, &[0.0, 0.5], 1e-8);
     ///     Ok(())
     /// }
     /// ```
@@ -136,7 +136,7 @@ mod tests {
     use crate::shapes::GeoKind;
     use crate::shapes::Scratchpad;
     use russell_lab::math::{ONE_BY_3, SQRT_3};
-    use russell_lab::{vec_approx_eq, Vector};
+    use russell_lab::{array_approx_eq, vec_approx_eq, Vector};
 
     #[test]
     fn approximate_ksi_handles_errors() {
@@ -217,7 +217,7 @@ mod tests {
                 if kind == GeoKind::Tri3 || kind == GeoKind::Qua4 || kind == GeoKind::Tet4 || kind == GeoKind::Hex8 {
                     assert_eq!(nit, 1);
                 }
-                vec_approx_eq(&ksi, ksi_ref, tol);
+                array_approx_eq(&ksi, ksi_ref, tol);
             }
 
             // test again inside the reference domain
@@ -228,7 +228,7 @@ mod tests {
             };
             pad.calc_coords(&mut x, &ksi_in).unwrap();
             pad.approximate_ksi(&mut ksi, &x, 10, 1e-14).unwrap();
-            vec_approx_eq(&ksi, &ksi_in, tol);
+            array_approx_eq(&ksi, &ksi_in, tol);
         }
     }
 
@@ -297,7 +297,7 @@ mod tests {
             let nit = pad.approximate_ksi(&mut ksi, &x, 30, *tol).unwrap();
             let mut x_out = Vector::new(2);
             pad.calc_coords(&mut x_out, &ksi).unwrap();
-            vec_approx_eq(x.as_data(), x_out.as_data(), *tol);
+            vec_approx_eq(&x, &x_out, *tol);
             if let Some(nc) = *nit_correct {
                 assert_eq!(nit, nc);
             }

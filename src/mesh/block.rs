@@ -979,7 +979,7 @@ mod tests {
     use crate::shapes::GeoKind;
     use plotpy::{Canvas, Plot, Surface};
     use russell_lab::math::{PI, SQRT_2};
-    use russell_lab::{approx_eq, vec_approx_eq};
+    use russell_lab::{approx_eq, array_approx_eq};
 
     const SAVE_FIGURE: bool = false;
 
@@ -1421,7 +1421,7 @@ mod tests {
         assert_eq!(mesh.points.len(), correct.points.len());
         assert_eq!(mesh.cells.len(), correct.cells.len());
         for point in &correct.points {
-            vec_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-15);
+            array_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-15);
         }
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
@@ -1456,7 +1456,7 @@ mod tests {
         assert_eq!(mesh.points.len(), correct.points.len());
         assert_eq!(mesh.cells.len(), correct.cells.len());
         for point in &correct.points {
-            vec_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-15);
+            array_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-15);
         }
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
@@ -1915,7 +1915,7 @@ mod tests {
         for (a, mid, b) in [(3, 6, 2)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
             draw(
@@ -1989,7 +1989,7 @@ mod tests {
         for (a, mid, b) in [(3, 6, 2), (2, 12, 9), (1, 5, 2), (2, 15, 13)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
             draw(
@@ -2112,7 +2112,7 @@ mod tests {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
-            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         if SAVE_FIGURE {
             draw(
@@ -2123,16 +2123,16 @@ mod tests {
                 |plot| {
                     let mut surf = Surface::new();
                     const NP: usize = 81;
-                    surf.set_solid_color("#ff000020");
+                    surf.set_surf_color("#ff000020");
                     surf.draw_cylinder(&[cen_minus, 0.0, -half_l], &[cen_minus, 0.0, half_l], r, 5, NP)
                         .unwrap();
-                    surf.set_solid_color("#00ff0020");
+                    surf.set_surf_color("#00ff0020");
                     surf.draw_cylinder(&[cen_plus, 0.0, -half_l], &[cen_plus, 0.0, half_l], r, 5, NP)
                         .unwrap();
-                    surf.set_solid_color("#0000ff20");
+                    surf.set_surf_color("#0000ff20");
                     surf.draw_cylinder(&[0.0, cen_minus, -half_l], &[0.0, cen_minus, half_l], r, 5, NP)
                         .unwrap();
-                    surf.set_solid_color("#ff00ff20");
+                    surf.set_surf_color("#ff00ff20");
                     surf.draw_cylinder(&[0.0, cen_plus, -half_l], &[0.0, cen_plus, half_l], r, 5, NP)
                         .unwrap();
                     plot.add(&surf);
@@ -2216,7 +2216,7 @@ mod tests {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
-            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         if SAVE_FIGURE {
             draw(
@@ -2227,10 +2227,10 @@ mod tests {
                 |plot| {
                     let mut surf = Surface::new();
                     const NP: usize = 81;
-                    surf.set_solid_color("#ff000020");
+                    surf.set_surf_color("#ff000020");
                     surf.draw_cylinder(&[-half_l, 0.0, cen_minus], &[half_l, 0.0, cen_minus], r, 5, NP)
                         .unwrap();
-                    surf.set_solid_color("#00ff0020");
+                    surf.set_surf_color("#00ff0020");
                     surf.draw_cylinder(&[0.0, -half_l, cen_plus], &[0.0, half_l, cen_plus], r, 5, NP)
                         .unwrap();
                     plot.add(&surf);
@@ -2285,7 +2285,7 @@ mod tests {
         for (a, mid, b) in [(23, 28, 26), (9, 17, 14)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
             draw(
@@ -2316,7 +2316,7 @@ mod tests {
         for (a, mid, b) in [(42, 48, 46), (27, 33, 31), (28, 34, 32), (10, 19, 16), (12, 20, 18)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
             draw(
@@ -2356,8 +2356,8 @@ mod tests {
             let yc = mesh.points[a].coords[1] + ly / 3.0;
             let xd = mesh.points[a].coords[0] + 2.0 * lx / 3.0;
             let yd = mesh.points[a].coords[1] + 2.0 * ly / 3.0;
-            vec_approx_eq(&mesh.points[c].coords, &[xc, yc], 1e-14);
-            vec_approx_eq(&mesh.points[d].coords, &[xd, yd], 1e-15);
+            array_approx_eq(&mesh.points[c].coords, &[xc, yc], 1e-14);
+            array_approx_eq(&mesh.points[d].coords, &[xd, yd], 1e-15);
         }
         if SAVE_FIGURE {
             draw(
@@ -2384,7 +2384,7 @@ mod tests {
         for (a, mid, b) in [(82, 92, 90), (54, 64, 62), (20, 34, 32)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
         }
         if SAVE_FIGURE {
             draw(
@@ -2430,7 +2430,7 @@ mod tests {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
-            vec_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
         }
         if SAVE_FIGURE {
             draw(

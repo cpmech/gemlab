@@ -78,7 +78,7 @@ use russell_lab::Vector;
 ///     // solution (A = 6):
 ///     // bᵐ₀ = v₀ A / 3
 ///     // bᵐ₁ = v₁ A / 3
-///     vec_approx_eq(b.as_data(), &[2.0, 4.0, 2.0, 4.0, 2.0, 4.0], 1e-14);
+///     vec_approx_eq(&b, &[2.0, 4.0, 2.0, 4.0, 2.0, 4.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
@@ -201,7 +201,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(b.as_data(), b_correct, tol);
+            vec_approx_eq(&b, b_correct, tol);
         });
     }
 
@@ -234,7 +234,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(b.as_data(), b_correct.as_data(), tol);
+            vec_approx_eq(&b, &b_correct, tol);
         });
     }
 
@@ -268,7 +268,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(b.as_data(), &b_correct, tol);
+            vec_approx_eq(&b, &b_correct, tol);
         });
     }
 }

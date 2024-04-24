@@ -125,7 +125,7 @@ impl Scratchpad {
         (self.fn_deriv)(&mut self.deriv, ksi);
 
         // matrix J: dx/dξ
-        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv).unwrap();
+        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv, 0.0).unwrap();
 
         // CABLE: line in 2D (geo_ndim = 1 and space_ndim = 2)
         //          →
@@ -232,7 +232,7 @@ mod tests {
             let mag_n = pad.calc_normal_vector(&mut un, ksi).unwrap();
             approx_eq(mag_n, correct_magnitude, tol_mag);
             approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
-            vec_approx_eq(un.as_data(), &correct_normal, tol_vec);
+            vec_approx_eq(&un, &correct_normal, tol_vec);
         }
     }
 
@@ -282,14 +282,14 @@ mod tests {
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
             approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
-            vec_approx_eq(un.as_data(), &correct_normal_face2, tol_vec);
+            vec_approx_eq(&un, &correct_normal_face2, tol_vec);
 
             // face # 3
             let mut pad_face = aux::extract_face(3, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
             approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
-            vec_approx_eq(un.as_data(), &correct_normal_face3, tol_vec);
+            vec_approx_eq(&un, &correct_normal_face3, tol_vec);
 
             // face # 4
             let mut pad_face = aux::extract_face(4, &pad);
@@ -367,11 +367,11 @@ mod tests {
                         } else {
                             approx_eq(mag_n, 1.0, 1e-15);
                         }
-                        vec_approx_eq(un.as_data(), tri_correct[e], 1e-15);
+                        vec_approx_eq(&un, tri_correct[e], 1e-15);
                     } else {
                         // check quadrilateral
                         approx_eq(mag_n, 1.0, 1e-15);
-                        vec_approx_eq(un.as_data(), qua_correct[e], 1e-15);
+                        vec_approx_eq(&un, qua_correct[e], 1e-15);
                     }
                 }
             }
@@ -449,11 +449,11 @@ mod tests {
                         } else {
                             approx_eq(mag_n, 4.0, tol);
                         }
-                        vec_approx_eq(un.as_data(), tet_correct[f], tol);
+                        vec_approx_eq(&un, tet_correct[f], tol);
                     } else {
                         // check hexahedron
                         approx_eq(mag_n, 1.0, tol);
-                        vec_approx_eq(un.as_data(), hex_correct[f], tol);
+                        vec_approx_eq(&un, hex_correct[f], tol);
                     }
                 }
             }
