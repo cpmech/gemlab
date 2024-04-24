@@ -1,29 +1,69 @@
-# Geometry, meshes, and numerical integration for finite element analyses
+# Geometry, meshes, and numerical integration for finite element analyses <!-- omit from toc -->
 
-[![Documentation](https://docs.rs/gemlab/badge.svg)](https://docs.rs/gemlab)
 [![codecov](https://codecov.io/gh/cpmech/gemlab/graph/badge.svg?token=OjQKQ0PrNF)](https://codecov.io/gh/cpmech/gemlab)
 [![Test & Coverage](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml)
 
-## Contents
+[![documentation](https://img.shields.io/badge/gemlab-documentation-blue)](https://docs.rs/gemlab)
 
-* [Introduction](#introduction)
-* [Installation](#installation)
-* [Setting Cargo.toml](#cargo)
-* [Examples](#examples)
+## Contents <!-- omit from toc -->
 
-## <a name="introduction"></a> Introduction
+- [Introduction](#introduction)
+  - [Documentation](#documentation)
+- [Installation](#installation)
+  - [TL;DR (Debian/Ubuntu/Linux)](#tldr-debianubuntulinux)
+  - [Details](#details)
+  - [Setting Cargo.toml](#setting-cargotoml)
+- [Examples](#examples)
+- [Roadmap](#roadmap)
+- [Appendix A - Shapes and local numbering of nodes](#appendix-a---shapes-and-local-numbering-of-nodes)
+  - [Lines (Lin)](#lines-lin)
+  - [Triangles (Tri)](#triangles-tri)
+  - [Quadrilaterals (Qua)](#quadrilaterals-qua)
+  - [Tetrahedra (Tet)](#tetrahedra-tet)
+  - [Hexahedra (Hex)](#hexahedra-hex)
+- [Appendix B - Geometry versus space dimensions](#appendix-b---geometry-versus-space-dimensions)
+
+
+
+## Introduction
 
 This crate contains structures and functions for geometry computations, generate meshes, and perform numerical integration for finite element analyses (FEM/FEA).
 
-**Documentation:**
+### Documentation
 
-[![Documentation](https://docs.rs/gemlab/badge.svg)](https://docs.rs/gemlab)
+[![documentation](https://img.shields.io/badge/gemlab-documentation-blue)](https://docs.rs/gemlab)
 
-## <a name="installation"></a> Installation
+
+## Installation
+
+At this moment, Gemlab works on **Linux** (Debian/Ubuntu; and maybe Arch).
+
+### TL;DR (Debian/Ubuntu/Linux)
+
+First:
+
+```bash
+sudo apt-get install -y --no-install-recommends \
+    g++ \
+    gdb \
+    gfortran \
+    liblapacke-dev \
+    libmumps-seq-dev \
+    libopenblas-dev \
+    libsuitesparse-dev
+```
+
+Then:
+
+```bash
+cargo add gemlab
+```
+
+### Details
 
 This crates depends on `russell_lab` and, hence, needs some external libraries. See the [installation of required dependencies](https://github.com/cpmech/russell) on `russell_lab`.
 
-## <a name="cargo"></a> Setting Cargo.toml
+### Setting Cargo.toml
 
 [![Crates.io](https://img.shields.io/crates/v/gemlab.svg)](https://crates.io/crates/gemlab)
 
@@ -34,7 +74,9 @@ This crates depends on `russell_lab` and, hence, needs some external libraries. 
 gemlab = "*"
 ```
 
-## <a name="examples"></a> Examples
+
+
+## Examples
 
 ```rust
 use gemlab::integ;
@@ -86,39 +128,42 @@ fn main() -> Result<(), StrError> {
 }
 ```
 
-## Todo
+
+
+## Roadmap
 
 - [x] Implement read/write mesh functions
 - [x] Add tests for the numerical integrations
-- [ ] Implement triangle and tetrahedron generators
+- [x] Implement triangle and tetrahedron generators
 - [x] Implement drawing functions
 
 
-## Appendix
 
-## Available shapes and local numbering of nodes
+## Appendix A - Shapes and local numbering of nodes
 
-### Lines -- Lin
+### Lines (Lin)
 
 ![lin_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_1_lin.svg)
 
-### Triangles -- Tri
+### Triangles (Tri)
 
 ![tri_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_2_tri.svg)
 
-### Quadrilaterals -- Qua
+### Quadrilaterals (Qua)
 
 ![qua_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_3_qua.svg)
 
-### Tetrahedra -- Tet
+### Tetrahedra (Tet)
 
 ![tet_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_4_tet.svg)
 
-### Hexahedra -- Hex
+### Hexahedra (Hex)
 
 ![hex_cells](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_draw_cells_and_points_work_5_hex.svg)
 
-### Geometry versus space dimensions
+
+
+## Appendix B - Geometry versus space dimensions
 
 The following table shows what combinations of geometry-number-of-dimensions (`geo_ndim`) and
 space-number-of-dimensions (`space_ndim`) are possible. There are three cases:
@@ -128,7 +173,7 @@ space-number-of-dimensions (`space_ndim`) are possible. There are three cases:
 3. Case `SOLID` -- `geo_ndim = space_ndim`; e.g., Tri and Qua in 2D or Tet and Hex in 3D
 
 | `geo_ndim` | `space_ndim = 2` | `space_ndim = 3` |
-|:----------:|:----------------:|:----------------:|
+| :--------: | :--------------: | :--------------: |
 |     1      |     `CABLE`      |     `CABLE`      |
 |     2      |     `SOLID`      |     `SHELL`      |
 |     3      |    impossible    |     `SOLID`      |
