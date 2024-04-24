@@ -76,7 +76,7 @@ use russell_lab::Vector;
 ///     integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
-///     vec_approx_eq(a.as_data(), &[10.0, 10.0, 10.0], 1e-14);
+///     vec_approx_eq(&a, &[10.0, 10.0, 10.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
@@ -185,7 +185,7 @@ mod tests {
             let mut args = CommonArgs::new(&mut pad, ips);
             let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
             integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][0])).unwrap();
-            vec_approx_eq(a.as_data(), a_correct, tol);
+            vec_approx_eq(&a, a_correct, tol);
         });
     }
 
@@ -212,7 +212,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(CS)).unwrap();
-            vec_approx_eq(a.as_data(), a_correct.as_data(), tol);
+            vec_approx_eq(&a, &a_correct, tol);
         });
     }
 
@@ -239,7 +239,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(CS)).unwrap();
-            vec_approx_eq(a.as_data(), &a_correct, tol);
+            vec_approx_eq(&a, &a_correct, tol);
         });
     }
 
@@ -269,7 +269,7 @@ mod tests {
             let mut args = CommonArgs::new(&mut pad, ips);
             let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
             integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][2])).unwrap();
-            vec_approx_eq(a.as_data(), &a_correct, tol);
+            vec_approx_eq(&a, &a_correct, tol);
         });
     }
 }

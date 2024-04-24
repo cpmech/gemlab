@@ -1,5 +1,4 @@
 use gemlab::prelude::*;
-use gemlab::shapes::GeoKind;
 use gemlab::StrError;
 
 fn main() -> Result<(), StrError> {

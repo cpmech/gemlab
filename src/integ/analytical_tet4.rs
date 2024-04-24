@@ -435,8 +435,8 @@ impl AnalyticalTet4 {
         let dim_kk = 12;
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd.mat).unwrap(); // cannot fail
-        mat_mat_mul(&mut kk, self.volume, &bb_t_dd, &self.bbe).unwrap(); // cannot fail
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd.mat, 0.0).unwrap(); // cannot fail
+        mat_mat_mul(&mut kk, self.volume, &bb_t_dd, &self.bbe, 0.0).unwrap(); // cannot fail
         Ok(kk)
     }
 }
@@ -447,7 +447,7 @@ impl AnalyticalTet4 {
 mod tests {
     use super::AnalyticalTet4;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_lab::{vec_approx_eq, Matrix};
+    use russell_lab::{mat_approx_eq, Matrix};
 
     #[test]
     fn analytical_tet4_works() {
@@ -471,7 +471,7 @@ mod tests {
         assert_eq!(tet.volume, 1.0 / 6.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        vec_approx_eq(tet.bb.as_data(), pad.gradient.as_data(), 1e-15);
+        mat_approx_eq(&tet.bb, &pad.gradient, 1e-15);
         let ee = 480.0;
         let nu = 1.0 / 3.0;
         let eb = ee / (12.0 * (1.0 - 2.0 * nu) * (1.0 + nu));
@@ -495,7 +495,7 @@ mod tests {
             [-tnu, -tnu, -tnh,  tnu, 0.0, 0.0, 0.0,  tnu, 0.0, 0.0, 0.0,  tnh],
         ]);
         let kk = tet.mat_10_bdb(ee, nu).unwrap();
-        vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-14);
+        mat_approx_eq(&kk, &kk_correct, 1e-14);
 
         // non-right-angles tet4
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Tet4).unwrap();
@@ -516,7 +516,7 @@ mod tests {
         assert_eq!(tet.volume, 4.0);
         // println!("gg=\n{}", tet.gg);
         // println!("gradient=\n{}", state.gradient);
-        vec_approx_eq(tet.bb.as_data(), pad.gradient.as_data(), 1e-15);
+        mat_approx_eq(&tet.bb, &pad.gradient, 1e-15);
         let kk = tet.mat_10_bdb(ee, nu).unwrap();
         #[rustfmt::skip]
         let kk_correct = Matrix::from(&[
@@ -533,6 +533,6 @@ mod tests {
             [-330.0,-1160.0,-300.0,  90.0,-380.0,-180.0,  60.0,  720.0, 120.0, 180.0,  820.0, 360.0],
             [-180.0, -420.0,-470.0,  60.0,-180.0,-230.0,   0.0,  240.0, 180.0, 120.0,  360.0, 520.0],
         ]);
-        vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-12);
+        mat_approx_eq(&kk, &kk_correct, 1e-12);
     }
 }

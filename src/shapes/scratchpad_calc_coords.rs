@@ -55,7 +55,7 @@ impl Scratchpad {
     ///
     ///     let mut x = Vector::new(2);
     ///     pad.calc_coords(&mut x, &[0.0, 0.0])?;
-    ///     vec_approx_eq(x.as_data(), &[x0 + w / 2.0, y0 + h / 2.0], 1e-15);
+    ///     vec_approx_eq(&x, &[x0 + w / 2.0, y0 + h / 2.0], 1e-15);
     ///     Ok(())
     /// }
     /// ```
@@ -140,7 +140,7 @@ mod tests {
 
                 // compare xᵐ with generated coordinates
                 aux::map_point_coords(&mut x_correct, ksi, ksi_min, ksi_del);
-                vec_approx_eq(x.as_data(), x_correct.as_data(), tol);
+                vec_approx_eq(&x, &x_correct, tol);
             }
 
             // test again inside the reference domain
@@ -151,7 +151,7 @@ mod tests {
             };
             pad.calc_coords(&mut x, &ksi_in).unwrap();
             aux::map_point_coords(&mut x_correct, &ksi_in, ksi_min, ksi_del);
-            vec_approx_eq(x.as_data(), x_correct.as_data(), tol_in);
+            vec_approx_eq(&x, &x_correct, tol_in);
         }
     }
 }

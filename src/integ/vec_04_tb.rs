@@ -86,7 +86,7 @@ use russell_tensor::{Mandel, Tensor2};
 ///     // B = │  ¼  0 │
 ///     //     │  0  ⅓ │
 ///     //     └       ┘
-///     vec_approx_eq(d.as_data(), &[-7.5, -8.5, 1.5, 4.5, 6.0, 4.0], 1e-14);
+///     vec_approx_eq(&d, &[-7.5, -8.5, 1.5, 4.5, 6.0, 4.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
@@ -245,7 +245,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(d.as_data(), d_correct.as_data(), tol);
+            vec_approx_eq(&d, &d_correct, tol);
         });
     }
 
@@ -287,7 +287,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(d.as_data(), d_correct.as_data(), tol);
+            vec_approx_eq(&d, &d_correct, tol);
         });
     }
 
@@ -325,7 +325,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(d.as_data(), &d_correct, tol);
+            vec_approx_eq(&d, &d_correct, tol);
         });
     }
 }

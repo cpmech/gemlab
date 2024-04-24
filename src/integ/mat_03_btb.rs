@@ -139,7 +139,7 @@ mod tests {
         self, AnalyticalQua4, AnalyticalQua8, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1,
         IP_TRI_INTERNAL_1,
     };
-    use russell_lab::{vec_approx_eq, Matrix, Vector};
+    use russell_lab::{mat_approx_eq, Matrix, Vector};
     use russell_tensor::{Mandel, Tensor2};
 
     #[test]
@@ -198,7 +198,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
+            mat_approx_eq(&kk, &kk_correct, tol);
         });
     }
 
@@ -222,7 +222,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
+            mat_approx_eq(&kk, &kk_correct, tol);
         });
     }
 
@@ -246,7 +246,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
+            mat_approx_eq(&kk, &kk_correct, tol);
         });
     }
 
@@ -275,7 +275,7 @@ mod tests {
             })
             .unwrap();
             // println!("{}", kk);
-            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
+            mat_approx_eq(&kk, &kk_correct, tol);
         });
     }
 }

@@ -77,7 +77,7 @@ use russell_lab::{Matrix, Vector};
 ///     // B = │  ¼  0 │
 ///     //     │  0  ⅓ │
 ///     //     └       ┘
-///     vec_approx_eq(c.as_data(), &[-5.5, 1.5, 4.0], 1e-14);
+///     vec_approx_eq(&c, &[-5.5, 1.5, 4.0], 1e-14);
 ///     Ok(())
 /// }
 /// ```
@@ -192,7 +192,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(c.as_data(), c_correct.as_data(), tol);
+            vec_approx_eq(&c, &c_correct, tol);
         });
     }
 
@@ -222,7 +222,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(c.as_data(), c_correct.as_data(), tol);
+            vec_approx_eq(&c, &c_correct, tol);
         });
     }
 
@@ -258,7 +258,7 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-            vec_approx_eq(c.as_data(), &c_correct, tol);
+            vec_approx_eq(&c, &c_correct, tol);
         });
     }
 }

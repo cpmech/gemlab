@@ -66,7 +66,7 @@ mod tests {
     use crate::mesh::algorithms::extract_all_2d_edges;
     use crate::mesh::{EdgeKey, Feature, PointId, Samples};
     use crate::util::AsArray2D;
-    use russell_lab::vec_approx_eq;
+    use russell_lab::array_approx_eq;
     use std::collections::HashMap;
 
     fn validate_edges<'a, T>(
@@ -295,8 +295,8 @@ mod tests {
             [13, 14, 24],
         ];
         validate_edges(&edges, &correct_keys, &correct_points);
-        vec_approx_eq(&min, &[0.0, 0.0], 1e-15);
-        vec_approx_eq(&max, &[2.0, 2.0], 1e-15);
+        array_approx_eq(&min, &[0.0, 0.0], 1e-15);
+        array_approx_eq(&max, &[2.0, 2.0], 1e-15);
         let mut points: Vec<_> = points.iter().map(|id| *id).collect();
         points.sort();
         assert_eq!(

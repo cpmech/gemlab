@@ -1,6 +1,6 @@
 use gemlab::integ::{self, AnalyticalTri3, CommonArgs};
 use gemlab::prelude::*;
-use gemlab::shapes::{GeoClass, GeoKind, Scratchpad, Tri3};
+use gemlab::shapes::Tri3;
 use russell_lab::{mat_approx_eq, vec_approx_eq, Matrix, Vector};
 
 // Example 5.6.1 from Lewis et al. Page 146
@@ -64,7 +64,7 @@ fn test_integ_heat_axis_1() {
     .unwrap();
     println!("kk = \n{:.1}", kk);
     println!("kk_correct = \n{:.1}", kk_correct);
-    vec_approx_eq(kk.as_data(), kk_correct.as_data(), 1e-13);
+    mat_approx_eq(&kk, &kk_correct, 1e-13);
 
     // convection on side 0
     let h_conv = 1.2;
@@ -95,7 +95,7 @@ fn test_integ_heat_axis_1() {
     let f_source_correct = ana.vec_01_ns(source, true);
     println!("f_source = \n{}", f);
     println!("f_source_correct = \n{}", f_source_correct);
-    vec_approx_eq(f.as_data(), f_source_correct.as_data(), 1e-13);
+    vec_approx_eq(&f, &f_source_correct, 1e-13);
 
     // convection on side 0
     let mut f_conv = Vector::new(2);
@@ -104,7 +104,7 @@ fn test_integ_heat_axis_1() {
     let f_conv_correct = ana.vec_01_ns_bry(0, h_conv * temp_env, true);
     println!("f_conv = \n{}", f_conv);
     println!("f_conv_correct = \n{}", f_conv_correct);
-    vec_approx_eq(f_conv.as_data(), f_conv_correct.as_data(), 1e-13);
+    vec_approx_eq(&f_conv, &f_conv_correct, 1e-13);
 
     // flux on side 1
     let mut f_flux = Vector::new(2);
@@ -113,7 +113,7 @@ fn test_integ_heat_axis_1() {
     let f_flux_correct = ana.vec_01_ns_bry(1, flux, true);
     println!("f_flux = \n{}", f_flux);
     println!("f_flux_correct = \n{}", f_flux_correct);
-    vec_approx_eq(f_flux.as_data(), f_flux_correct.as_data(), 1e-13);
+    vec_approx_eq(&f_flux, &f_flux_correct, 1e-13);
 
     // f-total
     for i in 0..2 {
@@ -140,5 +140,5 @@ fn test_integ_heat_axis_1() {
         (gg*aa/12.0)*(ri+rj+2.0*rk) + (q*ljk/6.0)*(rj+2.0*rk) + 0.0,
     ]);
     println!("f_lewis = \n{}", f_lewis);
-    vec_approx_eq(f.as_data(), f_lewis.as_data(), 1e-13);
+    vec_approx_eq(&f, &f_lewis, 1e-13);
 }

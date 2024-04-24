@@ -587,8 +587,7 @@ impl Unstructured {
 mod tests {
     use super::*;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{At, Features, Figure, Mesh};
-    use crate::shapes::GeoKind;
+    use crate::mesh::{At, Features, Figure};
     use crate::util::any_x;
     use plotpy::Surface;
     use russell_lab::approx_eq;
@@ -915,8 +914,8 @@ mod tests {
     fn draw_ring_3d_with_cylin(mesh: &Mesh, filename: &str) {
         let mut cylin_in = Surface::new();
         let mut cylin_out = Surface::new();
-        cylin_in.set_solid_color("#ff000020");
-        cylin_out.set_solid_color("#ff000020");
+        cylin_in.set_surf_color("#ff000020");
+        cylin_out.set_surf_color("#ff000020");
         cylin_in
             .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMIN, 5, 81)
             .unwrap();

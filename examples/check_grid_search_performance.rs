@@ -9,7 +9,7 @@ const R2: f64 = 6.0; // outer radius
 fn run(grid_search_ndiv: usize, nr: usize, na: usize) -> Result<(), StrError> {
     println!("\ngrid.ndiv       = {}", grid_search_ndiv);
 
-    let mut sw = Stopwatch::new("");
+    let mut sw = Stopwatch::new();
 
     let den = 6.0;
 

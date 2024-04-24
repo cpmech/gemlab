@@ -147,7 +147,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs};
-    use russell_lab::{vec_approx_eq, Matrix, Vector};
+    use russell_lab::{mat_approx_eq, Matrix, Vector};
 
     #[test]
     fn capture_some_errors() {
@@ -192,7 +192,7 @@ mod tests {
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_07_bsn(&mut kk, &mut args, &mut pad_b, |_, _, _, _| Ok(s)).unwrap();
             // println!("{:.2}", kk);
-            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
+            mat_approx_eq(&kk, &kk_correct, tol);
         });
     }
 
@@ -213,7 +213,7 @@ mod tests {
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_07_bsn(&mut kk, &mut args, &mut pad_b, |_, _, _, _| Ok(s)).unwrap();
             // println!("{}", kk);
-            vec_approx_eq(kk.as_data(), kk_correct.as_data(), tol);
+            mat_approx_eq(&kk, &kk_correct, tol);
         });
     }
 }

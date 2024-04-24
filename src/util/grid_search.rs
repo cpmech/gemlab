@@ -858,7 +858,7 @@ mod tests {
     use super::{any_x, GridSearch, GS_DEFAULT_TOLERANCE};
     use plotpy::Plot;
     use russell_lab::math::{SQRT_2, SQRT_3};
-    use russell_lab::{approx_eq, vec_approx_eq};
+    use russell_lab::{approx_eq, array_approx_eq};
 
     #[allow(unused_imports)]
     use plotpy::{Canvas, Curve, RayEndpoint, Surface};
@@ -988,8 +988,8 @@ mod tests {
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.ndiv, [10, 20]);
         approx_eq(grid.side_length, 0.102, 1e-15);
-        vec_approx_eq(&grid.xmin, &[-0.21, -0.21], 1e-15);
-        vec_approx_eq(&grid.xmax, &[0.81, -0.21 + 20.0 * 0.102], 1e-15);
+        array_approx_eq(&grid.xmin, &[-0.21, -0.21], 1e-15);
+        array_approx_eq(&grid.xmax, &[0.81, -0.21 + 20.0 * 0.102], 1e-15);
         assert_eq!(grid.coefficient, &[1, 10, 10 * 20]);
         assert_eq!(grid.tolerance, GS_DEFAULT_TOLERANCE);
         approx_eq(grid.tol_dist, SQRT_2 * GS_DEFAULT_TOLERANCE, 1e-15);
@@ -1002,8 +1002,8 @@ mod tests {
         assert_eq!(grid.ndim, 2);
         assert_eq!(grid.ndiv, [4, 8]);
         approx_eq(grid.side_length, 0.3, 1e-15);
-        vec_approx_eq(&grid.xmin, &[-0.3, -0.3], 1e-15);
-        vec_approx_eq(&grid.xmax, &[0.9, 2.1], 1e-15);
+        array_approx_eq(&grid.xmin, &[-0.3, -0.3], 1e-15);
+        array_approx_eq(&grid.xmax, &[0.9, 2.1], 1e-15);
         assert_eq!(grid.coefficient, &[1, 4, 4 * 8]);
         assert_eq!(grid.tolerance, GS_DEFAULT_TOLERANCE);
         approx_eq(grid.tol_dist, SQRT_2 * GS_DEFAULT_TOLERANCE, 1e-15);
@@ -1016,8 +1016,8 @@ mod tests {
         assert_eq!(grid.ndim, 3);
         assert_eq!(grid.ndiv, [2, 2, 2]);
         approx_eq(grid.side_length, 1.1, 1e-15);
-        vec_approx_eq(&grid.xmin, &[-1.1, -1.1, -1.1], 1e-15);
-        vec_approx_eq(&grid.xmax, &[1.1, 1.1, 1.1], 1e-15);
+        array_approx_eq(&grid.xmin, &[-1.1, -1.1, -1.1], 1e-15);
+        array_approx_eq(&grid.xmax, &[1.1, 1.1, 1.1], 1e-15);
         assert_eq!(grid.coefficient, &[1, 2, 2 * 2]);
         assert_eq!(grid.tolerance, GS_DEFAULT_TOLERANCE);
         approx_eq(grid.tol_dist, SQRT_3 * GS_DEFAULT_TOLERANCE, 1e-15);
@@ -1207,9 +1207,9 @@ mod tests {
         let (xb, yb) = (grid.xmax[0], grid.xmax[1]);
         let h = grid.side_length / 2.0;
         grid.container_center(&mut x, 0, 0, 0);
-        vec_approx_eq(&x, &[xa + h, ya + h], 1e-15);
+        array_approx_eq(&x, &[xa + h, ya + h], 1e-15);
         grid.container_center(&mut x, grid.ndiv[0] - 1, grid.ndiv[1] - 1, 0);
-        vec_approx_eq(&x, &[xb - h, yb - h], 1e-15);
+        array_approx_eq(&x, &[xb - h, yb - h], 1e-15);
 
         let grid = sample_grid_3d();
         let mut x = vec![0.0; 3];
@@ -1217,9 +1217,9 @@ mod tests {
         let (xb, yb, zb) = (grid.xmax[0], grid.xmax[1], grid.xmax[2]);
         let h = grid.side_length / 2.0;
         grid.container_center(&mut x, 0, 0, 0);
-        vec_approx_eq(&x, &[xa + h, ya + h, za + h], 1e-15);
+        array_approx_eq(&x, &[xa + h, ya + h, za + h], 1e-15);
         grid.container_center(&mut x, grid.ndiv[0] - 1, grid.ndiv[1] - 1, grid.ndiv[2] - 1);
-        vec_approx_eq(&x, &[xb - h, yb - h, zb - h], 1e-15);
+        array_approx_eq(&x, &[xb - h, yb - h, zb - h], 1e-15);
     }
 
     #[test]
