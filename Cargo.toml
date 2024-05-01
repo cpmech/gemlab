@@ -13,10 +13,10 @@ keywords = ["geometry", "mesh", "fem"]
 
 [dependencies]
 plotpy = "0.6"
-russell_lab = "1.2"
-russell_sparse = "1.2"
-russell_stat = "1.2"
-russell_tensor = "1.2"
+russell_lab = "1.4"
+russell_sparse = "1.4"
+russell_stat = "1.4"
+russell_tensor = "1.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tritet = "0.4"

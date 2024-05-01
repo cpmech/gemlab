@@ -2090,7 +2090,7 @@ mod tests {
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 12);
         mesh.check_all().unwrap();
-        if true {
+        if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_mesh_graph_12_edges.svg");
         }
 
