@@ -144,7 +144,7 @@ where
 /// Adds contribution to the d-vector in vec_04_tb
 #[inline]
 fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, args: &mut CommonArgs) {
-    let t = &sig.vec;
+    let t = sig.vector();
     let s = SQRT_2;
     let b = &args.pad.gradient;
     let ii0 = args.ii0;
@@ -165,7 +165,7 @@ fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, ar
 /// Adds contribution to the d-vector in vec_04_tb (axisymmetric case)
 #[inline]
 fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Tensor2, args: &mut CommonArgs) {
-    let t = &sig.vec;
+    let t = sig.vector();
     let s = SQRT_2;
     let nn = &args.pad.interp;
     let b = &args.pad.gradient;
@@ -321,7 +321,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
-                sig.mirror(&tt).unwrap();
+                sig.mirror(&tt);
                 Ok(())
             })
             .unwrap();

@@ -93,7 +93,7 @@ use russell_tensor::{Mandel, Tensor4};
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut args = integ::CommonArgs::new(&mut pad, ips);
 ///     integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-///         dd.mirror(model.get_modulus())?;
+///         dd.mirror(model.get_modulus());
 ///         Ok(())
 ///     })?;
 ///
@@ -178,7 +178,7 @@ where
 fn add_to_kk(kk: &mut Matrix, ndim: usize, nnode: usize, c: f64, dd: &Tensor4, args: &mut CommonArgs) {
     let s = SQRT_2;
     let b = &args.pad.gradient;
-    let d = &dd.mat;
+    let d = dd.matrix();
     let (ii0, jj0) = (args.ii0, args.jj0);
     if ndim == 2 {
         for m in 0..nnode {
@@ -211,7 +211,7 @@ fn add_to_kk(kk: &mut Matrix, ndim: usize, nnode: usize, c: f64, dd: &Tensor4, a
 #[rustfmt::skip]
 fn add_to_kk_axisymmetric(kk: &mut Matrix, nnode: usize, c: f64, r: f64, dd: &Tensor4, args: &mut CommonArgs) {
     let s = SQRT_2;
-    let d = &dd.mat;
+    let d = dd.matrix();
     let nn = &args.pad.interp;
     let b = &args.pad.gradient;
     let (ii0, jj0) = (args.ii0, args.jj0);
@@ -332,7 +332,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.alpha = thickness;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus())?;
+            dd.mirror(model.get_modulus());
             Ok(())
         })
         .unwrap();
@@ -364,7 +364,7 @@ mod tests {
             let mut args = CommonArgs::new(&mut pad, ips);
             args.alpha = thickness;
             integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-                dd.mirror(model.get_modulus())?;
+                dd.mirror(model.get_modulus());
                 Ok(())
             })
             .unwrap();
@@ -400,7 +400,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-                dd.mirror(model.get_modulus())?;
+                dd.mirror(model.get_modulus());
                 Ok(())
             })
             .unwrap();
@@ -475,7 +475,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus())?;
+            dd.mirror(model.get_modulus());
             Ok(())
         })
         .unwrap();
@@ -485,7 +485,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus())?;
+            dd.mirror(model.get_modulus());
             Ok(())
         })
         .unwrap();
@@ -495,7 +495,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus())?;
+            dd.mirror(model.get_modulus());
             Ok(())
         })
         .unwrap();
@@ -505,7 +505,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus())?;
+            dd.mirror(model.get_modulus());
             Ok(())
         })
         .unwrap();

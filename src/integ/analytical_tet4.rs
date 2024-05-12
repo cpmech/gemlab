@@ -225,7 +225,7 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn vec_04_tb(&self, tt: &Tensor2) -> Vec<f64> {
         let c = self.volume;
-        let mat = tt.to_matrix();
+        let mat = tt.as_matrix();
         let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
         let (a11, a12) = (mat.get(1,1), mat.get(1,2));
         let a22 = mat.get(2,2);
@@ -277,7 +277,7 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_03_btb(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume;
-        let mat = tt.to_matrix();
+        let mat = tt.as_matrix();
         let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
         let (a10, a11, a12) = (mat.get(1,0), mat.get(1,1), mat.get(1,2));
         let (a20, a21, a22) = (mat.get(2,0), mat.get(2,1), mat.get(2,2));
@@ -313,7 +313,7 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_05_btn(&self, tt: &Tensor2) -> Matrix {
         let c = self.volume / 4.0;
-        let mat = tt.to_matrix();
+        let mat = tt.as_matrix();
         let (t00, t01, t02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
         let (t11, t12) = (mat.get(1,1), mat.get(1,2));
         let t22 = mat.get(2,2);
@@ -377,7 +377,7 @@ impl AnalyticalTet4 {
     #[rustfmt::skip]
     pub fn mat_08_ntn(&self, sig: &Tensor2) -> Matrix {
         let vv = self.volume;
-        let mat = sig.to_matrix();
+        let mat = sig.as_matrix();
         let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
         let (a10, a11, a12) = (mat.get(1,0), mat.get(1,1), mat.get(1,2));
         let (a20, a21, a22) = (mat.get(2,0), mat.get(2,1), mat.get(2,2));
@@ -435,7 +435,7 @@ impl AnalyticalTet4 {
         let dim_kk = 12;
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd.mat, 0.0).unwrap(); // cannot fail
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, dd.matrix(), 0.0).unwrap(); // cannot fail
         mat_mat_mul(&mut kk, self.volume, &bb_t_dd, &self.bbe, 0.0).unwrap(); // cannot fail
         Ok(kk)
     }

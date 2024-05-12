@@ -124,7 +124,7 @@ where
         };
 
         // add contribution to K matrix
-        let t = &tt.vec;
+        let t = tt.vector();
         if space_ndim == 2 {
             for m in 0..nnode_b {
                 for n in 0..nnode {
@@ -222,7 +222,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
-                ten.mirror(&tt)?;
+                ten.mirror(&tt);
                 Ok(())
             })
             .unwrap();
@@ -252,7 +252,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
-                ten.mirror(&tt)?;
+                ten.mirror(&tt);
                 Ok(())
             })
             .unwrap();
