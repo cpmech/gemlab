@@ -93,7 +93,7 @@ use russell_tensor::{Mandel, Tensor4};
 ///     let ips = integ::default_points(pad.kind);
 ///     let mut args = integ::CommonArgs::new(&mut pad, ips);
 ///     integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-///         dd.mirror(model.get_modulus());
+///         dd.set_tensor(1.0, model.get_modulus());
 ///         Ok(())
 ///     })?;
 ///
@@ -332,7 +332,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.alpha = thickness;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus());
+            dd.set_tensor(1.0, model.get_modulus());
             Ok(())
         })
         .unwrap();
@@ -364,7 +364,7 @@ mod tests {
             let mut args = CommonArgs::new(&mut pad, ips);
             args.alpha = thickness;
             integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-                dd.mirror(model.get_modulus());
+                dd.set_tensor(1.0, model.get_modulus());
                 Ok(())
             })
             .unwrap();
@@ -400,7 +400,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-                dd.mirror(model.get_modulus());
+                dd.set_tensor(1.0, model.get_modulus());
                 Ok(())
             })
             .unwrap();
@@ -475,7 +475,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus());
+            dd.set_tensor(1.0, model.get_modulus());
             Ok(())
         })
         .unwrap();
@@ -485,7 +485,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus());
+            dd.set_tensor(1.0, model.get_modulus());
             Ok(())
         })
         .unwrap();
@@ -495,7 +495,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus());
+            dd.set_tensor(1.0, model.get_modulus());
             Ok(())
         })
         .unwrap();
@@ -505,7 +505,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, ips);
         args.axisymmetric = true;
         integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.mirror(model.get_modulus());
+            dd.set_tensor(1.0, model.get_modulus());
             Ok(())
         })
         .unwrap();

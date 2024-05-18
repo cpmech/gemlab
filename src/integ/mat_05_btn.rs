@@ -222,7 +222,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
-                ten.mirror(&tt);
+                ten.set_tensor(1.0, &tt);
                 Ok(())
             })
             .unwrap();
@@ -252,7 +252,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
-                ten.mirror(&tt);
+                ten.set_tensor(1.0, &tt);
                 Ok(())
             })
             .unwrap();

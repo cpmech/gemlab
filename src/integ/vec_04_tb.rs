@@ -321,7 +321,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
-                sig.mirror(&tt);
+                sig.set_tensor(1.0, &tt);
                 Ok(())
             })
             .unwrap();

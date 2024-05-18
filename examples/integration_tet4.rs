@@ -35,7 +35,7 @@ fn main() -> Result<(), StrError> {
     let ips = integ::default_points(pad.kind);
     let mut args = integ::CommonArgs::new(&mut pad, ips);
     integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-        dd.mirror(model.get_modulus());
+        dd.set_tensor(1.0, model.get_modulus());
         Ok(())
     })?;
 

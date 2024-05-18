@@ -227,7 +227,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_08_ntn(&mut kk, &mut args, |tt, _, _, _| {
-                tt.mirror(&sig);
+                tt.set_tensor(1.0, &sig);
                 Ok(())
             })
             .unwrap();
