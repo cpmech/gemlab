@@ -62,6 +62,9 @@ pub struct Figure {
 
     /// Parameter: specifies the figure size in points
     pub figure_size: Option<(f64, f64)>,
+
+    /// Parameter: shows point marker within parenthesis (if not zero)
+    pub with_point_marker: bool,
 }
 
 impl Figure {
@@ -127,6 +130,7 @@ impl Figure {
             range_2d: None,
             range_3d: None,
             figure_size: None,
+            with_point_marker: true,
         }
     }
 }
@@ -157,7 +161,7 @@ impl Mesh {
     pub fn draw_point_ids(&self, fig: &mut Figure) {
         if self.ndim == 2 {
             self.points.iter().for_each(|point| {
-                let msg = if point.marker != 0 {
+                let msg = if point.marker != 0 && fig.with_point_marker {
                     format!("{}({})", point.id, point.marker)
                 } else {
                     format!("{}", point.id)
@@ -166,7 +170,7 @@ impl Mesh {
             });
         } else {
             self.points.iter().for_each(|point| {
-                let msg = if point.marker != 0 {
+                let msg = if point.marker != 0 && fig.with_point_marker {
                     format!("{}({})", point.id, point.marker)
                 } else {
                     format!("{}", point.id)
