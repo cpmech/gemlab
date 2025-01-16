@@ -126,6 +126,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
+    use crate::recovery;
     use russell_lab::{mat_approx_eq, Matrix, Vector};
 
     #[test]
@@ -195,7 +196,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            let x_ips = recovery::points_coords(&mut args.pad, ips).unwrap();
             integ::mat_02_bvn(&mut kk, &mut args, |v, p, _, _| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][1];

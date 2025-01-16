@@ -59,6 +59,7 @@ where
 mod tests {
     use super::scalar_field;
     use crate::integ;
+    use crate::recovery;
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::approx_eq;
 
@@ -113,7 +114,7 @@ mod tests {
         let ii_correct = 8.0 / 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -128,7 +129,7 @@ mod tests {
         let ii_correct = 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -215,7 +216,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -231,7 +232,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];

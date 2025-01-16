@@ -25,7 +25,7 @@ use russell_lab::Vector;
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ::points_coords;
+/// use gemlab::recovery::points_coords;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 ///

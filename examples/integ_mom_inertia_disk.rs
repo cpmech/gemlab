@@ -1,5 +1,6 @@
-use gemlab::integ::{default_points, points_coords, scalar_field};
+use gemlab::integ::{default_points, scalar_field};
 use gemlab::prelude::*;
+use gemlab::recovery::points_coords;
 use gemlab::StrError;
 use russell_lab::approx_eq;
 use russell_lab::math::PI;

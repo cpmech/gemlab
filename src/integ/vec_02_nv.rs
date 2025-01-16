@@ -149,6 +149,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use crate::recovery;
     use russell_lab::{vec_approx_eq, Vector};
 
     #[test]
@@ -193,7 +194,7 @@ mod tests {
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::points_coords(&mut pad, ips).unwrap();
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_02_nv(&mut b, &mut args, |v, p, _| {
                 v[0] = x_ips[p][0];
