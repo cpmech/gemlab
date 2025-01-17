@@ -32,16 +32,44 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 /// 1. Durand R and Farias MM (2014) A local extrapolation method for finite elements,
 ///    Advances in Engineering Software, 67:1-9 <https://doi.org/10.1016/j.advengsoft.2013.07.002>
 pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Matrix, StrError> {
-    let nnode = pad.interp.dim();
+    let (nnode, geo_ndim) = pad.deriv.dims();
     let n_integ_point = integ_points.len();
     let mut ee = Matrix::new(nnode, n_integ_point);
     let mut pp = get_interp_matrix(pad, integ_points);
-    if n_integ_point < nnode {
-        return Err("TODO");
-    } else if n_integ_point == nnode {
+    // println!("P =\n{}", pp);
+    if n_integ_point == nnode {
         mat_inverse(&mut ee, &pp)?;
-    } else {
+    } else if n_integ_point > nnode {
         mat_pseudo_inverse(&mut ee, &mut pp)?;
+    } else if n_integ_point == 1 {
+        mat_pseudo_inverse(&mut ee, &mut pp)?;
+    } else {
+        // From Reference # 1:
+
+        // ξ matrix (nnode,geo_ndim+1) with natural coordinates of nodes, augmented by a column with ones.
+        // From Ref #1: ξ is a matrix containing the local (reference) coordinates of nodes (Eq. (31) of Ref #1).
+        let mut ksi = Matrix::new(nnode, geo_ndim + 1);
+        for m in 0..nnode {
+            let r = pad.kind.reference_coords(m);
+            for d in 0..geo_ndim {
+                ksi.set(m, d, r[d]);
+            }
+            ksi.set(m, geo_ndim, 1.0);
+        }
+
+        // ξ_hat matrix (n_integ_point,geo_ndim+1) with the natural coordinates of the integration points, augmented by a column with ones.
+        // From Ref #1: ξ_hat is a matrix containing the local (reference) coordinates of the sampling (integration) points (Eq. (30) of Ref #1)
+        let mut ksi_hat = Matrix::new(n_integ_point, geo_ndim + 1);
+        for i in 0..n_integ_point {
+            for d in 0..geo_ndim {
+                ksi_hat.set(i, d, integ_points[i][d]);
+            }
+            ksi_hat.set(i, geo_ndim, 1.0);
+        }
+
+        println!("ksi =\n{}", ksi);
+        println!("ksi_hat =\n{}", ksi_hat);
+        return Err("TODO");
     }
     return Ok(ee);
 }
@@ -51,9 +79,9 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Res
 #[cfg(test)]
 mod tests {
     use super::get_extrap_matrix;
-    use crate::integ::IP_QUA_LEGENDRE_4;
+    use crate::integ::{IP_QUA_LEGENDRE_1, IP_QUA_LEGENDRE_4};
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_lab::{mat_vec_mul, vec_approx_eq, Vector};
+    use russell_lab::{mat_approx_eq, mat_vec_mul, vec_approx_eq, Matrix, Vector};
 
     #[test]
     pub fn get_extrap_matrix_works() {
@@ -105,5 +133,34 @@ mod tests {
 
         // check
         vec_approx_eq(&u_nodes, &u_nodes_original, 1e-15);
+    }
+
+    #[test]
+    pub fn get_extrap_matrix_works_1ip() {
+        //  3-------------2         ξ₀   ξ₁
+        //  |      ξ₁     |  node    r    s
+        //  |      |      |     0 -1.0 -1.0
+        //  |      *--ξ₀  |     1  1.0 -1.0
+        //  |             |     2  1.0  1.0
+        //  |             |     3 -1.0  1.0
+        //  0-------------1
+
+        let (w, h) = (20.0, 10.0);
+        let space_ndim = 2;
+        let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4).unwrap();
+        pad.set_xx(0, 0, 0.0);
+        pad.set_xx(0, 1, 0.0);
+        pad.set_xx(1, 0, w);
+        pad.set_xx(1, 1, 0.0);
+        pad.set_xx(2, 0, w);
+        pad.set_xx(2, 1, h);
+        pad.set_xx(3, 0, 0.0);
+        pad.set_xx(3, 1, h);
+
+        let ips = &IP_QUA_LEGENDRE_1;
+        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+        // println!("E =\n{}", ee);
+        let ee_correct = Matrix::from(&[[1.0], [1.0], [1.0], [1.0]]); // the pseudo-inverse of P = [0.25, 0.25, 0.25, 0.25]
+        mat_approx_eq(&ee, &ee_correct, 1e-15);
     }
 }
