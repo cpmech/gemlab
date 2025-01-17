@@ -1,7 +1,7 @@
 use crate::shapes::Scratchpad;
 use russell_lab::Matrix;
 
-/// Returns a matrix formed by the interpolation functions evaluated at all integration points
+/// Calculates the interpolation matrix (nodes to integration points)
 ///
 /// # Input
 ///
@@ -10,7 +10,8 @@ use russell_lab::Matrix;
 ///
 /// # Output
 ///
-/// * `M` -- The `(n_integ_point,nnode)` interpolation matrix
+/// * `P` -- The `(n_integ_point,nnode)` interpolation matrix. Returns a matrix
+///   formed by the interpolation functions evaluated at all integration points.
 ///
 /// Possible use:
 ///
@@ -34,14 +35,14 @@ use russell_lab::Matrix;
 pub fn get_interp_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Matrix {
     let nnode = pad.interp.dim();
     let n_integ_point = integ_points.len();
-    let mut mm = Matrix::new(n_integ_point, nnode);
+    let mut pp = Matrix::new(n_integ_point, nnode);
     for i in 0..n_integ_point {
         (pad.fn_interp)(&mut pad.interp, &integ_points[i]);
         for j in 0..nnode {
-            mm.set(i, j, pad.interp[j]);
+            pp.set(i, j, pad.interp[j]);
         }
     }
-    mm
+    pp
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -76,8 +77,8 @@ mod tests {
         pad.set_xx(3, 1, h);
 
         let ips = &IP_QUA_LEGENDRE_4;
-        let mm = get_interp_matrix(&mut pad, ips);
-        assert_eq!(mm.dims(), (4, 4));
+        let pp = get_interp_matrix(&mut pad, ips);
+        assert_eq!(pp.dims(), (4, 4));
 
         // For one integration point:
         //
@@ -96,7 +97,7 @@ mod tests {
         for i in 0..nip {
             for j in 0..ndim {
                 for k in 0..nnode {
-                    xx_ips.add(i, j, mm.get(i, k) * pad.xxt.get(j, k));
+                    xx_ips.add(i, j, pp.get(i, k) * pad.xxt.get(j, k));
                 }
             }
         }

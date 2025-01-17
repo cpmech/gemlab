@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 
-/// Calculates the extrapolator matrix (integration points to nodes)
+/// Calculates the extrapolation matrix (integration points to nodes)
 ///
 /// # Input
 ///
@@ -12,7 +12,7 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///
 /// # Output
 ///
-/// * `E` -- The (nnode,n_integ_point) extrapolator matrix; aka "inverse" of the
+/// * `E` -- The (nnode,n_integ_point) extrapolation matrix; aka "inverse" of the
 ///    interpolation matrix `P` calculated by [get_interp_matrix()]. See note below
 ///    regarding the inversion problem.
 ///
@@ -29,19 +29,19 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///
 /// # Reference
 ///
-/// [1] Durand R and Farias MM (2014) A local extrapolation method for finite elements,
-///     Advances in Engineering Software, 67:1-9
+/// 1. Durand R and Farias MM (2014) A local extrapolation method for finite elements,
+///    Advances in Engineering Software, 67:1-9 <https://doi.org/10.1016/j.advengsoft.2013.07.002>
 pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Matrix, StrError> {
     let nnode = pad.interp.dim();
     let n_integ_point = integ_points.len();
     let mut ee = Matrix::new(nnode, n_integ_point);
-    let mut mm = get_interp_matrix(pad, integ_points);
+    let mut pp = get_interp_matrix(pad, integ_points);
     if n_integ_point < nnode {
         return Err("TODO");
     } else if n_integ_point == nnode {
-        mat_inverse(&mut ee, &mm)?;
+        mat_inverse(&mut ee, &pp)?;
     } else {
-        mat_pseudo_inverse(&mut ee, &mut mm)?;
+        mat_pseudo_inverse(&mut ee, &mut pp)?;
     }
     return Ok(ee);
 }
