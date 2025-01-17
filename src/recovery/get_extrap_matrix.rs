@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use super::get_interp_matrix;
 use crate::shapes::Scratchpad;
 use crate::StrError;
@@ -14,8 +12,26 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///
 /// # Output
 ///
-/// * `E` -- The (nnode,n_integ_point) extrapolator matrix
-pub fn get_extrapolator(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Matrix, StrError> {
+/// * `E` -- The (nnode,n_integ_point) extrapolator matrix; aka "inverse" of the
+///    interpolation matrix `P` calculated by [get_interp_matrix()]. See note below
+///    regarding the inversion problem.
+///
+/// This function returns the "inverse" of the interpolation matrix; however, the inverse
+/// is only possible if `n_integ_points == nnode`. If there are more interpolation points
+/// than nodes (`n_integ_points > node`), the problem is over-determined, and we use the
+/// pseudo-inverse instead. If there are fewer interpolation points than nodes
+/// (`n_integ_points < nnode`), the problem is under-determined and may even yield
+/// spurious results. To avoid such results and minimize the errors, we adopt the method
+/// proposed by Durand and Farias in Reference #1. In this case, a correction matrix is
+/// applied to the pseudo-inverse, and a translation is applied to the result.
+/// An exception exists: with a single integration point, the pseudo-inverse is returned
+/// without any correction.
+///
+/// # Reference
+///
+/// [1] Durand R and Farias MM (2014) A local extrapolation method for finite elements,
+///     Advances in Engineering Software, 67:1-9
+pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Matrix, StrError> {
     let nnode = pad.interp.dim();
     let n_integ_point = integ_points.len();
     let mut ee = Matrix::new(nnode, n_integ_point);
@@ -34,13 +50,13 @@ pub fn get_extrapolator(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use super::get_extrapolator;
+    use super::get_extrap_matrix;
     use crate::integ::IP_QUA_LEGENDRE_4;
     use crate::shapes::{GeoKind, Scratchpad};
-    use russell_lab::{approx_eq, mat_approx_eq, mat_vec_mul, vec_approx_eq, Matrix, Vector};
+    use russell_lab::{mat_vec_mul, vec_approx_eq, Vector};
 
     #[test]
-    pub fn get_shape_matrix_works() {
+    pub fn get_extrap_matrix_works() {
         //  3-------------2         ξ₀   ξ₁
         //  | *    ξ₁   * |  node    r    s
         //  |      |      |     0 -1.0 -1.0
@@ -62,13 +78,22 @@ mod tests {
         pad.set_xx(3, 1, h);
 
         let ips = &IP_QUA_LEGENDRE_4;
-        let ee = get_extrapolator(&mut pad, ips).unwrap();
+        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
         assert_eq!(ee.dims(), (4, 4));
 
-        // U values @ integration points
+        // original U values at nodes
+        let u_nodes_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]);
+
+        // interpolated U values @ integration points
         let nip = ips.len();
-        let (_, nnode) = pad.xxt.dims();
-        let u_ips = Vector::from(&[4.0, 4.0, 4.0, 4.0]);
+        let nnode = 4;
+        let mut u_ips = Vector::new(nip);
+        for i in 0..nip {
+            (pad.fn_interp)(&mut pad.interp, &ips[i]);
+            for m in 0..nnode {
+                u_ips[i] += pad.interp[m] * u_nodes_original[m];
+            }
+        }
 
         // extrapolated U values @ nodes points
         let mut u_nodes = Vector::new(nnode);
@@ -78,6 +103,7 @@ mod tests {
         // println!("U_ips =\n{}", u_ips);
         // println!("U_nodes =\n{}", u_nodes);
 
-        vec_approx_eq(&u_ips, &u_nodes, 1e-14);
+        // check
+        vec_approx_eq(&u_nodes, &u_nodes_original, 1e-15);
     }
 }

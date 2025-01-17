@@ -4,6 +4,7 @@
     "conv",
     "cuthill",
     "deque",
+    "extrap",
     "nfacet",
     "Stockmeyer"
   ]
