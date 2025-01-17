@@ -184,7 +184,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            let x_ips = recovery::points_coords(&mut args.pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut args.pad, ips).unwrap();
             integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][0])).unwrap();
             vec_approx_eq(&a, a_correct, tol);
         });
@@ -268,7 +268,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            let x_ips = recovery::points_coords(&mut args.pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut args.pad, ips).unwrap();
             integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][2])).unwrap();
             vec_approx_eq(&a, &a_correct, tol);
         });

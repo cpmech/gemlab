@@ -25,7 +25,7 @@ use russell_lab::Vector;
 /// # Examples
 ///
 /// ```
-/// use gemlab::recovery::points_coords;
+/// use gemlab::recovery::get_points_coords;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 ///
@@ -55,7 +55,7 @@ use russell_lab::Vector;
 ///         [1.0 / 6.0, 2.0 / 3.0, 0.0, 1.0 / 6.0],
 ///     ];
 ///
-///     let x_ips = points_coords(&mut pad, &IP_TRI_INTERNAL_3)?;
+///     let x_ips = get_points_coords(&mut pad, &IP_TRI_INTERNAL_3)?;
 ///     assert_eq!(x_ips[0].as_data(), &[1.0, 1.0]);
 ///     assert_eq!(x_ips[1].as_data(), &[4.0, 1.0]);
 ///     assert_eq!(x_ips[2].as_data(), &[1.0, 4.0]);
@@ -63,7 +63,7 @@ use russell_lab::Vector;
 /// }
 ///
 /// ```
-pub fn points_coords(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Vec<Vector>, StrError> {
+pub fn get_points_coords(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Vec<Vector>, StrError> {
     let space_ndim = pad.xxt.dims().0;
     let mut all_coords = Vec::new();
     for iota in integ_points {
@@ -78,7 +78,7 @@ pub fn points_coords(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<
 
 #[cfg(test)]
 mod tests {
-    use super::points_coords;
+    use super::get_points_coords;
     use crate::integ::IP_QUA_LEGENDRE_4;
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::approx_eq;
@@ -105,7 +105,7 @@ mod tests {
         pad.set_xx(3, 0, 0.0);
         pad.set_xx(3, 1, h);
 
-        let x_ips = points_coords(&mut pad, &IP_QUA_LEGENDRE_4).unwrap();
+        let x_ips = get_points_coords(&mut pad, &IP_QUA_LEGENDRE_4).unwrap();
 
         approx_eq(x_ips[0][0], w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
         approx_eq(x_ips[0][1], h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);

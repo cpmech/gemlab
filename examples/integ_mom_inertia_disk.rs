@@ -1,6 +1,6 @@
 use gemlab::integ::{default_points, scalar_field};
 use gemlab::prelude::*;
-use gemlab::recovery::points_coords;
+use gemlab::recovery::get_points_coords;
 use gemlab::StrError;
 use russell_lab::approx_eq;
 use russell_lab::math::PI;
@@ -23,7 +23,7 @@ fn main() -> Result<(), StrError> {
         mesh_1.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = points_coords(&mut pad, ips)?;
+        let x_ips = get_points_coords(&mut pad, ips)?;
 
         // perform the integration over the domain of a single cell
         second_mom_inertia_mesh_1 += scalar_field(&mut pad, ips, |p| {
@@ -40,7 +40,7 @@ fn main() -> Result<(), StrError> {
         mesh_2.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = points_coords(&mut pad, ips)?;
+        let x_ips = get_points_coords(&mut pad, ips)?;
 
         // perform the integration over the domain of a single cell
         second_mom_inertia_mesh_2 += scalar_field(&mut pad, ips, |p| {

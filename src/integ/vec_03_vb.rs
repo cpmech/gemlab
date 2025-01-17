@@ -216,7 +216,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            let x_ips = recovery::points_coords(&mut args.pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut args.pad, ips).unwrap();
             integ::vec_03_vb(&mut c, &mut args, |w, p, _, _| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];

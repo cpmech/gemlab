@@ -194,7 +194,7 @@ mod tests {
         let mut b = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = recovery::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_02_nv(&mut b, &mut args, |v, p, _| {
                 v[0] = x_ips[p][0];

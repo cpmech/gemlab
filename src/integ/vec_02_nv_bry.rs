@@ -192,7 +192,7 @@ mod tests {
         vec_approx_eq(&b, &[0.0, -2.0, 0.0, -2.0], 1e-15);
         // triangular (see @sgm:14\page{605})
         let mut args = CommonArgs::new(&mut pad, ips);
-        let x_ips = recovery::points_coords(&mut args.pad, ips).unwrap();
+        let x_ips = recovery::get_points_coords(&mut args.pad, ips).unwrap();
         integ::vec_02_nv_bry(&mut b, &mut args, |t, p, _, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;
@@ -223,7 +223,7 @@ mod tests {
         .unwrap();
         vec_approx_eq(&b, &[0.0, -0.5, 0.0, -0.5, 0.0, -2.0], 1e-15);
         // triangular (see @sgm:14\page{605})
-        let x_ips = recovery::points_coords(&mut pad, ips).unwrap();
+        let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
         let mut args = CommonArgs::new(&mut pad, ips);
         integ::vec_02_nv_bry(&mut b, &mut args, |t, p, _, _| {
             let c = x_ips[p][0] / ll;
@@ -271,7 +271,7 @@ mod tests {
         ];
         vec_approx_eq(&b, correct, 1e-15);
         // triangular (see @sgm:14\page{605})
-        let x_ips = recovery::points_coords(&mut pad, ips).unwrap();
+        let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
         let mut args = CommonArgs::new(&mut pad, ips);
         integ::vec_02_nv_bry(&mut b, &mut args, |t, p, _, _| {
             let c = x_ips[p][0] / ll;
