@@ -61,7 +61,6 @@ use russell_lab::Vector;
 ///     assert_eq!(x_ips[2].as_data(), &[1.0, 4.0]);
 ///     Ok(())
 /// }
-///
 /// ```
 pub fn get_points_coords(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Vec<Vector>, StrError> {
     let space_ndim = pad.xxt.dims().0;
