@@ -36,6 +36,60 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///
 /// 1. Durand R and Farias MM (2014) A local extrapolation method for finite elements,
 ///    Advances in Engineering Software, 67:1-9 <https://doi.org/10.1016/j.advengsoft.2013.07.002>
+///
+/// # Examples
+///
+/// ```
+/// use gemlab::recovery::{get_extrap_matrix, get_interp_matrix};
+/// use gemlab::shapes::{GeoKind, Scratchpad};
+/// use gemlab::StrError;
+/// use russell_lab::{mat_vec_mul, vec_approx_eq, Vector};
+///
+/// fn main() -> Result<(), StrError> {
+///     //  6 2
+///     //  5 | `.    * indicates the
+///     //  4 | * `.    location of ips
+///     //  3 |     `.
+///     //  2 |       `.
+///     //  1 | *     * `.
+///     //  0 0-----------1
+///     //    0 1 2 3 4 5 6
+///
+///     let space_ndim = 2;
+///     let mut pad = Scratchpad::new(space_ndim, GeoKind::Tri3)?;
+///     pad.set_xx(0, 0, 0.0);
+///     pad.set_xx(0, 1, 0.0);
+///     pad.set_xx(1, 0, 6.0);
+///     pad.set_xx(1, 1, 0.0);
+///     pad.set_xx(2, 0, 0.0);
+///     pad.set_xx(2, 1, 6.0);
+///
+///     // the last column of the array below contains the weight
+///     const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
+///         [1.0 / 6.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
+///         [2.0 / 3.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
+///         [1.0 / 6.0, 2.0 / 3.0, 0.0, 1.0 / 6.0],
+///     ];
+///
+///     // nodal values
+///     let u_nodal = Vector::from(&[1.0, 2.0, 3.0]);
+///
+///     // interpolated values
+///     let mut u_points = Vector::new(IP_TRI_INTERNAL_3.len());
+///     let pp = get_interp_matrix(&mut pad, &IP_TRI_INTERNAL_3);
+///     mat_vec_mul(&mut u_points, 1.0, &pp, &u_nodal)?;
+///
+///     // extrapolated values (recovered)
+///     let nnode = pad.xxt.dims().1;
+///     let mut u_nodal_rec = Vector::new(nnode);
+///     let ee = get_extrap_matrix(&mut pad, &IP_TRI_INTERNAL_3)?;
+///     mat_vec_mul(&mut u_nodal_rec, 1.0, &ee, &u_points)?;
+///
+///     // check
+///     vec_approx_eq(&u_nodal_rec, &u_nodal, 1e-14);
+///     Ok(())
+/// }
+/// ```
 pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Matrix, StrError> {
     // constants
     let (nnode, geo_ndim) = pad.deriv.dims();
