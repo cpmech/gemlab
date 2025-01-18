@@ -139,7 +139,8 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Res
 
         // calculate ξ_hat_inv (geo_ndim+1,n_integ_point), the pseudo-inverse of ξ_hat
         let mut xhi = Matrix::new(geo_ndim + 1, n_integ_point);
-        mat_pseudo_inverse(&mut xhi, &mut xh)?;
+        let mut copy = xh.clone();
+        mat_pseudo_inverse(&mut xhi, &mut copy)?;
 
         // auxiliary computations
         let mut aux = Matrix::new(n_integ_point, n_integ_point);
@@ -325,5 +326,26 @@ mod tests {
         // println!("u_point =\n{}", u_point);
         // println!("u_nodal =\n{}", u_nodal);
         vec_approx_eq(&u_nodal, &u_nodal_original, 12.3); // we cannot get better results with only 4 integ points
+    }
+
+    #[test]
+    pub fn get_extrap_matrix_works_durand_farias_example1() {
+        let mut pad = gen_qua8(1.0, 1.0, 0.0, 0.0, false);
+
+        // extrapolation matrix
+        let ips = &IP_QUA_LEGENDRE_4;
+        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+
+        // check
+        let u_point = Vector::from(&[0.5, 0.5, 0.5, 0.5]);
+        let u_nodal = do_extrapolate(&ee, &u_point);
+        // println!("u_point =\n{}", u_point);
+        // println!("u_nodal =\n{}", u_nodal);
+
+        // let u_nodal_without_correction = Vector::from(&[-0.088, -0.088, -0.088, -0.088, 0.353, 0.353, 0.353, 0.353]);
+        // vec_approx_eq(&u_nodal, &u_nodal_without_correction, 1e-3);
+
+        let u_nodal_expected = Vector::from(&[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
+        vec_approx_eq(&u_nodal, &u_nodal_expected, 1e-14);
     }
 }
