@@ -71,7 +71,7 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///
 ///     // interpolated values
 ///     let gauss = Gauss::new_sized(pad.kind.class(), 3)?;
-///     let mut u_points = Vector::new(gauss.data.len());
+///     let mut u_points = Vector::new(gauss.npoint());
 ///     let pp = get_interp_matrix(&mut pad, &gauss);
 ///     mat_vec_mul(&mut u_points, 1.0, &pp, &u_nodal)?;
 ///
@@ -89,7 +89,7 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 pub fn get_extrap_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Matrix, StrError> {
     // constants
     let (nnode, geo_ndim) = pad.deriv.dims();
-    let n_integ_point = gauss.data.len();
+    let n_integ_point = gauss.npoint();
 
     // calculate interpolation matrix P
     let mut pp = get_interp_matrix(pad, gauss);
@@ -128,7 +128,7 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Matrix, 
         let mut xh = Matrix::new(n_integ_point, geo_ndim + 1);
         for p in 0..n_integ_point {
             for d in 0..geo_ndim {
-                xh.set(p, d, gauss.data[p][d]);
+                xh.set(p, d, gauss.coords(p)[d]);
             }
             xh.set(p, geo_ndim, 1.0);
         }
@@ -241,12 +241,12 @@ mod tests {
 
     fn do_interpolate(pad: &mut Scratchpad, u_nodal: &Vector, gauss: &Gauss) -> Vector {
         let nnode = u_nodal.dim();
-        let n_integ_point = gauss.data.len();
+        let n_integ_point = gauss.npoint();
         let mut u_point = Vector::new(n_integ_point);
-        for i in 0..n_integ_point {
-            (pad.fn_interp)(&mut pad.interp, &gauss.data[i]);
+        for p in 0..n_integ_point {
+            (pad.fn_interp)(&mut pad.interp, gauss.coords(p));
             for m in 0..nnode {
-                u_point[i] += pad.interp[m] * u_nodal[m];
+                u_point[p] += pad.interp[m] * u_nodal[m];
             }
         }
         u_point

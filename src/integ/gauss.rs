@@ -19,7 +19,7 @@ pub struct Gauss {
     /// In 1D, `r` and `t` are equal to zero. In 2D, `t` is equal to zero.
     ///
     /// The 1D and 2D geometries have `s` and/or `t` equal to zero, as appropriate.
-    pub data: &'static [[f64; 4]],
+    data: &'static [[f64; 4]],
 
     /// Holds the augmented natural coordinates matrix (for the extrapolation algorithm)
     ///
@@ -45,7 +45,7 @@ impl Gauss {
     /// use gemlab::shapes::GeoKind;
     ///
     /// let gauss = Gauss::new(GeoKind::Tet4);
-    /// assert_eq!(gauss.data.len(), 4);
+    /// assert_eq!(gauss.npoint(), 4);
     /// ```
     pub fn new(kind: GeoKind) -> Self {
         let data: &'static [[f64; 4]] = match kind {
@@ -144,7 +144,8 @@ impl Gauss {
     ///
     /// fn main() -> Result<(), StrError> {
     ///     let gauss = Gauss::new_sized(GeoClass::Tet, 1)?;
-    ///     assert_eq!(gauss.data, [[0.25, 0.25, 0.25, 1.0/6.0]]);
+    ///     assert_eq!(gauss.coords(0), &[0.25, 0.25, 0.25, 1.0/6.0]);
+    ///     assert_eq!(gauss.weight(0), 1.0/6.0);
     ///     Ok(())
     /// }
     /// ```
@@ -208,8 +209,48 @@ impl Gauss {
     }
 
     /// Returns the number of integration points
+    #[inline]
     pub fn npoint(&self) -> usize {
         self.data.len()
+    }
+
+    /// Returns an access to the natural (reference) coordinates
+    ///
+    /// # Input
+    ///
+    /// * `p` -- the index of the integration point; must be in `0 ≤ p < npoint`
+    ///   Otherwise a panic will occur.
+    ///
+    /// # Output
+    ///
+    /// * `coords` -- the `r`, `s`, `t` coordinates (followed by the weight---that can be ignored)
+    ///   Note that, in 1D, `r` and `t` are equal to zero, and in 2D, `t` is equal to zero.
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if `p` is not in `0 ≤ p < npoint`
+    #[inline]
+    pub fn coords(&self, p: usize) -> &[f64; 4] {
+        &self.data[p]
+    }
+
+    /// Returns the weight
+    ///
+    /// # Input
+    ///
+    /// * `p` -- the index of the integration point; must be in `0 ≤ p < npoint`
+    ///   Otherwise a panic will occur.
+    ///
+    /// # Output
+    ///
+    /// * `weight` -- the weight associated with the integration point
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if `p` is not in `0 ≤ p < npoint`
+    #[inline]
+    pub fn weight(&self, p: usize) -> f64 {
+        self.data[p][3]
     }
 }
 

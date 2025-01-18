@@ -72,10 +72,10 @@ where
 
     // loop over integration points
     let s = SQRT_2;
-    for p in 0..args.gauss.data.len() {
+    for p in 0..args.gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &args.gauss.data[p];
-        let weight = args.gauss.data[p][3];
+        let iota = args.gauss.coords(p);
+        let weight = args.gauss.weight(p);
 
         // calculate Jacobian and gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N

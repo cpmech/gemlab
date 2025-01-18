@@ -61,9 +61,10 @@ use russell_lab::Vector;
 pub fn get_points_coords(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Vec<Vector>, StrError> {
     let space_ndim = pad.xxt.dims().0;
     let mut all_coords = Vec::new();
-    for iota in gauss.data {
+    let n_integ_point = gauss.npoint();
+    for p in 0..n_integ_point {
         let mut x = Vector::new(space_ndim);
-        pad.calc_coords(&mut x, iota)?;
+        pad.calc_coords(&mut x, gauss.coords(p))?;
         all_coords.push(x);
     }
     Ok(all_coords)

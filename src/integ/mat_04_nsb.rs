@@ -90,10 +90,10 @@ where
     }
 
     // loop over integration points
-    for p in 0..args.gauss.data.len() {
+    for p in 0..args.gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &args.gauss.data[p];
-        let weight = args.gauss.data[p][3];
+        let iota = args.gauss.coords(p);
+        let weight = args.gauss.weight(p);
 
         // calculate interpolation functions and Jacobian
         (pad_b.fn_interp)(&mut pad_b.interp, iota); // Nb

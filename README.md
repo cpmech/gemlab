@@ -118,8 +118,8 @@ fn main() -> Result<(), StrError> {
     let gauss = Gauss::new(cell_2.kind);
     let mut area = 0.0;
     for p in 0..gauss.npoint() {
-        let iota = &gauss.data[p];
-        let weight = gauss.data[p][3];
+        let iota = gauss.coords(p);
+        let weight = gauss.weight(p);
         let det_jac = pad.calc_jacobian(iota)?;
         area += weight * det_jac;
     }

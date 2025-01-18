@@ -112,10 +112,10 @@ where
     }
 
     // loop over integration points
-    for index in 0..args.gauss.data.len() {
+    for p in 0..args.gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &args.gauss.data[index];
-        let weight = args.gauss.data[index][3];
+        let iota = args.gauss.coords(p);
+        let weight = args.gauss.weight(p);
 
         // calculate Jacobian and Gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -124,7 +124,7 @@ where
         // calculate σ tensor
         let nn = &args.pad.interp;
         let bb = &args.pad.gradient;
-        fn_sig(&mut sig, index, nn, bb)?;
+        fn_sig(&mut sig, p, nn, bb)?;
 
         // add contribution to d vector
         let c = det_jac * weight * args.alpha;

@@ -72,7 +72,7 @@ use russell_lab::Matrix;
 ///
 ///     // interpolated values
 ///     let gauss = Gauss::new_sized(pad.kind.class(), 3)?;
-///     let mut u_points = Vector::new(gauss.data.len());
+///     let mut u_points = Vector::new(gauss.npoint());
 ///     let pp = get_interp_matrix(&mut pad, &gauss);
 ///     mat_vec_mul(&mut u_points, 1.0, &pp, &u_nodal)?;
 ///
@@ -84,12 +84,12 @@ use russell_lab::Matrix;
 /// ```
 pub fn get_interp_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Matrix {
     let nnode = pad.interp.dim();
-    let n_integ_point = gauss.data.len();
+    let n_integ_point = gauss.npoint();
     let mut pp = Matrix::new(n_integ_point, nnode);
-    for i in 0..n_integ_point {
-        (pad.fn_interp)(&mut pad.interp, &gauss.data[i]);
+    for p in 0..n_integ_point {
+        (pad.fn_interp)(&mut pad.interp, gauss.coords(p));
         for j in 0..nnode {
-            pp.set(i, j, pad.interp[j]);
+            pp.set(p, j, pad.interp[j]);
         }
     }
     pp
@@ -141,13 +141,13 @@ mod tests {
         //   X_ips    =      M           X
         // (nip,ndim)   (nip,nnode) (nnode,ndim)
 
-        let nip = gauss.data.len();
+        let n_integ_point = gauss.npoint();
         let (ndim, nnode) = pad.xxt.dims();
-        let mut xx_ips = Matrix::new(nip, ndim);
-        for i in 0..nip {
+        let mut xx_ips = Matrix::new(n_integ_point, ndim);
+        for p in 0..n_integ_point {
             for j in 0..ndim {
                 for k in 0..nnode {
-                    xx_ips.add(i, j, pp.get(i, k) * pad.xxt.get(j, k));
+                    xx_ips.add(p, j, pp.get(p, k) * pad.xxt.get(j, k));
                 }
             }
         }

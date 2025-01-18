@@ -36,10 +36,10 @@ where
     let mut ii = 0.0;
 
     // loop over integration points
-    for p in 0..gauss.data.len() {
+    for p in 0..gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &gauss.data[p];
-        let weight = gauss.data[p][3];
+        let iota = gauss.coords(p);
+        let weight = gauss.weight(p);
 
         // calculate Jacobian
         let det_jac = pad.calc_jacobian(iota)?;

@@ -127,9 +127,9 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     pad_edge_7_11.set_xx(1, 1, p[11].coords[1]);
     let gauss = Gauss::new(pad_edge_7_11.kind);
     let mut length_numerical = 0.0;
-    for index in 0..gauss.data.len() {
-        let iota = &gauss.data[index];
-        let weight = gauss.data[index][3];
+    for p in 0..gauss.npoint() {
+        let iota = gauss.coords(p);
+        let weight = gauss.weight(p);
         let det_jac = pad_edge_7_11.calc_jacobian(iota)?;
         length_numerical += weight * det_jac;
     }
@@ -145,9 +145,9 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     }
     let gauss = Gauss::new(pad_cell_5.kind);
     let mut area_numerical = 0.0;
-    for p in 0..gauss.data.len() {
-        let iota = &gauss.data[p];
-        let weight = gauss.data[p][3];
+    for p in 0..gauss.npoint() {
+        let iota = gauss.coords(p);
+        let weight = gauss.weight(p);
         let det_jac = pad_cell_5.calc_jacobian(iota)?;
         area_numerical += weight * det_jac;
     }
