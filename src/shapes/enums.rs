@@ -65,7 +65,7 @@ impl GeoCase {
     /// # Panics
     ///
     /// 1. `space_ndim` must be 2 or 3; otherwise a panic will occur
-    /// 2. This function will panic if `geo_ndim > space_ndim` (impossible case)
+    /// 2. `geo_ndim` must be ≤ `space_ndim`; otherwise a panic will occur
     pub fn new(geo_ndim: usize, space_ndim: usize) -> Self {
         assert!(space_ndim >= 2 && space_ndim <= 3, "space_ndim must be 2 or 3");
         assert!(geo_ndim <= space_ndim, "geo_ndim must be ≤ space_ndim");
