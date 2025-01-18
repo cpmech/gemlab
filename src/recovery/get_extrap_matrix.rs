@@ -17,10 +17,10 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///    regarding the inversion problem.
 ///
 /// This function returns the "inverse" of the interpolation matrix; however, the inverse
-/// is only possible if `n_integ_points == nnode`. If there are more interpolation points
-/// than nodes (`n_integ_points > node`), the problem is over-determined, and we use the
+/// is only possible if `n_integ_point == nnode`. If there are more interpolation points
+/// than nodes (`n_integ_point > node`), the problem is over-determined, and we use the
 /// pseudo-inverse instead. If there are fewer interpolation points than nodes
-/// (`n_integ_points < nnode`), the problem is under-determined and may even yield
+/// (`n_integ_point < nnode`), the problem is under-determined and may even yield
 /// spurious results. To avoid such results and minimize the errors, we adopt the method
 /// proposed by Durand and Farias in Reference #1. In this case, a correction matrix is
 /// applied to the pseudo-inverse, and a translation is applied to the result.
@@ -115,93 +115,38 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Res
 #[cfg(test)]
 mod tests {
     use super::get_extrap_matrix;
-    use crate::integ::{IP_QUA_LEGENDRE_1, IP_QUA_LEGENDRE_4};
+    use crate::integ::{IP_QUA_LEGENDRE_1, IP_QUA_LEGENDRE_4, IP_QUA_LEGENDRE_9};
     use crate::shapes::{GeoKind, Scratchpad};
+    use russell_lab::math::PI;
     use russell_lab::{mat_approx_eq, mat_vec_mul, vec_approx_eq, Matrix, Vector};
 
-    #[test]
-    pub fn get_extrap_matrix_works() {
-        //  3-------------2         ξ₀   ξ₁
-        //  | *    ξ₁   * |  node    r    s
-        //  |      |      |     0 -1.0 -1.0
-        //  |      +--ξ₀  |     1  1.0 -1.0
-        //  |             |     2  1.0  1.0
-        //  | *         * |     3 -1.0  1.0
-        //  0-------------1
-
-        let (w, h) = (20.0, 10.0);
-        let space_ndim = 2;
-        let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4).unwrap();
-        pad.set_xx(0, 0, 0.0);
-        pad.set_xx(0, 1, 0.0);
-        pad.set_xx(1, 0, w);
-        pad.set_xx(1, 1, 0.0);
-        pad.set_xx(2, 0, w);
-        pad.set_xx(2, 1, h);
-        pad.set_xx(3, 0, 0.0);
-        pad.set_xx(3, 1, h);
-
-        let ips = &IP_QUA_LEGENDRE_4;
-        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
-        assert_eq!(ee.dims(), (4, 4));
-
-        // original U values at nodes
-        let u_nodes_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]);
-
-        // interpolated U values @ integration points
-        let nip = ips.len();
-        let nnode = 4;
-        let mut u_ips = Vector::new(nip);
-        for i in 0..nip {
-            (pad.fn_interp)(&mut pad.interp, &ips[i]);
-            for m in 0..nnode {
-                u_ips[i] += pad.interp[m] * u_nodes_original[m];
-            }
-        }
-
-        // extrapolated U values @ nodes points
-        let mut u_nodes = Vector::new(nnode);
-        mat_vec_mul(&mut u_nodes, 1.0, &ee, &u_ips).unwrap();
-
-        // println!("E =\n{}", ee);
-        // println!("U_ips =\n{}", u_ips);
-        // println!("U_nodes =\n{}", u_nodes);
-
-        // check
-        vec_approx_eq(&u_nodes, &u_nodes_original, 1e-15);
-    }
-
-    #[test]
-    pub fn get_extrap_matrix_works_1ip() {
+    fn gen_qua4(w: f64, h: f64, skew_angle: f64, save_fig: bool) -> Scratchpad {
         //  3-------------2         ξ₀   ξ₁
         //  |      ξ₁     |  node    r    s
         //  |      |      |     0 -1.0 -1.0
-        //  |      *--ξ₀  |     1  1.0 -1.0
+        //  |      +--ξ₀  |     1  1.0 -1.0
         //  |             |     2  1.0  1.0
         //  |             |     3 -1.0  1.0
         //  0-------------1
-
-        let (w, h) = (20.0, 10.0);
         let space_ndim = 2;
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua4).unwrap();
+        let dx = h * f64::tan(skew_angle);
         pad.set_xx(0, 0, 0.0);
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(1, 0, w);
         pad.set_xx(1, 1, 0.0);
-        pad.set_xx(2, 0, w);
+        pad.set_xx(2, 0, w + dx);
         pad.set_xx(2, 1, h);
-        pad.set_xx(3, 0, 0.0);
+        pad.set_xx(3, 0, 0.0 + dx);
         pad.set_xx(3, 1, h);
-
-        let ips = &IP_QUA_LEGENDRE_1;
-        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
-        // println!("E =\n{}", ee);
-        let ee_correct = Matrix::from(&[[1.0], [1.0], [1.0], [1.0]]); // the pseudo-inverse of P = [0.25, 0.25, 0.25, 0.25]
-        mat_approx_eq(&ee, &ee_correct, 1e-15);
+        assert!(pad.ok_xxt);
+        if save_fig {
+            pad.draw_shape_simple("/tmp/gemlab/gen_qua4.svg").unwrap();
+        }
+        pad
     }
 
-    #[test]
-    pub fn get_extrap_matrix_works_q8_4ip() {
+    fn gen_qua8(w: f64, h: f64, skew_angle: f64, imprecision: f64, save_fig: bool) -> Scratchpad {
         //  3------6------2         ξ₀   ξ₁
         //  |      ξ₁     |  node    r    s
         //  |      |      |     0 -1.0 -1.0   4  0.0 -1.0
@@ -209,56 +154,117 @@ mod tests {
         //  |             |     2  1.0  1.0   6  0.0  1.0
         //  |             |     3 -1.0  1.0   7 -1.0  0.0
         //  0------4------1
-
-        let (w, h) = (20.0, 10.0);
         let space_ndim = 2;
         let mut pad = Scratchpad::new(space_ndim, GeoKind::Qua8).unwrap();
+        let dx = h * f64::tan(skew_angle);
         pad.set_xx(0, 0, 0.0);
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(1, 0, w);
         pad.set_xx(1, 1, 0.0);
-        pad.set_xx(2, 0, w);
+        pad.set_xx(2, 0, w + dx);
         pad.set_xx(2, 1, h);
-        pad.set_xx(3, 0, 0.0);
+        pad.set_xx(3, 0, 0.0 + dx);
         pad.set_xx(3, 1, h);
         pad.set_xx(4, 0, w / 2.0);
-        pad.set_xx(4, 1, 0.0);
-        pad.set_xx(5, 0, w);
+        pad.set_xx(4, 1, 0.0 + imprecision);
+        pad.set_xx(5, 0, w + dx / 2.0 - imprecision);
         pad.set_xx(5, 1, h / 2.0);
-        pad.set_xx(6, 0, w / 2.0);
-        pad.set_xx(6, 1, h);
-        pad.set_xx(7, 0, 0.0);
+        pad.set_xx(6, 0, w / 2.0 + dx - imprecision);
+        pad.set_xx(6, 1, h - imprecision);
+        pad.set_xx(7, 0, 0.0 + dx / 2.0 + imprecision);
         pad.set_xx(7, 1, h / 2.0);
         assert!(pad.ok_xxt);
-        // pad.draw_shape_simple("/tmp/gemlab/test_get_extrap_matrix_works_q8_4ip.svg").unwrap();
+        if save_fig {
+            pad.draw_shape_simple("/tmp/gemlab/gen_qua8.svg").unwrap();
+        }
+        pad
+    }
 
-        let ips = &IP_QUA_LEGENDRE_4;
-        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
-        assert_eq!(ee.dims(), (8, 4));
-
-        // original U values at nodes
-        let u_nodes_original = Vector::from(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-
-        // interpolated U values @ integration points
-        let nip = ips.len();
-        let nnode = 8;
-        let mut u_ips = Vector::new(nip);
-        for i in 0..nip {
-            (pad.fn_interp)(&mut pad.interp, &ips[i]);
+    fn do_interpolate(pad: &mut Scratchpad, u_nodal: &Vector, integ_points: &[[f64; 4]]) -> Vector {
+        let nnode = u_nodal.dim();
+        let n_integ_point = integ_points.len();
+        let mut u_point = Vector::new(n_integ_point);
+        for i in 0..n_integ_point {
+            (pad.fn_interp)(&mut pad.interp, &integ_points[i]);
             for m in 0..nnode {
-                u_ips[i] += pad.interp[m] * u_nodes_original[m];
+                u_point[i] += pad.interp[m] * u_nodal[m];
             }
         }
+        u_point
+    }
 
-        // extrapolated U values @ nodes points
-        let mut u_nodes = Vector::new(nnode);
-        mat_vec_mul(&mut u_nodes, 1.0, &ee, &u_ips).unwrap();
+    fn do_extrapolate(ee: &Matrix, u_point: &Vector) -> Vector {
+        let nnode = ee.dims().0;
+        let mut u_nodal = Vector::new(nnode);
+        mat_vec_mul(&mut u_nodal, 1.0, &ee, &u_point).unwrap();
+        u_nodal
+    }
 
-        println!("E =\n{}", ee);
-        println!("U_ips =\n{}", u_ips);
-        println!("U_nodes =\n{}", u_nodes);
+    #[test]
+    pub fn get_extrap_matrix_works_qua4_ip4() {
+        let mut pad = gen_qua4(20.0, 10.0, PI / 6.0, false);
+
+        // extrapolation matrix
+        let ips = &IP_QUA_LEGENDRE_4;
+        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
 
         // check
-        // vec_approx_eq(&u_nodes, &u_nodes_original, 1e-15);
+        let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]); // original U values at nodes
+        let u_point = do_interpolate(&mut pad, &u_nodal_original, ips); // interpolated U values @ integration points
+        let u_nodal = do_extrapolate(&ee, &u_point);
+        vec_approx_eq(&u_nodal, &u_nodal_original, 1e-15);
+    }
+
+    #[test]
+    pub fn get_extrap_matrix_works_qua4_ip1() {
+        let mut pad = gen_qua4(20.0, 10.0, PI / 6.0, false);
+
+        // extrapolation matrix
+        let ips = &IP_QUA_LEGENDRE_1;
+        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+        let ee_correct = Matrix::from(&[[1.0], [1.0], [1.0], [1.0]]); // the pseudo-inverse of P = [0.25, 0.25, 0.25, 0.25]
+        mat_approx_eq(&ee, &ee_correct, 1e-15);
+
+        // check
+        let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]); // original U values at nodes
+        let u_point = do_interpolate(&mut pad, &u_nodal_original, ips); // interpolated U values @ integration points
+        let u_nodal = do_extrapolate(&ee, &u_point);
+        // println!("u_point =\n{}", u_point);
+        // println!("u_nodal =\n{}", u_nodal);
+        vec_approx_eq(&u_nodal, &u_nodal_original, 1.5); // we cannot get a better result with such low n_integ_point
+    }
+
+    #[test]
+    pub fn get_extrap_matrix_works_qua8_ip9() {
+        let mut pad = gen_qua8(20.0, 10.0, PI / 6.0, 1.0, false);
+
+        // extrapolation matrix
+        let ips = &IP_QUA_LEGENDRE_9;
+        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+
+        // check
+        let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]); // original U values at nodes
+        let u_point = do_interpolate(&mut pad, &u_nodal_original, ips); // interpolated U values @ integration points
+        let u_nodal = do_extrapolate(&ee, &u_point);
+        // println!("u_point =\n{}", u_point);
+        // println!("u_nodal =\n{}", u_nodal);
+        vec_approx_eq(&u_nodal, &u_nodal_original, 1e-13); // pretty good, with overdetermined system
+    }
+
+    #[test]
+    pub fn get_extrap_matrix_works_qua8_ip4() {
+        let mut pad = gen_qua8(20.0, 10.0, 0.0, 0.0, false);
+
+        // extrapolation matrix
+        let ips = &IP_QUA_LEGENDRE_4;
+        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+
+        // check
+        let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]); // original U values at nodes
+        let u_point = do_interpolate(&mut pad, &u_nodal_original, ips); // interpolated U values @ integration points
+        let u_nodal = do_extrapolate(&ee, &u_point);
+        // println!("u_point =\n{}", u_point);
+        // println!("u_nodal =\n{}", u_nodal);
+        vec_approx_eq(&u_nodal, &u_nodal_original, 12.3); // we cannot get better results with only 4 integ points
     }
 }
