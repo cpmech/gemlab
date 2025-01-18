@@ -169,6 +169,61 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Matrix, 
     return Ok(ee);
 }
 
+/*
+fn get_xhi(class: GeoClass, n_integ_point: usize) {
+    let data: &'static [[f64; 4]] = match class {
+        // Lin
+        GeoClass::Lin => match n_integ_point {
+            1 => &KSI_HAT_INV_LIN_1,
+            2 => &KSI_HAT_INV_LIN_2,
+            3 => &KSI_HAT_INV_LIN_3,
+            4 => &KSI_HAT_INV_LIN_4,
+            5 => &KSI_HAT_INV_LIN_5,
+            _ => panic!("requested number of integration points is not available for Lin class"),
+        },
+        // Tri
+        GeoClass::Tri => match n_integ_point {
+            1 => &KSI_HAT_INV_TRI_1,
+            3 => &KSI_HAT_INV_TRI_3,
+            4 => &KSI_HAT_INV_TRI_4,
+            6 => &KSI_HAT_INV_TRI_6,
+            7 => &KSI_HAT_INV_TRI_7,
+            12 => &KSI_HAT_INV_TRI_12,
+            16 => &KSI_HAT_INV_TRI_16,
+            _ => panic!("requested number of integration points is not available for Tri class"),
+        },
+        // Qua
+        GeoClass::Qua => match n_integ_point {
+            1 => &KSI_HAT_INV_QUA_1,
+            4 => &KSI_HAT_INV_QUA_4,
+            9 => &KSI_HAT_INV_QUA_9,
+            16 => &KSI_HAT_INV_QUA_16,
+            _ => panic!("requested number of integration points is not available for Qua class"),
+        },
+        // Tet
+        GeoClass::Tet => match n_integ_point {
+            1 => &KSI_HAT_INV_TET_1,
+            4 => &KSI_HAT_INV_TET_4,
+            5 => &KSI_HAT_INV_TET_5,
+            8 => &KSI_HAT_INV_TET_8,
+            14 => &KSI_HAT_INV_TET_14,
+            15 => &KSI_HAT_INV_TET_15,
+            24 => &KSI_HAT_INV_TET_24,
+            _ => panic!("requested number of integration points is not available for Tet class"),
+        },
+        // Hex
+        GeoClass::Hex => match n_integ_point {
+            6 => &KSI_HAT_INV_HEX_6,
+            8 => &KSI_HAT_INV_HEX_8,
+            14 => &KSI_HAT_INV_HEX_14,
+            27 => &KSI_HAT_INV_HEX_27,
+            64 => &KSI_HAT_INV_HEX_64,
+            _ => panic!("requested number of integration points is not available for Hex class"),
+        },
+    };
+}
+*/
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
