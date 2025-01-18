@@ -59,22 +59,23 @@ pub enum GeoCase {
     Solid,
 }
 
-/// Returns the geometry case given the geo and space dimensions
-///
-/// # Panics
-///
-/// 1. `space_ndim` must be 2 or 3; otherwise a panic will occur
-/// 2. This function will panic if `geo_ndim > space_ndim` (impossible case)
-#[inline]
-pub fn geo_case(geo_ndim: usize, space_ndim: usize) -> GeoCase {
-    assert!(space_ndim >= 2 && space_ndim <= 3);
-    assert!(geo_ndim <= space_ndim);
-    if geo_ndim == space_ndim {
-        GeoCase::Solid
-    } else if geo_ndim == 1 {
-        GeoCase::Cable
-    } else {
-        GeoCase::Shell
+impl GeoCase {
+    /// Returns the geometry case given the geo and space dimensions
+    ///
+    /// # Panics
+    ///
+    /// 1. `space_ndim` must be 2 or 3; otherwise a panic will occur
+    /// 2. This function will panic if `geo_ndim > space_ndim` (impossible case)
+    pub fn new(geo_ndim: usize, space_ndim: usize) -> Self {
+        assert!(space_ndim >= 2 && space_ndim <= 3, "space_ndim must be 2 or 3");
+        assert!(geo_ndim <= space_ndim, "geo_ndim must be ≤ space_ndim");
+        if geo_ndim == space_ndim {
+            GeoCase::Solid
+        } else if geo_ndim == 1 {
+            GeoCase::Cable
+        } else {
+            GeoCase::Shell
+        }
     }
 }
 
@@ -1372,6 +1373,27 @@ mod tests {
         assert_eq!(format!("{:?}", kind), "Tri6");
         assert_eq!(classes.contains(&GeoClass::Tri), true);
         assert_eq!(kinds.contains(&GeoKind::Tri3), true);
+    }
+
+    #[test]
+    fn geo_case_functions_are_consistent() {
+        assert_eq!(GeoCase::new(1, 2), GeoCase::Cable);
+        assert_eq!(GeoCase::new(1, 3), GeoCase::Cable);
+        assert_eq!(GeoCase::new(2, 2), GeoCase::Solid);
+        assert_eq!(GeoCase::new(2, 3), GeoCase::Shell);
+        assert_eq!(GeoCase::new(3, 3), GeoCase::Solid);
+    }
+
+    #[test]
+    #[should_panic(expected = "space_ndim must be 2 or 3")]
+    fn geo_case_new_panics_on_invalid_input_1() {
+        assert_eq!(GeoCase::new(1, 1), GeoCase::Solid);
+    }
+
+    #[test]
+    #[should_panic(expected = "geo_ndim must be ≤ space_ndim")]
+    fn geo_case_new_panics_on_invalid_input_2() {
+        assert_eq!(GeoCase::new(3, 2), GeoCase::Solid);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use super::{EdgeKey, FaceKey, Feature, Mesh};
 use crate::shapes::DET_JAC_NOT_AVAILABLE;
-use crate::shapes::{geo_case, GeoCase, Scratchpad};
+use crate::shapes::{GeoCase, Scratchpad};
 use crate::util::GridSearch;
 use crate::StrError;
 use russell_lab::math::ONE_BY_3;
@@ -46,7 +46,7 @@ impl Mesh {
             let mut pad = Scratchpad::new(self.ndim, cell.kind)?;
             self.set_pad(&mut pad, &cell.points);
             let det_jac = pad.calc_jacobian(&ksi)?;
-            if geo_case(cell.kind.ndim(), self.ndim) == GeoCase::Shell {
+            if GeoCase::new(cell.kind.ndim(), self.ndim) == GeoCase::Shell {
                 assert_eq!(det_jac, DET_JAC_NOT_AVAILABLE);
             } else {
                 if det_jac < 0.0 {
