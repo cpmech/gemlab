@@ -5,6 +5,11 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 
 /// Calculates the extrapolation matrix (integration points to nodes)
 ///
+/// ```text
+/// u_nodal =      E       u_points
+/// (nnode)   (nnode,nip)    (nip)
+/// ```
+///
 /// # Input
 ///
 /// * `pad` -- The scratchpad

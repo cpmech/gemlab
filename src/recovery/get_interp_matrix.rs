@@ -3,6 +3,11 @@ use russell_lab::Matrix;
 
 /// Calculates the interpolation matrix (nodes to integration points)
 ///
+/// ```text
+/// u_points =      P       u_nodal
+///   (nip)    (nip,nnode)  (nnode)
+/// ```
+///
 /// # Input
 ///
 /// * `pad` -- The scratchpad
