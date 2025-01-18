@@ -75,10 +75,10 @@ where
     }
 
     // loop over integration points
-    for p in 0..args.ips.len() {
+    for p in 0..args.gauss.data.len() {
         // ksi coordinates and weight
-        let iota = &args.ips[p];
-        let weight = args.ips[p][3];
+        let iota = &args.gauss.data[p];
+        let weight = args.gauss.data[p][3];
 
         // calculate interpolation functions, Jacobian and gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -137,7 +137,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
 
     #[test]
@@ -149,7 +149,8 @@ mod tests {
         let bb = Matrix::new(0, 0);
         let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(());
         f(&mut vv, 0, &nn, &bb).unwrap();
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
             integ::mat_09_nvb(&mut kk, &mut args, f).err(),
@@ -163,14 +164,13 @@ mod tests {
         );
         args.jj0 = 0;
         // more errors
-        args.ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
             integ::mat_09_nvb(&mut kk, &mut args, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
-        let mut args = CommonArgs::new(&mut pad, &IP_TRI_INTERNAL_1);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         assert_eq!(
             integ::mat_09_nvb(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
             Some("stop")
@@ -188,7 +188,7 @@ mod tests {
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];
-        let selection: Vec<_> = [3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
@@ -214,7 +214,7 @@ mod tests {
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];
-        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [4].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);

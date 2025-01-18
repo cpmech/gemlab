@@ -55,7 +55,7 @@ use russell_tensor::{Mandel, Tensor2};
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ;
+/// use gemlab::integ::{self, CommonArgs, Gauss};
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_lab::{Vector, vec_approx_eq};
@@ -69,9 +69,9 @@ use russell_tensor::{Mandel, Tensor2};
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = integ::default_points(pad.kind);
+///     let gauss = Gauss::new(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     let mut args = CommonArgs::new(&mut pad, &gauss);
 ///     integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
@@ -112,10 +112,10 @@ where
     }
 
     // loop over integration points
-    for index in 0..args.ips.len() {
+    for index in 0..args.gauss.data.len() {
         // ksi coordinates and weight
-        let iota = &args.ips[index];
-        let weight = args.ips[index][3];
+        let iota = &args.gauss.data[index];
+        let weight = args.gauss.data[index][3];
 
         // calculate Jacobian and Gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -181,7 +181,7 @@ fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Ten
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use russell_lab::{vec_approx_eq, Matrix, Vector};
     use russell_tensor::{Mandel, Tensor2};
 
@@ -194,7 +194,8 @@ mod tests {
         let bb = Matrix::new(0, 0);
         let f = |_: &mut Tensor2, _, _: &Vector, _: &Matrix| Ok(());
         f(&mut sig, 0, &nn, &bb).unwrap();
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
             integ::vec_04_tb(&mut d, &mut args, f).err(),
@@ -228,7 +229,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 4, 12, 16]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // check
@@ -270,13 +271,13 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-13, 1e-13];
-        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            println!("nip={}, tol={:.e}", ips.len(), tol);
+            // println!("nip={}, tol={:.e}", ips.data.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             args.axisymmetric = true;
             integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
@@ -311,7 +312,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-13, 1e-14, 1e-13, 1e-13, 1e-13];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // check

@@ -1,4 +1,4 @@
-use gemlab::integ;
+use gemlab::integ::{self, Gauss};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
 use russell_lab::{vec_approx_eq, Vector};
@@ -35,9 +35,9 @@ fn main() -> Result<(), StrError> {
     //       3  │ 1 │   │ 36 │
     //          └   ┘   └    ┘
     let nnode = pad.kind.nnode();
-    let ips = integ::default_points(pad.kind);
+    let gauss = Gauss::new(pad.kind);
     let mut a = Vector::filled(nnode, 0.0);
-    let mut args = integ::CommonArgs::new(&mut pad, ips);
+    let mut args = integ::CommonArgs::new(&mut pad, &gauss);
     integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(18.0))?;
     assert_eq!(
         format!("{:.1}", a),

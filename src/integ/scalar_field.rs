@@ -1,4 +1,4 @@
-use super::IntegPointData;
+use super::Gauss;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 
@@ -28,7 +28,7 @@ use crate::StrError;
 /// # Output
 ///
 /// * Returns `I`, the result of integration.
-pub fn scalar_field<F>(pad: &mut Scratchpad, ips: IntegPointData, mut fn_s: F) -> Result<f64, StrError>
+pub fn scalar_field<F>(pad: &mut Scratchpad, gauss: &Gauss, mut fn_s: F) -> Result<f64, StrError>
 where
     F: FnMut(usize) -> Result<f64, StrError>,
 {
@@ -36,10 +36,10 @@ where
     let mut ii = 0.0;
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..gauss.data.len() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = &gauss.data[p];
+        let weight = gauss.data[p][3];
 
         // calculate Jacobian
         let det_jac = pad.calc_jacobian(iota)?;
@@ -58,7 +58,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::scalar_field;
-    use crate::integ;
+    use crate::integ::Gauss;
     use crate::recovery;
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::approx_eq;
@@ -97,7 +97,7 @@ mod tests {
         let class = pad.kind.class();
         let selection: Vec<_> = [1, 4, 9, 16]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // s(x) is constant = 1; i.e., the integral will result in the area of the "diamond" shape
@@ -199,7 +199,7 @@ mod tests {
         let class = pad.kind.class();
         let selection: Vec<_> = [6, 8, 14, 27, 64]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // s(x) is constant = 1; i.e., the integral will result in the volume

@@ -48,7 +48,7 @@ use russell_lab::{Matrix, Vector};
 /// See also the `examples` directory.
 ///
 /// ```
-/// use gemlab::integ;
+/// use gemlab::integ::{self, CommonArgs, Gauss};
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_lab::{Vector, vec_approx_eq};
@@ -62,9 +62,9 @@ use russell_lab::{Matrix, Vector};
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = integ::default_points(pad.kind);
+///     let gauss = Gauss::new(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     let mut args = CommonArgs::new(&mut pad, &gauss);
 ///     integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
@@ -101,10 +101,10 @@ where
     }
 
     // loop over integration points
-    for p in 0..args.ips.len() {
+    for p in 0..args.gauss.data.len() {
         // ksi coordinates and weight
-        let iota = &args.ips[p];
-        let weight = args.ips[p][3];
+        let iota = &args.gauss.data[p];
+        let weight = args.gauss.data[p][3];
 
         // calculate Jacobian and Gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -145,7 +145,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use crate::recovery;
     use russell_lab::{vec_approx_eq, Matrix, Vector};
 
@@ -158,7 +158,8 @@ mod tests {
         let bb = Matrix::new(0, 0);
         let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(());
         f(&mut w, 0, &nn, &bb).unwrap();
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
             integ::vec_03_vb(&mut c, &mut args, f).err(),
@@ -180,7 +181,7 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
@@ -209,7 +210,7 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
@@ -244,7 +245,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // check

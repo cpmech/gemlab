@@ -53,7 +53,7 @@ use russell_lab::Vector;
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ;
+/// use gemlab::integ::{self, CommonArgs, Gauss};
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_lab::{Vector, vec_approx_eq};
@@ -67,9 +67,9 @@ use russell_lab::Vector;
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = integ::default_points(pad.kind);
+///     let gauss = Gauss::new(pad.kind);
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     let mut args = CommonArgs::new(&mut pad, &gauss);
 ///     integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
 ///         v[0] = 1.0;
 ///         v[1] = 2.0;
@@ -102,10 +102,10 @@ where
     }
 
     // loop over integration points
-    for p in 0..args.ips.len() {
+    for p in 0..args.gauss.data.len() {
         // ksi coordinates and weight
-        let iota = &args.ips[p];
-        let weight = args.ips[p][3];
+        let iota = &args.gauss.data[p];
+        let weight = args.gauss.data[p][3];
 
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -148,7 +148,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use crate::recovery;
     use russell_lab::{vec_approx_eq, Vector};
 
@@ -160,7 +160,8 @@ mod tests {
         let nn = Vector::new(0);
         let f = |_v: &mut Vector, _p: usize, _nn: &Vector| Ok(());
         f(&mut v, 0, &nn).unwrap();
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
             integ::vec_02_nv(&mut b, &mut args, f).err(),
@@ -187,7 +188,7 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [2, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [2, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
@@ -221,7 +222,7 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
@@ -254,7 +255,7 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-15, 1e-15];
-        let selection: Vec<_> = [1, 4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 4].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let (space_ndim, nnode) = pad.xxt.dims();

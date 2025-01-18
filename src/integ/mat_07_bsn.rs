@@ -93,10 +93,10 @@ where
     }
 
     // loop over integration points
-    for p in 0..args.ips.len() {
+    for p in 0..args.gauss.data.len() {
         // ksi coordinates and weight
-        let iota = &args.ips[p];
-        let weight = args.ips[p][3];
+        let iota = &args.gauss.data[p];
+        let weight = args.gauss.data[p][3];
 
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -146,7 +146,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs};
+    use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs, Gauss};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
 
     #[test]
@@ -160,7 +160,8 @@ mod tests {
         let nnb = Vector::new(0);
         let f = |_p: usize, _nn: &Vector, _bb: &Matrix, _nnb: &Vector| Ok(0.0);
         assert_eq!(f(0, &nn, &bb, &nnb).unwrap(), 0.0);
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
             integ::mat_07_bsn(&mut kk, &mut args, &mut pad_b, f).err(),
@@ -186,7 +187,7 @@ mod tests {
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [4, 9].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [4, 9].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
@@ -207,7 +208,7 @@ mod tests {
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];
-        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [4].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);

@@ -1,3 +1,4 @@
+use crate::integ::Gauss;
 use crate::shapes::Scratchpad;
 use russell_lab::Matrix;
 
@@ -41,6 +42,7 @@ use russell_lab::Matrix;
 /// # Examples
 ///
 /// ```
+/// use gemlab::integ::Gauss;
 /// use gemlab::recovery::get_interp_matrix;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
@@ -65,19 +67,13 @@ use russell_lab::Matrix;
 ///     pad.set_xx(2, 0, 0.0);
 ///     pad.set_xx(2, 1, 6.0);
 ///
-///     // the last column of the array below contains the weight
-///     const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
-///         [1.0 / 6.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
-///         [2.0 / 3.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
-///         [1.0 / 6.0, 2.0 / 3.0, 0.0, 1.0 / 6.0],
-///     ];
-///
 ///     // nodal values
 ///     let u_nodal = Vector::from(&[1.0, 2.0, 3.0]);
 ///
 ///     // interpolated values
-///     let mut u_points = Vector::new(IP_TRI_INTERNAL_3.len());
-///     let pp = get_interp_matrix(&mut pad, &IP_TRI_INTERNAL_3);
+///     let gauss = Gauss::new_sized(pad.kind.class(), 3)?;
+///     let mut u_points = Vector::new(gauss.data.len());
+///     let pp = get_interp_matrix(&mut pad, &gauss);
 ///     mat_vec_mul(&mut u_points, 1.0, &pp, &u_nodal)?;
 ///
 ///     // check
@@ -86,12 +82,12 @@ use russell_lab::Matrix;
 ///     Ok(())
 /// }
 /// ```
-pub fn get_interp_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Matrix {
+pub fn get_interp_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Matrix {
     let nnode = pad.interp.dim();
-    let n_integ_point = integ_points.len();
+    let n_integ_point = gauss.data.len();
     let mut pp = Matrix::new(n_integ_point, nnode);
     for i in 0..n_integ_point {
-        (pad.fn_interp)(&mut pad.interp, &integ_points[i]);
+        (pad.fn_interp)(&mut pad.interp, &gauss.data[i]);
         for j in 0..nnode {
             pp.set(i, j, pad.interp[j]);
         }
@@ -104,7 +100,7 @@ pub fn get_interp_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Mat
 #[cfg(test)]
 mod tests {
     use super::get_interp_matrix;
-    use crate::integ::IP_QUA_LEGENDRE_4;
+    use crate::integ::Gauss;
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::{approx_eq, Matrix};
 
@@ -130,8 +126,8 @@ mod tests {
         pad.set_xx(3, 0, 0.0);
         pad.set_xx(3, 1, h);
 
-        let ips = &IP_QUA_LEGENDRE_4;
-        let pp = get_interp_matrix(&mut pad, ips);
+        let gauss = Gauss::new_sized(pad.kind.class(), 4).unwrap();
+        let pp = get_interp_matrix(&mut pad, &gauss);
         assert_eq!(pp.dims(), (4, 4));
 
         // For one integration point:
@@ -145,7 +141,7 @@ mod tests {
         //   X_ips    =      M           X
         // (nip,ndim)   (nip,nnode) (nnode,ndim)
 
-        let nip = ips.len();
+        let nip = gauss.data.len();
         let (ndim, nnode) = pad.xxt.dims();
         let mut xx_ips = Matrix::new(nip, ndim);
         for i in 0..nip {

@@ -79,7 +79,7 @@ gemlab = "*"
 ## Examples
 
 ```rust
-use gemlab::integ;
+use gemlab::integ::Gauss;
 use gemlab::mesh::{At, Features, Mesh};
 use gemlab::shapes::Scratchpad;
 use gemlab::StrError;
@@ -115,11 +115,11 @@ fn main() -> Result<(), StrError> {
     let cell_2 = &mesh.cells[2];
     let mut pad = Scratchpad::new(ndim, cell_2.kind)?;
     mesh.set_pad(&mut pad, &cell_2.points);
-    let ips = integ::default_points(cell_2.kind);
+    let gauss = Gauss::new(cell_2.kind);
     let mut area = 0.0;
-    for p in 0..ips.len() {
-        let iota = &ips[p];
-        let weight = ips[p][3];
+    for p in 0..gauss.npoint() {
+        let iota = &gauss.data[p];
+        let weight = gauss.data[p][3];
         let det_jac = pad.calc_jacobian(iota)?;
         area += weight * det_jac;
     }

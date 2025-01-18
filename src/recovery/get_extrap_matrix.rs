@@ -1,4 +1,5 @@
 use super::get_interp_matrix;
+use crate::integ::Gauss;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
@@ -40,6 +41,7 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 /// # Examples
 ///
 /// ```
+/// use gemlab::integ::Gauss;
 /// use gemlab::recovery::{get_extrap_matrix, get_interp_matrix};
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
@@ -64,25 +66,19 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///     pad.set_xx(2, 0, 0.0);
 ///     pad.set_xx(2, 1, 6.0);
 ///
-///     // the last column of the array below contains the weight
-///     const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
-///         [1.0 / 6.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
-///         [2.0 / 3.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
-///         [1.0 / 6.0, 2.0 / 3.0, 0.0, 1.0 / 6.0],
-///     ];
-///
 ///     // nodal values
 ///     let u_nodal = Vector::from(&[1.0, 2.0, 3.0]);
 ///
 ///     // interpolated values
-///     let mut u_points = Vector::new(IP_TRI_INTERNAL_3.len());
-///     let pp = get_interp_matrix(&mut pad, &IP_TRI_INTERNAL_3);
+///     let gauss = Gauss::new_sized(pad.kind.class(), 3)?;
+///     let mut u_points = Vector::new(gauss.data.len());
+///     let pp = get_interp_matrix(&mut pad, &gauss);
 ///     mat_vec_mul(&mut u_points, 1.0, &pp, &u_nodal)?;
 ///
 ///     // extrapolated values (recovered)
 ///     let nnode = pad.xxt.dims().1;
 ///     let mut u_nodal_rec = Vector::new(nnode);
-///     let ee = get_extrap_matrix(&mut pad, &IP_TRI_INTERNAL_3)?;
+///     let ee = get_extrap_matrix(&mut pad, &gauss)?;
 ///     mat_vec_mul(&mut u_nodal_rec, 1.0, &ee, &u_points)?;
 ///
 ///     // check
@@ -90,13 +86,13 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///     Ok(())
 /// }
 /// ```
-pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Matrix, StrError> {
+pub fn get_extrap_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Matrix, StrError> {
     // constants
     let (nnode, geo_ndim) = pad.deriv.dims();
-    let n_integ_point = integ_points.len();
+    let n_integ_point = gauss.data.len();
 
     // calculate interpolation matrix P
-    let mut pp = get_interp_matrix(pad, integ_points);
+    let mut pp = get_interp_matrix(pad, gauss);
 
     // allocate output
     let mut ee = Matrix::new(nnode, n_integ_point);
@@ -132,7 +128,7 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Res
         let mut xh = Matrix::new(n_integ_point, geo_ndim + 1);
         for p in 0..n_integ_point {
             for d in 0..geo_ndim {
-                xh.set(p, d, integ_points[p][d]);
+                xh.set(p, d, gauss.data[p][d]);
             }
             xh.set(p, geo_ndim, 1.0);
         }
@@ -141,6 +137,9 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Res
         let mut xhi = Matrix::new(geo_ndim + 1, n_integ_point);
         let mut copy = xh.clone();
         mat_pseudo_inverse(&mut xhi, &mut copy)?;
+
+        println!("xh =\n{:.5}", xh);
+        println!("xhi =\n{:.5}", xhi);
 
         // auxiliary computations
         let mut aux = Matrix::new(n_integ_point, n_integ_point);
@@ -175,7 +174,7 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Res
 #[cfg(test)]
 mod tests {
     use super::get_extrap_matrix;
-    use crate::integ::{IP_QUA_LEGENDRE_1, IP_QUA_LEGENDRE_4, IP_QUA_LEGENDRE_9};
+    use crate::integ::Gauss;
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::math::PI;
     use russell_lab::{mat_approx_eq, mat_vec_mul, vec_approx_eq, Matrix, Vector};
@@ -240,12 +239,12 @@ mod tests {
         pad
     }
 
-    fn do_interpolate(pad: &mut Scratchpad, u_nodal: &Vector, integ_points: &[[f64; 4]]) -> Vector {
+    fn do_interpolate(pad: &mut Scratchpad, u_nodal: &Vector, gauss: &Gauss) -> Vector {
         let nnode = u_nodal.dim();
-        let n_integ_point = integ_points.len();
+        let n_integ_point = gauss.data.len();
         let mut u_point = Vector::new(n_integ_point);
         for i in 0..n_integ_point {
-            (pad.fn_interp)(&mut pad.interp, &integ_points[i]);
+            (pad.fn_interp)(&mut pad.interp, &gauss.data[i]);
             for m in 0..nnode {
                 u_point[i] += pad.interp[m] * u_nodal[m];
             }
@@ -265,12 +264,12 @@ mod tests {
         let mut pad = gen_qua4(20.0, 10.0, PI / 6.0, false);
 
         // extrapolation matrix
-        let ips = &IP_QUA_LEGENDRE_4;
-        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+        let gauss = Gauss::new_sized(pad.kind.class(), 4).unwrap();
+        let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
 
         // check
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]); // original U values at nodes
-        let u_point = do_interpolate(&mut pad, &u_nodal_original, ips); // interpolated U values @ integration points
+        let u_point = do_interpolate(&mut pad, &u_nodal_original, &gauss); // interpolated U values @ integration points
         let u_nodal = do_extrapolate(&ee, &u_point);
         vec_approx_eq(&u_nodal, &u_nodal_original, 1e-15);
     }
@@ -280,14 +279,14 @@ mod tests {
         let mut pad = gen_qua4(20.0, 10.0, PI / 6.0, false);
 
         // extrapolation matrix
-        let ips = &IP_QUA_LEGENDRE_1;
-        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+        let gauss = Gauss::new_sized(pad.kind.class(), 1).unwrap();
+        let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
         let ee_correct = Matrix::from(&[[1.0], [1.0], [1.0], [1.0]]); // the pseudo-inverse of P = [0.25, 0.25, 0.25, 0.25]
         mat_approx_eq(&ee, &ee_correct, 1e-15);
 
         // check
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]); // original U values at nodes
-        let u_point = do_interpolate(&mut pad, &u_nodal_original, ips); // interpolated U values @ integration points
+        let u_point = do_interpolate(&mut pad, &u_nodal_original, &gauss); // interpolated U values @ integration points
         let u_nodal = do_extrapolate(&ee, &u_point);
         // println!("u_point =\n{}", u_point);
         // println!("u_nodal =\n{}", u_nodal);
@@ -299,12 +298,12 @@ mod tests {
         let mut pad = gen_qua8(20.0, 10.0, PI / 6.0, 1.0, false);
 
         // extrapolation matrix
-        let ips = &IP_QUA_LEGENDRE_9;
-        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+        let gauss = Gauss::new_sized(pad.kind.class(), 9).unwrap();
+        let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
 
         // check
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]); // original U values at nodes
-        let u_point = do_interpolate(&mut pad, &u_nodal_original, ips); // interpolated U values @ integration points
+        let u_point = do_interpolate(&mut pad, &u_nodal_original, &gauss); // interpolated U values @ integration points
         let u_nodal = do_extrapolate(&ee, &u_point);
         // println!("u_point =\n{}", u_point);
         // println!("u_nodal =\n{}", u_nodal);
@@ -316,12 +315,12 @@ mod tests {
         let mut pad = gen_qua8(20.0, 10.0, 0.0, 0.0, false);
 
         // extrapolation matrix
-        let ips = &IP_QUA_LEGENDRE_4;
-        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+        let gauss = Gauss::new_sized(pad.kind.class(), 4).unwrap();
+        let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
 
         // check
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]); // original U values at nodes
-        let u_point = do_interpolate(&mut pad, &u_nodal_original, ips); // interpolated U values @ integration points
+        let u_point = do_interpolate(&mut pad, &u_nodal_original, &gauss); // interpolated U values @ integration points
         let u_nodal = do_extrapolate(&ee, &u_point);
         // println!("u_point =\n{}", u_point);
         // println!("u_nodal =\n{}", u_nodal);
@@ -333,8 +332,8 @@ mod tests {
         let mut pad = gen_qua8(1.0, 1.0, 0.0, 0.0, false);
 
         // extrapolation matrix
-        let ips = &IP_QUA_LEGENDRE_4;
-        let ee = get_extrap_matrix(&mut pad, ips).unwrap();
+        let gauss = Gauss::new_sized(pad.kind.class(), 4).unwrap();
+        let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
 
         // check
         let u_point = Vector::from(&[0.5, 0.5, 0.5, 0.5]);

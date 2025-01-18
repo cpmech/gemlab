@@ -1,4 +1,4 @@
-use gemlab::integ::{default_points, scalar_field};
+use gemlab::integ::{scalar_field, Gauss};
 use gemlab::prelude::*;
 use gemlab::recovery::get_points_coords;
 use gemlab::StrError;
@@ -12,7 +12,7 @@ fn main() -> Result<(), StrError> {
     let mesh = Structured::quarter_ring_2d(rmin, rmax, 4, 8, kind, false)?;
 
     // allocate integration points and Scratchpad
-    let ips = default_points(kind);
+    let gauss = Gauss::new(kind);
     let mut pad = Scratchpad::new(2, kind)?;
 
     // sum contribution of all cells
@@ -22,10 +22,10 @@ fn main() -> Result<(), StrError> {
         mesh.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = get_points_coords(&mut pad, ips)?;
+        let x_ips = get_points_coords(&mut pad, &gauss)?;
 
         // perform the integration over the domain of a single cell
-        second_mom_inertia += scalar_field(&mut pad, ips, |p| {
+        second_mom_inertia += scalar_field(&mut pad, &gauss, |p| {
             let y = x_ips[p][1];
             Ok(y * y)
         })?;

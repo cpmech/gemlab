@@ -1,4 +1,4 @@
-use gemlab::integ::{default_points, scalar_field};
+use gemlab::integ::{scalar_field, Gauss};
 use gemlab::prelude::*;
 use gemlab::recovery::get_points_coords;
 use gemlab::StrError;
@@ -13,7 +13,7 @@ fn main() -> Result<(), StrError> {
     let mesh_2 = Structured::quarter_disk_2d_b(r / 2.0, r, 3, 3, kind, false)?;
 
     // allocate integration points and Scratchpad
-    let ips = default_points(kind);
+    let gauss = Gauss::new(kind);
     let mut pad = Scratchpad::new(2, kind)?;
 
     // mesh 1: sum contribution of all cells
@@ -23,10 +23,10 @@ fn main() -> Result<(), StrError> {
         mesh_1.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = get_points_coords(&mut pad, ips)?;
+        let x_ips = get_points_coords(&mut pad, &gauss)?;
 
         // perform the integration over the domain of a single cell
-        second_mom_inertia_mesh_1 += scalar_field(&mut pad, ips, |p| {
+        second_mom_inertia_mesh_1 += scalar_field(&mut pad, &gauss, |p| {
             let y = x_ips[p][1];
             Ok(y * y)
         })?;
@@ -40,10 +40,10 @@ fn main() -> Result<(), StrError> {
         mesh_2.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = get_points_coords(&mut pad, ips)?;
+        let x_ips = get_points_coords(&mut pad, &gauss)?;
 
         // perform the integration over the domain of a single cell
-        second_mom_inertia_mesh_2 += scalar_field(&mut pad, ips, |p| {
+        second_mom_inertia_mesh_2 += scalar_field(&mut pad, &gauss, |p| {
             let y = x_ips[p][1];
             Ok(y * y)
         })?;
