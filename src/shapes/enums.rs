@@ -97,6 +97,19 @@ pub enum GeoClass {
     Hex,
 }
 
+impl GeoClass {
+    /// Returns the (geometry) ndim
+    pub fn ndim(&self) -> usize {
+        match self {
+            Self::Lin => 1,
+            Self::Tri => 2,
+            Self::Qua => 2,
+            Self::Tet => 3,
+            Self::Hex => 3,
+        }
+    }
+}
+
 /// Defines the kind of the geometric shape (Lin2, ... Tri3, ..., Qua4, ... Tet4, ..., Hex8, ...)
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub enum GeoKind {
@@ -1362,7 +1375,16 @@ mod tests {
     }
 
     #[test]
-    fn data_is_consistent() {
+    fn geo_class_functions_are_consistent() {
+        assert_eq!(GeoClass::Lin.ndim(), 1);
+        assert_eq!(GeoClass::Tri.ndim(), 2);
+        assert_eq!(GeoClass::Qua.ndim(), 2);
+        assert_eq!(GeoClass::Tet.ndim(), 3);
+        assert_eq!(GeoClass::Hex.ndim(), 3);
+    }
+
+    #[test]
+    fn geo_kind_functions_are_consistent() {
         for kind in GeoKind::VALUES {
             match kind {
                 // Lin
