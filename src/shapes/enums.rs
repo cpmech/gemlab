@@ -99,7 +99,7 @@ pub enum GeoClass {
 }
 
 impl GeoClass {
-    /// Returns the (geometry) ndim
+    /// Returns the geometry ndim
     pub fn ndim(&self) -> usize {
         match self {
             Self::Lin => 1,
@@ -307,7 +307,7 @@ impl GeoKind {
         }
     }
 
-    /// Returns the (geometry) ndim
+    /// Returns the geometry ndim
     pub fn ndim(&self) -> usize {
         match self {
             // Lin
