@@ -41,6 +41,29 @@
 //! |     2      |     `SOLID`      |     `SHELL`      |
 //! |     3      |    impossible    |     `SOLID`      |
 //!
+//! # Interpolation functions
+//!
+//! The interpolation functions are such that:
+//!
+//! ```text
+//! → →         →  →
+//! u(ξ) = Σ Nᵐ(ξ) uᵐ
+//!        m
+//! ```
+//!
+//! for any quantity `uᵐ` specified at the nodes of an element/shape. Above, `ξ` is the (geo_ndim)
+//! vector of reference coordinates, and `Nᵐ` are the (nnode) interpolation functions.
+//!
+//! Given an (nnode,ncol) **matrix** of nodal values `U`, we can calculate the (ncol) **vector** of
+//! interpolated values `u` by means of
+//!
+//! ```text
+//!   u   =     Uᵀ     ⋅   N
+//! (ncol) (ncol,nnode) (nnode)
+//! ```
+//!
+//! where `N` is an (nnode) **vector** formed with all `Nᵐ` values.
+//!
 //! # Isoparametric formulation
 //!
 //! The isoparametric formulation establishes that we can calculate the coordinates `x(ξ)`
