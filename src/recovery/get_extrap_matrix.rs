@@ -722,7 +722,7 @@ mod tests {
     use super::get_extrap_matrix;
     use crate::integ::Gauss;
     use crate::recovery::{get_interp_matrix, get_points_coords};
-    use crate::shapes::{GeoKind, Scratchpad};
+    use crate::shapes::{GeoClass, GeoKind, Scratchpad};
     use plotpy::{generate3d, Plot, Surface};
     use russell_lab::math::PI;
     use russell_lab::{
@@ -1017,8 +1017,46 @@ mod tests {
         }
     }
 
+    fn check_hyperplane(pad: &mut Scratchpad, gauss: &Gauss) {
+        // println!("{:?}: {} points", pad.kind, gauss.npoint());
+
+        // set (hyper) plane function at integration points
+        let geo_ndim = pad.kind.ndim();
+        let np = gauss.npoint();
+        let x_ips = get_points_coords(pad, &gauss).unwrap();
+        let mut u_point = Vector::new(np);
+        for p in 0..np {
+            u_point[p] = -1.0;
+            for d in 0..geo_ndim {
+                u_point[p] += x_ips[p][d]; // -1 + x + y + z
+            }
+        }
+
+        // perform extrapolation to nodes
+        let ee = get_extrap_matrix(pad, &gauss).unwrap();
+        let u_nodal = do_extrapolate(&ee, &u_point);
+
+        // check
+        for m in 0..u_nodal.dim() {
+            let mut u_expected = -1.0;
+            for d in 0..geo_ndim {
+                u_expected += pad.xxt.get(d, m); // -1 + x + y + z
+            }
+            approx_eq(u_expected, u_nodal[m], 1e-13);
+        }
+
+        // interpolate back to integration points
+        let mut u_point_interp = Vector::new(np);
+        let pp = get_interp_matrix(pad, &gauss);
+        mat_vec_mul(&mut u_point_interp, 1.0, &pp, &u_nodal).unwrap();
+
+        // check
+        vec_approx_eq(&u_point_interp, &u_point, 1e-14);
+    }
+
     #[test]
     fn get_extrap_matrix_works_many_combos() {
+        // for kind in [GeoKind::Tri6] {
         for kind in GeoKind::VALUES {
             // pad
             let space_ndim = usize::max(2, kind.ndim());
@@ -1036,40 +1074,22 @@ mod tests {
                 }
             }
 
-            // default integration points
+            // check with default integration points
             let gauss = Gauss::new(kind);
+            check_hyperplane(&mut pad, &gauss);
 
-            // set (hyper) plane function at integration points
-            let np = gauss.npoint();
-            let x_ips = get_points_coords(&mut pad, &gauss).unwrap();
-            let mut u_point = Vector::new(np);
-            for p in 0..np {
-                u_point[p] = -1.0;
-                for d in 0..geo_ndim {
-                    u_point[p] += x_ips[p][d]; // -1 + x + y + z
-                }
+            // check with minimum number of integration points
+            let n_integ_point = match kind.class() {
+                GeoClass::Lin => 2,
+                GeoClass::Tri => 3,
+                GeoClass::Qua => 4,
+                GeoClass::Tet => 4,
+                GeoClass::Hex => 8,
+            };
+            if n_integ_point != gauss.npoint() {
+                let gauss_min = Gauss::new_sized(kind.class(), n_integ_point).unwrap();
+                check_hyperplane(&mut pad, &gauss_min);
             }
-
-            // perform extrapolation to nodes
-            let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
-            let u_nodal = do_extrapolate(&ee, &u_point);
-
-            // check
-            for m in 0..u_nodal.dim() {
-                let mut u_expected = -1.0;
-                for d in 0..geo_ndim {
-                    u_expected += pad.xxt.get(d, m); // -1 + x + y + z
-                }
-                approx_eq(u_expected, u_nodal[m], 1e-13);
-            }
-
-            // interpolate back to integration points
-            let mut u_point_interp = Vector::new(np);
-            let pp = get_interp_matrix(&mut pad, &gauss);
-            mat_vec_mul(&mut u_point_interp, 1.0, &pp, &u_nodal).unwrap();
-
-            // check
-            vec_approx_eq(&u_point_interp, &u_point, 1e-14);
         }
     }
 }
