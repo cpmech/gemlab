@@ -25,7 +25,7 @@ impl Scratchpad {
     ///
     /// # Output
     ///
-    /// * `deriv` -- interpolation functions (nnode)
+    /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
     /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
     /// * `inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
     /// * `gradient` -- gradient matrix (nnode,space_ndim)
