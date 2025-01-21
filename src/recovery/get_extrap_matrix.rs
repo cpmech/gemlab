@@ -812,7 +812,7 @@ mod tests {
     }
 
     #[test]
-    pub fn get_extrap_matrix_works_qua4_ip4() {
+    fn get_extrap_matrix_works_qua4_ip4() {
         let mut pad = gen_qua4(20.0, 10.0, PI / 6.0, false);
 
         // extrapolation matrix
@@ -827,7 +827,7 @@ mod tests {
     }
 
     #[test]
-    pub fn get_extrap_matrix_works_qua4_ip1() {
+    fn get_extrap_matrix_works_qua4_ip1() {
         let mut pad = gen_qua4(20.0, 10.0, PI / 6.0, false);
 
         // extrapolation matrix
@@ -844,7 +844,7 @@ mod tests {
     }
 
     #[test]
-    pub fn get_extrap_matrix_works_qua8_ip9() {
+    fn get_extrap_matrix_works_qua8_ip9() {
         let mut pad = gen_qua8(20.0, 10.0, PI / 6.0, 1.0, false);
 
         // extrapolation matrix
@@ -859,7 +859,7 @@ mod tests {
     }
 
     #[test]
-    pub fn get_extrap_matrix_works_qua8_ip4() {
+    fn get_extrap_matrix_works_qua8_ip4() {
         let mut pad = gen_qua8(20.0, 10.0, 0.0, 0.0, false);
 
         // extrapolation matrix
@@ -884,7 +884,7 @@ mod tests {
     }
 
     #[test]
-    pub fn get_extrap_matrix_works_durand_farias_example1() {
+    fn get_extrap_matrix_works_durand_farias_example1() {
         let mut pad = gen_qua8(1.0, 1.0, 0.0, 0.0, false);
 
         // extrapolation matrix
@@ -946,7 +946,7 @@ mod tests {
     }
 
     #[test]
-    pub fn get_extrap_matrix_works_durand_farias_example2() {
+    fn get_extrap_matrix_works_durand_farias_example2() {
         let mut pad = gen_qua8(1.0, 1.0, 0.0, 0.0, false);
 
         // extrapolation matrix
@@ -1014,6 +1014,62 @@ mod tests {
                 .set_figure_size_points(600.0, 400.0)
                 .save("/tmp/gemlab/test_durand_farias_example2.svg")
                 .unwrap();
+        }
+    }
+
+    #[test]
+    fn get_extrap_matrix_works_many_combos() {
+        for kind in GeoKind::VALUES {
+            // pad
+            let space_ndim = usize::max(2, kind.ndim());
+            let mut pad = Scratchpad::new(space_ndim, kind).unwrap();
+
+            // set the real coordinates of nodes equal to their natural coordinates
+            let (nnode, geo_ndim) = pad.deriv.dims();
+            for m in 0..nnode {
+                let r = kind.reference_coords(m);
+                for j in 0..geo_ndim {
+                    pad.set_xx(m, j, r[j]);
+                }
+                if geo_ndim == 1 {
+                    pad.set_xx(m, 1, 123.456);
+                }
+            }
+
+            // default integration points
+            let gauss = Gauss::new(kind);
+
+            // set (hyper) plane function at integration points
+            let np = gauss.npoint();
+            let x_ips = get_points_coords(&mut pad, &gauss).unwrap();
+            let mut u_point = Vector::new(np);
+            for p in 0..np {
+                u_point[p] = -1.0;
+                for d in 0..geo_ndim {
+                    u_point[p] += x_ips[p][d]; // -1 + x + y + z
+                }
+            }
+
+            // perform extrapolation to nodes
+            let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
+            let u_nodal = do_extrapolate(&ee, &u_point);
+
+            // check
+            for m in 0..u_nodal.dim() {
+                let mut u_expected = -1.0;
+                for d in 0..geo_ndim {
+                    u_expected += pad.xxt.get(d, m); // -1 + x + y + z
+                }
+                approx_eq(u_expected, u_nodal[m], 1e-13);
+            }
+
+            // interpolate back to integration points
+            let mut u_point_interp = Vector::new(np);
+            let pp = get_interp_matrix(&mut pad, &gauss);
+            mat_vec_mul(&mut u_point_interp, 1.0, &pp, &u_nodal).unwrap();
+
+            // check
+            vec_approx_eq(&u_point_interp, &u_point, 1e-14);
         }
     }
 }
