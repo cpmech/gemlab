@@ -414,7 +414,7 @@ mod tests {
                 let ksi = kind.reference_coords(m);
 
                 // compute interpolation function Nⁿ(ξᵐ)
-                (pad.fn_interp)(&mut pad.interp, ksi);
+                pad.calc_interp(ksi);
 
                 // check: Nⁿ(ξᵐ) = 1 if m==n; 0 otherwise
                 for n in 0..nnode {

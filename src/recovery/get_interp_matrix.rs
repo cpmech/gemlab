@@ -89,7 +89,7 @@ pub fn get_interp_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Matrix {
     let n_integ_point = gauss.npoint();
     let mut pp = Matrix::new(n_integ_point, nnode);
     for p in 0..n_integ_point {
-        (pad.fn_interp)(&mut pad.interp, gauss.coords(p));
+        pad.calc_interp(gauss.coords(p));
         for j in 0..nnode {
             pp.set(p, j, pad.interp[j]);
         }
