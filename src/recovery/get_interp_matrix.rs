@@ -5,9 +5,11 @@ use russell_lab::Matrix;
 /// Calculates the interpolation matrix (nodes to integration points)
 ///
 /// ```text
-/// u_points =      P       u_nodal
-///   (nip)    (nip,nnode)  (nnode)
+/// u_points =   P    u_nodal
+///    (np)   (np,nv)   (nv)
 /// ```
+///
+/// where `nv` is the number of vertices (nodes) and `np` is the number of integration points (`n_integ_point`).
 ///
 /// # Input
 ///
