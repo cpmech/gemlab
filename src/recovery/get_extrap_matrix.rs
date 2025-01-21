@@ -721,9 +721,15 @@ const TR_PINV_HXI_HEX_LEGENDRE_64: [[f64; 4]; 64] = [
 mod tests {
     use super::get_extrap_matrix;
     use crate::integ::Gauss;
+    use crate::recovery::{get_interp_matrix, get_points_coords};
     use crate::shapes::{GeoKind, Scratchpad};
+    use plotpy::{generate3d, Plot, Surface};
     use russell_lab::math::PI;
-    use russell_lab::{mat_approx_eq, mat_vec_mul, vec_approx_eq, Matrix, Vector};
+    use russell_lab::{
+        approx_eq, mat_approx_eq, mat_pseudo_inverse, mat_vec_mul, vec_approx_eq, vec_inner, Matrix, Vector,
+    };
+
+    const SAVE_FIGURE: bool = false;
 
     fn gen_qua4(w: f64, h: f64, skew_angle: f64, save_fig: bool) -> Scratchpad {
         //  3-------------2         ξ₀   ξ₁
@@ -790,7 +796,7 @@ mod tests {
         let n_integ_point = gauss.npoint();
         let mut u_point = Vector::new(n_integ_point);
         for p in 0..n_integ_point {
-            (pad.fn_interp)(&mut pad.interp, gauss.coords(p));
+            pad.calc_interp(gauss.coords(p));
             for m in 0..nnode {
                 u_point[p] += pad.interp[m] * u_nodal[m];
             }
@@ -834,8 +840,6 @@ mod tests {
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]); // original U values at nodes
         let u_point = do_interpolate(&mut pad, &u_nodal_original, &gauss); // interpolated U values @ integration points
         let u_nodal = do_extrapolate(&ee, &u_point);
-        // println!("u_point =\n{}", u_point);
-        // println!("u_nodal =\n{}", u_nodal);
         vec_approx_eq(&u_nodal, &u_nodal_original, 1.5); // we cannot get a better result with such low n_integ_point
     }
 
@@ -851,8 +855,6 @@ mod tests {
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]); // original U values at nodes
         let u_point = do_interpolate(&mut pad, &u_nodal_original, &gauss); // interpolated U values @ integration points
         let u_nodal = do_extrapolate(&ee, &u_point);
-        // println!("u_point =\n{}", u_point);
-        // println!("u_nodal =\n{}", u_nodal);
         vec_approx_eq(&u_nodal, &u_nodal_original, 1e-13); // pretty good, with overdetermined system
     }
 
@@ -868,9 +870,17 @@ mod tests {
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]); // original U values at nodes
         let u_point = do_interpolate(&mut pad, &u_nodal_original, &gauss); // interpolated U values @ integration points
         let u_nodal = do_extrapolate(&ee, &u_point);
-        // println!("u_point =\n{}", u_point);
-        // println!("u_nodal =\n{}", u_nodal);
         vec_approx_eq(&u_nodal, &u_nodal_original, 12.3); // we cannot get better results with only 4 integ points
+    }
+
+    // Calculates E = P⁺
+    fn calc_uncorrected_extrap_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Matrix {
+        let nv = pad.deriv.dims().0;
+        let np = gauss.npoint();
+        let mut pp = get_interp_matrix(pad, gauss); // (np,nv)
+        let mut pp_inv = Matrix::new(nv, np);
+        mat_pseudo_inverse(&mut pp_inv, &mut pp).unwrap();
+        return pp_inv;
     }
 
     #[test]
@@ -881,16 +891,129 @@ mod tests {
         let gauss = Gauss::new_sized(pad.kind.class(), 4).unwrap();
         let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
 
-        // check
+        // extrapolate to nodes
         let u_point = Vector::from(&[0.5, 0.5, 0.5, 0.5]);
         let u_nodal = do_extrapolate(&ee, &u_point);
-        // println!("u_point =\n{}", u_point);
-        // println!("u_nodal =\n{}", u_nodal);
 
-        // let u_nodal_without_correction = Vector::from(&[-0.088, -0.088, -0.088, -0.088, 0.353, 0.353, 0.353, 0.353]);
-        // vec_approx_eq(&u_nodal, &u_nodal_without_correction, 1e-3);
-
+        // check
         let u_nodal_expected = Vector::from(&[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
         vec_approx_eq(&u_nodal, &u_nodal_expected, 1e-14);
+
+        if SAVE_FIGURE {
+            let ee_uncorrected = calc_uncorrected_extrap_matrix(&mut pad, &gauss);
+            let u_nodal_unc = do_extrapolate(&ee_uncorrected, &u_point);
+
+            let n = 21;
+            let (rr, ss, uu) = generate3d(-1.0, 1.0, -1.0, 1.0, n, n, |r, s| {
+                pad.calc_interp(&[r, s]);
+                vec_inner(&pad.interp, &u_nodal)
+            });
+            let (rr_unc, ss_unc, uu_unc) = generate3d(-1.0, 1.0, -1.0, 1.0, n, n, |r, s| {
+                pad.calc_interp(&[r, s]);
+                vec_inner(&pad.interp, &u_nodal_unc)
+            });
+
+            let mut surface = Surface::new();
+            surface
+                .set_with_surface(false)
+                .set_with_wireframe(true)
+                .set_wire_line_width(0.3)
+                .draw(&rr, &ss, &uu);
+            let mut surface_unc = Surface::new();
+
+            surface_unc
+                .set_with_surface(false)
+                .set_with_wireframe(true)
+                .set_wire_line_width(0.3)
+                .draw(&rr_unc, &ss_unc, &uu_unc);
+
+            let mut plot = Plot::new();
+            plot.set_subplot_3d(1, 2, 1)
+                .set_title("Corrected E matrix")
+                .set_labels_3d("r", "s", "U")
+                .set_zrange(-0.09, 0.7)
+                .add(&surface)
+                .set_subplot_3d(1, 2, 2)
+                .set_title("Uncorrected E matrix")
+                .set_labels_3d("r", "s", "U")
+                .set_zrange(-0.09, 0.7)
+                .add(&surface_unc)
+                .set_save_pad_inches(0.25)
+                .set_figure_size_points(600.0, 400.0)
+                .save("/tmp/gemlab/test_durand_farias_example1.svg")
+                .unwrap();
+        }
+    }
+
+    #[test]
+    pub fn get_extrap_matrix_works_durand_farias_example2() {
+        let mut pad = gen_qua8(1.0, 1.0, 0.0, 0.0, false);
+
+        // extrapolation matrix
+        let gauss = Gauss::new_sized(pad.kind.class(), 4).unwrap();
+        let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
+
+        // set plane function at integration points
+        let np = gauss.npoint();
+        let x_ips = get_points_coords(&mut pad, &gauss).unwrap();
+        let mut u_point = Vector::new(np);
+        for p in 0..np {
+            u_point[p] = x_ips[p][0] + x_ips[p][1] - 1.0;
+        }
+
+        // extrapolate to nodes
+        let u_nodal = do_extrapolate(&ee, &u_point);
+
+        // check
+        for m in 0..u_nodal.dim() {
+            let x = pad.xxt.get(0, m);
+            let y = pad.xxt.get(1, m);
+            approx_eq(x + y - 1.0, u_nodal[m], 1e-14);
+        }
+
+        if SAVE_FIGURE {
+            let ee_uncorrected = calc_uncorrected_extrap_matrix(&mut pad, &gauss);
+            let u_nodal_unc = do_extrapolate(&ee_uncorrected, &u_point);
+
+            let n = 21;
+            let (rr, ss, uu) = generate3d(-1.0, 1.0, -1.0, 1.0, n, n, |r, s| {
+                pad.calc_interp(&[r, s]);
+                vec_inner(&pad.interp, &u_nodal)
+            });
+            let (rr_unc, ss_unc, uu_unc) = generate3d(-1.0, 1.0, -1.0, 1.0, n, n, |r, s| {
+                pad.calc_interp(&[r, s]);
+                vec_inner(&pad.interp, &u_nodal_unc)
+            });
+
+            let mut surface = Surface::new();
+            surface
+                .set_with_surface(false)
+                .set_with_wireframe(true)
+                .set_wire_line_width(0.3)
+                .draw(&rr, &ss, &uu);
+            let mut surface_unc = Surface::new();
+
+            surface_unc
+                .set_with_surface(false)
+                .set_with_wireframe(true)
+                .set_wire_line_width(0.3)
+                .draw(&rr_unc, &ss_unc, &uu_unc);
+
+            let mut plot = Plot::new();
+            plot.set_subplot_3d(1, 2, 1)
+                .set_title("Corrected E matrix")
+                .set_labels_3d("r", "s", "U")
+                .set_zrange(-1.0, 1.0)
+                .add(&surface)
+                .set_subplot_3d(1, 2, 2)
+                .set_title("Uncorrected E matrix")
+                .set_labels_3d("r", "s", "U")
+                .set_zrange(-1.0, 1.0)
+                .add(&surface_unc)
+                .set_save_pad_inches(0.25)
+                .set_figure_size_points(600.0, 400.0)
+                .save("/tmp/gemlab/test_durand_farias_example2.svg")
+                .unwrap();
+        }
     }
 }
