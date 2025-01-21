@@ -9,14 +9,14 @@ use std::path::Path;
 
 // Calculates the pseudo-inverse of the reference coordinates matrix
 //
-// This function calculates `PINV_HXI ← pinv(hat(ξ))`, where `HXI ← hat(ξ)` is
+// This function calculates `PINV_HXI ← pinv(hat_ξ)`, where `HXI ← hat_ξ` is
 // a matrix with the reference (natural) coordinates of the integration points,
 // augmented by a column of ones. Here, `pinv` means the pseudo-inverse.
 //
 // # Output
 //
 // ```text
-// TR_PINV_HXI ← transpose(PINV_HXI) ← transpose(pinv(hat(ξ))))
+// TR_PINV_HXI ← transpose(PINV_HXI) ← transpose(pinv(hat_ξ)))
 // ```
 //
 // This function returns a string representation of the **transpose** of `PINV_HXI`.
@@ -80,7 +80,7 @@ fn calc_pseudo_inverse_ref_coords_mat(
     // integration points
     let gauss = Gauss::new_sized(class, n_integ_point).unwrap();
 
-    // hat(ξ) matrix (n_integ_point,geo_ndim+1) with the natural coordinates of the integration points, augmented by a column of ones.
+    // hat_ξ matrix (n_integ_point,geo_ndim+1) with the natural coordinates of the integration points, augmented by a column of ones.
     let geo_ndim = class.ndim();
     let mut hxi = Matrix::new(n_integ_point, geo_ndim + 1);
     for p in 0..n_integ_point {
@@ -97,7 +97,7 @@ fn calc_pseudo_inverse_ref_coords_mat(
         write!(&mut buf, "{}", mat_to_mathematica("hxi", &hxi)).unwrap();
     }
 
-    // calculate pinv(hat(ξ)) (geo_ndim+1,n_integ_point), the pseudo-inverse of hat(ξ)
+    // calculate pinv(hat_ξ) (geo_ndim+1,n_integ_point), the pseudo-inverse of hat_ξ
     let mut pinv_hxi = Matrix::new(geo_ndim + 1, n_integ_point);
     mat_pseudo_inverse(&mut pinv_hxi, &mut hxi).unwrap();
 
@@ -132,7 +132,7 @@ fn main() -> Result<(), StrError> {
     //
     //    math < /tmp/gemlab/generate_gauss_extrap_data.m
     //
-    let math = true; // mathematica
+    let math = false; // mathematica
     let mut buf = String::new();
 
     // Lin
