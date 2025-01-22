@@ -1090,6 +1090,19 @@ mod tests {
                 let gauss_min = Gauss::new_sized(kind.class(), n_integ_point).unwrap();
                 check_hyperplane(&mut pad, &gauss_min);
             }
+
+            // check with maximum number of integration points
+            let n_integ_point = match kind.class() {
+                GeoClass::Lin => 5,
+                GeoClass::Tri => 16,
+                GeoClass::Qua => 16,
+                GeoClass::Tet => 24,
+                GeoClass::Hex => 64,
+            };
+            if n_integ_point != gauss.npoint() {
+                let gauss_min = Gauss::new_sized(kind.class(), n_integ_point).unwrap();
+                check_hyperplane(&mut pad, &gauss_min);
+            }
         }
     }
 }
