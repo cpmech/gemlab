@@ -65,6 +65,9 @@ pub struct Figure {
 
     /// Parameter: shows point marker within parenthesis (if not zero)
     pub with_point_marker: bool,
+
+    /// Parameter: shows cell attribute within parenthesis
+    pub with_cell_att: bool,
 }
 
 impl Figure {
@@ -79,7 +82,7 @@ impl Figure {
         canvas_edges
             .set_stop_clip(true)
             .set_face_color("None")
-            .set_line_width(2.0)
+            .set_line_width(1.0)
             .set_edge_color("#2440cd");
         canvas_points
             .set_stop_clip(true)
@@ -89,7 +92,7 @@ impl Figure {
             .set_line_style("None");
         canvas_point_ids
             .set_color("red")
-            .set_fontsize(8.0)
+            .set_fontsize(7.0)
             .set_align_horizontal("center")
             .set_align_vertical("center")
             .set_bbox(true)
@@ -98,23 +101,23 @@ impl Figure {
             .set_bbox_style("round,pad=0.15");
         canvas_cell_ids
             .set_color("#22971f")
-            .set_fontsize(9.0)
+            .set_fontsize(8.0)
             .set_align_horizontal("center")
             .set_align_vertical("center")
             .set_bbox(true)
             .set_bbox_facecolor("white")
-            .set_bbox_edgecolor("#b7b7b7")
+            .set_bbox_edgecolor("None")
             .set_bbox_style("square,pad=0.15");
         canvas_cells
             .set_stop_clip(true)
             .set_face_color("#e3f3ff")
             .set_edge_color("#0055d4")
-            .set_line_width(1.5);
+            .set_line_width(1.0);
         canvas_lin_cells
             .set_stop_clip(true)
             .set_face_color("None")
             .set_edge_color("#cd0000")
-            .set_line_width(3.0);
+            .set_line_width(2.0);
         Figure {
             plot: Plot::new(),
             canvas_edges,
@@ -130,7 +133,8 @@ impl Figure {
             range_2d: None,
             range_3d: None,
             figure_size: None,
-            with_point_marker: true,
+            with_point_marker: false,
+            with_cell_att: true,
         }
     }
 }
@@ -254,7 +258,11 @@ impl Mesh {
             }
 
             // add label
-            let msg = format!("{}({})", cell.id, cell.attribute);
+            let msg = if fig.with_cell_att {
+                format!("{}({})", cell.id, cell.attribute)
+            } else {
+                format!("{}", cell.id)
+            };
             if self.ndim == 2 {
                 fig.canvas_cell_ids.draw(x[0], x[1], msg.as_str());
             } else {
