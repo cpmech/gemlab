@@ -47,7 +47,7 @@ use russell_lab::Vector;
 ///   as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
 ///   The length must be `b.len() ≥ ii0 + nnode ⋅ space_ndim`
 /// * `args` --- Common arguments
-/// * `fn_v` -- Function `f(v,p,un,N)` that calculates `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_v` -- Function `f(v,p,un,N)` that calculates `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   the **unit** normal vector `un(x(ιᵖ))`, and shape functions N(ιᵖ).
 ///   `v.dim() = space_ndim` and `un.dim() = space_ndim`.
 ///

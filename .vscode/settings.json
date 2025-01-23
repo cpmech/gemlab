@@ -6,6 +6,7 @@
     "deque",
     "extrap",
     "nfacet",
+    "ngauss",
     "PINV",
     "Stockmeyer",
     "zrange"

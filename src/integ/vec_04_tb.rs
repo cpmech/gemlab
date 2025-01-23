@@ -49,7 +49,7 @@ use russell_tensor::{Mandel, Tensor2};
 ///   as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
 ///   The length must be `d.len() ≥ ii0 + nnode ⋅ space_ndim`
 /// * `args` --- Common arguments
-/// * `fn_sig` -- Function `f(σ,p,N,B)` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_sig` -- Function `f(σ,p,N,B)` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   shape functions N(ιᵖ), and the gradients B(ιᵖ). `σ` is set for `space_ndim`.
 ///
 /// # Examples

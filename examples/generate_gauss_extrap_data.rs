@@ -37,7 +37,7 @@ use std::path::Path;
 //    Advances in Engineering Software, 67:1-9 <https://doi.org/10.1016/j.advengsoft.2013.07.002>
 fn calc_pseudo_inverse_ref_coords_mat(
     class: GeoClass,
-    n_integ_point: usize,
+    ngauss: usize,
     mathematica: bool, // for mathematica check
     digits: usize,     // for mathematica check
 ) -> String {
@@ -45,7 +45,7 @@ fn calc_pseudo_inverse_ref_coords_mat(
     let typ = match class {
         GeoClass::Lin => "LEGENDRE",
         GeoClass::Tri => {
-            if n_integ_point == 6 || n_integ_point == 7 {
+            if ngauss == 6 || ngauss == 7 {
                 "FELIPPA"
             } else {
                 "INTERNAL"
@@ -53,14 +53,14 @@ fn calc_pseudo_inverse_ref_coords_mat(
         }
         GeoClass::Qua => "LEGENDRE",
         GeoClass::Tet => {
-            if n_integ_point > 5 {
+            if ngauss > 5 {
                 "FELIPPA"
             } else {
                 "INTERNAL"
             }
         }
         GeoClass::Hex => {
-            if n_integ_point == 6 || n_integ_point == 14 {
+            if ngauss == 6 || ngauss == 14 {
                 "IRONS"
             } else {
                 "LEGENDRE"
@@ -70,20 +70,20 @@ fn calc_pseudo_inverse_ref_coords_mat(
 
     // get const name
     let name = match class {
-        GeoClass::Lin => format!("TR_PINV_HXI_LIN_{}_{}", typ, n_integ_point),
-        GeoClass::Tri => format!("TR_PINV_HXI_TRI_{}_{}", typ, n_integ_point),
-        GeoClass::Qua => format!("TR_PINV_HXI_QUA_{}_{}", typ, n_integ_point),
-        GeoClass::Tet => format!("TR_PINV_HXI_TET_{}_{}", typ, n_integ_point),
-        GeoClass::Hex => format!("TR_PINV_HXI_HEX_{}_{}", typ, n_integ_point),
+        GeoClass::Lin => format!("TR_PINV_HXI_LIN_{}_{}", typ, ngauss),
+        GeoClass::Tri => format!("TR_PINV_HXI_TRI_{}_{}", typ, ngauss),
+        GeoClass::Qua => format!("TR_PINV_HXI_QUA_{}_{}", typ, ngauss),
+        GeoClass::Tet => format!("TR_PINV_HXI_TET_{}_{}", typ, ngauss),
+        GeoClass::Hex => format!("TR_PINV_HXI_HEX_{}_{}", typ, ngauss),
     };
 
     // integration points
-    let gauss = Gauss::new_sized(class, n_integ_point).unwrap();
+    let gauss = Gauss::new_sized(class, ngauss).unwrap();
 
-    // hat_ξ matrix (n_integ_point,geo_ndim+1) with the natural coordinates of the integration points, augmented by a column of ones.
+    // hat_ξ matrix (ngauss,geo_ndim+1) with the natural coordinates of the integration points, augmented by a column of ones.
     let geo_ndim = class.ndim();
-    let mut hxi = Matrix::new(n_integ_point, geo_ndim + 1);
-    for p in 0..n_integ_point {
+    let mut hxi = Matrix::new(ngauss, geo_ndim + 1);
+    for p in 0..ngauss {
         for d in 0..geo_ndim {
             hxi.set(p, d, gauss.coords(p)[d]);
         }
@@ -97,8 +97,8 @@ fn calc_pseudo_inverse_ref_coords_mat(
         write!(&mut buf, "{}", mat_to_mathematica("hxi", &hxi)).unwrap();
     }
 
-    // calculate pinv(hat_ξ) (geo_ndim+1,n_integ_point), the pseudo-inverse of hat_ξ
-    let mut pinv_hxi = Matrix::new(geo_ndim + 1, n_integ_point);
+    // calculate pinv(hat_ξ) (geo_ndim+1,ngauss), the pseudo-inverse of hat_ξ
+    let mut pinv_hxi = Matrix::new(geo_ndim + 1, ngauss);
     mat_pseudo_inverse(&mut pinv_hxi, &mut hxi).unwrap();
 
     // results
@@ -114,8 +114,8 @@ fn calc_pseudo_inverse_ref_coords_mat(
         .unwrap();
     } else {
         // generate transposed matrix with extra columns filled with zeros
-        let mut tr_pinv_hxi = Matrix::new(n_integ_point, 4);
-        for i in 0..n_integ_point {
+        let mut tr_pinv_hxi = Matrix::new(ngauss, 4);
+        for i in 0..ngauss {
             for j in 0..(geo_ndim + 1) {
                 tr_pinv_hxi.set(i, j, pinv_hxi.get(j, i));
             }
@@ -141,8 +141,8 @@ fn main() -> Result<(), StrError> {
         buf.push_str("// -- LIN ----------------------------------------------------------------\n");
         buf.push_str("// -----------------------------------------------------------------------\n");
     }
-    for n_integ_point in [1, 2, 3, 4, 5] {
-        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Lin, n_integ_point, math, 15);
+    for ngauss in [1, 2, 3, 4, 5] {
+        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Lin, ngauss, math, 15);
         buf.push_str(&res);
     }
 
@@ -152,8 +152,8 @@ fn main() -> Result<(), StrError> {
         buf.push_str("// -- TRI ----------------------------------------------------------------\n");
         buf.push_str("// -----------------------------------------------------------------------\n");
     }
-    for n_integ_point in [1, 3, 4, 6, 7, 12, 16] {
-        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Tri, n_integ_point, math, 14);
+    for ngauss in [1, 3, 4, 6, 7, 12, 16] {
+        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Tri, ngauss, math, 14);
         buf.push_str(&res);
     }
 
@@ -163,8 +163,8 @@ fn main() -> Result<(), StrError> {
         buf.push_str("// -- QUA ----------------------------------------------------------------\n");
         buf.push_str("// -----------------------------------------------------------------------\n");
     }
-    for n_integ_point in [1, 4, 9, 16] {
-        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Qua, n_integ_point, math, 15);
+    for ngauss in [1, 4, 9, 16] {
+        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Qua, ngauss, math, 15);
         buf.push_str(&res);
     }
 
@@ -174,8 +174,8 @@ fn main() -> Result<(), StrError> {
         buf.push_str("// -- TET ----------------------------------------------------------------\n");
         buf.push_str("// -----------------------------------------------------------------------\n");
     }
-    for n_integ_point in [1, 4, 5, 8, 14, 15, 24] {
-        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Tet, n_integ_point, math, 14);
+    for ngauss in [1, 4, 5, 8, 14, 15, 24] {
+        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Tet, ngauss, math, 14);
         buf.push_str(&res);
     }
 
@@ -185,8 +185,8 @@ fn main() -> Result<(), StrError> {
         buf.push_str("// -- HEX ----------------------------------------------------------------\n");
         buf.push_str("// -----------------------------------------------------------------------\n");
     }
-    for n_integ_point in [6, 8, 14, 27, 64] {
-        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Hex, n_integ_point, math, 15);
+    for ngauss in [6, 8, 14, 27, 64] {
+        let res = calc_pseudo_inverse_ref_coords_mat(GeoClass::Hex, ngauss, math, 15);
         buf.push_str(&res);
     }
 

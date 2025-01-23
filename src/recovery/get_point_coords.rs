@@ -16,11 +16,11 @@ use russell_lab::Vector;
 ///
 /// # Input
 ///
-/// * `integ_points` -- Integration points' constants (n_integ_point)
+/// * `integ_points` -- Integration points' constants (ngauss)
 ///
 /// # Output
 ///
-/// * Returns an array with `n_integ_point` (number of integration points) vectors, where
+/// * Returns an array with `ngauss` (number of integration points) vectors, where
 ///   each vector has a dimension equal to `space_ndim`.
 ///
 /// # Examples
@@ -61,8 +61,8 @@ use russell_lab::Vector;
 pub fn get_points_coords(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Vec<Vector>, StrError> {
     let space_ndim = pad.xxt.dims().0;
     let mut all_coords = Vec::new();
-    let n_integ_point = gauss.npoint();
-    for p in 0..n_integ_point {
+    let ngauss = gauss.npoint();
+    for p in 0..ngauss {
         let mut x = Vector::new(space_ndim);
         pad.calc_coords(&mut x, gauss.coords(p))?;
         all_coords.push(x);

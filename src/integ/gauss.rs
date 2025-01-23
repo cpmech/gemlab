@@ -88,11 +88,11 @@ impl Gauss {
     /// # Input
     ///
     /// * `class` -- The geometry class
-    /// * `n_integ_point` -- Number of integration points requested (see Options below)
+    /// * `ngauss` -- Number of integration points requested (see Options below)
     ///
     /// # Options
     ///
-    /// `n_integ_point` for **Lin** class:
+    /// `ngauss` for **Lin** class:
     ///
     /// * `1` -- Conventional Legendre integration points and weights
     /// * `2` -- Conventional Legendre integration points and weights
@@ -100,7 +100,7 @@ impl Gauss {
     /// * `4` -- Conventional Legendre integration points and weights
     /// * `5` -- Conventional Legendre integration points and weights
     ///
-    /// `n_integ_point` for **Tri** class:
+    /// `ngauss` for **Tri** class:
     ///
     /// * `1` -- Internal integration points and weights
     /// * `3` -- Internal integration points and weights
@@ -110,14 +110,14 @@ impl Gauss {
     /// * `12` -- Internal integration points and weights
     /// * `16` -- Internal integration points and weights
     ///
-    /// `n_integ_point` for **Qua** class:
+    /// `ngauss` for **Qua** class:
     ///
     /// * `1` -- Conventional Legendre integration points and weights
     /// * `4` -- Conventional Legendre integration points and weights
     /// * `9` -- Conventional Legendre integration points and weights
     /// * `16` -- Conventional Legendre integration points and weights
     ///
-    /// `n_integ_point` for **Tet** class:
+    /// `ngauss` for **Tet** class:
     ///
     /// * `1` -- Internal integration points and weights, degree 1
     /// * `4` -- Internal integration points and weights, degree 2 (based on Felippa's code)
@@ -127,7 +127,7 @@ impl Gauss {
     /// * `15` -- Felippa's ips and weights, degree 5 (based on Felippa's code)
     /// * `24` -- Felippa's ips and weights, degree 6 (based on Felippa's code)
     ///
-    /// `n_integ_point` for **Hex** class:
+    /// `ngauss` for **Hex** class:
     ///
     /// * `6` -- Iron's integration points and weights
     /// * `8` -- Conventional Legendre integration points and weights, degree 3
@@ -149,10 +149,10 @@ impl Gauss {
     ///     Ok(())
     /// }
     /// ```
-    pub fn new_sized(class: GeoClass, n_integ_point: usize) -> Result<Self, StrError> {
+    pub fn new_sized(class: GeoClass, ngauss: usize) -> Result<Self, StrError> {
         let data: &'static [[f64; 4]] = match class {
             // Lin
-            GeoClass::Lin => match n_integ_point {
+            GeoClass::Lin => match ngauss {
                 1 => &IP_LIN_LEGENDRE_1,
                 2 => &IP_LIN_LEGENDRE_2,
                 3 => &IP_LIN_LEGENDRE_3,
@@ -161,7 +161,7 @@ impl Gauss {
                 _ => return Err("requested number of integration points is not available for Lin class"),
             },
             // Tri
-            GeoClass::Tri => match n_integ_point {
+            GeoClass::Tri => match ngauss {
                 1 => &IP_TRI_INTERNAL_1,
                 3 => &IP_TRI_INTERNAL_3,
                 4 => &IP_TRI_INTERNAL_4,
@@ -172,7 +172,7 @@ impl Gauss {
                 _ => return Err("requested number of integration points is not available for Tri class"),
             },
             // Qua
-            GeoClass::Qua => match n_integ_point {
+            GeoClass::Qua => match ngauss {
                 1 => &IP_QUA_LEGENDRE_1,
                 4 => &IP_QUA_LEGENDRE_4,
                 9 => &IP_QUA_LEGENDRE_9,
@@ -180,7 +180,7 @@ impl Gauss {
                 _ => return Err("requested number of integration points is not available for Qua class"),
             },
             // Tet
-            GeoClass::Tet => match n_integ_point {
+            GeoClass::Tet => match ngauss {
                 1 => &IP_TET_INTERNAL_1,
                 4 => &IP_TET_INTERNAL_4,
                 5 => &IP_TET_INTERNAL_5,
@@ -191,7 +191,7 @@ impl Gauss {
                 _ => return Err("requested number of integration points is not available for Tet class"),
             },
             // Hex
-            GeoClass::Hex => match n_integ_point {
+            GeoClass::Hex => match ngauss {
                 6 => &IP_HEX_IRONS_6,
                 8 => &IP_HEX_LEGENDRE_8,
                 14 => &IP_HEX_IRONS_14,
@@ -762,10 +762,10 @@ mod tests {
     #[test]
     fn new_sized_works() {
         // Lin
-        for n_integ_point in [1, 2, 3, 4, 5] {
-            let gauss = Gauss::new_sized(GeoClass::Lin, n_integ_point).unwrap();
+        for ngauss in [1, 2, 3, 4, 5] {
+            let gauss = Gauss::new_sized(GeoClass::Lin, ngauss).unwrap();
             assert_eq!(gauss.class, GeoClass::Lin);
-            assert_eq!(gauss.data.len(), n_integ_point);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
             Gauss::new_sized(GeoClass::Lin, 100).err(),
@@ -773,10 +773,10 @@ mod tests {
         );
 
         // Tri
-        for n_integ_point in [1, 3, 4, 6, 7, 12, 16] {
-            let gauss = Gauss::new_sized(GeoClass::Tri, n_integ_point).unwrap();
+        for ngauss in [1, 3, 4, 6, 7, 12, 16] {
+            let gauss = Gauss::new_sized(GeoClass::Tri, ngauss).unwrap();
             assert_eq!(gauss.class, GeoClass::Tri);
-            assert_eq!(gauss.data.len(), n_integ_point);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
             Gauss::new_sized(GeoClass::Tri, 100).err(),
@@ -784,10 +784,10 @@ mod tests {
         );
 
         // Qua
-        for n_integ_point in [1, 4, 9, 16] {
-            let gauss = Gauss::new_sized(GeoClass::Qua, n_integ_point).unwrap();
+        for ngauss in [1, 4, 9, 16] {
+            let gauss = Gauss::new_sized(GeoClass::Qua, ngauss).unwrap();
             assert_eq!(gauss.class, GeoClass::Qua);
-            assert_eq!(gauss.data.len(), n_integ_point);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
             Gauss::new_sized(GeoClass::Qua, 100).err(),
@@ -795,10 +795,10 @@ mod tests {
         );
 
         // Tet
-        for n_integ_point in [1, 4, 5, 8, 14, 15, 24] {
-            let gauss = Gauss::new_sized(GeoClass::Tet, n_integ_point).unwrap();
+        for ngauss in [1, 4, 5, 8, 14, 15, 24] {
+            let gauss = Gauss::new_sized(GeoClass::Tet, ngauss).unwrap();
             assert_eq!(gauss.class, GeoClass::Tet);
-            assert_eq!(gauss.data.len(), n_integ_point);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
             Gauss::new_sized(GeoClass::Tet, 100).err(),
@@ -806,10 +806,10 @@ mod tests {
         );
 
         // Hex
-        for n_integ_point in [6, 8, 14, 27, 64] {
-            let gauss = Gauss::new_sized(GeoClass::Hex, n_integ_point).unwrap();
+        for ngauss in [6, 8, 14, 27, 64] {
+            let gauss = Gauss::new_sized(GeoClass::Hex, ngauss).unwrap();
             assert_eq!(gauss.class, GeoClass::Hex);
-            assert_eq!(gauss.data.len(), n_integ_point);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
             Gauss::new_sized(GeoClass::Hex, 100).err(),

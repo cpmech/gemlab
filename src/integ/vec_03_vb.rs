@@ -40,7 +40,7 @@ use russell_lab::{Matrix, Vector};
 /// * `c` -- A vector containing all `cᵐ` values, one after another, and sequentially placed as shown above.
 ///   `m` is the index of the node. The length must be `c.len() ≥ ii0 + nnode`.
 /// * `args` --- Common arguments
-/// * `fn_w` -- Function `f(w,p,N,B)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_w` -- Function `f(w,p,N,B)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   shape functions N(ιᵖ), and gradients B(ιᵖ). `w.dim() = space_ndim`.
 ///
 /// # Examples

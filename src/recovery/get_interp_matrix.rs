@@ -9,16 +9,16 @@ use russell_lab::Matrix;
 ///    (np)   (np,nv)   (nv)
 /// ```
 ///
-/// where `nv` is the number of vertices (nodes) and `np` is the number of integration points (`n_integ_point`).
+/// where `nv` is the number of vertices (nodes) and `np` is the number of integration points (`ngauss`).
 ///
 /// # Input
 ///
 /// * `pad` -- The scratchpad
-/// * `integ_points` -- Integration points' constants (n_integ_point)
+/// * `integ_points` -- Integration points' constants (ngauss)
 ///
 /// # Output
 ///
-/// * `P` -- The `(n_integ_point,nnode)` interpolation matrix. Returns a matrix
+/// * `P` -- The `(ngauss,nnode)` interpolation matrix. Returns a matrix
 ///   formed by the interpolation functions evaluated at all integration points.
 ///
 /// Possible use:
@@ -86,9 +86,9 @@ use russell_lab::Matrix;
 /// ```
 pub fn get_interp_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Matrix {
     let nnode = pad.interp.dim();
-    let n_integ_point = gauss.npoint();
-    let mut pp = Matrix::new(n_integ_point, nnode);
-    for p in 0..n_integ_point {
+    let ngauss = gauss.npoint();
+    let mut pp = Matrix::new(ngauss, nnode);
+    for p in 0..ngauss {
         pad.calc_interp(gauss.coords(p));
         for j in 0..nnode {
             pp.set(p, j, pad.interp[j]);
@@ -143,10 +143,10 @@ mod tests {
         //   X_ips    =      M           X
         // (nip,ndim)   (nip,nnode) (nnode,ndim)
 
-        let n_integ_point = gauss.npoint();
+        let ngauss = gauss.npoint();
         let (ndim, nnode) = pad.xxt.dims();
-        let mut xx_ips = Matrix::new(n_integ_point, ndim);
-        for p in 0..n_integ_point {
+        let mut xx_ips = Matrix::new(ngauss, ndim);
+        for p in 0..ngauss {
             for j in 0..ndim {
                 for k in 0..nnode {
                     xx_ips.add(p, j, pp.get(p, k) * pad.xxt.get(j, k));

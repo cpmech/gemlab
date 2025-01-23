@@ -59,7 +59,7 @@ use russell_lab::{Matrix, Vector};
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + pad_b.nnode`.
 /// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute B)
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
-/// * `fn_v` -- Function `f(v,p,N,B,Nb)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_v` -- Function `f(v,p,N,B,Nb)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   shape functions N(ιᵖ), gradients B(ιᵖ), and shape functions Nb(ιᵖ). `v.dim() = space_ndim`.
 ///
 /// # Warning

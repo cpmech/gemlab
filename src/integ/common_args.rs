@@ -6,7 +6,7 @@ pub struct CommonArgs<'a> {
     /// The temporary interpolation, Jacobian, gradient  variables computed at an integration point
     pub pad: &'a mut Scratchpad,
 
-    /// Integration points (n_integ_point)
+    /// Integration points
     pub gauss: &'a Gauss,
 
     /// Fills the output vector or matrix with zeros, otherwise accumulate values

@@ -12,24 +12,24 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///  (nv)    (nv,np)   (np)
 /// ```
 ///
-/// Where `nv` is the number of vertices (nodes) and `np` is the number of integration points (`n_integ_point`).
+/// Where `nv` is the number of vertices (nodes) and `np` is the number of integration points (`ngauss`).
 ///
 /// # Input
 ///
 /// * `pad` -- The scratchpad
-/// * `integ_points` -- Integration points' constants (n_integ_point)
+/// * `integ_points` -- Integration points' constants (ngauss)
 ///
 /// # Output
 ///
-/// * `E` -- The (nnode,n_integ_point) extrapolation matrix; aka "inverse" of the
+/// * `E` -- The (nnode,ngauss) extrapolation matrix; aka "inverse" of the
 ///    interpolation matrix `P` calculated by [get_interp_matrix()]. See note below
 ///    regarding the inversion problem.
 ///
 /// This function returns the "inverse" of the interpolation matrix `P`; however, the
-/// inverse is only possible if `n_integ_point == nnode`. If there are more interpolation
-/// points than nodes (`n_integ_point > node`), the problem is over-determined, and we use
+/// inverse is only possible if `ngauss == nnode`. If there are more interpolation
+/// points than nodes (`ngauss > node`), the problem is over-determined, and we use
 /// the pseudo-inverse instead `P⁺`. If there are fewer interpolation points than nodes
-/// (`n_integ_point < nnode`), the problem is under-determined and may even yield
+/// (`ngauss < nnode`), the problem is under-determined and may even yield
 /// spurious results. To avoid such results and minimize the errors, we adopt the method
 /// proposed by Durand and Farias in Reference #1. In this case, a correction matrix `A` is
 /// applied to the pseudo-inverse, and a translation `ξ B` is applied to the result.
@@ -53,7 +53,7 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 /// A = I - hat_ξ B
 /// ```
 ///
-/// where `I` is an identity matrix with n_integ_points rows and columns.
+/// where `I` is an identity matrix with ngausss rows and columns.
 ///
 /// With `nd` being the number of geometry dimensions plus 1, we have that:
 ///
@@ -218,10 +218,10 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Matrix, 
 ///
 /// 1. Durand R and Farias MM (2014) A local extrapolation method for finite elements,
 ///    Advances in Engineering Software, 67:1-9 <https://doi.org/10.1016/j.advengsoft.2013.07.002>
-fn get_tr_pinv_hxi(class: GeoClass, n_integ_point: usize) -> &'static [[f64; 4]] {
+fn get_tr_pinv_hxi(class: GeoClass, ngauss: usize) -> &'static [[f64; 4]] {
     match class {
         // Lin
-        GeoClass::Lin => match n_integ_point {
+        GeoClass::Lin => match ngauss {
             1 => &TR_PINV_HXI_LIN_LEGENDRE_1,
             2 => &TR_PINV_HXI_LIN_LEGENDRE_2,
             3 => &TR_PINV_HXI_LIN_LEGENDRE_3,
@@ -230,7 +230,7 @@ fn get_tr_pinv_hxi(class: GeoClass, n_integ_point: usize) -> &'static [[f64; 4]]
             _ => unreachable!("requested number of integration points is not available for Lin class"),
         },
         // Tri
-        GeoClass::Tri => match n_integ_point {
+        GeoClass::Tri => match ngauss {
             1 => &TR_PINV_HXI_TRI_INTERNAL_1,
             3 => &TR_PINV_HXI_TRI_INTERNAL_3,
             4 => &TR_PINV_HXI_TRI_INTERNAL_4,
@@ -241,7 +241,7 @@ fn get_tr_pinv_hxi(class: GeoClass, n_integ_point: usize) -> &'static [[f64; 4]]
             _ => unreachable!("requested number of integration points is not available for Tri class"),
         },
         // Qua
-        GeoClass::Qua => match n_integ_point {
+        GeoClass::Qua => match ngauss {
             1 => &TR_PINV_HXI_QUA_LEGENDRE_1,
             4 => &TR_PINV_HXI_QUA_LEGENDRE_4,
             9 => &TR_PINV_HXI_QUA_LEGENDRE_9,
@@ -249,7 +249,7 @@ fn get_tr_pinv_hxi(class: GeoClass, n_integ_point: usize) -> &'static [[f64; 4]]
             _ => unreachable!("requested number of integration points is not available for Qua class"),
         },
         // Tet
-        GeoClass::Tet => match n_integ_point {
+        GeoClass::Tet => match ngauss {
             1 => &TR_PINV_HXI_TET_INTERNAL_1,
             4 => &TR_PINV_HXI_TET_INTERNAL_4,
             5 => &TR_PINV_HXI_TET_INTERNAL_5,
@@ -260,7 +260,7 @@ fn get_tr_pinv_hxi(class: GeoClass, n_integ_point: usize) -> &'static [[f64; 4]]
             _ => unreachable!("requested number of integration points is not available for Tet class"),
         },
         // Hex
-        GeoClass::Hex => match n_integ_point {
+        GeoClass::Hex => match ngauss {
             6 => &TR_PINV_HXI_HEX_IRONS_6,
             8 => &TR_PINV_HXI_HEX_LEGENDRE_8,
             14 => &TR_PINV_HXI_HEX_IRONS_14,
@@ -793,9 +793,9 @@ mod tests {
 
     fn do_interpolate(pad: &mut Scratchpad, u_nodal: &Vector, gauss: &Gauss) -> Vector {
         let nnode = u_nodal.dim();
-        let n_integ_point = gauss.npoint();
-        let mut u_point = Vector::new(n_integ_point);
-        for p in 0..n_integ_point {
+        let ngauss = gauss.npoint();
+        let mut u_point = Vector::new(ngauss);
+        for p in 0..ngauss {
             pad.calc_interp(gauss.coords(p));
             for m in 0..nnode {
                 u_point[p] += pad.interp[m] * u_nodal[m];
@@ -840,7 +840,7 @@ mod tests {
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]); // original U values at nodes
         let u_point = do_interpolate(&mut pad, &u_nodal_original, &gauss); // interpolated U values @ integration points
         let u_nodal = do_extrapolate(&ee, &u_point);
-        vec_approx_eq(&u_nodal, &u_nodal_original, 1.5); // we cannot get a better result with such low n_integ_point
+        vec_approx_eq(&u_nodal, &u_nodal_original, 1.5); // we cannot get a better result with such low ngauss
     }
 
     #[test]
@@ -1079,28 +1079,28 @@ mod tests {
             check_hyperplane(&mut pad, &gauss);
 
             // check with minimum number of integration points
-            let n_integ_point = match kind.class() {
+            let ngauss = match kind.class() {
                 GeoClass::Lin => 2,
                 GeoClass::Tri => 3,
                 GeoClass::Qua => 4,
                 GeoClass::Tet => 4,
                 GeoClass::Hex => 8,
             };
-            if n_integ_point != gauss.npoint() {
-                let gauss_min = Gauss::new_sized(kind.class(), n_integ_point).unwrap();
+            if ngauss != gauss.npoint() {
+                let gauss_min = Gauss::new_sized(kind.class(), ngauss).unwrap();
                 check_hyperplane(&mut pad, &gauss_min);
             }
 
             // check with maximum number of integration points
-            let n_integ_point = match kind.class() {
+            let ngauss = match kind.class() {
                 GeoClass::Lin => 5,
                 GeoClass::Tri => 16,
                 GeoClass::Qua => 16,
                 GeoClass::Tet => 24,
                 GeoClass::Hex => 64,
             };
-            if n_integ_point != gauss.npoint() {
-                let gauss_min = Gauss::new_sized(kind.class(), n_integ_point).unwrap();
+            if ngauss != gauss.npoint() {
+                let gauss_min = Gauss::new_sized(kind.class(), ngauss).unwrap();
                 check_hyperplane(&mut pad, &gauss_min);
             }
         }

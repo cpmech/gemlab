@@ -50,7 +50,7 @@ use russell_lab::Vector;
 ///   sequentially placed as shown above. `m` is the index of the node.
 ///   The length must be `a.len() ≥ ii0 + nnode`
 /// * `args` --- Common arguments
-/// * `fn_s` -- Function `f(p,N)` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_s` -- Function `f(p,N)` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   and shape functions N(ιᵖ).
 ///
 /// # Examples
@@ -232,7 +232,7 @@ mod tests {
         let a_correct = ana.vec_01_ns(CS);
 
         // integration points
-        // Note that the tolerance is high for n_integ_point = 1
+        // Note that the tolerance is high for ngauss = 1
         // because the numerical integration performs poorly with few IPs
         let class = pad.kind.class();
         let tolerances = [1e-13, 1e-13];
@@ -258,7 +258,7 @@ mod tests {
         let a_correct = ana.vec_01_ns_linear_along_z(&pad);
 
         // integration points
-        // Note that the tolerance is high for n_integ_point = 1
+        // Note that the tolerance is high for ngauss = 1
         // because the numerical integration performs poorly with few IPs
         let class = pad.kind.class();
         let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15, 1e-15, 1e-15];

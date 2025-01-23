@@ -51,7 +51,7 @@ use russell_tensor::{Mandel, Tensor4};
 ///   above (in 2D). `m` and `n` are the indices of the node and `i` and `j` correspond to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + nnode ⋅ space_ndim`.
 /// * `args` --- Common arguments
-/// * `fn_dd` -- Function `f(D,p,N,B)` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_dd` -- Function `f(D,p,N,B)` that computes `D(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   shape functions N(ιᵖ), and gradients B(ιᵖ). `D` is **minor-symmetric** and set for `space_ndim`.
 ///
 /// # Examples

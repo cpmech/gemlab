@@ -58,7 +58,7 @@ use russell_tensor::{Mandel, Tensor2};
 ///   The dimensions must be `nrow(K) ≥ ii0 + pad_b.nnode` and `ncol(K) ≥ jj0 + pad.nnode ⋅ space_ndim`
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
 /// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute B)
-/// * `fn_tt` -- Function `f(T,p,Bb,N,B)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_tt` -- Function `f(T,p,Bb,N,B)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   the gradients Bb(ιᵖ), shape functions N(ιᵖ), and gradients B(ιᵖ). `T` is set for `space_ndim`.
 ///
 /// # Warning

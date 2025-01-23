@@ -2,7 +2,7 @@
 //!
 //! # Definitions
 //!
-//! * `n_integ_point` -- number of integration (Gauss) points
+//! * `ngauss` -- number of integration (Gauss) points
 //! * `|J|` -- the determinant of the Jacobian dx/dξ
 //! * `||J||` -- the norm of the Jacobian vector for lines in multi-dimensions
 //! * `ξ` -- ksi (or xi) -- coordinates in the reference space
