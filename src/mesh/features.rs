@@ -257,7 +257,7 @@ impl<'a> Features<'a> {
     ///
     /// # Notes
     ///
-    /// * You may want to call [Mesh::check_all] to capture (some) errors of the mesh first
+    /// * You may want to call [Mesh::check_all()] to capture (some) errors of the mesh first
     ///
     /// # Panics
     ///
