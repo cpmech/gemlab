@@ -365,7 +365,7 @@ impl<'a> Features<'a> {
         self.edges.get(&(a, b)).expect("cannot find edge with given key")
     }
 
-    /// Returns an face or panics
+    /// Returns a face or panics
     pub fn get_face(&self, a: usize, b: usize, c: usize, d: usize) -> &Feature {
         self.faces.get(&(a, b, c, d)).expect("cannot find face with given key")
     }
