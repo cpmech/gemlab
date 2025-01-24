@@ -31,7 +31,7 @@ pub(crate) fn extract_all_faces(mesh: &Mesh) -> MapFaceToCells {
                         cell.points[cell.kind.face_node_id(f, 0)],
                         cell.points[cell.kind.face_node_id(f, 1)],
                         cell.points[cell.kind.face_node_id(f, 2)],
-                        mesh.points.len(),
+                        usize::MAX,
                     )
                 };
                 sort4(&mut face_key);
@@ -133,10 +133,10 @@ mod tests {
                 &(0, 3, 4, 7),
                 &(1, 2, 5, 6),
                 &(2, 3, 6, 7),
-                &(2, 3, 6, 13),
-                &(2, 3, 8, 13),
-                &(2, 6, 8, 13),
-                &(3, 6, 8, 13),
+                &(2, 3, 6, usize::MAX),
+                &(2, 3, 8, usize::MAX),
+                &(2, 6, 8, usize::MAX),
+                &(3, 6, 8, usize::MAX),
                 &(4, 5, 6, 7),
             ]
         );
@@ -145,10 +145,10 @@ mod tests {
         assert_eq!(faces.get(&(0, 3, 4, 7)).unwrap(), &[(0, 0)]);
         assert_eq!(faces.get(&(1, 2, 5, 6)).unwrap(), &[(0, 1)]);
         assert_eq!(faces.get(&(2, 3, 6, 7)).unwrap(), &[(0, 3)]);
-        assert_eq!(faces.get(&(2, 3, 6, 13)).unwrap(), &[(1, 0)]);
-        assert_eq!(faces.get(&(2, 3, 8, 13)).unwrap(), &[(1, 2)]);
-        assert_eq!(faces.get(&(2, 6, 8, 13)).unwrap(), &[(1, 1)]);
-        assert_eq!(faces.get(&(3, 6, 8, 13)).unwrap(), &[(1, 3)]);
+        assert_eq!(faces.get(&(2, 3, 6, usize::MAX)).unwrap(), &[(1, 0)]);
+        assert_eq!(faces.get(&(2, 3, 8, usize::MAX)).unwrap(), &[(1, 2)]);
+        assert_eq!(faces.get(&(2, 6, 8, usize::MAX)).unwrap(), &[(1, 1)]);
+        assert_eq!(faces.get(&(3, 6, 8, usize::MAX)).unwrap(), &[(1, 3)]);
         assert_eq!(faces.get(&(4, 5, 6, 7)).unwrap(), &[(0, 5)]);
     }
 }

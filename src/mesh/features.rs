@@ -16,10 +16,9 @@ pub type EdgeKey = (usize, usize);
 
 /// Aliases (usize,usize,usize,usize) as the key of faces
 ///
-/// **Note:** If a face has at most 3 points, the fourth entry in the key will be
-/// set to the total number of points. In this way, we can compare 4-node (or more nodes)
-/// faces with each other. Further, since the local numbering scheme runs over the
-/// "corners" first, the middle points don't matter.
+/// **Note:** For 3-node faces, the fourth entry in the key will be set to [usize::MAX].
+/// In this way, we can compare 4-node (or more nodes) faces. Since the local numbering
+/// scheme runs over the "corners" first, the middle points don't matter.
 pub type FaceKey = (usize, usize, usize, usize);
 
 /// Holds the essential information to reconstruct an edge
@@ -64,7 +63,11 @@ pub struct Face {
 impl Face {
     /// Returns the sorted list of key points
     pub fn key(&self) -> FaceKey {
-        let mut key = (self.points[0], self.points[1], self.points[2], self.points[3]);
+        let mut key = if self.points.len() > 3 {
+            (self.points[0], self.points[1], self.points[2], self.points[3])
+        } else {
+            (self.points[0], self.points[1], self.points[2], usize::MAX)
+        };
         sort4(&mut key);
         key
     }
@@ -685,7 +688,6 @@ impl<'a> Features<'a> {
         if self.mesh.ndim != 3 {
             return Err("cannot find face keys in 2D");
         }
-        let npoint = self.mesh.points.len();
         let mut face_keys: HashSet<FaceKey> = HashSet::new();
         // search all points constrained by "at" and "filter"
         let point_ids = self.search_point_ids(at, filter)?;
@@ -694,7 +696,7 @@ impl<'a> Features<'a> {
             let faces = self.point_to_faces.get(point_id).unwrap(); // unwrap here because there should be no hanging faces
             for face_key in faces {
                 // accept face when at least four face points validate "At"
-                let fourth_is_ok = if face_key.3 == npoint {
+                let fourth_is_ok = if face_key.3 == usize::MAX {
                     true
                 } else {
                     point_ids.contains(&face_key.3)
@@ -888,7 +890,12 @@ impl<'a> fmt::Display for Edges<'a> {
 
 impl fmt::Display for Face {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.key()).unwrap();
+        if self.points.len() == 3 {
+            let (a, b, c, _) = self.key();
+            write!(f, "({}, {}, {}, MAX)", a, b, c).unwrap();
+        } else {
+            write!(f, "{:?}", self.key()).unwrap();
+        }
         Ok(())
     }
 }
@@ -939,7 +946,7 @@ mod tests {
     }
 
     #[test]
-    fn new_and_get_methods_work_3d() {
+    fn new_and_get_methods_work_3d_1() {
         //      4--------------7  1.0
         //     /.             /|
         //    / .            / |    [#] indicates id
@@ -961,6 +968,19 @@ mod tests {
         assert_eq!(face.points, &[0, 1, 5, 4]);
         assert_eq!(edge.key(), (4, 5));
         assert_eq!(face.key(), (0, 1, 4, 5));
+        assert_eq!(features.get_cells_via_face(&face), &[0]);
+    }
+
+    #[test]
+    fn new_and_get_methods_work_3d_2() {
+        let mesh = Samples::one_tet4();
+        let features = Features::new(&mesh, false);
+        let edge = features.get_edge(1, 2);
+        let face = features.get_face(0, 1, 3, usize::MAX);
+        assert_eq!(edge.points, &[1, 2]);
+        assert_eq!(face.points, &[0, 1, 3]);
+        assert_eq!(edge.key(), (1, 2));
+        assert_eq!(face.key(), (0, 1, 3, usize::MAX));
         assert_eq!(features.get_cells_via_face(&face), &[0]);
     }
 
@@ -1666,7 +1686,7 @@ mod tests {
     }
 
     #[test]
-    fn display_works() {
+    fn display_works_1() {
         //       8-------------11  2.0
         //      /.             /|
         //     / .            / |
@@ -1694,5 +1714,15 @@ mod tests {
         let faces = features.search_faces(At::Y(1.0), any_x).unwrap();
         assert_eq!(format!("{}", edges), "(0, 1), (0, 3), (1, 2), (2, 3)");
         assert_eq!(format!("{}", faces), "(2, 3, 6, 7), (6, 7, 10, 11)");
+    }
+
+    #[test]
+    fn display_works_2() {
+        let mesh = Samples::one_tet4();
+        let features = Features::new(&mesh, false);
+        let edges = features.search_edges(At::Z(0.0), any_x).unwrap();
+        let faces = features.search_faces(At::X(0.0), any_x).unwrap();
+        assert_eq!(format!("{}", edges), "(0, 1), (0, 2), (1, 2)");
+        assert_eq!(format!("{}", faces), "(0, 2, 3, MAX)");
     }
 }
