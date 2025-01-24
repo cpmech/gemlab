@@ -34,8 +34,8 @@ use russell_lab::Matrix;
 /// Then, for all integration points:
 ///
 /// ```text
-///   X_ips    =      M           X
-/// (nip,ndim)   (nip,nnode) (nnode,ndim)
+///  X_ips =   P       X
+/// (np,nd) (np,nv) (nv,nd)
 /// ```
 ///
 /// where `X_ips` are the (actual) coordinates of all integration points,
