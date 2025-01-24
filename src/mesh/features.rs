@@ -400,6 +400,18 @@ impl<'a> Features<'a> {
         self.faces.get(&(a, b, c, d)).expect("cannot find face with given key")
     }
 
+    /// Returns all cells sharing a given (2D) edge
+    pub fn get_cells_via_2d_edge(&self, edge: &Edge) -> Vec<CellId> {
+        let cells = self.all_2d_edges.get(&edge.key()).expect("cannot find 2D edge");
+        cells.iter().map(|c| c.0).collect()
+    }
+
+    /// Returns all cells sharing a given face
+    pub fn get_cells_via_face(&self, face: &Face) -> Vec<CellId> {
+        let cells = self.all_faces.get(&face.key()).expect("cannot find face");
+        cells.iter().map(|c| c.0).collect()
+    }
+
     /// Returns all neighbors of a 2D cell
     ///
     /// # Input
@@ -844,7 +856,27 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    fn new_and_get_methods_work() {
+    fn new_and_get_methods_work_2d() {
+        //      y
+        //      ^
+        // 1.0  3------6------2
+        //      |             |    [#] indicates id
+        //      |             |    (#) indicates attribute
+        //      7     [0]     5
+        //      |     (1)     |
+        //      |             |
+        // 0.0  0------4------1 -> x
+        //     0.0           1.0
+        let mesh = Samples::one_qua8();
+        let features = Features::new(&mesh, false);
+        let edge = features.get_edge(2, 3);
+        assert_eq!(edge.points, &[3, 2, 6]);
+        assert_eq!(edge.key(), (2, 3));
+        assert_eq!(features.get_cells_via_2d_edge(&edge), &[0]);
+    }
+
+    #[test]
+    fn new_and_get_methods_work_3d() {
         //      4--------------7  1.0
         //     /.             /|
         //    / .            / |    [#] indicates id
@@ -866,6 +898,7 @@ mod tests {
         assert_eq!(face.points, &[0, 1, 5, 4]);
         assert_eq!(edge.key(), (4, 5));
         assert_eq!(face.key(), (0, 1, 4, 5));
+        assert_eq!(features.get_cells_via_face(&face), &[0]);
     }
 
     #[test]
