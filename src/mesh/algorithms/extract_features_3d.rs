@@ -1,4 +1,4 @@
-use crate::mesh::{EdgeKey, FaceKey, Feature, MapFaceToCells, Mesh, PointId};
+use crate::mesh::{Edge, EdgeKey, Face, FaceKey, MapFaceToCells, Mesh, PointId};
 use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
@@ -14,8 +14,8 @@ pub(crate) fn extract_features_3d(
     extract_all: bool,
 ) -> (
     HashSet<PointId>,
-    HashMap<EdgeKey, Feature>,
-    HashMap<FaceKey, Feature>,
+    HashMap<EdgeKey, Edge>,
+    HashMap<FaceKey, Face>,
     Vec<f64>,
     Vec<f64>,
 ) {
@@ -49,7 +49,7 @@ pub(crate) fn extract_features_3d(
         // cell and face
         let (cell_id, f) = shared_by[0];
         let cell = &mesh.cells[cell_id];
-        let mut face = Feature {
+        let mut face = Face {
             kind: cell.kind.face_kind().unwrap(),
             points: vec![0; cell.kind.face_nnode()],
         };
@@ -79,7 +79,7 @@ pub(crate) fn extract_features_3d(
             }
 
             // new edge
-            let mut edge = Feature {
+            let mut edge = Edge {
                 kind: face.kind.edge_kind().unwrap(),
                 points: vec![0; face.kind.edge_nnode()],
             };
@@ -103,12 +103,12 @@ pub(crate) fn extract_features_3d(
 mod tests {
     use super::extract_features_3d;
     use crate::mesh::algorithms::extract_all_faces;
-    use crate::mesh::{EdgeKey, FaceKey, Feature, PointId, Samples};
+    use crate::mesh::{Edge, EdgeKey, Face, FaceKey, PointId, Samples};
     use crate::util::AsArray2D;
     use std::collections::HashMap;
 
     fn validate_edges<'a, T>(
-        edges: &HashMap<EdgeKey, Feature>,
+        edges: &HashMap<EdgeKey, Edge>,
         correct_keys: &[EdgeKey], // sorted
         correct_points: &'a T,
     ) where
@@ -123,7 +123,7 @@ mod tests {
     }
 
     fn validate_faces<'a, T>(
-        faces: &HashMap<FaceKey, Feature>,
+        faces: &HashMap<FaceKey, Face>,
         correct_keys: &[FaceKey], // sorted
         correct_points: &'a T,
     ) where
