@@ -317,6 +317,19 @@ impl Mesh {
         }
     }
 
+    /// Allocates a Scratchpad for numerical integration and sets its coordinates
+    ///
+    /// # Panics
+    ///
+    /// 1. This function does not check for bounds on point indices and dimensions
+    /// 2. Use [Mesh::check_all] to capture (some) errors
+    pub fn get_pad(&self, cell_id: CellId) -> Scratchpad {
+        let cell = &self.cells[cell_id];
+        let mut pad = Scratchpad::new(self.ndim, cell.kind).unwrap();
+        self.set_pad(&mut pad, &cell.points);
+        pad
+    }
+
     /// Returns the (min,max) point coordinates in a mesh
     pub fn get_limits(&self) -> (Vec<f64>, Vec<f64>) {
         let mut min = vec![f64::MAX; self.ndim];
@@ -654,7 +667,7 @@ mod tests {
     }
 
     #[test]
-    fn set_pad_works_2d() {
+    fn set_and_get_pad_works_2d() {
         //  3--------2--------5
         //  |        |        |
         //  |        |        |
@@ -662,29 +675,29 @@ mod tests {
         //  0--------1--------4
         let mesh = Samples::two_qua4();
         let cell = &mesh.cells[0];
-        let mut pad = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
-        mesh.set_pad(&mut pad, &cell.points);
-        assert_eq!(
-            format!("{}", pad.xxt),
-            "┌         ┐\n\
-             │ 0 1 1 0 │\n\
-             │ 0 0 1 1 │\n\
-             └         ┘"
-        );
+        let mut pad_0a = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
+        mesh.set_pad(&mut pad_0a, &cell.points);
+        let pad_0b = mesh.get_pad(0);
+        let correct = "┌         ┐\n\
+                       │ 0 1 1 0 │\n\
+                       │ 0 0 1 1 │\n\
+                       └         ┘";
+        assert_eq!(format!("{}", pad_0a.xxt), correct);
+        assert_eq!(format!("{}", pad_0b.xxt), correct);
         let cell = &mesh.cells[1];
-        let mut pad = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
-        mesh.set_pad(&mut pad, &cell.points);
-        assert_eq!(
-            format!("{}", pad.xxt),
-            "┌         ┐\n\
-             │ 1 2 2 1 │\n\
-             │ 0 0 1 1 │\n\
-             └         ┘"
-        );
+        let mut pad_1a = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
+        mesh.set_pad(&mut pad_1a, &cell.points);
+        let pad_1b = mesh.get_pad(1);
+        let correct = "┌         ┐\n\
+                       │ 1 2 2 1 │\n\
+                       │ 0 0 1 1 │\n\
+                       └         ┘";
+        assert_eq!(format!("{}", pad_1a.xxt), correct);
+        assert_eq!(format!("{}", pad_1b.xxt), correct);
     }
 
     #[test]
-    fn set_pad_works_3d() {
+    fn set_and_get_pad_works_3d() {
         //       8-------------11
         //      /.             /|
         //     / .            / |
@@ -707,27 +720,27 @@ mod tests {
         //  1--------------2
         let mesh = Samples::two_hex8();
         let cell = &mesh.cells[0];
-        let mut pad = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
-        mesh.set_pad(&mut pad, &cell.points);
-        assert_eq!(
-            format!("{}", pad.xxt),
-            "┌                 ┐\n\
-             │ 0 1 1 0 0 1 1 0 │\n\
-             │ 0 0 1 1 0 0 1 1 │\n\
-             │ 0 0 0 0 1 1 1 1 │\n\
-             └                 ┘"
-        );
+        let mut pad_0a = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
+        mesh.set_pad(&mut pad_0a, &cell.points);
+        let pad_0b = mesh.get_pad(0);
+        let correct = "┌                 ┐\n\
+                       │ 0 1 1 0 0 1 1 0 │\n\
+                       │ 0 0 1 1 0 0 1 1 │\n\
+                       │ 0 0 0 0 1 1 1 1 │\n\
+                       └                 ┘";
+        assert_eq!(format!("{}", pad_0a.xxt), correct);
+        assert_eq!(format!("{}", pad_0b.xxt), correct);
         let cell = &mesh.cells[1];
-        let mut pad = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
-        mesh.set_pad(&mut pad, &cell.points);
-        assert_eq!(
-            format!("{}", pad.xxt),
-            "┌                 ┐\n\
-             │ 0 1 1 0 0 1 1 0 │\n\
-             │ 0 0 1 1 0 0 1 1 │\n\
-             │ 1 1 1 1 2 2 2 2 │\n\
-             └                 ┘"
-        );
+        let mut pad_1a = Scratchpad::new(mesh.ndim, cell.kind).unwrap();
+        mesh.set_pad(&mut pad_1a, &cell.points);
+        let pad_1b = mesh.get_pad(1);
+        let correct = "┌                 ┐\n\
+                       │ 0 1 1 0 0 1 1 0 │\n\
+                       │ 0 0 1 1 0 0 1 1 │\n\
+                       │ 1 1 1 1 2 2 2 2 │\n\
+                       └                 ┘";
+        assert_eq!(format!("{}", pad_1a.xxt), correct);
+        assert_eq!(format!("{}", pad_1b.xxt), correct);
     }
 
     #[test]
