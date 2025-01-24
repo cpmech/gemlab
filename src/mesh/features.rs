@@ -6,6 +6,7 @@ use crate::util::GridSearch;
 use crate::StrError;
 use russell_lab::{sort2, sort4};
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 /// Aliases (usize,usize) as the key of edges
 ///
@@ -42,6 +43,12 @@ impl Edge {
     }
 }
 
+/// Defines an array of edges
+pub struct Edges<'a> {
+    /// Holds a set of edges
+    pub all: Vec<&'a Edge>,
+}
+
 /// Holds the essential information to reconstruct an face
 ///
 /// * A face is an entity belonging to a solid cell in 3D
@@ -61,6 +68,12 @@ impl Face {
         sort4(&mut key);
         key
     }
+}
+
+/// Defines an array of faces
+pub struct Faces<'a> {
+    /// Holds a set of faces
+    pub all: Vec<&'a Face>,
 }
 
 /// Maps edges to cells sharing the edge (2D only)
@@ -717,7 +730,7 @@ impl<'a> Features<'a> {
     ///
     /// * If at least one point has been found, returns an array such that the edge keys are **sorted**
     /// * Otherwise, returns an error
-    pub fn search_edges<F>(&self, at: At, filter: F) -> Result<Vec<&Edge>, StrError>
+    pub fn search_edges<F>(&self, at: At, filter: F) -> Result<Edges, StrError>
     where
         F: FnMut(&[f64]) -> bool,
     {
@@ -730,7 +743,10 @@ impl<'a> Features<'a> {
                     .ok_or("INTERNAL ERROR: features.edges data is inconsistent")
             })
             .collect();
-        results
+        match results {
+            Ok(all) => Ok(Edges { all }),
+            Err(e) => Err(e),
+        }
     }
 
     /// Searches faces
@@ -747,7 +763,7 @@ impl<'a> Features<'a> {
     ///
     /// * If at least one point has been found, returns an array such that the face keys are **sorted**
     /// * Otherwise, returns an error
-    pub fn search_faces<F>(&self, at: At, filter: F) -> Result<Vec<&Face>, StrError>
+    pub fn search_faces<F>(&self, at: At, filter: F) -> Result<Faces, StrError>
     where
         F: FnMut(&[f64]) -> bool,
     {
@@ -760,7 +776,10 @@ impl<'a> Features<'a> {
                     .ok_or("INTERNAL ERROR: features.faces data is inconsistent")
             })
             .collect();
-        results
+        match results {
+            Ok(all) => Ok(Faces { all }),
+            Err(e) => Err(e),
+        }
     }
 
     /// Searches many edges using a list of constraints
@@ -778,7 +797,7 @@ impl<'a> Features<'a> {
     /// * Returns edges sorted by keys
     /// * **Warning** Every `At` in the `ats` must generate at least one edge,
     ///   otherwise an error will occur.
-    pub fn search_many_edges<F>(&self, ats: &[At], mut filter: F) -> Result<Vec<&Edge>, StrError>
+    pub fn search_many_edges<F>(&self, ats: &[At], mut filter: F) -> Result<Edges, StrError>
     where
         F: FnMut(&[f64]) -> bool,
     {
@@ -799,7 +818,10 @@ impl<'a> Features<'a> {
                     .ok_or("INTERNAL ERROR: features.edges data is inconsistent")
             })
             .collect();
-        results
+        match results {
+            Ok(all) => Ok(Edges { all }),
+            Err(e) => Err(e),
+        }
     }
 
     /// Search many faces using a list of constraints
@@ -817,7 +839,7 @@ impl<'a> Features<'a> {
     /// * Returns faces sorted by keys
     /// * **Warning** Every `At` in the `ats` must generate at least one face,
     ///   otherwise an error will occur.
-    pub fn search_many_faces<F>(&self, ats: &[At], mut filter: F) -> Result<Vec<&Face>, StrError>
+    pub fn search_many_faces<F>(&self, ats: &[At], mut filter: F) -> Result<Faces, StrError>
     where
         F: FnMut(&[f64]) -> bool,
     {
@@ -838,7 +860,48 @@ impl<'a> Features<'a> {
                     .ok_or("INTERNAL ERROR: features.faces data is inconsistent")
             })
             .collect();
-        results
+        match results {
+            Ok(all) => Ok(Faces { all }),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl fmt::Display for Edge {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.key()).unwrap();
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for Edges<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in 0..self.all.len() {
+            if i > 0 {
+                write!(f, ", ").unwrap();
+            }
+            write!(f, "{}", self.all[i]).unwrap();
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for Face {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.key()).unwrap();
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for Faces<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in 0..self.all.len() {
+            if i > 0 {
+                write!(f, ", ").unwrap();
+            }
+            write!(f, "{}", self.all[i]).unwrap();
+        }
+        Ok(())
     }
 }
 
@@ -1229,9 +1292,9 @@ mod tests {
 
         // high-level function
         let res = feat.search_edges(At::Y(0.0), any_x).unwrap();
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0].points, &[1, 0]);
-        assert_eq!(res[1].points, &[4, 1]);
+        assert_eq!(res.all.len(), 2);
+        assert_eq!(res.all[0].points, &[1, 0]);
+        assert_eq!(res.all[1].points, &[4, 1]);
         assert_eq!(
             feat.search_edges(At::XYZ(0.0, 0.0, 0.0), any_x).err(),
             Some("At::XYZ works in 3D only")
@@ -1241,8 +1304,8 @@ mod tests {
         let res = feat
             .search_many_edges(&[At::X(0.0), At::X(2.0), At::Y(0.0), At::Y(1.0)], any_x)
             .unwrap();
-        assert_eq!(res.len(), 6);
-        let keys: Vec<_> = res.iter().map(|r| (r.points[0], r.points[1])).collect();
+        assert_eq!(res.all.len(), 6);
+        let keys: Vec<_> = res.all.iter().map(|r| (r.points[0], r.points[1])).collect();
         assert_eq!(keys, &[(1, 0), (0, 3), (4, 1), (3, 2), (2, 5), (5, 4)]);
     }
 
@@ -1371,14 +1434,15 @@ mod tests {
 
         // high-level function
         let res = feat.search_edges(At::XY(0.0, 0.0), any_x).unwrap();
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0].points, &[0, 4]);
-        assert_eq!(res[1].points, &[4, 8]);
+        assert_eq!(res.all.len(), 2);
+        assert_eq!(res.all[0].points, &[0, 4]);
+        assert_eq!(res.all[1].points, &[4, 8]);
 
         // many faces
         let res = feat.search_many_faces(&[At::Z(0.0), At::Z(2.0)], any_x).unwrap();
-        assert_eq!(res.len(), 2);
+        assert_eq!(res.all.len(), 2);
         let keys: Vec<_> = res
+            .all
             .iter()
             .map(|r| (r.points[0], r.points[1], r.points[2], r.points[3]))
             .collect();
@@ -1527,8 +1591,8 @@ mod tests {
 
         // high-level function
         let res = feat.search_faces(At::Z(0.0), any_x).unwrap();
-        assert_eq!(res.len(), 1);
-        assert_eq!(res[0].points, &[0, 3, 2, 1]);
+        assert_eq!(res.all.len(), 1);
+        assert_eq!(res.all[0].points, &[0, 3, 2, 1]);
         assert_eq!(
             feat.search_faces(At::Circle(0.0, 0.0, 1.0), any_x).err(),
             Some("At::Circle works in 2D only")
@@ -1599,5 +1663,36 @@ mod tests {
             feat.search_edge_keys(At::Circle(0.0, 0.0, rr), any_x).unwrap(),
             &[(2, 5), (5, 8), (8, 11), (11, 14)],
         );
+    }
+
+    #[test]
+    fn display_works() {
+        //       8-------------11  2.0
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7  1.0
+        //  |   /. [1]     |   /|
+        //  |  / . (2)     |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |          z
+        //  |    .         |    |          ↑
+        //  |    0---------|----3  0.0     o → y
+        //  |   /  [0]     |   /          ↙
+        //  |  /   (1)     |  /          x
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2   1.0
+        // 0.0            1.0
+        let mesh = Samples::two_hex8();
+        let features = Features::new(&mesh, false);
+        let edges = features.search_edges(At::Z(0.0), any_x).unwrap();
+        let faces = features.search_faces(At::Y(1.0), any_x).unwrap();
+        assert_eq!(format!("{}", edges), "(0, 1), (0, 3), (1, 2), (2, 3)");
+        assert_eq!(format!("{}", faces), "(2, 3, 6, 7), (6, 7, 10, 11)");
     }
 }
