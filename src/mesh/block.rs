@@ -396,6 +396,13 @@ impl Block {
     }
 
     /// Sets the division weights for 2D blocks
+    ///
+    /// # Input
+    ///
+    /// * `wx` -- (ndiv_x) the weights for divisions along x
+    /// * `wy` -- (ndiv_y) the weights for divisions along y
+    ///
+    /// **Note:** the sum of weights must be ≥ 1.
     pub fn set_div_weights_2d(&mut self, wx: &[f64], wy: &[f64]) -> Result<&mut Self, StrError> {
         if self.ndim != 2 {
             return Err("this method works only for 2D blocks");
@@ -408,6 +415,12 @@ impl Block {
         }
         let sum_wx = wx.iter().fold(0.0, |acc, w| acc + w);
         let sum_wy = wy.iter().fold(0.0, |acc, w| acc + w);
+        if sum_wx < 1.0 {
+            return Err("the sum of wx must be ≥ 1.0");
+        }
+        if sum_wy < 1.0 {
+            return Err("the sum of wy must be ≥ 1.0");
+        }
         self.ndiv[0] = wx.len();
         self.ndiv[1] = wy.len();
         self.delta_ksi[0] = wx.iter().map(|w| w * Block::NAT_LENGTH / sum_wx).collect();
@@ -416,6 +429,14 @@ impl Block {
     }
 
     /// Sets the division weights for 3D blocks
+    ///
+    /// # Input
+    ///
+    /// * `wx` -- (ndiv_x) the weights for divisions along x
+    /// * `wy` -- (ndiv_y) the weights for divisions along y
+    /// * `wz` -- (ndiv_z) the weights for divisions along z
+    ///
+    /// **Note:** the sum of weights must be ≥ 1.
     pub fn set_div_weights_3d(&mut self, wx: &[f64], wy: &[f64], wz: &[f64]) -> Result<&mut Self, StrError> {
         if self.ndim != 3 {
             return Err("this method works only for 3D blocks");
@@ -432,6 +453,15 @@ impl Block {
         let sum_wx = wx.iter().fold(0.0, |acc, w| acc + w);
         let sum_wy = wy.iter().fold(0.0, |acc, w| acc + w);
         let sum_wz = wz.iter().fold(0.0, |acc, w| acc + w);
+        if sum_wx < 1.0 {
+            return Err("the sum of wx must be ≥ 1.0");
+        }
+        if sum_wy < 1.0 {
+            return Err("the sum of wy must be ≥ 1.0");
+        }
+        if sum_wz < 1.0 {
+            return Err("the sum of wz must be ≥ 1.0");
+        }
         self.ndiv[0] = wx.len();
         self.ndiv[1] = wy.len();
         self.ndiv[2] = wz.len();
@@ -1251,6 +1281,14 @@ mod tests {
             block.set_div_weights_2d(&[1.0], &[]).err(),
             Some("the length of the wy array must be ≥ 1")
         );
+        assert_eq!(
+            block.set_div_weights_2d(&[0.99999999], &[1.0]).err(),
+            Some("the sum of wx must be ≥ 1.0")
+        );
+        assert_eq!(
+            block.set_div_weights_2d(&[1.0], &[0.99999999]).err(),
+            Some("the sum of wy must be ≥ 1.0")
+        );
         block.set_div_weights_2d(&[5.0, 10.0, 20.0, 65.0], &[5.0, 5.0]).unwrap();
         assert_eq!(block.ndiv.len(), 2); // 2D
         assert_eq!(block.ndiv[0], 4); // 4 divisions along x
@@ -1286,6 +1324,18 @@ mod tests {
         assert_eq!(
             block.set_div_weights_3d(&[1.0], &[1.0], &[]).err(),
             Some("the length of the wz array must be ≥ 1")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[0.999999995], &[1.0], &[1.0]).err(),
+            Some("the sum of wx must be ≥ 1.0")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[0.999999995], &[1.0]).err(),
+            Some("the sum of wy must be ≥ 1.0")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[1.0], &[0.999999995]).err(),
+            Some("the sum of wz must be ≥ 1.0")
         );
         block
             .set_div_weights_3d(&[5.0, 10.0, 25.0], &[5.0, 5.0], &[2.0, 6.0])
