@@ -188,9 +188,6 @@ impl Block {
     /// Length of shape along each direction in reference coords space
     const NAT_LENGTH: f64 = 2.0;
 
-    /// Default number of divisions
-    const NDIV: usize = 2;
-
     /// Default attribute
     const ATTRIBUTE: usize = 1;
 
@@ -286,12 +283,16 @@ impl Block {
             }
         };
 
+        // default number of divisions and default delta ksi
+        let ndiv = 2;
+        let del_ksi = Block::NAT_LENGTH / (ndiv as f64);
+
         // block
         Ok(Block {
             attribute: Block::ATTRIBUTE,
             ndim,
-            ndiv: vec![Block::NDIV; ndim],
-            delta_ksi: vec![vec![1.0; Block::NDIV]; ndim],
+            ndiv: vec![ndiv; ndim],
+            delta_ksi: vec![vec![del_ksi; ndiv]; ndim],
             edge_constraints: HashMap::new(),
             face_constraints: HashMap::new(),
             has_constraints: false,
@@ -806,16 +807,25 @@ impl Block {
                     mesh.cells.push(cell);
 
                     // next x-center
-                    center[0] += self.delta_ksi[0][i];
+                    if i + 1 < nx {
+                        // add half of this cell and half of the next cell in case the deltas are unequal
+                        center[0] += (self.delta_ksi[0][i] + self.delta_ksi[0][i + 1]) / 2.0;
+                    }
                 }
 
                 // next y-center
-                center[1] += self.delta_ksi[1][j];
+                if j + 1 < ny {
+                    // add half of this cell and half of the next cell in case the deltas are unequal
+                    center[1] += (self.delta_ksi[1][j] + self.delta_ksi[1][j + 1]) / 2.0;
+                }
             }
 
             // next z-center
             if ndim == 3 {
-                center[2] += self.delta_ksi[2][k];
+                if k + 1 < nz {
+                    // add half of this cell and half of the next cell in case the deltas are unequal
+                    center[2] += (self.delta_ksi[2][k] + self.delta_ksi[2][k + 1]) / 2.0;
+                }
             }
         }
         Ok(mesh)
@@ -1430,6 +1440,58 @@ mod tests {
         let correct = Samples::block_2d_four_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         mesh.check_all().unwrap();
+    }
+
+    #[test]
+    fn subdivide_2d_qua4_weighted_works() {
+        // 7---------6---------------------8
+        // |         |                     |
+        // |         |                     |
+        // |         |                     |
+        // |   [2]   |         [3]         |
+        // |         |                     |
+        // |         |                     |
+        // |         |                     |
+        // 3---------2---------------------5
+        // |         |                     |
+        // |   [0]   |         [1]         |
+        // |         |                     |
+        // 0---------1---------------------4
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [0.0, 0.0],
+            [3.0, 0.0],
+            [3.0, 3.0],
+            [0.0, 3.0],
+        ]).unwrap();
+        block.set_div_weights_2d(&[1.0, 2.0], &[1.0, 2.0]).unwrap();
+        let mesh = block.subdivide(GeoKind::Qua4).unwrap();
+        assert_eq!(mesh.points.len(), 9);
+        assert_eq!(mesh.cells.len(), 4);
+        array_approx_eq(&mesh.points[0].coords, &[0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[1].coords, &[1.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[2].coords, &[1.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[3].coords, &[0.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[4].coords, &[3.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[5].coords, &[3.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[6].coords, &[1.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[7].coords, &[0.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[8].coords, &[3.0, 3.0], 1e-15);
+        assert_eq!(&mesh.cells[0].points, &[0, 1, 2, 3]);
+        assert_eq!(&mesh.cells[1].points, &[1, 4, 5, 2]);
+        assert_eq!(&mesh.cells[2].points, &[3, 2, 6, 7]);
+        assert_eq!(&mesh.cells[3].points, &[2, 5, 8, 6]);
+        if SAVE_FIGURE {
+            let mut fig = Figure::new();
+            fig.point_ids = true;
+            fig.figure_size = Some((600.0, 600.0));
+            mesh.draw(
+                Some(fig),
+                "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg",
+                |_, _| {},
+            )
+            .unwrap();
+        }
     }
 
     #[test]
