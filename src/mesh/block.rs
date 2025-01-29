@@ -1731,6 +1731,54 @@ mod tests {
     }
 
     #[test]
+    fn subdivide_3d_weighted_works() {
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [0.0, 0.0, 0.0],
+            [3.0, 0.0, 0.0],
+            [3.0, 3.0, 0.0],
+            [0.0, 3.0, 0.0],
+            [0.0, 0.0, 3.0],
+            [3.0, 0.0, 3.0],
+            [3.0, 3.0, 3.0],
+            [0.0, 3.0, 3.0],
+        ]).unwrap();
+        block.set_div_weights_3d(&[1.0, 2.0], &[1.0, 2.0], &[1.0, 2.0]).unwrap();
+        let mesh = block.subdivide(GeoKind::Hex8).unwrap();
+        mesh.check_all().unwrap();
+        assert_eq!(mesh.points.len(), 27);
+        assert_eq!(mesh.cells.len(), 8);
+        array_approx_eq(&mesh.points[0].coords, &[0.0, 0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[1].coords, &[1.0, 0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[2].coords, &[1.0, 1.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[3].coords, &[0.0, 1.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[4].coords, &[0.0, 0.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[5].coords, &[1.0, 0.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[6].coords, &[1.0, 1.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[7].coords, &[0.0, 1.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[8].coords, &[3.0, 0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[9].coords, &[3.0, 1.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[10].coords, &[3.0, 0.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[11].coords, &[3.0, 1.0, 1.0], 1e-14); // <<
+        array_approx_eq(&mesh.points[22].coords, &[3.0, 0.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[23].coords, &[3.0, 1.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[18].coords, &[0.0, 0.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[19].coords, &[1.0, 0.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[20].coords, &[1.0, 1.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[21].coords, &[0.0, 1.0, 3.0], 1e-15);
+        assert_eq!(&mesh.cells[0].points, &[0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(&mesh.cells[1].points, &[1, 8, 9, 2, 5, 10, 11, 6]);
+        assert_eq!(&mesh.cells[7].points, &[6, 11, 17, 14, 20, 23, 26, 24]);
+        if SAVE_FIGURE {
+            let mut fig = Figure::new();
+            fig.point_ids = true;
+            fig.figure_size = Some((600.0, 600.0));
+            mesh.draw(Some(fig), "/tmp/gemlab/test_subdivide_3d_o2_works.svg", |_, _| {})
+                .unwrap();
+        }
+    }
+
+    #[test]
     fn subdivide_3d_o2_works() {
         //              51--------58--------54--------74--------71
         //              /.                  /.                  /|
