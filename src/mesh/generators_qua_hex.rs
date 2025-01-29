@@ -31,20 +31,31 @@ impl Structured {
     ///
     /// * `rmin` -- inner radius
     /// * `rmax` -- outer radius
-    /// * `nr` -- number of divisions along the radius (must be > 0)
+    /// * `wr` -- weights for divisions along the radius (the len must be > 0 and the sum must be ≥ 1.0)
     /// * `na` -- number of divisions along alpha (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
     /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn quarter_ring_2d(
         rmin: f64,
         rmax: f64,
-        nr: usize,
+        wr: &[f64],
         na: usize,
         target: GeoKind,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
+        if wr.len() < 1 {
+            return Err("the length of wr must be ≥ 1");
+        }
+        let sum_wr = wr.iter().fold(0.0, |acc, w| acc + w);
+        if sum_wr < 1.0 {
+            return Err("the sum of wr must be ≥ 1.0");
+        }
+        if na < 1 {
+            return Err("na must be ≥ 1");
+        }
         let mut block = Block::new_square(1.0);
-        block.set_ndiv(&[nr, na])?;
+        let wa = vec![1.0; na];
+        block.set_div_weights_2d(wr, &wa).unwrap();
         block.set_transform_into_ring(Some(ArgsRing {
             amin: 0.0,
             amax: PI / 2.0,
@@ -85,7 +96,7 @@ impl Structured {
     /// * `rmin` -- inner radius
     /// * `rmax` -- outer radius
     /// * `z` -- thickness (zmin = 0.0)
-    /// * `nr` -- number of divisions along the radius (must be > 0)
+    /// * `wr` -- weights for divisions along the radius (the len must be > 0 and the sum must be ≥ 1.0)
     /// * `na` -- number of divisions along alpha (must be > 0)
     /// * `nz` -- number of divisions along z (thickness) (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
@@ -94,14 +105,29 @@ impl Structured {
         rmin: f64,
         rmax: f64,
         z: f64,
-        nr: usize,
+        wr: &[f64],
         na: usize,
         nz: usize,
         target: GeoKind,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
+        if wr.len() < 1 {
+            return Err("the length of wr must be ≥ 1");
+        }
+        let sum_wr = wr.iter().fold(0.0, |acc, w| acc + w);
+        if sum_wr < 1.0 {
+            return Err("the sum of wr must be ≥ 1.0");
+        }
+        if na < 1 {
+            return Err("na must be ≥ 1");
+        }
+        if nz < 1 {
+            return Err("nz must be ≥ 1");
+        }
         let mut block = Block::new_cube(1.0);
-        block.set_ndiv(&[nr, na, nz])?;
+        let wa = vec![1.0; na];
+        let wz = vec![1.0; nz];
+        block.set_div_weights_3d(wr, &wa, &wz).unwrap();
         block.set_transform_into_ring(Some(ArgsRing {
             amin: 0.0,
             amax: PI / 2.0,
@@ -966,14 +992,22 @@ mod tests {
     #[test]
     fn quarter_ring_2d_captures_errors() {
         assert_eq!(
-            Structured::quarter_ring_2d(3.0, 6.0, 0, 1, GeoKind::Qua16, false).err(),
-            Some("ndiv must be ≥ 1")
+            Structured::quarter_ring_2d(3.0, 6.0, &[], 1, GeoKind::Qua16, false).err(),
+            Some("the length of wr must be ≥ 1")
+        );
+        assert_eq!(
+            Structured::quarter_ring_2d(3.0, 6.0, &[0.0], 1, GeoKind::Qua16, false).err(),
+            Some("the sum of wr must be ≥ 1.0")
+        );
+        assert_eq!(
+            Structured::quarter_ring_2d(3.0, 6.0, &[1.0], 0, GeoKind::Qua16, false).err(),
+            Some("na must be ≥ 1")
         );
     }
 
     #[test]
     fn quarter_ring_2d_works() {
-        let mesh = Structured::quarter_ring_2d(3.0, 6.0, 1, 1, GeoKind::Qua16, false).unwrap();
+        let mesh = Structured::quarter_ring_2d(3.0, 6.0, &[1.0], 1, GeoKind::Qua16, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 1);
@@ -1001,14 +1035,26 @@ mod tests {
     #[test]
     fn quarter_ring_3d_captures_errors() {
         assert_eq!(
-            Structured::quarter_ring_3d(3.0, 6.0, 2.0, 0, 1, 1, GeoKind::Hex8, false).err(),
-            Some("ndiv must be ≥ 1")
+            Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[], 1, 1, GeoKind::Hex8, false).err(),
+            Some("the length of wr must be ≥ 1")
+        );
+        assert_eq!(
+            Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[0.0], 1, 1, GeoKind::Hex8, false).err(),
+            Some("the sum of wr must be ≥ 1.0")
+        );
+        assert_eq!(
+            Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[1.0], 0, 1, GeoKind::Hex8, false).err(),
+            Some("na must be ≥ 1")
+        );
+        assert_eq!(
+            Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[1.0], 1, 0, GeoKind::Hex8, false).err(),
+            Some("nz must be ≥ 1")
         );
     }
 
     #[test]
     fn quarter_ring_3d_works() {
-        let mut mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 1, 2, 1, GeoKind::Hex32, false).unwrap();
+        let mut mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[1.0], 2, 1, GeoKind::Hex32, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 52);
         assert_eq!(mesh.cells.len(), 2);

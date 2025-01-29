@@ -9,7 +9,9 @@ fn main() -> Result<(), StrError> {
     // generate mesh
     let (rmin, rmax) = (1.0, 3.0);
     let kind = GeoKind::Qua17;
-    let mesh = Structured::quarter_ring_2d(rmin, rmax, 4, 8, kind, false)?;
+    let nr = 4;
+    let wr = vec![1.0; nr];
+    let mesh = Structured::quarter_ring_2d(rmin, rmax, &wr, 8, kind, false)?;
 
     // allocate integration points and Scratchpad
     let gauss = Gauss::new(kind);
