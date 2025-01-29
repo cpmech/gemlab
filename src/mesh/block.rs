@@ -394,6 +394,52 @@ impl Block {
         Ok(self)
     }
 
+    /// Sets the division weights for 2D blocks
+    pub fn set_div_weights_2d(&mut self, wx: &[f64], wy: &[f64]) -> Result<&mut Self, StrError> {
+        if self.ndim != 2 {
+            return Err("this method works only for 2D blocks");
+        }
+        if wx.len() < 1 {
+            return Err("the length of the wx array must be ≥ 1");
+        }
+        if wy.len() < 1 {
+            return Err("the length of the wy array must be ≥ 1");
+        }
+        let sum_wx = wx.iter().fold(0.0, |acc, w| acc + w);
+        let sum_wy = wy.iter().fold(0.0, |acc, w| acc + w);
+        self.ndiv[0] = wx.len();
+        self.ndiv[1] = wy.len();
+        self.delta_ksi[0] = wx.iter().map(|w| w * Block::NAT_LENGTH / sum_wx).collect();
+        self.delta_ksi[1] = wy.iter().map(|w| w * Block::NAT_LENGTH / sum_wy).collect();
+        Ok(self)
+    }
+
+    /// Sets the division weights for 3D blocks
+    pub fn set_div_weights_3d(&mut self, wx: &[f64], wy: &[f64], wz: &[f64]) -> Result<&mut Self, StrError> {
+        if self.ndim != 3 {
+            return Err("this method works only for 3D blocks");
+        }
+        if wx.len() < 1 {
+            return Err("the length of the wx array must be ≥ 1");
+        }
+        if wy.len() < 1 {
+            return Err("the length of the wy array must be ≥ 1");
+        }
+        if wz.len() < 1 {
+            return Err("the length of the wz array must be ≥ 1");
+        }
+        let sum_wx = wx.iter().fold(0.0, |acc, w| acc + w);
+        let sum_wy = wy.iter().fold(0.0, |acc, w| acc + w);
+        let sum_wz = wz.iter().fold(0.0, |acc, w| acc + w);
+        self.ndiv[0] = wx.len();
+        self.ndiv[1] = wy.len();
+        self.ndiv[2] = wz.len();
+        self.delta_ksi[0] = wx.iter().map(|w| w * Block::NAT_LENGTH / sum_wx).collect();
+        self.delta_ksi[1] = wy.iter().map(|w| w * Block::NAT_LENGTH / sum_wy).collect();
+        self.delta_ksi[2] = wz.iter().map(|w| w * Block::NAT_LENGTH / sum_wz).collect();
+        Ok(self)
+    }
+
     /// Sets (or removes) a constraint to an edge of this block
     ///
     /// # Input
@@ -1177,6 +1223,70 @@ mod tests {
         block.set_ndiv(&[2, 4]).unwrap();
         assert_eq!(block.ndiv, &[2, 4]);
         assert_eq!(format!("{:?}", block.delta_ksi), "[[1.0, 1.0], [0.5, 0.5, 0.5, 0.5]]");
+    }
+
+    #[test]
+    fn set_div_weights_2d_works() {
+        let mut block = Block::new_cube(1.0);
+        assert_eq!(
+            block.set_div_weights_2d(&[1.0], &[1.0]).err(),
+            Some("this method works only for 2D blocks")
+        );
+        let mut block = Block::new_square(1.0);
+        assert_eq!(
+            block.set_div_weights_2d(&[], &[1.0]).err(),
+            Some("the length of the wx array must be ≥ 1")
+        );
+        assert_eq!(
+            block.set_div_weights_2d(&[1.0], &[]).err(),
+            Some("the length of the wy array must be ≥ 1")
+        );
+        block.set_div_weights_2d(&[5.0, 10.0, 20.0, 65.0], &[5.0, 5.0]).unwrap();
+        assert_eq!(block.ndiv.len(), 2); // 2D
+        assert_eq!(block.ndiv[0], 4); // 4 divisions along x
+        assert_eq!(block.ndiv[1], 2); // 2 divisions along y
+        assert_eq!(
+            block.delta_ksi[0],
+            &[
+                2.0 * 5.0 / 100.0, // 2.0 is due to NAT_LENGTH
+                2.0 * 10.0 / 100.0,
+                2.0 * 20.0 / 100.0,
+                2.0 * 65.0 / 100.0
+            ]
+        );
+        assert_eq!(block.delta_ksi[1], &[2.0 * 5.0 / (5.0 + 5.0), 2.0 * 5.0 / (5.0 + 5.0)]);
+    }
+
+    #[test]
+    fn set_div_weights_3d_works() {
+        let mut block = Block::new_square(1.0);
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[1.0], &[1.0]).err(),
+            Some("this method works only for 3D blocks")
+        );
+        let mut block = Block::new_cube(1.0);
+        assert_eq!(
+            block.set_div_weights_3d(&[], &[1.0], &[1.0]).err(),
+            Some("the length of the wx array must be ≥ 1")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[], &[1.0]).err(),
+            Some("the length of the wy array must be ≥ 1")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[1.0], &[]).err(),
+            Some("the length of the wz array must be ≥ 1")
+        );
+        block
+            .set_div_weights_3d(&[5.0, 10.0, 25.0], &[5.0, 5.0], &[2.0, 6.0])
+            .unwrap();
+        assert_eq!(block.ndiv.len(), 3); // 3D
+        assert_eq!(block.ndiv[0], 3); // 4 divisions along x
+        assert_eq!(block.ndiv[1], 2); // 2 divisions along y
+        assert_eq!(block.ndiv[2], 2); // 2 divisions along z
+        assert_eq!(block.delta_ksi[0], &[0.25, 0.5, 1.25]);
+        assert_eq!(block.delta_ksi[1], &[1.0, 1.0]);
+        assert_eq!(block.delta_ksi[2], &[0.5, 1.5]);
     }
 
     #[test]
