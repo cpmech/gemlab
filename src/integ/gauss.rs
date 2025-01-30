@@ -88,7 +88,7 @@ impl Gauss {
     /// # Input
     ///
     /// * `class` -- The geometry class
-    /// * `ngauss` -- Number of integration points requested (see Options below)
+    /// * `ngauss` -- Number of integration points (see Options below)
     ///
     /// # Options
     ///
@@ -206,6 +206,19 @@ impl Gauss {
             ksi_hat: None,
             ksi_hat_inv: None,
         })
+    }
+
+    /// Allocates a new instance using either default or specified number of points
+    ///
+    /// # Input
+    ///
+    /// * `ngauss` -- Number of integration points (see options in [Gauss::new_sized()]).
+    ///   If None, the default number is selected as described in [Gauss::new()]
+    pub fn new_or_sized(kind: GeoKind, ngauss: Option<usize>) -> Result<Self, StrError> {
+        match ngauss {
+            Some(n) => Gauss::new_sized(kind.class(), n),
+            None => Ok(Gauss::new(kind)),
+        }
     }
 
     /// Returns the number of integration points
@@ -815,5 +828,11 @@ mod tests {
             Gauss::new_sized(GeoClass::Hex, 100).err(),
             Some("requested number of integration points is not available for Hex class")
         );
+    }
+
+    #[test]
+    fn new_or_sized_works() {
+        assert_eq!(Gauss::new_or_sized(GeoKind::Qua8, None).unwrap().npoint(), 9);
+        assert_eq!(Gauss::new_or_sized(GeoKind::Qua8, Some(1)).unwrap().npoint(), 1);
     }
 }
