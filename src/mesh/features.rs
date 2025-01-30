@@ -429,15 +429,41 @@ impl<'a> Features<'a> {
     }
 
     /// Returns cells sharing a given (2D) edge
+    ///
+    /// Returns a **sorted** list of Cell IDs
     pub fn get_cells_via_2d_edge(&self, edge: &Edge) -> Vec<CellId> {
         let cells = self.all_2d_edges.get(&edge.key()).expect("cannot find 2D edge");
-        cells.iter().map(|c| c.0).collect()
+        let mut ids: Vec<_> = cells.iter().map(|c| c.0).collect();
+        ids.sort();
+        ids
     }
 
     /// Returns cells sharing a given face
+    ///
+    /// Returns a **sorted** list of Cell IDs
     pub fn get_cells_via_face(&self, face: &Face) -> Vec<CellId> {
         let cells = self.all_faces.get(&face.key()).expect("cannot find face");
-        cells.iter().map(|c| c.0).collect()
+        let mut ids: Vec<_> = cells.iter().map(|c| c.0).collect();
+        ids.sort();
+        ids
+    }
+
+    /// Returns many cells sharing a given (2D) edge
+    ///
+    /// Returns a **sorted** list of Cell IDs
+    pub fn get_cells_via_2d_edges(&self, edges: &Edges) -> Vec<CellId> {
+        let mut ids: Vec<_> = edges.all.iter().flat_map(|e| self.get_cells_via_2d_edge(e)).collect();
+        ids.sort();
+        ids
+    }
+
+    /// Returns many cells sharing a given face
+    ///
+    /// Returns a **sorted** list of Cell IDs
+    pub fn get_cells_via_faces(&self, faces: &Faces) -> Vec<CellId> {
+        let mut ids: Vec<_> = faces.all.iter().flat_map(|f| self.get_cells_via_face(f)).collect();
+        ids.sort();
+        ids
     }
 
     /// Returns all neighbors of a 2D cell
@@ -942,7 +968,7 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    fn new_and_get_methods_work_2d() {
+    fn new_and_basic_get_methods_work_2d() {
         //      y
         //      ^
         // 1.0  3------6------2
@@ -954,15 +980,14 @@ mod tests {
         // 0.0  0------4------1 -> x
         //     0.0           1.0
         let mesh = Samples::one_qua8();
-        let features = Features::new(&mesh, false);
-        let edge = features.get_edge(2, 3);
+        let feat = Features::new(&mesh, false);
+        let edge = feat.get_edge(2, 3);
         assert_eq!(edge.points, &[3, 2, 6]);
         assert_eq!(edge.key(), (2, 3));
-        assert_eq!(features.get_cells_via_2d_edge(&edge), &[0]);
     }
 
     #[test]
-    fn new_and_get_methods_work_3d_1() {
+    fn new_and_basic_get_methods_work_3d_1() {
         //      4--------------7  1.0
         //     /.             /|
         //    / .            / |    [#] indicates id
@@ -977,32 +1002,31 @@ mod tests {
         // |/             |/
         // 1--------------2   1.0
         let mesh = Samples::one_hex8();
-        let features = Features::new(&mesh, false);
-        let edge = features.get_edge(4, 5);
-        let face = features.get_face(0, 1, 4, 5);
+        let feat = Features::new(&mesh, false);
+        let edge = feat.get_edge(4, 5);
+        let face = feat.get_face(0, 1, 4, 5);
         assert_eq!(edge.points, &[4, 5]);
         assert_eq!(face.points, &[0, 1, 5, 4]);
         assert_eq!(edge.key(), (4, 5));
         assert_eq!(face.key(), (0, 1, 4, 5));
-        assert_eq!(features.get_cells_via_face(&face), &[0]);
     }
 
     #[test]
-    fn new_and_get_methods_work_3d_2() {
+    fn new_and_basic_get_methods_work_3d_2() {
         let mesh = Samples::one_tet4();
-        let features = Features::new(&mesh, false);
-        let edge = features.get_edge(1, 2);
-        let face = features.get_face(0, 1, 3, usize::MAX);
+        let feat = Features::new(&mesh, false);
+        let edge = feat.get_edge(1, 2);
+        let face = feat.get_face(0, 1, 3, usize::MAX);
         assert_eq!(edge.points, &[1, 2]);
         assert_eq!(face.points, &[0, 1, 3]);
         assert_eq!(edge.key(), (1, 2));
         assert_eq!(face.key(), (0, 1, 3, usize::MAX));
-        assert_eq!(features.get_cells_via_face(&face), &[0]);
+        assert_eq!(feat.get_cells_via_face(&face), &[0]);
     }
 
     #[test]
     #[should_panic(expected = "cannot find edge with given key")]
-    fn get_method_panics_on_notfound_edge() {
+    fn get_edge_panics_on_notfound_edge() {
         //                       4------------7-----------10
         //                      /.           /|            |
         //                     / .          / |            |
@@ -1017,8 +1041,29 @@ mod tests {
         //                  |/           |/         `. /
         //  12-----11-------1------------2------------8
         let mesh = Samples::mixed_shapes_3d();
-        let features = Features::new(&mesh, true);
-        features.get_edge(7, 10);
+        let feat = Features::new(&mesh, true);
+        feat.get_edge(7, 10); // hanging edge, i.e., CABLE
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot find face with given key")]
+    fn get_face_panics_on_notfound_face() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //                  5------------6    |            |
+        //                  |    .       |`.  |            |
+        //                  |    0-------|--`.3------------9
+        //                  |   /        |   /`.          /
+        //                  |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, true);
+        feat.get_face(3, 7, 9, 10); // hanging face, i.e., SHELL
     }
 
     #[test]
@@ -1874,5 +1919,89 @@ mod tests {
         let faces = features.search_faces(At::X(0.0), any_x).unwrap();
         assert_eq!(format!("{}", edges), "(0, 1), (0, 2), (1, 2)");
         assert_eq!(format!("{}", faces), "(0, 2, 3, MAX)");
+    }
+
+    #[test]
+    fn get_cells_methods_work_2d_1() {
+        // 1.0              4-----------3
+        //                  |           |
+        //                  |    [1]    |   [*] indicates id
+        //                  |    (2)    |   (*) indicates attribute
+        //                  |           |
+        // 0.0  0-----------1-----------2-----------5
+        //           [0]                     [2]
+        //           (1)                     (1)
+        let mesh = Samples::mixed_shapes_2d();
+        let feat = Features::new(&mesh, false);
+        let edge = feat.get_edge(1, 2);
+        assert_eq!(feat.get_cells_via_2d_edge(&edge), &[1]);
+    }
+
+    #[test]
+    fn get_cells_methods_work_2d_2() {
+        // 7---------------6---------------8
+        // |               |               |
+        // |               |               |
+        // |      [2]      |      [3]      |
+        // |               |               |
+        // |               |               |
+        // 3---------------2---------------5
+        // |               |               |
+        // |               |               |
+        // |      [0]      |      [1]      |
+        // |               |               |
+        // |               |               |
+        // 0---------------1---------------4
+        let mesh = Samples::block_2d_four_qua4();
+        let feat = Features::new(&mesh, true); // need interior edges
+        let edge_a = feat.get_edge(2, 3);
+        let edge_b = feat.get_edge(2, 5);
+        let edges = Edges {
+            all: vec![&edge_a, &edge_b],
+        };
+        assert_eq!(feat.get_cells_via_2d_edge(&edge_a), &[0, 2]);
+        assert_eq!(feat.get_cells_via_2d_edge(&edge_b), &[1, 3]);
+        assert_eq!(feat.get_cells_via_2d_edges(&edges), &[0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn get_cells_methods_work_3d_1() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //         z        5------------6    |            |
+        //         ↑        |    .       |`.  |            |
+        //         o → y    |    0-------|--`.3------------9
+        //        ↙         |   /        |   /`.          /
+        //      x           |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, false);
+        let face_a = feat.get_face(2, 3, 6, 7);
+        let face_b = feat.get_face(2, 3, 6, usize::MAX);
+        let faces = Faces {
+            all: vec![&face_a, &face_b],
+        };
+        assert_eq!(feat.get_cells_via_face(&face_a), &[0]);
+        assert_eq!(feat.get_cells_via_face(&face_b), &[1]);
+        assert_eq!(feat.get_cells_via_faces(&faces), &[0, 1]);
+    }
+
+    #[test]
+    fn get_cells_methods_work_3d_2() {
+        let mesh = Samples::block_3d_eight_hex8();
+        let feat = Features::new(&mesh, true); // need interior faces
+        let face_a = feat.get_face(2, 3, 6, 7);
+        let face_b = feat.get_face(6, 7, 20, 21);
+        let faces = Faces {
+            all: vec![&face_a, &face_b],
+        };
+        assert_eq!(feat.get_cells_via_face(&face_a), &[0, 2]);
+        assert_eq!(feat.get_cells_via_face(&face_b), &[4, 6]);
+        assert_eq!(feat.get_cells_via_faces(&faces), &[0, 2, 4, 6]);
     }
 }
