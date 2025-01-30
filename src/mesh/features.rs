@@ -1,6 +1,5 @@
 use super::algorithms::{extract_all_2d_edges, extract_all_faces, extract_features_2d, extract_features_3d};
 use super::{At, CellId, Mesh, PointId};
-use crate::prelude::GeoClass;
 use crate::shapes::GeoKind;
 use crate::util::GridSearch;
 use crate::StrError;
@@ -43,6 +42,7 @@ impl Edge {
 }
 
 /// Defines an array of edges
+#[derive(Clone, Debug)]
 pub struct Edges<'a> {
     /// Holds a set of edges
     pub all: Vec<&'a Edge>,
@@ -74,6 +74,7 @@ impl Face {
 }
 
 /// Defines an array of faces
+#[derive(Clone, Debug)]
 pub struct Faces<'a> {
     /// Holds a set of faces
     pub all: Vec<&'a Face>,
@@ -263,6 +264,7 @@ pub struct Features<'a> {
     /// 2. In 3D, a boundary edge belongs to a boundary face
     /// 3. In 2D, an interior edge is such that it is shared by **more** than one 2D cell (1D cells are ignored)
     /// 4. In 3D, an interior edge belongs to an interior face
+    /// 5. 1D cells in 2D go to the `cables` array
     pub edges: HashMap<EdgeKey, Edge>,
 
     /// Set of faces on the mesh boundary, interior, or both boundary and interior
@@ -271,10 +273,15 @@ pub struct Features<'a> {
     ///
     /// 1. A boundary face is such that it is shared by one 3D cell only (2D cells are ignored)
     /// 2. An interior face is such that it is shared by **more** than one 3D cell (2D cells are ignored)
+    /// 3. 1D cells in 3D go to the `cables` array
+    /// 4. 2D cells in 3D go to the `shells` array
     pub faces: HashMap<FaceKey, Face>,
 
-    /// Holds the ids of linear cells (GeoKind::Lin) in 2D or 3D
-    pub lines: Vec<CellId>,
+    /// Holds the ids of linear cells; GeoKind::Lin with geo_ndim = 1 in 2D or 3D
+    pub cables: Vec<CellId>,
+
+    /// Holds the ids of 2D cells (geo_ndim = 2) in 3D (space_ndim = 3)
+    pub shells: Vec<CellId>,
 
     /// The minimum coordinates of the points (space_ndim)
     pub min: Vec<f64>,
@@ -376,18 +383,22 @@ impl<'a> Features<'a> {
             }
         }
 
-        // linear cells
-        let lines: Vec<_> = mesh
+        // CABLE cells
+        let cables: Vec<_> = mesh
             .cells
             .iter()
-            .filter_map(|cell| {
-                if cell.kind.class() == GeoClass::Lin {
-                    Some(cell.id)
-                } else {
-                    None
-                }
-            })
+            .filter_map(|cell| if cell.kind.ndim() == 1 { Some(cell.id) } else { None })
             .collect();
+
+        // SHELL cells
+        let shells = if mesh.ndim == 3 {
+            mesh.cells
+                .iter()
+                .filter_map(|cell| if cell.kind.ndim() == 2 { Some(cell.id) } else { None })
+                .collect()
+        } else {
+            Vec::new()
+        };
 
         // results
         Features {
@@ -397,7 +408,8 @@ impl<'a> Features<'a> {
             points,
             edges,
             faces,
-            lines,
+            cables,
+            shells,
             min,
             max,
             grid,
@@ -416,13 +428,13 @@ impl<'a> Features<'a> {
         self.faces.get(&(a, b, c, d)).expect("cannot find face with given key")
     }
 
-    /// Returns all cells sharing a given (2D) edge
+    /// Returns cells sharing a given (2D) edge
     pub fn get_cells_via_2d_edge(&self, edge: &Edge) -> Vec<CellId> {
         let cells = self.all_2d_edges.get(&edge.key()).expect("cannot find 2D edge");
         cells.iter().map(|c| c.0).collect()
     }
 
-    /// Returns all cells sharing a given face
+    /// Returns cells sharing a given face
     pub fn get_cells_via_face(&self, face: &Face) -> Vec<CellId> {
         let cells = self.all_faces.get(&face.key()).expect("cannot find face");
         cells.iter().map(|c| c.0).collect()
@@ -651,12 +663,14 @@ impl<'a> Features<'a> {
         let point_ids = self.search_point_ids(at, filter)?;
         for point_id in &point_ids {
             // select all edges connected to the found points
-            let edges = self.point_to_edges.get(point_id).unwrap(); // unwrap here because there should be no hanging edges
-            for edge_key in edges {
-                // accept edge when at least two edge points validate "At"
-                if point_ids.contains(&edge_key.0) && point_ids.contains(&edge_key.1) {
-                    edge_keys.insert(*edge_key);
+            if let Some(edges) = self.point_to_edges.get(point_id) {
+                for edge_key in edges {
+                    // accept edge when at least two edge points validate "At"
+                    if point_ids.contains(&edge_key.0) && point_ids.contains(&edge_key.1) {
+                        edge_keys.insert(*edge_key);
+                    }
                 }
+                // the None branch means that the point is not attached to any edge; i.e., a CABLE or SHELL point
             }
         }
         if edge_keys.len() == 0 {
@@ -693,21 +707,23 @@ impl<'a> Features<'a> {
         let point_ids = self.search_point_ids(at, filter)?;
         for point_id in &point_ids {
             // select all faces connected to the found points
-            let faces = self.point_to_faces.get(point_id).unwrap(); // unwrap here because there should be no hanging faces
-            for face_key in faces {
-                // accept face when at least four face points validate "At"
-                let fourth_is_ok = if face_key.3 == usize::MAX {
-                    true
-                } else {
-                    point_ids.contains(&face_key.3)
-                };
-                if point_ids.contains(&face_key.0)
-                    && point_ids.contains(&face_key.1)
-                    && point_ids.contains(&face_key.2)
-                    && fourth_is_ok
-                {
-                    face_keys.insert(*face_key);
+            if let Some(faces) = self.point_to_faces.get(point_id) {
+                for face_key in faces {
+                    // accept face when at least four face points validate "At"
+                    let fourth_is_ok = if face_key.3 == usize::MAX {
+                        true
+                    } else {
+                        point_ids.contains(&face_key.3)
+                    };
+                    if point_ids.contains(&face_key.0)
+                        && point_ids.contains(&face_key.1)
+                        && point_ids.contains(&face_key.2)
+                        && fourth_is_ok
+                    {
+                        face_keys.insert(*face_key);
+                    }
                 }
+                // the None branch means that the point is not attached to any face; i.e., a SHELL point
             }
         }
         if face_keys.len() == 0 {
@@ -916,7 +932,7 @@ impl<'a> fmt::Display for Faces<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Edge, Face, Features};
+    use super::{Edge, Edges, Face, Faces, Features};
     use crate::mesh::{At, Samples};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
@@ -982,6 +998,27 @@ mod tests {
         assert_eq!(edge.key(), (1, 2));
         assert_eq!(face.key(), (0, 1, 3, usize::MAX));
         assert_eq!(features.get_cells_via_face(&face), &[0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot find edge with given key")]
+    fn get_method_panics_on_notfound_edge() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //                  5------------6    |            |
+        //                  |    .       |`.  |            |
+        //                  |    0-------|--`.3------------9
+        //                  |   /        |   /`.          /
+        //                  |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let features = Features::new(&mesh, true);
+        features.get_edge(7, 10);
     }
 
     #[test]
@@ -1070,6 +1107,18 @@ mod tests {
         assert_eq!(face_clone.points.len(), 4);
         assert_eq!(edge.key(), (10, 20));
         assert_eq!(face.key(), (1, 2, 3, 4));
+        let edges = Edges { all: vec![&edge] };
+        let faces = Faces { all: vec![&face] };
+        let edges_clone = edges.clone();
+        let faces_clone = faces.clone();
+        assert_eq!(
+            format!("{:?}", edges_clone),
+            "Edges { all: [Edge { kind: Lin3, points: [10, 20, 33] }] }"
+        );
+        assert_eq!(
+            format!("{:?}", faces_clone),
+            "Faces { all: [Face { kind: Qua4, points: [1, 2, 3, 4] }] }"
+        );
     }
 
     #[test]
@@ -1283,6 +1332,36 @@ mod tests {
     }
 
     #[test]
+    fn search_points_works_3d_mixed() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //         z        5------------6    |            |
+        //         ↑        |    .       |`.  |            |
+        //         o → y    |    0-------|--`.3------------9
+        //        ↙         |   /        |   /`.          /
+        //      x           |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, true);
+        assert_eq!(feat.search_point_ids(At::X(0.0), any_x).unwrap(), &[0, 3, 4, 7, 9, 10]);
+        assert_eq!(feat.search_point_ids(At::Y(1.0), any_x).unwrap(), &[2, 3, 6, 7]);
+        assert_eq!(feat.search_point_ids(At::XZ(0.0, 1.0), any_x).unwrap(), &[4, 7, 10]);
+        assert_eq!(
+            feat.search_point_ids(At::XZ(1.0, 0.0), any_x).unwrap(),
+            &[1, 2, 8, 11, 12]
+        );
+        assert_eq!(
+            feat.search_point_ids(At::Z(0.0), any_x).unwrap(),
+            &[0, 1, 2, 3, 8, 9, 11, 12]
+        );
+    }
+
+    #[test]
     fn search_edges_works_2d() {
         // 3--------2--------5
         // |        |        |
@@ -1327,6 +1406,23 @@ mod tests {
         assert_eq!(res.all.len(), 6);
         let keys: Vec<_> = res.all.iter().map(|r| (r.points[0], r.points[1])).collect();
         assert_eq!(keys, &[(1, 0), (0, 3), (4, 1), (3, 2), (2, 5), (5, 4)]);
+    }
+
+    #[test]
+    fn search_edges_works_2d_mixed() {
+        // 1.0              4-----------3
+        //                  |           |
+        //                  |    [1]    |   [*] indicates id
+        //                  |    (2)    |   (*) indicates attribute
+        //                  |           |
+        // 0.0  0-----------1-----------2-----------5
+        //           [0]                     [2]
+        //           (1)                     (1)
+        let mesh = Samples::mixed_shapes_2d();
+        let feat = Features::new(&mesh, false);
+        assert_eq!(feat.cables, &[0, 2]);
+        // note that (0,1) and (2,5) are NOT edge; they're CABLE
+        assert_eq!(feat.search_edge_keys(At::Y(0.0), any_x).unwrap(), &[(1, 2)]);
     }
 
     #[test]
@@ -1467,6 +1563,37 @@ mod tests {
             .map(|r| (r.points[0], r.points[1], r.points[2], r.points[3]))
             .collect();
         assert_eq!(keys, &[(0, 3, 2, 1), (8, 9, 10, 11)]);
+    }
+
+    #[test]
+    fn search_edges_works_3d_mixed() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //         z        5------------6    |            |
+        //         ↑        |    .       |`.  |            |
+        //         o → y    |    0-------|--`.3------------9
+        //        ↙         |   /        |   /`.          /
+        //      x           |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, true);
+        assert_eq!(feat.cables, &[4]);
+        assert_eq!(feat.shells, &[2, 3]);
+        // note that (11,12) and (1,11) are not edges; they are CABLE
+        assert_eq!(
+            feat.search_edge_keys(At::XZ(1.0, 0.0), any_x).unwrap(),
+            &[(1, 2), (2, 8)]
+        );
+        // note that (7,10) and (9,10) are not edges because they belong to SHELL (hanging faces)
+        assert_eq!(
+            feat.search_edge_keys(At::X(0.0), any_x).unwrap(),
+            &[(0, 3), (0, 4), (3, 7), (4, 7)]
+        );
     }
 
     #[test]
@@ -1617,6 +1744,29 @@ mod tests {
             feat.search_faces(At::Circle(0.0, 0.0, 1.0), any_x).err(),
             Some("At::Circle works in 2D only")
         );
+    }
+
+    #[test]
+    fn search_faces_works_mixed() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //         z        5------------6    |            |
+        //         ↑        |    .       |`.  |            |
+        //         o → y    |    0-------|--`.3------------9
+        //        ↙         |   /        |   /`.          /
+        //      x           |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, true);
+        assert_eq!(feat.cables, &[4]);
+        assert_eq!(feat.shells, &[2, 3]);
+        // note that (3,7,9,10) is not face because it is SHELL (hanging face)
+        assert_eq!(feat.search_face_keys(At::X(0.0), any_x).unwrap(), &[(0, 3, 4, 7)]);
     }
 
     #[test]
