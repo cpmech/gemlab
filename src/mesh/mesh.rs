@@ -330,7 +330,9 @@ impl Mesh {
         pad
     }
 
-    /// Returns the (min,max) point coordinates in a mesh
+    /// Returns the min and max coordinates of all points in the mesh
+    ///
+    /// Returns `(min, max)`, each being an `ndim` vector.
     pub fn get_limits(&self) -> (Vec<f64>, Vec<f64>) {
         let mut min = vec![f64::MAX; self.ndim];
         let mut max = vec![f64::MIN; self.ndim];
@@ -338,6 +340,23 @@ impl Mesh {
             for i in 0..self.ndim {
                 min[i] = f64::min(min[i], point.coords[i]);
                 max[i] = f64::max(max[i], point.coords[i]);
+            }
+        }
+        (min, max)
+    }
+
+    /// Returns the bounding box of a cell
+    ///
+    /// Returns `(min, max)`, each being an `ndim` vector.
+    pub fn get_cell_bounding_box(&self, cell_id: CellId) -> (Vec<f64>, Vec<f64>) {
+        let cell = &self.cells[cell_id];
+        let mut min = vec![f64::MAX; self.ndim];
+        let mut max = vec![f64::MIN; self.ndim];
+        for m in 0..cell.points.len() {
+            let p = cell.points[m];
+            for i in 0..self.ndim {
+                min[i] = f64::min(min[i], self.points[p].coords[i]);
+                max[i] = f64::max(max[i], self.points[p].coords[i]);
             }
         }
         (min, max)
@@ -744,7 +763,7 @@ mod tests {
     }
 
     #[test]
-    fn get_mesh_limits_works() {
+    fn get_limits_works() {
         let mesh = &Samples::two_qua4();
         let (min, max) = mesh.get_limits();
         assert_eq!(min, &[0.0, 0.0]);
@@ -753,6 +772,25 @@ mod tests {
         let mesh = &Samples::two_hex8();
         let (min, max) = mesh.get_limits();
         assert_eq!(min, &[0.0, 0.0, 0.0]);
+        assert_eq!(max, &[1.0, 1.0, 2.0]);
+    }
+
+    #[test]
+    fn get_cell_bounding_box_works() {
+        let mesh = &Samples::two_qua4();
+        let (min, max) = mesh.get_cell_bounding_box(0);
+        assert_eq!(min, &[0.0, 0.0]);
+        assert_eq!(max, &[1.0, 1.0]);
+        let (min, max) = mesh.get_cell_bounding_box(1);
+        assert_eq!(min, &[1.0, 0.0]);
+        assert_eq!(max, &[2.0, 1.0]);
+
+        let mesh = &Samples::two_hex8();
+        let (min, max) = mesh.get_cell_bounding_box(0);
+        assert_eq!(min, &[0.0, 0.0, 0.0]);
+        assert_eq!(max, &[1.0, 1.0, 1.0]);
+        let (min, max) = mesh.get_cell_bounding_box(1);
+        assert_eq!(min, &[0.0, 0.0, 1.0]);
         assert_eq!(max, &[1.0, 1.0, 2.0]);
     }
 
