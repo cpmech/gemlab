@@ -10,7 +10,7 @@ use std::collections::HashMap;
 #[test]
 fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     // read mesh
-    let mesh = Mesh::from_text_file("./data/meshes/column_distorted_tris_quads.msh")?;
+    let mesh = Mesh::read("./data/meshes/column_distorted_tris_quads.msh")?;
     let features = Features::new(&mesh, false);
 
     // check sizes
@@ -87,7 +87,7 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
 #[test]
 fn test_rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
-    let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
+    let mesh = Mesh::read("./data/meshes/rectangle_tris_quads.msh")?;
     let features = Features::new(&mesh, false);
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 #[test]
 fn test_tetrahedra() -> Result<(), StrError> {
     // read mesh
-    let mesh = Mesh::from_text_file("./data/meshes/five_tets_within_cube.msh")?;
+    let mesh = Mesh::read("./data/meshes/five_tets_within_cube.msh")?;
     let features = Features::new(&mesh, false);
     assert_eq!(mesh.points.len(), 8);
     assert_eq!(mesh.cells.len(), 5);

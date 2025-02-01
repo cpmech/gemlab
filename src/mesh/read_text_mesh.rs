@@ -204,7 +204,7 @@ impl Mesh {
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
-    pub fn from_text_file<P>(full_path: &P) -> Result<Self, StrError>
+    pub fn read<P>(full_path: &P) -> Result<Self, StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
@@ -567,56 +567,53 @@ mod tests {
     }
 
     #[test]
-    fn from_text_file_captures_errors() {
+    fn read_captures_errors() {
+        assert_eq!(Mesh::read(&String::from("__wrong__")).err(), Some("cannot open file"));
         assert_eq!(
-            Mesh::from_text_file(&String::from("__wrong__")).err(),
-            Some("cannot open file")
-        );
-        assert_eq!(
-            Mesh::from_text_file(&String::from("./data/meshes/bad_empty.msh")).err(),
+            Mesh::read(&String::from("./data/meshes/bad_empty.msh")).err(),
             Some("file is empty or header is missing")
         );
         assert_eq!(
-            Mesh::from_text_file(&String::from("./data/meshes/bad_extra_cell_data.msh")).err(),
+            Mesh::read(&String::from("./data/meshes/bad_extra_cell_data.msh")).err(),
             Some("cell data contains extra values")
         );
         assert_eq!(
-            Mesh::from_text_file(&String::from("./data/meshes/bad_extra_point_data.msh")).err(),
+            Mesh::read(&String::from("./data/meshes/bad_extra_point_data.msh")).err(),
             Some("point data contains extra values")
         );
         assert_eq!(
-            Mesh::from_text_file(&String::from("./data/meshes/bad_missing_header.msh")).err(),
+            Mesh::read(&String::from("./data/meshes/bad_missing_header.msh")).err(),
             Some("file is empty or header is missing")
         );
         assert_eq!(
-            Mesh::from_text_file(&String::from("./data/meshes/bad_missing_points.msh")).err(),
+            Mesh::read(&String::from("./data/meshes/bad_missing_points.msh")).err(),
             Some("not all points have been found")
         );
         assert_eq!(
-            Mesh::from_text_file(&String::from("./data/meshes/bad_missing_cells.msh")).err(),
+            Mesh::read(&String::from("./data/meshes/bad_missing_cells.msh")).err(),
             Some("not all cells have been found")
         );
         assert_eq!(
-            Mesh::from_text_file(&String::from("./data/meshes/bad_wrong_cell_kind.msh")).err(),
+            Mesh::read(&String::from("./data/meshes/bad_wrong_cell_kind.msh")).err(),
             Some("string representation of GeoKind is incorrect")
         );
     }
 
     #[test]
-    fn from_text_file_works() {
-        let mesh = Mesh::from_text_file("./data/meshes/two_quads_horizontal.msh").unwrap();
+    fn read_works() {
+        let mesh = Mesh::read("./data/meshes/two_quads_horizontal.msh").unwrap();
         let sample = Samples::two_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
-        let mesh = Mesh::from_text_file("./data/meshes/two_cubes_vertical.msh").unwrap();
+        let mesh = Mesh::read("./data/meshes/two_cubes_vertical.msh").unwrap();
         let sample = Samples::two_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
-        let mesh = Mesh::from_text_file("./data/meshes/mixed_shapes_2d.msh").unwrap();
+        let mesh = Mesh::read("./data/meshes/mixed_shapes_2d.msh").unwrap();
         let sample = Samples::mixed_shapes_2d();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
-        let mesh = Mesh::from_text_file("./data/meshes/mixed_shapes_3d.msh").unwrap();
+        let mesh = Mesh::read("./data/meshes/mixed_shapes_3d.msh").unwrap();
         let sample = Samples::mixed_shapes_3d();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
     }

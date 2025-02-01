@@ -99,7 +99,7 @@ fn main() -> Result<(), StrError> {
     // 0.0  0------`1'------2
     //     0.0     0.5     1.0
     let path = "./data/meshes/four_tri3_one_qua4.msh";
-    let mesh = Mesh::from_text_file(path)?;
+    let mesh = Mesh::read(path)?;
 
     // Extract features such boundary edges and faces.
     // Search entities along the boundary of the mesh given coordinates.

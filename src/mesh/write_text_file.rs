@@ -47,7 +47,7 @@ impl Mesh {
     /// # Input
     ///
     /// * `full_path` -- may be a String, &str, or Path
-    pub fn write_text_file<P>(&self, full_path: &P) -> Result<(), StrError>
+    pub fn write<P>(&self, full_path: &P) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
@@ -84,7 +84,7 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn write_text_file_handles_unavailable_types() {
+    fn write_handles_unavailable_types() {
         assert_eq!(
             Samples::lin_cells().write_vtu("/tmp/gemlab/nothing.vtu").err(),
             Some("cannot generate VTU file because VTK cell type is not available")
@@ -100,10 +100,10 @@ mod tests {
     }
 
     #[test]
-    fn write_text_file_works_qua8_tri6_lin2() -> Result<(), StrError> {
+    fn write_works_qua8_tri6_lin2() -> Result<(), StrError> {
         let mesh = Samples::qua8_tri6_lin2();
         let file_path = "/tmp/gemlab/test_qua8_tri6_lin2.msh";
-        mesh.write_text_file(file_path)?;
+        mesh.write(file_path)?;
         let contents = fs::read_to_string(file_path).map_err(|_| "cannot open file")?;
         assert_eq!(
             contents,
