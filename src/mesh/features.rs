@@ -466,6 +466,22 @@ impl<'a> Features<'a> {
         ids
     }
 
+    /// Returns all points (sorted) on a set of (2D) edges
+    pub fn get_points_via_2d_edges(&self, edges: &Edges) -> Vec<PointId> {
+        let mut point_ids: Vec<_> = edges.all.iter().flat_map(|e| e.points.clone()).collect();
+        point_ids.sort();
+        point_ids.dedup();
+        point_ids
+    }
+
+    /// Returns all points (sorted) on a set of faces
+    pub fn get_points_via_faces(&self, faces: &Faces) -> Vec<PointId> {
+        let mut point_ids: Vec<_> = faces.all.iter().flat_map(|f| f.points.clone()).collect();
+        point_ids.sort();
+        point_ids.dedup();
+        point_ids
+    }
+
     /// Returns all neighbors of a 2D cell
     ///
     /// # Input
@@ -1922,7 +1938,7 @@ mod tests {
     }
 
     #[test]
-    fn get_cells_methods_work_2d_1() {
+    fn get_cells_and_points_methods_work_2d_1() {
         // 1.0              4-----------3
         //                  |           |
         //                  |    [1]    |   [*] indicates id
@@ -1934,11 +1950,14 @@ mod tests {
         let mesh = Samples::mixed_shapes_2d();
         let feat = Features::new(&mesh, false);
         let edge = feat.get_edge(1, 2);
+        let edges = Edges { all: vec![&edge] };
         assert_eq!(feat.get_cells_via_2d_edge(&edge), &[1]);
+        assert_eq!(feat.get_cells_via_2d_edges(&edges), &[1]);
+        assert_eq!(feat.get_points_via_2d_edges(&edges), &[1, 2]);
     }
 
     #[test]
-    fn get_cells_methods_work_2d_2() {
+    fn get_cells_and_points_methods_work_2d_2() {
         // 7---------------6---------------8
         // |               |               |
         // |               |               |
@@ -1962,10 +1981,11 @@ mod tests {
         assert_eq!(feat.get_cells_via_2d_edge(&edge_a), &[0, 2]);
         assert_eq!(feat.get_cells_via_2d_edge(&edge_b), &[1, 3]);
         assert_eq!(feat.get_cells_via_2d_edges(&edges), &[0, 1, 2, 3]);
+        assert_eq!(feat.get_points_via_2d_edges(&edges), &[2, 3, 5]);
     }
 
     #[test]
-    fn get_cells_methods_work_3d_1() {
+    fn get_cells_and_points_methods_work_3d_1() {
         //                       4------------7-----------10
         //                      /.           /|            |
         //                     / .          / |            |
@@ -1989,10 +2009,11 @@ mod tests {
         assert_eq!(feat.get_cells_via_face(&face_a), &[0]);
         assert_eq!(feat.get_cells_via_face(&face_b), &[1]);
         assert_eq!(feat.get_cells_via_faces(&faces), &[0, 1]);
+        assert_eq!(feat.get_points_via_faces(&faces), &[2, 3, 6, 7]);
     }
 
     #[test]
-    fn get_cells_methods_work_3d_2() {
+    fn get_cells_and_points_methods_work_3d_2() {
         let mesh = Samples::block_3d_eight_hex8();
         let feat = Features::new(&mesh, true); // need interior faces
         let face_a = feat.get_face(2, 3, 6, 7);
@@ -2003,5 +2024,6 @@ mod tests {
         assert_eq!(feat.get_cells_via_face(&face_a), &[0, 2]);
         assert_eq!(feat.get_cells_via_face(&face_b), &[4, 6]);
         assert_eq!(feat.get_cells_via_faces(&faces), &[0, 2, 4, 6]);
+        assert_eq!(feat.get_points_via_faces(&faces), &[2, 3, 6, 7, 20, 21]);
     }
 }
