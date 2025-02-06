@@ -1,6 +1,8 @@
 use crate::shapes::{GeoKind, Scratchpad};
 use crate::StrError;
+use russell_lab::{argsort2_f64, argsort3_f64};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::{self, Write as FmtWrite};
 use std::fs::{self, File};
@@ -362,6 +364,76 @@ impl Mesh {
         (min, max)
     }
 
+    /// Returns the IDs of points such that their coordinates are sorted by x → y → z
+    ///
+    /// # Input
+    ///
+    /// * `point_ids` -- list of point ids to be sorted
+    /// * `filter` -- function `fn(x, y, z) -> bool` that returns true to **keep** the coordinate just found
+    ///
+    /// # Output
+    ///
+    /// Returns the IDs of the points sorted by x → y → z
+    ///
+    /// # Examples
+    ///
+    ///
+    /// ```
+    /// use gemlab::mesh::Samples;
+    ///
+    /// fn main() {
+    ///     // 8------7------6._
+    ///     // |             |  '-.5
+    ///     // |             |     '-._
+    ///     // 9            10         '4
+    ///     // |             |       .-'
+    ///     // |             |   _.3'
+    ///     // 0------1------2.-'
+    ///     let mesh = Samples::qua8_tri6_lin2();
+    ///
+    ///     // define the point IDs to be sorted
+    ///     let point_ids = vec![8, 7, 6, 5, 4, 3, 2, 1, 0, 10, 9];
+    ///
+    ///     // use the get_sorted_points method with a filter
+    ///     let sorted_points = mesh.get_sorted_points(&point_ids, |x, y, _| x > 0.0 && y > 0.0);
+    ///
+    ///     // check
+    ///     assert_eq!(sorted_points, &[7, 10, 6, 3, 5, 4]);
+    /// }
+    /// ```
+    pub fn get_sorted_points<F>(&self, point_ids: &[PointId], filter: F) -> Vec<PointId>
+    where
+        F: Fn(f64, f64, f64) -> bool,
+    {
+        // build arrays of coordinates
+        let d3 = self.ndim == 3;
+        let np = point_ids.len();
+        let mut k2id = HashMap::new();
+        let mut xx = Vec::with_capacity(np);
+        let mut yy = Vec::with_capacity(np);
+        let mut zz = if d3 { Vec::with_capacity(np) } else { Vec::new() };
+        for nid in point_ids {
+            let x = self.points[*nid].coords[0];
+            let y = self.points[*nid].coords[1];
+            let z = if d3 { self.points[*nid].coords[2] } else { 0.0 };
+            if filter(x, y, z) {
+                k2id.insert(xx.len(), *nid);
+                xx.push(x);
+                yy.push(y);
+                if d3 {
+                    zz.push(z);
+                }
+            }
+        }
+        // sort nodes by x → y → z
+        let sorted_indices = if d3 {
+            argsort3_f64(&xx, &yy, &zz)
+        } else {
+            argsort2_f64(&xx, &yy)
+        };
+        sorted_indices.iter().map(|&i| k2id[&i]).collect()
+    }
+
     /// Renumber all points (reordering)
     ///
     /// # Input
@@ -454,7 +526,7 @@ impl fmt::Display for Mesh {
 
 #[cfg(test)]
 mod tests {
-    use crate::mesh::{Mesh, Samples};
+    use crate::mesh::{Mesh, Point, Samples};
     use crate::shapes::Scratchpad;
 
     #[test]
@@ -845,5 +917,62 @@ mod tests {
             mesh.renumber_points(&[0, 0, 0, 0, 0, 0]).err(),
             Some("not all points have been updated")
         );
+    }
+
+    #[test]
+    fn test_get_sorted_points_2d() {
+        #[rustfmt::skip]
+        let points = vec![
+            Point { id: 0, marker: 0, coords: vec![1.0, 2.0] },
+            Point { id: 1, marker: 0, coords: vec![3.0, 4.0] },
+            Point { id: 2, marker: 0, coords: vec![0.0, 1.0] },
+            Point { id: 3, marker: 0, coords: vec![2.0, 3.0] },
+        ];
+        let mesh = Mesh {
+            points,
+            ndim: 2,
+            cells: vec![],
+        };
+        let point_ids = vec![0, 1, 2, 3];
+        let sorted_points = mesh.get_sorted_points(&point_ids, |_, _, _| true);
+        assert_eq!(sorted_points, vec![2, 0, 3, 1]);
+    }
+
+    #[test]
+    fn test_get_sorted_points_3d() {
+        #[rustfmt::skip]
+        let points = vec![
+            Point { id: 0, marker: 0, coords: vec![1.0, 2.0, 3.0] },
+            Point { id: 1, marker: 0, coords: vec![3.0, 4.0, 5.0] },
+            Point { id: 2, marker: 0, coords: vec![0.0, 1.0, 2.0] },
+            Point { id: 3, marker: 0, coords: vec![2.0, 3.0, 4.0] },
+        ];
+        let mesh = Mesh {
+            points,
+            ndim: 3,
+            cells: vec![],
+        };
+        let point_ids = vec![0, 1, 2, 3];
+        let sorted_points = mesh.get_sorted_points(&point_ids, |_, _, _| true);
+        assert_eq!(sorted_points, vec![2, 0, 3, 1]);
+    }
+
+    #[test]
+    fn test_get_sorted_points_with_filter() {
+        #[rustfmt::skip]
+        let points = vec![
+            Point { id: 0, marker: 0, coords: vec![1.0, 2.0, 3.0] },
+            Point { id: 1, marker: 0, coords: vec![3.0, 4.0, 5.0] },
+            Point { id: 2, marker: 0, coords: vec![0.0, 1.0, 2.0] },
+            Point { id: 3, marker: 0, coords: vec![2.0, 3.0, 4.0] },
+        ];
+        let mesh = Mesh {
+            points,
+            ndim: 3,
+            cells: vec![],
+        };
+        let point_ids = vec![0, 1, 2, 3];
+        let sorted_points = mesh.get_sorted_points(&point_ids, |x, y, z| x > 1.0 && y > 1.0 && z > 1.0);
+        assert_eq!(sorted_points, vec![3, 1]);
     }
 }
