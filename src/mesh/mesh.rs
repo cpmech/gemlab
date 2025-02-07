@@ -9,6 +9,9 @@ use std::fs::{self, File};
 use std::io::BufReader;
 use std::path::Path;
 
+/// Defines a tolerance to compare points in [Mesh::get_sorted_points()]
+pub const TOL_COMPARE_POINTS: f64 = 1e-6;
+
 /// Aliases usize as Point ID
 pub type PointId = usize;
 
@@ -373,9 +376,13 @@ impl Mesh {
     ///
     /// * `point_ids` -- list of point ids to be sorted
     /// * `filter` -- function `fn(x, y, z) -> bool` that returns true to **keep** the coordinate just found
-    /// * `tol` -- slice of tolerances such that:
-    ///   - 2D: tol corresponds to `[tol_y, tol_x]`
-    ///   - 3D: tol corresponds to `[tol_z, tol_y, tol_x]`
+    ///
+    /// # Notes
+    ///
+    /// 1. The filter is applied before sorting the points.
+    /// 2. The tolerance to compare points is [TOL_COMPARE_POINTS] times the range of the coordinates;
+    ///    i.e., `tol_x = TOL_COMPARE_POINTS * (max_x - min_x)`, `tol_y = TOL_COMPARE_POINTS * (max_y - min_y)`,
+    ///    and `tol_z = [TOL_COMPARE_POINTS * (max_z - min_z)`.
     ///
     /// # Output
     ///
@@ -400,7 +407,7 @@ impl Mesh {
     ///     let point_ids = vec![8, 7, 6, 5, 4, 3, 2, 1, 0, 10, 9];
     ///
     ///     // use the get_sorted_points method with a filter
-    ///     let sorted_points = mesh.get_sorted_points(&point_ids, &[1e-6, 1e-6], |x, y, _| {
+    ///     let sorted_points = mesh.get_sorted_points(&point_ids, |x, y, _| {
     ///         x > 0.0 && y > 0.0
     ///     });
     ///
@@ -408,7 +415,7 @@ impl Mesh {
     ///     assert_eq!(sorted_points, &[3, 10, 4, 5, 7, 6]);
     /// }
     /// ```
-    pub fn get_sorted_points<F>(&self, point_ids: &[PointId], tol: &[f64], filter: F) -> Vec<PointId>
+    pub fn get_sorted_points<F>(&self, point_ids: &[PointId], filter: F) -> Vec<PointId>
     where
         F: Fn(f64, f64, f64) -> bool,
     {
@@ -431,6 +438,12 @@ impl Mesh {
                     zz.push(z);
                 }
             }
+        }
+        // calculate tolerances to compare point coordinates
+        let (min, max) = self.get_limits();
+        let mut tol = vec![TOL_COMPARE_POINTS; self.ndim];
+        for i in 0..self.ndim {
+            tol[i] *= max[i] - min[i];
         }
         // sort nodes by x → y → z
         let sorted_indices = if d3 {
@@ -942,7 +955,7 @@ mod tests {
             cells: vec![],
         };
         let point_ids = vec![0, 1, 2, 3, 4];
-        let sorted_points = mesh.get_sorted_points(&point_ids, &[1e-6, 1e-6], |_, _, _| true);
+        let sorted_points = mesh.get_sorted_points(&point_ids, |_, _, _| true);
         assert_eq!(sorted_points, vec![4, 2, 0, 3, 1]);
     }
 
@@ -971,7 +984,7 @@ mod tests {
         // 0.0            1.0
         let mesh = Samples::two_hex8();
         let point_ids = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-        let sorted_points = mesh.get_sorted_points(&point_ids, &[1e-6, 1e-6, 1e-6], |_, _, _| true);
+        let sorted_points = mesh.get_sorted_points(&point_ids, |_, _, _| true);
         assert_eq!(sorted_points, vec![0, 1, 3, 2, 4, 5, 7, 6, 8, 9, 11, 10]);
     }
 
@@ -1000,8 +1013,7 @@ mod tests {
         // 0.0            1.0
         let mesh = Samples::two_hex8();
         let point_ids = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-        let sorted_points =
-            mesh.get_sorted_points(&point_ids, &[1e-6, 1e-6, 1e-6], |x, y, z| x > 0.0 && y > 0.0 && z > 0.0);
+        let sorted_points = mesh.get_sorted_points(&point_ids, |x, y, z| x > 0.0 && y > 0.0 && z > 0.0);
         assert_eq!(sorted_points, vec![6, 10]);
     }
 }
