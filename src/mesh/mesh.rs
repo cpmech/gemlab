@@ -380,9 +380,13 @@ impl Mesh {
     /// # Notes
     ///
     /// 1. The filter is applied before sorting the points.
-    /// 2. The tolerance to compare points is [TOL_COMPARE_POINTS] times the range of the coordinates;
-    ///    i.e., `tol_x = TOL_COMPARE_POINTS * (max_x - min_x)`, `tol_y = TOL_COMPARE_POINTS * (max_y - min_y)`,
-    ///    and `tol_z = [TOL_COMPARE_POINTS * (max_z - min_z)`.
+    /// 2. The tolerance to compare points is [TOL_COMPARE_POINTS] times the range of the coordinates; i.e.:
+    ///
+    /// ```text
+    /// tol_x = TOL_COMPARE_POINTS * (xmax - xmin)
+    /// tol_y = TOL_COMPARE_POINTS * (ymax - ymin)
+    /// tol_z = TOL_COMPARE_POINTS * (zmax - zmin)
+    /// ```
     ///
     /// # Output
     ///
