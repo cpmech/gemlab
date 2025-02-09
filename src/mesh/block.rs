@@ -1103,11 +1103,11 @@ mod tests {
         F: FnMut(&mut Plot),
     {
         let mut fig = Figure::new();
-        fig.cell_ids = true;
-        fig.point_ids = true;
-        fig.point_dots = true;
-        fig.figure_size = Some((600.0, 600.0));
-        fig.canvas_point_ids
+        fig.show_cell_ids(true)
+            .show_point_ids(true)
+            .show_point_dots(true)
+            .size(600.0, 600.0)
+            .canvas_point_ids()
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
@@ -1533,8 +1533,7 @@ mod tests {
         assert_eq!(&mesh.cells[3].points, &[2, 5, 8, 6]);
         if SAVE_FIGURE {
             let mut fig = Figure::new();
-            fig.point_ids = true;
-            fig.figure_size = Some((600.0, 600.0));
+            fig.show_point_ids(true).size(600.0, 600.0);
             mesh.draw(
                 Some(fig),
                 "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg",
@@ -1821,8 +1820,7 @@ mod tests {
         assert_eq!(&mesh.cells[7].points, &[6, 11, 17, 14, 20, 23, 26, 24]);
         if SAVE_FIGURE {
             let mut fig = Figure::new();
-            fig.point_ids = true;
-            fig.figure_size = Some((600.0, 600.0));
+            fig.show_point_ids(true).size(600.0, 600.0);
             mesh.draw(Some(fig), "/tmp/gemlab/test_subdivide_3d_o2_works.svg", |_, _| {})
                 .unwrap();
         }
@@ -2035,7 +2033,7 @@ mod tests {
         }
         if SAVE_FIGURE {
             let mut fig = Figure::new();
-            fig.figure_size = Some((600.0, 600.0));
+            fig.size(600.0, 600.0);
             mesh.draw(
                 Some(fig),
                 "/tmp/gemlab/test_block_transform_into_ring_3d.svg",
@@ -2081,7 +2079,7 @@ mod tests {
         }
         if SAVE_FIGURE {
             let mut fig = Figure::new();
-            fig.figure_size = Some((600.0, 600.0));
+            fig.size(600.0, 600.0);
             mesh.draw(
                 Some(fig),
                 "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg",

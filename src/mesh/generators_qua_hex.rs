@@ -981,10 +981,9 @@ mod tests {
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
-        fig.cell_ids = true;
-        fig.point_ids = true;
+        fig.show_cell_ids(true).show_point_ids(true);
         if larger {
-            fig.figure_size = Some((600.0, 600.0));
+            fig.size(600.0, 600.0);
         }
         mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
     }

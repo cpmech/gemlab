@@ -613,12 +613,11 @@ mod tests {
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut fig = Figure::new();
-        fig.cell_ids = true;
-        fig.point_ids = true;
+        fig.show_cell_ids(true).show_point_ids(true);
         if larger {
-            fig.figure_size = Some((800.0, 800.0));
+            fig.size(800.0, 800.0);
         } else {
-            fig.figure_size = Some((600.0, 600.0));
+            fig.size(600.0, 600.0);
         }
         mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
     }
@@ -924,9 +923,7 @@ mod tests {
             .unwrap();
 
         let mut fig = Figure::new();
-        fig.figure_size = Some((800.0, 800.0));
-        fig.point_ids = true;
-        fig.point_dots = true;
+        fig.size(800.0, 800.0).show_point_ids(true).show_point_dots(true);
         mesh.draw(Some(fig), filename, |plot, before| {
             if before {
                 plot.add(&cylin_in).add(&cylin_out);

@@ -28,32 +28,32 @@ pub struct Figure {
     /// Canvas to draw lin cells
     canvas_lin_cells: Canvas,
 
-    /// Parameter: draw cell ids
+    /// Shows cell ids
     show_cell_ids: bool,
 
-    /// Parameter: draw point ids
+    /// Shows cell attribute within parenthesis
+    show_cell_att: bool,
+
+    /// Shows point ids
     show_point_ids: bool,
 
-    /// Parameter: draw point dots
+    /// Shows point marker within parenthesis (if not zero)
+    show_point_marker: bool,
+
+    /// Shows point dots
     show_point_dots: bool,
 
-    /// Parameter: generate the plot without equal axes
-    not_equal_exes: bool,
+    /// Generates the plot without equal axes
+    unequal_exes: bool,
 
-    /// Parameter: specifies the plot range (xmin, xmax, ymin, ymax)
+    /// Specifies the plot range (xmin, xmax, ymin, ymax)
     range_2d: Option<(f64, f64, f64, f64)>,
 
-    /// Parameter: specifies the plot range (xmin, xmax, ymin, ymax, zmin, zmax)
+    /// Specifies the plot range (xmin, xmax, ymin, ymax, zmin, zmax)
     range_3d: Option<(f64, f64, f64, f64, f64, f64)>,
 
-    /// Parameter: specifies the figure size in points
+    /// Specifies the figure size in points
     figure_size: Option<(f64, f64)>,
-
-    /// Parameter: shows point marker within parenthesis (if not zero)
-    with_point_marker: bool,
-
-    /// Parameter: shows cell attribute within parenthesis
-    with_cell_att: bool,
 
     /// Enables zooming a region of the plot (2D meshes only)
     ///
@@ -63,22 +63,15 @@ pub struct Figure {
     /// * `(u0, v0, w, h)` -- the position (normalized coordinates) and size (width,height) of the zoomed region
     zoom_2d: Option<((f64, f64, f64, f64), (f64, f64, f64, f64))>,
 
-    /// Sets the color of the zoom indicator
+    /// Configures some characteristics of the zoom indicator
     ///
     /// Holds `(color, alpha, linewidth)` for the zoom indicator.
-    zoom_indicator_config: Option<(String, f64, f64)>,
+    zoom_indicator_config: (String, f64, f64),
 }
 
 impl Figure {
     /// Allocates a new instance
     pub fn new() -> Self {
-        let mut fig = Self::default();
-        fig.init_canvases();
-        fig
-    }
-
-    /// Initialize the canvas properties
-    fn init_canvases(&mut self) {
         let mut canvas_edges = Canvas::new();
         let mut canvas_points = Curve::new();
         let mut canvas_point_ids = Text::new();
@@ -122,17 +115,26 @@ impl Figure {
             .set_face_color("None")
             .set_edge_color("#cd0000")
             .set_line_width(2.0);
-        self.canvas_edges = canvas_edges;
-        self.canvas_points = canvas_points;
-        self.canvas_point_ids = canvas_point_ids;
-        self.canvas_cell_ids = canvas_cell_ids;
-        self.canvas_cells = canvas_cells;
-        self.canvas_lin_cells = canvas_lin_cells;
-    }
-
-    /// Get a mutable reference to the plot
-    pub fn plot(&mut self) -> &mut Plot {
-        &mut self.plot
+        Figure {
+            plot: Plot::new(),
+            canvas_edges,
+            canvas_points,
+            canvas_point_ids,
+            canvas_cell_ids,
+            canvas_cells,
+            canvas_lin_cells,
+            show_cell_ids: false,
+            show_cell_att: true,
+            show_point_ids: false,
+            show_point_marker: false,
+            show_point_dots: false,
+            unequal_exes: false,
+            range_2d: None,
+            range_3d: None,
+            figure_size: None,
+            zoom_2d: None,
+            zoom_indicator_config: ("#f9d835".to_string(), 1.0, 2.0),
+        }
     }
 
     /// Get a mutable reference to the canvas edges
@@ -165,67 +167,67 @@ impl Figure {
         &mut self.canvas_lin_cells
     }
 
-    /// Set show_cell_ids
-    pub fn set_show_cell_ids(&mut self, value: bool) -> &mut Self {
+    /// Shows cell ids
+    pub fn show_cell_ids(&mut self, value: bool) -> &mut Self {
         self.show_cell_ids = value;
         self
     }
 
-    /// Set show_point_ids
-    pub fn set_show_point_ids(&mut self, value: bool) -> &mut Self {
+    /// Shows cell attribute within parenthesis
+    pub fn show_cell_att(&mut self, value: bool) -> &mut Self {
+        self.show_cell_att = value;
+        self
+    }
+
+    /// Shows point ids
+    pub fn show_point_ids(&mut self, value: bool) -> &mut Self {
         self.show_point_ids = value;
         self
     }
 
-    /// Set show_point_dots
-    pub fn set_show_point_dots(&mut self, value: bool) -> &mut Self {
+    /// Shows point marker within parenthesis (if not zero)
+    pub fn show_point_marker(&mut self, value: bool) -> &mut Self {
+        self.show_point_marker = value;
+        self
+    }
+
+    /// Shows point dots
+    pub fn show_point_dots(&mut self, value: bool) -> &mut Self {
         self.show_point_dots = value;
         self
     }
 
-    /// Set not_equal_exes
-    pub fn set_not_equal_exes(&mut self, value: bool) -> &mut Self {
-        self.not_equal_exes = value;
+    /// Generates the plot without equal axes
+    pub fn unequal_exes(&mut self, value: bool) -> &mut Self {
+        self.unequal_exes = value;
         self
     }
 
-    /// Set range_2d
-    pub fn set_range_2d(&mut self, value: Option<(f64, f64, f64, f64)>) -> &mut Self {
-        self.range_2d = value;
+    /// Specifies the plot range in 2D
+    pub fn range_2d(&mut self, xmin: f64, xmax: f64, ymin: f64, ymax: f64) -> &mut Self {
+        self.range_2d = Some((xmin, xmax, ymin, ymax));
         self
     }
 
-    /// Set range_3d
-    pub fn set_range_3d(&mut self, value: Option<(f64, f64, f64, f64, f64, f64)>) -> &mut Self {
-        self.range_3d = value;
+    /// Specifies the plot range in 3D
+    pub fn range_3d(&mut self, xmin: f64, xmax: f64, ymin: f64, ymax: f64, zmin: f64, zmax: f64) -> &mut Self {
+        self.range_3d = Some((xmin, xmax, ymin, ymax, zmin, zmax));
         self
     }
 
-    /// Set figure_size
-    pub fn set_figure_size(&mut self, value: Option<(f64, f64)>) -> &mut Self {
-        self.figure_size = value;
+    /// Specifies the figure size in points
+    pub fn size(&mut self, width: f64, height: f64) -> &mut Self {
+        self.figure_size = Some((width, height));
         self
     }
 
-    /// Set with_point_marker
-    pub fn set_with_point_marker(&mut self, value: bool) -> &mut Self {
-        self.with_point_marker = value;
-        self
-    }
-
-    /// Set with_cell_att
-    pub fn set_with_cell_att(&mut self, value: bool) -> &mut Self {
-        self.with_cell_att = value;
-        self
-    }
-
-    /// Set zoom_2d
+    /// Enables zooming a region of the plot (2D meshes only)
     ///
     /// # Input
     ///
     /// * `xmin, xmax, ymin, ymax` - the region to be zoomed
     /// * `u0, v0, w, h` - the position (normalized coordinates) and size (width,height) of the zoomed region
-    pub fn set_zoom_2d(
+    pub fn zoom_2d(
         &mut self,
         xmin: f64,
         xmax: f64,
@@ -240,53 +242,22 @@ impl Figure {
         self
     }
 
-    /// Disable zoom_2d
+    /// Disables the mesh zooming
     pub fn disable_zoom_2d(&mut self) -> &mut Self {
         self.zoom_2d = None;
         self
     }
 
-    /// Set zoom_indicator_config
+    /// Configures some characteristics of the zoom indicator
     ///
     /// # Input
     ///
     /// * `color` - color of the zoom indicator
     /// * `alpha` - transparency of the zoom indicator
     /// * `linewidth` - width of the zoom indicator line
-    pub fn set_zoom_indicator_config(&mut self, color: &str, alpha: f64, linewidth: f64) -> &mut Self {
-        self.zoom_indicator_config = Some((color.to_string(), alpha, linewidth));
+    pub fn zoom_indicator(&mut self, color: &str, alpha: f64, linewidth: f64) -> &mut Self {
+        self.zoom_indicator_config = (color.to_string(), alpha, linewidth);
         self
-    }
-
-    /// Disable zoom_indicator_config
-    pub fn disable_zoom_indicator_config(&mut self) -> &mut Self {
-        self.zoom_indicator_config = None;
-        self
-    }
-}
-
-impl Default for Figure {
-    fn default() -> Self {
-        Figure {
-            plot: Plot::new(),
-            canvas_edges: Canvas::new(),
-            canvas_points: Curve::new(),
-            canvas_point_ids: Text::new(),
-            canvas_cell_ids: Text::new(),
-            canvas_cells: Canvas::new(),
-            canvas_lin_cells: Canvas::new(),
-            show_cell_ids: false,
-            show_point_ids: false,
-            show_point_dots: false,
-            not_equal_exes: false,
-            range_2d: None,
-            range_3d: None,
-            figure_size: None,
-            with_point_marker: false,
-            with_cell_att: true,
-            zoom_2d: None,
-            zoom_indicator_config: Some(("#f9d835".to_string(), 1.0, 2.0)),
-        }
     }
 }
 
@@ -316,7 +287,7 @@ impl Mesh {
     pub fn draw_point_ids(&self, fig: &mut Figure) {
         if self.ndim == 2 {
             self.points.iter().for_each(|point| {
-                let msg = if point.marker != 0 && fig.with_point_marker {
+                let msg = if point.marker != 0 && fig.show_point_marker {
                     format!("{}({})", point.id, point.marker)
                 } else {
                     format!("{}", point.id)
@@ -325,7 +296,7 @@ impl Mesh {
             });
         } else {
             self.points.iter().for_each(|point| {
-                let msg = if point.marker != 0 && fig.with_point_marker {
+                let msg = if point.marker != 0 && fig.show_point_marker {
                     format!("{}({})", point.id, point.marker)
                 } else {
                     format!("{}", point.id)
@@ -409,7 +380,7 @@ impl Mesh {
             }
 
             // add label
-            let msg = if fig.with_cell_att {
+            let msg = if fig.show_cell_att {
                 format!("{}({})", cell.id, cell.attribute)
             } else {
                 format!("{}", cell.id)
@@ -502,7 +473,7 @@ impl Mesh {
         if self.ndim == 2 {
             figure.plot.grid_and_labels("x", "y");
         }
-        if !figure.not_equal_exes {
+        if !figure.unequal_exes {
             figure.plot.set_equal_axes(true);
         }
         if self.ndim == 2 {
@@ -520,12 +491,10 @@ impl Mesh {
         extra(&mut figure.plot, false);
         if let Some(((xmin, xmax, ymin, ymax), (u0, v0, w, h))) = figure.zoom_2d {
             let mut inset = InsetAxes::new();
-            if let Some((color, alpha, linewidth)) = figure.zoom_indicator_config {
-                inset
-                    .set_indicator_line_color(&color)
-                    .set_indicator_alpha(alpha)
-                    .set_indicator_line_width(linewidth);
-            }
+            inset
+                .set_indicator_line_color(&figure.zoom_indicator_config.0)
+                .set_indicator_alpha(figure.zoom_indicator_config.1)
+                .set_indicator_line_width(figure.zoom_indicator_config.2);
             inset.add(&figure.canvas_cells);
             if figure.show_cell_ids {
                 inset.add(&figure.canvas_cell_ids);
@@ -551,7 +520,7 @@ mod tests {
     use crate::mesh::{Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
-    const SAVE_FIGURE: bool = true;
+    const SAVE_FIGURE: bool = false;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
@@ -774,11 +743,11 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua12();
             let mut fig = Figure::new();
-            fig.set_show_cell_ids(true)
-                .set_show_point_ids(true)
-                .set_show_point_dots(true)
-                .set_range_2d(Some((-0.5, 6.0, -0.5, 6.0)))
-                .set_zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3);
+            fig.show_cell_ids(true)
+                .show_point_ids(true)
+                .show_point_dots(true)
+                .range_2d(-0.5, 6.0, -0.5, 6.0)
+                .zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3);
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
                 .unwrap();
         }
@@ -789,9 +758,7 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua16();
             let mut fig = Figure::new();
-            fig.set_cell_ids(true)
-                .set_point_ids(true)
-                .set_point_dots(true);
+            fig.show_cell_ids(true).show_point_ids(true).show_point_dots(true);
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua16.svg", |_, _| {})
                 .unwrap();
         }
@@ -802,9 +769,7 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua17();
             let mut fig = Figure::new();
-            fig.set_show_cell_ids(true)
-                .set_show_point_ids(true)
-                .set_show_point_dots(true);
+            fig.show_cell_ids(true).show_point_ids(true).show_point_dots(true);
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua17.svg", |_, _| {})
                 .unwrap();
         }
@@ -815,9 +780,7 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::mixed_shapes_2d();
             let mut fig = Figure::new();
-            fig.set_show_cell_ids(true)
-                .set_show_point_ids(true)
-                .set_show_point_dots(true);
+            fig.show_cell_ids(true).show_point_ids(true).show_point_dots(true);
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_mixed_2d.svg", |_, _| {})
                 .unwrap();
         }
@@ -828,10 +791,10 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::two_hex8();
             let mut fig = Figure::new();
-            fig.set_show_cell_ids(true)
-                .set_show_point_ids(true)
-                .set_show_point_dots(true)
-                .set_figure_size(Some((600.0, 600.0)));
+            fig.show_cell_ids(true)
+                .show_point_ids(true)
+                .show_point_dots(true)
+                .size(600.0, 600.0);
             fig.canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
@@ -849,10 +812,10 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::block_3d_eight_hex20();
             let mut fig = Figure::new();
-            fig.set_cell_ids(true)
-                .set_point_ids(true)
-                .set_point_dots(true)
-                .set_figure_size(Some((600.0, 600.0)));
+            fig.show_cell_ids(true)
+                .show_point_ids(true)
+                .show_point_dots(true)
+                .size(600.0, 600.0);
             fig.canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
@@ -870,10 +833,10 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::mixed_shapes_3d();
             let mut fig = Figure::new();
-            fig.set_cell_ids(true)
-                .set_point_ids(true)
-                .set_point_dots(true)
-                .set_figure_size(Some((600.0, 600.0)));
+            fig.show_cell_ids(true)
+                .show_point_ids(true)
+                .show_point_dots(true)
+                .size(600.0, 600.0);
             fig.canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")

@@ -540,7 +540,7 @@ mod tests {
         mesh.renumber_points(old_to_new).unwrap(); // this is to match the paper's numbers
         if SAVE_FIGURE {
             let mut fig = Figure::new();
-            fig.point_ids = true;
+            fig.show_point_ids(true);
             mesh.draw(Some(fig), "/tmp/gemlab/test_graph_gps_example.svg", |_, _| {})
                 .unwrap();
         }
@@ -568,7 +568,7 @@ mod tests {
                 mesh.points[i].marker = 1 + graph.distance[i] as i32; // use markers for the distance
             }
             let mut fig = Figure::new();
-            fig.point_ids = true;
+            fig.show_point_ids(true);
             mesh.draw(Some(fig), "/tmp/gemlab/test_graph_gps_example_cm_8.svg", |_, _| {})
                 .unwrap();
         }
@@ -595,7 +595,7 @@ mod tests {
                 mesh.points[i].marker = 1 + graph.distance[i] as i32; // use markers for the distance
             }
             let mut fig = Figure::new();
-            fig.point_ids = true;
+            fig.show_point_ids(true);
             mesh.draw(Some(fig), "/tmp/gemlab/test_graph_gps_example_cm_pp.svg", |_, _| {})
                 .unwrap();
         }
