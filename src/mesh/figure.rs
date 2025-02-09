@@ -259,89 +259,87 @@ impl Figure {
         self.zoom_indicator_config = (color.to_string(), alpha, linewidth);
         self
     }
-}
 
-impl Mesh {
     /// Draws all points (dots)
-    pub fn draw_point_dots(&self, fig: &mut Figure) {
-        if self.ndim == 2 {
-            fig.canvas_points.points_begin();
-            self.points.iter().for_each(|point| {
-                fig.canvas_points.points_add(point.coords[0], point.coords[1]);
+    pub fn draw_point_dots(&mut self, mesh: &Mesh) {
+        if mesh.ndim == 2 {
+            self.canvas_points.points_begin();
+            mesh.points.iter().for_each(|point| {
+                self.canvas_points.points_add(point.coords[0], point.coords[1]);
             });
-            fig.canvas_points.points_end();
+            self.canvas_points.points_end();
         } else {
-            fig.canvas_points.points_3d_begin();
-            self.points.iter().for_each(|point| {
-                fig.canvas_points
+            self.canvas_points.points_3d_begin();
+            mesh.points.iter().for_each(|point| {
+                self.canvas_points
                     .points_3d_add(point.coords[0], point.coords[1], point.coords[2]);
             });
-            fig.canvas_points.points_3d_end();
+            self.canvas_points.points_3d_end();
         }
-        fig.plot.add(&fig.canvas_points);
+        self.plot.add(&self.canvas_points);
     }
 
     /// Draws all point ids (labels)
     ///
     /// **Note:** Non-zero point markers are shown within parentheses.
-    pub fn draw_point_ids(&self, fig: &mut Figure) {
-        if self.ndim == 2 {
-            self.points.iter().for_each(|point| {
-                let msg = if point.marker != 0 && fig.show_point_marker {
+    pub fn draw_point_ids(&mut self, mesh: &Mesh) {
+        if mesh.ndim == 2 {
+            mesh.points.iter().for_each(|point| {
+                let msg = if point.marker != 0 && self.show_point_marker {
                     format!("{}({})", point.id, point.marker)
                 } else {
                     format!("{}", point.id)
                 };
-                fig.canvas_point_ids.draw(point.coords[0], point.coords[1], &msg);
+                self.canvas_point_ids.draw(point.coords[0], point.coords[1], &msg);
             });
         } else {
-            self.points.iter().for_each(|point| {
-                let msg = if point.marker != 0 && fig.show_point_marker {
+            mesh.points.iter().for_each(|point| {
+                let msg = if point.marker != 0 && self.show_point_marker {
                     format!("{}({})", point.id, point.marker)
                 } else {
                     format!("{}", point.id)
                 };
-                fig.canvas_point_ids
+                self.canvas_point_ids
                     .draw_3d(point.coords[0], point.coords[1], point.coords[2], &msg);
             });
         }
-        fig.plot.add(&fig.canvas_point_ids);
+        self.plot.add(&self.canvas_point_ids);
     }
 
     /// Draws cells
-    pub fn draw_cells(&self, fig: &mut Figure, set_range: bool) -> Result<(), StrError> {
+    pub fn draw_cells(&mut self, mesh: &Mesh, set_range: bool) -> Result<(), StrError> {
         // limits
-        let mut xmin = vec![f64::MAX; self.ndim];
-        let mut xmax = vec![f64::MIN; self.ndim];
+        let mut xmin = vec![f64::MAX; mesh.ndim];
+        let mut xmax = vec![f64::MIN; mesh.ndim];
 
         // loop over cells
-        for cell_id in 0..self.cells.len() {
-            let canvas = if self.cells[cell_id].kind.is_lin() {
-                &mut fig.canvas_lin_cells
+        for cell_id in 0..mesh.cells.len() {
+            let canvas = if mesh.cells[cell_id].kind.is_lin() {
+                &mut self.canvas_lin_cells
             } else {
-                &mut fig.canvas_cells
+                &mut self.canvas_cells
             };
-            self.draw_cell(canvas, cell_id)?;
+            mesh.draw_cell(canvas, cell_id)?;
             if set_range {
-                for point_id in &self.cells[cell_id].points {
-                    for j in 0..self.ndim {
-                        xmin[j] = f64::min(xmin[j], self.points[*point_id].coords[j]);
-                        xmax[j] = f64::max(xmax[j], self.points[*point_id].coords[j]);
+                for point_id in &mesh.cells[cell_id].points {
+                    for j in 0..mesh.ndim {
+                        xmin[j] = f64::min(xmin[j], mesh.points[*point_id].coords[j]);
+                        xmax[j] = f64::max(xmax[j], mesh.points[*point_id].coords[j]);
                     }
                 }
             }
         }
 
         // add to plot
-        fig.plot.add(&fig.canvas_cells);
-        fig.plot.add(&fig.canvas_lin_cells);
+        self.plot.add(&self.canvas_cells);
+        self.plot.add(&self.canvas_lin_cells);
         if set_range {
             let dx = xmax[0] - xmin[0];
             let dy = xmax[1] - xmin[1];
             if dx > 0.0 && dy > 0.0 {
                 let gx = 0.05 * dx;
                 let gy = 0.05 * dy;
-                fig.plot
+                self.plot
                     .set_range(xmin[0] - gx, xmax[0] + gx, xmin[1] - gy, xmax[1] + gy);
             }
         }
@@ -351,69 +349,56 @@ impl Mesh {
     /// Draws ids and attributes of cells
     ///
     /// **Note:** Cell attributes are shown within parentheses.
-    pub fn draw_cell_ids(&self, fig: &mut Figure) -> Result<(), StrError> {
+    pub fn draw_cell_ids(&mut self, mesh: &Mesh) -> Result<(), StrError> {
         // auxiliary
-        let mut x = Vector::new(self.ndim);
+        let mut x = Vector::new(mesh.ndim);
 
         // loop over all cells
-        for cell_id in 0..self.cells.len() {
+        for cell_id in 0..mesh.cells.len() {
             // compute coordinates of the label
-            let cell = &self.cells[cell_id];
+            let cell = &mesh.cells[cell_id];
             x.fill(0.0);
             if cell.kind == GeoKind::Qua9 || cell.kind == GeoKind::Qua17 {
-                for i in 0..self.ndim {
-                    x[i] = (3.0 * self.points[cell.points[0]].coords[i] + self.points[cell.points[2]].coords[i]) / 4.0;
+                for i in 0..mesh.ndim {
+                    x[i] = (3.0 * mesh.points[cell.points[0]].coords[i] + mesh.points[cell.points[2]].coords[i]) / 4.0;
                 }
             } else if cell.kind == GeoKind::Tri10 {
-                for i in 0..self.ndim {
-                    x[i] = (self.points[cell.points[0]].coords[i] + self.points[cell.points[9]].coords[i]) / 2.0;
+                for i in 0..mesh.ndim {
+                    x[i] = (mesh.points[cell.points[0]].coords[i] + mesh.points[cell.points[9]].coords[i]) / 2.0;
                 }
             } else {
                 for m in 0..cell.points.len() {
-                    for i in 0..self.ndim {
-                        x[i] += self.points[cell.points[m]].coords[i];
+                    for i in 0..mesh.ndim {
+                        x[i] += mesh.points[cell.points[m]].coords[i];
                     }
                 }
-                for i in 0..self.ndim {
+                for i in 0..mesh.ndim {
                     x[i] /= cell.points.len() as f64;
                 }
             }
 
             // add label
-            let msg = if fig.show_cell_att {
+            let msg = if self.show_cell_att {
                 format!("{}({})", cell.id, cell.attribute)
             } else {
                 format!("{}", cell.id)
             };
-            if self.ndim == 2 {
-                fig.canvas_cell_ids.draw(x[0], x[1], msg.as_str());
+            if mesh.ndim == 2 {
+                self.canvas_cell_ids.draw(x[0], x[1], msg.as_str());
             } else {
-                fig.canvas_cell_ids.draw_3d(x[0], x[1], x[2], msg.as_str());
+                self.canvas_cell_ids.draw_3d(x[0], x[1], x[2], msg.as_str());
             }
         }
 
         // add to plot
-        fig.plot.add(&fig.canvas_cell_ids);
+        self.plot.add(&self.canvas_cell_ids);
         Ok(())
     }
 
-    /// Draws the cells and points with default configuration
-    ///
-    /// See [Mesh::draw()] if customization is required.
-    pub fn draw_default<P, F>(&self, filepath: &P) -> Result<(), StrError>
-    where
-        P: AsRef<OsStr> + ?Sized,
-        F: FnMut(&mut Plot, bool),
-    {
-        let mut fig = Figure::new();
-        self.draw(&mut fig, filepath, |_, _| {})
-    }
-
-    /// Draws the cells and points
+    /// Draws the mesh
     ///
     /// # Input
     ///
-    /// * `fig` -- the Figure struct to configure the plot
     /// * `filepath` -- may be a String, &str, or Path
     /// * `extra` -- is a function `|plot, before| {}` to perform some {pre,post}-drawing on the plot area.
     ///   The two arguments of this function are:
@@ -451,13 +436,10 @@ impl Mesh {
     ///             .set_line_width(7.0)
     ///             .draw_circle(0.0, 0.0, 2.0);
     ///
-    ///         // configure drawing
-    ///         let mut fig = Figure::new();
-    ///         fig.show_cell_ids(true);
-    ///  
     ///         // draw mesh
-    ///         let filename = "/tmp/gemlab/doc_example_mesh_draw.svg";
-    ///         mesh.draw(&mut fig, filename, |plot, before| {
+    ///         let mut fig = Figure::new();
+    ///         fig.show_cell_ids(true)
+    ///            .draw(&mesh, "/tmp/gemlab/doc_example_mesh_draw.svg", |plot, before| {
     ///             if !before {
     ///                 plot.add(&circle_in);
     ///                 plot.add(&circle_out);
@@ -469,61 +451,61 @@ impl Mesh {
     /// ```
     ///
     /// ![doc_example_mesh_draw](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/doc_example_mesh_draw.svg)
-    pub fn draw<P, F>(&self, fig: &mut Figure, filepath: &P, mut extra: F) -> Result<(), StrError>
+    pub fn draw<P, F>(&mut self, mesh: &Mesh, filepath: &P, mut extra: F) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
         F: FnMut(&mut Plot, bool),
     {
-        extra(&mut fig.plot, true);
-        self.draw_cells(fig, true)?;
-        if fig.show_cell_ids {
-            self.draw_cell_ids(fig)?;
+        extra(&mut self.plot, true);
+        self.draw_cells(mesh, true)?;
+        if self.show_cell_ids {
+            self.draw_cell_ids(mesh)?;
         }
-        if fig.show_point_dots {
-            self.draw_point_dots(fig);
+        if self.show_point_dots {
+            self.draw_point_dots(mesh);
         }
-        if fig.show_point_ids {
-            self.draw_point_ids(fig);
+        if self.show_point_ids {
+            self.draw_point_ids(mesh);
         }
-        if self.ndim == 2 {
-            fig.plot.grid_and_labels("x", "y");
+        if mesh.ndim == 2 {
+            self.plot.grid_and_labels("x", "y");
         }
-        if !fig.unequal_exes {
-            fig.plot.set_equal_axes(true);
+        if !self.unequal_exes {
+            self.plot.set_equal_axes(true);
         }
-        if self.ndim == 2 {
-            if let Some((xmin, xmax, ymin, ymax)) = fig.range_2d {
-                fig.plot.set_range(xmin, xmax, ymin, ymax);
+        if mesh.ndim == 2 {
+            if let Some((xmin, xmax, ymin, ymax)) = self.range_2d {
+                self.plot.set_range(xmin, xmax, ymin, ymax);
             }
         } else {
-            if let Some((xmin, xmax, ymin, ymax, zmin, zmax)) = fig.range_3d {
-                fig.plot.set_range_3d(xmin, xmax, ymin, ymax, zmin, zmax);
+            if let Some((xmin, xmax, ymin, ymax, zmin, zmax)) = self.range_3d {
+                self.plot.set_range_3d(xmin, xmax, ymin, ymax, zmin, zmax);
             }
         }
-        if let Some((width, height)) = fig.size {
-            fig.plot.set_figure_size_points(width, height);
+        if let Some((width, height)) = self.size {
+            self.plot.set_figure_size_points(width, height);
         }
-        extra(&mut fig.plot, false);
-        if let Some(((xmin, xmax, ymin, ymax), (u0, v0, w, h))) = fig.zoom_2d {
+        extra(&mut self.plot, false);
+        if let Some(((xmin, xmax, ymin, ymax), (u0, v0, w, h))) = self.zoom_2d {
             let mut inset = InsetAxes::new();
             inset
-                .set_indicator_line_color(&fig.zoom_indicator_config.0)
-                .set_indicator_alpha(fig.zoom_indicator_config.1)
-                .set_indicator_line_width(fig.zoom_indicator_config.2);
-            inset.add(&fig.canvas_cells);
-            if fig.show_cell_ids {
-                inset.add(&fig.canvas_cell_ids);
+                .set_indicator_line_color(&self.zoom_indicator_config.0)
+                .set_indicator_alpha(self.zoom_indicator_config.1)
+                .set_indicator_line_width(self.zoom_indicator_config.2);
+            inset.add(&self.canvas_cells);
+            if self.show_cell_ids {
+                inset.add(&self.canvas_cell_ids);
             }
-            if fig.show_point_dots {
-                inset.add(&fig.canvas_points);
+            if self.show_point_dots {
+                inset.add(&self.canvas_points);
             }
-            if fig.show_point_ids {
-                inset.add(&fig.canvas_point_ids);
+            if self.show_point_ids {
+                inset.add(&self.canvas_point_ids);
             }
             inset.set_range(xmin, xmax, ymin, ymax).draw(u0, v0, w, h);
-            fig.plot.add(&inset);
+            self.plot.add(&inset);
         }
-        fig.plot.save(filepath)
+        self.plot.save(filepath)
     }
 }
 
@@ -581,8 +563,8 @@ mod tests {
         // lin cells ---------------------------------------------------------------------------
         let mesh = Samples::lin_cells();
         let mut fig = Figure::new();
-        mesh.draw_cells(&mut fig, true).unwrap();
-        mesh.draw_point_dots(&mut fig);
+        fig.draw_cells(&mesh, true).unwrap();
+        fig.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -605,8 +587,8 @@ mod tests {
         // lin cells in 3d ---------------------------------------------------------------------
         let mesh = Samples::lin_cells_3d();
         let mut fig = Figure::new();
-        mesh.draw_cells(&mut fig, true).unwrap();
-        mesh.draw_point_dots(&mut fig);
+        fig.draw_cells(&mesh, true).unwrap();
+        fig.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -627,8 +609,8 @@ mod tests {
         // tri cells ---------------------------------------------------------------------------
         let mesh = Samples::tri_cells();
         let mut fig = Figure::new();
-        mesh.draw_cells(&mut fig, true).unwrap();
-        mesh.draw_point_dots(&mut fig);
+        fig.draw_cells(&mesh, true).unwrap();
+        fig.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -651,8 +633,8 @@ mod tests {
         // qua cells ---------------------------------------------------------------------------
         let mesh = Samples::qua_cells();
         let mut fig = Figure::new();
-        mesh.draw_cells(&mut fig, true).unwrap();
-        mesh.draw_point_dots(&mut fig);
+        fig.draw_cells(&mesh, true).unwrap();
+        fig.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -677,8 +659,8 @@ mod tests {
         // tet cells ---------------------------------------------------------------------------
         let mesh = Samples::tet_cells();
         let mut fig = Figure::new();
-        mesh.draw_cells(&mut fig, true).unwrap();
-        mesh.draw_point_dots(&mut fig);
+        fig.draw_cells(&mesh, true).unwrap();
+        fig.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -698,8 +680,8 @@ mod tests {
         // hex cells ---------------------------------------------------------------------------
         let mesh = Samples::hex_cells();
         let mut fig = Figure::new();
-        mesh.draw_cells(&mut fig, true).unwrap();
-        mesh.draw_point_dots(&mut fig);
+        fig.draw_cells(&mesh, true).unwrap();
+        fig.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -719,8 +701,8 @@ mod tests {
         // ring --------------------------------------------------------------------------------
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let mut fig = Figure::new();
-        mesh.draw_cells(&mut fig, true).unwrap();
-        mesh.draw_point_dots(&mut fig);
+        fig.draw_cells(&mesh, true).unwrap();
+        fig.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let mut circle_in = Canvas::new();
@@ -762,8 +744,8 @@ mod tests {
                 .show_point_ids(true)
                 .show_point_dots(true)
                 .range_2d(-0.5, 6.0, -0.5, 6.0)
-                .zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3);
-            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
+                .zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3)
+                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -773,8 +755,10 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua16();
             let mut fig = Figure::new();
-            fig.show_cell_ids(true).show_point_ids(true).show_point_dots(true);
-            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_qua16.svg", |_, _| {})
+            fig.show_cell_ids(true)
+                .show_point_ids(true)
+                .show_point_dots(true)
+                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua16.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -784,8 +768,10 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua17();
             let mut fig = Figure::new();
-            fig.show_cell_ids(true).show_point_ids(true).show_point_dots(true);
-            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_qua17.svg", |_, _| {})
+            fig.show_cell_ids(true)
+                .show_point_ids(true)
+                .show_point_dots(true)
+                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua17.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -795,8 +781,10 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::mixed_shapes_2d();
             let mut fig = Figure::new();
-            fig.show_cell_ids(true).show_point_ids(true).show_point_dots(true);
-            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_mixed_2d.svg", |_, _| {})
+            fig.show_cell_ids(true)
+                .show_point_ids(true)
+                .show_point_dots(true)
+                .draw(&mesh, "/tmp/gemlab/test_draw_works_mixed_2d.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -817,7 +805,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_hex8.svg", |_, _| {})
+            fig.draw(&mesh, "/tmp/gemlab/test_draw_works_hex8.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -838,7 +826,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_hex20.svg", |_, _| {})
+            fig.draw(&mesh, "/tmp/gemlab/test_draw_works_hex20.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -859,7 +847,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            mesh.draw(&mut fig, "/tmp/gemlab/test_works_mixed_3d.svg", |_, _| {})
+            fig.draw(&mesh, "/tmp/gemlab/test_works_mixed_3d.svg", |_, _| {})
                 .unwrap();
         }
     }

@@ -1089,7 +1089,7 @@ mod tests {
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, args.rmax);
         let mut fig = Figure::new();
-        mesh.draw(&mut fig, filename, |plot, before| {
+        fig.draw(&mesh, filename, |plot, before| {
             if !before {
                 plot.add(&circle_in);
                 plot.add(&circle_mid);
@@ -1112,7 +1112,7 @@ mod tests {
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
-        mesh.draw(&mut fig, filename, |plot, before| {
+        fig.draw(&mesh, filename, |plot, before| {
             if !before {
                 pre(plot);
                 block.draw(plot, false, set_range).unwrap();
@@ -1534,13 +1534,14 @@ mod tests {
         assert_eq!(&mesh.cells[3].points, &[2, 5, 8, 6]);
         if SAVE_FIGURE {
             let mut fig = Figure::new();
-            fig.show_point_ids(true).size(600.0, 600.0);
-            mesh.draw(
-                &mut fig,
-                "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg",
-                |_, _| {},
-            )
-            .unwrap();
+            fig.show_point_ids(true)
+                .size(600.0, 600.0)
+                .draw(
+                    &mesh,
+                    "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg",
+                    |_, _| {},
+                )
+                .unwrap();
         }
     }
 
@@ -1822,7 +1823,7 @@ mod tests {
         if SAVE_FIGURE {
             let mut fig = Figure::new();
             fig.show_point_ids(true).size(600.0, 600.0);
-            mesh.draw(&mut fig, "/tmp/gemlab/test_subdivide_3d_o2_works.svg", |_, _| {})
+            fig.draw(&mesh, "/tmp/gemlab/test_subdivide_3d_o2_works.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -2035,7 +2036,7 @@ mod tests {
         if SAVE_FIGURE {
             let mut fig = Figure::new();
             fig.size(600.0, 600.0);
-            mesh.draw(&mut fig, "/tmp/gemlab/test_block_transform_into_ring_3d.svg", |_, _| {})
+            fig.draw(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -2076,13 +2077,13 @@ mod tests {
         }
         if SAVE_FIGURE {
             let mut fig = Figure::new();
-            fig.size(600.0, 600.0);
-            mesh.draw(
-                &mut fig,
-                "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg",
-                |_, _| {},
-            )
-            .unwrap();
+            fig.size(600.0, 600.0)
+                .draw(
+                    &mesh,
+                    "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg",
+                    |_, _| {},
+                )
+                .unwrap();
         }
     }
 

@@ -48,6 +48,9 @@ fn main() -> Result<(), StrError> {
 
     // draw mesh
     let mut fig = Figure::new();
-    fig.show_cell_ids(true).show_point_ids(true).size(800.0, 800.0);
-    mesh.draw(&mut fig, "/tmp/gemlab/example_mom_inertia_ring.svg", |_, _| {})
+    fig.show_cell_ids(true).show_point_ids(true).size(800.0, 800.0).draw(
+        &mesh,
+        "/tmp/gemlab/example_mom_inertia_ring.svg",
+        |_, _| {},
+    )
 }
