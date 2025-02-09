@@ -848,4 +848,80 @@ mod tests {
                 .unwrap();
         }
     }
+
+    #[test]
+    fn test_figure_setters() {
+        let mut fig = Figure::new();
+        
+        // Test show_cell_ids
+        assert!(!fig.show_cell_ids);
+        fig.show_cell_ids(true);
+        assert!(fig.show_cell_ids);
+        
+        // Test show_cell_att
+        assert!(fig.show_cell_att);
+        fig.show_cell_att(false);
+        assert!(!fig.show_cell_att);
+        
+        // Test show_point_ids
+        assert!(!fig.show_point_ids);
+        fig.show_point_ids(true);
+        assert!(fig.show_point_ids);
+        
+        // Test show_point_marker
+        assert!(!fig.show_point_marker);
+        fig.show_point_marker(true);
+        assert!(fig.show_point_marker);
+        
+        // Test show_point_dots
+        assert!(!fig.show_point_dots);
+        fig.show_point_dots(true);
+        assert!(fig.show_point_dots);
+        
+        // Test unequal_axes
+        assert!(!fig.unequal_exes);
+        fig.unequal_exes(true);
+        assert!(fig.unequal_exes);
+        
+        // Test range_2d
+        assert!(fig.range_2d.is_none());
+        fig.range_2d(-1.0, 1.0, -2.0, 2.0);
+        assert_eq!(fig.range_2d, Some((-1.0, 1.0, -2.0, 2.0)));
+        
+        // Test range_3d
+        assert!(fig.range_3d.is_none());
+        fig.range_3d(-1.0, 1.0, -2.0, 2.0, -3.0, 3.0);
+        assert_eq!(fig.range_3d, Some((-1.0, 1.0, -2.0, 2.0, -3.0, 3.0)));
+        
+        // Test size
+        assert!(fig.figure_size.is_none());
+        fig.size(800.0, 600.0);
+        assert_eq!(fig.figure_size, Some((800.0, 600.0)));
+        
+        // Test zoom_2d
+        assert!(fig.zoom_2d.is_none());
+        fig.zoom_2d(-0.5, 0.5, -1.0, 1.0, 0.1, 0.2, 0.3, 0.4);
+        assert_eq!(fig.zoom_2d, Some(((-0.5, 0.5, -1.0, 1.0), (0.1, 0.2, 0.3, 0.4))));
+        
+        // Test disable_zoom_2d
+        fig.disable_zoom_2d();
+        assert!(fig.zoom_2d.is_none());
+        
+        // Test zoom_indicator
+        fig.zoom_indicator("#ff0000", 0.8, 2.5);
+        assert_eq!(fig.zoom_indicator_config, ("#ff0000".to_string(), 0.8, 2.5));
+        
+        // Test method chaining
+        let mut fig = Figure::new();
+        fig.show_cell_ids(true)
+           .show_point_ids(true)
+           .show_point_dots(true)
+           .size(800.0, 600.0)
+           .range_2d(-1.0, 1.0, -1.0, 1.0);
+        assert!(fig.show_cell_ids);
+        assert!(fig.show_point_ids);
+        assert!(fig.show_point_dots);
+        assert_eq!(fig.figure_size, Some((800.0, 600.0)));
+        assert_eq!(fig.range_2d, Some((-1.0, 1.0, -1.0, 1.0)));
+    }
 }
