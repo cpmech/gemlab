@@ -1,7 +1,7 @@
 use super::Mesh;
 use crate::shapes::GeoKind;
 use crate::StrError;
-use plotpy::{Canvas, Curve, Plot, Text};
+use plotpy::{Canvas, Curve, InsetAxes, Plot, Text};
 use russell_lab::Vector;
 use std::ffi::OsStr;
 
@@ -68,6 +68,19 @@ pub struct Figure {
 
     /// Parameter: shows cell attribute within parenthesis
     pub with_cell_att: bool,
+
+    /// Enables zooming a region of the plot (2D meshes only)
+    ///
+    /// Holds `((xmin, xmax, ymin, ymax), (u0, u0, w, h))` for the zoomed region; where:
+    ///
+    /// * `(xmin, xmax, ymin, ymax)` -- the region to be zoomed
+    /// * `(u0, v0, w, h)` -- the position (normalized coordinates) and size (width,height) of the zoomed region
+    pub zoom_2d: Option<((f64, f64, f64, f64), (f64, f64, f64, f64))>,
+
+    /// Sets the color of the zoom indicator
+    ///
+    /// Holds `(color, alpha, linewidth)` for the zoom indicator.
+    pub zoom_indicator_config: Option<(String, f64, f64)>,
 }
 
 impl Figure {
@@ -80,17 +93,16 @@ impl Figure {
         let mut canvas_cells = Canvas::new();
         let mut canvas_lin_cells = Canvas::new();
         canvas_edges
-            .set_stop_clip(true)
             .set_face_color("None")
             .set_line_width(1.0)
             .set_edge_color("#2440cd");
         canvas_points
-            .set_stop_clip(true)
             .set_marker_color("black")
             .set_marker_line_color("white")
             .set_marker_style("o")
             .set_line_style("None");
         canvas_point_ids
+            .set_extra("clip_on=True")
             .set_color("red")
             .set_fontsize(7.0)
             .set_align_horizontal("center")
@@ -100,6 +112,7 @@ impl Figure {
             .set_bbox_edgecolor("None")
             .set_bbox_style("round,pad=0.15");
         canvas_cell_ids
+            .set_extra("clip_on=True")
             .set_color("#22971f")
             .set_fontsize(8.0)
             .set_align_horizontal("center")
@@ -109,12 +122,10 @@ impl Figure {
             .set_bbox_edgecolor("None")
             .set_bbox_style("square,pad=0.15");
         canvas_cells
-            .set_stop_clip(true)
             .set_face_color("#e3f3ff")
             .set_edge_color("#0055d4")
             .set_line_width(1.0);
         canvas_lin_cells
-            .set_stop_clip(true)
             .set_face_color("None")
             .set_edge_color("#cd0000")
             .set_line_width(2.0);
@@ -135,6 +146,8 @@ impl Figure {
             figure_size: None,
             with_point_marker: false,
             with_cell_att: true,
+            zoom_2d: None,
+            zoom_indicator_config: Some(("#f9d835".to_string(), 1.0, 2.0)),
         }
     }
 }
@@ -367,6 +380,27 @@ impl Mesh {
             figure.plot.set_figure_size_points(width, height);
         }
         extra(&mut figure.plot, false);
+        if let Some(((xmin, xmax, ymin, ymax), (u0, v0, w, h))) = figure.zoom_2d {
+            let mut inset = InsetAxes::new();
+            if let Some((color, alpha, linewidth)) = figure.zoom_indicator_config {
+                inset
+                    .set_indicator_line_color(&color)
+                    .set_indicator_alpha(alpha)
+                    .set_indicator_line_width(linewidth);
+            }
+            inset.add(&figure.canvas_cells);
+            if figure.cell_ids {
+                inset.add(&figure.canvas_cell_ids);
+            }
+            if figure.point_dots {
+                inset.add(&figure.canvas_points);
+            }
+            if figure.point_ids {
+                inset.add(&figure.canvas_point_ids);
+            }
+            inset.set_range(xmin, xmax, ymin, ymax).draw(u0, v0, w, h);
+            figure.plot.add(&inset);
+        }
         figure.plot.save(filepath)
     }
 }
@@ -379,7 +413,7 @@ mod tests {
     use crate::mesh::{Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
-    const SAVE_FIGURE: bool = false;
+    const SAVE_FIGURE: bool = true;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
@@ -605,6 +639,8 @@ mod tests {
             fig.cell_ids = true;
             fig.point_ids = true;
             fig.point_dots = true;
+            fig.range_2d = Some((-0.5, 6.0, -0.5, 6.0));
+            fig.zoom_2d = Some(((-0.05, 1.55, -0.05, 1.55), (0.6, 0.6, 0.3, 0.3)));
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
                 .unwrap();
         }
