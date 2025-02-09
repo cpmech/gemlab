@@ -220,14 +220,47 @@ impl Figure {
     }
 
     /// Set zoom_2d
-    pub fn set_zoom_2d(&mut self, value: Option<((f64, f64, f64, f64), (f64, f64, f64, f64))>) -> &mut Self {
-        self.zoom_2d = value;
+    ///
+    /// # Input
+    ///
+    /// * `xmin, xmax, ymin, ymax` - the region to be zoomed
+    /// * `u0, v0, w, h` - the position (normalized coordinates) and size (width,height) of the zoomed region
+    pub fn set_zoom_2d(
+        &mut self,
+        xmin: f64,
+        xmax: f64,
+        ymin: f64,
+        ymax: f64,
+        u0: f64,
+        v0: f64,
+        w: f64,
+        h: f64,
+    ) -> &mut Self {
+        self.zoom_2d = Some(((xmin, xmax, ymin, ymax), (u0, v0, w, h)));
+        self
+    }
+
+    /// Disable zoom_2d
+    pub fn disable_zoom_2d(&mut self) -> &mut Self {
+        self.zoom_2d = None;
         self
     }
 
     /// Set zoom_indicator_config
-    pub fn set_zoom_indicator_config(&mut self, value: Option<(String, f64, f64)>) -> &mut Self {
-        self.zoom_indicator_config = value;
+    ///
+    /// # Input
+    ///
+    /// * `color` - color of the zoom indicator
+    /// * `alpha` - transparency of the zoom indicator
+    /// * `linewidth` - width of the zoom indicator line
+    pub fn set_zoom_indicator_config(&mut self, color: &str, alpha: f64, linewidth: f64) -> &mut Self {
+        self.zoom_indicator_config = Some((color.to_string(), alpha, linewidth));
+        self
+    }
+
+    /// Disable zoom_indicator_config
+    pub fn disable_zoom_indicator_config(&mut self) -> &mut Self {
+        self.zoom_indicator_config = None;
         self
     }
 }
@@ -745,7 +778,7 @@ mod tests {
                 .set_point_ids(true)
                 .set_point_dots(true)
                 .set_range_2d(Some((-0.5, 6.0, -0.5, 6.0)))
-                .set_zoom_2d(Some(((-0.05, 1.55, -0.05, 1.55), (0.6, 0.6, 0.3, 0.3))));
+                .set_zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3);
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
                 .unwrap();
         }
