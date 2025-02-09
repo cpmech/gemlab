@@ -71,5 +71,5 @@ fn main() -> Result<(), StrError> {
 
     let mut fig = Figure::new();
     fig.show_cell_ids(true).show_point_ids(true);
-    mesh.draw(Some(fig), "/tmp/gemlab/example_block_2d_qua8.svg", |_, _| {})
+    mesh.draw(&mut fig, "/tmp/gemlab/example_block_2d_qua8.svg", |_, _| {})
 }

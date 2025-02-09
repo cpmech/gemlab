@@ -1088,7 +1088,8 @@ mod tests {
             .set_edge_color("#bfbfbfbb")
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, args.rmax);
-        mesh.draw(None, filename, |plot, before| {
+        let mut fig = Figure::new();
+        mesh.draw(&mut fig, filename, |plot, before| {
             if !before {
                 plot.add(&circle_in);
                 plot.add(&circle_mid);
@@ -1111,7 +1112,7 @@ mod tests {
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
-        mesh.draw(Some(fig), filename, |plot, before| {
+        mesh.draw(&mut fig, filename, |plot, before| {
             if !before {
                 pre(plot);
                 block.draw(plot, false, set_range).unwrap();
@@ -1535,7 +1536,7 @@ mod tests {
             let mut fig = Figure::new();
             fig.show_point_ids(true).size(600.0, 600.0);
             mesh.draw(
-                Some(fig),
+                &mut fig,
                 "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg",
                 |_, _| {},
             )
@@ -1821,7 +1822,7 @@ mod tests {
         if SAVE_FIGURE {
             let mut fig = Figure::new();
             fig.show_point_ids(true).size(600.0, 600.0);
-            mesh.draw(Some(fig), "/tmp/gemlab/test_subdivide_3d_o2_works.svg", |_, _| {})
+            mesh.draw(&mut fig, "/tmp/gemlab/test_subdivide_3d_o2_works.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -2034,12 +2035,8 @@ mod tests {
         if SAVE_FIGURE {
             let mut fig = Figure::new();
             fig.size(600.0, 600.0);
-            mesh.draw(
-                Some(fig),
-                "/tmp/gemlab/test_block_transform_into_ring_3d.svg",
-                |_, _| {},
-            )
-            .unwrap();
+            mesh.draw(&mut fig, "/tmp/gemlab/test_block_transform_into_ring_3d.svg", |_, _| {})
+                .unwrap();
         }
     }
 
@@ -2081,7 +2078,7 @@ mod tests {
             let mut fig = Figure::new();
             fig.size(600.0, 600.0);
             mesh.draw(
-                Some(fig),
+                &mut fig,
                 "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg",
                 |_, _| {},
             )

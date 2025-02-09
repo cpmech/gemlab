@@ -2024,7 +2024,7 @@ mod tests {
         if larger {
             fig.size(600.0, 600.0);
         }
-        mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
+        mesh.draw(&mut fig, filename, |_, _| {}).unwrap();
     }
 
     #[test]

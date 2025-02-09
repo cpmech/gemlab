@@ -68,11 +68,8 @@ fn main() -> Result<(), StrError> {
     approx_eq(second_mom_inertia_mesh_2, correct, 1e-5);
 
     // draw meshes
-    let mut fig_1 = Figure::new();
-    fig_1.show_cell_ids(true).show_point_ids(true).size(800.0, 800.0);
-    mesh_1.draw(Some(fig_1), "/tmp/gemlab/example_mom_inertia_disk_1.svg", |_, _| {})?;
-
-    let mut fig_2 = Figure::new();
-    fig_2.show_cell_ids(true).show_point_ids(true).size(800.0, 800.0);
-    mesh_2.draw(Some(fig_2), "/tmp/gemlab/example_mom_inertia_disk_2.svg", |_, _| {})
+    let mut fig = Figure::new();
+    fig.show_cell_ids(true).show_point_ids(true).size(800.0, 800.0);
+    mesh_1.draw(&mut fig, "/tmp/gemlab/example_mom_inertia_disk_1.svg", |_, _| {})?;
+    mesh_2.draw(&mut fig, "/tmp/gemlab/example_mom_inertia_disk_2.svg", |_, _| {})
 }

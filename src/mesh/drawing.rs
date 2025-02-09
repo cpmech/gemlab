@@ -397,11 +397,23 @@ impl Mesh {
         Ok(())
     }
 
-    /// Draws the cells, points, attributes, and markers
+    /// Draws the cells and points with default configuration
+    ///
+    /// See [Mesh::draw()] if customization is required.
+    pub fn draw_default<P, F>(&self, filepath: &P) -> Result<(), StrError>
+    where
+        P: AsRef<OsStr> + ?Sized,
+        F: FnMut(&mut Plot, bool),
+    {
+        let mut fig = Figure::new();
+        self.draw(&mut fig, filepath, |_, _| {})
+    }
+
+    /// Draws the cells and points
     ///
     /// # Input
     ///
-    /// * `fig` -- the Figure struct (optional => use default configuration)
+    /// * `fig` -- the Figure struct to configure the plot
     /// * `filepath` -- may be a String, &str, or Path
     /// * `extra` -- is a function `|plot, before| {}` to perform some {pre,post}-drawing on the plot area.
     ///   The two arguments of this function are:
@@ -414,34 +426,38 @@ impl Mesh {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::mesh::Samples;
+    /// use gemlab::mesh::{Figure, Samples};
     /// use gemlab::StrError;
     /// use plotpy::Canvas;
     ///
     /// const SAVE_FIGURE: bool = false;
     ///
     /// fn main() -> Result<(), StrError> {
-    ///     // use sample mesh
-    ///     let mesh = Samples::ring_eight_qua8_rad1_thick1();
-    ///
-    ///     // configure circles
-    ///     let mut circle_in = Canvas::new();
-    ///     let mut circle_out = Canvas::new();
-    ///     circle_in
-    ///         .set_face_color("None")
-    ///         .set_edge_color("#ff000080")
-    ///         .set_line_width(7.0)
-    ///         .draw_circle(0.0, 0.0, 1.0);
-    ///     circle_out
-    ///         .set_face_color("None")
-    ///         .set_edge_color("#0000ff80")
-    ///         .set_line_width(7.0)
-    ///         .draw_circle(0.0, 0.0, 2.0);
-    ///
-    ///     // draw mesh elements and circles
     ///     if SAVE_FIGURE {
+    ///         // use sample mesh
+    ///         let mesh = Samples::ring_eight_qua8_rad1_thick1();
+    ///
+    ///         // draw circles
+    ///         let mut circle_in = Canvas::new();
+    ///         let mut circle_out = Canvas::new();
+    ///         circle_in
+    ///             .set_face_color("None")
+    ///             .set_edge_color("#ff000080")
+    ///             .set_line_width(7.0)
+    ///             .draw_circle(0.0, 0.0, 1.0);
+    ///         circle_out
+    ///             .set_face_color("None")
+    ///             .set_edge_color("#0000ff80")
+    ///             .set_line_width(7.0)
+    ///             .draw_circle(0.0, 0.0, 2.0);
+    ///
+    ///         // configure drawing
+    ///         let mut fig = Figure::new();
+    ///         fig.show_cell_ids(true);
+    ///  
+    ///         // draw mesh
     ///         let filename = "/tmp/gemlab/doc_example_mesh_draw.svg";
-    ///         mesh.draw(None, filename, |plot, before| {
+    ///         mesh.draw(&mut fig, filename, |plot, before| {
     ///             if !before {
     ///                 plot.add(&circle_in);
     ///                 plot.add(&circle_out);
@@ -453,62 +469,61 @@ impl Mesh {
     /// ```
     ///
     /// ![doc_example_mesh_draw](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/doc_example_mesh_draw.svg)
-    pub fn draw<P, F>(&self, fig: Option<Figure>, filepath: &P, mut extra: F) -> Result<(), StrError>
+    pub fn draw<P, F>(&self, fig: &mut Figure, filepath: &P, mut extra: F) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
         F: FnMut(&mut Plot, bool),
     {
-        let mut figure = if let Some(f) = fig { f } else { Figure::new() };
-        extra(&mut figure.plot, true);
-        self.draw_cells(&mut figure, true)?;
-        if figure.show_cell_ids {
-            self.draw_cell_ids(&mut figure)?;
+        extra(&mut fig.plot, true);
+        self.draw_cells(fig, true)?;
+        if fig.show_cell_ids {
+            self.draw_cell_ids(fig)?;
         }
-        if figure.show_point_dots {
-            self.draw_point_dots(&mut figure);
+        if fig.show_point_dots {
+            self.draw_point_dots(fig);
         }
-        if figure.show_point_ids {
-            self.draw_point_ids(&mut figure);
-        }
-        if self.ndim == 2 {
-            figure.plot.grid_and_labels("x", "y");
-        }
-        if !figure.unequal_exes {
-            figure.plot.set_equal_axes(true);
+        if fig.show_point_ids {
+            self.draw_point_ids(fig);
         }
         if self.ndim == 2 {
-            if let Some((xmin, xmax, ymin, ymax)) = figure.range_2d {
-                figure.plot.set_range(xmin, xmax, ymin, ymax);
+            fig.plot.grid_and_labels("x", "y");
+        }
+        if !fig.unequal_exes {
+            fig.plot.set_equal_axes(true);
+        }
+        if self.ndim == 2 {
+            if let Some((xmin, xmax, ymin, ymax)) = fig.range_2d {
+                fig.plot.set_range(xmin, xmax, ymin, ymax);
             }
         } else {
-            if let Some((xmin, xmax, ymin, ymax, zmin, zmax)) = figure.range_3d {
-                figure.plot.set_range_3d(xmin, xmax, ymin, ymax, zmin, zmax);
+            if let Some((xmin, xmax, ymin, ymax, zmin, zmax)) = fig.range_3d {
+                fig.plot.set_range_3d(xmin, xmax, ymin, ymax, zmin, zmax);
             }
         }
-        if let Some((width, height)) = figure.size {
-            figure.plot.set_figure_size_points(width, height);
+        if let Some((width, height)) = fig.size {
+            fig.plot.set_figure_size_points(width, height);
         }
-        extra(&mut figure.plot, false);
-        if let Some(((xmin, xmax, ymin, ymax), (u0, v0, w, h))) = figure.zoom_2d {
+        extra(&mut fig.plot, false);
+        if let Some(((xmin, xmax, ymin, ymax), (u0, v0, w, h))) = fig.zoom_2d {
             let mut inset = InsetAxes::new();
             inset
-                .set_indicator_line_color(&figure.zoom_indicator_config.0)
-                .set_indicator_alpha(figure.zoom_indicator_config.1)
-                .set_indicator_line_width(figure.zoom_indicator_config.2);
-            inset.add(&figure.canvas_cells);
-            if figure.show_cell_ids {
-                inset.add(&figure.canvas_cell_ids);
+                .set_indicator_line_color(&fig.zoom_indicator_config.0)
+                .set_indicator_alpha(fig.zoom_indicator_config.1)
+                .set_indicator_line_width(fig.zoom_indicator_config.2);
+            inset.add(&fig.canvas_cells);
+            if fig.show_cell_ids {
+                inset.add(&fig.canvas_cell_ids);
             }
-            if figure.show_point_dots {
-                inset.add(&figure.canvas_points);
+            if fig.show_point_dots {
+                inset.add(&fig.canvas_points);
             }
-            if figure.show_point_ids {
-                inset.add(&figure.canvas_point_ids);
+            if fig.show_point_ids {
+                inset.add(&fig.canvas_point_ids);
             }
             inset.set_range(xmin, xmax, ymin, ymax).draw(u0, v0, w, h);
-            figure.plot.add(&inset);
+            fig.plot.add(&inset);
         }
-        figure.plot.save(filepath)
+        fig.plot.save(filepath)
     }
 }
 
@@ -748,7 +763,7 @@ mod tests {
                 .show_point_dots(true)
                 .range_2d(-0.5, 6.0, -0.5, 6.0)
                 .zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3);
-            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
+            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -759,7 +774,7 @@ mod tests {
             let mesh = Samples::block_2d_four_qua16();
             let mut fig = Figure::new();
             fig.show_cell_ids(true).show_point_ids(true).show_point_dots(true);
-            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua16.svg", |_, _| {})
+            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_qua16.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -770,7 +785,7 @@ mod tests {
             let mesh = Samples::block_2d_four_qua17();
             let mut fig = Figure::new();
             fig.show_cell_ids(true).show_point_ids(true).show_point_dots(true);
-            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua17.svg", |_, _| {})
+            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_qua17.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -781,7 +796,7 @@ mod tests {
             let mesh = Samples::mixed_shapes_2d();
             let mut fig = Figure::new();
             fig.show_cell_ids(true).show_point_ids(true).show_point_dots(true);
-            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_mixed_2d.svg", |_, _| {})
+            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_mixed_2d.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -802,7 +817,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_hex8.svg", |_, _| {})
+            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_hex8.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -823,7 +838,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_hex20.svg", |_, _| {})
+            mesh.draw(&mut fig, "/tmp/gemlab/test_draw_works_hex20.svg", |_, _| {})
                 .unwrap();
         }
     }
@@ -844,7 +859,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            mesh.draw(Some(fig), "/tmp/gemlab/test_works_mixed_3d.svg", |_, _| {})
+            mesh.draw(&mut fig, "/tmp/gemlab/test_works_mixed_3d.svg", |_, _| {})
                 .unwrap();
         }
     }

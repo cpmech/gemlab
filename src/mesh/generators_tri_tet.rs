@@ -619,7 +619,7 @@ mod tests {
         } else {
             fig.size(600.0, 600.0);
         }
-        mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
+        mesh.draw(&mut fig, filename, |_, _| {}).unwrap();
     }
 
     fn check_corner_markers(mesh: &Mesh, o2_3d: bool) {
@@ -924,7 +924,7 @@ mod tests {
 
         let mut fig = Figure::new();
         fig.size(800.0, 800.0).show_point_ids(true).show_point_dots(true);
-        mesh.draw(Some(fig), filename, |plot, before| {
+        mesh.draw(&mut fig, filename, |plot, before| {
             if before {
                 plot.add(&cylin_in).add(&cylin_out);
             }
