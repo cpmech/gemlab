@@ -774,9 +774,9 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua12();
             let mut fig = Figure::new();
-            fig.set_cell_ids(true)
-                .set_point_ids(true)
-                .set_point_dots(true)
+            fig.set_show_cell_ids(true)
+                .set_show_point_ids(true)
+                .set_show_point_dots(true)
                 .set_range_2d(Some((-0.5, 6.0, -0.5, 6.0)))
                 .set_zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3);
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
@@ -802,9 +802,9 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua17();
             let mut fig = Figure::new();
-            fig.show_cell_ids = true;
-            fig.show_point_ids = true;
-            fig.show_point_dots = true;
+            fig.set_show_cell_ids(true)
+                .set_show_point_ids(true)
+                .set_show_point_dots(true);
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua17.svg", |_, _| {})
                 .unwrap();
         }
@@ -815,9 +815,9 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::mixed_shapes_2d();
             let mut fig = Figure::new();
-            fig.cell_ids = true;
-            fig.point_ids = true;
-            fig.point_dots = true;
+            fig.set_show_cell_ids(true)
+                .set_show_point_ids(true)
+                .set_show_point_dots(true);
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_mixed_2d.svg", |_, _| {})
                 .unwrap();
         }
@@ -828,9 +828,9 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::two_hex8();
             let mut fig = Figure::new();
-            fig.set_cell_ids(true)
-                .set_point_ids(true)
-                .set_point_dots(true)
+            fig.set_show_cell_ids(true)
+                .set_show_point_ids(true)
+                .set_show_point_dots(true)
                 .set_figure_size(Some((600.0, 600.0)));
             fig.canvas_point_ids()
                 .set_align_horizontal("left")
