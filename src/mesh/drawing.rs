@@ -29,13 +29,13 @@ pub struct Figure {
     canvas_lin_cells: Canvas,
 
     /// Parameter: draw cell ids
-    cell_ids: bool,
+    show_cell_ids: bool,
 
     /// Parameter: draw point ids
-    point_ids: bool,
+    show_point_ids: bool,
 
     /// Parameter: draw point dots
-    point_dots: bool,
+    show_point_dots: bool,
 
     /// Parameter: generate the plot without equal axes
     not_equal_exes: bool,
@@ -165,21 +165,21 @@ impl Figure {
         &mut self.canvas_lin_cells
     }
 
-    /// Set cell_ids
-    pub fn set_cell_ids(&mut self, value: bool) -> &mut Self {
-        self.cell_ids = value;
+    /// Set show_cell_ids
+    pub fn set_show_cell_ids(&mut self, value: bool) -> &mut Self {
+        self.show_cell_ids = value;
         self
     }
 
-    /// Set point_ids
-    pub fn set_point_ids(&mut self, value: bool) -> &mut Self {
-        self.point_ids = value;
+    /// Set show_point_ids
+    pub fn set_show_point_ids(&mut self, value: bool) -> &mut Self {
+        self.show_point_ids = value;
         self
     }
 
-    /// Set point_dots
-    pub fn set_point_dots(&mut self, value: bool) -> &mut Self {
-        self.point_dots = value;
+    /// Set show_point_dots
+    pub fn set_show_point_dots(&mut self, value: bool) -> &mut Self {
+        self.show_point_dots = value;
         self
     }
 
@@ -275,9 +275,9 @@ impl Default for Figure {
             canvas_cell_ids: Text::new(),
             canvas_cells: Canvas::new(),
             canvas_lin_cells: Canvas::new(),
-            cell_ids: false,
-            point_ids: false,
-            point_dots: false,
+            show_cell_ids: false,
+            show_point_ids: false,
+            show_point_dots: false,
             not_equal_exes: false,
             range_2d: None,
             range_3d: None,
@@ -490,13 +490,13 @@ impl Mesh {
         let mut figure = if let Some(f) = fig { f } else { Figure::new() };
         extra(&mut figure.plot, true);
         self.draw_cells(&mut figure, true)?;
-        if figure.cell_ids {
+        if figure.show_cell_ids {
             self.draw_cell_ids(&mut figure)?;
         }
-        if figure.point_dots {
+        if figure.show_point_dots {
             self.draw_point_dots(&mut figure);
         }
-        if figure.point_ids {
+        if figure.show_point_ids {
             self.draw_point_ids(&mut figure);
         }
         if self.ndim == 2 {
@@ -527,13 +527,13 @@ impl Mesh {
                     .set_indicator_line_width(linewidth);
             }
             inset.add(&figure.canvas_cells);
-            if figure.cell_ids {
+            if figure.show_cell_ids {
                 inset.add(&figure.canvas_cell_ids);
             }
-            if figure.point_dots {
+            if figure.show_point_dots {
                 inset.add(&figure.canvas_points);
             }
-            if figure.point_ids {
+            if figure.show_point_ids {
                 inset.add(&figure.canvas_point_ids);
             }
             inset.set_range(xmin, xmax, ymin, ymax).draw(u0, v0, w, h);
@@ -802,9 +802,9 @@ mod tests {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua17();
             let mut fig = Figure::new();
-            fig.cell_ids = true;
-            fig.point_ids = true;
-            fig.point_dots = true;
+            fig.show_cell_ids = true;
+            fig.show_point_ids = true;
+            fig.show_point_dots = true;
             mesh.draw(Some(fig), "/tmp/gemlab/test_draw_works_qua17.svg", |_, _| {})
                 .unwrap();
         }
