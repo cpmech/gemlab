@@ -985,7 +985,7 @@ mod tests {
         if larger {
             fig.size(600.0, 600.0);
         }
-        fig.draw(&mesh, filename, |_, _| {}).unwrap();
+        fig.draw(&mesh, filename).unwrap();
     }
 
     #[test]

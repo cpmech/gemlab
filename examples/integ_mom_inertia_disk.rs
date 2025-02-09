@@ -70,6 +70,6 @@ fn main() -> Result<(), StrError> {
     // draw meshes
     let mut fig = Figure::new();
     fig.show_cell_ids(true).show_point_ids(true).size(800.0, 800.0);
-    fig.draw(&mesh_1, "/tmp/gemlab/example_mom_inertia_disk_1.svg", |_, _| {})?;
-    fig.draw(&mesh_2, "/tmp/gemlab/example_mom_inertia_disk_2.svg", |_, _| {})
+    fig.draw(&mesh_1, "/tmp/gemlab/example_mom_inertia_disk_1.svg")?;
+    fig.draw(&mesh_2, "/tmp/gemlab/example_mom_inertia_disk_2.svg")
 }

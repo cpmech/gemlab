@@ -6,7 +6,7 @@ use russell_lab::Vector;
 use std::ffi::OsStr;
 
 /// Implements functions to draw cells, edges and faces
-pub struct Figure {
+pub struct Figure<'a> {
     /// The plotpy structure to draw figures (plots)
     plot: Plot,
 
@@ -67,9 +67,17 @@ pub struct Figure {
     ///
     /// Holds `(color, alpha, linewidth)` for the zoom indicator.
     zoom_indicator_config: (String, f64, f64),
+
+    /// Holds a (callback) function to perform some extra drawing on the plot area
+    ///
+    /// The function is `|plot, before| {}` where:
+    ///
+    /// * `plot` -- the `plot` reference that can be used perform some extra drawings.
+    /// * `before` -- **true** indicates that the callback function is being called before all other drawing functions.
+    extra: Option<Box<dyn Fn(&mut Plot, bool) + 'a>>,
 }
 
-impl Figure {
+impl<'a> Figure<'a> {
     /// Allocates a new instance
     pub fn new() -> Self {
         let mut canvas_edges = Canvas::new();
@@ -134,6 +142,7 @@ impl Figure {
             size: None,
             zoom_2d: None,
             zoom_indicator_config: ("#f9d835".to_string(), 1.0, 2.0),
+            extra: None,
         }
     }
 
@@ -257,6 +266,19 @@ impl Figure {
     /// * `linewidth` - width of the zoom indicator line
     pub fn zoom_indicator(&mut self, color: &str, alpha: f64, linewidth: f64) -> &mut Self {
         self.zoom_indicator_config = (color.to_string(), alpha, linewidth);
+        self
+    }
+
+    /// Sets a callback function to perform extra drawing on the plot area
+    ///
+    /// The function is `|plot, before| { ... }` where:
+    ///
+    /// * `plot` -- is the `plot` mutable reference that can be used perform some extra drawings.
+    /// * `before` -- indicates if the function is being called before all other drawing functions.
+    ///   The value `false` means that the function is being called `after` all other functions,
+    ///   and just before the call to `plot.save()`.
+    pub fn extra(&mut self, callback: impl Fn(&mut Plot, bool) + 'a) -> &mut Self {
+        self.extra = Some(Box::new(callback));
         self
     }
 
@@ -399,14 +421,8 @@ impl Figure {
     ///
     /// # Input
     ///
+    /// * `mesh` -- the mesh to be drawn
     /// * `filepath` -- may be a String, &str, or Path
-    /// * `extra` -- is a function `|plot, before| {}` to perform some {pre,post}-drawing on the plot area.
-    ///   The two arguments of this function are:
-    ///     * `plot: &mut Plot` -- the `plot` reference that can be used perform some extra drawings.
-    ///     * `before: bool` -- **true** indicates that the function is being called before all other
-    ///       drawing functions. Otherwise, **false* indicates that the function is being called after
-    ///       all other drawing functions, and just before the `plot.save` call.
-    ///   For example, use `|_, _| {}` to do nothing.
     ///
     /// # Examples
     ///
@@ -438,25 +454,27 @@ impl Figure {
     ///
     ///         // draw mesh
     ///         let mut fig = Figure::new();
-    ///         fig.show_cell_ids(true)
-    ///            .draw(&mesh, "/tmp/gemlab/doc_example_mesh_draw.svg", |plot, before| {
+    ///         fig.extra(|plot, before| {
     ///             if !before {
     ///                 plot.add(&circle_in);
     ///                 plot.add(&circle_out);
     ///             }
-    ///         })?;
+    ///         })
+    ///         .show_cell_ids(true)
+    ///         .draw(&mesh, "/tmp/gemlab/doc_example_mesh_draw.svg")?;
     ///     }
     ///     Ok(())
     /// }
     /// ```
     ///
     /// ![doc_example_mesh_draw](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/doc_example_mesh_draw.svg)
-    pub fn draw<P, F>(&mut self, mesh: &Mesh, filepath: &P, mut extra: F) -> Result<(), StrError>
+    pub fn draw<P>(&mut self, mesh: &Mesh, filepath: &P) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
-        F: FnMut(&mut Plot, bool),
     {
-        extra(&mut self.plot, true);
+        if let Some(callback) = self.extra.as_ref() {
+            callback(&mut self.plot, true);
+        }
         self.draw_cells(mesh, true)?;
         if self.show_cell_ids {
             self.draw_cell_ids(mesh)?;
@@ -485,7 +503,9 @@ impl Figure {
         if let Some((width, height)) = self.size {
             self.plot.set_figure_size_points(width, height);
         }
-        extra(&mut self.plot, false);
+        if let Some(callback) = self.extra.as_ref() {
+            callback(&mut self.plot, false);
+        }
         if let Some(((xmin, xmax, ymin, ymax), (u0, v0, w, h))) = self.zoom_2d {
             let mut inset = InsetAxes::new();
             inset
@@ -745,7 +765,7 @@ mod tests {
                 .show_point_dots(true)
                 .range_2d(-0.5, 6.0, -0.5, 6.0)
                 .zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3)
-                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua12.svg", |_, _| {})
+                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua12.svg")
                 .unwrap();
         }
     }
@@ -758,7 +778,7 @@ mod tests {
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua16.svg", |_, _| {})
+                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua16.svg")
                 .unwrap();
         }
     }
@@ -771,7 +791,7 @@ mod tests {
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua17.svg", |_, _| {})
+                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua17.svg")
                 .unwrap();
         }
     }
@@ -784,7 +804,7 @@ mod tests {
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .draw(&mesh, "/tmp/gemlab/test_draw_works_mixed_2d.svg", |_, _| {})
+                .draw(&mesh, "/tmp/gemlab/test_draw_works_mixed_2d.svg")
                 .unwrap();
         }
     }
@@ -805,8 +825,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            fig.draw(&mesh, "/tmp/gemlab/test_draw_works_hex8.svg", |_, _| {})
-                .unwrap();
+            fig.draw(&mesh, "/tmp/gemlab/test_draw_works_hex8.svg").unwrap();
         }
     }
 
@@ -826,8 +845,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            fig.draw(&mesh, "/tmp/gemlab/test_draw_works_hex20.svg", |_, _| {})
-                .unwrap();
+            fig.draw(&mesh, "/tmp/gemlab/test_draw_works_hex20.svg").unwrap();
         }
     }
 
@@ -847,8 +865,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            fig.draw(&mesh, "/tmp/gemlab/test_works_mixed_3d.svg", |_, _| {})
-                .unwrap();
+            fig.draw(&mesh, "/tmp/gemlab/test_works_mixed_3d.svg").unwrap();
         }
     }
 

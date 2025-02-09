@@ -47,5 +47,5 @@ fn main() -> Result<(), StrError> {
     let mut fig = Figure::new();
     fig.show_cell_ids(true).show_point_ids(true);
 
-    fig.draw(&mesh, "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg", |_, _| {})
+    fig.draw(&mesh, "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg")
 }

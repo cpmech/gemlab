@@ -541,8 +541,7 @@ mod tests {
         if SAVE_FIGURE {
             let mut fig = Figure::new();
             fig.show_point_ids(true);
-            fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example.svg", |_, _| {})
-                .unwrap();
+            fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example.svg").unwrap();
         }
         let npoint = mesh.points.len();
 
@@ -569,8 +568,7 @@ mod tests {
             }
             let mut fig = Figure::new();
             fig.show_point_ids(true);
-            fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_8.svg", |_, _| {})
-                .unwrap();
+            fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_8.svg").unwrap();
         }
 
         // print pattern with updated mesh (cm_8)
@@ -596,8 +594,7 @@ mod tests {
             }
             let mut fig = Figure::new();
             fig.show_point_ids(true);
-            fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_pp.svg", |_, _| {})
-                .unwrap();
+            fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_pp.svg").unwrap();
         }
 
         // print pattern with updated mesh (cm_pp)
