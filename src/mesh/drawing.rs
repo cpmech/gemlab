@@ -8,66 +8,52 @@ use std::ffi::OsStr;
 /// Implements functions to draw cells, edges and faces
 pub struct Figure {
     /// The plotpy structure to draw figures (plots)
-    ///
-    /// **Note:** May be accessed externally to perform some additional configuration.
-    pub plot: Plot,
+    plot: Plot,
 
     /// Canvas to draw edges
-    ///
-    /// **Note:** May be accessed externally to perform some additional configuration.
-    pub canvas_edges: Canvas,
+    canvas_edges: Canvas,
 
     /// Canvas to draw points (markers)
-    ///
-    /// **Note:** May be accessed externally to perform some additional configuration.
-    pub canvas_points: Curve,
+    canvas_points: Curve,
 
     /// Canvas to draw point ids
-    ///
-    /// **Note:** May be accessed externally to perform some additional configuration.
-    pub canvas_point_ids: Text,
+    canvas_point_ids: Text,
 
     /// Canvas to draw cell ids
-    ///
-    /// **Note:** May be accessed externally to perform some additional configuration.
-    pub canvas_cell_ids: Text,
+    canvas_cell_ids: Text,
 
     /// Canvas to draw cells
-    ///
-    /// **Note:** May be accessed externally to perform some additional configuration.
-    pub canvas_cells: Canvas,
+    canvas_cells: Canvas,
 
     /// Canvas to draw lin cells
-    ///
-    /// **Note:** May be accessed externally to perform some additional configuration.
-    pub canvas_lin_cells: Canvas,
+    canvas_lin_cells: Canvas,
 
     /// Parameter: draw cell ids
-    pub cell_ids: bool,
+    cell_ids: bool,
 
     /// Parameter: draw point ids
-    pub point_ids: bool,
+    point_ids: bool,
 
     /// Parameter: draw point dots
-    pub point_dots: bool,
+    point_dots: bool,
 
     /// Parameter: generate the plot without equal axes
-    pub not_equal_exes: bool,
+    not_equal_exes: bool,
 
     /// Parameter: specifies the plot range (xmin, xmax, ymin, ymax)
-    pub range_2d: Option<(f64, f64, f64, f64)>,
+    range_2d: Option<(f64, f64, f64, f64)>,
 
     /// Parameter: specifies the plot range (xmin, xmax, ymin, ymax, zmin, zmax)
-    pub range_3d: Option<(f64, f64, f64, f64, f64, f64)>,
+    range_3d: Option<(f64, f64, f64, f64, f64, f64)>,
 
     /// Parameter: specifies the figure size in points
-    pub figure_size: Option<(f64, f64)>,
+    figure_size: Option<(f64, f64)>,
 
     /// Parameter: shows point marker within parenthesis (if not zero)
-    pub with_point_marker: bool,
+    with_point_marker: bool,
 
     /// Parameter: shows cell attribute within parenthesis
-    pub with_cell_att: bool,
+    with_cell_att: bool,
 
     /// Enables zooming a region of the plot (2D meshes only)
     ///
@@ -75,17 +61,24 @@ pub struct Figure {
     ///
     /// * `(xmin, xmax, ymin, ymax)` -- the region to be zoomed
     /// * `(u0, v0, w, h)` -- the position (normalized coordinates) and size (width,height) of the zoomed region
-    pub zoom_2d: Option<((f64, f64, f64, f64), (f64, f64, f64, f64))>,
+    zoom_2d: Option<((f64, f64, f64, f64), (f64, f64, f64, f64))>,
 
     /// Sets the color of the zoom indicator
     ///
     /// Holds `(color, alpha, linewidth)` for the zoom indicator.
-    pub zoom_indicator_config: Option<(String, f64, f64)>,
+    zoom_indicator_config: Option<(String, f64, f64)>,
 }
 
 impl Figure {
     /// Allocates a new instance
     pub fn new() -> Self {
+        let mut fig = Self::default();
+        fig.init_canvases();
+        fig
+    }
+
+    /// Initialize the canvas properties
+    fn init_canvases(&mut self) {
         let mut canvas_edges = Canvas::new();
         let mut canvas_points = Curve::new();
         let mut canvas_point_ids = Text::new();
@@ -129,14 +122,126 @@ impl Figure {
             .set_face_color("None")
             .set_edge_color("#cd0000")
             .set_line_width(2.0);
+        self.canvas_edges = canvas_edges;
+        self.canvas_points = canvas_points;
+        self.canvas_point_ids = canvas_point_ids;
+        self.canvas_cell_ids = canvas_cell_ids;
+        self.canvas_cells = canvas_cells;
+        self.canvas_lin_cells = canvas_lin_cells;
+    }
+
+    /// Get a mutable reference to the plot
+    pub fn plot(&mut self) -> &mut Plot {
+        &mut self.plot
+    }
+
+    /// Get a mutable reference to the canvas edges
+    pub fn canvas_edges(&mut self) -> &mut Canvas {
+        &mut self.canvas_edges
+    }
+
+    /// Get a mutable reference to the canvas points
+    pub fn canvas_points(&mut self) -> &mut Curve {
+        &mut self.canvas_points
+    }
+
+    /// Get a mutable reference to the canvas point ids
+    pub fn canvas_point_ids(&mut self) -> &mut Text {
+        &mut self.canvas_point_ids
+    }
+
+    /// Get a mutable reference to the canvas cell ids
+    pub fn canvas_cell_ids(&mut self) -> &mut Text {
+        &mut self.canvas_cell_ids
+    }
+
+    /// Get a mutable reference to the canvas cells
+    pub fn canvas_cells(&mut self) -> &mut Canvas {
+        &mut self.canvas_cells
+    }
+
+    /// Get a mutable reference to the canvas lin cells
+    pub fn canvas_lin_cells(&mut self) -> &mut Canvas {
+        &mut self.canvas_lin_cells
+    }
+
+    /// Set cell_ids
+    pub fn set_cell_ids(&mut self, value: bool) -> &mut Self {
+        self.cell_ids = value;
+        self
+    }
+
+    /// Set point_ids
+    pub fn set_point_ids(&mut self, value: bool) -> &mut Self {
+        self.point_ids = value;
+        self
+    }
+
+    /// Set point_dots
+    pub fn set_point_dots(&mut self, value: bool) -> &mut Self {
+        self.point_dots = value;
+        self
+    }
+
+    /// Set not_equal_exes
+    pub fn set_not_equal_exes(&mut self, value: bool) -> &mut Self {
+        self.not_equal_exes = value;
+        self
+    }
+
+    /// Set range_2d
+    pub fn set_range_2d(&mut self, value: Option<(f64, f64, f64, f64)>) -> &mut Self {
+        self.range_2d = value;
+        self
+    }
+
+    /// Set range_3d
+    pub fn set_range_3d(&mut self, value: Option<(f64, f64, f64, f64, f64, f64)>) -> &mut Self {
+        self.range_3d = value;
+        self
+    }
+
+    /// Set figure_size
+    pub fn set_figure_size(&mut self, value: Option<(f64, f64)>) -> &mut Self {
+        self.figure_size = value;
+        self
+    }
+
+    /// Set with_point_marker
+    pub fn set_with_point_marker(&mut self, value: bool) -> &mut Self {
+        self.with_point_marker = value;
+        self
+    }
+
+    /// Set with_cell_att
+    pub fn set_with_cell_att(&mut self, value: bool) -> &mut Self {
+        self.with_cell_att = value;
+        self
+    }
+
+    /// Set zoom_2d
+    pub fn set_zoom_2d(&mut self, value: Option<((f64, f64, f64, f64), (f64, f64, f64, f64))>) -> &mut Self {
+        self.zoom_2d = value;
+        self
+    }
+
+    /// Set zoom_indicator_config
+    pub fn set_zoom_indicator_config(&mut self, value: Option<(String, f64, f64)>) -> &mut Self {
+        self.zoom_indicator_config = value;
+        self
+    }
+}
+
+impl Default for Figure {
+    fn default() -> Self {
         Figure {
             plot: Plot::new(),
-            canvas_edges,
-            canvas_points,
-            canvas_point_ids,
-            canvas_cell_ids,
-            canvas_cells,
-            canvas_lin_cells,
+            canvas_edges: Canvas::new(),
+            canvas_points: Curve::new(),
+            canvas_point_ids: Text::new(),
+            canvas_cell_ids: Text::new(),
+            canvas_cells: Canvas::new(),
+            canvas_lin_cells: Canvas::new(),
             cell_ids: false,
             point_ids: false,
             point_dots: false,
