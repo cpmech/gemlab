@@ -55,6 +55,14 @@ pub struct Figure<'a> {
     /// Specifies the figure size in points
     size: Option<(f64, f64)>,
 
+    /// Holds a (callback) function to perform some extra drawing on the plot area
+    ///
+    /// The function is `|plot, before| {}` where:
+    ///
+    /// * `plot` -- the `plot` reference that can be used perform some extra drawings.
+    /// * `before` -- **true** indicates that the callback function is being called before all other drawing functions.
+    extra: Option<Box<dyn Fn(&mut Plot, bool) + 'a>>,
+
     /// Enables zooming a region of the plot (2D meshes only)
     ///
     /// Holds `((xmin, xmax, ymin, ymax), (u0, u0, w, h))` for the zoomed region; where:
@@ -68,13 +76,12 @@ pub struct Figure<'a> {
     /// Holds `(color, alpha, linewidth)` for the zoom indicator.
     zoom_indicator_config: (String, f64, f64),
 
-    /// Holds a (callback) function to perform some extra drawing on the plot area
+    /// Holds a (callback) function to perform some extra drawing on the zoom area
     ///
-    /// The function is `|plot, before| {}` where:
+    /// The function is `|inset| {}` where:
     ///
-    /// * `plot` -- the `plot` reference that can be used perform some extra drawings.
-    /// * `before` -- **true** indicates that the callback function is being called before all other drawing functions.
-    extra: Option<Box<dyn Fn(&mut Plot, bool) + 'a>>,
+    /// * `inset` -- Is the InsetAxes reference for further configuration
+    zoom_extra: Option<Box<dyn Fn(&mut InsetAxes) + 'a>>,
 }
 
 impl<'a> Figure<'a> {
@@ -140,9 +147,10 @@ impl<'a> Figure<'a> {
             range_2d: None,
             range_3d: None,
             size: None,
+            extra: None,
             zoom_2d: None,
             zoom_indicator_config: ("#f9d835".to_string(), 1.0, 2.0),
-            extra: None,
+            zoom_extra: None,
         }
     }
 
@@ -230,6 +238,19 @@ impl<'a> Figure<'a> {
         self
     }
 
+    /// Sets a callback function to perform extra drawing on the plot area
+    ///
+    /// The function is `|plot, before| { ... }` where:
+    ///
+    /// * `plot` -- is the `plot` mutable reference that can be used perform some extra drawings.
+    /// * `before` -- indicates if the function is being called before all other drawing functions.
+    ///   The value `false` means that the function is being called `after` all other functions,
+    ///   and just before the call to `plot.save()`.
+    pub fn extra(&mut self, callback: impl Fn(&mut Plot, bool) + 'a) -> &mut Self {
+        self.extra = Some(Box::new(callback));
+        self
+    }
+
     /// Enables zooming a region of the plot (2D meshes only)
     ///
     /// # Input
@@ -269,16 +290,13 @@ impl<'a> Figure<'a> {
         self
     }
 
-    /// Sets a callback function to perform extra drawing on the plot area
+    /// Sets a callback function to perform extra drawing on the zoom area
     ///
-    /// The function is `|plot, before| { ... }` where:
+    /// The function is `|inset| {}` where:
     ///
-    /// * `plot` -- is the `plot` mutable reference that can be used perform some extra drawings.
-    /// * `before` -- indicates if the function is being called before all other drawing functions.
-    ///   The value `false` means that the function is being called `after` all other functions,
-    ///   and just before the call to `plot.save()`.
-    pub fn extra(&mut self, callback: impl Fn(&mut Plot, bool) + 'a) -> &mut Self {
-        self.extra = Some(Box::new(callback));
+    /// * `inset` -- Is the InsetAxes reference for further configuration
+    pub fn zoom_extra(&mut self, callback: impl Fn(&mut InsetAxes) + 'a) -> &mut Self {
+        self.zoom_extra = Some(Box::new(callback));
         self
     }
 
@@ -523,6 +541,9 @@ impl<'a> Figure<'a> {
                 inset.add(&self.canvas_point_ids);
             }
             inset.set_range(xmin, xmax, ymin, ymax).draw(u0, v0, w, h);
+            if let Some(callback) = self.zoom_extra.as_ref() {
+                callback(&mut inset);
+            }
             self.plot.add(&inset);
         }
         self.plot.save(filepath)
@@ -765,6 +786,11 @@ mod tests {
                 .show_point_dots(true)
                 .range_2d(-0.5, 6.0, -0.5, 6.0)
                 .zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3)
+                .zoom_extra(|inset| {
+                    let mut text = Text::new();
+                    text.draw(0.3, 1.0, "HELLO");
+                    inset.add(&text);
+                })
                 .draw(&mesh, "/tmp/gemlab/test_draw_works_qua12.svg")
                 .unwrap();
         }
@@ -918,6 +944,11 @@ mod tests {
         fig.size(800.0, 600.0);
         assert_eq!(fig.size, Some((800.0, 600.0)));
 
+        // Test extra
+        assert!(fig.extra.is_none());
+        fig.extra(|_, _| {});
+        assert!(fig.extra.is_some());
+
         // Test zoom_2d
         assert!(fig.zoom_2d.is_none());
         fig.zoom_2d(-0.5, 0.5, -1.0, 1.0, 0.1, 0.2, 0.3, 0.4);
@@ -930,6 +961,11 @@ mod tests {
         // Test zoom_indicator
         fig.zoom_indicator("#ff0000", 0.8, 2.5);
         assert_eq!(fig.zoom_indicator_config, ("#ff0000".to_string(), 0.8, 2.5));
+
+        // Test zoom_extra
+        assert!(fig.zoom_extra.is_none());
+        fig.zoom_extra(|_| {});
+        assert!(fig.zoom_extra.is_some());
 
         // Test method chaining
         let mut fig = Figure::new();
