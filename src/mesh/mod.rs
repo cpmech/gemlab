@@ -36,7 +36,6 @@ mod block;
 mod check;
 mod convert_2d;
 mod draw_cell;
-mod edges;
 mod enums;
 mod features;
 mod figure;
@@ -52,7 +51,6 @@ mod write_text_file;
 
 pub use algorithms::*;
 pub use block::*;
-pub use edges::*;
 pub use enums::*;
 pub use features::*;
 pub use figure::*;
