@@ -86,10 +86,11 @@ mod tests {
     #[test]
     fn test_connected_edges_path() {
         // Create test mesh with some edges (QUA8 elements)
+        // Note: Edges have 3 nodes each
         //
-        //  14---16---13---20---18    Node numbering shown
-        //   |         |         |     [#] indicates edge indices
-        //  17        15        19     Edges have 3 nodes each
+        //  14---16---13---20---18
+        //   |         |         |
+        //  17        15        19
         //   |         |         |
         //   3----6----2---12----9
         //   |         |         |
