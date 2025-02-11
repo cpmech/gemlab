@@ -36,6 +36,7 @@ mod block;
 mod check;
 mod convert_2d;
 mod draw_cell;
+mod edges;
 mod enums;
 mod features;
 mod figure;
