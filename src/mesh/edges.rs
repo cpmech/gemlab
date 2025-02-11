@@ -55,7 +55,7 @@ impl<'a> Edges<'a> {
                     if a == c || a == d || b == c || b == d {
                         if found {
                             // More than one connection means there's a branch
-                            return Err("found branching");
+                            return Err("found branching (or loop)");
                         }
                         current = i;
                         path.push(current);
@@ -137,29 +137,35 @@ mod tests {
 
     #[test]
     fn test_connected_edges_path_1() {
+        // allocate edges
         let all = generate_sample();
 
+        // test empty
         let empty = Edges { all: vec![] };
         assert_eq!(empty.connected_path().err(), Some("the edges list is empty"));
 
+        // test branching
         let branching = Edges {
             all: vec![&all[5], &all[6], &all[7], &all[8]],
         };
-        assert_eq!(branching.connected_path().err(), Some("found branching"));
+        assert_eq!(branching.connected_path().err(), Some("found branching (or loop)"));
 
+        // test disconnected
         let disconnected = Edges {
             all: vec![&all[3], &all[4], &all[10]],
         };
         assert_eq!(disconnected.connected_path().err(), Some("found disconnected edges"));
 
-        let bottom = Edges {
-            all: vec![&all[0], &all[1], &all[2]],
-        };
-        assert_eq!(bottom.connected_path().unwrap(), vec![0, 1, 2]);
-
+        // test loop
         let loop1 = Edges {
             all: vec![&all[5], &all[7], &all[9], &all[1]],
         };
-        assert_eq!(loop1.connected_path().unwrap(), vec![0, 1, 2, 3]);
+        assert_eq!(loop1.connected_path().err(), Some("found branching (or loop)"));
+
+        // follow path
+        let bottom = Edges {
+            all: vec![&all[2], &all[1], &all[0]],
+        };
+        assert_eq!(bottom.connected_path().unwrap(), vec![0, 1, 2]);
     }
 }
