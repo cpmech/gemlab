@@ -4,13 +4,21 @@ use super::Edges;
 use crate::StrError;
 
 impl<'a> Edges<'a> {
-    /// Returns indices of edges in connected order
+    /// Returns indices of edges in connected order, starting from index 0
+    ///
+    /// A connected path is a sequence of edges where:
+    /// * Each edge shares exactly one vertex with the next edge
+    /// * No edge connects to more than two other edges (no branches)
+    /// * All edges must form a single continuous path
     ///
     /// # Returns
     ///
-    /// * Returns a vector of indices into `self.all` representing a path through connected edges
-    /// * The path starts at index 0 and follows connected edges
-    /// * Returns `None` if the edges are not all connected or if there are branches
+    /// * `Ok(Vec<usize>)` - Vector of indices into `self.all` representing the connected path
+    /// * `Err(StrError)` - If the edges:
+    ///   * Form a branching path (an edge connects to more than two others)
+    ///   * Are disconnected (not all edges can be reached)
+    ///   * Form a loop
+    ///   * The list is empty
     ///
     /// # Examples
     ///
@@ -20,21 +28,49 @@ impl<'a> Edges<'a> {
     /// use gemlab::mesh::At;
     /// use gemlab::util::any_x;
     ///
+    /// // 1.0  3-----------2-----------5
+    /// //      |           |           |
+    /// //      |           |           |
+    /// //      |           |           |
+    /// //      |           |           |
+    /// // 0.0  0-----------1-----------4
+    /// //     0.0         1.0         2.0
     /// let mesh = Samples::two_qua4();
-    /// let features = Features::new(&mesh, false);
+    /// let feat = Features::new(&mesh, false);
     ///
-    /// // Get edges along bottom of mesh (y=0)
-    /// let edges = features.search_edges(At::Y(0.0), any_x).unwrap();
+    /// // Valid connected path along bottom edge (y=0)
+    /// let edges = feat.search_edges(At::Y(0.0), any_x).unwrap();
+    /// assert_eq!(edges.connected_path().unwrap(), vec![0, 1]);
     ///
-    /// // Get connected path
-    /// let path = edges.connected_path().unwrap();
-    /// assert_eq!(path, vec![0, 1]); // Indices into edges.all
+    /// // Disconnected edges will error
+    /// let edges = feat.search_many_edges(
+    ///     &[At::Y(0.0), At::Y(1.0)],
+    ///     any_x
+    /// ).unwrap();
+    /// assert!(edges.connected_path().is_err());
+    ///
+    /// // Branching edges will error
+    /// let edges = feat.search_many_edges(
+    ///     &[At::Y(0.0), At::X(0.0)],
+    ///     any_x
+    /// ).unwrap();
+    /// assert!(edges.connected_path().is_err());
     /// ```
     pub fn connected_path(&self) -> Result<Vec<usize>, StrError> {
+        // Algorithm:
+        // 1. Start with edge at index 0
+        // 2. Find the next unvisited edge that shares a vertex
+        // 3. Continue until all edges are visited or an error is found
+        // 4. Return error if:
+        //    * Multiple edges connect to current edge (branch/loop)
+        //    * Not all edges were reached (disconnected)
+
+        // Check if empty
         if self.all.is_empty() {
             return Err("the edges list is empty");
         }
 
+        // First edge
         let mut path = Vec::with_capacity(self.all.len());
         let mut visited = vec![false; self.all.len()];
         let mut current = 0;
@@ -136,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn test_connected_edges_path_1() {
+    fn test_connected_path_1() {
         // allocate edges
         let all = generate_sample();
 
