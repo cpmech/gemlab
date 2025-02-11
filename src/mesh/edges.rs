@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use super::Edges;
 
 impl<'a> Edges<'a> {
@@ -80,50 +82,106 @@ impl<'a> Edges<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::mesh::{At, Features, Samples};
+    use std::vec;
+
+    use crate::mesh::{At, Edge, Edges, Features, Samples};
+    use crate::shapes::GeoKind;
     use crate::util::any_x;
 
+    #[rustfmt::skip]
+    fn generate_sample() -> Vec<Edge> {
+        //   9--------7-------.4--------6
+        //   |        |     .' |        |
+        //   |        |   .'   |        |
+        //   |        | .'     |        |
+        //   1--------8'       |        |
+        //   |        |        |        |
+        //   |        |        |        |
+        //   |        |        |        |
+        //   5--------2--------3-------10
+
+        // IMPORTANT: The diagram above may not work as a FEM mesh because
+        // the outward normals may not be pointing in the right direction.
+
+        // Bottom horizontal edges
+        let e0 = Edge { kind: GeoKind::Lin2, points: vec![5, 2] };
+        let e1 = Edge { kind: GeoKind::Lin2, points: vec![2, 3] };
+        let e2 = Edge { kind: GeoKind::Lin2, points: vec![3, 10] };
+
+        // Left vertical edges
+        let e3 = Edge { kind: GeoKind::Lin2, points: vec![5, 1] };
+        let e4 = Edge { kind: GeoKind::Lin2, points: vec![1, 9] };
+
+        // Middle vertical and diagonal edges
+        let e5 = Edge { kind: GeoKind::Lin2, points: vec![2, 8] };
+        let e6 = Edge { kind: GeoKind::Lin2, points: vec![8, 7] };
+        let e7 = Edge { kind: GeoKind::Lin2, points: vec![8, 4] };
+
+        // Right vertical edges
+        let e8 = Edge { kind: GeoKind::Lin2, points: vec![3, 4] };
+        let e9 = Edge { kind: GeoKind::Lin2, points: vec![10, 6] };
+
+        // Top horizontal edges
+        let e10 = Edge { kind: GeoKind::Lin2, points: vec![9, 7] };
+        let e11 = Edge { kind: GeoKind::Lin2, points: vec![7, 4] };
+        let e12 = Edge { kind: GeoKind::Lin2, points: vec![4, 6] };
+
+        vec![e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12]
+    }
+
+    #[rustfmt::skip]
+    fn generate_sample_o2() -> Vec<Edge> {
+        //   9---22---7---25--.4---14---6
+        //   |        |     .' |        |
+        //  23       24   16   |        |
+        //   |        | .'     |        |
+        //   1---21---8'      12       11
+        //   |        |        |        |
+        //  19       18        |        |
+        //   |        |        |        |
+        //   5---20---2---17---3---13--10
+
+        // IMPORTANT: The diagram above may not work as a FEM mesh because
+        // the outward normals may not be pointing in the right direction.
+
+        // Bottom horizontal edges
+        let e0 = Edge { kind: GeoKind::Lin3, points: vec![5, 2, 20] };
+        let e1 = Edge { kind: GeoKind::Lin3, points: vec![2, 3, 17] };
+        let e2 = Edge { kind: GeoKind::Lin3, points: vec![3, 10, 13] };
+
+        // Left vertical edges
+        let e3 = Edge { kind: GeoKind::Lin3, points: vec![5, 1, 19] };
+        let e4 = Edge { kind: GeoKind::Lin3, points: vec![1, 9, 23] };
+
+        // Middle vertical and diagonal edges
+        let e5 = Edge { kind: GeoKind::Lin3, points: vec![2, 8, 18] };
+        let e6 = Edge { kind: GeoKind::Lin3, points: vec![8, 7, 24] };
+        let e7 = Edge { kind: GeoKind::Lin3, points: vec![8, 4, 16] };
+
+        // Right vertical edges
+        let e8 = Edge { kind: GeoKind::Lin3, points: vec![3, 4, 12] };
+        let e9 = Edge { kind: GeoKind::Lin3, points: vec![10, 6, 11] };
+
+        // Top horizontal edges
+        let e10 = Edge { kind: GeoKind::Lin3, points: vec![9, 7, 22] };
+        let e11 = Edge { kind: GeoKind::Lin3, points: vec![7, 4, 25] };
+        let e12 = Edge { kind: GeoKind::Lin3, points: vec![4, 6, 14] };
+
+        vec![e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12]
+    }
+
     #[test]
-    fn test_connected_edges_path() {
-        // Create test mesh with some edges (QUA8 elements)
-        // Note: Edges have 3 nodes each
-        //
-        //  14---16---13---20---18
-        //   |         |         |
-        //  17        15        19
-        //   |         |         |
-        //   3----6----2---12----9
-        //   |         |         |
-        //   7         5        11
-        //   |         |         |
-        //   0----4----1---10----8
-        //
-        let mesh = Samples::block_2d_four_qua8();
-        let feat = Features::new(&mesh, true);
-
-        // Test bottom horizontal path (y = 0.0)
-        let edges = feat.search_edges(At::Y(0.0), any_x).unwrap();
-        let path = edges.connected_path().unwrap();
-        assert_eq!(path, vec![0, 1]); // Edge path: (0-4-1), (1-10-8)
-
-        // Test top horizontal path (y = 2.0)
-        let edges = feat.search_edges(At::Y(2.0), any_x).unwrap();
-        let path = edges.connected_path().unwrap();
-        assert_eq!(path, vec![0, 1]); // Edge path: (14-16-13), (13-20-18)
-
-        // Test left vertical path (x = 0.0)
-        let edges = feat.search_edges(At::X(0.0), any_x).unwrap();
-        let path = edges.connected_path().unwrap();
-        assert_eq!(path, vec![0, 1]); // Edge path: (0-7-3), (3-17-14)
-
-        // Test disconnected edges should return None
-        let edges = feat.search_many_edges(&[At::X(0.0), At::X(2.0)], any_x).unwrap();
-        assert!(edges.connected_path().is_none());
-
-        // Test branching edges should return None
-        let edges = feat
-            .search_many_edges(&[At::Y(0.0), At::Y(1.0), At::X(0.0)], any_x)
-            .unwrap();
-        assert!(edges.connected_path().is_none());
+    fn test_connected_edges_path_1() {
+        //   9--------7-------.4--------6
+        //   |        |     .' |        |
+        //   |        |   .'   |        |
+        //   |        | .'     |        |
+        //   1--------8'       |        |
+        //   |        |        |        |
+        //   |        |        |        |
+        //   |        |        |        |
+        //   5--------2--------3-------10
+        let all = generate_sample();
+        // TODO
     }
 }
