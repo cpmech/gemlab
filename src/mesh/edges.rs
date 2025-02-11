@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use super::Edges;
 use crate::StrError;
 
@@ -119,8 +117,6 @@ impl<'a> Edges<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
-
     use crate::mesh::{At, Edge, Edges, Features, Samples};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
@@ -172,36 +168,110 @@ mod tests {
     }
 
     #[test]
-    fn test_connected_path_1() {
-        // allocate edges
-        let all = generate_sample();
-
-        // test empty
+    fn test_connected_path_empty() {
         let empty = Edges { all: vec![] };
         assert_eq!(empty.connected_path().err(), Some("the edges list is empty"));
+    }
 
-        // test branching
+    #[test]
+    fn test_connected_path_single_edge() {
+        let all = generate_sample();
+        let single = Edges { all: vec![&all[0]] };
+        assert_eq!(single.connected_path().unwrap(), vec![0]);
+    }
+
+    #[test]
+    fn test_connected_path_branching() {
+        let all = generate_sample();
+
+        // Test branching at node 8
         let branching = Edges {
             all: vec![&all[5], &all[6], &all[7], &all[8]],
         };
         assert_eq!(branching.connected_path().err(), Some("found branching (or loop)"));
 
-        // test disconnected
+        // Test branching at node 4
+        let branching_at_4 = Edges {
+            all: vec![&all[7], &all[9], &all[12], &all[13]],
+        };
+        assert_eq!(branching_at_4.connected_path().err(), Some("found branching (or loop)"));
+    }
+
+    #[test]
+    fn test_connected_path_disconnected() {
+        let all = generate_sample();
+
+        // Test completely disconnected edges
         let disconnected = Edges {
             all: vec![&all[3], &all[4], &all[10]],
         };
         assert_eq!(disconnected.connected_path().err(), Some("found disconnected edges"));
 
-        // test loop
-        let loop1 = Edges {
+        // Test partially connected edges
+        let partially_connected = Edges {
+            all: vec![&all[0], &all[1], &all[10], &all[11]],
+        };
+        assert_eq!(
+            partially_connected.connected_path().err(),
+            Some("found disconnected edges")
+        );
+    }
+
+    #[test]
+    fn test_connected_path_loops() {
+        let all = generate_sample();
+
+        // Test square loop
+        let square_loop = Edges {
             all: vec![&all[5], &all[7], &all[9], &all[1]],
         };
-        assert_eq!(loop1.connected_path().err(), Some("found branching (or loop)"));
+        assert_eq!(square_loop.connected_path().err(), Some("found branching (or loop)"));
 
-        // follow path
+        // Test triangle loop - edges connecting nodes 8-4, 4-7, and 7-8
+        let triangle_loop = Edges {
+            all: vec![&all[7], &all[12], &all[6]],
+        };
+        assert_eq!(triangle_loop.connected_path().err(), Some("found branching (or loop)"));
+    }
+
+    #[test]
+    fn test_connected_path_valid_paths() {
+        let all = generate_sample();
+
+        // Test bottom horizontal path
         let bottom = Edges {
-            all: vec![&all[2], &all[1], &all[0]],
+            all: vec![&all[0], &all[1], &all[2]],
         };
         assert_eq!(bottom.connected_path().unwrap(), vec![0, 1, 2]);
+
+        // Test left vertical path
+        let left = Edges {
+            all: vec![&all[3], &all[4]],
+        };
+        assert_eq!(left.connected_path().unwrap(), vec![0, 1]);
+
+        // Test diagonal path
+        let diagonal = Edges {
+            all: vec![&all[5], &all[7]],
+        };
+        assert_eq!(diagonal.connected_path().unwrap(), vec![0, 1]);
+    }
+
+    #[test]
+    fn test_connected_path_with_mesh() {
+        let mesh = Samples::block_2d_four_qua8();
+        let feat = Features::new(&mesh, true);
+
+        // Test bottom horizontal path (y = 0.0)
+        let edges = feat.search_edges(At::Y(0.0), any_x).unwrap();
+        assert_eq!(edges.connected_path().unwrap(), vec![0, 1]);
+
+        // Test left vertical path (x = 0.0)
+        let edges = feat.search_edges(At::X(0.0), any_x).unwrap();
+        assert_eq!(edges.connected_path().unwrap(), vec![0, 1]);
+
+        // Test disconnected edges should error
+        let edges = feat.search_many_edges(&[At::X(0.0), At::X(2.0)], any_x).unwrap();
+        assert!(edges.connected_path().is_err());
     }
 }
