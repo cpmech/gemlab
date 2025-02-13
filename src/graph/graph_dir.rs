@@ -53,11 +53,6 @@ pub struct GraphDir {
     /// Size: nedge
     weights: Vec<f64>,
 
-    /// Maps a node index to a list of edges sharing the node
-    ///
-    /// Size: nnode
-    shares: HashMap<usize, Vec<usize>>,
-
     /// Holds the distances (is the distance matrix)
     ///
     /// If the real coordinates of points are provided, the distance is the Euclidean distance
@@ -117,7 +112,6 @@ impl GraphDir {
         GraphDir {
             edges: NumMatrix::from(edges),
             weights: vec![1.0; nedge],
-            shares,
             dist: Matrix::new(nnode, nnode),
             next: NumMatrix::new(nnode, nnode),
             ready_path: false,
@@ -158,7 +152,7 @@ impl GraphDir {
 
     /// Returns the number of nodes
     pub fn get_nnode(&self) -> usize {
-        self.shares.len()
+        self.dist.nrow()
     }
 
     /// Computes all-pairs shortest paths using Floyd-Warshall algorithm
@@ -267,7 +261,7 @@ impl GraphDir {
     /// Nonetheless, it may be useful for debugging the initial matrices.
     pub fn calc_dist_and_next(&mut self) {
         // initialize 'dist' and 'next' matrices
-        let nnode = self.shares.len();
+        let nnode = self.dist.nrow();
         for i in 0..nnode {
             for j in 0..nnode {
                 if i == j {
@@ -671,14 +665,6 @@ mod tests {
 
         // check weights
         assert_eq!(&graph.weights, &[1.0, 1.0, 1.0, 1.0]);
-
-        // check shares
-        let mut entries: Vec<_> = graph.shares.iter().collect();
-        entries.sort_by(|a, b| a.0.cmp(&b.0));
-        assert_eq!(
-            format!("{:?}", entries),
-            "[(0, [0, 1]), (1, [0, 2]), (2, [2, 3]), (3, [1, 3])]"
-        );
 
         // check 'dist'
         assert_eq!(graph.dist.dims(), (4, 4));
