@@ -101,6 +101,7 @@ impl GraphDir {
     where
         T: AsArray2D<'a, usize>,
     {
+        // find number of nodes
         let (nedge, ncorner) = edges.size();
         if ncorner < 2 {
             return Err("edges must have at least two nodes");
@@ -112,6 +113,8 @@ impl GraphDir {
             nodes.insert(b);
         }
         let nnode = nodes.len();
+
+        // allocate graph
         Ok(GraphDir {
             edges: NumMatrix::from(edges),
             weights: vec![1.0; nedge],

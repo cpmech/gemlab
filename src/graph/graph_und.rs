@@ -1,5 +1,6 @@
 use crate::mesh::{Mesh, PointId};
 use crate::StrError;
+use russell_lab::AsArray2D;
 use std::collections::{HashSet, VecDeque};
 
 /// Defines an undirected graph structure
@@ -37,6 +38,40 @@ pub struct GraphUnd {
 }
 
 impl GraphUnd {
+    /// Allocates a new instance given a list of edges
+    ///
+    /// # Input
+    ///
+    /// * `check_connectivity` -- checks if the graph is connected
+    pub fn from_edges<'a, T>(edges: &'a T, check_connectivity: bool) -> Result<Self, StrError>
+    where
+        T: AsArray2D<'a, usize>,
+    {
+        // find number of nodes
+        let (nedge, ncorner) = edges.size();
+        if ncorner < 2 {
+            return Err("edges must have at least two nodes");
+        }
+        let mut nodes = HashSet::new();
+        for e in 0..nedge {
+            let (a, b) = (edges.at(e, 0), edges.at(e, 1));
+            nodes.insert(a);
+            nodes.insert(b);
+        }
+        let nnode = nodes.len();
+
+        // find the adjacency (sparse) matrix of nodes' connections
+        let mut adjacency_set = vec![HashSet::new(); nnode];
+        for e in 0..nedge {
+            let (a, b) = (edges.at(e, 0), edges.at(e, 1));
+            adjacency_set[a].insert(b);
+            adjacency_set[b].insert(a);
+        }
+
+        // allocate graph
+        GraphUnd::from_adjacency_set(&adjacency_set, check_connectivity)
+    }
+
     /// Allocates a new instance given a mesh
     ///
     /// # Input
@@ -44,8 +79,8 @@ impl GraphUnd {
     /// * `check_connectivity` -- checks if the graph is connected
     pub fn from_mesh(mesh: &Mesh, check_connectivity: bool) -> Result<Self, StrError> {
         // find the adjacency (sparse) matrix of nodes' connections
-        let npoint = mesh.points.len();
-        let mut adjacency_set = vec![HashSet::new(); npoint];
+        let nnode = mesh.points.len();
+        let mut adjacency_set = vec![HashSet::new(); nnode];
         for cell in &mesh.cells {
             for a in &cell.points {
                 for b in &cell.points {
@@ -57,9 +92,16 @@ impl GraphUnd {
             }
         }
 
+        // allocate graph
+        GraphUnd::from_adjacency_set(&adjacency_set, check_connectivity)
+    }
+
+    /// Allocates a new instance given an adjacency set
+    fn from_adjacency_set(adjacency_set: &Vec<HashSet<PointId>>, check_connectivity: bool) -> Result<Self, StrError> {
         // check the connectivity of the graph (all vertices must be explored)
+        let nnode = adjacency_set.len();
         let mut queue = VecDeque::new();
-        let mut explored = vec![false; npoint];
+        let mut explored = vec![false; nnode];
         if check_connectivity {
             explored[0] = true;
             queue.push_back(0);
@@ -81,7 +123,7 @@ impl GraphUnd {
         }
 
         // compute the list of degrees (number of connections of a vertex)
-        let mut degree = vec![0; npoint];
+        let mut degree = vec![0; nnode];
         let mut p_min_degree = 0;
         let mut p_max_degree = 0;
         let mut min_degree = usize::MAX;
@@ -114,7 +156,7 @@ impl GraphUnd {
             p_max_degree,
             queue,
             explored,
-            distance: vec![0; npoint],
+            distance: vec![0; nnode],
         })
     }
 
@@ -375,7 +417,7 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    fn graph_new_works_1() {
+    fn graph_from_mesh_works_1() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
         let graph = GraphUnd::from_mesh(&mesh, false).unwrap();
@@ -397,7 +439,7 @@ mod tests {
     }
 
     #[test]
-    fn graph_new_works_2() {
+    fn graph_from_mesh_works_2() {
         // 5------4------3
         // |      |      |
         // |      |      |
