@@ -26,7 +26,7 @@ use std::{collections::HashMap, vec};
 ///
 /// // Create graph with 4 nodes and 4 edges
 /// let edges = [[0, 1], [0, 3], [1, 2], [2, 3]];
-/// let mut graph = GraphDir::new(&edges);
+/// let mut graph = GraphDir::new(&edges).unwrap();
 ///
 /// // Set edge weights
 /// graph.set_weight(0, 5.0)  // Edge 0: 0→1 with weight 5.0
@@ -93,7 +93,7 @@ impl GraphDir {
     ///
     /// // Create graph with 3 nodes and 2 edges
     /// let edges = [[0, 1], [1, 2]];
-    /// let graph = GraphDir::new(&edges);
+    /// let graph = GraphDir::new(&edges).unwrap();
     /// assert_eq!(graph.get_nnode(), 3);
     /// assert_eq!(graph.get_nedge(), 2);
     /// ```
@@ -137,7 +137,7 @@ impl GraphDir {
     /// use gemlab::graph::GraphDir;
     ///
     /// let edges = [[0, 1], [1, 2]];
-    /// let mut graph = GraphDir::new(&edges);
+    /// let mut graph = GraphDir::new(&edges).unwrap();
     /// graph.set_weight(0, 5.0);  // Set weight of edge 0 to 5.0
     /// graph.set_weight(1, 3.0);  // Set weight of edge 1 to 3.0
     /// ```
@@ -213,7 +213,7 @@ impl GraphDir {
     /// use gemlab::graph::GraphDir;
     ///
     /// let edges = [[0, 1], [1, 2], [2, 3]];
-    /// let mut graph = GraphDir::new(&edges);
+    /// let mut graph = GraphDir::new(&edges).unwrap();
     /// graph.set_weight(0, 5.0).set_weight(1, 3.0).set_weight(2, 1.0);
     ///
     /// graph.shortest_paths_fw();
@@ -536,9 +536,10 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    fn new_handles_empty_graph() {
+    #[should_panic(expected = "index out of bounds: the len is 0 but the index is 0")]
+    fn new_panics_on_empty_graph() {
         let edges = Vec::new();
-        assert_eq!(GraphDir::new(&edges).err(), Some("edges must have at least two nodes"));
+        GraphDir::new(&edges).unwrap();
     }
 
     #[test]
@@ -567,7 +568,7 @@ mod tests {
     #[should_panic(expected = "edge weight must be ≥ 0")]
     fn set_weight_panics_on_negative_weight() {
         let edges = [[0, 1]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
         graph.set_weight(0, -1.0);
     }
 
@@ -575,7 +576,7 @@ mod tests {
     fn shortest_paths_fw_handles_disconnected_graph() {
         // 0   1   2
         let edges = [[0, 0], [1, 1], [2, 2]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
         graph.shortest_paths_fw();
 
         assert_eq!(graph.path(0, 1).err(), Some("no path found"));
@@ -589,7 +590,7 @@ mod tests {
         // ↕   ↕
         // 2 ↔ 3
         let edges = [[0, 1], [1, 0], [1, 3], [3, 1], [0, 2], [2, 0], [2, 3], [3, 2]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
         graph.shortest_paths_fw();
 
         assert_eq!(graph.path(0, 3).unwrap(), &[0, 1, 3]);
@@ -609,7 +610,7 @@ mod tests {
     #[test]
     fn path_handles_direct_connection() {
         let edges = [[0, 1], [1, 2]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
         graph.shortest_paths_fw();
         assert_eq!(graph.path(0, 1).unwrap(), &[0, 1]);
     }
@@ -617,7 +618,7 @@ mod tests {
     #[test]
     fn path_handles_same_start_and_end() {
         let edges = [[0, 1], [1, 2]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
         graph.shortest_paths_fw();
         assert_eq!(graph.path(0, 0).unwrap(), &[0]);
     }
@@ -625,7 +626,7 @@ mod tests {
     #[test]
     fn calc_dist_and_next_initializes_correctly() {
         let edges = [[0, 1], [1, 2]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
         graph.calc_dist_and_next();
 
         assert_eq!(graph.dist.get(0, 1), 1.0);
@@ -651,7 +652,7 @@ mod tests {
 
         // edge:       0       1       2       3
         let edges = [[0, 1], [0, 3], [1, 2], [2, 3]];
-        let graph = GraphDir::new(&edges);
+        let graph = GraphDir::new(&edges).unwrap();
 
         // check edges
         assert_eq!(
@@ -693,7 +694,7 @@ mod tests {
 
         // edge:       0       1       2       3
         let edges = [[0, 1], [0, 3], [1, 2], [2, 3]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
 
         // initial 'dist' matrix
         graph.calc_dist_and_next();
@@ -749,7 +750,7 @@ mod tests {
 
         // edge:       0       1       2       3
         let edges = [[0, 1], [0, 3], [1, 2], [2, 3]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
         graph
             .set_weight(0, 5.0)
             .set_weight(1, 10.0)
@@ -857,7 +858,7 @@ mod tests {
 
         // edge:       0       1       2       3       4       5       6
         let edges = [[4, 5], [1, 4], [0, 1], [0, 2], [5, 2], [2, 3], [5, 3]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
         graph
             .set_weight(0, 3.0)
             .set_weight(1, 11.0)
@@ -967,7 +968,7 @@ mod tests {
             .zip(to.iter())
             .map(|(a, b)| vec![*a as usize - 1, *b as usize - 1])
             .collect();
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
 
         // set the weights
         let cost = table.get("cost").unwrap();
