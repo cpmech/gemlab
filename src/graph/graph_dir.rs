@@ -3,6 +3,7 @@ use plotpy::{Canvas, Plot, Text};
 use russell_lab::AsArray2D;
 use russell_lab::{Matrix, NumMatrix};
 use std::cmp;
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::{collections::HashMap, vec};
 
@@ -100,15 +101,15 @@ impl GraphDir {
     where
         T: AsArray2D<'a, usize>,
     {
-        let mut shares = HashMap::new();
+        let mut nodes = HashSet::new();
         let (nedge, ncorner) = edges.size();
         assert!(ncorner >= 2, "edges must have at least two nodes");
         for e in 0..nedge {
             let (a, b) = (edges.at(e, 0), edges.at(e, 1));
-            shares.entry(a).or_insert(Vec::new()).push(e);
-            shares.entry(b).or_insert(Vec::new()).push(e);
+            nodes.insert(a);
+            nodes.insert(b);
         }
-        let nnode = shares.len();
+        let nnode = nodes.len();
         GraphDir {
             edges: NumMatrix::from(edges),
             weights: vec![1.0; nedge],
