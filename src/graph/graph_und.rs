@@ -10,30 +10,40 @@ pub struct GraphUnd {
     /// Holds the adjacency (sparse) matrix (point connections)
     ///
     /// Note: each row in this matrix is sorted in ascending order of degree, followed by id
+    ///
+    /// (nnode x variable nnode)
     pub adjacency: Vec<Vec<PointId>>,
 
     /// Holds all point degrees (the number of connections of a vertex)
+    ///
+    /// (nnode)
     pub degree: Vec<usize>,
 
-    /// Holds the id of the point with the minimum degree
+    /// Holds the id of the point with the minimum degree (the number of connections of a vertex)
     pub p_min_degree: usize,
 
-    /// Holds the id of the point with the maximum degree
+    /// Holds the id of the point with the maximum degree (the number of connections of a vertex)
     pub p_max_degree: usize,
 
     /// Defines an auxiliary queue for BFS (breadth-first-search) runs
     ///
     /// Note: must be cleared before each use.
+    ///
+    /// (nnode)
     queue: VecDeque<PointId>,
 
     /// Holds the auxiliary list of bool indicating that a vertex has been explored
     ///
     /// Note: must be cleared before each use.
+    ///
+    /// (nnode)
     explored: Vec<bool>,
 
     /// Holds the distance from the root to each point
     ///
     /// Note: must be cleared before each use.
+    ///
+    /// (nnode)
     distance: Vec<usize>,
 }
 
@@ -100,7 +110,7 @@ impl GraphUnd {
     fn from_adjacency_set(adjacency_set: &Vec<HashSet<PointId>>, check_connectivity: bool) -> Result<Self, StrError> {
         // check the connectivity of the graph (all vertices must be explored)
         let nnode = adjacency_set.len();
-        let mut queue = VecDeque::new();
+        let mut queue = VecDeque::with_capacity(nnode);
         let mut explored = vec![false; nnode];
         if check_connectivity {
             explored[0] = true;
@@ -415,6 +425,33 @@ mod tests {
     use russell_lab::NumMatrix;
 
     const SAVE_FIGURE: bool = false;
+
+    #[test]
+    fn graph_from_edges_works_1() {
+        //  0 ––––––––––– 3
+        //  │      1      │
+        //  │             │
+        //  │ 0         3 │
+        //  │             │
+        //  │      2      |
+        //  1 ––––––––––– 2
+
+        // edge:       0       1       2       3
+        let edges = [[0, 1], [0, 3], [1, 2], [2, 3]];
+        let graph = GraphUnd::from_edges(&edges, true).unwrap();
+
+        // for (i, row) in graph.adjacency.iter().enumerate() { println!("{}: {:?}", i, row); }
+
+        assert_eq!(graph.adjacency[0], &[1, 3]); // sorted by id
+        assert_eq!(graph.adjacency[1], &[0, 2]); // sorted by id
+        assert_eq!(graph.adjacency[2], &[1, 3]); // sorted by id
+        assert_eq!(graph.adjacency[3], &[0, 2]); // sorted by id
+
+        //                         0  1  2  3 (point)
+        assert_eq!(graph.degree, &[2, 2, 2, 2]);
+        assert_eq!(graph.p_min_degree, 0);
+        assert_eq!(graph.p_max_degree, 0);
+    }
 
     #[test]
     fn graph_from_mesh_works_1() {
