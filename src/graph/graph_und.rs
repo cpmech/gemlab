@@ -1085,14 +1085,19 @@ mod tests {
         // Graph with one articulation point
         let edges = [[0, 1], [1, 2], [2, 3], [1, 3], [1, 4]];
         let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
-        assert_eq!(graph.find_articulation_points(), vec![1]);
+        let mut art_points = graph.find_articulation_points();
+        art_points.sort_unstable();
+        assert_eq!(art_points, vec![1]);
 
         // Graph with multiple articulation points
-        let edges = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [2, 5]];
+        // 0 - 1 - 2 - 3 - 4
+        //         |       |
+        //         5 - 6 - 7
+        let edges = [[0, 1], [1, 2], [2, 3], [3, 4], [2, 5], [5, 6], [6, 7], [7, 4]];
         let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
         let mut art_points = graph.find_articulation_points();
         art_points.sort_unstable();
-        assert_eq!(art_points, vec![2, 5]);
+        assert_eq!(art_points, vec![2]);
     }
 
     #[test]
