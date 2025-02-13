@@ -97,26 +97,28 @@ impl GraphDir {
     /// assert_eq!(graph.get_nnode(), 3);
     /// assert_eq!(graph.get_nedge(), 2);
     /// ```
-    pub fn new<'a, T>(edges: &'a T) -> Self
+    pub fn new<'a, T>(edges: &'a T) -> Result<Self, StrError>
     where
         T: AsArray2D<'a, usize>,
     {
-        let mut nodes = HashSet::new();
         let (nedge, ncorner) = edges.size();
-        assert!(ncorner >= 2, "edges must have at least two nodes");
+        if ncorner < 2 {
+            return Err("edges must have at least two nodes");
+        }
+        let mut nodes = HashSet::new();
         for e in 0..nedge {
             let (a, b) = (edges.at(e, 0), edges.at(e, 1));
             nodes.insert(a);
             nodes.insert(b);
         }
         let nnode = nodes.len();
-        GraphDir {
+        Ok(GraphDir {
             edges: NumMatrix::from(edges),
             weights: vec![1.0; nedge],
             dist: Matrix::new(nnode, nnode),
             next: NumMatrix::new(nnode, nnode),
             ready_path: false,
-        }
+        })
     }
 
     /// Sets the weight of an edge
@@ -534,23 +536,21 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    #[should_panic(expected = "index out of bounds: the len is 0 but the index is 0")]
-    fn new_panics_on_empty_graph() {
+    fn new_handles_empty_graph() {
         let edges = Vec::new();
-        GraphDir::new(&edges);
+        assert_eq!(GraphDir::new(&edges).err(), Some("edges must have at least two nodes"));
     }
 
     #[test]
-    #[should_panic(expected = "edges must have at least two nodes")]
-    fn new_panics_on_missing_edge_nodes() {
+    fn new_handles_missing_edge_nodes() {
         let edges = [[0]];
-        GraphDir::new(&edges);
+        assert_eq!(GraphDir::new(&edges).err(), Some("edges must have at least two nodes"));
     }
 
     #[test]
     fn new_handles_single_node() {
         let edges = [[0, 0]];
-        let graph = GraphDir::new(&edges);
+        let graph = GraphDir::new(&edges).unwrap();
         assert_eq!(graph.get_nnode(), 1);
         assert_eq!(graph.get_nedge(), 1);
     }
@@ -558,7 +558,7 @@ mod tests {
     #[test]
     fn set_weight_handles_zero_weight() {
         let edges = [[0, 1]];
-        let mut graph = GraphDir::new(&edges);
+        let mut graph = GraphDir::new(&edges).unwrap();
         graph.set_weight(0, 0.0);
         assert_eq!(graph.weights[0], 0.0);
     }
@@ -599,7 +599,7 @@ mod tests {
     #[test]
     fn path_captures_missing_shortest_paths_calculation() {
         let edges = [[0, 1], [1, 2]];
-        let graph = GraphDir::new(&edges);
+        let graph = GraphDir::new(&edges).unwrap();
         assert_eq!(
             graph.path(0, 1).err(),
             Some("a path finding algorithm (e.g., shortest_paths_fw) must be called first")
