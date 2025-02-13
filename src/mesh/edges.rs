@@ -4,19 +4,25 @@ use std::collections::HashMap;
 impl<'a> Edges<'a> {
     /// Finds a sequence of edges by following connected points.
     ///
-    /// Returns a list of connected edges. The start point is found such that it has only one edge connected
-    /// to it. If no such point is found (e.g., in a loop), the point with the **lowest number** among all
-    /// points is selected as the first point. If there are multiple extremities (e.g. in the case of branching),
-    /// the point with the **lowest number** among all extremities is selected as the first point.
+    /// Returns `(edge_indices, points)` where:
+    ///
+    /// * `edge_indices` -- is a list of indices of edges in `self.all` that form a path.
+    /// * `points` -- is a list of pairs of points `(a, b)` where `a` and `b` are the start and end points of
+    ///   a **directed** edge in the path.
+    ///
+    /// The start point is found such that it has only one edge connected to it. If no such point is found
+    /// (e.g., in a loop), the point with the **lowest number** among all points is selected as the first point.
+    /// If there are multiple extremities (e.g. in the case of branching), the point with the **lowest number**
+    /// among all extremities is selected as the first point.
     ///
     /// Ideally, this function would find the longest path. However, the longest path problem is NP-hard!
     /// Therefore, we use a simple algorithm that finds **any path**. If the path is simply connected,
     /// i.e., without branching or disconnected edges, the path will be the longest path (obviously, because
     /// there is only one path).
-    pub fn any_path(&self) -> Vec<usize> {
+    pub fn any_path(&self) -> (Vec<usize>, Vec<(PointId, PointId)>) {
         // check if the list of edges is empty
         if self.all.is_empty() {
-            return Vec::new();
+            return (Vec::new(), Vec::new());
         }
 
         // maps points to edges (indices in self.all)
@@ -67,29 +73,34 @@ impl<'a> Edges<'a> {
 
         // select current edge and point
         let mut edge = map.get(&endpoint).unwrap()[0];
-        let mut point = next_point(endpoint, edge);
+        let mut b = next_point(endpoint, edge);
 
         // define the array with the indices of edges along the path
         let mut path = Vec::with_capacity(self.all.len());
         path.push(edge);
 
+        // define the array with the pairs of points along the path
+        let mut a = endpoint;
+        let mut points = vec![(a, b)];
+
         // follow path
         for _ in 0..self.all.len() {
-            let edges = next_edges(point, edge);
+            let edges = next_edges(b, edge);
             if edges.len() == 0 {
                 // no more edges to follow
                 break;
             }
             edge = *edges[0];
-            point = next_point(point, edge);
-            if point == endpoint {
+            a = b;
+            b = next_point(b, edge);
+            points.push((a, b));
+            path.push(edge);
+            if b == endpoint {
                 // loop detected
-                path.push(edge);
                 break;
             }
-            path.push(edge);
         }
-        path
+        (path, points)
     }
 }
 
@@ -153,7 +164,7 @@ mod tests {
 
         // Empty list of edges
         let empty = Edges { all: vec![] };
-        assert_eq!(empty.any_path(), &[] as &[usize]);
+        assert_eq!(empty.any_path(), (Vec::new(), Vec::new()));
 
         // Branching
         // The selected endpoint is 1 on edge 8 because it is the lowest among [1,2,4,7]
@@ -162,7 +173,7 @@ mod tests {
         let branching = Edges {
             all: vec![&all[5], &all[7], &all[6], &all[8]],
         };
-        assert_eq!(branching.any_path(), &[/*8*/ 3, /*5*/ 0]);
+        assert_eq!(branching.any_path(), (vec![/*8*/ 3, /*5*/ 0], vec![(1, 8), (8, 2)]));
 
         // Loop 1
         // The selected endpoint is 2 on edge 5 because it is the lowest among all points and there aren't extremities
@@ -170,7 +181,13 @@ mod tests {
         let loop1 = Edges {
             all: vec![&all[5], &all[9], &all[1], &all[7]], // 5 come first => clockwise loop
         };
-        assert_eq!(loop1.any_path(), &[/*5*/ 0, /*7*/ 3, /*9*/ 1, /*1*/ 2]);
+        assert_eq!(
+            loop1.any_path(),
+            (
+                vec![/*5*/ 0, /*7*/ 3, /*9*/ 1, /*1*/ 2],
+                vec![(2, 8), (8, 4), (4, 3), (3, 2)]
+            )
+        );
 
         // Loop 2
         // The selected endpoint is 2 on edge 1 because it is the lowest among all points and there aren't extremities
@@ -178,7 +195,13 @@ mod tests {
         let loop2 = Edges {
             all: vec![&all[7], &all[9], &all[1], &all[5]], // 7 come first => counter-clockwise loop
         };
-        assert_eq!(loop2.any_path(), &[/*1*/ 2, /*9*/ 1, /*7*/ 0, /*5*/ 3]);
+        assert_eq!(
+            loop2.any_path(),
+            (
+                vec![/*1*/ 2, /*9*/ 1, /*7*/ 0, /*5*/ 3],
+                vec![(2, 3), (3, 4), (4, 8), (8, 2)]
+            )
+        );
 
         // Disconnected
         // The selected endpoint is 5 on edge 3 because it is the lowest among [5,6,9,10]
@@ -186,7 +209,7 @@ mod tests {
         let disconnected = Edges {
             all: vec![&all[10], &all[4], &all[3]],
         };
-        assert_eq!(disconnected.any_path(), &[/*3*/ 2, /*4*/ 1]);
+        assert_eq!(disconnected.any_path(), (vec![/*3*/ 2, /*4*/ 1], vec![(5, 1), (1, 9)]));
 
         // Bottom edges
         // The selected endpoint is 5 on edge 0 because it is the lowest among [5,10]
@@ -194,6 +217,9 @@ mod tests {
         let bottom = Edges {
             all: vec![&all[2], &all[0], &all[1]],
         };
-        assert_eq!(bottom.any_path(), &[/*0*/ 1, /*1*/ 2, /*2*/ 0]);
+        assert_eq!(
+            bottom.any_path(),
+            (vec![/*0*/ 1, /*1*/ 2, /*2*/ 0], vec![(5, 2), (2, 3), (3, 10)])
+        );
     }
 }
