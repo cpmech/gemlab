@@ -427,18 +427,23 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    fn graph_from_edges_works_1() {
-        //  0 ––––––––––– 3
-        //  │      1      │
-        //  │             │
-        //  │ 0         3 │
-        //  │             │
-        //  │      2      |
-        //  1 ––––––––––– 2
+    fn graph_from_edges_works_4nodes() {
+        // 0 ––––––––––– 3
+        // │      1      │
+        // │             │
+        // │ 0         3 │
+        // │             │
+        // │      2      |
+        // 1 ––––––––––– 2
 
         // edge:       0       1       2       3
         let edges = [[0, 1], [0, 3], [1, 2], [2, 3]];
         let graph = GraphUnd::from_edges(&edges, true).unwrap();
+
+        // node:                   0  1  2  3
+        assert_eq!(graph.degree, &[2, 2, 2, 2]);
+        assert_eq!(graph.p_min_degree, 0);
+        assert_eq!(graph.p_max_degree, 0);
 
         // for (i, row) in graph.adjacency.iter().enumerate() { println!("{}: {:?}", i, row); }
 
@@ -446,11 +451,37 @@ mod tests {
         assert_eq!(graph.adjacency[1], &[0, 2]); // sorted by id
         assert_eq!(graph.adjacency[2], &[1, 3]); // sorted by id
         assert_eq!(graph.adjacency[3], &[0, 2]); // sorted by id
+    }
 
-        //                         0  1  2  3 (point)
-        assert_eq!(graph.degree, &[2, 2, 2, 2]);
+    #[test]
+    fn graph_from_edges_works_6nodes() {
+        // 4 ––––––––––––––– 5 .
+        // │        0        │  `. 6
+        // │                 │    `.
+        // │                 │      `.
+        // │ 1             4 │        3
+        // │                 │     ,'
+        // │                 │   ,'
+        // │    2       3    │ ,'  5
+        // 1 –––––– 0 –––––– 2
+
+        // edge:       0       1       2       3       4       5       6
+        let edges = [[4, 5], [1, 4], [0, 1], [0, 2], [5, 2], [2, 3], [5, 3]];
+        let graph = GraphUnd::from_edges(&edges, true).unwrap();
+
+        // node:                   0  1  2  3  4  5
+        assert_eq!(graph.degree, &[2, 2, 3, 2, 2, 3]);
         assert_eq!(graph.p_min_degree, 0);
-        assert_eq!(graph.p_max_degree, 0);
+        assert_eq!(graph.p_max_degree, 2);
+
+        // for (i, row) in graph.adjacency.iter().enumerate() { println!("{}: {:?}", i, row); }
+
+        assert_eq!(graph.adjacency[0], &[1, 2]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[1], &[0, 4]); // sorted by id
+        assert_eq!(graph.adjacency[2], &[0, 3, 5]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[3], &[2, 5]); // sorted by id
+        assert_eq!(graph.adjacency[4], &[1, 5]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[5], &[3, 4, 2]); // sorted by degree, then id
     }
 
     #[test]
