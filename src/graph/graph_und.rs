@@ -552,6 +552,133 @@ impl GraphUnd {
         }
         edges
     }
+
+    /// Returns the density of the graph
+    ///
+    /// The density is defined as: (2 * |E|) / (|V| * (|V| - 1))
+    /// where |E| is the number of edges and |V| is the number of vertices
+    pub fn density(&self) -> f64 {
+        let nv = self.get_nnode() as f64;
+        if nv <= 1.0 {
+            return 0.0;
+        }
+        (2.0 * self.get_nedge() as f64) / (nv * (nv - 1.0))
+    }
+
+    /// Finds all connected components in the graph
+    ///
+    /// Returns a vector where each element is a vector of node indices belonging to that component
+    pub fn connected_components(&mut self) -> Vec<Vec<usize>> {
+        let nnode = self.get_nnode();
+        let mut components = Vec::new();
+        let mut unvisited: HashSet<usize> = (0..nnode).collect();
+
+        while !unvisited.is_empty() {
+            let start = *unvisited.iter().next().unwrap();
+            let mut component = Vec::new();
+            
+            // Clear auxiliary structures
+            self.queue.clear();
+            for i in 0..nnode {
+                self.explored[i] = false;
+            }
+
+            // Run BFS from the start node
+            self.explored[start] = true;
+            self.queue.push_back(start);
+            component.push(start);
+            unvisited.remove(&start);
+
+            while let Some(node) = self.queue.pop_front() {
+                for &neighbor in &self.adjacency[node] {
+                    if !self.explored[neighbor] {
+                        self.explored[neighbor] = true;
+                        self.queue.push_back(neighbor);
+                        component.push(neighbor);
+                        unvisited.remove(&neighbor);
+                    }
+                }
+            }
+
+            components.push(component);
+        }
+
+        components
+    }
+
+    /// Checks if the graph is connected
+    ///
+    /// A graph is connected if there is a path between every pair of vertices
+    pub fn is_connected(&mut self) -> bool {
+        self.connected_components().len() == 1
+    }
+
+    /// Finds articulation points (cut vertices) in the graph
+    ///
+    /// An articulation point is a vertex whose removal increases the number of connected components
+    pub fn find_articulation_points(&self) -> Vec<usize> {
+        let nnode = self.get_nnode();
+        if nnode <= 1 {
+            return Vec::new();
+        }
+
+        let mut discovery = vec![0; nnode];
+        let mut low = vec![0; nnode];
+        let mut parent = vec![usize::MAX; nnode];
+        let mut visited = vec![false; nnode];
+        let mut is_articulation = vec![false; nnode];
+        let mut time = 0;
+
+        // DFS function
+        fn dfs(u: usize, 
+              discovery: &mut Vec<usize>,
+              low: &mut Vec<usize>,
+              parent: &mut Vec<usize>,
+              visited: &mut Vec<bool>,
+              is_articulation: &mut Vec<bool>,
+              time: &mut usize,
+              graph: &GraphUnd) {
+            visited[u] = true;
+            *time += 1;
+            discovery[u] = *time;
+            low[u] = *time;
+            let mut children = 0;
+
+            for &v in &graph.adjacency[u] {
+                if !visited[v] {
+                    children += 1;
+                    parent[v] = u;
+                    dfs(v, discovery, low, parent, visited, is_articulation, time, graph);
+
+                    low[u] = low[u].min(low[v]);
+
+                    if parent[u] == usize::MAX && children > 1 {
+                        is_articulation[u] = true;
+                    }
+                    if parent[u] != usize::MAX && low[v] >= discovery[u] {
+                        is_articulation[u] = true;
+                    }
+                } else if v != parent[u] {
+                    low[u] = low[u].min(discovery[v]);
+                }
+            }
+        }
+
+        // Run DFS from each unvisited vertex
+        for i in 0..nnode {
+            if !visited[i] {
+                dfs(i, &mut discovery, &mut low, &mut parent, &mut visited, 
+                    &mut is_articulation, &mut time, self);
+            }
+        }
+
+        // Collect articulation points
+        is_articulation.iter()
+            .enumerate()
+            .filter(|(_, &is_art)| is_art)
+            .map(|(i, _)| i)
+            .collect()
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
