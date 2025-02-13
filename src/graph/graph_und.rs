@@ -652,24 +652,27 @@ impl GraphUnd {
 
                     low[u] = low[u].min(low[v]);
 
+                    // Root needs at least two children to be an articulation point
                     if parent[u] == usize::MAX && children > 1 {
                         is_articulation[u] = true;
                     }
+                    // Non-root vertex is an articulation point if it has a child whose
+                    // lowest reachable vertex (through back edges) is not above this vertex
                     if parent[u] != usize::MAX && low[v] >= discovery[u] {
                         is_articulation[u] = true;
                     }
                 } else if v != parent[u] {
+                    // Update low value for parent
                     low[u] = low[u].min(discovery[v]);
                 }
             }
         }
 
-        // Run DFS from each unvisited vertex
-        for i in 0..nnode {
-            if !visited[i] {
-                dfs(i, &mut discovery, &mut low, &mut parent, &mut visited, 
-                    &mut is_articulation, &mut time, self);
-            }
+        // Run DFS from vertex 0 only - since we want to find articulation points
+        // in the connected component, we don't need to start from every vertex
+        if nnode > 0 {
+            dfs(0, &mut discovery, &mut low, &mut parent, &mut visited, 
+                &mut is_articulation, &mut time, self);
         }
 
         // Collect articulation points
