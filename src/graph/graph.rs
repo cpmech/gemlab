@@ -2,8 +2,10 @@ use crate::mesh::{Mesh, PointId};
 use crate::StrError;
 use std::collections::{HashSet, VecDeque};
 
-/// Defines a graph structure to assist in renumbering a mesh
-pub struct Graph {
+/// Defines an undirected graph structure
+///
+/// Potential uses include renumbering a mesh to reduce the associated bandwidth.
+pub struct GraphUnd {
     /// Holds the adjacency (sparse) matrix (point connections)
     ///
     /// Note: each row in this matrix is sorted in ascending order of degree, followed by id
@@ -34,7 +36,7 @@ pub struct Graph {
     distance: Vec<usize>,
 }
 
-impl Graph {
+impl GraphUnd {
     /// Allocates a new instance
     ///
     /// # Input
@@ -105,7 +107,7 @@ impl Graph {
         }
 
         // results
-        Ok(Graph {
+        Ok(GraphUnd {
             adjacency,
             degree,
             p_min_degree,
@@ -354,9 +356,9 @@ impl Graph {
     ///
     /// * `check_connectivity` -- checks if the associated graph is connected
     pub fn renumber_mesh(mesh: &mut Mesh, check_connectivity: bool) -> Result<(), StrError> {
-        let mut graph = Graph::new(&mesh, check_connectivity)?;
+        let mut graph = GraphUnd::new(&mesh, check_connectivity)?;
         let ordering = graph.cuthill_mckee(None)?;
-        let old_to_new = Graph::get_old_to_new_map(&ordering);
+        let old_to_new = GraphUnd::get_old_to_new_map(&ordering);
         mesh.renumber_points(&old_to_new)
     }
 }
@@ -365,7 +367,7 @@ impl Graph {
 
 #[cfg(test)]
 mod tests {
-    use super::Graph;
+    use super::GraphUnd;
     use crate::mesh::{Block, Cell, Figure, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_lab::NumMatrix;
@@ -376,7 +378,7 @@ mod tests {
     fn graph_new_works_1() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
-        let graph = Graph::new(&mesh, false).unwrap();
+        let graph = GraphUnd::new(&mesh, false).unwrap();
 
         //                         0  1  2  3  4  5  6  7 (point)
         assert_eq!(graph.degree, &[1, 3, 2, 2, 3, 2, 1, 2]);
@@ -416,7 +418,7 @@ mod tests {
                 Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![1, 2, 3, 4] },
             ],
         };
-        let graph = Graph::new(&mesh, false).unwrap();
+        let graph = GraphUnd::new(&mesh, false).unwrap();
 
         //                         0  1  2  3  4  5 (point)
         assert_eq!(graph.degree, &[3, 5, 3, 3, 5, 3]);
@@ -456,7 +458,7 @@ mod tests {
     fn cuthill_mckee_works() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
-        let mut graph = Graph::new(&mesh, false).unwrap();
+        let mut graph = GraphUnd::new(&mesh, false).unwrap();
         let ordering = graph.cuthill_mckee(Some(0)).unwrap();
         // println!("ordering = {:?}", ordering);
         assert_eq!(ordering, &[7, 5, 6, 1, 3, 2, 4, 0]);
@@ -466,7 +468,7 @@ mod tests {
     fn distance_works() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
-        let mut graph = Graph::new(&mesh, false).unwrap();
+        let mut graph = GraphUnd::new(&mesh, false).unwrap();
 
         let max_distance = graph.calc_distance(0);
         assert_eq!(graph.distance, &[0, 3, 2, 2, 1, 4, 3, 4]);
@@ -489,7 +491,7 @@ mod tests {
     fn pseudo_peripheral_works() {
         // graph_8_edges
         let mesh = Samples::graph_8_edges();
-        let mut graph = Graph::new(&mesh, false).unwrap();
+        let mut graph = GraphUnd::new(&mesh, false).unwrap();
         assert_eq!(graph.pseudo_peripheral(None), 6);
         assert_eq!(graph.pseudo_peripheral(Some(4)), 6);
         assert_eq!(graph.pseudo_peripheral(Some(7)), 6);
@@ -497,7 +499,7 @@ mod tests {
 
         // graph_12_edges
         let mesh = Samples::graph_12_edges();
-        let mut graph = Graph::new(&mesh, false).unwrap();
+        let mut graph = GraphUnd::new(&mesh, false).unwrap();
         assert_eq!(graph.pseudo_peripheral(Some(0)), 8);
         assert_eq!(graph.pseudo_peripheral(Some(4)), 2);
         assert_eq!(graph.pseudo_peripheral(None), 3);
@@ -546,7 +548,7 @@ mod tests {
         let npoint = mesh.points.len();
 
         // original graph
-        let mut graph = Graph::new(&mesh, false).unwrap();
+        let mut graph = GraphUnd::new(&mesh, false).unwrap();
         let band = graph.calc_bandwidth();
         graph.print_non_zero_pattern();
         println!("band (original) = {}", band);
@@ -557,7 +559,7 @@ mod tests {
 
         // renumber mesh nodes
         let mut mesh_cm_8 = mesh.clone();
-        let old_to_new = Graph::get_old_to_new_map(&ordering);
+        let old_to_new = GraphUnd::get_old_to_new_map(&ordering);
         mesh_cm_8.renumber_points(&old_to_new).unwrap();
 
         // generate figure with levels/distance and mesh
@@ -572,18 +574,18 @@ mod tests {
         }
 
         // print pattern with updated mesh (cm_8)
-        let graph_cm_8 = Graph::new(&mesh_cm_8, false).unwrap();
+        let graph_cm_8 = GraphUnd::new(&mesh_cm_8, false).unwrap();
         let band = graph_cm_8.calc_bandwidth();
         graph_cm_8.print_non_zero_pattern();
         println!("band (cm_8) = {}", band);
         assert_eq!(band, 9);
 
         // CM algo with pseudo-peripheral root
-        let mut graph = Graph::new(&mesh, false).unwrap();
+        let mut graph = GraphUnd::new(&mesh, false).unwrap();
 
         // renumber mesh nodes (cuthill-mckee + pseudo-peripheral)
         let mut mesh_cm_pp = mesh.clone();
-        Graph::renumber_mesh(&mut mesh_cm_pp, false).unwrap();
+        GraphUnd::renumber_mesh(&mut mesh_cm_pp, false).unwrap();
 
         // generate figure with levels/distance and mesh
         if SAVE_FIGURE {
@@ -598,7 +600,7 @@ mod tests {
         }
 
         // print pattern with updated mesh (cm_pp)
-        let graph_cm_pp = Graph::new(&mesh_cm_pp, false).unwrap();
+        let graph_cm_pp = GraphUnd::new(&mesh_cm_pp, false).unwrap();
         let band = graph_cm_pp.calc_bandwidth();
         graph_cm_pp.print_non_zero_pattern();
         println!("band (cm_pp) = {}", band);

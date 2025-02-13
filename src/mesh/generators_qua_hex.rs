@@ -1,5 +1,5 @@
 use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Mesh};
-use crate::graph::Graph;
+use crate::graph::GraphUnd;
 use crate::shapes::GeoKind;
 use crate::StrError;
 use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
@@ -67,7 +67,7 @@ impl Structured {
         }))?;
         let mut mesh = block.subdivide(target)?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -139,7 +139,7 @@ impl Structured {
         }))?;
         let mut mesh = block.subdivide(target)?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -191,7 +191,7 @@ impl Structured {
         let mesh_3 = block_3.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -292,7 +292,7 @@ impl Structured {
         let mesh_3 = block_3.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -384,7 +384,7 @@ impl Structured {
         let mesh_3 = block_3.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -526,7 +526,7 @@ impl Structured {
         let mesh_3 = block_3.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -652,7 +652,7 @@ impl Structured {
         let mesh_4 = block_4.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -831,7 +831,7 @@ impl Structured {
         let mesh_4 = block_4.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -947,7 +947,7 @@ impl Structured {
         }
         let mut mesh = join_meshes(&meshes.iter().collect::<Vec<_>>())?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -959,7 +959,7 @@ impl Structured {
 mod tests {
     use super::Structured;
     use crate::geometry::point_point_distance;
-    use crate::graph::Graph;
+    use crate::graph::GraphUnd;
     use crate::mesh::{Figure, Mesh};
     use crate::shapes::GeoKind;
     use russell_lab::{approx_eq, array_approx_eq};
@@ -968,12 +968,12 @@ mod tests {
     const MAX_NPOINT_PRINT: usize = 200;
 
     fn print_bandwidth(mesh: &mut Mesh) {
-        let graph = Graph::new(&mesh, false).unwrap();
+        let graph = GraphUnd::new(&mesh, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph.print_non_zero_pattern();
         }
-        Graph::renumber_mesh(mesh, false).unwrap();
-        let graph_after = Graph::new(&mesh, false).unwrap();
+        GraphUnd::renumber_mesh(mesh, false).unwrap();
+        let graph_after = GraphUnd::new(&mesh, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph_after.print_non_zero_pattern();
         }

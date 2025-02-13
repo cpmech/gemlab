@@ -1,5 +1,5 @@
 use super::{Cell, Mesh, Point};
-use crate::graph::Graph;
+use crate::graph::GraphUnd;
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 use russell_lab::math::PI;
@@ -261,7 +261,7 @@ impl Unstructured {
 
         // results
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -576,7 +576,7 @@ impl Unstructured {
 
         // results
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -599,12 +599,12 @@ mod tests {
     const MAX_NPOINT_PRINT: usize = 200;
 
     fn print_bandwidth(mesh: &mut Mesh) {
-        let graph = Graph::new(&mesh, false).unwrap();
+        let graph = GraphUnd::new(&mesh, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph.print_non_zero_pattern();
         }
-        Graph::renumber_mesh(mesh, false).unwrap();
-        let graph_after = Graph::new(&mesh, false).unwrap();
+        GraphUnd::renumber_mesh(mesh, false).unwrap();
+        let graph_after = GraphUnd::new(&mesh, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph_after.print_non_zero_pattern();
         }
