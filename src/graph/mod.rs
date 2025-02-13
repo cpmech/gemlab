@@ -1,5 +1,5 @@
 //! Graph structures and algorithms
 
-mod graph;
+mod graph_und;
 
-pub use graph::*;
+pub use graph_und::*;
