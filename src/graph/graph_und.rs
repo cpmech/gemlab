@@ -1005,6 +1005,97 @@ mod tests {
     }
 
     #[test]
+    fn test_density() {
+        // Empty graph
+        let edges: [[usize; 2]; 0] = [];
+        let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        assert_eq!(graph.density(), 0.0);
+
+        // Single node graph
+        let edges = [[0, 0]];
+        let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        assert_eq!(graph.density(), 0.0);
+
+        // Complete graph K3
+        let edges = [[0, 1], [1, 2], [0, 2]];
+        let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        assert_eq!(graph.density(), 1.0);
+
+        // Square graph (4 nodes, 4 edges)
+        let edges = [[0, 1], [1, 2], [2, 3], [3, 0]];
+        let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        assert_eq!(graph.density(), 4.0 / (4.0 * 3.0));
+    }
+
+    #[test]
+    fn test_connected_components() {
+        // Disconnected graph with three components
+        let edges = [
+            [0, 1], [1, 2],           // Component 1
+            [3, 4],                   // Component 2
+            [5, 6], [6, 7], [7, 5],  // Component 3
+        ];
+        let mut graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        let components = graph.connected_components();
+        
+        assert_eq!(components.len(), 3);
+        
+        // Sort components and their contents for stable comparison
+        let mut sorted_components: Vec<Vec<usize>> = components
+            .into_iter()
+            .map(|mut comp| {
+                comp.sort_unstable();
+                comp
+            })
+            .collect();
+        sorted_components.sort_unstable();
+        
+        assert_eq!(sorted_components, vec![
+            vec![0, 1, 2],
+            vec![3, 4],
+            vec![5, 6, 7],
+        ]);
+    }
+
+    #[test]
+    fn test_is_connected() {
+        // Connected graph
+        let edges = [[0, 1], [1, 2], [2, 3], [3, 0]];
+        let mut graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        assert!(graph.is_connected());
+
+        // Disconnected graph
+        let edges = [[0, 1], [2, 3]];
+        let mut graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        assert!(!graph.is_connected());
+
+        // Single node is connected
+        let edges = [[0, 0]];
+        let mut graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        assert!(graph.is_connected());
+    }
+
+    #[test]
+    fn test_articulation_points() {
+        // Graph with no articulation points (cycle)
+        let edges = [[0, 1], [1, 2], [2, 3], [3, 0]];
+        let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        assert!(graph.find_articulation_points().is_empty());
+
+        // Graph with one articulation point
+        let edges = [[0, 1], [1, 2], [2, 3], [1, 3], [1, 4]];
+        let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        assert_eq!(graph.find_articulation_points(), vec![1]);
+
+        // Graph with multiple articulation points
+        let edges = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [2, 5]];
+        let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
+        let mut art_points = graph.find_articulation_points();
+        art_points.sort_unstable();
+        assert_eq!(art_points, vec![2, 5]);
+    }
+
+    #[test]
     fn gibbs_poole_stock_example() {
         // use graph example from:
         // Gibbs NW, Poole WG JR, and Stockmeyer PK (1976) An algorithm for reducing the bandwidth
