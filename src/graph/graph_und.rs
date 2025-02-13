@@ -704,6 +704,11 @@ mod tests {
         assert_eq!(graph.adjacency[3], &[2, 5]); // sorted by id
         assert_eq!(graph.adjacency[4], &[1, 5]); // sorted by degree, then id
         assert_eq!(graph.adjacency[5], &[3, 4, 2]); // sorted by degree, then id
+
+        assert_eq!(
+            graph.get_edges(),
+            &[(0, 1), (0, 2), (1, 4), (2, 3), (2, 5), (3, 5), (4, 5)]
+        );
     }
 
     #[test]
@@ -884,12 +889,44 @@ mod tests {
         let path = graph.shortest_path_bfs(2, 6);
         assert_eq!(path, &[2, 1, 0, 3, 4, 6]);
 
+        assert_eq!(
+            graph.get_edges(),
+            &[
+                (0, 1),
+                (0, 3),
+                (1, 2),
+                (3, 4),
+                (3, 7),
+                (4, 5),
+                (4, 6),
+                (4, 7),
+                (5, 6),
+                (6, 7)
+            ]
+        );
+
         // Now, the adjacency matrix sorts by the degree first and then by the id, the node 7 is
         // selected instead of 4 because the degree of node 7 is 3 and the degree of node 4 is 4.
         let calc_degree = true; // will change the sorting of rows in the adjacency matrix
         let mut graph = GraphUnd::from_edges(&edges, calc_degree, false).unwrap();
         let path = graph.shortest_path_bfs(2, 6);
         assert_eq!(path, &[2, 1, 0, 3, 7, 6]);
+
+        assert_eq!(
+            graph.get_edges(),
+            &[
+                (0, 1),
+                (0, 3),
+                (1, 2),
+                (3, 7), // (3, 7) comes first because the degree of 7 is lower than the degree of 4
+                (3, 4),
+                (4, 5),
+                (4, 6),
+                (4, 7),
+                (5, 6),
+                (6, 7)
+            ]
+        );
     }
 
     #[test]
