@@ -10,6 +10,7 @@
     "ngauss",
     "PINV",
     "Stockmeyer",
+    "Warshall",
     "zrange"
   ]
 }
