@@ -9,56 +9,133 @@ use std::collections::{HashSet, VecDeque};
 pub struct GraphUnd {
     /// Holds the adjacency (sparse) matrix (point connections)
     ///
-    /// Note: each row in this matrix is sorted in ascending order of degree, followed by id
+    /// Note: If `calc_degree` is true, each row in this matrix is sorted in ascending order of degree,
+    /// followed by point ID. Otherwise, each row is sorted in ascending order of point ID only.
+    /// Degree here means the number of connections of a vertex.
     ///
     /// (nnode x variable nnode)
-    pub adjacency: Vec<Vec<PointId>>,
-
-    /// Holds all point degrees (the number of connections of a vertex)
-    ///
-    /// (nnode)
-    pub degree: Vec<usize>,
-
-    /// Holds the id of the point with the minimum degree (the number of connections of a vertex)
-    pub p_min_degree: usize,
-
-    /// Holds the id of the point with the maximum degree (the number of connections of a vertex)
-    pub p_max_degree: usize,
+    adjacency: Vec<Vec<PointId>>,
 
     /// Defines an auxiliary queue for BFS (breadth-first-search) runs
     ///
-    /// Note: must be cleared before each use.
+    /// Note: this queue must be cleared before each use.
     ///
     /// (nnode)
     queue: VecDeque<PointId>,
 
     /// Holds the auxiliary list of bool indicating that a vertex has been explored
     ///
-    /// Note: must be cleared before each use.
+    /// Note: this array must be cleared before each use.
     ///
     /// (nnode)
     explored: Vec<bool>,
 
+    /// Holds all point degrees (the number of connections of a vertex)
+    ///
+    /// Requires: `calc_degree == true`
+    ///
+    /// Optional(nnode)
+    degree: Vec<usize>,
+
+    /// Holds the id of the point with the minimum degree (the number of connections of a vertex)
+    ///
+    /// Requires: `calc_degree == true`
+    ///
+    /// Optional
+    p_min_degree: usize,
+
     /// Holds the distance from the root to each point
     ///
-    /// Note: must be cleared before each use.
-    ///
-    /// (nnode)
+    /// Optional(nnode)
     distance: Vec<usize>,
 
     /// Holds the parent node of each point in the BFS tree
     ///
-    /// The usize:MAX value indicates that the point has no parent
+    /// Optional(nnode)
     parent: Vec<PointId>,
 }
 
 impl GraphUnd {
+    /// Allocates a new instance given an adjacency set
+    fn from_adjacency_set(
+        adjacency_set: &Vec<HashSet<PointId>>,
+        calc_degree: bool,
+        check_connectivity: bool,
+    ) -> Result<Self, StrError> {
+        // check the connectivity of the graph (all vertices must be explored)
+        let nnode = adjacency_set.len();
+        let mut queue = VecDeque::with_capacity(nnode);
+        let mut explored = vec![false; nnode];
+        if check_connectivity {
+            explored[0] = true;
+            queue.push_back(0);
+            while queue.len() != 0 {
+                if let Some(a) = queue.pop_front() {
+                    for b in &adjacency_set[a] {
+                        if !explored[*b] {
+                            explored[*b] = true;
+                            queue.push_back(*b);
+                        }
+                    }
+                }
+            }
+            for exp in &explored {
+                if !exp {
+                    return Err("there are hanging vertices/edges in the mesh (graph is disconnected)");
+                }
+            }
+        }
+
+        // allocate adjacency matrix and degree array
+        let mut adjacency = Vec::new();
+        let mut degree = Vec::new();
+        let mut p_min_degree = 0;
+        if calc_degree {
+            // compute the list of degrees (number of connections of a vertex)
+            degree = vec![0; nnode];
+            let mut min_degree = usize::MAX;
+            for (p, row) in adjacency_set.iter().enumerate() {
+                degree[p] = row.len();
+                if degree[p] < min_degree {
+                    p_min_degree = p;
+                    min_degree = degree[p];
+                }
+            }
+            // sort each row of the adjacency matrix by the degree, and then by id
+            for row_set in adjacency_set.iter() {
+                let mut row: Vec<_> = row_set.iter().copied().collect();
+                row.sort_unstable_by_key(|p| (degree[*p], *p));
+                adjacency.push(row);
+            }
+        } else {
+            // sort each row of the adjacency matrix by point id
+            for row_set in adjacency_set.iter() {
+                let mut row: Vec<_> = row_set.iter().copied().collect();
+                row.sort();
+                adjacency.push(row);
+            }
+        }
+
+        // results
+        Ok(GraphUnd {
+            adjacency,
+            queue,
+            explored,
+            degree,
+            p_min_degree,
+            distance: Vec::new(),
+            parent: Vec::new(),
+        })
+    }
+
     /// Allocates a new instance given a list of edges
     ///
     /// # Input
     ///
+    /// * `calc_degree` -- calculates the degree (the number of connections of a vertex), as required by the
+    ///    Cuthill-McKee algorithm. The degree affects the sorting of rows in the adjacency matrix.
     /// * `check_connectivity` -- checks if the graph is connected
-    pub fn from_edges<'a, T>(edges: &'a T, check_connectivity: bool) -> Result<Self, StrError>
+    pub fn from_edges<'a, T>(edges: &'a T, calc_degree: bool, check_connectivity: bool) -> Result<Self, StrError>
     where
         T: AsArray2D<'a, usize>,
     {
@@ -84,15 +161,17 @@ impl GraphUnd {
         }
 
         // allocate graph
-        GraphUnd::from_adjacency_set(&adjacency_set, check_connectivity)
+        GraphUnd::from_adjacency_set(&adjacency_set, calc_degree, check_connectivity)
     }
 
     /// Allocates a new instance given a mesh
     ///
     /// # Input
     ///
+    /// * `calc_degree` -- calculates the degree (the number of connections of a vertex), as required by the
+    ///    Cuthill-McKee algorithm. The degree affects the sorting of rows in the adjacency matrix.
     /// * `check_connectivity` -- checks if the graph is connected
-    pub fn from_mesh(mesh: &Mesh, check_connectivity: bool) -> Result<Self, StrError> {
+    pub fn from_mesh(mesh: &Mesh, calc_degree: bool, check_connectivity: bool) -> Result<Self, StrError> {
         // find the adjacency (sparse) matrix of nodes' connections
         let nnode = mesh.points.len();
         let mut adjacency_set = vec![HashSet::new(); nnode];
@@ -108,72 +187,7 @@ impl GraphUnd {
         }
 
         // allocate graph
-        GraphUnd::from_adjacency_set(&adjacency_set, check_connectivity)
-    }
-
-    /// Allocates a new instance given an adjacency set
-    fn from_adjacency_set(adjacency_set: &Vec<HashSet<PointId>>, check_connectivity: bool) -> Result<Self, StrError> {
-        // check the connectivity of the graph (all vertices must be explored)
-        let nnode = adjacency_set.len();
-        let mut queue = VecDeque::with_capacity(nnode);
-        let mut explored = vec![false; nnode];
-        if check_connectivity {
-            explored[0] = true;
-            queue.push_back(0);
-            while queue.len() != 0 {
-                if let Some(a) = queue.pop_front() {
-                    for b in &adjacency_set[a] {
-                        if !explored[*b] {
-                            explored[*b] = true;
-                            queue.push_back(*b);
-                        }
-                    }
-                }
-            }
-            for exp in &explored {
-                if !exp {
-                    return Err("there are hanging vertices/edges in the mesh (graph is disconnected)");
-                }
-            }
-        }
-
-        // compute the list of degrees (number of connections of a vertex)
-        let mut degree = vec![0; nnode];
-        let mut p_min_degree = 0;
-        let mut p_max_degree = 0;
-        let mut min_degree = usize::MAX;
-        let mut max_degree = 0;
-        for (p, row) in adjacency_set.iter().enumerate() {
-            degree[p] = row.len();
-            if degree[p] < min_degree {
-                p_min_degree = p;
-                min_degree = degree[p];
-            }
-            if degree[p] > max_degree {
-                p_max_degree = p;
-                max_degree = degree[p];
-            }
-        }
-
-        // sort each row of the adjacency matrix by the degree, and then by id
-        let mut adjacency = Vec::new();
-        for row_set in adjacency_set.iter() {
-            let mut row: Vec<_> = row_set.iter().copied().collect();
-            row.sort_unstable_by_key(|p| (degree[*p], *p));
-            adjacency.push(row);
-        }
-
-        // results
-        Ok(GraphUnd {
-            adjacency,
-            degree,
-            p_min_degree,
-            p_max_degree,
-            queue,
-            explored,
-            distance: vec![0; nnode],
-            parent: vec![usize::MAX; nnode],
-        })
+        GraphUnd::from_adjacency_set(&adjacency_set, calc_degree, check_connectivity)
     }
 
     /// Computes the ordering array to renumber the vertices according to the (reverse) Cuthill-McKee algorithm
@@ -190,21 +204,26 @@ impl GraphUnd {
     /// Returns the ordering array such that `old = ordering[new]` where `old` is the original
     /// point id and `new` is the new point id. See the function [Graph::get_old_to_new_map]
     pub fn cuthill_mckee(&mut self, start_point: Option<PointId>) -> Result<Vec<PointId>, StrError> {
+        // check if the degree of vertices is available
+        let nnode = self.adjacency.len();
+        if self.degree.len() != nnode {
+            return Err("Cuthill-McKee algorithm requires the degree of vertices (calc_degree must be set to true)");
+        }
+
         // root point
         let root = match start_point {
             Some(p) => p,
-            None => self.pseudo_peripheral(None),
+            None => self.pseudo_peripheral(None)?,
         };
 
         // clear auxiliary structures
         self.queue.clear();
-        let npoint = self.adjacency.len();
-        for i in 0..npoint {
+        for i in 0..nnode {
             self.explored[i] = false;
         }
 
         // allocate auxiliary structures
-        let mut ordering = vec![0; npoint];
+        let mut ordering = vec![0; nnode];
 
         // first label
         let mut label = 0;
@@ -232,57 +251,20 @@ impl GraphUnd {
         Ok(ordering)
     }
 
-    /// Runs a BFS to compute the distances (levels) from every vertex to the root vertex
-    ///
-    /// # Input
-    ///
-    /// * `root` -- The root point
-    ///
-    /// # Output
-    ///
-    /// Returns the `max_distance`
-    pub fn calc_distance(&mut self, root: usize) -> usize {
-        // clear auxiliary structures
-        self.queue.clear();
-        let npoint = self.adjacency.len();
-        for i in 0..npoint {
-            self.explored[i] = false;
-            self.distance[i] = 0;
-        }
-
-        // run BFS
-        self.explored[root] = true;
-        self.queue.push_back(root);
-        while self.queue.len() != 0 {
-            if let Some(a) = self.queue.pop_front() {
-                for b in &self.adjacency[a] {
-                    if !self.explored[*b] {
-                        self.explored[*b] = true;
-                        self.queue.push_back(*b);
-                        self.distance[*b] = self.distance[a] + 1;
-                    }
-                }
-            }
-        }
-
-        // calculate max distance
-        let mut max_distance = 0;
-        for i in 0..npoint {
-            if self.distance[i] > max_distance {
-                max_distance = self.distance[i];
-            }
-        }
-        max_distance
-    }
-
     /// Finds the shortest path between two points using the breadth-first search (BFS) algorithm
     ///
     /// Returns a list of point ids representing the shortest path between the source and destination points
     pub fn shortest_path_bfs(&mut self, source: usize, destination: usize) -> Vec<usize> {
         // clear auxiliary structures
         self.queue.clear();
-        let npoint = self.adjacency.len();
-        for i in 0..npoint {
+        let nnode = self.adjacency.len();
+        if self.distance.len() != nnode {
+            self.distance = vec![0; nnode];
+        }
+        if self.parent.len() != nnode {
+            self.parent = vec![usize::MAX; nnode];
+        }
+        for i in 0..nnode {
             self.explored[i] = false;
             self.distance[i] = 0;
             self.parent[i] = usize::MAX;
@@ -305,7 +287,7 @@ impl GraphUnd {
         }
 
         // run backwards to find the path
-        let mut path = Vec::with_capacity(npoint);
+        let mut path = Vec::with_capacity(nnode);
         let mut current = destination;
         path.insert(0, current);
         while self.parent[current] != usize::MAX {
@@ -315,13 +297,65 @@ impl GraphUnd {
         path
     }
 
+    /// Runs a BFS to compute the distances (levels) from every vertex to the root vertex
+    ///
+    /// # Input
+    ///
+    /// * `root` -- The root point
+    ///
+    /// # Output
+    ///
+    /// Returns the `max_distance`
+    pub fn calc_distance(&mut self, root: usize) -> usize {
+        // clear auxiliary structures
+        self.queue.clear();
+        let nnode = self.adjacency.len();
+        if self.distance.len() != nnode {
+            self.distance = vec![0; nnode];
+        }
+        for i in 0..nnode {
+            self.explored[i] = false;
+            self.distance[i] = 0;
+        }
+
+        // run BFS
+        self.explored[root] = true;
+        self.queue.push_back(root);
+        while self.queue.len() != 0 {
+            if let Some(a) = self.queue.pop_front() {
+                for b in &self.adjacency[a] {
+                    if !self.explored[*b] {
+                        self.explored[*b] = true;
+                        self.queue.push_back(*b);
+                        self.distance[*b] = self.distance[a] + 1;
+                    }
+                }
+            }
+        }
+
+        // calculate max distance
+        let mut max_distance = 0;
+        for i in 0..nnode {
+            if self.distance[i] > max_distance {
+                max_distance = self.distance[i];
+            }
+        }
+        max_distance
+    }
+
     /// Finds a pseudo-peripheral point
     ///
     /// # Input
     ///
     /// * `start_point` -- (root) the first point id, which will not be renumbered. Should have a low degree.
     ///   If None, a point with a minimum degree will be used.
-    pub fn pseudo_peripheral(&mut self, start_point: Option<PointId>) -> usize {
+    pub fn pseudo_peripheral(&mut self, start_point: Option<PointId>) -> Result<usize, StrError> {
+        // check if the degree of vertices is available
+        let nnode = self.adjacency.len();
+        if self.degree.len() != nnode {
+            return Err("pseudo_peripheral requires the degree of vertices (calc_degree must be set to true)");
+        }
+
         // root point
         let mut root = match start_point {
             Some(p) => p,
@@ -333,7 +367,6 @@ impl GraphUnd {
 
         // auxiliary
         const MAX_ITERATIONS: usize = 10;
-        let npoint = self.adjacency.len();
         let mut success = false;
 
         // perform iterations
@@ -342,7 +375,7 @@ impl GraphUnd {
             // equal to root's max distance, and select the point with the minimum degree
             let mut next_root = None;
             let mut min_deg = usize::MAX; // min degree among potential roots
-            for i in 0..npoint {
+            for i in 0..nnode {
                 if self.distance[i] == max_distance {
                     let deg = self.degree[i];
                     if deg < min_deg {
@@ -371,21 +404,21 @@ impl GraphUnd {
             }
         }
         if !success {
-            panic!("INTERNAL ERROR: iterations did not converge");
+            return Err("INTERNAL ERROR: iterations did not converge");
         }
-        root
+        Ok(root)
     }
 
     /// Calculates the (half) bandwidth (with diagonal) of the adjacency matrix
     ///
     /// ```text
-    /// band = max{band_i, 0 ≤ n ≤ npoint-1}
+    /// band = max{band_i, 0 ≤ n ≤ nnode-1}
     /// band_i = max{|i - j| + 1, any j > i}
     /// ```
     pub fn calc_bandwidth(&self) -> usize {
-        let npoint = self.adjacency.len();
+        let nnode = self.adjacency.len();
         let mut band = 0;
-        for i in 0..npoint {
+        for i in 0..nnode {
             let mut band_i = 1;
             for j in &self.adjacency[i] {
                 if *j > i {
@@ -412,19 +445,19 @@ impl GraphUnd {
     /// D: Diagonal matrix with the degrees
     /// ```
     pub fn print_non_zero_pattern(&self) {
-        let npoint = self.adjacency.len();
-        let mut non_zeros_pattern = vec![vec!["."; npoint]; npoint];
-        for i in 0..npoint {
+        let nnode = self.adjacency.len();
+        let mut non_zeros_pattern = vec![vec!["."; nnode]; nnode];
+        for i in 0..nnode {
             non_zeros_pattern[i][i] = "D";
             for j in &self.adjacency[i] {
                 non_zeros_pattern[i][*j] = "#";
             }
         }
-        let width = npoint * 2 + 1;
+        let width = nnode * 2 + 1;
         println!("\n┌{:1$}┐", " ", width);
-        for i in 0..npoint {
+        for i in 0..nnode {
             print!("│");
-            for j in 0..npoint {
+            for j in 0..nnode {
                 print!(" {}", non_zeros_pattern[i][j])
             }
             print!(" │\n");
@@ -454,7 +487,8 @@ impl GraphUnd {
     ///
     /// * `check_connectivity` -- checks if the associated graph is connected
     pub fn renumber_mesh(mesh: &mut Mesh, check_connectivity: bool) -> Result<(), StrError> {
-        let mut graph = GraphUnd::from_mesh(&mesh, check_connectivity)?;
+        let calc_degree = true;
+        let mut graph = GraphUnd::from_mesh(&mesh, calc_degree, check_connectivity)?;
         let ordering = graph.cuthill_mckee(None)?;
         let old_to_new = GraphUnd::get_old_to_new_map(&ordering);
         mesh.renumber_points(&old_to_new)
@@ -465,12 +499,54 @@ impl GraphUnd {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::GraphUnd;
     use crate::mesh::{Block, Cell, Figure, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_lab::NumMatrix;
 
     const SAVE_FIGURE: bool = false;
+
+    #[test]
+    fn from_adjacency_set_works() {
+        //          .1.
+        //        .' | '.
+        //      .'   |   '.
+        //    0'     |     3
+        //     '.    |    .'
+        //       '.  |  .'
+        //         '.2.'
+        let adjacency_set = vec![
+            HashSet::from([2, 1]),    // node 0 connects to 2 and 1
+            HashSet::from([0, 3, 2]), // node 1 connects to 0, 3, and 2
+            HashSet::from([0, 1, 3]), // node 2 connects to 0, 1, and 3
+            HashSet::from([2, 1]),    // node 3 connects to 2 and 1
+        ];
+        let graph = GraphUnd::from_adjacency_set(&adjacency_set, false, false).unwrap();
+
+        assert_eq!(graph.adjacency[0], &[1, 2]); // sorted by id
+        assert_eq!(graph.adjacency[1], &[0, 2, 3]); // sorted by id
+        assert_eq!(graph.adjacency[2], &[0, 1, 3]); // sorted by id
+        assert_eq!(graph.adjacency[3], &[1, 2]); // sorted by id
+
+        assert_eq!(graph.explored.len(), 4);
+        assert_eq!(graph.degree.len(), 0);
+        assert_eq!(graph.distance.len(), 0);
+        assert_eq!(graph.parent.len(), 0);
+
+        let graph = GraphUnd::from_adjacency_set(&adjacency_set, true, false).unwrap();
+
+        assert_eq!(graph.adjacency[0], &[1, 2]); // sorted by id
+        assert_eq!(graph.adjacency[1], &[0, 3, 2]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[2], &[0, 3, 1]); // sorted by degree, then id
+        assert_eq!(graph.adjacency[3], &[1, 2]); // sorted by id
+
+        assert_eq!(graph.explored.len(), 4);
+        assert_eq!(graph.degree, &[2, 3, 3, 2]);
+        assert_eq!(graph.distance.len(), 0);
+        assert_eq!(graph.parent.len(), 0);
+    }
 
     #[test]
     fn graph_from_edges_works_4nodes() {
@@ -484,12 +560,11 @@ mod tests {
 
         // edge:       0       1       2       3
         let edges = [[0, 1], [0, 3], [1, 2], [2, 3]];
-        let graph = GraphUnd::from_edges(&edges, true).unwrap();
+        let graph = GraphUnd::from_edges(&edges, true, true).unwrap();
 
         // node:                   0  1  2  3
         assert_eq!(graph.degree, &[2, 2, 2, 2]);
         assert_eq!(graph.p_min_degree, 0);
-        assert_eq!(graph.p_max_degree, 0);
 
         // for (i, row) in graph.adjacency.iter().enumerate() { println!("{}: {:?}", i, row); }
 
@@ -513,12 +588,11 @@ mod tests {
 
         // edge:       0       1       2       3       4       5       6
         let edges = [[4, 5], [1, 4], [0, 1], [0, 2], [5, 2], [2, 3], [5, 3]];
-        let graph = GraphUnd::from_edges(&edges, true).unwrap();
+        let graph = GraphUnd::from_edges(&edges, true, true).unwrap();
 
         // node:                   0  1  2  3  4  5
         assert_eq!(graph.degree, &[2, 2, 3, 2, 2, 3]);
         assert_eq!(graph.p_min_degree, 0);
-        assert_eq!(graph.p_max_degree, 2);
 
         // for (i, row) in graph.adjacency.iter().enumerate() { println!("{}: {:?}", i, row); }
 
@@ -534,12 +608,11 @@ mod tests {
     fn graph_from_mesh_works_1() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
-        let graph = GraphUnd::from_mesh(&mesh, false).unwrap();
+        let graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
 
         //                         0  1  2  3  4  5  6  7 (point)
         assert_eq!(graph.degree, &[1, 3, 2, 2, 3, 2, 1, 2]);
         assert_eq!(graph.p_min_degree, 0);
-        assert_eq!(graph.p_max_degree, 1);
 
         // for (i, row) in graph.adjacency.iter().enumerate() { println!("{}: {:?}", i, row); }
 
@@ -574,7 +647,7 @@ mod tests {
                 Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![1, 2, 3, 4] },
             ],
         };
-        let graph = GraphUnd::from_mesh(&mesh, false).unwrap();
+        let graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
 
         //                         0  1  2  3  4  5 (point)
         assert_eq!(graph.degree, &[3, 5, 3, 3, 5, 3]);
@@ -611,10 +684,21 @@ mod tests {
     }
 
     #[test]
+    fn cuthill_mckee_requires_calc_degree() {
+        // lin2_graph
+        let mesh = Samples::graph_8_edges();
+        let mut graph = GraphUnd::from_mesh(&mesh, false, false).unwrap();
+        assert_eq!(
+            graph.cuthill_mckee(Some(0)).err(),
+            Some("Cuthill-McKee algorithm requires the degree of vertices (calc_degree must be set to true)")
+        );
+    }
+
+    #[test]
     fn cuthill_mckee_works() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
-        let mut graph = GraphUnd::from_mesh(&mesh, false).unwrap();
+        let mut graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
         let ordering = graph.cuthill_mckee(Some(0)).unwrap();
         // println!("ordering = {:?}", ordering);
         assert_eq!(ordering, &[7, 5, 6, 1, 3, 2, 4, 0]);
@@ -624,7 +708,7 @@ mod tests {
     fn calc_distance_works_1() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
-        let mut graph = GraphUnd::from_mesh(&mesh, false).unwrap();
+        let mut graph = GraphUnd::from_mesh(&mesh, false, false).unwrap();
 
         let max_distance = graph.calc_distance(0);
         assert_eq!(graph.distance, &[0, 3, 2, 2, 1, 4, 3, 4]);
@@ -662,7 +746,7 @@ mod tests {
             [6, 4], // 8
             [5, 6], // 9
         ];
-        let mut graph = GraphUnd::from_edges(&edges, true).unwrap();
+        let mut graph = GraphUnd::from_edges(&edges, false, true).unwrap();
 
         let max_distance = graph.calc_distance(7);
         assert_eq!(graph.distance, &[2, 3, 4, 1, 1, 2, 1, 0]);
@@ -688,34 +772,51 @@ mod tests {
             [6, 4], // 8
             [5, 6], // 9
         ];
-        let mut graph = GraphUnd::from_edges(&edges, true).unwrap();
+        let mut graph = GraphUnd::from_edges(&edges, false, false).unwrap();
 
         let path = graph.shortest_path_bfs(0, 7);
         assert_eq!(path, &[0, 3, 7]);
 
+        // Since calc_degree is false, the adjacency matrix is sorted by id only.
+        // Thus, the results equal Mathematica's results.
         let path = graph.shortest_path_bfs(2, 6);
-        // Mathematica returns `[2, 1, 0, 3, 4, 6]`. However, since the adjacency matrix here
-        // sorts by the degree first and then by the id, the node 7 is selected instead of 4
-        // because the degree of node 7 is 3 and the degree of node 4 is 4.
+        assert_eq!(path, &[2, 1, 0, 3, 4, 6]);
+
+        // Now, the adjacency matrix sorts by the degree first and then by the id, the node 7 is
+        // selected instead of 4 because the degree of node 7 is 3 and the degree of node 4 is 4.
+        let calc_degree = true; // will change the sorting of rows in the adjacency matrix
+        let mut graph = GraphUnd::from_edges(&edges, calc_degree, false).unwrap();
+        let path = graph.shortest_path_bfs(2, 6);
         assert_eq!(path, &[2, 1, 0, 3, 7, 6]);
+    }
+
+    #[test]
+    fn pseudo_peripheral_requires_calc_degree() {
+        // graph_8_edges
+        let mesh = Samples::graph_8_edges();
+        let mut graph = GraphUnd::from_mesh(&mesh, false, false).unwrap();
+        assert_eq!(
+            graph.pseudo_peripheral(None).err(),
+            Some("pseudo_peripheral requires the degree of vertices (calc_degree must be set to true)")
+        );
     }
 
     #[test]
     fn pseudo_peripheral_works() {
         // graph_8_edges
         let mesh = Samples::graph_8_edges();
-        let mut graph = GraphUnd::from_mesh(&mesh, false).unwrap();
-        assert_eq!(graph.pseudo_peripheral(None), 6);
-        assert_eq!(graph.pseudo_peripheral(Some(4)), 6);
-        assert_eq!(graph.pseudo_peripheral(Some(7)), 6);
-        assert_eq!(graph.pseudo_peripheral(Some(6)), 5);
+        let mut graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
+        assert_eq!(graph.pseudo_peripheral(None).unwrap(), 6);
+        assert_eq!(graph.pseudo_peripheral(Some(4)).unwrap(), 6);
+        assert_eq!(graph.pseudo_peripheral(Some(7)).unwrap(), 6);
+        assert_eq!(graph.pseudo_peripheral(Some(6)).unwrap(), 5);
 
         // graph_12_edges
         let mesh = Samples::graph_12_edges();
-        let mut graph = GraphUnd::from_mesh(&mesh, false).unwrap();
-        assert_eq!(graph.pseudo_peripheral(Some(0)), 8);
-        assert_eq!(graph.pseudo_peripheral(Some(4)), 2);
-        assert_eq!(graph.pseudo_peripheral(None), 3);
+        let mut graph = GraphUnd::from_mesh(&mesh, true, true).unwrap();
+        assert_eq!(graph.pseudo_peripheral(Some(0)).unwrap(), 8);
+        assert_eq!(graph.pseudo_peripheral(Some(4)).unwrap(), 2);
+        assert_eq!(graph.pseudo_peripheral(None).unwrap(), 3);
     }
 
     #[test]
@@ -761,7 +862,7 @@ mod tests {
         let npoint = mesh.points.len();
 
         // original graph
-        let mut graph = GraphUnd::from_mesh(&mesh, false).unwrap();
+        let mut graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
         let band = graph.calc_bandwidth();
         graph.print_non_zero_pattern();
         println!("band (original) = {}", band);
@@ -787,14 +888,14 @@ mod tests {
         }
 
         // print pattern with updated mesh (cm_8)
-        let graph_cm_8 = GraphUnd::from_mesh(&mesh_cm_8, false).unwrap();
+        let graph_cm_8 = GraphUnd::from_mesh(&mesh_cm_8, false, false).unwrap();
         let band = graph_cm_8.calc_bandwidth();
         graph_cm_8.print_non_zero_pattern();
         println!("band (cm_8) = {}", band);
         assert_eq!(band, 9);
 
         // CM algo with pseudo-peripheral root
-        let mut graph = GraphUnd::from_mesh(&mesh, false).unwrap();
+        let mut graph = GraphUnd::from_mesh(&mesh, false, false).unwrap();
 
         // renumber mesh nodes (cuthill-mckee + pseudo-peripheral)
         let mut mesh_cm_pp = mesh.clone();
@@ -802,7 +903,7 @@ mod tests {
 
         // generate figure with levels/distance and mesh
         if SAVE_FIGURE {
-            let root = graph.pseudo_peripheral(None);
+            let root = graph.pseudo_peripheral(None).unwrap();
             graph.calc_distance(root);
             for i in 0..npoint {
                 mesh.points[i].marker = 1 + graph.distance[i] as i32; // use markers for the distance
@@ -813,7 +914,7 @@ mod tests {
         }
 
         // print pattern with updated mesh (cm_pp)
-        let graph_cm_pp = GraphUnd::from_mesh(&mesh_cm_pp, false).unwrap();
+        let graph_cm_pp = GraphUnd::from_mesh(&mesh_cm_pp, false, false).unwrap();
         let band = graph_cm_pp.calc_bandwidth();
         graph_cm_pp.print_non_zero_pattern();
         println!("band (cm_pp) = {}", band);

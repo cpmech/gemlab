@@ -968,12 +968,12 @@ mod tests {
     const MAX_NPOINT_PRINT: usize = 200;
 
     fn print_bandwidth(mesh: &mut Mesh) {
-        let graph = GraphUnd::from_mesh(&mesh, false).unwrap();
+        let graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph.print_non_zero_pattern();
         }
         GraphUnd::renumber_mesh(mesh, false).unwrap();
-        let graph_after = GraphUnd::from_mesh(&mesh, false).unwrap();
+        let graph_after = GraphUnd::from_mesh(&mesh, true, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph_after.print_non_zero_pattern();
         }
