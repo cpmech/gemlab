@@ -499,12 +499,11 @@ impl GraphUnd {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use super::GraphUnd;
     use crate::mesh::{Block, Cell, Figure, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_lab::NumMatrix;
+    use std::collections::HashSet;
 
     const SAVE_FIGURE: bool = false;
 
@@ -883,19 +882,19 @@ mod tests {
                 mesh.points[i].marker = 1 + graph.distance[i] as i32; // use markers for the distance
             }
             let mut fig = Figure::new();
-            fig.show_point_ids(true);
+            fig.show_point_ids(true).show_point_marker(true);
             fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_8.svg").unwrap();
         }
 
         // print pattern with updated mesh (cm_8)
-        let graph_cm_8 = GraphUnd::from_mesh(&mesh_cm_8, false, false).unwrap();
+        let graph_cm_8 = GraphUnd::from_mesh(&mesh_cm_8, true, false).unwrap();
         let band = graph_cm_8.calc_bandwidth();
         graph_cm_8.print_non_zero_pattern();
         println!("band (cm_8) = {}", band);
         assert_eq!(band, 9);
 
         // CM algo with pseudo-peripheral root
-        let mut graph = GraphUnd::from_mesh(&mesh, false, false).unwrap();
+        let mut graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
 
         // renumber mesh nodes (cuthill-mckee + pseudo-peripheral)
         let mut mesh_cm_pp = mesh.clone();
@@ -909,12 +908,12 @@ mod tests {
                 mesh.points[i].marker = 1 + graph.distance[i] as i32; // use markers for the distance
             }
             let mut fig = Figure::new();
-            fig.show_point_ids(true);
+            fig.show_point_ids(true).show_point_marker(true);
             fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_pp.svg").unwrap();
         }
 
         // print pattern with updated mesh (cm_pp)
-        let graph_cm_pp = GraphUnd::from_mesh(&mesh_cm_pp, false, false).unwrap();
+        let graph_cm_pp = GraphUnd::from_mesh(&mesh_cm_pp, true, false).unwrap();
         let band = graph_cm_pp.calc_bandwidth();
         graph_cm_pp.print_non_zero_pattern();
         println!("band (cm_pp) = {}", band);
