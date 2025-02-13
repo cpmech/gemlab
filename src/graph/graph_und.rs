@@ -694,6 +694,9 @@ mod tests {
         assert_eq!(path, &[0, 3, 7]);
 
         let path = graph.shortest_path_bfs(2, 6);
+        // Mathematica returns `[2, 1, 0, 3, 4, 6]`. However, since the adjacency matrix here
+        // sorts by the degree first and then by the id, the node 7 is selected instead of 4
+        // because the degree of node 7 is 3 and the degree of node 4 is 4.
         assert_eq!(path, &[2, 1, 0, 3, 7, 6]);
     }
 
