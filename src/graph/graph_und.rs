@@ -45,6 +45,11 @@ pub struct GraphUnd {
     ///
     /// (nnode)
     distance: Vec<usize>,
+
+    /// Holds the parent node of each point in the BFS tree
+    ///
+    /// The usize:MAX value indicates that the point has no parent
+    parent: Vec<PointId>,
 }
 
 impl GraphUnd {
@@ -167,6 +172,7 @@ impl GraphUnd {
             queue,
             explored,
             distance: vec![0; nnode],
+            parent: vec![usize::MAX; nnode],
         })
     }
 
@@ -267,6 +273,46 @@ impl GraphUnd {
             }
         }
         max_distance
+    }
+
+    /// Finds the shortest path between two points using the breadth-first search (BFS) algorithm
+    ///
+    /// Returns a list of point ids representing the shortest path between the source and destination points
+    pub fn shortest_path_bfs(&mut self, source: usize, destination: usize) -> Vec<usize> {
+        // clear auxiliary structures
+        self.queue.clear();
+        let npoint = self.adjacency.len();
+        for i in 0..npoint {
+            self.explored[i] = false;
+            self.distance[i] = 0;
+            self.parent[i] = usize::MAX;
+        }
+
+        // run BFS
+        self.explored[source] = true;
+        self.queue.push_back(source);
+        while self.queue.len() != 0 {
+            if let Some(a) = self.queue.pop_front() {
+                for b in &self.adjacency[a] {
+                    if !self.explored[*b] {
+                        self.explored[*b] = true;
+                        self.queue.push_back(*b);
+                        self.distance[*b] = self.distance[a] + 1;
+                        self.parent[*b] = a;
+                    }
+                }
+            }
+        }
+
+        // run backwards to find the path
+        let mut path = Vec::with_capacity(npoint);
+        let mut current = destination;
+        path.insert(0, current);
+        while self.parent[current] != usize::MAX {
+            path.insert(0, self.parent[current]);
+            current = self.parent[current];
+        }
+        path
     }
 
     /// Finds a pseudo-peripheral point
@@ -575,7 +621,7 @@ mod tests {
     }
 
     #[test]
-    fn distance_works() {
+    fn calc_distance_works_1() {
         // lin2_graph
         let mesh = Samples::graph_8_edges();
         let mut graph = GraphUnd::from_mesh(&mesh, false).unwrap();
@@ -595,6 +641,60 @@ mod tests {
         let max_distance = graph.calc_distance(6);
         assert_eq!(graph.distance, &[3, 4, 3, 1, 2, 5, 0, 5]);
         assert_eq!(max_distance, 5);
+    }
+
+    #[test]
+    fn calc_distance_works_2() {
+        // 1-------0       7 ------6
+        // |       |     .'|     .'|
+        // |       |   .'  |   .'  |
+        // |       | .'    | .'    |
+        // 2       3-------4-------5
+        let edges = [
+            [0, 1], // 0
+            [1, 2], // 1
+            [3, 0], // 2
+            [3, 4], // 3
+            [4, 7], // 4
+            [3, 7], // 5
+            [7, 6], // 6
+            [4, 5], // 7
+            [6, 4], // 8
+            [5, 6], // 9
+        ];
+        let mut graph = GraphUnd::from_edges(&edges, true).unwrap();
+
+        let max_distance = graph.calc_distance(7);
+        assert_eq!(graph.distance, &[2, 3, 4, 1, 1, 2, 1, 0]);
+        assert_eq!(max_distance, 4);
+    }
+
+    #[test]
+    fn shortest_path_bfs_works_1() {
+        // 1-------0       7 ------6
+        // |       |     .'|     .'|
+        // |       |   .'  |   .'  |
+        // |       | .'    | .'    |
+        // 2       3-------4-------5
+        let edges = [
+            [0, 1], // 0
+            [1, 2], // 1
+            [3, 0], // 2
+            [3, 4], // 3
+            [4, 7], // 4
+            [3, 7], // 5
+            [7, 6], // 6
+            [4, 5], // 7
+            [6, 4], // 8
+            [5, 6], // 9
+        ];
+        let mut graph = GraphUnd::from_edges(&edges, true).unwrap();
+
+        let path = graph.shortest_path_bfs(0, 7);
+        assert_eq!(path, &[0, 3, 7]);
+
+        let path = graph.shortest_path_bfs(2, 6);
+        assert_eq!(path, &[2, 1, 0, 3, 7, 6]);
     }
 
     #[test]
