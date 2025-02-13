@@ -2,23 +2,59 @@ use super::{Edges, PointId};
 use std::collections::HashMap;
 
 impl<'a> Edges<'a> {
-    /// Finds a sequence of edges by following connected points.
+    /// Finds a sequence of edges by following connected points to create a path
     ///
-    /// Returns `(edge_indices, points)` where:
+    /// # Returns
     ///
-    /// * `edge_indices` -- is a list of indices of edges in `self.all` that form a path.
-    /// * `points` -- is a list of pairs of points `(a, b)` where `a` and `b` are the start and end points of
-    ///   a **directed** edge in the path.
+    /// Returns a tuple `(edge_indices, points)` where:
     ///
-    /// The start point is found such that it has only one edge connected to it. If no such point is found
-    /// (e.g., in a loop), the point with the **lowest number** among all points is selected as the first point.
-    /// If there are multiple extremities (e.g. in the case of branching), the point with the **lowest number**
-    /// among all extremities is selected as the first point.
+    /// * `edge_indices` - List of indices into `self.all` representing edges along the path
+    /// * `points` - List of `(a, b)` pairs where `a` and `b` are the endpoints of each directed edge
     ///
-    /// Ideally, this function would find the longest path. However, the longest path problem is NP-hard!
-    /// Therefore, we use a simple algorithm that finds **any path**. If the path is simply connected,
-    /// i.e., without branching or disconnected edges, the path will be the longest path (obviously, because
-    /// there is only one path).
+    /// # Path Finding Algorithm
+    ///
+    /// 1. Start point selection:
+    ///    * First tries to find points connected to only one edge (endpoints)
+    ///    * If no endpoints exist (e.g., in a loop), uses point with lowest ID
+    ///    * If multiple endpoints exist, uses endpoint with lowest ID
+    ///
+    /// 2. Path construction:
+    ///    * Starts from selected point and follows connected edges
+    ///    * At each step, takes first available edge not yet used
+    ///    * Stops when no more edges can be followed or a loop is detected
+    ///
+    /// # Notes
+    ///
+    /// * Does not guarantee finding the longest path (NP-hard problem)
+    /// * For simple connected paths (no branches), will find the only possible path
+    /// * For branching paths, result depends on edge order in `self.all`
+    /// * For loops, starts at lowest numbered point and follows first available edge
+    /// * For disconnected components, follows path until no more connected edges
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::mesh::{Edge, Edges};
+    /// use gemlab::shapes::GeoKind;
+    ///
+    /// // Create some sample edges (a simple path 1-2-3)
+    /// let e1 = Edge { kind: GeoKind::Lin2, points: vec![1, 2] };
+    /// let e2 = Edge { kind: GeoKind::Lin2, points: vec![2, 3] };
+    /// let edges = Edges { all: vec![&e1, &e2] };
+    ///
+    /// // Get path through edges
+    /// let (path, points) = edges.any_path();
+    /// assert_eq!(path, vec![0, 1]);           // Edge indices
+    /// assert_eq!(points, vec![(1,2), (2,3)]); // Point pairs
+    /// ```
+    ///
+    /// # Edge Cases
+    ///
+    /// * Empty edge list returns `(Vec::new(), Vec::new())`
+    /// * Single edge returns path with just that edge
+    /// * Loop starts from lowest numbered point
+    /// * Branching paths follow first available edge at each step
+    /// * Disconnected edges follow path until component ends
     pub fn any_path(&self) -> (Vec<usize>, Vec<(PointId, PointId)>) {
         // check if the list of edges is empty
         if self.all.is_empty() {
