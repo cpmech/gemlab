@@ -1083,7 +1083,10 @@ mod tests {
         assert!(graph.find_articulation_points().is_empty());
 
         // Graph with one articulation point
-        let edges = [[0, 1], [1, 2], [2, 3], [1, 3], [1, 4]];
+        // 0 - 1 - 2
+        //     |
+        //     3
+        let edges = [[0, 1], [1, 2], [1, 3]];
         let graph = GraphUnd::from_edges(&edges, false, false).unwrap();
         let mut art_points = graph.find_articulation_points();
         art_points.sort_unstable();
