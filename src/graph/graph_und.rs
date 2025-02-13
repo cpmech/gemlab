@@ -493,6 +493,65 @@ impl GraphUnd {
         let old_to_new = GraphUnd::get_old_to_new_map(&ordering);
         mesh.renumber_points(&old_to_new)
     }
+
+    /// Returns the number of nodes in the graph
+    pub fn get_nnode(&self) -> usize {
+        self.adjacency.len()
+    }
+
+    /// Returns the number of edges in the graph
+    pub fn get_nedge(&self) -> usize {
+        let mut count = 0;
+        for row in &self.adjacency {
+            count += row.len();
+        }
+        // Divide by 2 since each edge is counted twice (undirected graph)
+        count / 2
+    }
+
+    /// Returns the degree (number of connections) of a node
+    ///
+    /// # Arguments
+    ///
+    /// * `node` - The node index
+    pub fn get_degree(&self, node: usize) -> Result<usize, StrError> {
+        let nnode = self.adjacency.len();
+        if self.degree.len() != nnode {
+            return Err("degree information is not available (calc_degree must be set to true)");
+        }
+        if node >= nnode {
+            return Err("node index out of bounds");
+        }
+        Ok(self.degree[node])
+    }
+
+    /// Checks if the graph contains a given edge
+    ///
+    /// # Arguments
+    ///
+    /// * `a` - First node
+    /// * `b` - Second node
+    pub fn has_edge(&self, a: usize, b: usize) -> bool {
+        let nnode = self.adjacency.len();
+        if a >= nnode || b >= nnode {
+            return false;
+        }
+        self.adjacency[a].contains(&b)
+    }
+
+    /// Returns a list of all edges in the graph as pairs of node indices
+    pub fn get_edges(&self) -> Vec<(usize, usize)> {
+        let mut edges = Vec::new();
+        for (a, neighbors) in self.adjacency.iter().enumerate() {
+            for &b in neighbors {
+                if a < b {
+                    // Only add each edge once
+                    edges.push((a, b));
+                }
+            }
+        }
+        edges
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
