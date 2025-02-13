@@ -30,6 +30,11 @@ pub struct GraphUnd {
     /// (nnode)
     explored: Vec<bool>,
 
+    /// Holds the number of edges
+    ///
+    /// The number of edges equals the sum of all rows in the adjacency matrix, divided by 2.
+    nedge: usize,
+
     /// Holds all point degrees (the number of connections of a vertex)
     ///
     /// Requires: `calc_degree == true`
@@ -87,6 +92,7 @@ impl GraphUnd {
         }
 
         // allocate adjacency matrix and degree array
+        let mut nedge = 0;
         let mut adjacency = Vec::new();
         let mut degree = Vec::new();
         let mut p_min_degree = 0;
@@ -105,6 +111,7 @@ impl GraphUnd {
             for row_set in adjacency_set.iter() {
                 let mut row: Vec<_> = row_set.iter().copied().collect();
                 row.sort_unstable_by_key(|p| (degree[*p], *p));
+                nedge += row.len();
                 adjacency.push(row);
             }
         } else {
@@ -112,15 +119,20 @@ impl GraphUnd {
             for row_set in adjacency_set.iter() {
                 let mut row: Vec<_> = row_set.iter().copied().collect();
                 row.sort();
+                nedge += row.len();
                 adjacency.push(row);
             }
         }
+
+        // divide by 2 since each edge is counted twice
+        nedge /= 2;
 
         // results
         Ok(GraphUnd {
             adjacency,
             queue,
             explored,
+            nedge,
             degree,
             p_min_degree,
             distance: Vec::new(),
@@ -499,6 +511,70 @@ impl GraphUnd {
         self.adjacency.len()
     }
 
+    /// Returns the number of edges in the graph                                                
+    pub fn get_nedge(&self) -> usize {
+        self.nedge
+    }
+
+    /// Returns the degree (number of connections) of a node                                    
+    ///                                                                                         
+    /// # Arguments                                                                             
+    ///                                                                                         
+    /// * `node` - The node index                                                               
+    pub fn get_degree(&self, node: usize) -> Result<usize, StrError> {
+        let nnode = self.adjacency.len();
+        if self.degree.len() != nnode {
+            return Err("degree information is not available (calc_degree must be set to true)");
+        }
+        if node >= nnode {
+            return Err("node index out of bounds");
+        }
+        Ok(self.degree[node])
+    }
+
+    /// Checks if the graph contains a given edge                                               
+    ///                                                                                         
+    /// # Arguments                                                                             
+    ///                                                                                         
+    /// * `a` - First node                                                                      
+    /// * `b` - Second node                                                                     
+    pub fn has_edge(&self, a: usize, b: usize) -> bool {
+        let nnode = self.adjacency.len();
+        if a >= nnode || b >= nnode {
+            return false;
+        }
+        self.adjacency[a].contains(&b)
+    }
+
+    /// Returns a list of all edges in the graph as pairs of node indices                       
+    pub fn get_edges(&self) -> Vec<(usize, usize)> {
+        let mut edges = Vec::new();
+        for (a, neighbors) in self.adjacency.iter().enumerate() {
+            for &b in neighbors {
+                if a < b {
+                    // only add each edge once
+                    edges.push((a, b));
+                }
+            }
+        }
+        edges
+    }
+
+    /// Returns the density of the graph                                                        
+    ///                                                                                         
+    /// ```text
+    /// density = (2 * nedge) / (nnode * (nnode - 1))                                
+    /// ```
+    ///
+    /// [See Wolfram](https://reference.wolfram.com/language/ref/GraphDensity.html.en)
+    pub fn density(&self) -> f64 {
+        let nnode = self.adjacency.len() as f64;
+        let nedge = self.nedge as f64;
+        if nnode <= 1.0 {
+            return 0.0;
+        }
+        (2.0 * nedge) / (nnode * (nnode - 1.0))
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -540,6 +616,13 @@ mod tests {
         assert_eq!(graph.distance.len(), 0);
         assert_eq!(graph.parent.len(), 0);
 
+        assert_eq!(
+            graph.get_degree(0).err(),
+            Some("degree information is not available (calc_degree must be set to true)")
+        );
+
+        assert_eq!(graph.get_edges(), &[(0, 1), (0, 2), (1, 2), (1, 3), (2, 3)]);
+
         let graph = GraphUnd::from_adjacency_set(&adjacency_set, true, false).unwrap();
 
         assert_eq!(graph.adjacency[0], &[1, 2]); // sorted by id
@@ -551,6 +634,20 @@ mod tests {
         assert_eq!(graph.degree, &[2, 3, 3, 2]);
         assert_eq!(graph.distance.len(), 0);
         assert_eq!(graph.parent.len(), 0);
+
+        assert_eq!(graph.get_nnode(), 4);
+        assert_eq!(graph.get_nedge(), 5);
+        assert_eq!(graph.get_degree(0).unwrap(), 2);
+        assert_eq!(graph.get_degree(2).unwrap(), 3);
+        assert_eq!(graph.has_edge(0, 2), true);
+        assert_eq!(graph.has_edge(0, 3), false);
+        assert_eq!(graph.has_edge(10, 0), false);
+        assert_eq!(graph.has_edge(0, 10), false);
+
+        // note that (1, 3) precedes (1, 2) because the node 3 has a lower degree than node 2
+        assert_eq!(graph.get_edges(), &[(0, 1), (0, 2), (1, 3), (1, 2), (2, 3)]);
+
+        assert_eq!(graph.density(), 5.0 / 6.0);
     }
 
     #[test]
@@ -823,7 +920,6 @@ mod tests {
         assert_eq!(graph.pseudo_peripheral(Some(4)).unwrap(), 2);
         assert_eq!(graph.pseudo_peripheral(None).unwrap(), 3);
     }
-
 
     #[test]
     fn gibbs_poole_stock_example() {
