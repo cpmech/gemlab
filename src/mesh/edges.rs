@@ -201,7 +201,7 @@ mod tests {
     use crate::shapes::GeoKind;
 
     #[rustfmt::skip]
-    fn generate_sample() -> Vec<Edge> {
+    fn generate_sample_lin2() -> Vec<Edge> {
         //          (11)           (12)           (13)
         //    9--------------7-------------.4--------------6
         //    |              |           .' |              |
@@ -246,14 +246,75 @@ mod tests {
         vec![e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13]
     }
 
+    #[rustfmt::skip]
+    fn generate_sample_lin3() -> Vec<Edge> {
+        //           (11)           (12)           (13)
+        //     9------105-----7-----106-----.4------107-----6
+        //     |              |           .' |              |
+        //     |              |         .'   |              |
+        // (4)112         (6)113  (7) .'     |              |
+        //     |              |     .104     |              |
+        //     |              |   .'         |              |
+        //     |      (8)     | .'           |(9)           |(10)
+        //     1------103-----8'            110            111
+        //     |              |              |              |
+        //     |              |              |              |
+        // (3)108         (5)109             |              |
+        //     |              |              |              |
+        //     |              |              |              |
+        //     5------100-----2------101-----3-----102-----10
+        //            (0)            (1)            (2)
+
+        // Bottom horizontal edges
+        let e0 = Edge { kind: GeoKind::Lin3, points: vec![5, 2, 100] };
+        let e1 = Edge { kind: GeoKind::Lin3, points: vec![2, 3, 101] };
+        let e2 = Edge { kind: GeoKind::Lin3, points: vec![3, 10, 102] };
+
+        // Left vertical edges
+        let e3 = Edge { kind: GeoKind::Lin3, points: vec![5, 1, 108] };
+        let e4 = Edge { kind: GeoKind::Lin3, points: vec![1, 9, 112] };
+
+        // Central edges
+        let e5 = Edge { kind: GeoKind::Lin3, points: vec![2, 8, 109] };
+        let e6 = Edge { kind: GeoKind::Lin3, points: vec![8, 7, 113] };
+        let e7 = Edge { kind: GeoKind::Lin3, points: vec![8, 4, 104] };
+        let e8 = Edge { kind: GeoKind::Lin3, points: vec![1, 8, 103] };
+
+        // Right vertical edges
+        let e9  = Edge { kind: GeoKind::Lin3, points: vec![3, 4, 110] };
+        let e10 = Edge { kind: GeoKind::Lin3, points: vec![10, 6, 111] };
+
+        // Top horizontal edges
+        let e11 = Edge { kind: GeoKind::Lin3, points: vec![9, 7, 105] };
+        let e12 = Edge { kind: GeoKind::Lin3, points: vec![7, 4, 106] };
+        let e13 = Edge { kind: GeoKind::Lin3, points: vec![4, 6, 107] };
+
+        vec![e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13]
+    }
+
     #[test]
-    fn test_any_path_1() {
+    #[should_panic(expected = "the edge kind must be Lin")]
+    fn any_path_panics_on_wrong_kind() {
+        let edge = Edge {
+            kind: GeoKind::Tri3,
+            points: vec![5, 2, 100],
+        };
+        let edges = Edges { all: vec![&edge] };
+        edges.any_path();
+    }
+
+    #[test]
+    fn any_path_works_lin2() {
         // Allocate edges
-        let all = generate_sample();
+        let all = generate_sample_lin2();
 
         // Empty list of edges
         let empty = Edges { all: vec![] };
         assert_eq!(empty.any_path(), (Vec::new(), Vec::new()));
+
+        // Single edge
+        let single = Edges { all: vec![&all[9]] };
+        assert_eq!(single.any_path(), (vec![/*9*/ 0], vec![3, 4]));
 
         // Branching
         // The selected endpoint is 1 on edge 8 because it is the lowest among [1,2,4,7]
@@ -303,56 +364,18 @@ mod tests {
         assert_eq!(bottom.any_path(), (vec![/*0*/ 1, /*1*/ 2, /*2*/ 0], vec![5, 2, 3, 10]));
     }
 
-    #[rustfmt::skip]
-    fn generate_sample_o2() -> Vec<Edge> {
-        //           (11)           (12)           (13)
-        //     9------105-----7-----106-----.4------107-----6
-        //     |              |           .' |              |
-        //     |              |         .'   |              |
-        // (4)112         (6)113  (7) .'     |              |
-        //     |              |     .104     |              |
-        //     |              |   .'         |              |
-        //     |      (8)     | .'           |(9)           |(10)
-        //     1------103-----8'            110            111
-        //     |              |              |              |
-        //     |              |              |              |
-        // (3)108         (5)109             |              |
-        //     |              |              |              |
-        //     |              |              |              |
-        //     5------100-----2------101-----3-----102-----10
-        //            (0)            (1)            (2)
-
-        // Bottom horizontal edges
-        let e0 = Edge { kind: GeoKind::Lin3, points: vec![5, 2, 100] };
-        let e1 = Edge { kind: GeoKind::Lin3, points: vec![2, 3, 101] };
-        let e2 = Edge { kind: GeoKind::Lin3, points: vec![3, 10, 102] };
-
-        // Left vertical edges
-        let e3 = Edge { kind: GeoKind::Lin3, points: vec![5, 1, 108] };
-        let e4 = Edge { kind: GeoKind::Lin3, points: vec![1, 9, 112] };
-
-        // Central edges
-        let e5 = Edge { kind: GeoKind::Lin3, points: vec![2, 8, 109] };
-        let e6 = Edge { kind: GeoKind::Lin3, points: vec![8, 7, 113] };
-        let e7 = Edge { kind: GeoKind::Lin3, points: vec![8, 4, 104] };
-        let e8 = Edge { kind: GeoKind::Lin3, points: vec![1, 8, 103] };
-
-        // Right vertical edges
-        let e9  = Edge { kind: GeoKind::Lin3, points: vec![3, 4, 110] };
-        let e10 = Edge { kind: GeoKind::Lin3, points: vec![10, 6, 111] };
-
-        // Top horizontal edges
-        let e11 = Edge { kind: GeoKind::Lin3, points: vec![9, 7, 105] };
-        let e12 = Edge { kind: GeoKind::Lin3, points: vec![7, 4, 106] };
-        let e13 = Edge { kind: GeoKind::Lin3, points: vec![4, 6, 107] };
-
-        vec![e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13]
-    }
-
     #[test]
-    fn test_any_path_2() {
+    fn any_path_works_lin3() {
         // Allocate edges
-        let all = generate_sample_o2();
+        let all = generate_sample_lin3();
+
+        // Empty list of edges
+        let empty = Edges { all: vec![] };
+        assert_eq!(empty.any_path(), (Vec::new(), Vec::new()));
+
+        // Single edge
+        let single = Edges { all: vec![&all[9]] };
+        assert_eq!(single.any_path(), (vec![/*9*/ 0], vec![3, 110, 4]));
 
         // Branching
         let branching = Edges {
@@ -401,5 +424,86 @@ mod tests {
             bottom.any_path(),
             (vec![/*0*/ 1, /*1*/ 2, /*2*/ 0], vec![5, 100, 2, 101, 3, 102, 10])
         );
+    }
+
+    #[test]
+    fn any_path_works_lin4() {
+        //              (0)             (1)
+        //      21---26---23----20---32---30----28
+        //       |               |               |
+        //      24              25              31
+        // (4)   |               |               |  (5)
+        //      27              22              29
+        //       |               |               |
+        //       3---10-----6----2---19---16----13
+        //              (2)             (3)
+        let e0 = Edge {
+            kind: GeoKind::Lin4,
+            points: vec![21, 20, 26, 23],
+        };
+        let e1 = Edge {
+            kind: GeoKind::Lin4,
+            points: vec![20, 28, 32, 30],
+        };
+        let e2 = Edge {
+            kind: GeoKind::Lin4,
+            points: vec![2, 3, 6, 10],
+        };
+        let e3 = Edge {
+            kind: GeoKind::Lin4,
+            points: vec![2, 13, 19, 16],
+        };
+        // Note: the edges do not make outward normals!
+
+        let edges = Edges { all: vec![&e0, &e1] };
+        assert_eq!(edges.any_path(), (vec![0, 1], vec![21, 26, 23, 20, 32, 30, 28]));
+
+        let edges = Edges { all: vec![&e1, &e0] };
+        assert_eq!(edges.any_path(), (vec![1, 0], vec![21, 26, 23, 20, 32, 30, 28]));
+
+        let edges = Edges { all: vec![&e2, &e3] };
+        assert_eq!(edges.any_path(), (vec![0, 1], vec![3, 10, 6, 2, 19, 16, 13]));
+    }
+
+    #[test]
+    fn any_path_works_lin5() {
+        //                 (0)                 (1)
+        //       30---38---32---37---29---48---43---47---41
+        //        |                   |                   |
+        //       39                  36                  46
+        //        |                   |                   |
+        //  (4)  33        34        31        44        42  (5)
+        //        |                   |                   |
+        //       40                  35                  45
+        //        |                   |                   |
+        //        3---14----6---13----2---28---21---27---18
+        //                 (2)                 (3)
+        let e0 = Edge {
+            kind: GeoKind::Lin5,
+            points: vec![30, 29, 32, 38, 37],
+        };
+        let e1 = Edge {
+            kind: GeoKind::Lin5,
+            points: vec![29, 41, 43, 48, 47],
+        };
+        let e2 = Edge {
+            kind: GeoKind::Lin5,
+            points: vec![2, 3, 6, 13, 14],
+        };
+        let e3 = Edge {
+            kind: GeoKind::Lin5,
+            points: vec![2, 18, 21, 28, 27],
+        };
+        // Note: the edges do not make outward normals!
+
+        let edges = Edges { all: vec![&e0, &e1] };
+        assert_eq!(edges.any_path(), (vec![0, 1], vec![30, 38, 32, 37, 29, 48, 43, 47, 41]));
+
+        let edges = Edges { all: vec![&e1, &e0] };
+        assert_eq!(edges.any_path(), (vec![1, 0], vec![30, 38, 32, 37, 29, 48, 43, 47, 41]));
+
+        let edges = Edges { all: vec![&e2, &e3] };
+        println!("{:?}", edges.any_path());
+        assert_eq!(edges.any_path(), (vec![0, 1], vec![3, 14, 6, 13, 2, 28, 21, 27, 18]));
     }
 }
