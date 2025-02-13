@@ -1,4 +1,5 @@
-use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Graph, Mesh};
+use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Mesh};
+use crate::graph::Graph;
 use crate::shapes::GeoKind;
 use crate::StrError;
 use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
@@ -958,7 +959,8 @@ impl Structured {
 mod tests {
     use super::Structured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{Figure, Graph, Mesh};
+    use crate::graph::Graph;
+    use crate::mesh::{Figure, Mesh};
     use crate::shapes::GeoKind;
     use russell_lab::{approx_eq, array_approx_eq};
 

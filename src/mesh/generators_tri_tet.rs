@@ -1,4 +1,5 @@
-use super::{Cell, Graph, Mesh, Point};
+use super::{Cell, Mesh, Point};
+use crate::graph::Graph;
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 use russell_lab::math::PI;
