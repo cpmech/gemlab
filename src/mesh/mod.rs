@@ -60,3 +60,8 @@ pub use grid_cells::*;
 pub use join_meshes::*;
 pub use mesh::*;
 pub use samples::*;
+
+// re-export GeoKind
+pub use crate::shapes::GeoCase;
+pub use crate::shapes::GeoClass;
+pub use crate::shapes::GeoKind;
