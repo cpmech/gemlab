@@ -960,8 +960,11 @@ mod tests {
     #[test]
     fn shortest_paths_fw_works_sioux_falls() {
         // read the graph
-        let table: HashMap<String, Vec<f64>> =
-            read_table("data/graphs/SiouxFalls.flow", Some(&["from", "to", "cap", "cost"])).unwrap();
+        let table: HashMap<String, Vec<f64>> = read_table(
+            "data/graphs/SiouxFalls.flow",
+            Some(&["from", "to", "volume_capacity", "cost"]),
+        )
+        .unwrap();
 
         // create the graph
         let from = table.get("from").unwrap();
