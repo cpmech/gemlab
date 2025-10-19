@@ -75,7 +75,7 @@ impl Unstructured {
         let npoint = trigen.out_npoint();
         let ncell = trigen.out_ncell();
         let nnode = trigen.out_cell_npoint();
-        let kind = if npoint == 6 { GeoKind::Tri6 } else { GeoKind::Tri3 };
+        let kind = if nnode == 6 { GeoKind::Tri6 } else { GeoKind::Tri3 };
         let zero_point = Point {
             id: 0,
             marker: 0,
