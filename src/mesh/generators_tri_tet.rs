@@ -68,6 +68,49 @@ fn apply_constraints(mesh: &mut Mesh, rmin: f64, rmax: f64) {
 }
 
 impl Unstructured {
+    /// Allocates a mesh from the data stored in a Trigen instance
+    pub fn from_trigen(trigen: &Trigen) -> Mesh {
+        // allocate data
+        const NDIM: usize = 2;
+        let npoint = trigen.out_npoint();
+        let ncell = trigen.out_ncell();
+        let nnode = trigen.out_cell_npoint();
+        let kind = if npoint == 6 { GeoKind::Tri6 } else { GeoKind::Tri3 };
+        let zero_point = Point {
+            id: 0,
+            marker: 0,
+            coords: vec![0.0; NDIM],
+        };
+        let zero_cell = Cell {
+            id: 0,
+            attribute: 1,
+            kind,
+            points: vec![0; nnode],
+        };
+        let mut mesh = Mesh {
+            ndim: NDIM,
+            points: vec![zero_point; npoint],
+            cells: vec![zero_cell; ncell],
+        };
+
+        // set mesh data
+        for i in 0..npoint {
+            let marker = trigen.out_point_marker(i);
+            mesh.points[i].id = i;
+            mesh.points[i].marker = marker;
+            mesh.points[i].coords[0] = trigen.out_point(i, 0);
+            mesh.points[i].coords[1] = trigen.out_point(i, 1);
+        }
+        for i in 0..ncell {
+            mesh.cells[i].id = i;
+            mesh.cells[i].attribute = trigen.out_cell_attribute(i);
+            for m in 0..nnode {
+                mesh.cells[i].points[m] = trigen.out_cell_point(i, m);
+            }
+        }
+        mesh
+    }
+
     /// Generates a mesh representing a quarter of a ring in 2D
     ///
     /// ```text
@@ -687,6 +730,81 @@ mod tests {
             let d = point_point_distance(&point.coords[0..2], &[0.0, 0.0]).unwrap();
             approx_eq(d, RMAX, 1e-15);
         }
+    }
+
+    #[test]
+    fn from_trigen_works() {
+        let mut trigen = Trigen::new(3, Some(3), Some(1), None).unwrap();
+        trigen.set_point(0, -100, 0.0, 0.0).unwrap();
+        trigen.set_point(1, -200, 1.0, 0.0).unwrap();
+        trigen.set_point(2, -300, 0.0, 1.0).unwrap();
+        trigen.set_segment(0, -10, 0, 1).unwrap();
+        trigen.set_segment(1, -20, 1, 2).unwrap();
+        trigen.set_segment(2, -30, 2, 0).unwrap();
+        trigen.set_region(0, 8, 0.1, 0.1, None).unwrap();
+        trigen.generate_mesh(false, false, false, None, None).unwrap();
+        let mesh = Unstructured::from_trigen(&trigen);
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_from_trigen.svg");
+        }
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 3);
+        assert_eq!(mesh.cells.len(), 1);
+        assert_eq!(mesh.points[0].id, 0);
+        assert_eq!(mesh.points[0].marker, -100);
+        assert_eq!(mesh.points[0].coords, vec![0.0, 0.0]);
+        assert_eq!(mesh.points[1].id, 1);
+        assert_eq!(mesh.points[1].marker, -200);
+        assert_eq!(mesh.points[1].coords, vec![1.0, 0.0]);
+        assert_eq!(mesh.points[2].id, 2);
+        assert_eq!(mesh.points[2].marker, -300);
+        assert_eq!(mesh.points[2].coords, vec![0.0, 1.0]);
+        assert_eq!(mesh.cells[0].id, 0);
+        assert_eq!(mesh.cells[0].attribute, 8);
+        assert_eq!(mesh.cells[0].kind, GeoKind::Tri3);
+        assert_eq!(mesh.cells[0].points, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn from_trigen_works_o2() {
+        let mut trigen = Trigen::new(3, Some(3), Some(1), None).unwrap();
+        trigen.set_point(0, -100, 0.0, 0.0).unwrap();
+        trigen.set_point(1, -200, 1.0, 0.0).unwrap();
+        trigen.set_point(2, -300, 0.0, 1.0).unwrap();
+        trigen.set_segment(0, -10, 0, 1).unwrap();
+        trigen.set_segment(1, -20, 1, 2).unwrap();
+        trigen.set_segment(2, -30, 2, 0).unwrap();
+        trigen.set_region(0, 8, 0.1, 0.1, None).unwrap();
+        trigen.generate_mesh(false, true, false, None, None).unwrap();
+        let mesh = Unstructured::from_trigen(&trigen);
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_from_trigen_o2.svg");
+        }
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 6);
+        assert_eq!(mesh.cells.len(), 1);
+        assert_eq!(mesh.points[0].id, 0);
+        assert_eq!(mesh.points[0].marker, -100);
+        assert_eq!(mesh.points[0].coords, vec![0.0, 0.0]);
+        assert_eq!(mesh.points[1].id, 1);
+        assert_eq!(mesh.points[1].marker, -200);
+        assert_eq!(mesh.points[1].coords, vec![1.0, 0.0]);
+        assert_eq!(mesh.points[2].id, 2);
+        assert_eq!(mesh.points[2].marker, -300);
+        assert_eq!(mesh.points[2].coords, vec![0.0, 1.0]);
+        assert_eq!(mesh.points[3].id, 3);
+        assert_eq!(mesh.points[3].marker, -10);
+        assert_eq!(mesh.points[3].coords, vec![0.5, 0.0]);
+        assert_eq!(mesh.points[4].id, 4);
+        assert_eq!(mesh.points[4].marker, -20);
+        assert_eq!(mesh.points[4].coords, vec![0.5, 0.5]);
+        assert_eq!(mesh.points[5].id, 5);
+        assert_eq!(mesh.points[5].marker, -30);
+        assert_eq!(mesh.points[5].coords, vec![0.0, 0.5]);
+        assert_eq!(mesh.cells[0].id, 0);
+        assert_eq!(mesh.cells[0].attribute, 8);
+        assert_eq!(mesh.cells[0].kind, GeoKind::Tri6);
+        assert_eq!(mesh.cells[0].points, vec![0, 1, 2, 3, 4, 5]);
     }
 
     #[test]
