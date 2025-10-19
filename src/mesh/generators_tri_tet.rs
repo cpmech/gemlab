@@ -111,6 +111,53 @@ impl Unstructured {
         mesh
     }
 
+    /// Allocates a mesh from the data stored in a Tetgen instance
+    pub fn from_tetgen(tetgen: &Tetgen) -> Mesh {
+        // allocate data
+        const NDIM: usize = 3;
+        let npoint = tetgen.out_npoint();
+        let ncell = tetgen.out_ncell();
+        let nnode = tetgen.out_cell_npoint();
+        let kind = if nnode == 10 { GeoKind::Tet10 } else { GeoKind::Tet4 };
+        let zero_point = Point {
+            id: 0,
+            marker: 0,
+            coords: vec![0.0; NDIM],
+        };
+        let zero_cell = Cell {
+            id: 0,
+            attribute: 1,
+            kind,
+            points: vec![0; nnode],
+        };
+        let mut mesh = Mesh {
+            ndim: NDIM,
+            points: vec![zero_point; npoint],
+            cells: vec![zero_cell; ncell],
+        };
+
+        // set mesh data
+        for i in 0..npoint {
+            // note: TetGen automatically assigns the marker 1 for points on the boundary
+            // thus, we cannot use the marker 1 to identify corner points
+            let tet_mark = tetgen.out_point_marker(i);
+            let marker = if tet_mark == 1 { 0 } else { tet_mark };
+            mesh.points[i].id = i;
+            mesh.points[i].marker = marker;
+            mesh.points[i].coords[0] = tetgen.out_point(i, 0);
+            mesh.points[i].coords[1] = tetgen.out_point(i, 1);
+            mesh.points[i].coords[2] = tetgen.out_point(i, 2);
+        }
+        for i in 0..ncell {
+            mesh.cells[i].id = i;
+            mesh.cells[i].attribute = tetgen.out_cell_attribute(i);
+            for m in 0..nnode {
+                mesh.cells[i].points[m] = tetgen.out_cell_point(i, m);
+            }
+        }
+        mesh
+    }
+
     /// Generates a mesh representing a quarter of a ring in 2D
     ///
     /// ```text
@@ -763,6 +810,94 @@ mod tests {
         assert_eq!(mesh.cells[0].attribute, 8);
         assert_eq!(mesh.cells[0].kind, GeoKind::Tri3);
         assert_eq!(mesh.cells[0].points, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn from_tetgen_works() {
+        // allocate data for 4 points
+        let mut tetgen = Tetgen::new(4, Some(vec![3, 3, 3, 3]), Some(1), None).unwrap();
+
+        // set points
+        tetgen.set_point(0, 0, 0.0, 1.0, 0.0).unwrap();
+        tetgen.set_point(1, 0, 0.0, 0.0, 0.0).unwrap();
+        tetgen.set_point(2, 0, 1.0, 1.0, 0.0).unwrap();
+        tetgen.set_point(3, 0, 0.0, 1.0, 1.0).unwrap();
+
+        // set facets
+        // 0
+        tetgen.set_facet_point(0, 0, 0).unwrap();
+        tetgen.set_facet_point(0, 1, 2).unwrap();
+        tetgen.set_facet_point(0, 2, 1).unwrap();
+        // 1
+        tetgen.set_facet_point(1, 0, 0).unwrap();
+        tetgen.set_facet_point(1, 1, 1).unwrap();
+        tetgen.set_facet_point(1, 2, 3).unwrap();
+        // 2
+        tetgen.set_facet_point(2, 0, 0).unwrap();
+        tetgen.set_facet_point(2, 1, 3).unwrap();
+        tetgen.set_facet_point(2, 2, 2).unwrap();
+        // 3
+        tetgen.set_facet_point(3, 0, 1).unwrap();
+        tetgen.set_facet_point(3, 1, 2).unwrap();
+        tetgen.set_facet_point(3, 2, 3).unwrap();
+
+        // set region
+        tetgen.set_region(0, 1, 0.1, 0.9, 0.1, None).unwrap();
+
+        // generate mesh
+        tetgen.generate_mesh(false, false, None, None).unwrap();
+
+        let mesh = Unstructured::from_tetgen(&tetgen);
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_from_tetgen.svg");
+        }
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 5);
+        assert_eq!(mesh.cells.len(), 2);
+    }
+
+    #[test]
+    fn from_tetgen_works_o2() {
+        // allocate data for 4 points
+        let mut tetgen = Tetgen::new(4, Some(vec![3, 3, 3, 3]), Some(1), None).unwrap();
+
+        // set points
+        tetgen.set_point(0, 0, 0.0, 1.0, 0.0).unwrap();
+        tetgen.set_point(1, 0, 0.0, 0.0, 0.0).unwrap();
+        tetgen.set_point(2, 0, 1.0, 1.0, 0.0).unwrap();
+        tetgen.set_point(3, 0, 0.0, 1.0, 1.0).unwrap();
+
+        // set facets
+        // 0
+        tetgen.set_facet_point(0, 0, 0).unwrap();
+        tetgen.set_facet_point(0, 1, 2).unwrap();
+        tetgen.set_facet_point(0, 2, 1).unwrap();
+        // 1
+        tetgen.set_facet_point(1, 0, 0).unwrap();
+        tetgen.set_facet_point(1, 1, 1).unwrap();
+        tetgen.set_facet_point(1, 2, 3).unwrap();
+        // 2
+        tetgen.set_facet_point(2, 0, 0).unwrap();
+        tetgen.set_facet_point(2, 1, 3).unwrap();
+        tetgen.set_facet_point(2, 2, 2).unwrap();
+        // 3
+        tetgen.set_facet_point(3, 0, 1).unwrap();
+        tetgen.set_facet_point(3, 1, 2).unwrap();
+        tetgen.set_facet_point(3, 2, 3).unwrap();
+
+        // set region
+        tetgen.set_region(0, 1, 0.1, 0.9, 0.1, None).unwrap();
+
+        // generate mesh
+        tetgen.generate_mesh(false, true, None, None).unwrap();
+
+        let mesh = Unstructured::from_tetgen(&tetgen);
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_from_tetgen_o2.svg");
+        }
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 14);
+        assert_eq!(mesh.cells.len(), 2);
     }
 
     #[test]
