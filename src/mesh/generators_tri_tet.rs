@@ -298,44 +298,8 @@ impl Unstructured {
         // generate mesh
         trigen.generate_mesh(false, o2, true, global_max_area, None)?;
 
-        // allocate data
-        const NDIM: usize = 2;
-        let npoint = trigen.out_npoint();
-        let ncell = trigen.out_ncell();
-        let nnode = trigen.out_cell_npoint();
-        let kind = if o2 { GeoKind::Tri6 } else { GeoKind::Tri3 };
-        let zero_point = Point {
-            id: 0,
-            marker: 0,
-            coords: vec![0.0; NDIM],
-        };
-        let zero_cell = Cell {
-            id: 0,
-            attribute: 1,
-            kind,
-            points: vec![0; nnode],
-        };
-        let mut mesh = Mesh {
-            ndim: NDIM,
-            points: vec![zero_point; npoint],
-            cells: vec![zero_cell; ncell],
-        };
-
-        // set mesh data
-        for i in 0..npoint {
-            let marker = trigen.out_point_marker(i);
-            mesh.points[i].id = i;
-            mesh.points[i].marker = marker;
-            mesh.points[i].coords[0] = trigen.out_point(i, 0);
-            mesh.points[i].coords[1] = trigen.out_point(i, 1);
-        }
-        for i in 0..ncell {
-            mesh.cells[i].id = i;
-            mesh.cells[i].attribute = trigen.out_cell_attribute(i);
-            for m in 0..nnode {
-                mesh.cells[i].points[m] = trigen.out_cell_point(i, m);
-            }
-        }
+        // convert trigen to Mesh
+        let mut mesh = Unstructured::from_trigen(&trigen);
 
         // apply constraints (need to be done before the upgrade because
         // Steiner points may be added even for Tri3)
@@ -604,48 +568,8 @@ impl Unstructured {
         // generate mesh
         tetgen.generate_mesh(false, o2, global_max_volume, None)?;
 
-        // allocate data
-        const NDIM: usize = 3;
-        let npoint = tetgen.out_npoint();
-        let ncell = tetgen.out_ncell();
-        let nnode = tetgen.out_cell_npoint();
-        let kind = if o2 { GeoKind::Tet10 } else { GeoKind::Tet4 };
-        let zero_point = Point {
-            id: 0,
-            marker: 0,
-            coords: vec![0.0; NDIM],
-        };
-        let zero_cell = Cell {
-            id: 0,
-            attribute: 1,
-            kind,
-            points: vec![0; nnode],
-        };
-        let mut mesh = Mesh {
-            ndim: NDIM,
-            points: vec![zero_point; npoint],
-            cells: vec![zero_cell; ncell],
-        };
-
-        // set mesh data
-        for i in 0..npoint {
-            // note: TetGen automatically assigns the marker 1 for points on the boundary
-            // thus, we cannot use the marker 1 to identify corner points
-            let tet_mark = tetgen.out_point_marker(i);
-            let marker = if tet_mark == 1 { 0 } else { tet_mark };
-            mesh.points[i].id = i;
-            mesh.points[i].marker = marker;
-            mesh.points[i].coords[0] = tetgen.out_point(i, 0);
-            mesh.points[i].coords[1] = tetgen.out_point(i, 1);
-            mesh.points[i].coords[2] = tetgen.out_point(i, 2);
-        }
-        for i in 0..ncell {
-            mesh.cells[i].id = i;
-            mesh.cells[i].attribute = tetgen.out_cell_attribute(i);
-            for m in 0..nnode {
-                mesh.cells[i].points[m] = tetgen.out_cell_point(i, m);
-            }
-        }
+        // convert trigen to Mesh
+        let mut mesh = Unstructured::from_tetgen(&tetgen);
 
         // set markers of points on marked faces
         let n_face_point = if o2 { 6 } else { 3 };
