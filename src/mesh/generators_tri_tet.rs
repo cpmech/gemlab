@@ -1,4 +1,4 @@
-use super::{Cell, Mesh, Point};
+use super::Mesh;
 use crate::graph::GraphUnd;
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
@@ -76,22 +76,7 @@ impl Unstructured {
         let ncell = trigen.out_ncell();
         let nnode = trigen.out_cell_npoint();
         let kind = if nnode == 6 { GeoKind::Tri6 } else { GeoKind::Tri3 };
-        let zero_point = Point {
-            id: 0,
-            marker: 0,
-            coords: vec![0.0; NDIM],
-        };
-        let zero_cell = Cell {
-            id: 0,
-            attribute: 1,
-            kind,
-            points: vec![0; nnode],
-        };
-        let mut mesh = Mesh {
-            ndim: NDIM,
-            points: vec![zero_point; npoint],
-            cells: vec![zero_cell; ncell],
-        };
+        let mut mesh = Mesh::new_zero_homogeneous(NDIM, npoint, ncell, kind).unwrap();
 
         // set mesh data
         for i in 0..npoint {
@@ -119,22 +104,7 @@ impl Unstructured {
         let ncell = tetgen.out_ncell();
         let nnode = tetgen.out_cell_npoint();
         let kind = if nnode == 10 { GeoKind::Tet10 } else { GeoKind::Tet4 };
-        let zero_point = Point {
-            id: 0,
-            marker: 0,
-            coords: vec![0.0; NDIM],
-        };
-        let zero_cell = Cell {
-            id: 0,
-            attribute: 1,
-            kind,
-            points: vec![0; nnode],
-        };
-        let mut mesh = Mesh {
-            ndim: NDIM,
-            points: vec![zero_point; npoint],
-            cells: vec![zero_cell; ncell],
-        };
+        let mut mesh = Mesh::new_zero_homogeneous(NDIM, npoint, ncell, kind).unwrap();
 
         // set mesh data
         for i in 0..npoint {

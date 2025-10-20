@@ -108,6 +108,106 @@ pub struct Mesh {
 }
 
 impl Mesh {
+    /// Allocates a new Mesh with zeroed coordinates and connectivities and homogeneous cells (all cells are of the same kind)
+    ///
+    /// Use this function to allocate memory and later fill the coordinates and cell connectivities as appropriate.
+    ///
+    /// # Arguments
+    ///
+    /// * `space_ndim` -- space dimension (2 or 3). Also, `space_ndim` must be greater than or equal to
+    ///   `geo_ndim`; e.g., you cannot have a 3D shape in a 2D space.
+    /// * `npoint` -- number of points (≥ 2)
+    /// * `ncell` -- number of cells (≥ 1)
+    /// * `kind` -- cell kind, such that `geo_kind` ≤ `space_ndim` with `geo_ndim = kind.ndim()`
+    ///
+    /// **Warning:** This function does not check for validity of the mesh. Use [Mesh::check_all()] to capture (some) errors.
+    ///
+    /// Geometry cases regarding the number of dimensions (geo vs space)
+    ///
+    /// 1. Case `CABLE` -- `geo_ndim = 1` and `space_ndim = 2 or 3`; e.g., line in 2D or 3D (cables and rods)
+    /// 2. Case `SHELL` -- `geo_ndim = 2` and `space_ndim = 3`; e.g. Tri or Qua in 3D (shells and surfaces)
+    /// 3. Case `SOLID` -- `geo_ndim = space_ndim`; e.g., Tri and Qua in 2D or Tet and Hex in 3D
+    ///
+    /// | `geo_ndim` | `space_ndim = 2` | `space_ndim = 3` |
+    /// |:----------:|:----------------:|:----------------:|
+    /// |     1      |     `CABLE`      |     `CABLE`      |
+    /// |     2      |     `SOLID`      |     `SHELL`      |
+    /// |     3      |    impossible    |     `SOLID`      |
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::prelude::*;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     let mesh = Mesh::new_zero_homogeneous(2, 4, 2, GeoKind::Tri3).unwrap();
+    ///     assert_eq!(mesh.ndim, 2);
+    ///     assert_eq!(mesh.points.len(), 4);
+    ///     assert_eq!(mesh.cells.len(), 2);
+    ///     for i in 0..4 {
+    ///         let point = &mesh.points[i];
+    ///         assert_eq!(point.id, i);
+    ///         assert_eq!(point.coords, vec![0.0, 0.0]);
+    ///     }
+    ///     for e in 0..2 {
+    ///         let cell = &mesh.cells[e];
+    ///         assert_eq!(cell.id, e);
+    ///         assert_eq!(cell.attribute, 1);
+    ///         assert_eq!(cell.kind, GeoKind::Tri3);
+    ///         assert_eq!(cell.points, vec![0, 0, 0]);
+    ///     }
+    ///     assert_eq!(
+    ///         mesh.check_all().err(),
+    ///         Some("cannot compute inverse due to zero determinant")
+    ///     );
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn new_zero_homogeneous(
+        space_ndim: usize,
+        npoint: usize,
+        ncell: usize,
+        kind: GeoKind,
+    ) -> Result<Self, StrError> {
+        if space_ndim < 2 || space_ndim > 3 {
+            return Err("space_ndim must be 2 or 3");
+        }
+        if npoint < 2 {
+            return Err("npoint must be ≥ 2");
+        }
+        if ncell < 1 {
+            return Err("ncell must be ≥ 1");
+        }
+        let geo_ndim = kind.ndim();
+        if geo_ndim > space_ndim {
+            return Err("geo_ndim cannot be greater than space_ndim");
+        }
+        let nnode = kind.nnode();
+        let mut points: Vec<Point> = Vec::with_capacity(npoint);
+        let mut cells: Vec<Cell> = Vec::with_capacity(ncell);
+        for i in 0..npoint {
+            points.push(Point {
+                id: i,
+                marker: 0,
+                coords: vec![0.0; space_ndim],
+            });
+        }
+        for i in 0..ncell {
+            cells.push(Cell {
+                id: i,
+                attribute: 1,
+                kind,
+                points: vec![0; nnode],
+            });
+        }
+        Ok(Mesh {
+            ndim: space_ndim,
+            points,
+            cells,
+        })
+    }
+
     /// Reads a JSON file containing the mesh data
     ///
     /// # Input
@@ -551,7 +651,51 @@ impl fmt::Display for Mesh {
 #[cfg(test)]
 mod tests {
     use crate::mesh::{Mesh, Point, Samples};
-    use crate::shapes::Scratchpad;
+    use crate::shapes::{GeoKind, Scratchpad};
+
+    #[test]
+    fn new_zero_homogeneous_captures_errors() {
+        assert_eq!(
+            Mesh::new_zero_homogeneous(1, 2, 1, GeoKind::Lin2).err(),
+            Some("space_ndim must be 2 or 3")
+        );
+        assert_eq!(
+            Mesh::new_zero_homogeneous(2, 1, 1, GeoKind::Lin2).err(),
+            Some("npoint must be ≥ 2")
+        );
+        assert_eq!(
+            Mesh::new_zero_homogeneous(2, 2, 0, GeoKind::Lin2).err(),
+            Some("ncell must be ≥ 1")
+        );
+        assert_eq!(
+            Mesh::new_zero_homogeneous(2, 2, 1, GeoKind::Hex8).err(),
+            Some("geo_ndim cannot be greater than space_ndim")
+        );
+    }
+
+    #[test]
+    fn new_zero_homogeneous_works() {
+        let mesh = Mesh::new_zero_homogeneous(2, 4, 2, GeoKind::Tri3).unwrap();
+        assert_eq!(mesh.ndim, 2);
+        assert_eq!(mesh.points.len(), 4);
+        assert_eq!(mesh.cells.len(), 2);
+        for i in 0..4 {
+            let point = &mesh.points[i];
+            assert_eq!(point.id, i);
+            assert_eq!(point.coords, vec![0.0, 0.0]);
+        }
+        for i in 0..2 {
+            let cell = &mesh.cells[i];
+            assert_eq!(cell.id, i);
+            assert_eq!(cell.attribute, 1);
+            assert_eq!(cell.kind, GeoKind::Tri3);
+            assert_eq!(cell.points, vec![0, 0, 0]);
+        }
+        assert_eq!(
+            mesh.check_all().err(),
+            Some("cannot compute inverse due to zero determinant")
+        );
+    }
 
     #[test]
     fn read_and_write_capture_errors() {
