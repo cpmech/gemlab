@@ -214,7 +214,7 @@ impl GraphUnd {
     /// # Output
     ///
     /// Returns the ordering array such that `old = ordering[new]` where `old` is the original
-    /// point id and `new` is the new point id. See the function [Graph::get_old_to_new_map]
+    /// point id and `new` is the new point id. See the function [GraphUnd::get_old_to_new_map()]
     pub fn cuthill_mckee(&mut self, start_point: Option<PointId>) -> Result<Vec<PointId>, StrError> {
         // check if the degree of vertices is available
         let nnode = self.adjacency.len();
