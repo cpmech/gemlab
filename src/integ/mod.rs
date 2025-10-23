@@ -312,8 +312,8 @@ mod testing;
 mod vec_01_ns;
 mod vec_02_nv;
 mod vec_02_nv_bry;
-mod vec_03_vb;
-mod vec_04_tb;
+mod vec_03_bv;
+mod vec_04_bt;
 
 pub use analytical_qua4::*;
 pub use analytical_qua8::*;
@@ -336,5 +336,5 @@ pub use scalar_field::*;
 pub use vec_01_ns::*;
 pub use vec_02_nv::*;
 pub use vec_02_nv_bry::*;
-pub use vec_03_vb::*;
-pub use vec_04_tb::*;
+pub use vec_03_bv::*;
+pub use vec_04_bt::*;
