@@ -149,7 +149,7 @@ fn main() -> Result<(), StrError> {
     //     └     ┘
     let (s00, s11, s01) = (6.0, 4.0, 2.0);
     let mut d = Vector::filled(nnode * space_ndim, 0.0);
-    integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+    integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
         sig.sym_set(0, 0, s00);
         sig.sym_set(1, 1, s11);
         sig.sym_set(0, 1, s01);
@@ -173,7 +173,7 @@ fn main() -> Result<(), StrError> {
         Mandel::Symmetric2D,
     )
     .unwrap();
-    let d_correct = ana.vec_04_tb(&sig, false);
+    let d_correct = ana.vec_04_bt(&sig, false);
     vec_approx_eq(&d, &d_correct, 1e-15);
     Ok(())
 }

@@ -74,15 +74,15 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 04: Tensor(T) dot gradient(B)
+//! ## VEC 04: gradient(B) dot transpose tensor(T)
 //!
-//! Function [vec_04_tb()]
+//! Function [vec_04_bt()]
 //!
 //! ```text
-//! →    ⌠   →    →  → →
-//! dᵐ = │ σ(x) · Bᵐ(x(ξ)) dΩ
-//!      ⌡ ▔
-//!      Ωₑ
+//! →    ⌠ →  → →        →      ⌠   →    →  → →
+//! dᵐ = │ Bᵐ(x(ξ)) · σᵀ(x) dΩ  │ σ(x) · Bᵐ(x(ξ)) dΩ
+//!      ⌡            ▔         ⌡ ▔
+//!      Ωₑ                     Ωₑ
 //! ```
 //!
 //! # Matrix results: Integration of some combinations involving N, tensors, and B, resulting in matrices

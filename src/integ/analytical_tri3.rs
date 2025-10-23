@@ -189,9 +189,9 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Integrates tensor dot gradient with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
+    /// Integrates gradient dot transpose tensor with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
     #[rustfmt::skip]
-    pub fn vec_04_tb(&self, tt: &Tensor2, axisymmetric: bool) -> Vector {
+    pub fn vec_04_bt(&self, tt: &Tensor2, axisymmetric: bool) -> Vector {
         let (x0, x1, x2) = (self.x0, self.x1, self.x2);
         let (b00, b01) = (self.bb.get(0,0), self.bb.get(0,1));
         let (b10, b11) = (self.bb.get(1,0), self.bb.get(1,1));

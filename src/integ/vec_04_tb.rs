@@ -4,17 +4,17 @@ use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::{Mandel, Tensor2};
 
-/// Implements the tensor(T) dot gradient(B) integration case 04
+/// Implements the gradient(B) dot transpose tensor(T) integration case 04
 ///
 /// Callback function: `f(σ, p, N, B)`
 ///
 /// Tensor dot gradient:
 ///
 /// ```text
-/// →    ⌠   →    →  → →
-/// dᵐ = │ σ(x) · Bᵐ(x(ξ)) α dΩ
-///      ⌡ ▔
-///      Ωₑ
+/// →    ⌠  →  → →        →         ⌠   →    →  → →
+/// dᵐ = │  Bᵐ(x(ξ)) · σᵀ(x) α dΩ = │ σ(x) · Bᵐ(x(ξ)) α dΩ
+///      ⌡             ▔            ⌡ ▔
+///      Ωₑ                         Ωₑ
 /// ```
 ///
 /// The numerical integration is:
@@ -72,7 +72,7 @@ use russell_tensor::{Mandel, Tensor2};
 ///     let gauss = Gauss::new(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
 ///     let mut args = CommonArgs::new(&mut pad, &gauss);
-///     integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+///     integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
 ///         sig.sym_set(0, 1, 3.0);
@@ -90,7 +90,7 @@ use russell_tensor::{Mandel, Tensor2};
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_04_tb<F>(d: &mut Vector, args: &mut CommonArgs, mut fn_sig: F) -> Result<(), StrError>
+pub fn vec_04_bt<F>(d: &mut Vector, args: &mut CommonArgs, mut fn_sig: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Tensor2, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
@@ -141,7 +141,7 @@ where
     Ok(())
 }
 
-/// Adds contribution to the d-vector in vec_04_tb
+/// Adds contribution to the d-vector in vec_04_bt
 #[inline]
 fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, args: &mut CommonArgs) {
     let t = sig.vector();
@@ -162,7 +162,7 @@ fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, ar
     }
 }
 
-/// Adds contribution to the d-vector in vec_04_tb (axisymmetric case)
+/// Adds contribution to the d-vector in vec_04_bt (axisymmetric case)
 #[inline]
 fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Tensor2, args: &mut CommonArgs) {
     let t = sig.vector();
@@ -198,7 +198,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
-            integ::vec_04_tb(&mut d, &mut args, f).err(),
+            integ::vec_04_bt(&mut d, &mut args, f).err(),
             Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -222,7 +222,7 @@ mod tests {
             Mandel::Symmetric2D,
         )
         .unwrap();
-        let d_correct = ana.vec_04_tb(&sig, false);
+        let d_correct = ana.vec_04_bt(&sig, false);
 
         // integration points
         let class = pad.kind.class();
@@ -238,7 +238,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+            integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -266,7 +266,7 @@ mod tests {
             Mandel::Symmetric2D,
         )
         .unwrap();
-        let d_correct = ana.vec_04_tb(&sig, true);
+        let d_correct = ana.vec_04_bt(&sig, true);
 
         // integration points
         let class = pad.kind.class();
@@ -280,7 +280,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.data.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             args.axisymmetric = true;
-            integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+            integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -305,7 +305,7 @@ mod tests {
             [7.0, 6.0, 4.0],
         ], Mandel::Symmetric).unwrap();
         let ana = AnalyticalTet4::new(&pad);
-        let d_correct = ana.vec_04_tb(&tt);
+        let d_correct = ana.vec_04_bt(&tt);
 
         // integration points
         let class = pad.kind.class();
@@ -321,7 +321,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+            integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
                 sig.set_tensor(1.0, &tt);
                 Ok(())
             })

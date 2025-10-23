@@ -211,7 +211,7 @@ impl AnalyticalTet4 {
         ]
     }
 
-    /// Integrates tensor dot gradient with constant tensor function σ(x)
+    /// Integrates gradient dot transpose tensor with constant tensor function σ(x)
     ///
     /// Solution:
     ///
@@ -223,7 +223,7 @@ impl AnalyticalTet4 {
     /// dᵐ₂ = (σ₂₀ Bᵐ₀ + σ₂₁ Bᵐ₁ + σ₂₂ Bᵐ₂) V
     /// ```
     #[rustfmt::skip]
-    pub fn vec_04_tb(&self, tt: &Tensor2) -> Vec<f64> {
+    pub fn vec_04_bt(&self, tt: &Tensor2) -> Vec<f64> {
         let c = self.volume;
         let mat = tt.as_matrix();
         let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
