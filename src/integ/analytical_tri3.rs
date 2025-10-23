@@ -151,14 +151,14 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Integrates vector dot gradient with constant vector function w(x) = {w₀, w₁}
+    /// Integrates gradient dot vector with constant vector function w(x) = {w₀, w₁}
     ///
     /// solution:
     ///
     /// ```text
     /// cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁) A
     /// ```
-    pub fn vec_03_vb(&self, w0: f64, w1: f64) -> Vector {
+    pub fn vec_03_bv(&self, w0: f64, w1: f64) -> Vector {
         Vector::from(&[
             (w0 * self.bb.get(0, 0) + w1 * self.bb.get(0, 1)) * self.area,
             (w0 * self.bb.get(1, 0) + w1 * self.bb.get(1, 1)) * self.area,
@@ -166,7 +166,7 @@ impl AnalyticalTri3 {
         ])
     }
 
-    /// Integrates vector dot gradient with bilinear vector function w(x) = {x, y}
+    /// Integrates gradient dot vector with bilinear vector function w(x) = {x, y}
     ///
     /// solution:
     ///
@@ -179,7 +179,7 @@ impl AnalyticalTri3 {
     /// * `pad` -- The same shape used in `new` because we need the nodal coordinates here
     ///            Do not change the coordinates, otherwise the values will be wrong.
     #[rustfmt::skip]
-    pub fn vec_03_vb_bilinear(&self, pad: &Scratchpad) -> Vector {
+    pub fn vec_03_bv_bilinear(&self, pad: &Scratchpad) -> Vector {
         let (x0, x1, x2) = (pad.xxt.get(0,0), pad.xxt.get(0,1), pad.xxt.get(0,2));
         let (y0, y1, y2) = (pad.xxt.get(1,0), pad.xxt.get(1,1), pad.xxt.get(1,2));
         Vector::from(&[

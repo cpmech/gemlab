@@ -65,11 +65,11 @@
 //!
 //! ## VEC 03: Vector(V) dot gradient(B)
 //!
-//! Function [vec_03_vb()]
+//! Function [vec_03_bv()]
 //!
 //! ```text
-//!      ⌠ → →    →  → →
-//! cᵐ = │ w(x) · Bᵐ(x(ξ)) dΩ
+//!      ⌠ →  → →     → →
+//! cᵐ = │ Bᵐ(x(ξ)) · w(x) dΩ
 //!      ⌡
 //!      Ωₑ
 //! ```

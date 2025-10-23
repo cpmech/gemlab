@@ -194,7 +194,7 @@ impl AnalyticalTet4 {
         ]
     }
 
-    /// Integrates vector dot gradient with constant vector w(x) = {w0, w1, w2}
+    /// Integrates gradient dot vector with constant vector w(x) = {w0, w1, w2}
     ///
     /// Solution:
     ///
@@ -202,7 +202,7 @@ impl AnalyticalTet4 {
     /// cᵐ = (w₀ Bᵐ₀ + w₁ Bᵐ₁ + w₂ Bᵐ₂) V
     /// ```
     #[rustfmt::skip]
-    pub fn vec_03_vb(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
+    pub fn vec_03_bv(&self, w0: f64, w1: f64, w2: f64) -> Vec<f64> {
         vec![
             (w0 * self.bb.get(0,0) + w1 * self.bb.get(0,1) + w2 * self.bb.get(0,2)) * self.volume,
             (w0 * self.bb.get(1,0) + w1 * self.bb.get(1,1) + w2 * self.bb.get(1,2)) * self.volume,

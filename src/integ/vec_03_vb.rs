@@ -2,15 +2,15 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the vector(V) dot gradient(B) integration case 03
+/// Implements the gradient(B) dot vector(V) integration case 03
 ///
 /// Callback function: `f(w, p, N, B)`
 ///
 /// Vector dot gradient:
 ///
 /// ```text
-///      ⌠ → →    →  → →
-/// cᵐ = │ w(x) · Bᵐ(x(ξ)) α dΩ
+///      ⌠ →  → →     → →
+/// cᵐ = │ Bᵐ(x(ξ)) · w(x) α dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -18,8 +18,8 @@ use russell_lab::{Matrix, Vector};
 /// The numerical integration is:
 ///
 /// ```text
-///      nip-1  → →     →  →       →
-/// cᵐ ≈   Σ    w(ιᵖ) · Bᵐ(ιᵖ) |J|(ιᵖ) wᵖ α
+///      nip-1  →  →     → →       →
+/// cᵐ ≈   Σ    Bᵐ(ιᵖ) · w(ιᵖ) |J|(ιᵖ) wᵖ α
 ///       p=0
 /// ```
 ///
@@ -65,7 +65,7 @@ use russell_lab::{Matrix, Vector};
 ///     let gauss = Gauss::new(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
 ///     let mut args = CommonArgs::new(&mut pad, &gauss);
-///     integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
+///     integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
 ///         Ok(())
@@ -81,7 +81,7 @@ use russell_lab::{Matrix, Vector};
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_03_vb<F>(c: &mut Vector, args: &mut CommonArgs, mut fn_w: F) -> Result<(), StrError>
+pub fn vec_03_bv<F>(c: &mut Vector, args: &mut CommonArgs, mut fn_w: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
@@ -162,7 +162,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
-            integ::vec_03_vb(&mut c, &mut args, f).err(),
+            integ::vec_03_bv(&mut c, &mut args, f).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
     }
@@ -176,7 +176,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
-        let c_correct = ana.vec_03_vb(W0, W1);
+        let c_correct = ana.vec_03_bv(W0, W1);
 
         // integration points
         let class = pad.kind.class();
@@ -188,7 +188,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
+            integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(())
@@ -205,7 +205,7 @@ mod tests {
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
-        let c_correct = ana.vec_03_vb_bilinear(&pad);
+        let c_correct = ana.vec_03_bv_bilinear(&pad);
 
         // integration points
         let class = pad.kind.class();
@@ -218,7 +218,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             let x_ips = recovery::get_points_coords(&mut args.pad, ips).unwrap();
-            integ::vec_03_vb(&mut c, &mut args, |w, p, _, _| {
+            integ::vec_03_bv(&mut c, &mut args, |w, p, _, _| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(())
@@ -238,7 +238,7 @@ mod tests {
         const W1: f64 = 3.0;
         const W2: f64 = 4.0;
         let ana = AnalyticalTet4::new(&pad);
-        let c_correct = ana.vec_03_vb(W0, W1, W2);
+        let c_correct = ana.vec_03_bv(W0, W1, W2);
 
         // integration points
         let class = pad.kind.class();
@@ -253,7 +253,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
+            integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;

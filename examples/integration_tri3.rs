@@ -109,7 +109,7 @@ fn main() -> Result<(), StrError> {
     //     │  6 │
     //     └    ┘
     let mut c = Vector::filled(nnode, 0.0);
-    integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
+    integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
         w[0] = -2.0;
         w[1] = 4.0;
         Ok(())
@@ -124,7 +124,7 @@ fn main() -> Result<(), StrError> {
     );
 
     // check
-    let c_correct = ana.vec_03_vb(-2.0, 4.0);
+    let c_correct = ana.vec_03_bv(-2.0, 4.0);
     vec_approx_eq(&c, &c_correct, 1e-15);
 
     // tensor dot gradient, returns vector 'd'
