@@ -51,6 +51,11 @@ use russell_lab::Vector;
 ///   the **unit** normal vector `un(x(ιᵖ))`, and shape functions N(ιᵖ).
 ///   `v.dim() = space_ndim` and `un.dim() = space_ndim`.
 ///
+/// # Requirements
+///
+/// * In 2D, geometry ndim must be equal to 1 (a line)
+/// * In 3D, geometry ndim must be equal to 2 (a surface)
+///
 /// # Examples
 ///
 pub fn vec_02_nv_bry<F>(b: &mut Vector, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
@@ -90,7 +95,7 @@ where
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
         let mag_n = args.pad.calc_normal_vector(&mut un, iota)?;
 
-        // calculate t
+        // calculate v
         let nn = &args.pad.interp;
         fn_v(&mut v, p, &un, nn)?;
 
