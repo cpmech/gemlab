@@ -205,4 +205,45 @@ mod tests {
         .unwrap();
         vec_approx_eq(&a, a_correct, 1e-15);
     }
+
+    #[test]
+    fn vec_01_ns_bry_works_lin2_linear_w() {
+        // lin2 with linear flow vector
+        //
+        // s(x) = [x+y, y-x]ᵀ · un
+        //
+        let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
+        let (xa, ya) = (1.0, 2.0);
+        let (xb, yb) = (4.0, 6.0);
+        pad.set_xx(0, 0, xa);
+        pad.set_xx(0, 1, ya);
+        pad.set_xx(1, 0, xb);
+        pad.set_xx(1, 1, yb);
+
+        // solution
+        let dx = xb - xa;
+        let dy = yb - ya;
+        let aa = dx - dy;
+        let bb = dx * dx + dy * dy;
+        let cc = dx + dy;
+        let mm = 3.0 * aa * ya - 3.0 * xa * cc;
+        let a_correct = &[(mm - bb) / 6.0, (mm - 2.0 * bb) / 6.0];
+
+        // integration points
+        let class = pad.kind.class();
+        let ips = Gauss::new_sized(class, 2).unwrap();
+
+        // check
+        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut args = CommonArgs::new(&mut pad, &ips);
+        let x_ips = recovery::get_points_coords(&mut args.pad, &ips).unwrap();
+        integ::vec_01_ns_bry(&mut a, &mut args, |p, un, _| {
+            let x = x_ips[p][0];
+            let y = x_ips[p][1];
+            let s = (x + y) * un[0] + (y - x) * un[1];
+            Ok(s)
+        })
+        .unwrap();
+        vec_approx_eq(&a, a_correct, 1e-14);
+    }
 }
