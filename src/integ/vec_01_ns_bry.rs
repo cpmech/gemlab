@@ -189,7 +189,7 @@ mod tests {
         let (w0, w1) = (3.0, 5.0);
         let dx = xb - xa;
         let dy = yb - ya;
-        let a_correct = &[(-dy * w0 + dx * w1) / 2.0, (-dy * w0 + dx * w1) / 2.0];
+        let a_correct = &[(w1 * dx - w0 * dy) / 2.0, (w1 * dx - w0 * dy) / 2.0];
 
         // integration points
         let class = pad.kind.class();
