@@ -41,6 +41,17 @@
 //!      Ωₑ
 //! ```
 //!
+//! ## VEC 01(bry): Shape(N) times scalar(S) (boundary integral version)
+//!
+//! Function [vec_01_ns_bry()]
+//!
+//! ```text
+//!      ⌠    → →     →
+//! aᵐ = │ Nᵐ(x(ξ)) s(x) dΩ
+//!      ⌡
+//!      Ωₑ
+//! ```
+//!
 //! ## VEC 02: Shape(N) times vector(V)
 //!
 //! Function [vec_02_nv()]
@@ -310,6 +321,7 @@ mod mat_10_bdb;
 mod scalar_field;
 mod testing;
 mod vec_01_ns;
+mod vec_01_ns_bry;
 mod vec_02_nv;
 mod vec_02_nv_bry;
 mod vec_03_bv;
@@ -334,6 +346,7 @@ pub use mat_09_nvb::*;
 pub use mat_10_bdb::*;
 pub use scalar_field::*;
 pub use vec_01_ns::*;
+pub use vec_01_ns_bry::*;
 pub use vec_02_nv::*;
 pub use vec_02_nv_bry::*;
 pub use vec_03_bv::*;
