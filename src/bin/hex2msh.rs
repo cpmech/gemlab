@@ -1,4 +1,4 @@
-use gemlab::mesh::{Blocks2d, Figure, GeoKind, Structured};
+use gemlab::mesh::{Blocks3d, Figure, GeoKind, Structured};
 use gemlab::StrError;
 use std::path::Path;
 use std::path::PathBuf;
@@ -7,8 +7,8 @@ use structopt::StructOpt;
 /// Command line options
 #[derive(Debug, StructOpt)]
 #[structopt(
-    name = "qua2msh",
-    about = "Generates quad meshes from on a set of blocks. Outputs MSH and VTU files (VTU: only for n4, n8, and n9)."
+    name = "hex2msh",
+    about = "Generates hex meshes from on a set of blocks. Outputs MSH and VTU files (VTU: only for n8 and n20)."
 )]
 struct Options {
     /// Input JSON file
@@ -18,8 +18,8 @@ struct Options {
     /// Output directory
     out_dir: String,
 
-    /// Number of nodes on the target element (4, 8, 9, 12, 16, 17)
-    #[structopt(short, long, default_value = "4")]
+    /// Number of nodes on the target element (8, 20, 32)
+    #[structopt(short, long, default_value = "8")]
     nnode: usize,
 
     /// Generate SVG figure with the wireframe of the mesh
@@ -41,7 +41,7 @@ fn main() -> Result<(), StrError> {
 
     // load input data from JSON file
     let in_path = Path::new(&options.input);
-    let blocks = Blocks2d::read_json(&in_path)?;
+    let blocks = Blocks3d::read_json(&in_path)?;
     let fn_stem = in_path
         .file_stem()
         .ok_or("cannot get file stem")?
@@ -50,15 +50,12 @@ fn main() -> Result<(), StrError> {
 
     // generate mesh
     let (target, do_vtu) = match options.nnode {
-        4 => (GeoKind::Qua4, true),
-        8 => (GeoKind::Qua8, true),
-        9 => (GeoKind::Qua9, true),
-        12 => (GeoKind::Qua12, false),
-        16 => (GeoKind::Qua16, false),
-        17 => (GeoKind::Qua17, false),
-        _ => return Err("invalid number of nodes for quadrilateral cell"),
+        8 => (GeoKind::Hex8, true),
+        20 => (GeoKind::Hex20, true),
+        32 => (GeoKind::Hex32, false),
+        _ => return Err("invalid number of nodes for hexahedral cell"),
     };
-    let mesh = Structured::from_blocks_2d(&blocks, target, options.renumber)?;
+    let mesh = Structured::from_blocks_3d(&blocks, target, options.renumber)?;
 
     // write MSH file
     let path_msh = format!("{}/{}.msh", options.out_dir, fn_stem);
