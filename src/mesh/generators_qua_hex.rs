@@ -1,6 +1,5 @@
-use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Mesh};
+use super::{join_meshes, ArgsRing, Block, Blocks2d, Blocks3d, Constraint2d, Constraint3d, Mesh};
 use crate::graph::GraphUnd;
-use crate::mesh::Blocks2d;
 use crate::shapes::GeoKind;
 use crate::StrError;
 use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
@@ -27,6 +26,47 @@ impl Structured {
             }
             if let Some(c) = blocks.edge_constraints[i].as_ref() {
                 b.set_edge_constraint(c.0, Some(c.1.clone()))?;
+            }
+            meshes.push(b.subdivide(target)?);
+        }
+        let mut mesh = join_meshes(&meshes.iter().collect::<Vec<_>>())?;
+        if renumber {
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
+    }
+
+    /// Generates a structured mesh from a set of blocks in 3D
+    pub fn from_blocks_3d(blocks: &Blocks3d, target: GeoKind, renumber: bool) -> Result<Mesh, StrError> {
+        let nb = blocks.regions.len();
+        let mut meshes = Vec::with_capacity(nb);
+        for i in 0..nb {
+            let att = blocks.regions[i].0;
+            let p0 = blocks.points[blocks.regions[i].1];
+            let p1 = blocks.points[blocks.regions[i].2];
+            let p2 = blocks.points[blocks.regions[i].3];
+            let p3 = blocks.points[blocks.regions[i].4];
+            let p4 = blocks.points[blocks.regions[i].5];
+            let p5 = blocks.points[blocks.regions[i].6];
+            let p6 = blocks.points[blocks.regions[i].7];
+            let p7 = blocks.points[blocks.regions[i].8];
+            let mut b = Block::new(&[
+                [p0.0, p0.1, p0.2],
+                [p1.0, p1.1, p1.2],
+                [p2.0, p2.1, p2.2],
+                [p3.0, p3.1, p3.2],
+                [p4.0, p4.1, p4.2],
+                [p5.0, p5.1, p5.2],
+                [p6.0, p6.1, p6.2],
+                [p7.0, p7.1, p7.2],
+            ])?;
+            b.set_attribute(att);
+            let (wx, wy, wz) = &blocks.div_weights[i];
+            if wx.len() > 0 && wy.len() > 0 && wz.len() > 0 {
+                b.set_div_weights_3d(wx, wy, wz)?;
+            }
+            if let Some(c) = blocks.face_constraints[i].as_ref() {
+                b.set_face_constraint(c.0, Some(c.1.clone()))?;
             }
             meshes.push(b.subdivide(target)?);
         }
@@ -212,7 +252,7 @@ impl Structured {
         block_1.set_ndiv(&[na, na])?;
         block_2.set_ndiv(&[nb, na])?;
         block_3.set_ndiv(&[na, nb])?;
-        let ct = Constraint2D::Circle(0.0, 0.0, r);
+        let ct = Constraint2d::Circle(0.0, 0.0, r);
         block_2.set_edge_constraint(1, Some(ct.clone()))?;
         block_3.set_edge_constraint(2, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -313,7 +353,7 @@ impl Structured {
         block_1.set_ndiv(&[na, na])?;
         block_2.set_ndiv(&[nb, na])?;
         block_3.set_ndiv(&[na, nb])?;
-        let ct = Constraint2D::Circle(0.0, 0.0, r);
+        let ct = Constraint2d::Circle(0.0, 0.0, r);
         block_2.set_edge_constraint(1, Some(ct.clone()))?;
         block_3.set_edge_constraint(2, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -405,7 +445,7 @@ impl Structured {
         block_1.set_ndiv(&[na, na, nz])?;
         block_2.set_ndiv(&[nb, na, nz])?;
         block_3.set_ndiv(&[na, nb, nz])?;
-        let ct = Constraint3D::CylinderZ(0.0, 0.0, r);
+        let ct = Constraint3d::CylinderZ(0.0, 0.0, r);
         block_2.set_face_constraint(1, Some(ct.clone()))?;
         block_3.set_face_constraint(3, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -547,7 +587,7 @@ impl Structured {
         block_1.set_ndiv(&[na, na, nz])?;
         block_2.set_ndiv(&[nb, na, nz])?;
         block_3.set_ndiv(&[na, nb, nz])?;
-        let ct = Constraint3D::CylinderZ(0.0, 0.0, r);
+        let ct = Constraint3d::CylinderZ(0.0, 0.0, r);
         block_2.set_face_constraint(1, Some(ct.clone()))?;
         block_3.set_face_constraint(3, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -663,8 +703,8 @@ impl Structured {
             [0.0,  n],
             [ d1, d3],
         ])?;
-        let ct_r = Constraint2D::Circle(0.0, 0.0, r);
-        let ct_ra = Constraint2D::Circle(0.0, 0.0, ra);
+        let ct_r = Constraint2d::Circle(0.0, 0.0, r);
+        let ct_ra = Constraint2d::Circle(0.0, 0.0, ra);
         block_1.set_edge_constraint(3, Some(ct_r.clone()))?;
         block_1.set_edge_constraint(1, Some(ct_ra.clone()))?;
         block_1.set_ndiv(&[na, n45])?;
@@ -842,8 +882,8 @@ impl Structured {
             [0.0,  l,  hz],
             [0.0, ra,  hz],
         ])?;
-        let ct_r = Constraint3D::CylinderZ(0.0, 0.0, r);
-        let ct_ra = Constraint3D::CylinderZ(0.0, 0.0, ra);
+        let ct_r = Constraint3d::CylinderZ(0.0, 0.0, r);
+        let ct_ra = Constraint3d::CylinderZ(0.0, 0.0, ra);
         block_1.set_face_constraint(0, Some(ct_r.clone()))?;
         block_1.set_face_constraint(1, Some(ct_ra.clone()))?;
         block_1.set_ndiv(&[na, n45, nz])?;
@@ -989,9 +1029,9 @@ mod tests {
     use super::Structured;
     use crate::geometry::point_point_distance;
     use crate::graph::GraphUnd;
-    use crate::mesh::{Blocks2d, Constraint2D, Figure, Mesh};
+    use crate::mesh::{Blocks2d, Blocks3d, Constraint2d, Constraint3d, Figure, Mesh};
     use crate::shapes::GeoKind;
-    use plotpy::Canvas;
+    use plotpy::{Canvas, Surface};
     use russell_lab::{approx_eq, array_approx_eq};
 
     const SAVE_FIGURE: bool = false;
@@ -1046,7 +1086,7 @@ mod tests {
             ],
             edge_constraints: vec![
                 None,                                         // block 0
-                Some((1, Constraint2D::Circle(w + m, l, r))), // block 1
+                Some((1, Constraint2d::Circle(w + m, l, r))), // block 1
             ],
         };
 
@@ -1060,10 +1100,10 @@ mod tests {
                 .show_cell_att(true);
             fig.extra(|plot, before| {
                 if before {
-                    let mut circle = Canvas::new();
-                    circle.set_face_color("yellow").set_edge_color("black");
-                    circle.draw_circle(w + m, l, r);
-                    plot.add(&circle);
+                    let mut canvas = Canvas::new();
+                    canvas.set_face_color("yellow").set_edge_color("black");
+                    canvas.draw_circle(w + m, l, r);
+                    plot.add(&canvas);
                 } else {
                     plot.set_range(-0.5, 4.0, -0.5, 1.5)
                         .set_figure_size_points(800.0, 300.0);
@@ -1083,6 +1123,81 @@ mod tests {
         assert_eq!(mesh.cells[0].attribute, 1);
         assert_eq!(mesh.cells[3].attribute, 1);
         assert_eq!(mesh.cells[4].attribute, 2);
+    }
+
+    #[test]
+    fn from_blocks_3d_works() {
+        let r = 0.866;
+        let w = 2.0;
+        let h = 1.0;
+        let l = h / 2.0;
+        let m = f64::sqrt(r * r - l * l);
+        let blocks = Blocks3d {
+            points: vec![
+                (0.0, 0.0, 0.0), //  0
+                (1.0, 0.0, 0.0), //  1
+                (1.0, 1.0, 0.0), //  2
+                (0.0, 1.0, 0.0), //  3
+                (2.0, 0.0, 0.0), //  4
+                (2.0, 1.0, 0.0), //  5
+                (0.0, 0.0, 1.0), //  6
+                (1.0, 0.0, 1.0), //  7
+                (1.0, 1.0, 1.0), //  8
+                (0.0, 1.0, 1.0), //  9
+                (2.0, 0.0, 1.0), // 10
+                (2.0, 1.0, 1.0), // 11
+            ],
+            regions: vec![
+                (1, 0, 1, 2, 3, 6, 7, 8, 9), // attribute, p1, p2, p3, p4, p5, p6, p7, p8
+                (2, 1, 4, 5, 2, 7, 10, 11, 8),
+            ],
+            div_weights: vec![
+                (vec![1.0], vec![1.0], vec![1.0, 1.0]), // b0
+                (vec![1.0], vec![1.0], vec![1.0, 1.0]), // b1
+            ],
+            face_constraints: vec![
+                None,                                            // block 0
+                Some((1, Constraint3d::CylinderZ(w + m, l, r))), // block 1
+            ],
+        };
+
+        let mesh = Structured::from_blocks_3d(&blocks, GeoKind::Hex20, false).unwrap();
+
+        if SAVE_FIGURE {
+            let mut fig = Figure::new();
+            fig.show_point_ids(true)
+                .show_point_marker(true)
+                .show_cell_ids(true)
+                .show_cell_att(true);
+            fig.extra(|plot, before| {
+                if before {
+                    let mut canvas = Surface::new();
+                    canvas.set_surf_color("#d68b1384");
+                    let xc = w + m;
+                    let yc = l;
+                    canvas.draw_cylinder(&[xc, yc, 0.0], &[xc, yc, 1.0], r, 1, 32).unwrap();
+                    plot.add(&canvas);
+                } else {
+                    // plot.set_range(-0.5, 4.0, -0.5, 1.5)
+                    plot.set_figure_size_points(1000.0, 1000.0);
+                }
+            });
+            fig.draw(&mesh, "/tmp/gemlab/test_from_blocks_3d.svg").unwrap();
+        }
+
+        mesh.check_overlapping_points(0.01).unwrap();
+        mesh.check_all().unwrap();
+        assert_eq!(mesh.points.len(), 51);
+        assert_eq!(mesh.cells.len(), 4);
+        array_approx_eq(&mesh.points[6].coords, &[1.0, 1.0, 0.5], 1e-15);
+        array_approx_eq(&mesh.points[32].coords, &[2.0, 0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[40].coords, &[w + m - r, 0.5, 0.5], 1e-15);
+        array_approx_eq(&mesh.points[47].coords, &[w + m - r, 0.5, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[45].coords, &[2.0, 1.0, 1.0], 1e-15);
+        assert_eq!(mesh.cells[0].attribute, 1);
+        assert_eq!(mesh.cells[1].attribute, 1);
+        assert_eq!(mesh.cells[2].attribute, 2);
+        assert_eq!(mesh.cells[3].attribute, 2);
     }
 
     #[test]

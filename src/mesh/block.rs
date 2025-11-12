@@ -40,14 +40,14 @@ pub struct ArgsRing {
 
 /// Defines constraints for a side of a block (2D)
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum Constraint2D {
+pub enum Constraint2d {
     /// Circumference specified by (xc,yc,radius)
     Circle(f64, f64, f64),
 }
 
 /// Defines constraints for a side of a block (3D)
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum Constraint3D {
+pub enum Constraint3d {
     /// Surface of a cylinder parallel to x specified by (yc,zc,radius)
     CylinderX(f64, f64, f64),
 
@@ -167,10 +167,10 @@ pub struct Block {
     delta_ksi: Vec<Vec<f64>>,
 
     /// Constraints on edges (nedge) (2D only)
-    edge_constraints: HashMap<usize, Constraint2D>,
+    edge_constraints: HashMap<usize, Constraint2d>,
 
     /// Constraints on faces (nface) (3D only)
-    face_constraints: HashMap<usize, Constraint3D>,
+    face_constraints: HashMap<usize, Constraint3d>,
 
     /// Has constraints?
     has_constraints: bool,
@@ -349,7 +349,7 @@ impl Block {
         if self.ndim == 2 && self.has_constraints {
             for ct in self.edge_constraints.values() {
                 match ct {
-                    Constraint2D::Circle(xc, yc, r) => {
+                    Constraint2d::Circle(xc, yc, r) => {
                         let mut circle = Canvas::new();
                         circle
                             .set_face_color("None")
@@ -488,7 +488,7 @@ impl Block {
     ///
     /// Therefore, make sure that multiple constraints are compatible one with another. In other words,
     /// the effect of two constraints on a point (e.g. at a corner) must be equal.
-    pub fn set_edge_constraint(&mut self, e: usize, value: Option<Constraint2D>) -> Result<&mut Self, StrError> {
+    pub fn set_edge_constraint(&mut self, e: usize, value: Option<Constraint2d>) -> Result<&mut Self, StrError> {
         if self.ndim != 2 {
             return Err("set_edge_constraint requires ndim = 2");
         }
@@ -523,7 +523,7 @@ impl Block {
     ///
     /// Therefore, make sure that multiple constraints are compatible one with another. In other words,
     /// the effect of two constraints on a point (e.g. at a corner) must be equal.
-    pub fn set_face_constraint(&mut self, f: usize, value: Option<Constraint3D>) -> Result<&mut Self, StrError> {
+    pub fn set_face_constraint(&mut self, f: usize, value: Option<Constraint3d>) -> Result<&mut Self, StrError> {
         if self.ndim != 3 {
             return Err("set_face_constraint requires ndim = 3");
         }
@@ -976,9 +976,9 @@ impl Block {
     /// Applies 2D constraint
     ///
     /// Returns true if the constraint has been applied; otherwise, returns false
-    fn apply_constraint_2d(&self, x: &mut Vector, ct: &Constraint2D) -> Result<bool, StrError> {
+    fn apply_constraint_2d(&self, x: &mut Vector, ct: &Constraint2d) -> Result<bool, StrError> {
         match ct {
-            Constraint2D::Circle(xc, yc, r) => {
+            Constraint2d::Circle(xc, yc, r) => {
                 let dx = x[0] - xc;
                 let dy = x[1] - yc;
                 let d = f64::sqrt(dx * dx + dy * dy);
@@ -1001,9 +1001,9 @@ impl Block {
     /// Applies 3D constraint
     ///
     /// Returns true if the constraint has been applied; otherwise, returns false
-    fn apply_constraint_3d(&self, x: &mut Vector, ct: &Constraint3D) -> Result<bool, StrError> {
+    fn apply_constraint_3d(&self, x: &mut Vector, ct: &Constraint3d) -> Result<bool, StrError> {
         match ct {
-            Constraint3D::CylinderX(yc, zc, r) => {
+            Constraint3d::CylinderX(yc, zc, r) => {
                 let dy = x[1] - yc;
                 let dz = x[2] - zc;
                 let d = f64::sqrt(dy * dy + dz * dz);
@@ -1019,7 +1019,7 @@ impl Block {
                     return Ok(true);
                 }
             }
-            Constraint3D::CylinderY(xc, zc, r) => {
+            Constraint3d::CylinderY(xc, zc, r) => {
                 let dx = x[0] - xc;
                 let dz = x[2] - zc;
                 let d = f64::sqrt(dx * dx + dz * dz);
@@ -1035,7 +1035,7 @@ impl Block {
                     return Ok(true);
                 }
             }
-            Constraint3D::CylinderZ(xc, yc, r) => {
+            Constraint3d::CylinderZ(xc, yc, r) => {
                 let dx = x[0] - xc;
                 let dy = x[1] - yc;
                 let d = f64::sqrt(dx * dx + dy * dy);
@@ -1060,7 +1060,7 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
-    use super::{ArgsRing, Block, Constraint2D, Constraint3D};
+    use super::{ArgsRing, Block, Constraint2d, Constraint3d};
     use crate::geometry::point_point_distance;
     use crate::mesh::{Figure, Mesh, Samples};
     use crate::shapes::GeoKind;
@@ -1135,13 +1135,13 @@ mod tests {
         let correct = "ArgsRing { amin: 1.0, amax: 2.0, rmin: 3.0, rmax: 4.0, zmin: 5.0, zmax: 6.0 }";
         assert_eq!(format!("{:?}", clone), correct);
 
-        let constraint = Constraint2D::Circle(2.0, 3.0, 1.0);
+        let constraint = Constraint2d::Circle(2.0, 3.0, 1.0);
         let clone = constraint.clone();
         let correct = "Circle(2.0, 3.0, 1.0)";
         assert_eq!(format!("{:?}", constraint), correct);
         assert_eq!(format!("{:?}", clone), correct);
 
-        let constraint = Constraint3D::CylinderZ(2.0, 3.0, 1.0);
+        let constraint = Constraint3d::CylinderZ(2.0, 3.0, 1.0);
         let clone = constraint.clone();
         let correct = "CylinderZ(2.0, 3.0, 1.0)";
         assert_eq!(format!("{:?}", constraint), correct);
@@ -1353,7 +1353,7 @@ mod tests {
     #[test]
     fn set_edge_constraint_works() {
         let mut block = Block::new_square(1.0);
-        let ct = Constraint2D::Circle(-1.0, -1.0, 2.0);
+        let ct = Constraint2d::Circle(-1.0, -1.0, 2.0);
         assert_eq!(format!("{:?}", block.edge_constraints), "{}");
         assert_eq!(block.has_constraints, false);
         block.set_edge_constraint(0, Some(ct)).unwrap();
@@ -1376,7 +1376,7 @@ mod tests {
     #[test]
     fn set_face_constraint_works() {
         let mut block = Block::new_cube(1.0);
-        let ct = Constraint3D::CylinderZ(-1.0, -1.0, 2.0);
+        let ct = Constraint3d::CylinderZ(-1.0, -1.0, 2.0);
         assert_eq!(format!("{:?}", block.face_constraints), "{}");
         assert_eq!(block.has_constraints, false);
         block.set_face_constraint(0, Some(ct)).unwrap();
@@ -2088,7 +2088,7 @@ mod tests {
             [0.0, 2.0],
         ]).unwrap();
         block
-            .set_edge_constraint(0, Some(Constraint2D::Circle(0.0, 0.0, 1.0)))
+            .set_edge_constraint(0, Some(Constraint2d::Circle(0.0, 0.0, 1.0)))
             .unwrap();
         assert_eq!(
             block.subdivide(GeoKind::Qua4).err(),
@@ -2109,7 +2109,7 @@ mod tests {
         block.set_ndiv(&[2, 2]).unwrap();
 
         // circle pushes point
-        let ct = Constraint2D::Circle(0.0, 0.0, 1.0);
+        let ct = Constraint2d::Circle(0.0, 0.0, 1.0);
         block.set_edge_constraint(3, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [0, 3, 7] {
@@ -2127,7 +2127,7 @@ mod tests {
         }
 
         // circle pulls point
-        let ct = Constraint2D::Circle(0.0, 0.0, 0.5);
+        let ct = Constraint2d::Circle(0.0, 0.0, 0.5);
         block.set_edge_constraint(3, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [0, 3, 7] {
@@ -2160,7 +2160,7 @@ mod tests {
         let beta = f64::asin(SQRT_2 / (2.0 * r));
         let theta = PI / 4.0 - beta;
         let xc = -r * f64::sin(theta);
-        let ct = Constraint2D::Circle(xc, xc, r);
+        let ct = Constraint2d::Circle(xc, xc, r);
         block.set_edge_constraint(3, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         // side 3
@@ -2201,16 +2201,16 @@ mod tests {
         let cen_minus = -half_l - r * f64::cos(theta);
         let cen_plus = half_l + r * f64::cos(theta);
         block
-            .set_edge_constraint(0, Some(Constraint2D::Circle(0.0, cen_minus, r)))
+            .set_edge_constraint(0, Some(Constraint2d::Circle(0.0, cen_minus, r)))
             .unwrap();
         block
-            .set_edge_constraint(1, Some(Constraint2D::Circle(cen_plus, 0.0, r)))
+            .set_edge_constraint(1, Some(Constraint2d::Circle(cen_plus, 0.0, r)))
             .unwrap();
         block
-            .set_edge_constraint(2, Some(Constraint2D::Circle(0.0, cen_plus, r)))
+            .set_edge_constraint(2, Some(Constraint2d::Circle(0.0, cen_plus, r)))
             .unwrap();
         block
-            .set_edge_constraint(3, Some(Constraint2D::Circle(cen_minus, 0.0, r)))
+            .set_edge_constraint(3, Some(Constraint2d::Circle(cen_minus, 0.0, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         mesh.check_all().unwrap();
@@ -2278,16 +2278,16 @@ mod tests {
         let cen_minus = -half_l - r * f64::cos(theta);
         let cen_plus = half_l + r * f64::cos(theta);
         block
-            .set_face_constraint(0, Some(Constraint3D::CylinderZ(cen_minus, 0.0, r)))
+            .set_face_constraint(0, Some(Constraint3d::CylinderZ(cen_minus, 0.0, r)))
             .unwrap();
         block
-            .set_face_constraint(1, Some(Constraint3D::CylinderZ(cen_plus, 0.0, r)))
+            .set_face_constraint(1, Some(Constraint3d::CylinderZ(cen_plus, 0.0, r)))
             .unwrap();
         block
-            .set_face_constraint(2, Some(Constraint3D::CylinderZ(0.0, cen_minus, r)))
+            .set_face_constraint(2, Some(Constraint3d::CylinderZ(0.0, cen_minus, r)))
             .unwrap();
         block
-            .set_face_constraint(3, Some(Constraint3D::CylinderZ(0.0, cen_plus, r)))
+            .set_face_constraint(3, Some(Constraint3d::CylinderZ(0.0, cen_plus, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
         mesh.check_all().unwrap();
@@ -2418,10 +2418,10 @@ mod tests {
         let cen_minus = -half_l - r * f64::cos(theta);
         let cen_plus = half_l + r * f64::cos(theta);
         block
-            .set_face_constraint(4, Some(Constraint3D::CylinderX(0.0, cen_minus, r)))
+            .set_face_constraint(4, Some(Constraint3d::CylinderX(0.0, cen_minus, r)))
             .unwrap();
         block
-            .set_face_constraint(5, Some(Constraint3D::CylinderY(0.0, cen_plus, r)))
+            .set_face_constraint(5, Some(Constraint3d::CylinderY(0.0, cen_plus, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
         mesh.check_all().unwrap();
@@ -2501,7 +2501,7 @@ mod tests {
     fn constraints_2d_handles_imprecision() {
         let mut block = Block::new_square(6.0);
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, 6.0);
+        let ct = Constraint2d::Circle(0.0, 0.0, 6.0);
         block.set_edge_constraint(1, Some(ct.clone())).unwrap();
         block.set_edge_constraint(2, Some(ct.clone())).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
@@ -2532,7 +2532,7 @@ mod tests {
         let p = 1.15 * m / SQRT_2;
         let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]]).unwrap();
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        let ct = Constraint2d::Circle(0.0, 0.0, radius);
         block.set_edge_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         for p in [13, 16, 14, 27, 26, 38, 37] {
@@ -2563,7 +2563,7 @@ mod tests {
         let p = 1.15 * m / SQRT_2;
         let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]]).unwrap();
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        let ct = Constraint2d::Circle(0.0, 0.0, radius);
         block.set_edge_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua9).unwrap();
         for p in [15, 18, 16, 32, 31, 46, 45] {
@@ -2594,7 +2594,7 @@ mod tests {
         let p = 1.15 * m / SQRT_2;
         let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]]).unwrap();
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        let ct = Constraint2d::Circle(0.0, 0.0, radius);
         block.set_edge_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua16).unwrap();
         for (a, c, d, b) in [
@@ -2635,7 +2635,7 @@ mod tests {
         let p = 1.15 * m / SQRT_2;
         let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]]).unwrap();
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        let ct = Constraint2d::Circle(0.0, 0.0, radius);
         block.set_edge_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua17).unwrap();
         for (a, mid, b) in [(82, 92, 90), (54, 64, 62), (20, 34, 32)] {
@@ -2672,7 +2672,7 @@ mod tests {
             [     p,   p, 1.0],
         ]).unwrap();
         block.set_ndiv(&[2, 2, 1]).unwrap();
-        let ct = Constraint3D::CylinderZ(0.0, 0.0, radius);
+        let ct = Constraint3d::CylinderZ(0.0, 0.0, radius);
         block.set_face_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
         for p in [

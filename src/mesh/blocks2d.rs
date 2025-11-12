@@ -1,4 +1,4 @@
-use crate::mesh::Constraint2D;
+use crate::mesh::Constraint2d;
 use crate::StrError;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
@@ -11,7 +11,7 @@ use std::path::Path;
 pub struct Blocks2d {
     /// List of points
     ///
-    /// Each point is defined by a x and y coordinates.
+    /// Each point is defined by x and y coordinates.
     ///
     /// (length = number of points)
     pub points: Vec<(f64, f64)>,
@@ -45,7 +45,7 @@ pub struct Blocks2d {
     /// and `constraint` is the `Constraint2D` applied to that edge
     ///
     /// (length = number of blocks)
-    pub edge_constraints: Vec<Option<(usize, Constraint2D)>>,
+    pub edge_constraints: Vec<Option<(usize, Constraint2d)>>,
 }
 
 impl Blocks2d {
@@ -89,7 +89,7 @@ impl Blocks2d {
 #[cfg(test)]
 mod tests {
     use super::Blocks2d;
-    use crate::mesh::Constraint2D;
+    use crate::mesh::Constraint2d;
 
     #[test]
     fn test_blocks2d_write_works() {
@@ -112,7 +112,7 @@ mod tests {
             ],
             edge_constraints: vec![
                 None,                                           // block 0
-                Some((0, Constraint2D::Circle(0.0, 0.0, 1.0))), // block 1
+                Some((0, Constraint2d::Circle(0.0, 0.0, 1.0))), // block 1
             ],
         };
 
