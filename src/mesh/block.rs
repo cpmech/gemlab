@@ -6,6 +6,7 @@ use crate::StrError;
 use plotpy::{Canvas, Plot};
 use russell_lab::math::PI;
 use russell_lab::Vector;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Arguments to transform the Block generated mesh into a ring
@@ -38,14 +39,14 @@ pub struct ArgsRing {
 }
 
 /// Defines constraints for a side of a block (2D)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Constraint2D {
     /// Circumference specified by (xc,yc,radius)
     Circle(f64, f64, f64),
 }
 
 /// Defines constraints for a side of a block (3D)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Constraint3D {
     /// Surface of a cylinder parallel to x specified by (yc,zc,radius)
     CylinderX(f64, f64, f64),
@@ -154,7 +155,7 @@ const TOL_DISTANCE: f64 = 1e-8;
 /// ```
 pub struct Block {
     /// Attribute of all elements in this block
-    attribute: usize,
+    attribute: i32,
 
     /// Space dimension
     ndim: usize,
@@ -189,7 +190,7 @@ impl Block {
     const NAT_LENGTH: f64 = 2.0;
 
     /// Default attribute
-    const ATTRIBUTE: usize = 1;
+    const ATTRIBUTE: i32 = 1;
 
     /// Allocate a new instance
     ///
@@ -364,7 +365,7 @@ impl Block {
     }
 
     /// Sets group
-    pub fn set_attribute(&mut self, attribute: usize) -> &mut Self {
+    pub fn set_attribute(&mut self, attribute: i32) -> &mut Self {
         self.attribute = attribute;
         self
     }

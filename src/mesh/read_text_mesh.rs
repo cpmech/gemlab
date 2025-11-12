@@ -123,7 +123,7 @@ impl DataForReadTextMesh {
             return Err("the id and index of cells must equal each other");
         }
 
-        let attribute: usize = match data.next() {
+        let attribute: i32 = match data.next() {
             Some(v) => v.parse().map_err(|_| "cannot parse cell attribute")?,
             None => return Err("cannot read cell attribute"),
         };
@@ -152,7 +152,7 @@ impl DataForReadTextMesh {
 
         mesh.cells.push(Cell {
             id,
-            attribute: attribute,
+            attribute,
             kind,
             points,
         });

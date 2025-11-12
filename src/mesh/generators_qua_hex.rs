@@ -1,5 +1,6 @@
 use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Mesh};
 use crate::graph::GraphUnd;
+use crate::mesh::Blocks2d;
 use crate::shapes::GeoKind;
 use crate::StrError;
 use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
@@ -8,6 +9,34 @@ use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
 pub struct Structured {}
 
 impl Structured {
+    /// Generates a structured mesh from a set of blocks in 2D
+    pub fn from_blocks_2d(blocks: &Blocks2d, target: GeoKind, renumber: bool) -> Result<Mesh, StrError> {
+        let nb = blocks.regions.len();
+        let mut meshes = Vec::with_capacity(nb);
+        for i in 0..nb {
+            let att = blocks.regions[i].0;
+            let p0 = blocks.points[blocks.regions[i].1];
+            let p1 = blocks.points[blocks.regions[i].2];
+            let p2 = blocks.points[blocks.regions[i].3];
+            let p3 = blocks.points[blocks.regions[i].4];
+            let mut b = Block::new(&[[p0.0, p0.1], [p1.0, p1.1], [p2.0, p2.1], [p3.0, p3.1]])?;
+            b.set_attribute(att);
+            let (wx, wy) = &blocks.div_weights[i];
+            if wx.len() > 0 && wy.len() > 0 {
+                b.set_div_weights_2d(wx, wy)?;
+            }
+            if let Some(c) = blocks.edge_constraints[i].as_ref() {
+                b.set_edge_constraint(c.0, Some(c.1.clone()))?;
+            }
+            meshes.push(b.subdivide(target)?);
+        }
+        let mut mesh = join_meshes(&meshes.iter().collect::<Vec<_>>())?;
+        if renumber {
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
+    }
+
     /// Generates a mesh representing a quarter of a ring in 2D
     ///
     /// ```text
@@ -885,7 +914,7 @@ impl Structured {
         nb: usize,
         y: &[f64],
         ny: &[usize],
-        attributes: &[usize],
+        attributes: &[i32],
         target: GeoKind,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
@@ -960,8 +989,9 @@ mod tests {
     use super::Structured;
     use crate::geometry::point_point_distance;
     use crate::graph::GraphUnd;
-    use crate::mesh::{Figure, Mesh};
+    use crate::mesh::{Blocks2d, Constraint2D, Figure, Mesh};
     use crate::shapes::GeoKind;
+    use plotpy::Canvas;
     use russell_lab::{approx_eq, array_approx_eq};
 
     const SAVE_FIGURE: bool = false;
@@ -988,6 +1018,71 @@ mod tests {
             fig.size(600.0, 600.0);
         }
         fig.draw(&mesh, filename).unwrap();
+    }
+
+    #[test]
+    fn from_blocks_2d_works() {
+        let r = 0.866;
+        let w = 2.0;
+        let h = 1.0;
+        let l = h / 2.0;
+        let m = f64::sqrt(r * r - l * l);
+        let blocks = Blocks2d {
+            points: vec![
+                (0.0, 0.0),     // 0
+                (w / 2.0, 0.0), // 1
+                (w / 2.0, h),   // 2
+                (0.0, h),       // 3
+                (w, 0.0),       // 4
+                (w, h),         // 5
+            ],
+            regions: vec![
+                (1, 0, 1, 2, 3), // attribute, p1, p2, p3, p4
+                (2, 1, 4, 5, 2),
+            ],
+            div_weights: vec![
+                (Vec::new(), Vec::new()), // default number of divisions and weighting
+                (vec![1.0], vec![1.0]),   // one division with weight 1.0 along each direction
+            ],
+            edge_constraints: vec![
+                None,                                         // block 0
+                Some((1, Constraint2D::Circle(w + m, l, r))), // block 1
+            ],
+        };
+
+        let mesh = Structured::from_blocks_2d(&blocks, GeoKind::Qua8, false).unwrap();
+
+        if SAVE_FIGURE {
+            let mut fig = Figure::new();
+            fig.show_point_ids(true)
+                .show_point_marker(true)
+                .show_cell_ids(true)
+                .show_cell_att(true);
+            fig.extra(|plot, before| {
+                if before {
+                    let mut circle = Canvas::new();
+                    circle.set_face_color("yellow").set_edge_color("black");
+                    circle.draw_circle(w + m, l, r);
+                    plot.add(&circle);
+                } else {
+                    plot.set_range(-0.5, 4.0, -0.5, 1.5)
+                        .set_figure_size_points(800.0, 300.0);
+                }
+            });
+            fig.draw(&mesh, "/tmp/gemlab/test_from_blocks_2d.svg").unwrap();
+        }
+
+        mesh.check_overlapping_points(0.01).unwrap();
+        mesh.check_all().unwrap();
+        assert_eq!(mesh.points.len(), 26);
+        assert_eq!(mesh.cells.len(), 5);
+        array_approx_eq(&mesh.points[2].coords, &[0.5, l], 1e-15);
+        array_approx_eq(&mesh.points[9].coords, &[1.0, l], 1e-15);
+        array_approx_eq(&mesh.points[22].coords, &[w, h], 1e-15);
+        array_approx_eq(&mesh.points[24].coords, &[w + m - r, l], 1e-15);
+        assert_eq!(mesh.cells[0].attribute, 1);
+        assert_eq!(mesh.cells[3].attribute, 1);
+        assert_eq!(mesh.cells[4].attribute, 2);
     }
 
     #[test]

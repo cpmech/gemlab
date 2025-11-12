@@ -22,7 +22,7 @@ pub type PointMarker = i32;
 pub type CellId = usize;
 
 /// Aliases usize as Cell's attribute
-pub type CellAttribute = usize;
+pub type CellAttribute = i32;
 
 /// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
