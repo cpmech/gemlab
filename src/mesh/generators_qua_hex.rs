@@ -1089,6 +1089,7 @@ mod tests {
                 Some((1, Constraint2d::Circle(w + m, l, r))), // block 1
             ],
         };
+        // blocks.write_json("/tmp/gemlab/example_qua_input.json").unwrap();
 
         let mesh = Structured::from_blocks_2d(&blocks, GeoKind::Qua8, false).unwrap();
 
@@ -1160,6 +1161,7 @@ mod tests {
                 Some((1, Constraint3d::CylinderZ(w + m, l, r))), // block 1
             ],
         };
+        // blocks.write_json("/tmp/gemlab/example_hex_input.json").unwrap();
 
         let mesh = Structured::from_blocks_3d(&blocks, GeoKind::Hex20, false).unwrap();
 
