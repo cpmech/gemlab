@@ -778,4 +778,59 @@ mod tests {
         let sample = Samples::two_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
     }
+
+    #[test]
+    fn read_works_with_data_from_tritet_tri() {
+        let mesh = Mesh::read("data/meshes/test_tri_write_msh_file_works.msh").unwrap();
+        let correct = "# header\n\
+                       # ndim npoint ncell\n\
+                       2 5 4\n\
+                       \n\
+                       # points\n\
+                       # id marker x y {z}\n\
+                       0 -1 0.0 0.0\n\
+                       1 -1 1.0 0.0\n\
+                       2 -1 1.0 1.0\n\
+                       3 -1 0.0 1.0\n\
+                       4 0 0.5 0.5\n\
+                       \n\
+                       # cells\n\
+                       # id attribute kind points\n\
+                       0 1 tri3 1 2 4\n\
+                       1 1 tri3 3 0 4\n\
+                       2 1 tri3 4 2 3\n\
+                       3 1 tri3 0 1 4\n\
+                       ";
+        assert_eq!(format!("{}", mesh), correct);
+    }
+
+    #[test]
+    fn read_works_with_data_from_tritet_tet() {
+        let mesh = Mesh::read("data/meshes/test_tet_write_msh_file_works.msh").unwrap();
+        let correct = "# header\n\
+                       # ndim npoint ncell\n\
+                       3 8 6\n\
+                       \n\
+                       # points\n\
+                       # id marker x y {z}\n\
+                       0 -1 0.0 0.0 0.0\n\
+                       1 -2 1.0 0.0 0.0\n\
+                       2 -3 1.0 1.0 0.0\n\
+                       3 -4 0.0 1.0 0.0\n\
+                       4 -5 0.0 0.0 1.0\n\
+                       5 -6 1.0 0.0 1.0\n\
+                       6 -7 1.0 1.0 1.0\n\
+                       7 -8 0.0 1.0 1.0\n\
+                       \n\
+                       # cells\n\
+                       # id attribute kind points\n\
+                       0 1 tet4 0 3 7 2\n\
+                       1 1 tet4 0 7 4 6\n\
+                       2 1 tet4 5 0 4 6\n\
+                       3 1 tet4 0 7 6 2\n\
+                       4 1 tet4 5 0 6 1\n\
+                       5 1 tet4 6 0 2 1\n\
+                       ";
+        assert_eq!(format!("{}", mesh), correct);
+    }
 }

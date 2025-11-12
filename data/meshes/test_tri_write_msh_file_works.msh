@@ -1,0 +1,18 @@
+# header
+# ndim npoint ncell
+2 5 4
+
+# points
+# id marker x y
+0 -1 0.0 0.0
+1 -1 1.0 0.0
+2 -1 1.0 1.0
+3 -1 0.0 1.0
+4 0 0.5 0.5
+
+# cells
+# id attribute kind points
+0 1 tri3 1 2 4
+1 1 tri3 3 0 4
+2 1 tri3 4 2 3
+3 1 tri3 0 1 4
