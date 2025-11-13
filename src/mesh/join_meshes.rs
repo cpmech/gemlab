@@ -131,8 +131,8 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
 /// # Notes
 ///
 /// 1. The meshes must have the same space_ndim.
-/// 2. The boundary of mesh[i] is used to find overlapping points with mesh[i+1].
-/// 3. The boundary markers of mesh[i] have precedence over those of mesh[i+1].
+/// 2. The boundary of mesh(i) is used to find overlapping points with mesh(i+1).
+/// 3. The boundary markers of mesh(i) have precedence over those of mesh(i+1).
 ///
 /// **Important:** This function does not guarantee the "mesh compatibility" requirements
 /// for finite element analyses.
