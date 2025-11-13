@@ -1,10 +1,16 @@
 use super::{Cell, Features, Mesh, Point};
 use crate::util::GridSearch;
 use crate::StrError;
+use russell_lab::{sort2, sort4};
+use std::collections::HashMap;
 
 /// Joins two meshes by comparing the coordinates on the boundary of the first mesh
 ///
-/// **Note:** The meshes must have the same space_ndim.
+/// # Notes
+///
+/// 1. The meshes must have the same space_ndim.
+/// 2. The boundary of mesh A is used to find overlapping points with mesh B.
+/// 3. The boundary markers of mesh A have precedence over those of mesh B.
 ///
 /// **Important:** This function does not guarantee the "mesh compatibility" requirements
 /// for finite element analyses.
@@ -25,8 +31,6 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
 
     // create a new mesh with all mesh A data, except the marked edges/faces
     let mut mesh = a.clone();
-    mesh.marked_edges.clear(); // TODO: implement merging marked edges
-    mesh.marked_faces.clear(); // TODO: implement merging marked faces
 
     // renumber the points of mesh B and add them to the new mesh (if not present yet)
     let mut new_point_id = a.points.len();
@@ -60,12 +64,75 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
         });
         new_cell_id += 1;
     }
+
+    // create a map of boundary markers from mesh A
+    let mut marked_edges_map = HashMap::new();
+    let mut marked_faces_map = HashMap::new();
+    a.marked_edges.iter().for_each(|(marker, p1, p2)| {
+        let mut edge_key = (*p1, *p2);
+        sort2(&mut edge_key);
+        marked_edges_map.insert(edge_key, *marker);
+    });
+    a.marked_faces.iter().for_each(|(marker, p1, p2, p3, p4)| {
+        let mut face_key = (*p1, *p2, *p3, *p4);
+        sort4(&mut face_key);
+        marked_faces_map.insert(face_key, *marker);
+    });
+
+    // insert marked edges/faces from mesh B into the boundary maps
+    b.marked_edges.iter().for_each(|(marker, p1, p2)| {
+        let p1new = map_old_to_new_point_id_b[*p1];
+        let p2new = map_old_to_new_point_id_b[*p2];
+        let mut edge_key = (p1new, p2new);
+        sort2(&mut edge_key);
+        if marked_edges_map.get(&edge_key).is_none() {
+            marked_edges_map.insert(edge_key, *marker);
+        }
+    });
+    b.marked_faces.iter().for_each(|(marker, p1, p2, p3, p4)| {
+        let p1new = map_old_to_new_point_id_b[*p1];
+        let p2new = map_old_to_new_point_id_b[*p2];
+        let p3new = map_old_to_new_point_id_b[*p3];
+        let p4new = map_old_to_new_point_id_b[*p4];
+        let mut face_key = (p1new, p2new, p3new, p4new);
+        sort4(&mut face_key);
+        if marked_faces_map.get(&face_key).is_none() {
+            marked_faces_map.insert(face_key, *marker);
+        }
+    });
+
+    // rebuild marked edges/faces in the new mesh
+    mesh.marked_edges.clear();
+    mesh.marked_faces.clear();
+    if marked_edges_map.len() > 0 {
+        let mut edge_keys: Vec<_> = marked_edges_map.keys().cloned().collect();
+        edge_keys.sort(); // sort just for deterministic behavior (important for tests)
+        for edge_key in &edge_keys {
+            let marker = marked_edges_map[edge_key];
+            mesh.marked_edges.push((marker, edge_key.0, edge_key.1));
+        }
+    }
+    if marked_faces_map.len() > 0 {
+        let mut face_keys: Vec<_> = marked_faces_map.keys().cloned().collect();
+        face_keys.sort(); // sort just for deterministic behavior (important for tests)
+        for face_key in &face_keys {
+            let marker = marked_faces_map[face_key];
+            mesh.marked_faces
+                .push((marker, face_key.0, face_key.1, face_key.2, face_key.3));
+        }
+    }
+
+    // done
     Ok(mesh)
 }
 
 /// Joins meshes by comparing the coordinates on the boundary
 ///
-/// **Note:** The meshes must have the same space_ndim.
+/// # Notes
+///
+/// 1. The meshes must have the same space_ndim.
+/// 2. The boundary of mesh[i] is used to find overlapping points with mesh[i+1].
+/// 3. The boundary markers of mesh[i] have precedence over those of mesh[i+1].
 ///
 /// **Important:** This function does not guarantee the "mesh compatibility" requirements
 /// for finite element analyses.
@@ -97,25 +164,23 @@ mod tests {
 
     #[test]
     fn join_two_meshes_works_2d() {
-        //          [#] indicates id
-        //      y   (#) indicates attribute
-        //      ↑
-        // 1.0  3-----------2-----------5
-        //      |           |           |
-        //      |    [0]    |    [1]    |
-        //      |    (1)    |    (2)    |
-        //      |           |           |
-        // 0.0  0-----------1-----------4  → x
+        //       -300        -400
+        //   3-----------2-----------5
+        //   |           |           |
+        //   |    [0]    |    [1]    |
+        //   |    (1)    |    (2)    |
+        //   |           |           |
+        //   0-----------1-----------4
         //
-        //                  +
+        //             UNION
         //
-        // 1.0  3-----------2-----------5
-        //      |           |           |
-        //      |    [0]    |    [1]    |
-        //      |    (1)    |    (2)    |
-        //      |           |           |
-        // 0.0  0-----------1-----------4  → x
-        //     0.0         1.0         2.0
+        //       -100        -200
+        //   3-----------2-----------5
+        //   |           |           |
+        //   |    [0]    |    [1]    |
+        //   |    (1)    |    (2)    |
+        //   |           |           |
+        //   0-----------1-----------4
         let a = Samples::two_qua4();
         let mut b = Samples::two_qua4();
 
@@ -123,14 +188,17 @@ mod tests {
         for m in 0..b.points.len() {
             b.points[m].coords[1] += 1.0;
         }
+        // change boundary markers of B-mesh
+        b.marked_edges[0].0 = -300;
+        b.marked_edges[1].0 = -400;
 
         //      y
-        //      ↑
+        //      ↑    -300       -400
         // 2.0  7-----------6-----------8
         //      |           |           |
         //      |    [2]    |    [3]    |
         //      |    (1)    |    (2)    |
-        //      |           |           |
+        //      |    -100   |   -200    |
         // 1.0  3-----------2-----------5
         //      |           |           |
         //      |    [0]    |    [1]    |
@@ -139,6 +207,7 @@ mod tests {
         // 0.0  0-----------1-----------4  → x
         //     0.0         1.0         2.0
         let mesh = join_two_meshes(&a, &b).unwrap();
+        // println!("{}", mesh);
         mesh.check_ids_and_kind().unwrap();
         mesh.check_jacobian().unwrap();
         mesh.check_overlapping_points(0.01).unwrap();
@@ -159,31 +228,34 @@ mod tests {
         assert_eq!(mesh.cells[1].attribute, 2);
         assert_eq!(mesh.cells[2].attribute, 1);
         assert_eq!(mesh.cells[3].attribute, 2);
-        println!("{}", mesh);
+        assert_eq!(
+            mesh.marked_edges,
+            vec![(-100, 2, 3), (-200, 2, 5), (-300, 6, 7), (-400, 6, 8)]
+        );
     }
 
     #[test]
     fn join_two_meshes_works_3d() {
-        //       8-------------11  2.0          8-------------11  2.0
-        //      /.             /|              /.             /|
-        //     / .            / |             / .            / |
-        //    /  .           /  |            /  .           /  |
-        //   /   .          /   |           /   .          /   |
-        //  9-------------10    |          9-------------10    |
-        //  |    .         |    |          |    .         |    |
-        //  |    4---------|----7  1.0     |    4---------|----7  1.0
-        //  |   /. [1]     |   /|          |   /. [1]     |   /|
-        //  |  / . (2)     |  / |      +   |  / . (2)     |  / |
-        //  | /  .         | /  |          | /  .         | /  |
-        //  |/   .         |/   |          |/   .         |/   |
-        //  5--------------6    |          5--------------6    |          z
-        //  |    .         |    |          |    .         |    |          ↑
-        //  |    0---------|----3  0.0     |    0---------|----3  0.0     o → y
-        //  |   /  [0]     |   /           |   /  [0]     |   /          ↙
-        //  |  /   (1)     |  /            |  /   (1)     |  /          x
-        //  | /            | /             | /            | /
-        //  |/             |/              |/             |/
-        //  1--------------2   1.0         1--------------2   1.0
+        //       8-------------11                   8-------------11
+        //      /.             /|                  /.             /|
+        //  {0}/ .         {0}/ |                 / .         {0}/ |
+        //    /  .   {-9}    /  |                /  .   {-9}    /  |
+        //   /   .          /   |{123}          /   .          /   |{123}
+        //  9-------------10    |              9-------------10    |
+        //  |    .         |    |              |    .         |    |
+        //  |    4---------|----7              |    4---------|----7
+        //  |   /. [1]     |   /|              |   /. [1]     |   /|
+        //  |  / . (2)     |  / |    UNION     |  / . (2)     |  / |
+        //  | /  .         | /  |              | /  .         | /  |
+        //  |/   .         |/   |{-4}          |/   .         |/   |{-4}
+        //  5--------------6    |              5--------------6    |
+        //  |    .         | {0}|              |    .         | {0}|
+        //  |    0---------|----3              |    0---------|----3
+        //  |   /  [0]     |   /               |   /  [0]     |   /
+        //  |  /   (1)     |  /                |  /   (1)     |  /
+        //  | /            | /                 | /            | /
+        //  |/             |/                  |/             |/
+        //  1--------------2                   1--------------2   1.0
         let a = Samples::two_hex8();
         let mut b = Samples::two_hex8();
 
@@ -192,28 +264,28 @@ mod tests {
             b.points[m].coords[1] += 1.0;
         }
 
-        //       8-------------11-------------17  2.0
+        //       8-------------11-------------17
         //      /.             /.             /|
-        //     / .            / .            / |
-        //    /  .           /  .           /  |
-        //   /   .          /   .          /   |
+        //  {0}/ .         {0}/ .         {0}/ |
+        //    /  .   {-9}    /  .    {-9}   /  |
+        //   /   .          /   .{123}     /   |{123}
         //  9=============10=============16    |
         //  |    .         |    .         |    |
-        //  |    4---------|----7---------|---15  1.0
+        //  |    4---------|----7---------|---15
         //  |   /. [1]     |   /. [3]     |   /|
         //  |  / . (2)     |  / . (2)     |  / |
         //  | /  .         | /  .         | /  |
-        //  |/   .         |/   .         |/   |
-        //  5--------------6-------------14    |          z
-        //  |    .         |    .         |    |          ↑
-        //  |    0---------|----3---------|---13  0.0     o → y
-        //  |   /  [0]     |   /  [2]     |   /          ↙
-        //  |  /   (1)     |  /   (1)     |  /          x
+        //  |/   .         |/   .{-4}     |/   |{-4}
+        //  5--------------6-------------14    |
+        //  |    .         | {0}.         | {0}|
+        //  |    0---------|----3---------|---13
+        //  |   /  [0]     |   /  [2]     |   /
+        //  |  /   (1)     |  /   (1)     |  /
         //  | /            | /            | /
         //  |/             |/             |/
-        //  1--------------2-------------12   1.0
-        // 0.0            1.0            2.0
+        //  1--------------2-------------12
         let mesh = join_two_meshes(&a, &b).unwrap();
+        println!("{}", mesh);
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 18);
         assert_eq!(mesh.cells.len(), 4);
@@ -230,35 +302,59 @@ mod tests {
             assert_eq!(mesh.points[i].id, sample.points[i].id);
             assert_eq!(mesh.points[i].coords, sample.points[i].coords);
         }
+
+        assert_eq!(
+            mesh.marked_edges,
+            vec![
+                (-4, 3, 7),
+                (123, 7, 11),
+                (0, 8, 9),
+                (0, 10, 11),
+                (-4, 13, 15),
+                (123, 15, 17),
+                (0, 16, 17)
+            ]
+        );
+        assert_eq!(
+            mesh.marked_faces,
+            vec![
+                (0, 2, 3, 6, 7),
+                (-9, 8, 9, 10, 11),
+                (-9, 10, 11, 16, 17),
+                (0, 12, 13, 14, 15)
+            ]
+        );
     }
 
     #[test]
     fn join_meshes_works() {
-        // 1.0  3-----------2-----------5
-        //      |(-4)       |(-3)       |(-6)
-        //      |    [0]    |    [1]    |
-        //      |    (1)    |    (2)    |
-        //      |(-1)       |(-2)       |(-5)
-        // 0.0  0-----------1-----------4  → x
+        //       -500        -600
+        //   3-----------2-----------5
+        //   |(-4)       |(-3)       |(-6)
+        //   |    [0]    |    [1]    |
+        //   |    (1)    |    (2)    |
+        //   |(-1)       |(-2)       |(-5)
+        //   0-----------1-----------4  → x
         //
-        //                  +
+        //             UNION
         //
-        // 1.0  3-----------2-----------5
-        //      |(-4)       |(-3)       |(-6)
-        //      |    [0]    |    [1]    |
-        //      |    (1)    |    (2)    |
-        //      |(-1)       |(-2)       |(-5)
-        // 0.0  0-----------1-----------4  → x
+        //       -300        -400
+        //   3-----------2-----------5
+        //   |(-4)       |(-3)       |(-6)
+        //   |    [0]    |    [1]    |
+        //   |    (1)    |    (2)    |
+        //   |(-1)       |(-2)       |(-5)
+        //   0-----------1-----------4
         //
-        //                  +
+        //             UNION
         //
-        // 1.0  3-----------2-----------5
-        //      |(-4)       |(-3)       |(-6)
-        //      |    [0]    |    [1]    |
-        //      |    (1)    |    (2)    |
-        //      |(-1)       |(-2)       |(-5)
-        // 0.0  0-----------1-----------4  → x
-        //     0.0         1.0         2.0
+        //       -100        -200
+        //   3-----------2-----------5
+        //   |(-4)       |(-3)       |(-6)
+        //   |    [0]    |    [1]    |
+        //   |    (1)    |    (2)    |
+        //   |(-1)       |(-2)       |(-5)
+        //   0-----------1-----------4
         let a = Samples::two_qua4();
         let mut b = Samples::two_qua4();
         let mut c = Samples::two_qua4();
@@ -266,31 +362,37 @@ mod tests {
             b.points[m].coords[1] += 1.0;
             c.points[m].coords[1] += 2.0;
         }
+        b.marked_edges[0].0 = -300;
+        b.marked_edges[1].0 = -400;
+        b.marked_edges.push((-123, 3, 2)); // will be overwritten by the first mesh
+        b.marked_edges.push((-456, 2, 5)); // will be overwritten by the first mesh
+        c.marked_edges[0].0 = -500;
+        c.marked_edges[1].0 = -600;
 
-        // 3.0  10----------9----------11
-        //      |(-4)       |(-3)       |(-6)
-        //      |    [4]    |    [5]    |
-        //      |    (1)    |    (2)    |
-        //      |           |           |
-        // 2.0  7-----------6-----------8
-        //      |(-4)       |(-3)       |(-6)
-        //      |    [2]    |    [3]    |
-        //      |    (1)    |    (2)    |
-        //      |           |           |
-        // 1.0  3-----------2-----------5
-        //      |(-4)       |(-3)       |(-6)
-        //      |    [0]    |    [1]    |
-        //      |    (1)    |    (2)    |
-        //      |(-1)       |(-2)       |(-5)
-        // 0.0  0-----------1-----------4  → x
-        //     0.0         1.0         2.0
+        //        -500       -600
+        //   10----------9----------11
+        //   |(-4)       |(-3)       |(-6)
+        //   |    [4]    |    [5]    |
+        //   |    (1)    |    (2)    |
+        //   |    -300   |   -400    |
+        //   7-----------6-----------8
+        //   |(-4)       |(-3)       |(-6)
+        //   |    [2]    |    [3]    |
+        //   |    (1)    |    (2)    |
+        //   |    -100   |   -200    |
+        //   3-----------2-----------5
+        //   |(-4)       |(-3)       |(-6)
+        //   |    [0]    |    [1]    |
+        //   |    (1)    |    (2)    |
+        //   |(-1)       |(-2)       |(-5)
+        //   0-----------1-----------4
         let mesh = join_meshes(&[&a, &b, &c]).unwrap();
         mesh.check_overlapping_points(0.01).unwrap();
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
              # ndim npoint ncell nmarked_edge nmarked_face\n\
-             2 12 6 0 0\n\
+             2 12 6 6 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -314,7 +416,16 @@ mod tests {
              2 1 qua4 3 2 6 7\n\
              3 2 qua4 2 5 8 6\n\
              4 1 qua4 7 6 9 10\n\
-             5 2 qua4 6 8 11 9\n"
+             5 2 qua4 6 8 11 9\n\
+             \n\
+             # marked edges\n\
+             # marker p1 p2\n\
+             -100 2 3\n\
+             -200 2 5\n\
+             -300 6 7\n\
+             -400 6 8\n\
+             -500 9 10\n\
+             -600 9 11\n"
         );
     }
 }
