@@ -30,6 +30,9 @@ pub struct Edge {
 
     /// List of points defining this edge or face; in the right (FEM) order (i.e., unsorted)
     pub points: Vec<PointId>,
+
+    /// Marker
+    pub marker: i32,
 }
 
 impl Edge {
@@ -58,6 +61,9 @@ pub struct Face {
 
     /// List of points defining this edge or face; in the right (FEM) order (i.e., unsorted)
     pub points: Vec<PointId>,
+
+    /// Marker
+    pub marker: i32,
 }
 
 impl Face {
@@ -570,6 +576,38 @@ impl<'a> Features<'a> {
             }
         }
         res
+    }
+
+    /// Searches points with a given marker
+    ///
+    /// Returns a **sorted** array of point ids
+    pub fn search_marked_points(&self, marker: i32) -> Vec<PointId> {
+        let mut point_ids: Vec<_> = self
+            .points
+            .iter()
+            .filter(|id| self.mesh.points[**id].marker == marker)
+            .copied()
+            .collect();
+        point_ids.sort();
+        point_ids
+    }
+
+    /// Searches edges with a given marker
+    ///
+    /// Returns edges sorted by their edge keys
+    pub fn search_marked_edges(&self, marker: i32) -> Edges {
+        let mut all: Vec<_> = self.edges.values().filter(|edge| edge.marker == marker).collect();
+        all.sort_by_key(|edge| edge.key());
+        Edges { all }
+    }
+
+    /// Searches faces with a given marker
+    ///
+    /// Returns faces sorted by their face keys
+    pub fn search_marked_faces(&self, marker: i32) -> Faces {
+        let mut all: Vec<_> = self.faces.values().filter(|face| face.marker == marker).collect();
+        all.sort_by_key(|face| face.key());
+        Faces { all }
     }
 
     /// Searches point ids
@@ -1161,15 +1199,23 @@ mod tests {
         let edge = Edge {
             kind: GeoKind::Lin3,
             points: vec![10, 20, 33],
+            marker: 0,
         };
         let face = Face {
             kind: GeoKind::Qua4,
             points: vec![1, 2, 3, 4],
+            marker: 0,
         };
         let edge_clone = edge.clone();
         let face_clone = face.clone();
-        assert_eq!(format!("{:?}", edge), "Edge { kind: Lin3, points: [10, 20, 33] }");
-        assert_eq!(format!("{:?}", face), "Face { kind: Qua4, points: [1, 2, 3, 4] }");
+        assert_eq!(
+            format!("{:?}", edge),
+            "Edge { kind: Lin3, points: [10, 20, 33], marker: 0 }"
+        );
+        assert_eq!(
+            format!("{:?}", face),
+            "Face { kind: Qua4, points: [1, 2, 3, 4], marker: 0 }"
+        );
         assert_eq!(edge_clone.points.len(), 3);
         assert_eq!(face_clone.points.len(), 4);
         assert_eq!(edge.key(), (10, 20));
@@ -1180,11 +1226,11 @@ mod tests {
         let faces_clone = faces.clone();
         assert_eq!(
             format!("{:?}", edges_clone),
-            "Edges { all: [Edge { kind: Lin3, points: [10, 20, 33] }] }"
+            "Edges { all: [Edge { kind: Lin3, points: [10, 20, 33], marker: 0 }] }"
         );
         assert_eq!(
             format!("{:?}", faces_clone),
-            "Faces { all: [Face { kind: Qua4, points: [1, 2, 3, 4] }] }"
+            "Faces { all: [Face { kind: Qua4, points: [1, 2, 3, 4], marker: 0 }] }"
         );
     }
 
@@ -1251,6 +1297,32 @@ mod tests {
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 1, 2)));
         assert!(neighbors.contains(&(3, 2, 1)));
+    }
+
+    #[test]
+    fn search_marked_points_edges_faces_work() {
+        let mesh = Samples::two_hex8();
+        let features = Features::new(&mesh, false);
+
+        assert_eq!(features.search_marked_points(-1), vec![1, 2, 7]);
+
+        let res = features.search_marked_edges(-4);
+        assert_eq!(res.all.iter().map(|e| e.key()).collect::<Vec<_>>(), vec![(3, 7)]);
+
+        let res = features.search_marked_edges(-5);
+        assert_eq!(
+            res.all.iter().map(|e| e.key()).collect::<Vec<_>>(),
+            vec![(8, 9), (10, 11)]
+        );
+
+        let res = features.search_marked_faces(-8);
+        assert_eq!(res.all.iter().map(|f| f.key()).collect::<Vec<_>>(), vec![(2, 3, 6, 7)]);
+
+        let res = features.search_marked_faces(-9);
+        assert_eq!(
+            res.all.iter().map(|f| f.key()).collect::<Vec<_>>(),
+            vec![(8, 9, 10, 11)]
+        );
     }
 
     #[test]

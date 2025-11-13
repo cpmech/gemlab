@@ -47,8 +47,8 @@ impl<'a> Edges<'a> {
     /// use gemlab::shapes::GeoKind;
     ///
     /// // Create some sample edges (a simple path 1-2-3)
-    /// let e1 = Edge { kind: GeoKind::Lin2, points: vec![1, 2] };
-    /// let e2 = Edge { kind: GeoKind::Lin2, points: vec![2, 3] };
+    /// let e1 = Edge { kind: GeoKind::Lin2, points: vec![1, 2], marker: 0 };
+    /// let e2 = Edge { kind: GeoKind::Lin2, points: vec![2, 3], marker: 0 };
     /// let edges = Edges { all: vec![&e1, &e2] };
     ///
     /// // Get path through edges
@@ -220,28 +220,28 @@ mod tests {
         //           (0)           (1)            (2)
 
         // Bottom horizontal edges
-        let e0 = Edge { kind: GeoKind::Lin2, points: vec![5, 2] };
-        let e1 = Edge { kind: GeoKind::Lin2, points: vec![2, 3] };
-        let e2 = Edge { kind: GeoKind::Lin2, points: vec![3, 10] };
+        let e0 = Edge { kind: GeoKind::Lin2, points: vec![5,  2], marker: 0 };
+        let e1 = Edge { kind: GeoKind::Lin2, points: vec![2,  3], marker: 0 };
+        let e2 = Edge { kind: GeoKind::Lin2, points: vec![3, 10], marker: 0 };
 
         // Left vertical edges
-        let e3 = Edge { kind: GeoKind::Lin2, points: vec![5, 1] };
-        let e4 = Edge { kind: GeoKind::Lin2, points: vec![1, 9] };
+        let e3 = Edge { kind: GeoKind::Lin2, points: vec![5, 1], marker: 0 };
+        let e4 = Edge { kind: GeoKind::Lin2, points: vec![1, 9], marker: 0 };
 
         // Central edges
-        let e5 = Edge { kind: GeoKind::Lin2, points: vec![2, 8] };
-        let e6 = Edge { kind: GeoKind::Lin2, points: vec![8, 7] };
-        let e7 = Edge { kind: GeoKind::Lin2, points: vec![8, 4] };
-        let e8 = Edge { kind: GeoKind::Lin2, points: vec![1, 8] };
+        let e5 = Edge { kind: GeoKind::Lin2, points: vec![2, 8], marker: 0 };
+        let e6 = Edge { kind: GeoKind::Lin2, points: vec![8, 7], marker: 0 };
+        let e7 = Edge { kind: GeoKind::Lin2, points: vec![8, 4], marker: 0 };
+        let e8 = Edge { kind: GeoKind::Lin2, points: vec![1, 8], marker: 0 };
 
         // Right vertical edges
-        let e9  = Edge { kind: GeoKind::Lin2, points: vec![3, 4] };
-        let e10 = Edge { kind: GeoKind::Lin2, points: vec![10, 6] };
+        let e9  = Edge { kind: GeoKind::Lin2, points: vec![ 3, 4], marker: 0 };
+        let e10 = Edge { kind: GeoKind::Lin2, points: vec![10, 6], marker: 0 };
 
         // Top horizontal edges
-        let e11 = Edge { kind: GeoKind::Lin2, points: vec![9, 7] };
-        let e12 = Edge { kind: GeoKind::Lin2, points: vec![7, 4] };
-        let e13 = Edge { kind: GeoKind::Lin2, points: vec![4, 6] };
+        let e11 = Edge { kind: GeoKind::Lin2, points: vec![9, 7], marker: 0 };
+        let e12 = Edge { kind: GeoKind::Lin2, points: vec![7, 4], marker: 0 };
+        let e13 = Edge { kind: GeoKind::Lin2, points: vec![4, 6], marker: 0 };
 
         vec![e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13]
     }
@@ -266,28 +266,28 @@ mod tests {
         //            (0)            (1)            (2)
 
         // Bottom horizontal edges
-        let e0 = Edge { kind: GeoKind::Lin3, points: vec![5, 2, 100] };
-        let e1 = Edge { kind: GeoKind::Lin3, points: vec![2, 3, 101] };
-        let e2 = Edge { kind: GeoKind::Lin3, points: vec![3, 10, 102] };
+        let e0 = Edge { kind: GeoKind::Lin3, points: vec![5,  2, 100], marker: 0 };
+        let e1 = Edge { kind: GeoKind::Lin3, points: vec![2,  3, 101], marker: 0 };
+        let e2 = Edge { kind: GeoKind::Lin3, points: vec![3, 10, 102], marker: 0 };
 
         // Left vertical edges
-        let e3 = Edge { kind: GeoKind::Lin3, points: vec![5, 1, 108] };
-        let e4 = Edge { kind: GeoKind::Lin3, points: vec![1, 9, 112] };
+        let e3 = Edge { kind: GeoKind::Lin3, points: vec![5, 1, 108], marker: 0 };
+        let e4 = Edge { kind: GeoKind::Lin3, points: vec![1, 9, 112], marker: 0 };
 
         // Central edges
-        let e5 = Edge { kind: GeoKind::Lin3, points: vec![2, 8, 109] };
-        let e6 = Edge { kind: GeoKind::Lin3, points: vec![8, 7, 113] };
-        let e7 = Edge { kind: GeoKind::Lin3, points: vec![8, 4, 104] };
-        let e8 = Edge { kind: GeoKind::Lin3, points: vec![1, 8, 103] };
+        let e5 = Edge { kind: GeoKind::Lin3, points: vec![2, 8, 109], marker: 0 };
+        let e6 = Edge { kind: GeoKind::Lin3, points: vec![8, 7, 113], marker: 0 };
+        let e7 = Edge { kind: GeoKind::Lin3, points: vec![8, 4, 104], marker: 0 };
+        let e8 = Edge { kind: GeoKind::Lin3, points: vec![1, 8, 103], marker: 0 };
 
         // Right vertical edges
-        let e9  = Edge { kind: GeoKind::Lin3, points: vec![3, 4, 110] };
-        let e10 = Edge { kind: GeoKind::Lin3, points: vec![10, 6, 111] };
+        let e9  = Edge { kind: GeoKind::Lin3, points: vec![ 3, 4, 110], marker: 0 };
+        let e10 = Edge { kind: GeoKind::Lin3, points: vec![10, 6, 111], marker: 0 };
 
         // Top horizontal edges
-        let e11 = Edge { kind: GeoKind::Lin3, points: vec![9, 7, 105] };
-        let e12 = Edge { kind: GeoKind::Lin3, points: vec![7, 4, 106] };
-        let e13 = Edge { kind: GeoKind::Lin3, points: vec![4, 6, 107] };
+        let e11 = Edge { kind: GeoKind::Lin3, points: vec![9, 7, 105], marker: 0 };
+        let e12 = Edge { kind: GeoKind::Lin3, points: vec![7, 4, 106], marker: 0 };
+        let e13 = Edge { kind: GeoKind::Lin3, points: vec![4, 6, 107], marker: 0 };
 
         vec![e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13]
     }
@@ -298,6 +298,7 @@ mod tests {
         let edge = Edge {
             kind: GeoKind::Tri3,
             points: vec![5, 2, 100],
+            marker: 0,
         };
         let edges = Edges { all: vec![&edge] };
         edges.any_path();
@@ -440,18 +441,22 @@ mod tests {
         let e0 = Edge {
             kind: GeoKind::Lin4,
             points: vec![21, 20, 26, 23],
+            marker: 0,
         };
         let e1 = Edge {
             kind: GeoKind::Lin4,
             points: vec![20, 28, 32, 30],
+            marker: 0,
         };
         let e2 = Edge {
             kind: GeoKind::Lin4,
             points: vec![2, 3, 6, 10],
+            marker: 0,
         };
         let e3 = Edge {
             kind: GeoKind::Lin4,
             points: vec![2, 13, 19, 16],
+            marker: 0,
         };
         // Note: the edges do not make outward normals!
 
@@ -481,18 +486,22 @@ mod tests {
         let e0 = Edge {
             kind: GeoKind::Lin5,
             points: vec![30, 29, 32, 38, 37],
+            marker: 0,
         };
         let e1 = Edge {
             kind: GeoKind::Lin5,
             points: vec![29, 41, 43, 48, 47],
+            marker: 0,
         };
         let e2 = Edge {
             kind: GeoKind::Lin5,
             points: vec![2, 3, 6, 13, 14],
+            marker: 0,
         };
         let e3 = Edge {
             kind: GeoKind::Lin5,
             points: vec![2, 18, 21, 28, 27],
+            marker: 0,
         };
         // Note: the edges do not make outward normals!
 

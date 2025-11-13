@@ -1043,27 +1043,28 @@ impl Samples {
     ///           [#] indicates id
     ///           (#) indicates attribute
     ///           {#} indicates marker
+    ///             * indicates points marked with -1
     ///
     ///       8-------------11  2.0
     ///      /.             /|
-    ///  {0}/ .         {0}/ |
+    /// {-5}/ .        {-5}/ |
     ///    /  .   {-9}    /  |
     ///   /   .          /   |{123}
     ///  9-------------10    |
     ///  |    .         |    |
-    ///  |    4---------|----7  1.0
+    ///  |    4---------|----7* 1.0
     ///  |   /. [1]     |   /|
     ///  |  / . (2)     |  / |
     ///  | /  .         | /  |
     ///  |/   .         |/   |{-4}
     ///  5--------------6    |          z
-    ///  |    .         | {0}|          ↑
+    ///  |    .         |{-8}|          ↑
     ///  |    0---------|----3  0.0     o → y
     ///  |   /  [0]     |   /          ↙
     ///  |  /   (1)     |  /          x
     ///  | /            | /
     ///  |/             |/
-    ///  1--------------2   1.0
+    ///  1*-------------2*  1.0
     /// 0.0            1.0
     /// ```
     ///
@@ -1074,13 +1075,13 @@ impl Samples {
             ndim: 3,
             points: vec![
                 Point { id:  0, marker: 0, coords: vec![0.0, 0.0, 0.0] },
-                Point { id:  1, marker: 0, coords: vec![1.0, 0.0, 0.0] },
-                Point { id:  2, marker: 0, coords: vec![1.0, 1.0, 0.0] },
+                Point { id:  1, marker:-1, coords: vec![1.0, 0.0, 0.0] },
+                Point { id:  2, marker:-1, coords: vec![1.0, 1.0, 0.0] },
                 Point { id:  3, marker: 0, coords: vec![0.0, 1.0, 0.0] },
                 Point { id:  4, marker: 0, coords: vec![0.0, 0.0, 1.0] },
                 Point { id:  5, marker: 0, coords: vec![1.0, 0.0, 1.0] },
                 Point { id:  6, marker: 0, coords: vec![1.0, 1.0, 1.0] },
-                Point { id:  7, marker: 0, coords: vec![0.0, 1.0, 1.0] },
+                Point { id:  7, marker:-1, coords: vec![0.0, 1.0, 1.0] },
                 Point { id:  8, marker: 0, coords: vec![0.0, 0.0, 2.0] },
                 Point { id:  9, marker: 0, coords: vec![1.0, 0.0, 2.0] },
                 Point { id: 10, marker: 0, coords: vec![1.0, 1.0, 2.0] },
@@ -1090,8 +1091,8 @@ impl Samples {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Hex8, points: vec![4,5,6,7, 8,9,10,11] },
             ],
-            marked_edges: vec![(123, 7, 11), (0, 11, 10), (-4, 7, 3), (0, 8, 9)],
-            marked_faces: vec![(0, 3, 2, 7, 6), (-9, 8, 9, 10, 11)]
+            marked_edges: vec![(123, 7, 11), (-5, 11, 10), (-4, 7, 3), (-5, 8, 9)],
+            marked_faces: vec![(-8, 3, 2, 7, 6), (-9, 8, 10, 9, 11)]
         }
     }
 

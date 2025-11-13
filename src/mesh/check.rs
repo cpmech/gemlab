@@ -286,12 +286,12 @@ mod tests {
 
         #[rustfmt::skip]
         let mut edges = HashMap::from([
-            ((0, 3), Edge { kind: GeoKind::Lin2, points: vec![0, 3] }),
-            ((2, 3), Edge { kind: GeoKind::Lin2, points: vec![3, 2] }),
-            ((2, 5), Edge { kind: GeoKind::Lin2, points: vec![2, 5] }),
-            ((4, 5), Edge { kind: GeoKind::Lin2, points: vec![5, 4] }),
-            ((1, 4), Edge { kind: GeoKind::Lin2, points: vec![4, 1] }),
-            ((0, 1), Edge { kind: GeoKind::Lin2, points: vec![1, 0] }),
+            ((0, 3), Edge { kind: GeoKind::Lin2, points: vec![0, 3], marker: 0 }),
+            ((2, 3), Edge { kind: GeoKind::Lin2, points: vec![3, 2], marker: 0 }),
+            ((2, 5), Edge { kind: GeoKind::Lin2, points: vec![2, 5], marker: 0 }),
+            ((4, 5), Edge { kind: GeoKind::Lin2, points: vec![5, 4], marker: 0 }),
+            ((1, 4), Edge { kind: GeoKind::Lin2, points: vec![4, 1], marker: 0 }),
+            ((0, 1), Edge { kind: GeoKind::Lin2, points: vec![1, 0], marker: 0 }),
         ]);
         let solutions = HashMap::from([
             ((0, 3), (l, [-1.0, 0.0])),
@@ -361,12 +361,12 @@ mod tests {
 
         #[rustfmt::skip]
         let mut faces = HashMap::from([
-            ((0, 3, 4, 7), Face { kind: GeoKind::Qua4, points: vec![0, 4, 7, 3] }),
-            ((1, 2, 5, 6), Face { kind: GeoKind::Qua4, points: vec![1, 2, 6, 5] }),
-            ((0, 1, 4, 5), Face { kind: GeoKind::Qua4, points: vec![0, 1, 5, 4] }),
-            ((2, 3, 6, 7), Face { kind: GeoKind::Qua4, points: vec![2, 3, 7, 6] }),
-            ((0, 1, 2, 3), Face { kind: GeoKind::Qua4, points: vec![0, 3, 2, 1] }),
-            ((4, 5, 6, 7), Face { kind: GeoKind::Qua4, points: vec![4, 5, 6, 7] }),
+            ((0, 3, 4, 7), Face { kind: GeoKind::Qua4, points: vec![0, 4, 7, 3], marker: 0 }),
+            ((1, 2, 5, 6), Face { kind: GeoKind::Qua4, points: vec![1, 2, 6, 5], marker: 0 }),
+            ((0, 1, 4, 5), Face { kind: GeoKind::Qua4, points: vec![0, 1, 5, 4], marker: 0 }),
+            ((2, 3, 6, 7), Face { kind: GeoKind::Qua4, points: vec![2, 3, 7, 6], marker: 0 }),
+            ((0, 1, 2, 3), Face { kind: GeoKind::Qua4, points: vec![0, 3, 2, 1], marker: 0 }),
+            ((4, 5, 6, 7), Face { kind: GeoKind::Qua4, points: vec![4, 5, 6, 7], marker: 0 }),
         ]);
         let solutions = HashMap::from([
             ((0, 3, 4, 7), (l, [-1.0, 0.0, 0.0])),

@@ -1,4 +1,5 @@
 use crate::mesh::{Edge, EdgeKey, MapEdge2dToCells, Mesh, PointId};
+use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
 /// Extracts mesh features in 2D
@@ -13,6 +14,14 @@ pub(crate) fn extract_features_2d(
     extract_all: bool,
 ) -> (HashSet<PointId>, HashMap<EdgeKey, Edge>, Vec<f64>, Vec<f64>) {
     assert_eq!(mesh.ndim, 2);
+
+    // create a map of markers
+    let mut marked_edges_map = HashMap::new();
+    mesh.marked_edges.iter().for_each(|(marker, p1, p2)| {
+        let mut edge_key = (*p1, *p2);
+        sort2(&mut edge_key);
+        marked_edges_map.insert(edge_key, *marker);
+    });
 
     // results
     let mut points = HashSet::new();
@@ -38,6 +47,7 @@ pub(crate) fn extract_features_2d(
         let mut edge = Edge {
             kind: cell.kind.edge_kind().unwrap(),
             points: vec![0; cell.kind.edge_nnode()],
+            marker: marked_edges_map.get(edge_key).cloned().unwrap_or(0),
         };
 
         // process points on edge

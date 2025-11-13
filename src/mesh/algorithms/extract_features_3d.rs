@@ -1,5 +1,5 @@
 use crate::mesh::{Edge, EdgeKey, Face, FaceKey, MapFaceToCells, Mesh, PointId};
-use russell_lab::sort2;
+use russell_lab::{sort2, sort4};
 use std::collections::{HashMap, HashSet};
 
 /// Extracts mesh features in 3D
@@ -20,6 +20,20 @@ pub(crate) fn extract_features_3d(
     Vec<f64>,
 ) {
     assert_eq!(mesh.ndim, 3);
+
+    // create maps of markers
+    let mut marked_edges_map = HashMap::new();
+    let mut marked_faces_map = HashMap::new();
+    mesh.marked_edges.iter().for_each(|(marker, p1, p2)| {
+        let mut edge_key = (*p1, *p2);
+        sort2(&mut edge_key);
+        marked_edges_map.insert(edge_key, *marker);
+    });
+    mesh.marked_faces.iter().for_each(|(marker, p1, p2, p3, p4)| {
+        let mut face_key = (*p1, *p2, *p3, *p4);
+        sort4(&mut face_key);
+        marked_faces_map.insert(face_key, *marker);
+    });
 
     // results
     let mut points = HashSet::new();
@@ -52,6 +66,7 @@ pub(crate) fn extract_features_3d(
         let mut face = Face {
             kind: cell.kind.face_kind().unwrap(),
             points: vec![0; cell.kind.face_nnode()],
+            marker: marked_faces_map.get(face_key).cloned().unwrap_or(0),
         };
 
         // process points on face
@@ -82,6 +97,7 @@ pub(crate) fn extract_features_3d(
             let mut edge = Edge {
                 kind: face.kind.edge_kind().unwrap(),
                 points: vec![0; face.kind.edge_nnode()],
+                marker: marked_edges_map.get(&edge_key).cloned().unwrap_or(0),
             };
             for i in 0..edge.points.len() {
                 edge.points[i] = face.points[face.kind.edge_node_id(e, i)];
