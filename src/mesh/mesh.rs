@@ -88,6 +88,8 @@ pub struct Cell {
 ///         Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
 ///         Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
 ///     ],
+///     marked_edges: Vec::new(),
+///     marked_faces: Vec::new(),
 /// };
 /// ```
 ///
@@ -105,6 +107,19 @@ pub struct Mesh {
 
     /// All cells (aka geometric shape, polygon, polyhedra) in the mesh
     pub cells: Vec<Cell>,
+
+    /// Holds all marked edges
+    ///
+    /// Each entry contains `(marker, p1, p2)`, where `marker` is the edge marker,
+    /// and `p1` and `p2` are the point ids. The point ids may be unsorted.
+    pub marked_edges: Vec<(i32, usize, usize)>,
+
+    /// Holds all marked faces
+    ///
+    /// Each entry contains `(marker, p1, p2, p3, p4)`, where `marker` is the face marker,
+    /// and `p1`, `p2`, `p3`, and `p4` are the point ids. The point ids may be unsorted.
+    /// For triangular faces, the fourth point (p4) must be set to [usize::MAX].
+    pub marked_faces: Vec<(i32, usize, usize, usize, usize)>,
 }
 
 impl Mesh {
@@ -205,6 +220,8 @@ impl Mesh {
             ndim: space_ndim,
             points,
             cells,
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         })
     }
 
@@ -299,6 +316,8 @@ impl Mesh {
     ///             Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
     ///             Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
     ///         ],
+    ///         marked_edges: Vec::new(),
+    ///         marked_faces: Vec::new(),
     ///     };
     ///     assert_eq!(mesh.search_marked_points(-200, |_| true)?, &[2]);
     ///     assert_eq!(mesh.search_marked_points(-400, |_| true)?, &[6]);
@@ -385,6 +404,8 @@ impl Mesh {
     ///             Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
     ///             Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
     ///         ],
+    ///         marked_edges: Vec::new(),
+    ///         marked_faces: Vec::new(),
     ///     };
     ///     assert_eq!(mesh.search_first_marked_point(1, |_| true)?, 0);
     ///     assert_eq!(mesh.search_first_marked_point(2, |_| true)?, 4);
@@ -604,9 +625,21 @@ impl Mesh {
 impl fmt::Display for Mesh {
     /// Returns a text representation of the Mesh (can be used with [Mesh::from_text])
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // write header
         write!(f, "# header\n").unwrap();
-        write!(f, "# ndim npoint ncell\n").unwrap();
-        write!(f, "{} {} {}\n", self.ndim, self.points.len(), self.cells.len()).unwrap();
+        write!(f, "# ndim npoint ncell nmarked_edge nmarked_face\n").unwrap();
+        write!(
+            f,
+            "{} {} {} {} {}\n",
+            self.ndim,
+            self.points.len(),
+            self.cells.len(),
+            self.marked_edges.len(),
+            self.marked_faces.len()
+        )
+        .unwrap();
+
+        // write points
         write!(f, "\n# points\n").unwrap();
         write!(f, "# id marker x y {{z}}\n").unwrap();
         self.points.iter().for_each(|point| {
@@ -626,6 +659,8 @@ impl fmt::Display for Mesh {
                 .unwrap();
             }
         });
+
+        // write cells
         write!(f, "\n# cells\n").unwrap();
         write!(f, "# id attribute kind points\n").unwrap();
         self.cells.iter().for_each(|cell| {
@@ -642,6 +677,28 @@ impl fmt::Display for Mesh {
             )
             .unwrap();
         });
+
+        // write marked edges
+        if self.marked_edges.len() > 0 {
+            write!(f, "\n# marked edges\n").unwrap();
+            write!(f, "# marker p1 p2\n").unwrap();
+            for entry in &self.marked_edges {
+                write!(f, "{} {} {}\n", entry.0, entry.1, entry.2).unwrap();
+            }
+        }
+
+        // write marked faces
+        if self.marked_faces.len() > 0 {
+            write!(f, "\n# marked faces\n").unwrap();
+            write!(f, "# marker p1 p2 p3 {{p4}}\n").unwrap();
+            for entry in &self.marked_faces {
+                if entry.4 == usize::MAX {
+                    write!(f, "{} {} {} {}\n", entry.0, entry.1, entry.2, entry.3).unwrap();
+                } else {
+                    write!(f, "{} {} {} {} {}\n", entry.0, entry.1, entry.2, entry.3, entry.4).unwrap();
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -708,13 +765,15 @@ mod tests {
             ndim: 2,
             points: Vec::new(),
             cells: Vec::new(),
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(mesh.write_json("/tmp/").err(), Some("cannot create file"));
     }
 
     #[test]
     fn read_and_write_work() {
-        //
+        //     -100
         //  3--------2--------5
         //  |(-4)    |(-3)    |(-6)
         //  |        |        |
@@ -723,8 +782,8 @@ mod tests {
         //
         let mesh = Mesh::from_text(
             r"# header
-            # ndim npoint ncell
-                 2      6     2
+            # ndim npoint ncell nmarked_edge nmarked_face
+                 2      6     2            1            0
             
             # points
             # id marker x y
@@ -738,7 +797,11 @@ mod tests {
             # cells
             # id attribute kind point_ids...
                0   1 qua4 0 1 2 3
-               1   0 qua4 1 4 5 2",
+               1   0 qua4 1 4 5 2
+               
+            # marked edges
+            # marker p1 p2
+                -100  3  2",
         )
         .unwrap();
         mesh.write_json("/tmp/gemlab/test.json").unwrap();
@@ -750,7 +813,7 @@ mod tests {
     fn derive_works() {
         let mesh = Samples::two_qua4();
         let mesh_clone = mesh.clone();
-        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: -1, coords: [0.0, 0.0] }, Point { id: 1, marker: -2, coords: [1.0, 0.0] }, Point { id: 2, marker: -3, coords: [1.0, 1.0] }, Point { id: 3, marker: -4, coords: [0.0, 1.0] }, Point { id: 4, marker: -5, coords: [2.0, 0.0] }, Point { id: 5, marker: -6, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }] }";
+        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: -1, coords: [0.0, 0.0] }, Point { id: 1, marker: -2, coords: [1.0, 0.0] }, Point { id: 2, marker: -3, coords: [1.0, 1.0] }, Point { id: 3, marker: -4, coords: [0.0, 1.0] }, Point { id: 4, marker: -5, coords: [2.0, 0.0] }, Point { id: 5, marker: -6, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }], marked_edges: [(-100, 3, 2), (-200, 2, 5)], marked_faces: [] }";
         assert_eq!(format!("{:?}", mesh), correct);
         assert_eq!(mesh_clone.ndim, mesh.ndim);
         assert_eq!(mesh_clone.points.len(), mesh.points.len());
@@ -769,8 +832,8 @@ mod tests {
         assert_eq!(
             text,
             "# header\n\
-             # ndim npoint ncell\n\
-             2 6 2\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 6 2 2 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -784,7 +847,12 @@ mod tests {
              # cells\n\
              # id attribute kind points\n\
              0 1 qua4 0 1 2 3\n\
-             1 2 qua4 1 4 5 2\n"
+             1 2 qua4 1 4 5 2\n\
+             \n\
+             # marked edges\n\
+             # marker p1 p2\n\
+             -100 3 2\n\
+             -200 2 5\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);
@@ -797,8 +865,8 @@ mod tests {
         assert_eq!(
             text,
             "# header\n\
-             # ndim npoint ncell\n\
-             3 12 2\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             3 12 2 4 2\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -818,7 +886,19 @@ mod tests {
              # cells\n\
              # id attribute kind points\n\
              0 1 hex8 0 1 2 3 4 5 6 7\n\
-             1 2 hex8 4 5 6 7 8 9 10 11\n"
+             1 2 hex8 4 5 6 7 8 9 10 11\n\
+             \n\
+             # marked edges\n\
+             # marker p1 p2\n\
+             123 7 11\n\
+             0 11 10\n\
+             -4 7 3\n\
+             0 8 9\n\
+             \n\
+             # marked faces\n\
+             # marker p1 p2 p3 {p4}\n\
+             0 3 2 7 6\n\
+             -9 8 9 10 11\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);
@@ -1101,6 +1181,8 @@ mod tests {
             points,
             ndim: 2,
             cells: vec![],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         let point_ids = vec![0, 1, 2, 3, 4];
         let sorted_points = mesh.get_sorted_points(&point_ids, |_, _, _| true);

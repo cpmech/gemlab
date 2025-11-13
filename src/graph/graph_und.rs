@@ -753,6 +753,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 4, 5] },
                 Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![1, 2, 3, 4] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         let graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
 

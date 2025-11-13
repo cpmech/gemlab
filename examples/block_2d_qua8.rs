@@ -32,8 +32,8 @@ fn main() -> Result<(), StrError> {
     println!("{}", mesh);
 
     let correct = "# header
-# ndim npoint ncell
-2 21 4
+# ndim npoint ncell nmarked_edge nmarked_face
+2 21 4 0 0
 
 # points
 # id marker x y {z}

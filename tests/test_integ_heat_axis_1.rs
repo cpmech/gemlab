@@ -20,6 +20,8 @@ fn generate_pads() -> (Scratchpad, Scratchpad, Scratchpad, AnalyticalTri3) {
         cells: vec![
             Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
         ],
+        marked_edges: Vec::new(),
+        marked_faces: Vec::new(),
     };
     let mut pad_tri = Scratchpad::new(2, GeoKind::Tri3).unwrap();
     let mut pad_conv = Scratchpad::new(2, GeoKind::Lin2).unwrap();

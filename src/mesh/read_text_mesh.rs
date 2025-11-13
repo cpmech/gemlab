@@ -10,8 +10,12 @@ struct DataForReadTextMesh {
     ndim: usize,
     npoint: usize,
     ncell: usize,
+    nmarked_edge: usize,
+    nmarked_face: usize,
     current_npoint: usize,
     current_ncell: usize,
+    current_marked_edge: usize,
+    current_marked_face: usize,
 }
 
 impl DataForReadTextMesh {
@@ -20,8 +24,12 @@ impl DataForReadTextMesh {
             ndim: 0,
             npoint: 0,
             ncell: 0,
+            nmarked_edge: 0,
+            nmarked_face: 0,
             current_npoint: 0,
             current_ncell: 0,
+            current_marked_edge: 0,
+            current_marked_face: 0,
         }
     }
 
@@ -47,6 +55,16 @@ impl DataForReadTextMesh {
         self.ncell = match data.next() {
             Some(v) => v.parse().map_err(|_| "cannot parse ncell")?,
             None => return Err("cannot read ncell"),
+        };
+
+        self.nmarked_edge = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse nmarked_edge")?,
+            None => return Err("cannot read nmarked_edge"),
+        };
+
+        self.nmarked_face = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse nmarked_face")?,
+            None => return Err("cannot read nmarked_face"),
         };
 
         Ok(true) // returns true == parsed
@@ -161,6 +179,80 @@ impl DataForReadTextMesh {
 
         Ok(true) // returns true == parsed
     }
+
+    fn parse_marked_edge(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, StrError> {
+        let maybe_data = line.trim_start().trim_end_matches("\n");
+        if maybe_data.starts_with("#") || maybe_data == "" {
+            return Ok(false); // ignore comments or empty lines
+        }
+
+        let mut data = maybe_data.split_whitespace();
+
+        let marker: i32 = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse marked edge")?,
+            None => unreachable!("at least one value expected at this point"),
+        };
+
+        let p1: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse p1 of marked edge")?,
+            None => return Err("cannot read p1 of marked edge"),
+        };
+
+        let p2: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse p2 of marked edge")?,
+            None => return Err("cannot read p2 of marked edge"),
+        };
+
+        if data.next() != None {
+            return Err("marked edge data contains extra values");
+        }
+
+        mesh.marked_edges.push((marker, p1, p2));
+
+        self.current_marked_edge += 1; // next marked edge
+
+        Ok(true) // returns true == parsed
+    }
+
+    fn parse_marked_face(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, StrError> {
+        let maybe_data = line.trim_start().trim_end_matches("\n");
+        if maybe_data.starts_with("#") || maybe_data == "" {
+            return Ok(false); // ignore comments or empty lines
+        }
+
+        let mut data = maybe_data.split_whitespace();
+
+        let marker: i32 = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse marked face")?,
+            None => unreachable!("at least one value expected at this point"),
+        };
+
+        let p1: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse p1 of marked face")?,
+            None => return Err("cannot read p1 of marked face"),
+        };
+
+        let p2: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse p2 of marked face")?,
+            None => return Err("cannot read p2 of marked face"),
+        };
+
+        let p3: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse p3 of marked face")?,
+            None => return Err("cannot read p3 of marked face"),
+        };
+
+        let p4: usize = match data.next() {
+            Some(v) => v.parse().map_err(|_| "cannot parse p4 of marked face")?,
+            None => usize::MAX,
+        };
+
+        mesh.marked_faces.push((marker, p1, p2, p3, p4));
+
+        self.current_marked_face += 1; // next marked face
+
+        Ok(true) // returns true == parsed
+    }
 }
 
 impl Mesh {
@@ -180,20 +272,33 @@ impl Mesh {
     ///
     /// ```text
     /// # header
-    /// # ndim npoint ncell
-    ///      2      8     5
+    /// # ndim npoint ncell nmarked_edge nmarked_face
+    ///      3      8     5            3            2
     ///
     /// # points
-    /// # id marker x y
-    ///    0 0 0.0 0.0
-    ///    1 0 0.5 0.0
-    ///    2 0 1.0 0.0
+    /// # id marker x y {z}
+    ///    0 0 0.0 0.0 0.0
+    ///    1 0 0.5 0.0 0.0
+    ///    2 0 1.0 0.0 0.0
     /// # ... more points should follow
     ///
     /// # cells
     /// # id attribute kind point_ids...
     ///    0 1 tri3 0 1 3
     ///    1 1 qua4 1 4 6 3
+    ///    2 2 tet4 0 3 7 2
+    /// # ... more cells should follow
+    ///
+    /// # marked edges
+    /// # marker p1 p2
+    /// -100 0 1
+    /// -100 9 8
+    /// -200 8 3
+    ///
+    /// # marked faces
+    /// # marker p1 p2 p3 {p4}
+    /// -10 4 7 4
+    /// -10 1 2 3
     /// ```
     ///
     /// where we can see that different cell (shape) kinds can be present in the same mesh.
@@ -234,6 +339,8 @@ impl Mesh {
             ndim: data.ndim,
             points: Vec::new(),
             cells: Vec::new(),
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // read and parse points
@@ -274,6 +381,46 @@ impl Mesh {
         // check data
         if data.current_ncell != data.ncell {
             return Err("not all cells have been found");
+        }
+
+        // read and parse marked edges
+        if data.nmarked_edge > 0 {
+            loop {
+                match lines_iter.next() {
+                    Some(v) => {
+                        let line = v.unwrap(); // must panic because no error expected here
+                        if data.parse_marked_edge(&mut mesh, &line)? {
+                            if data.current_marked_edge == data.nmarked_edge {
+                                break;
+                            }
+                        }
+                    }
+                    None => break,
+                }
+            }
+            if data.current_marked_edge != data.nmarked_edge {
+                return Err("not all marked edges have been found");
+            }
+        }
+
+        // read and parse marked faces
+        if data.nmarked_face > 0 {
+            loop {
+                match lines_iter.next() {
+                    Some(v) => {
+                        let line = v.unwrap(); // must panic because no error expected here
+                        if data.parse_marked_face(&mut mesh, &line)? {
+                            if data.current_marked_face == data.nmarked_face {
+                                break;
+                            }
+                        }
+                    }
+                    None => break,
+                }
+            }
+            if data.current_marked_face != data.nmarked_face {
+                return Err("not all marked faces have been found");
+            }
         }
 
         // done
@@ -334,7 +481,7 @@ impl Mesh {
     ///     // 0.0  0------`1
     ///     //     0.0     1.0
     ///     let mesh = Mesh::from_text(
-    ///         "2 4 2\n# points\n0 0 0.0 0.0\n1 0 1.0 0.0\n2 0 1.0 1.0\n3 0 0.0 1.0\n# cells\n0 1 tri3  0 1 3\n1 1 tri3  2 3 1\n",
+    ///         "2 4 2 0 0\n# points\n0 0 0.0 0.0\n1 0 1.0 0.0\n2 0 1.0 1.0\n3 0 0.0 1.0\n# cells\n0 1 tri3  0 1 3\n1 1 tri3  2 3 1\n",
     ///     )?;
     ///     assert_eq!(mesh.points.len(), 4);
     ///     assert_eq!(mesh.cells.len(), 2);
@@ -365,6 +512,8 @@ impl Mesh {
             ndim: data.ndim,
             points: Vec::new(),
             cells: Vec::new(),
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // read and parse points
@@ -405,6 +554,44 @@ impl Mesh {
             return Err("not all cells have been found");
         }
 
+        // read and parse marked edges
+        if data.nmarked_edge > 0 {
+            loop {
+                match lines_iter.next() {
+                    Some(line) => {
+                        if data.parse_marked_edge(&mut mesh, &line)? {
+                            if data.current_marked_edge == data.nmarked_edge {
+                                break;
+                            }
+                        }
+                    }
+                    None => break,
+                }
+            }
+            if data.current_marked_edge != data.nmarked_edge {
+                return Err("not all marked edges have been found");
+            }
+        }
+
+        // read and parse marked faces
+        if data.nmarked_face > 0 {
+            loop {
+                match lines_iter.next() {
+                    Some(line) => {
+                        if data.parse_marked_face(&mut mesh, &line)? {
+                            if data.current_marked_face == data.nmarked_face {
+                                break;
+                            }
+                        }
+                    }
+                    None => break,
+                }
+            }
+            if data.current_marked_face != data.nmarked_face {
+                return Err("not all marked faces have been found");
+            }
+        }
+
         // done
         Ok(mesh)
     }
@@ -443,6 +630,14 @@ mod tests {
             data.parse_sizes(&String::from(" 2 4  wrong")).err(),
             Some("cannot parse ncell")
         );
+        assert_eq!(
+            data.parse_sizes(&String::from(" 2 4 3 wrong")).err(),
+            Some("cannot parse nmarked_edge")
+        );
+        assert_eq!(
+            data.parse_sizes(&String::from(" 2 4 3 5 wrong")).err(),
+            Some("cannot parse nmarked_face")
+        );
     }
 
     #[test]
@@ -456,6 +651,8 @@ mod tests {
             ndim: data.ndim,
             points: Vec::new(),
             cells: Vec::new(),
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         assert_eq!(
@@ -516,6 +713,8 @@ mod tests {
             ndim: data.ndim,
             points: Vec::new(),
             cells: Vec::new(),
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         assert_eq!(
@@ -567,6 +766,113 @@ mod tests {
     }
 
     #[test]
+    fn parse_edge_marker_captures_errors() {
+        let mut data = DataForReadTextMesh::new();
+        data.ndim = 2;
+        data.npoint = 2;
+        data.ncell = 1;
+
+        let mut mesh = Mesh {
+            ndim: data.ndim,
+            points: Vec::new(),
+            cells: Vec::new(),
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
+        };
+
+        assert_eq!(
+            data.parse_marked_edge(&mut mesh, &String::from(" wrong \n")).err(),
+            Some("cannot parse marked edge")
+        );
+
+        assert_eq!(
+            data.parse_marked_edge(&mut mesh, &String::from(" -10 wrong \n")).err(),
+            Some("cannot parse p1 of marked edge")
+        );
+
+        assert_eq!(
+            data.parse_marked_edge(&mut mesh, &String::from(" -10 \n")).err(),
+            Some("cannot read p1 of marked edge")
+        );
+
+        assert_eq!(
+            data.parse_marked_edge(&mut mesh, &String::from(" -10 1 wrong \n"))
+                .err(),
+            Some("cannot parse p2 of marked edge")
+        );
+
+        assert_eq!(
+            data.parse_marked_edge(&mut mesh, &String::from(" -10 1 \n")).err(),
+            Some("cannot read p2 of marked edge")
+        );
+
+        assert_eq!(
+            data.parse_marked_edge(&mut mesh, &String::from(" -10 1 2 extra \n"))
+                .err(),
+            Some("marked edge data contains extra values")
+        );
+    }
+
+    #[test]
+    fn parse_face_marker_captures_errors() {
+        let mut data = DataForReadTextMesh::new();
+        data.ndim = 3;
+        data.npoint = 2;
+        data.ncell = 1;
+
+        let mut mesh = Mesh {
+            ndim: data.ndim,
+            points: Vec::new(),
+            cells: Vec::new(),
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
+        };
+
+        assert_eq!(
+            data.parse_marked_face(&mut mesh, &String::from(" wrong \n")).err(),
+            Some("cannot parse marked face")
+        );
+
+        assert_eq!(
+            data.parse_marked_face(&mut mesh, &String::from(" -10 wrong \n")).err(),
+            Some("cannot parse p1 of marked face")
+        );
+
+        assert_eq!(
+            data.parse_marked_face(&mut mesh, &String::from(" -10 \n")).err(),
+            Some("cannot read p1 of marked face")
+        );
+
+        assert_eq!(
+            data.parse_marked_face(&mut mesh, &String::from(" -10 1 wrong \n"))
+                .err(),
+            Some("cannot parse p2 of marked face")
+        );
+
+        assert_eq!(
+            data.parse_marked_face(&mut mesh, &String::from(" -10 1 \n")).err(),
+            Some("cannot read p2 of marked face")
+        );
+
+        assert_eq!(
+            data.parse_marked_face(&mut mesh, &String::from(" -10 1 2 wrong \n"))
+                .err(),
+            Some("cannot parse p3 of marked face")
+        );
+
+        assert_eq!(
+            data.parse_marked_face(&mut mesh, &String::from(" -10 1 3 \n")).err(),
+            Some("cannot read p3 of marked face")
+        );
+
+        assert_eq!(
+            data.parse_marked_face(&mut mesh, &String::from(" -10 1 2 3 wrong \n"))
+                .err(),
+            Some("cannot parse p4 of marked face")
+        );
+    }
+
+    #[test]
     fn read_captures_errors() {
         assert_eq!(Mesh::read(&String::from("__wrong__")).err(), Some("cannot open file"));
         assert_eq!(
@@ -594,6 +900,18 @@ mod tests {
             Some("not all cells have been found")
         );
         assert_eq!(
+            Mesh::read(&String::from("./data/meshes/bad_missing_marked_edges.msh")).err(),
+            Some("not all marked edges have been found")
+        );
+        assert_eq!(
+            Mesh::read(&String::from("./data/meshes/bad_missing_marked_faces.msh")).err(),
+            Some("not all marked faces have been found")
+        );
+        assert_eq!(
+            Mesh::read(&String::from("./data/meshes/bad_missing_marked_faces2.msh")).err(),
+            Some("not all marked faces have been found")
+        );
+        assert_eq!(
             Mesh::read(&String::from("./data/meshes/bad_wrong_cell_kind.msh")).err(),
             Some("string representation of GeoKind is incorrect")
         );
@@ -607,6 +925,10 @@ mod tests {
 
         let mesh = Mesh::read("./data/meshes/two_cubes_vertical.msh").unwrap();
         let sample = Samples::two_hex8();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
+
+        let mesh = Mesh::read("./data/meshes/four_hex8.msh").unwrap();
+        let sample = Samples::four_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
 
         let mesh = Mesh::read("./data/meshes/mixed_shapes_2d.msh").unwrap();
@@ -623,7 +945,7 @@ mod tests {
         assert_eq!(
             Mesh::from_text(
                 "# header\n\
-                 # ndim npoint ncell\n"
+                 # ndim npoint ncell nmarked_edge nmarked_face\n"
             )
             .err(),
             Some("text string is empty or header is missing")
@@ -632,8 +954,8 @@ mod tests {
         assert_eq!(
             Mesh::from_text(
                 "# header\n\
-                 # ndim npoint ncell\n\
-                      2      4     1\n\
+                 # ndim npoint ncell nmarked_edge nmarked_face\n\
+                      2      4     1            0            0\n\
                  \n\
                  # points\n\
                  # id marker x y\n\
@@ -646,8 +968,8 @@ mod tests {
         assert_eq!(
             Mesh::from_text(
                 "# header\n\
-                 # ndim npoint ncell\n\
-                      2      6     2\n\
+                 # ndim npoint ncell nmarked_edge nmarked_face\n\
+                      2      6     2            0            0\n\
                  \n\
                  # points\n\
                  # id marker x y\n\
@@ -669,8 +991,8 @@ mod tests {
         assert_eq!(
             Mesh::from_text(
                 "# header\n\
-                 # ndim npoint ncell\n\
-                      2      4     1\n\
+                 # ndim npoint ncell nmarked_edge nmarked_face\n\
+                      2      4     1            0            0\n\
                  # points\n\
                  # id marker x y wrong\n\
                     0 0 0.0 0.0  1\n\
@@ -688,8 +1010,8 @@ mod tests {
         assert_eq!(
             Mesh::from_text(
                 "# header\n\
-                 # ndim npoint ncell\n\
-                      2      4     1\n\
+                 # ndim npoint ncell nmarked_edge nmarked_face\n\
+                      2      4     1            0            0\n\
                  # points\n\
                  # id marker x y\n\
                     0 0 0.0 0.0\n\
@@ -707,8 +1029,8 @@ mod tests {
         assert_eq!(
             Mesh::from_text(
                 "# header\n\
-                 # ndim npoint ncell\n\
-                      2      4     1\n\
+                 # ndim npoint ncell nmarked_edge nmarked_face\n\
+                      2      4     1            0            0\n\
                  # points\n\
                  # id marker x y\n\
                     0 0 0.0 0.0\n\
@@ -728,8 +1050,32 @@ mod tests {
     fn from_text_works() {
         let mesh = Mesh::from_text(
             r"# header
-            # ndim npoint ncell
-                 2      6     2
+              # ndim npoint ncell nmarked_edge nmarked_face
+                  2      6     3            0            0
+
+              # points
+              # id marker x y
+              0 0 0.0 0.0
+              1 0 1.0 0.0
+              2 0 2.0 0.0
+              3 0 2.0 1.0
+              4 0 1.0 1.0
+              5 0 3.0 0.0
+
+              # cells
+              # id attribute kind point_ids...
+              0 1 lin2 0 1
+              1 2 qua4 1 2 3 4
+              2 1 lin2 2 5",
+        )
+        .unwrap();
+        let sample = Samples::mixed_shapes_2d();
+        assert_eq!(format!("{:?}", mesh), format!("{:?}", sample));
+
+        let mesh = Mesh::from_text(
+            r"# header
+            # ndim npoint ncell nmarked_edge nmarked_face
+                 2      6     2            2            0
             
             # points
             # id marker x y
@@ -743,7 +1089,12 @@ mod tests {
             # cells
             # id attribute kind  point_ids...
                0   1 qua4  0 1 2 3
-               1   2 qua4  1 4 5 2",
+               1   2 qua4  1 4 5 2
+               
+            # marked edges
+            # marker p1 p2
+            -100 3 2
+            -200 2 5",
         )
         .unwrap();
         let sample = Samples::two_qua4();
@@ -751,8 +1102,8 @@ mod tests {
 
         let mesh = Mesh::from_text(
             r"# header
-            # ndim npoint ncell
-                 3     12     2
+            # ndim npoint ncell nmarked_edge nmarked_face
+                 3     12     2            4            2
             
             # points
             # id marker x y z
@@ -772,7 +1123,19 @@ mod tests {
             # cells
             # id attribute kind  point_ids...
                0   1 hex8  0 1 2 3 4 5  6  7
-               1   2 hex8  4 5 6 7 8 9 10 11",
+               1   2 hex8  4 5 6 7 8 9 10 11
+               
+            # marked edges
+            # marker p1 p2
+            123 7 11
+            0 11 10
+            -4 7 3
+            0 8 9
+
+            # marked faces
+            # marker p1 p2 p3 {p4}
+            0 3 2 7 6
+            -9 8 9 10 11",
         )
         .unwrap();
         let sample = Samples::two_hex8();
@@ -783,15 +1146,15 @@ mod tests {
     fn read_works_with_data_from_tritet_tri() {
         let mesh = Mesh::read("data/meshes/test_tri_write_msh_file_works.msh").unwrap();
         let correct = "# header\n\
-                       # ndim npoint ncell\n\
-                       2 5 4\n\
+                       # ndim npoint ncell nmarked_edge nmarked_face\n\
+                       2 5 4 4 0\n\
                        \n\
                        # points\n\
                        # id marker x y {z}\n\
                        0 -1 0.0 0.0\n\
-                       1 -1 1.0 0.0\n\
-                       2 -1 1.0 1.0\n\
-                       3 -1 0.0 1.0\n\
+                       1 -2 1.0 0.0\n\
+                       2 -3 1.0 1.0\n\
+                       3 -4 0.0 1.0\n\
                        4 0 0.5 0.5\n\
                        \n\
                        # cells\n\
@@ -800,6 +1163,13 @@ mod tests {
                        1 1 tri3 3 0 4\n\
                        2 1 tri3 4 2 3\n\
                        3 1 tri3 0 1 4\n\
+                       \n\
+                       # marked edges\n\
+                       # marker p1 p2\n\
+                       -10 1 0\n\
+                       -20 2 1\n\
+                       -30 3 2\n\
+                       -40 0 3\n\
                        ";
         assert_eq!(format!("{}", mesh), correct);
     }
@@ -808,8 +1178,8 @@ mod tests {
     fn read_works_with_data_from_tritet_tet() {
         let mesh = Mesh::read("data/meshes/test_tet_write_msh_file_works.msh").unwrap();
         let correct = "# header\n\
-                       # ndim npoint ncell\n\
-                       3 8 6\n\
+                       # ndim npoint ncell nmarked_edge nmarked_face\n\
+                       3 8 6 0 12\n\
                        \n\
                        # points\n\
                        # id marker x y {z}\n\
@@ -830,6 +1200,21 @@ mod tests {
                        3 1 tet4 0 7 6 2\n\
                        4 1 tet4 5 0 6 1\n\
                        5 1 tet4 6 0 2 1\n\
+                       \n\
+                       # marked faces\n\
+                       # marker p1 p2 p3 {p4}\n\
+                       20 2 7 3\n\
+                       -30 3 0 2\n\
+                       -10 3 7 0\n\
+                       30 6 4 7\n\
+                       -10 7 4 0\n\
+                       30 6 5 4\n\
+                       -20 0 4 5\n\
+                       20 2 6 7\n\
+                       10 1 5 6\n\
+                       -20 0 5 1\n\
+                       -30 1 2 0\n\
+                       10 1 6 2\n\
                        ";
         assert_eq!(format!("{}", mesh), correct);
     }

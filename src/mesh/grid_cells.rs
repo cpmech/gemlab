@@ -584,6 +584,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
                 Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         let tolerance = 1e-3;
         let border_tol = 0.1;
@@ -678,6 +680,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
                 Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         let tolerance = 1e-3;
         let border_tol = 0.1;

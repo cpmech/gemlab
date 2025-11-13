@@ -101,6 +101,8 @@ impl Mesh {
             ndim: self.ndim,
             points: Vec::new(),
             cells: vec![zero_cell; ncell],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // scratchpad for point interpolation (based on the original mesh)
@@ -236,6 +238,8 @@ mod tests {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(mesh.convert_2d(GeoKind::Tri15).err(), Some("ndim must be equal to 2"));
 
@@ -243,6 +247,8 @@ mod tests {
             ndim: 2,
             points: vec![],
             cells: vec![],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(
             mesh.convert_2d(GeoKind::Tri15).err(),
@@ -260,6 +266,8 @@ mod tests {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(
             mesh.convert_2d(GeoKind::Qua8).err(),
@@ -276,6 +284,8 @@ mod tests {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(
             mesh.convert_2d(GeoKind::Lin3).err(),
@@ -295,6 +305,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
                 Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(
             mesh.convert_2d(GeoKind::Tri6).err(),
@@ -322,6 +334,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_all().unwrap();
 
@@ -418,6 +432,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_all().unwrap();
 
@@ -493,6 +509,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_all().unwrap();
 

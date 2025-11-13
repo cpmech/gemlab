@@ -1583,8 +1583,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
-             # ndim npoint ncell\n\
-             2 4 1\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 4 1 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -1609,8 +1609,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
-             # ndim npoint ncell\n\
-             2 6 2\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 6 2 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -1650,8 +1650,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
-             # ndim npoint ncell\n\
-             2 6 2\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 6 2 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -1691,8 +1691,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
-             # ndim npoint ncell\n\
-             2 9 4\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 9 4 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\

@@ -1,18 +1,18 @@
 #
 #           8-------------11
 #          /.             /|
-#         / .            / |
-#        /  .           /  |
+#      {0}/ .         {0}/ |
+#        /  .   {-9}    /  |{123}
 #       /   .          /   |       id = 1
 # 2.0  9-------------10    |       attribute = 2
 #      |    .         |    |
 #      |    4---------|----7
 #      |   /.         |   /|
 #      |  / .         |  / |
-#      | /  .         | /  |
+#      | /  .         | /  |{-4}
 #      |/   .         |/   |
 # 1.0  5--------------6    |       id = 0
-#      |    .         |    |       attribute = 1
+#      |    .         | {0}|       attribute = 1
 #      |    0---------|----3  0.0
 #      |   /          |   /
 #      |  /           |  /
@@ -22,8 +22,8 @@
 #     0.0            1.0
 #
 # header
-# ndim npoint ncell
-     3     12     2
+# ndim npoint ncell nmarked_edge nmarked_face
+     3     12     2            4            2
 
 # points
 # id marker x y z
@@ -44,4 +44,15 @@
 # id attribute kind  point_ids...
    0   1 hex8  0 1 2 3 4 5  6  7
    1   2 hex8  4 5 6 7 8 9 10 11
-   
+
+# marked edges
+# marker p1 p2
+123 7 11
+0 11 10
+-4 7 3
+0 8 9
+
+# marked faces
+# marker p1 p2 p3 {p4}
+0 3 2 7 6
+-9 8 9 10 11

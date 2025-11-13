@@ -634,6 +634,8 @@ impl Block {
             ndim,
             points: Vec::new(),
             cells: Vec::new(),
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // constants

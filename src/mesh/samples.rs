@@ -40,6 +40,8 @@ impl Samples {
                 Cell { id: 2, attribute: 4, kind: GeoKind::Lin4, points: vec![5, 6, 7, 8] },
                 Cell { id: 3, attribute: 5, kind: GeoKind::Lin5, points: vec![9, 10, 11, 12, 13] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -78,6 +80,8 @@ impl Samples {
                 Cell { id: 2, attribute: 4, kind: GeoKind::Lin4, points: vec![5, 6, 7, 8] },
                 Cell { id: 3, attribute: 5, kind: GeoKind::Lin5, points: vec![9, 10, 11, 12, 13] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -136,6 +140,8 @@ impl Samples {
                 Cell { id: 2, attribute: 1, kind: GeoKind::Tri10, points: vec![9, 10, 11, 12, 13, 14, 15, 16, 17, 18] },
                 Cell { id: 3, attribute: 1, kind: GeoKind::Tri15, points: vec![19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -230,6 +236,8 @@ impl Samples {
                 Cell { id: 4, attribute: 1, kind: GeoKind::Qua16, points: vec![33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48] },
                 Cell { id: 5, attribute: 1, kind: GeoKind::Qua17, points: vec![49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -287,6 +295,8 @@ impl Samples {
                 Cell { id: 1, attribute: 1, kind: GeoKind::Tet10,  points: vec![4, 5, 6, 7, 8, 9, 10, 11, 12, 13] },
                 Cell { id: 2, attribute: 1, kind: GeoKind::Tet20,  points: vec![14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -370,6 +380,8 @@ impl Samples {
                 Cell { id: 1, attribute: 1, kind: GeoKind::Hex20, points: vec![8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] },
                 Cell { id: 2, attribute: 1, kind: GeoKind::Hex32, points: vec![28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -394,6 +406,8 @@ impl Samples {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -424,6 +438,8 @@ impl Samples {
                 Cell { id: 6, attribute: 1, kind: GeoKind::Lin2, points: vec![5, 7] },
                 Cell { id: 7, attribute: 1, kind: GeoKind::Lin2, points: vec![3, 4] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -469,6 +485,8 @@ impl Samples {
                 Cell { id: 10, attribute: 1, kind: GeoKind::Lin2, points: vec![1, 6] },
                 Cell { id: 11, attribute: 1, kind: GeoKind::Lin2, points: vec![1, 5] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -497,6 +515,8 @@ impl Samples {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -528,6 +548,8 @@ impl Samples {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![0, 1, 2, 3, 4, 5] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -554,6 +576,8 @@ impl Samples {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -588,6 +612,8 @@ impl Samples {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
                 Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![2, 3, 1] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -622,6 +648,8 @@ impl Samples {
                 Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 3, 4] },
                 Cell { id: 2, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -665,6 +693,8 @@ impl Samples {
                 Cell { id: 1, attribute: 2, kind: GeoKind::Tri3, points: vec![2, 1, 3] },
                 Cell { id: 2, attribute: 2, kind: GeoKind::Tri3, points: vec![0, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -714,6 +744,8 @@ impl Samples {
                 Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![2, 1, 6, 4, 7, 8] },
                 Cell { id: 2, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 2, 6, 5, 8, 9] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -751,6 +783,8 @@ impl Samples {
                 Cell { id: 2, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 4, 2] },
                 Cell { id: 3, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 3, 0] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -790,6 +824,8 @@ impl Samples {
                 Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![2, 3, 1] },
                 Cell { id: 2, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -813,6 +849,8 @@ impl Samples {
                 Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![1, 4, 3, 2] },
                 Cell { id: 2, attribute: 1, kind: GeoKind::Lin2, points: vec![3, 5] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -849,6 +887,8 @@ impl Samples {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua8, points: vec![0, 1, 2, 3, 4, 5, 6, 7] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -857,7 +897,7 @@ impl Samples {
     /// ```text
     ///          [#] indicates id
     ///      y   (#) indicates attribute
-    ///      ↑
+    ///      ↑   -100        -200
     /// 1.0  3-----------2-----------5
     ///      |(-4)       |(-3)       |(-6)
     ///      |    [0]    |    [1]    |
@@ -884,6 +924,8 @@ impl Samples {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: vec![(-100, 3, 2), (-200, 2, 5)],
+            marked_faces: Vec::new(),
         }
     }
 
@@ -927,6 +969,8 @@ impl Samples {
                 Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
                 Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -946,6 +990,8 @@ impl Samples {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Tet4, points: vec![0, 1, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -986,6 +1032,8 @@ impl Samples {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -994,21 +1042,22 @@ impl Samples {
     /// ```text
     ///           [#] indicates id
     ///           (#) indicates attribute
+    ///           {#} indicates marker
     ///
     ///       8-------------11  2.0
     ///      /.             /|
-    ///     / .            / |
-    ///    /  .           /  |
-    ///   /   .          /   |
+    ///  {0}/ .         {0}/ |
+    ///    /  .   {-9}    /  |
+    ///   /   .          /   |{123}
     ///  9-------------10    |
     ///  |    .         |    |
     ///  |    4---------|----7  1.0
     ///  |   /. [1]     |   /|
     ///  |  / . (2)     |  / |
     ///  | /  .         | /  |
-    ///  |/   .         |/   |
+    ///  |/   .         |/   |{-4}
     ///  5--------------6    |          z
-    ///  |    .         |    |          ↑
+    ///  |    .         | {0}|          ↑
     ///  |    0---------|----3  0.0     o → y
     ///  |   /  [0]     |   /          ↙
     ///  |  /   (1)     |  /          x
@@ -1041,6 +1090,8 @@ impl Samples {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Hex8, points: vec![4,5,6,7, 8,9,10,11] },
             ],
+            marked_edges: vec![(123, 7, 11), (0, 11, 10), (-4, 7, 3), (0, 8, 9)],
+            marked_faces: vec![(0, 3, 2, 7, 6), (-9, 8, 9, 10, 11)]
         }
     }
 
@@ -1049,10 +1100,11 @@ impl Samples {
     /// ```text
     ///           [#] indicates id
     ///           (#) indicates attribute
+    ///           {#} indicates marker
     ///
     ///       8-------------11-------------17  2.0
     ///      /.             /.             /|
-    ///     / .            / .            / |
+    ///     / .  {-100}    / .  {-200}    / |
     ///    /  .           /  .           /  |
     ///   /   .          /   .          /   |
     ///  9=============10=============16    |
@@ -1087,7 +1139,7 @@ impl Samples {
                 Point { id:  5, marker: 0, coords: vec![1.0, 0.0, 1.0] },
                 Point { id:  6, marker: 0, coords: vec![1.0, 1.0, 1.0] },
                 Point { id:  7, marker: 0, coords: vec![0.0, 1.0, 1.0] },
-                Point { id:  8, marker: 0, coords: vec![0.0, 0.0, 2.0] },
+                Point { id:  8, marker:-1, coords: vec![0.0, 0.0, 2.0] },
                 Point { id:  9, marker: 0, coords: vec![1.0, 0.0, 2.0] },
                 Point { id: 10, marker: 0, coords: vec![1.0, 1.0, 2.0] },
                 Point { id: 11, marker: 0, coords: vec![0.0, 1.0, 2.0] },
@@ -1104,6 +1156,8 @@ impl Samples {
                 Cell { id: 2, attribute: 1, kind: GeoKind::Hex8, points: vec![3,2,12,13,  7, 6,14,15] },
                 Cell { id: 3, attribute: 2, kind: GeoKind::Hex8, points: vec![7,6,14,15, 11,10,16,17] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: vec![(-100, 8, 9,10,11), (-200,10,11,16,17)],
         }
     }
 
@@ -1140,6 +1194,8 @@ impl Samples {
                 Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 2, 3, 4] },
                 Cell { id: 2, attribute: 1, kind: GeoKind::Lin2, points: vec![2, 5] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1191,6 +1247,8 @@ impl Samples {
                 Cell { id: 3, attribute: 2, kind: GeoKind::Tri3, points: vec![8,9,3] },
                 Cell { id: 4, attribute: 3, kind: GeoKind::Lin3, points: vec![1,12,11] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1239,6 +1297,8 @@ impl Samples {
                 Cell { id: 2, attribute: 1, kind: GeoKind::Qua4, points: vec![3, 2, 6, 7] },
                 Cell { id: 3, attribute: 1, kind: GeoKind::Qua4, points: vec![2, 5, 8, 6] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1299,6 +1359,8 @@ impl Samples {
                 Cell { id: 2, attribute: 1, kind: GeoKind::Qua8, points: vec![3, 2, 13, 14,  6, 15, 16, 17] },
                 Cell { id: 3, attribute: 1, kind: GeoKind::Qua8, points: vec![2, 9, 18, 13, 12, 19, 20, 15] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1365,6 +1427,8 @@ impl Samples {
                 Cell { id: 2, attribute: 1, kind: GeoKind::Qua9, points: vec![3,  2, 15, 16,  6, 17, 18, 19, 20] },
                 Cell { id: 3, attribute: 1, kind: GeoKind::Qua9, points: vec![2, 10, 21, 15, 13, 22, 23, 17, 24] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1439,6 +1503,8 @@ impl Samples {
                 Cell { id: 2, attribute: 1, kind: GeoKind::Qua12, points: vec![3,  2, 20, 21, 10, 22, 23, 24,  6, 25, 26, 27] },
                 Cell { id: 3, attribute: 1, kind: GeoKind::Qua12, points: vec![2, 13, 28, 20, 19, 29, 30, 25, 16, 31, 32, 22] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1529,6 +1595,8 @@ impl Samples {
                 Cell { id: 2, attribute: 1, kind: GeoKind::Qua16, points: vec![3,  2, 28, 29, 10, 30, 31, 32,  6, 33, 34, 35, 36, 37, 38, 39] },
                 Cell { id: 3, attribute: 1, kind: GeoKind::Qua16, points: vec![2, 17, 40, 28, 23, 41, 42, 33, 20, 43, 44, 30, 45, 46, 47, 48] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1623,6 +1691,8 @@ impl Samples {
                 Cell { id: 2, attribute: 1, kind: GeoKind::Qua17, points: vec![3,  2, 29, 30,  6, 31, 32, 33, 34, 14, 13, 35, 36, 37, 38, 39, 40] },
                 Cell { id: 3, attribute: 1, kind: GeoKind::Qua17, points: vec![2, 18, 41, 29, 21, 42, 43, 31, 44, 28, 27, 45, 46, 47, 48, 36, 35] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1722,6 +1792,8 @@ impl Samples {
                 Cell { id: 6, attribute: 1, kind: GeoKind::Hex8, points: vec![7,  6, 14, 15, 21, 20, 24, 25] },
                 Cell { id: 7, attribute: 1, kind: GeoKind::Hex8, points: vec![6, 11, 17, 14, 20, 23, 26, 24] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1875,6 +1947,8 @@ impl Samples {
                 Cell { id: 6, attribute: 1, kind: GeoKind::Hex20, points: vec![7,  6, 34, 35, 54, 53, 70, 71, 14, 39, 40, 41, 57, 72, 73, 74, 62, 61, 75, 76] },
                 Cell { id: 7, attribute: 1, kind: GeoKind::Hex20, points: vec![6, 23, 45, 34, 53, 64, 77, 70, 29, 48, 49, 39, 67, 78, 79, 72, 61, 69, 80, 75] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -1969,6 +2043,8 @@ impl Samples {
                 Cell { id: 6, attribute: 1, kind: GeoKind::Qua8, points: vec![ 9,10,13,12,21,35,23,34] },
                 Cell { id: 7, attribute: 1, kind: GeoKind::Qua8, points: vec![10,11,14,13,22,36,24,35] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -2005,6 +2081,8 @@ impl Samples {
                 Cell { id: 10, attribute: 1, kind: GeoKind::Tri3, points: vec![7, 9, 1] }, // << very large
                 Cell { id: 11, attribute: 1, kind: GeoKind::Tri3, points: vec![6, 3, 5] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 }

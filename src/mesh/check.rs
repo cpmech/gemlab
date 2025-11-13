@@ -170,6 +170,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_ids_and_kind().expect("should not fail");
 
@@ -225,6 +227,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_jacobian().expect("should not fail");
 
@@ -272,6 +276,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // the magnitude (l) of the normal vector should be equal to
@@ -345,6 +351,8 @@ mod tests {
             cells: vec![
                 Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // the magnitude (l) of the normal vector should be equal to
@@ -402,6 +410,8 @@ mod tests {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_overlapping_points(1e-2).expect("should not fail");
 

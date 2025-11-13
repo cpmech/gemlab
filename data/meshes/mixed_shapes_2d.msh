@@ -6,8 +6,8 @@
 #  0-------1--------2-------5
 #
 # header
-# ndim npoint ncell
-     2      6     3
+# ndim npoint ncell nmarked_edge nmarked_face
+     2      6     3            0            0
 
 # points
 # id marker x y

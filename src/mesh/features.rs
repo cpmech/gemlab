@@ -7,13 +7,13 @@ use russell_lab::{sort2, sort4};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-/// Aliases (usize,usize) as the key of edges
+/// Defines a unique key for edges by using a pair of sorted point indices
 ///
 /// **Note:** Since the local numbering scheme runs over "corners" first,
 /// we can compare edges using only two points; i.e., the middle points don't matter.
 pub type EdgeKey = (usize, usize);
 
-/// Aliases (usize,usize,usize,usize) as the key of faces
+/// Defines a unique key for faces by using a quadruple of sorted point indices
 ///
 /// **Note:** For 3-node faces, the fourth entry in the key will be set to [usize::MAX].
 /// In this way, we can compare 4-node (or more nodes) faces. Since the local numbering
@@ -138,6 +138,8 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 ///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
 ///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
 ///         ],
+///         marked_edges: Vec::new(),
+///         marked_faces: Vec::new(),
 ///     };
 ///
 ///     let features = Features::new(&mesh, false);
@@ -190,6 +192,8 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 ///              Cell { id: 0, attribute: 1, kind: GeoKind::Hex8,
 ///                                  points: vec![0,1,2,3, 4,5,6,7] },
 ///          ],
+///          marked_edges: Vec::new(),
+///          marked_faces: Vec::new(),
 ///      };
 ///
 ///     let features = Features::new(&mesh, false);
@@ -526,6 +530,8 @@ impl<'a> Features<'a> {
     ///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
     ///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
     ///         ],
+    ///         marked_edges: Vec::new(),
+    ///         marked_faces: Vec::new(),
     ///     };
     ///
     ///     let features = Features::new(&mesh, true);

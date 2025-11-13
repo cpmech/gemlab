@@ -23,8 +23,10 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
         grid_a.insert(a.points[m].id, &a.points[m].coords)?;
     }
 
-    // create a new mesh with all mesh A data
+    // create a new mesh with all mesh A data, except the marked edges/faces
     let mut mesh = a.clone();
+    mesh.marked_edges.clear(); // TODO: implement merging marked edges
+    mesh.marked_faces.clear(); // TODO: implement merging marked faces
 
     // renumber the points of mesh B and add them to the new mesh (if not present yet)
     let mut new_point_id = a.points.len();
@@ -287,8 +289,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
-             # ndim npoint ncell\n\
-             2 12 6\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 12 6 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\

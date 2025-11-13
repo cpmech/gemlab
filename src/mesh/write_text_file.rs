@@ -23,8 +23,8 @@ impl Mesh {
     ///
     /// ```text
     /// # header
-    /// # ndim npoint ncell
-    ///      2      8     5
+    /// # ndim npoint ncell nmarked_edge nmarked_face
+    ///      2      8     5            0            0
     ///
     /// # points
     /// # id marker x y
@@ -108,8 +108,8 @@ mod tests {
         assert_eq!(
             contents,
             "# header\n\
-             # ndim npoint ncell\n\
-             2 11 4\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 11 4 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\

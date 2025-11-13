@@ -9,6 +9,7 @@
     "extrap",
     "nfacet",
     "ngauss",
+    "nmarked",
     "PINV",
     "Stockmeyer",
     "Warshall",

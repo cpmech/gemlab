@@ -37,6 +37,8 @@ fn main() -> Result<(), StrError> {
             Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
             Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
         ],
+        marked_edges: Vec::new(),
+        marked_faces: Vec::new(),
     };
     assert_eq!(mesh.search_marked_points(-200, |_| true)?, &[2]);
     assert_eq!(mesh.search_marked_points(-400, |_| true)?, &[6]);

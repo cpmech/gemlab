@@ -24,8 +24,8 @@
 #      0.0        1.0        2.0                   4.0
 #
 # header
-# ndim npoint ncell
-     2     16    12
+# ndim npoint ncell nmarked_edge nmarked_face
+     2     16    12            0            0
 
 # points
 # id marker x y
