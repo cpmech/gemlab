@@ -1088,6 +1088,7 @@ mod tests {
                 None,                                         // block 0
                 Some((1, Constraint2d::Circle(w + m, l, r))), // block 1
             ],
+            marked_edges: vec![(-100, 3, 2), (-200, 2, 5)],
         };
         // blocks.write_json("/tmp/gemlab/example_qua_input.json").unwrap();
 
@@ -1102,7 +1103,7 @@ mod tests {
             fig.extra(|plot, before| {
                 if before {
                     let mut canvas = Canvas::new();
-                    canvas.set_face_color("yellow").set_edge_color("black");
+                    canvas.set_face_color("None").set_edge_color("black");
                     canvas.draw_circle(w + m, l, r);
                     plot.add(&canvas);
                 } else {
@@ -1124,6 +1125,7 @@ mod tests {
         assert_eq!(mesh.cells[0].attribute, 1);
         assert_eq!(mesh.cells[3].attribute, 1);
         assert_eq!(mesh.cells[4].attribute, 2);
+        // TODO: assert_eq!(mesh.marked_edges, &[(-100, 13, 14)]);
     }
 
     #[test]

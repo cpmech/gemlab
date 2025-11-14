@@ -5,9 +5,9 @@ use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
 use russell_lab::math::PI;
-use russell_lab::Vector;
+use russell_lab::{sort2, sort4, Vector};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Arguments to transform the Block generated mesh into a ring
 ///
@@ -172,8 +172,11 @@ pub struct Block {
     /// Constraints on faces (nface) (3D only)
     face_constraints: HashMap<usize, Constraint3d>,
 
-    /// Has constraints?
-    has_constraints: bool,
+    /// Holds markers on edges (nedge) (2D only)
+    edge_markers: HashMap<usize, i32>,
+
+    /// Holds markers on faces (nface) (3D only)
+    face_markers: HashMap<usize, i32>,
 
     /// Scratchpad for the block
     pad: Scratchpad,
@@ -284,6 +287,12 @@ impl Block {
             }
         };
 
+        // check if the determinant of the Jacobian is positive at the center of the block
+        let det_jac = pad.calc_jacobian(&[0.0, 0.0, 0.0])?;
+        if det_jac <= 0.0 {
+            return Err("the determinant of the Jacobian is non-positive at the center of the block");
+        }
+
         // default number of divisions and default delta ksi
         let ndiv = 2;
         let del_ksi = Block::NAT_LENGTH / (ndiv as f64);
@@ -296,7 +305,8 @@ impl Block {
             delta_ksi: vec![vec![del_ksi; ndiv]; ndim],
             edge_constraints: HashMap::new(),
             face_constraints: HashMap::new(),
-            has_constraints: false,
+            edge_markers: HashMap::new(),
+            face_markers: HashMap::new(),
             pad,
             args_ring: ArgsRing {
                 amin: 0.0,
@@ -346,7 +356,7 @@ impl Block {
 
     /// Draws this block
     pub fn draw(&self, plot: &mut Plot, with_ids: bool, set_range: bool) -> Result<(), StrError> {
-        if self.ndim == 2 && self.has_constraints {
+        if self.ndim == 2 && self.edge_constraints.len() > 0 {
             for ct in self.edge_constraints.values() {
                 match ct {
                     Constraint2d::Circle(xc, yc, r) => {
@@ -503,7 +513,6 @@ impl Block {
                 self.edge_constraints.remove(&e);
             }
         }
-        self.has_constraints = self.edge_constraints.len() > 0;
         Ok(self)
     }
 
@@ -538,7 +547,43 @@ impl Block {
                 self.face_constraints.remove(&f);
             }
         }
-        self.has_constraints = self.face_constraints.len() > 0;
+        Ok(self)
+    }
+
+    /// Sets a marker to an edge of this block
+    ///
+    /// # Input
+    ///
+    /// * `e` -- index of edge; must be < 4 in 2D or < 12 in 3D
+    /// * `marker` -- the marker
+    pub fn set_edge_marker(&mut self, e: usize, value: i32) -> Result<&mut Self, StrError> {
+        if self.ndim == 2 {
+            if e > 3 {
+                return Err("edge index must be < 4 (nedge) in 2D");
+            }
+        } else {
+            if e > 11 {
+                return Err("edge index must be < 12 (nedge) in 3D");
+            }
+        }
+        self.edge_markers.insert(e, value);
+        Ok(self)
+    }
+
+    /// Sets a marker to a face of this block
+    ///
+    /// # Input
+    ///
+    /// * `f` -- index of face; must be < 6 (nface)
+    /// * `marker` -- the marker
+    pub fn set_face_marker(&mut self, f: usize, value: i32) -> Result<&mut Self, StrError> {
+        if self.ndim != 3 {
+            return Err("set_face_marker requires ndim = 3");
+        }
+        if f > 5 {
+            return Err("face index must be < 6 (nface)");
+        }
+        self.face_markers.insert(f, value);
         Ok(self)
     }
 
@@ -640,15 +685,18 @@ impl Block {
 
         // constants
         let target_nnode = target.nnode();
+        let has_constraints = self.edge_constraints.len() > 0 || self.face_constraints.len() > 0;
+        let has_markers = self.edge_markers.len() > 0 || self.face_markers.len() > 0;
 
         // constants used only if there are constraints and
         // the constraint causes some middle edge nodes to move
         let mut pad_lin2 = Scratchpad::new(ndim, GeoKind::Lin2)?;
         let target_nedge = target.nedge();
+        let target_nface = target.nface();
         let target_edge_kind = target.edge_kind().unwrap();
         let target_edge_nnode = target.edge_nnode();
         let target_n_interior_nodes = target.n_interior_nodes();
-        let mut serendipity = if self.has_constraints {
+        let mut serendipity = if has_constraints {
             match target {
                 GeoKind::Qua9 => Some(Scratchpad::new(ndim, GeoKind::Qua8)?),
                 GeoKind::Qua16 => Some(Scratchpad::new(ndim, GeoKind::Qua12)?),
@@ -662,6 +710,9 @@ impl Block {
         // maps the id of a constrained point to the side (edge/face) where
         // the constrained has been applied (i.e., the point coordinates were modified)
         let mut constrained_point_to_side: HashMap<PointId, usize> = HashMap::new(); // point_id => side
+
+        // set of points on boundaries (to determined the marked edges and faces)
+        let mut boundary_points: HashSet<PointId> = HashSet::new();
 
         // The idea here is to map the TARGET CELL (shown on the right)
         // to the BLOCK's reference (natural) space. (right-to-left mapping)
@@ -746,9 +797,24 @@ impl Block {
                                 } else {
                                     // compute real coordinates of point using the block's
                                     self.pad.calc_coords(&mut x, &ksi)?;
-                                    if self.has_constraints {
+                                    if has_constraints {
                                         if let Some(side) = self.handle_constraints(&mut x, &ksi)? {
                                             constrained_point_to_side.insert(point_id, side);
+                                        }
+                                    }
+                                }
+
+                                // add point to the set of boundary points (only if markers are specified)
+                                if has_markers {
+                                    let on_xy_bry = ksi[0] == -1.0 || ksi[0] == 1.0 || ksi[1] == -1.0 || ksi[1] == 1.0;
+                                    if self.ndim == 2 {
+                                        if on_xy_bry {
+                                            boundary_points.insert(point_id);
+                                        }
+                                    } else {
+                                        let on_z_bry = ksi[2] == -1.0 || ksi[2] == 1.0;
+                                        if on_xy_bry || on_z_bry {
+                                            boundary_points.insert(point_id);
                                         }
                                     }
                                 }
@@ -767,7 +833,7 @@ impl Block {
 
                     // fix middle edge nodes after corner movement due to constraints
                     // (only process edges with more than 2 nodes; i.e., those with middle/interior nodes)
-                    if self.has_constraints && target_edge_nnode > 2 {
+                    if has_constraints && target_edge_nnode > 2 {
                         for (point_id, side) in &constrained_point_to_side {
                             for e in 0..target_nedge {
                                 // only process an edge that is orthogonal to the constrained side (edge/face)
@@ -825,6 +891,42 @@ impl Block {
                                     for dim in 0..ndim {
                                         mesh.points[points[m]].coords[dim] = x[dim];
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    // set marked edges
+                    if self.edge_markers.len() > 0 {
+                        for e in 0..target_nedge {
+                            if let Some(marker) = self.edge_markers.get(&e) {
+                                let p1 = points[target.edge_node_id(e, 0)];
+                                let p2 = points[target.edge_node_id(e, 1)];
+                                if boundary_points.contains(&p1) && boundary_points.contains(&p2) {
+                                    let mut key = (p1, p2);
+                                    sort2(&mut key);
+                                    mesh.marked_edges.push((*marker, key.0, key.1));
+                                }
+                            }
+                        }
+                    }
+
+                    // set marked faces
+                    if self.face_markers.len() > 0 {
+                        for f in 0..target_nface {
+                            if let Some(marker) = self.face_markers.get(&f) {
+                                let p1 = points[target.face_node_id(f, 0)];
+                                let p2 = points[target.face_node_id(f, 1)];
+                                let p3 = points[target.face_node_id(f, 2)];
+                                let p4 = points[target.face_node_id(f, 3)];
+                                if boundary_points.contains(&p1)
+                                    && boundary_points.contains(&p2)
+                                    && boundary_points.contains(&p3)
+                                    && boundary_points.contains(&p4)
+                                {
+                                    let mut key = (p1, p2, p3, p4);
+                                    sort4(&mut key);
+                                    mesh.marked_faces.push((*marker, key.0, key.1, key.2, key.3));
                                 }
                             }
                         }
@@ -1161,6 +1263,58 @@ mod tests {
     }
 
     #[test]
+    fn new_fails_on_wrong_jacobian() {
+        assert_eq!(
+            Block::new(&[
+                [0.0, 0.0], // 0
+                [1.0, 0.0], // 1
+                [0.0, 1.0], // 2 (swapped with 3)
+                [1.0, 1.0], // 3 (swapped with 2)
+            ])
+            .err(),
+            Some("cannot compute inverse due to zero determinant")
+        );
+        assert_eq!(
+            Block::new(&[
+                [0.0, 0.0], // 0
+                [0.0, 1.0], // 1 (going clockwise == incorrect)
+                [1.0, 1.0], // 2
+                [1.0, 0.0], // 3
+            ])
+            .err(),
+            Some("the determinant of the Jacobian is non-positive at the center of the block")
+        );
+        assert_eq!(
+            Block::new(&[
+                [0.0, 0.0, 0.0], // 0
+                [1.0, 0.0, 0.0], // 1
+                [1.0, 1.0, 0.0], // 2
+                [0.0, 1.0, 0.0], // 3
+                [0.0, 0.0, 0.0], // 4 (flat block)
+                [1.0, 0.0, 0.0], // 5 (flat block)
+                [1.0, 1.0, 0.0], // 6 (flat block)
+                [0.0, 1.0, 0.0], // 7 (flat block)
+            ])
+            .err(),
+            Some("cannot compute inverse due to zero determinant")
+        );
+        assert_eq!(
+            Block::new(&[
+                [0.0, 0.0, 0.0], // 0
+                [0.0, 1.0, 0.0], // 3 (going clockwise == incorrect)
+                [1.0, 1.0, 0.0], // 2
+                [1.0, 0.0, 0.0], // 1
+                [0.0, 1.0, 1.0], // 7
+                [1.0, 1.0, 1.0], // 6
+                [1.0, 0.0, 1.0], // 5
+                [0.0, 0.0, 1.0], // 4
+            ])
+            .err(),
+            Some("the determinant of the Jacobian is non-positive at the center of the block")
+        );
+    }
+
+    #[test]
     fn new_works() {
         let b2d = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]]).unwrap();
         assert_eq!(b2d.attribute, 1);
@@ -1357,13 +1511,10 @@ mod tests {
         let mut block = Block::new_square(1.0);
         let ct = Constraint2d::Circle(-1.0, -1.0, 2.0);
         assert_eq!(format!("{:?}", block.edge_constraints), "{}");
-        assert_eq!(block.has_constraints, false);
         block.set_edge_constraint(0, Some(ct)).unwrap();
         assert_eq!(format!("{:?}", block.edge_constraints), "{0: Circle(-1.0, -1.0, 2.0)}");
-        assert_eq!(block.has_constraints, true);
         block.set_edge_constraint(0, None).unwrap();
         assert_eq!(format!("{:?}", block.edge_constraints), "{}");
-        assert_eq!(block.has_constraints, false);
         assert_eq!(
             block.set_edge_constraint(4, None).err(),
             Some("edge index must be < 4 (nedge)")
@@ -1380,16 +1531,13 @@ mod tests {
         let mut block = Block::new_cube(1.0);
         let ct = Constraint3d::CylinderZ(-1.0, -1.0, 2.0);
         assert_eq!(format!("{:?}", block.face_constraints), "{}");
-        assert_eq!(block.has_constraints, false);
         block.set_face_constraint(0, Some(ct)).unwrap();
         assert_eq!(
             format!("{:?}", block.face_constraints),
             "{0: CylinderZ(-1.0, -1.0, 2.0)}"
         );
-        assert_eq!(block.has_constraints, true);
         block.set_face_constraint(0, None).unwrap();
         assert_eq!(format!("{:?}", block.face_constraints), "{}");
-        assert_eq!(block.has_constraints, false);
         assert_eq!(
             block.set_face_constraint(6, None).err(),
             Some("face index must be < 6 (nface)")
@@ -1398,6 +1546,42 @@ mod tests {
         assert_eq!(
             block_2d.set_face_constraint(0, None).err(),
             Some("set_face_constraint requires ndim = 3")
+        );
+    }
+
+    #[test]
+    fn set_edge_marker_works() {
+        let mut block = Block::new_square(1.0);
+        assert_eq!(format!("{:?}", block.edge_markers), "{}");
+        block.set_edge_marker(0, -10).unwrap();
+        assert_eq!(format!("{:?}", block.edge_markers), "{0: -10}");
+        assert_eq!(
+            block.set_edge_marker(4, -10).err(),
+            Some("edge index must be < 4 (nedge) in 2D")
+        );
+        let mut block_3d = Block::new_cube(1.0);
+        block_3d.set_edge_marker(0, -100).unwrap();
+        assert_eq!(format!("{:?}", block_3d.edge_markers), "{0: -100}");
+        assert_eq!(
+            block_3d.set_edge_marker(12, -100).err(),
+            Some("edge index must be < 12 (nedge) in 3D")
+        );
+    }
+
+    #[test]
+    fn set_face_marker_works() {
+        let mut block = Block::new_cube(1.0);
+        assert_eq!(format!("{:?}", block.face_markers), "{}");
+        block.set_face_marker(0, -100).unwrap();
+        assert_eq!(format!("{:?}", block.face_markers), "{0: -100}");
+        assert_eq!(
+            block.set_face_marker(6, -10).err(),
+            Some("face index must be < 6 (nface)")
+        );
+        let mut block_2d = Block::new_square(1.0);
+        assert_eq!(
+            block_2d.set_face_marker(0, -10).err(),
+            Some("set_face_marker requires ndim = 3")
         );
     }
 
@@ -1469,19 +1653,21 @@ mod tests {
 
     #[test]
     fn subdivide_2d_qua4_works() {
-        // 7---------------6---------------8
-        // |               |               |
-        // |               |               |
-        // |      [2]      |      [3]      |
-        // |               |               |
-        // |               |               |
-        // 3---------------2---------------5
-        // |               |               |
-        // |               |               |
-        // |      [0]      |      [1]      |
-        // |               |               |
-        // |               |               |
-        // 0---------------1---------------4
+        //            -300            -300
+        //      7---------------6---------------8
+        //      |               |               |
+        //      |               |               |
+        //  -400|      [2]      |      [3]      |-200
+        //      |               |               |
+        //      |               |               |
+        //      3---------------2---------------5
+        //      |               |               |
+        //      |               |               |
+        //  -400|      [0]      |      [1]      |-200
+        //      |               |               |
+        //      |               |               |
+        //      0---------------1---------------4
+        //            -100             -100
         #[rustfmt::skip]
         let mut block = Block::new(&[
             [0.0, 0.0],
@@ -1489,6 +1675,10 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ]).unwrap();
+        block.set_edge_marker(0, -100).unwrap();
+        block.set_edge_marker(1, -200).unwrap();
+        block.set_edge_marker(2, -300).unwrap();
+        block.set_edge_marker(3, -400).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         let correct = Samples::block_2d_four_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
@@ -1552,6 +1742,10 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ]).unwrap();
+        block.set_edge_marker(0, -100).unwrap();
+        block.set_edge_marker(1, -200).unwrap();
+        block.set_edge_marker(2, -300).unwrap();
+        block.set_edge_marker(3, -400).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         let correct = Samples::block_2d_four_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
@@ -1719,6 +1913,8 @@ mod tests {
 
     #[test]
     fn subdivide_3d_works() {
+        //               z
+        //               |
         //              18------------------21------------------25
         //              /.                  /.                  /|
         //             / .                 / .                 / |
@@ -1749,7 +1945,7 @@ mod tests {
         //  10==================11==================17     |     |
         //   |     .     .       |     .     .       |     |     |
         //   |     .     .       |     .     .       |     |     |
-        //   |     .     0 - - - | - - . - - 3 - - - | - - | - -13
+        //   |     .     0 - - - | - - . - - 3 - - - | - - | - -13 ---> y
         //   |     .    /        |     .    /        |     |    /
         //   |     .   /         |     .   /         |     |   /
         //   |     .  /          |     .  /          |     |  /
@@ -1762,6 +1958,8 @@ mod tests {
         //   | /                 | /                 | /
         //   |/                  |/                  |/
         //   8===================9==================16
+        //  /
+        // x
         #[rustfmt::skip]
         let mut block = Block::new(&[
             [0.0, 0.0, 0.0],
@@ -1773,6 +1971,12 @@ mod tests {
             [2.0, 2.0, 4.0],
             [0.0, 2.0, 4.0],
         ]).unwrap();
+        block.set_face_marker(0, -100).unwrap();
+        block.set_face_marker(1, -200).unwrap();
+        block.set_face_marker(2, -300).unwrap();
+        block.set_face_marker(3, -400).unwrap();
+        block.set_face_marker(4, -500).unwrap();
+        block.set_face_marker(5, -600).unwrap();
         let mesh = block.subdivide(GeoKind::Hex8).unwrap();
         let correct = Samples::block_3d_eight_hex8();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));

@@ -46,6 +46,12 @@ pub struct Blocks2d {
     ///
     /// (length = number of blocks)
     pub edge_constraints: Vec<Option<(usize, Constraint2d)>>,
+
+    /// Holds all marked edges
+    ///
+    /// Each entry contains `(marker, p1, p2)`, where `marker` is the edge marker,
+    /// and `p1` and `p2` are the point ids. The point ids may be unsorted.
+    pub marked_edges: Vec<(i32, usize, usize)>,
 }
 
 impl Blocks2d {
@@ -93,6 +99,14 @@ mod tests {
 
     #[test]
     fn test_blocks2d_write_works() {
+        //           -100       -200
+        // 1.0  3-----------2-----------5
+        //      |           |           |
+        //      |           |           |
+        //      |           |           |
+        //      |           |           |
+        // 0.0  0-----------1-----------4
+        //     0.0         1.0         2.0
         let blocks = Blocks2d {
             points: vec![
                 (0.0, 0.0), // 0
@@ -114,6 +128,7 @@ mod tests {
                 None,                                           // block 0
                 Some((0, Constraint2d::Circle(0.0, 0.0, 1.0))), // block 1
             ],
+            marked_edges: vec![(-100, 3, 2), (-200, 2, 5)],
         };
 
         assert_eq!(blocks.points.len(), 6);
