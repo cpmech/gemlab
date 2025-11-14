@@ -898,14 +898,98 @@ impl Block {
 
                     // set marked edges
                     if self.edge_markers.len() > 0 {
-                        for e in 0..target_nedge {
-                            if let Some(marker) = self.edge_markers.get(&e) {
-                                let p1 = points[target.edge_node_id(e, 0)];
-                                let p2 = points[target.edge_node_id(e, 1)];
-                                if boundary_points.contains(&p1) && boundary_points.contains(&p2) {
-                                    let mut key = (p1, p2);
-                                    sort2(&mut key);
-                                    mesh.marked_edges.push((*marker, key.0, key.1));
+                        if self.ndim == 2 {
+                            //      2
+                            //  +-------+
+                            //  |       |
+                            // 3|       |1
+                            //  |       |
+                            //  +-------+
+                            //      0
+                            let cell_touches_xm = i == 0; // x-minus boundary
+                            let cell_touches_ym = j == 0; // y-minus boundary
+                            let cell_touches_xp = i == nx - 1; // x-plus boundary
+                            let cell_touches_yp = j == ny - 1; // y-plus boundary
+                            if cell_touches_xm || cell_touches_ym || cell_touches_xp || cell_touches_yp {
+                                // this is a boundary cell
+                                for e in 0..4 {
+                                    let corner_edge = match e {
+                                        0 => cell_touches_ym,
+                                        1 => cell_touches_xp,
+                                        2 => cell_touches_yp,
+                                        3 => cell_touches_xm,
+                                        _ => unreachable!(),
+                                    };
+                                    if corner_edge {
+                                        if let Some(marker) = self.edge_markers.get(&e) {
+                                            let p1 = points[target.edge_node_id(e, 0)];
+                                            let p2 = points[target.edge_node_id(e, 1)];
+                                            let mut key = (p1, p2);
+                                            sort2(&mut key);
+                                            mesh.marked_edges.push((*marker, key.0, key.1));
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            //                 z       7
+                            //                 +----------------+
+                            //               ,'|              ,'|
+                            //           4 ,'  |8          6,'  |
+                            //           ,'    |          ,'    |
+                            //         ,'      |   5    ,'      |11
+                            //       +'===============+'        |
+                            //       |         |      |         |
+                            //       |         |      |  3      |
+                            //       |         .- - - | -  - - -+ y
+                            //      9|       ,'       |       ,'
+                            //       |    0,'         |10   ,'
+                            //       |   ,'           |   ,' 2
+                            //       | ,'             | ,'
+                            //       +----------------+'
+                            //      x        1
+                            let cell_touches_xm = i == 0; // x-minus boundary
+                            let cell_touches_ym = j == 0; // y-minus boundary
+                            let cell_touches_zm = k == 0; // z-minus boundary
+                            let cell_touches_xp = i == nx - 1; // x-plus boundary
+                            let cell_touches_yp = j == ny - 1; // y-plus boundary
+                            let cell_touches_zp = k == nz - 1; // z-plus boundary
+                            if cell_touches_xm
+                                || cell_touches_ym
+                                || cell_touches_zm
+                                || cell_touches_xp
+                                || cell_touches_yp
+                                || cell_touches_zp
+                            {
+                                // this is a boundary cell
+                                for e in 0..12 {
+                                    let corner_edge = match e {
+                                        // bottom edges
+                                        0 => cell_touches_ym && cell_touches_zm,
+                                        1 => cell_touches_xp && cell_touches_zm,
+                                        2 => cell_touches_yp && cell_touches_zm,
+                                        3 => cell_touches_xm && cell_touches_zm,
+                                        // top edges
+                                        4 => cell_touches_ym && cell_touches_zp,
+                                        5 => cell_touches_xp && cell_touches_zp,
+                                        6 => cell_touches_yp && cell_touches_zp,
+                                        7 => cell_touches_xm && cell_touches_zp,
+                                        // vertical edges
+                                        8 => cell_touches_xm && cell_touches_ym,
+                                        9 => cell_touches_xp && cell_touches_ym,
+                                        10 => cell_touches_xp && cell_touches_yp,
+                                        11 => cell_touches_xm && cell_touches_yp,
+                                        _ => unreachable!(),
+                                    };
+                                    if corner_edge {
+                                        if let Some(marker) = self.edge_markers.get(&e) {
+                                            let p1 = points[target.edge_node_id(e, 0)];
+                                            let p2 = points[target.edge_node_id(e, 1)];
+                                            let mut key = (p1, p2);
+                                            sort2(&mut key);
+                                            mesh.marked_edges.push((*marker, key.0, key.1));
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1914,17 +1998,17 @@ mod tests {
     #[test]
     fn subdivide_3d_works() {
         //               z
-        //               |
+        //               |         -1                -1
         //              18------------------21------------------25
         //              /.                  /.                  /|
         //             / .                 / .                 / |
-        //            /  .                /  .                /  |
+        //            /  .                /  .              -2/  |
         //           /   .               /   .               /   |
         //          /    .              /    .              /    |
         //        19------------------20------------------24     |
         //        /.     .            /.     .            /|     |
-        //       / .     .           / .     .           / |     |
-        //      /  .     .          /  .     .          /  |     |
+        //       / .     .           / .     .           / |     |-3
+        //      /  .     .          /  .     .        -2/  |     |
         //     /   .     .         /   .     .         /   |     |
         //    /    .     .        /    .     .        /    |     |
         //  22==================23==================26     |     |
@@ -1937,7 +2021,7 @@ mod tests {
         //   |     . /   .       |     . /   .       |     | /   |
         //   |     ./    .       |     ./    .       |     |/    |
         //   |     5 - - - - - - | - - 6 - - - - - - | - -14     |
-        //   |    /.     .       |    /.     .       |    /|     |
+        //   |    /.     .       |    /.     .       |    /|     |-3
         //   |   / .     .       |   / .     .       |   / |     |
         //   |  /  .     .       |  /  .     .       |  /  |     |
         //   | /   .     .       | /   .     .       | /   |     |
@@ -1958,7 +2042,7 @@ mod tests {
         //   | /                 | /                 | /
         //   |/                  |/                  |/
         //   8===================9==================16
-        //  /
+        //  /         -4                  -4
         // x
         #[rustfmt::skip]
         let mut block = Block::new(&[
@@ -1971,6 +2055,10 @@ mod tests {
             [2.0, 2.0, 4.0],
             [0.0, 2.0, 4.0],
         ]).unwrap();
+        block.set_edge_marker(1, -4).unwrap();
+        block.set_edge_marker(6, -2).unwrap();
+        block.set_edge_marker(7, -1).unwrap();
+        block.set_edge_marker(11, -3).unwrap();
         block.set_face_marker(0, -100).unwrap();
         block.set_face_marker(1, -200).unwrap();
         block.set_face_marker(2, -300).unwrap();
@@ -1979,6 +2067,7 @@ mod tests {
         block.set_face_marker(5, -600).unwrap();
         let mesh = block.subdivide(GeoKind::Hex8).unwrap();
         let correct = Samples::block_3d_eight_hex8();
+        // println!("{}", mesh);
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         mesh.check_all().unwrap();
     }
