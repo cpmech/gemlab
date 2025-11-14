@@ -7,7 +7,7 @@ use plotpy::{Canvas, Plot};
 use russell_lab::math::PI;
 use russell_lab::{sort2, sort4, Vector};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// Arguments to transform the Block generated mesh into a ring
 ///
@@ -686,13 +686,11 @@ impl Block {
         // constants
         let target_nnode = target.nnode();
         let has_constraints = self.edge_constraints.len() > 0 || self.face_constraints.len() > 0;
-        let has_markers = self.edge_markers.len() > 0 || self.face_markers.len() > 0;
 
         // constants used only if there are constraints and
         // the constraint causes some middle edge nodes to move
         let mut pad_lin2 = Scratchpad::new(ndim, GeoKind::Lin2)?;
         let target_nedge = target.nedge();
-        let target_nface = target.nface();
         let target_edge_kind = target.edge_kind().unwrap();
         let target_edge_nnode = target.edge_nnode();
         let target_n_interior_nodes = target.n_interior_nodes();
@@ -710,9 +708,6 @@ impl Block {
         // maps the id of a constrained point to the side (edge/face) where
         // the constrained has been applied (i.e., the point coordinates were modified)
         let mut constrained_point_to_side: HashMap<PointId, usize> = HashMap::new(); // point_id => side
-
-        // set of points on boundaries (to determined the marked edges and faces)
-        let mut boundary_points: HashSet<PointId> = HashSet::new();
 
         // The idea here is to map the TARGET CELL (shown on the right)
         // to the BLOCK's reference (natural) space. (right-to-left mapping)
@@ -804,21 +799,6 @@ impl Block {
                                     }
                                 }
 
-                                // add point to the set of boundary points (only if markers are specified)
-                                if has_markers {
-                                    let on_xy_bry = ksi[0] == -1.0 || ksi[0] == 1.0 || ksi[1] == -1.0 || ksi[1] == 1.0;
-                                    if self.ndim == 2 {
-                                        if on_xy_bry {
-                                            boundary_points.insert(point_id);
-                                        }
-                                    } else {
-                                        let on_z_bry = ksi[2] == -1.0 || ksi[2] == 1.0;
-                                        if on_xy_bry || on_z_bry {
-                                            boundary_points.insert(point_id);
-                                        }
-                                    }
-                                }
-
                                 // add new point to mesh
                                 mesh.points.push(Point {
                                     id: point_id,
@@ -899,13 +879,6 @@ impl Block {
                     // set marked edges
                     if self.edge_markers.len() > 0 {
                         if self.ndim == 2 {
-                            //      2
-                            //  +-------+
-                            //  |       |
-                            // 3|       |1
-                            //  |       |
-                            //  +-------+
-                            //      0
                             let cell_touches_xm = i == 0; // x-minus boundary
                             let cell_touches_ym = j == 0; // y-minus boundary
                             let cell_touches_xp = i == nx - 1; // x-plus boundary
@@ -913,6 +886,13 @@ impl Block {
                             if cell_touches_xm || cell_touches_ym || cell_touches_xp || cell_touches_yp {
                                 // this is a boundary cell
                                 for e in 0..4 {
+                                    //      2
+                                    //  +-------+
+                                    //  |       |
+                                    // 3|       |1
+                                    //  |       |
+                                    //  +-------+
+                                    //      0
                                     let corner_edge = match e {
                                         0 => cell_touches_ym,
                                         1 => cell_touches_xp,
@@ -932,22 +912,6 @@ impl Block {
                                 }
                             }
                         } else {
-                            //                 z       7
-                            //                 +----------------+
-                            //               ,'|              ,'|
-                            //           4 ,'  |8          6,'  |
-                            //           ,'    |          ,'    |
-                            //         ,'      |   5    ,'      |11
-                            //       +'===============+'        |
-                            //       |         |      |         |
-                            //       |         |      |  3      |
-                            //       |         .- - - | -  - - -+ y
-                            //      9|       ,'       |       ,'
-                            //       |    0,'         |10   ,'
-                            //       |   ,'           |   ,' 2
-                            //       | ,'             | ,'
-                            //       +----------------+'
-                            //      x        1
                             let cell_touches_xm = i == 0; // x-minus boundary
                             let cell_touches_ym = j == 0; // y-minus boundary
                             let cell_touches_zm = k == 0; // z-minus boundary
@@ -963,6 +927,22 @@ impl Block {
                             {
                                 // this is a boundary cell
                                 for e in 0..12 {
+                                    //                 z       7
+                                    //                 +----------------+
+                                    //               ,'|              ,'|
+                                    //           4 ,'  |8          6,'  |
+                                    //           ,'    |          ,'    |
+                                    //         ,'      |   5    ,'      |11
+                                    //       +'===============+'        |
+                                    //       |         |      |         |
+                                    //       |         |      |  3      |
+                                    //       |         .- - - | -  - - -+ y
+                                    //      9|       ,'       |       ,'
+                                    //       |    0,'         |10   ,'
+                                    //       |   ,'           |   ,' 2
+                                    //       | ,'             | ,'
+                                    //       +----------------+'
+                                    //      x        1
                                     let corner_edge = match e {
                                         // bottom edges
                                         0 => cell_touches_ym && cell_touches_zm,
@@ -997,20 +977,54 @@ impl Block {
 
                     // set marked faces
                     if self.face_markers.len() > 0 {
-                        for f in 0..target_nface {
-                            if let Some(marker) = self.face_markers.get(&f) {
-                                let p1 = points[target.face_node_id(f, 0)];
-                                let p2 = points[target.face_node_id(f, 1)];
-                                let p3 = points[target.face_node_id(f, 2)];
-                                let p4 = points[target.face_node_id(f, 3)];
-                                if boundary_points.contains(&p1)
-                                    && boundary_points.contains(&p2)
-                                    && boundary_points.contains(&p3)
-                                    && boundary_points.contains(&p4)
-                                {
-                                    let mut key = (p1, p2, p3, p4);
-                                    sort4(&mut key);
-                                    mesh.marked_faces.push((*marker, key.0, key.1, key.2, key.3));
+                        let cell_touches_xm = i == 0; // x-minus boundary
+                        let cell_touches_ym = j == 0; // y-minus boundary
+                        let cell_touches_zm = k == 0; // z-minus boundary
+                        let cell_touches_xp = i == nx - 1; // x-plus boundary
+                        let cell_touches_yp = j == ny - 1; // y-plus boundary
+                        let cell_touches_zp = k == nz - 1; // z-plus boundary
+                        if cell_touches_xm
+                            || cell_touches_ym
+                            || cell_touches_zm
+                            || cell_touches_xp
+                            || cell_touches_yp
+                            || cell_touches_zp
+                        {
+                            // this is a boundary cell
+                            for f in 0..6 {
+                                //            +----------------+
+                                //          ,'|              ,'|
+                                //        ,'  |  ___       ,'  |
+                                //      ,'    |,'5,'  [0],'    |
+                                //    ,'      |~~~     ,'      |
+                                //  +'===============+'  ,'|   |
+                                //  |   ,'|   |      |   |3|   |
+                                //  |   |2|   |      |   |,'   |
+                                //  |   |,'   +- - - | +- - - -+
+                                //  |       ,'       |       ,'
+                                //  |     ,' [1]  ___|     ,'
+                                //  |   ,'      ,'4,'|   ,'
+                                //  | ,'        ~~~  | ,'
+                                //  +----------------+'
+                                let bry_face = match f {
+                                    0 => cell_touches_xm,
+                                    1 => cell_touches_xp,
+                                    2 => cell_touches_ym,
+                                    3 => cell_touches_yp,
+                                    4 => cell_touches_zm,
+                                    5 => cell_touches_zp,
+                                    _ => unreachable!(),
+                                };
+                                if bry_face {
+                                    if let Some(marker) = self.face_markers.get(&f) {
+                                        let p1 = points[target.face_node_id(f, 0)];
+                                        let p2 = points[target.face_node_id(f, 1)];
+                                        let p3 = points[target.face_node_id(f, 2)];
+                                        let p4 = points[target.face_node_id(f, 3)];
+                                        let mut key = (p1, p2, p3, p4);
+                                        sort4(&mut key);
+                                        mesh.marked_faces.push((*marker, key.0, key.1, key.2, key.3));
+                                    }
                                 }
                             }
                         }
