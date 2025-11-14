@@ -47,6 +47,19 @@ pub struct Blocks3d {
     ///
     /// (length = number of blocks)
     pub face_constraints: Vec<Option<(usize, Constraint3d)>>,
+
+    /// Holds all marked edges
+    ///
+    /// Each entry contains `(marker, p1, p2)`, where `marker` is the edge marker,
+    /// and `p1` and `p2` are the point ids. The point ids may be unsorted.
+    pub marked_edges: Vec<(i32, usize, usize)>,
+
+    /// Holds all marked faces
+    ///
+    /// Each entry contains `(marker, p1, p2, p3, p4)`, where `marker` is the face marker,
+    /// and `p1`, `p2`, `p3`, and `p4` are the point ids. The point ids may be unsorted.
+    /// For triangular faces, the fourth point (p4) must be set to [usize::MAX].
+    pub marked_faces: Vec<(i32, usize, usize, usize, usize)>,
 }
 
 impl Blocks3d {
@@ -126,6 +139,8 @@ mod tests {
                 None,                                            // block 0
                 Some((0, Constraint3d::CylinderZ(w + m, l, r))), // block 1
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         assert_eq!(blocks.points.len(), 12);

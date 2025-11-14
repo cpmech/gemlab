@@ -3,6 +3,8 @@ use crate::graph::GraphUnd;
 use crate::shapes::GeoKind;
 use crate::StrError;
 use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
+use russell_lab::{sort2, sort4};
+use std::collections::HashMap;
 
 /// Groups generators of structured meshes (Qua and Hex -- sometimes Tri)
 pub struct Structured {}
@@ -10,26 +12,70 @@ pub struct Structured {}
 impl Structured {
     /// Generates a structured mesh from a set of blocks in 2D
     pub fn from_blocks_2d(blocks: &Blocks2d, target: GeoKind, renumber: bool) -> Result<Mesh, StrError> {
+        // allocate empty meshes array
         let nb = blocks.regions.len();
         let mut meshes = Vec::with_capacity(nb);
+
+        // create a map of boundary markers
+        let mut marked_edges_map = HashMap::new();
+        blocks.marked_edges.iter().for_each(|(marker, p1, p2)| {
+            let mut edge_key = (*p1, *p2);
+            sort2(&mut edge_key);
+            marked_edges_map.insert(edge_key, *marker);
+        });
+
+        // loop over each block
         for i in 0..nb {
+            // allocate block
             let att = blocks.regions[i].0;
-            let p0 = blocks.points[blocks.regions[i].1];
-            let p1 = blocks.points[blocks.regions[i].2];
-            let p2 = blocks.points[blocks.regions[i].3];
-            let p3 = blocks.points[blocks.regions[i].4];
-            let mut b = Block::new(&[[p0.0, p0.1], [p1.0, p1.1], [p2.0, p2.1], [p3.0, p3.1]])?;
+            let pp = [
+                blocks.regions[i].1,
+                blocks.regions[i].2,
+                blocks.regions[i].3,
+                blocks.regions[i].4,
+            ];
+            let c0 = blocks.points[pp[0]];
+            let c1 = blocks.points[pp[1]];
+            let c2 = blocks.points[pp[2]];
+            let c3 = blocks.points[pp[3]];
+            let mut b = Block::new(&[[c0.0, c0.1], [c1.0, c1.1], [c2.0, c2.1], [c3.0, c3.1]])?;
+
+            // set attribute
             b.set_attribute(att);
+
+            // set division weights
             let (wx, wy) = &blocks.div_weights[i];
             if wx.len() > 0 && wy.len() > 0 {
                 b.set_div_weights_2d(wx, wy)?;
             }
+
+            // set constraints
             if let Some(c) = blocks.edge_constraints[i].as_ref() {
                 b.set_edge_constraint(c.0, Some(c.1.clone()))?;
             }
+
+            // set marked edges
+            if marked_edges_map.len() > 0 {
+                let kind = GeoKind::Qua4;
+                for e in 0..4 {
+                    let j0 = kind.edge_node_id(e, 0);
+                    let j1 = kind.edge_node_id(e, 1);
+                    let mut edge_key = (pp[j0], pp[j1]);
+                    sort2(&mut edge_key);
+                    if let Some(marker) = marked_edges_map.get(&edge_key) {
+                        b.set_edge_marker(e, *marker)?;
+                    }
+                }
+            }
+
+            // subdivide block => create mesh
             meshes.push(b.subdivide(target)?);
         }
+
+        // join all meshes
         let mut mesh = join_meshes(&meshes.iter().collect::<Vec<_>>())?;
+
+        // renumber the vertices
         if renumber {
             GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
@@ -38,39 +84,108 @@ impl Structured {
 
     /// Generates a structured mesh from a set of blocks in 3D
     pub fn from_blocks_3d(blocks: &Blocks3d, target: GeoKind, renumber: bool) -> Result<Mesh, StrError> {
+        // allocate empty meshes array
         let nb = blocks.regions.len();
         let mut meshes = Vec::with_capacity(nb);
+
+        // create a map of boundary markers
+        let mut marked_edges_map = HashMap::new();
+        let mut marked_faces_map = HashMap::new();
+        blocks.marked_edges.iter().for_each(|(marker, p1, p2)| {
+            let mut edge_key = (*p1, *p2);
+            sort2(&mut edge_key);
+            marked_edges_map.insert(edge_key, *marker);
+        });
+        blocks.marked_faces.iter().for_each(|(marker, p1, p2, p3, p4)| {
+            let mut face_key = (*p1, *p2, *p3, *p4);
+            sort4(&mut face_key);
+            marked_faces_map.insert(face_key, *marker);
+        });
+
+        // loop over each block
         for i in 0..nb {
             let att = blocks.regions[i].0;
-            let p0 = blocks.points[blocks.regions[i].1];
-            let p1 = blocks.points[blocks.regions[i].2];
-            let p2 = blocks.points[blocks.regions[i].3];
-            let p3 = blocks.points[blocks.regions[i].4];
-            let p4 = blocks.points[blocks.regions[i].5];
-            let p5 = blocks.points[blocks.regions[i].6];
-            let p6 = blocks.points[blocks.regions[i].7];
-            let p7 = blocks.points[blocks.regions[i].8];
+            let pp = [
+                blocks.regions[i].1,
+                blocks.regions[i].2,
+                blocks.regions[i].3,
+                blocks.regions[i].4,
+                blocks.regions[i].5,
+                blocks.regions[i].6,
+                blocks.regions[i].7,
+                blocks.regions[i].8,
+            ];
+            let c0 = blocks.points[pp[0]];
+            let c1 = blocks.points[pp[1]];
+            let c2 = blocks.points[pp[2]];
+            let c3 = blocks.points[pp[3]];
+            let c4 = blocks.points[pp[4]];
+            let c5 = blocks.points[pp[5]];
+            let c6 = blocks.points[pp[6]];
+            let c7 = blocks.points[pp[7]];
             let mut b = Block::new(&[
-                [p0.0, p0.1, p0.2],
-                [p1.0, p1.1, p1.2],
-                [p2.0, p2.1, p2.2],
-                [p3.0, p3.1, p3.2],
-                [p4.0, p4.1, p4.2],
-                [p5.0, p5.1, p5.2],
-                [p6.0, p6.1, p6.2],
-                [p7.0, p7.1, p7.2],
+                [c0.0, c0.1, c0.2],
+                [c1.0, c1.1, c1.2],
+                [c2.0, c2.1, c2.2],
+                [c3.0, c3.1, c3.2],
+                [c4.0, c4.1, c4.2],
+                [c5.0, c5.1, c5.2],
+                [c6.0, c6.1, c6.2],
+                [c7.0, c7.1, c7.2],
             ])?;
+
+            // set attribute
             b.set_attribute(att);
+
+            // set division weights
             let (wx, wy, wz) = &blocks.div_weights[i];
             if wx.len() > 0 && wy.len() > 0 && wz.len() > 0 {
                 b.set_div_weights_3d(wx, wy, wz)?;
             }
+
+            // set constraints
             if let Some(c) = blocks.face_constraints[i].as_ref() {
                 b.set_face_constraint(c.0, Some(c.1.clone()))?;
             }
+
+            // set marked edges
+            if marked_edges_map.len() > 0 {
+                let kind = GeoKind::Hex8;
+                for e in 0..12 {
+                    let j0 = kind.edge_node_id(e, 0);
+                    let j1 = kind.edge_node_id(e, 1);
+                    let mut edge_key = (pp[j0], pp[j1]);
+                    sort2(&mut edge_key);
+                    if let Some(marker) = marked_edges_map.get(&edge_key) {
+                        b.set_edge_marker(e, *marker)?;
+                    }
+                }
+            }
+
+            // set marked faces
+            if marked_faces_map.len() > 0 {
+                let kind = GeoKind::Hex8;
+                for f in 0..6 {
+                    let j0 = kind.face_node_id(f, 0);
+                    let j1 = kind.face_node_id(f, 1);
+                    let j2 = kind.face_node_id(f, 2);
+                    let j3 = kind.face_node_id(f, 3);
+                    let mut face_key = (pp[j0], pp[j1], pp[j2], pp[j3]);
+                    sort4(&mut face_key);
+                    if let Some(marker) = marked_faces_map.get(&face_key) {
+                        b.set_face_marker(f, *marker)?;
+                    }
+                }
+            }
+
+            // subdivide block => create mesh
             meshes.push(b.subdivide(target)?);
         }
+
+        // join all meshes
         let mut mesh = join_meshes(&meshes.iter().collect::<Vec<_>>())?;
+
+        // renumber the vertices
         if renumber {
             GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
@@ -1067,6 +1182,13 @@ mod tests {
         let h = 1.0;
         let l = h / 2.0;
         let m = f64::sqrt(r * r - l * l);
+        //     -100        -200
+        // 3-----------2-----------5
+        // |           |           |
+        // |           |           |
+        // |           |           |
+        // |           |           |
+        // 0-----------1-----------4
         let blocks = Blocks2d {
             points: vec![
                 (0.0, 0.0),     // 0
@@ -1125,7 +1247,7 @@ mod tests {
         assert_eq!(mesh.cells[0].attribute, 1);
         assert_eq!(mesh.cells[3].attribute, 1);
         assert_eq!(mesh.cells[4].attribute, 2);
-        // TODO: assert_eq!(mesh.marked_edges, &[(-100, 13, 14)]);
+        assert_eq!(mesh.marked_edges, &[(-100, 13, 14), (-100, 13, 18), (-200, 18, 22)]);
     }
 
     #[test]
@@ -1135,6 +1257,38 @@ mod tests {
         let h = 1.0;
         let l = h / 2.0;
         let m = f64::sqrt(r * r - l * l);
+        //               z
+        //               |       -1
+        //               6-------------------9
+        //              /.                  /|
+        //             / .                 / |
+        //            /  .    -200      -2/  |
+        //           /   .               /   |
+        //          /    .              /    |
+        //         7-------------------8     |
+        //        /.     .            /|     |
+        //       / .     .           / |     |-3
+        //      /  .     .          /  |     |
+        //     /   .     .         /   |     |
+        //    /    .     .        /    |     |
+        //  10==================11     |     |
+        //   |     .     .       |     |     |
+        //   |     .     .       |     |     |
+        //   |     .     0 - - - | - - | - - 3 ---y
+        //   |     .    /        |     |    /
+        //   |     .   /         | -3  |   /
+        //   |     .  /          |  0  |  /
+        //   |     . /  -100     |  0  | /
+        //   |     ./            |     |/
+        //   |     1 - - - - - - | - - 2
+        //   |    /              |    /
+        //   |   /               |   /
+        //   |  /                |  /
+        //   | /                 | /
+        //   |/                  |/
+        //   4===================5
+        //  /        -4
+        // x
         let blocks = Blocks3d {
             points: vec![
                 (0.0, 0.0, 0.0), //  0
@@ -1162,6 +1316,8 @@ mod tests {
                 None,                                            // block 0
                 Some((1, Constraint3d::CylinderZ(w + m, l, r))), // block 1
             ],
+            marked_edges: vec![(-4, 4, 5), (-3, 9, 3), (-1, 6, 9), (-2, 8, 9)],
+            marked_faces: vec![(-100, 4, 5, 11, 10), (-200, 6, 7, 8, 9), (-300, 11, 8, 2, 5)],
         };
         // blocks.write_json("/tmp/gemlab/example_hex_input.json").unwrap();
 
@@ -1202,6 +1358,27 @@ mod tests {
         assert_eq!(mesh.cells[1].attribute, 1);
         assert_eq!(mesh.cells[2].attribute, 2);
         assert_eq!(mesh.cells[3].attribute, 2);
+        // println!("{}", mesh);
+        assert_eq!(
+            mesh.marked_edges,
+            &[
+                (-3, 3, 7), //
+                (-3, 7, 23),
+                (-1, 20, 23),
+                (-2, 22, 23),
+                (-4, 32, 33),
+            ]
+        );
+        assert_eq!(
+            mesh.marked_faces,
+            &[
+                (-300, 2, 6, 33, 35),
+                (-300, 6, 22, 35, 45),
+                (-200, 20, 21, 22, 23),
+                (-100, 32, 33, 34, 35),
+                (-100, 34, 35, 44, 45)
+            ]
+        );
     }
 
     #[test]
