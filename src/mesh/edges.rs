@@ -1,6 +1,57 @@
-use super::{Edges, PointId};
+use super::{CellId, PointId};
 use crate::shapes::GeoKind;
-use std::collections::HashMap;
+use russell_lab::sort2;
+use std::collections::{HashMap, HashSet};
+
+/// Defines a unique key for edges by using a pair of sorted point indices
+///
+/// **Note:** Since the local numbering scheme runs over "corners" first,
+/// we can compare edges using only two points; i.e., the middle points don't matter.
+pub type EdgeKey = (usize, usize);
+
+/// Holds the essential information to reconstruct an edge
+///
+/// * An edge is an entity belonging to a solid cell in 2D or a face in 3D
+#[derive(Clone, Debug)]
+pub struct Edge {
+    /// Geometry kind
+    pub kind: GeoKind,
+
+    /// List of points defining this edge or face; in the right (FEM) order (i.e., unsorted)
+    pub points: Vec<PointId>,
+
+    /// Marker
+    pub marker: i32,
+}
+
+impl Edge {
+    /// Returns the sorted list of key points
+    pub fn key(&self) -> EdgeKey {
+        let mut key = (self.points[0], self.points[1]);
+        sort2(&mut key);
+        key
+    }
+}
+
+/// Defines an array of edges
+#[derive(Clone, Debug)]
+pub struct Edges<'a> {
+    /// Holds a set of edges
+    pub all: Vec<&'a Edge>,
+}
+
+/// Maps edges to cells sharing the edge (2D only)
+///
+/// Relates edge keys to `Vec<(cell_id, e)>` where:
+///
+/// * `cell_id` -- is he id of the cell sharing the edge
+/// * `e` -- is the cell's local edge index
+pub type MapEdge2dToCells = HashMap<EdgeKey, Vec<(CellId, usize)>>;
+
+/// Maps a point id to edges sharing the point
+///
+/// Relates a point id to a unique set of EdgeKey
+pub type MapPointToEdges = HashMap<PointId, HashSet<EdgeKey>>;
 
 impl<'a> Edges<'a> {
     /// Finds a sequence of edges by following connected points to create a path
@@ -197,7 +248,7 @@ impl<'a> Edges<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::mesh::{Edge, Edges};
+    use super::{Edge, Edges};
     use crate::shapes::GeoKind;
 
     #[rustfmt::skip]
