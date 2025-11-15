@@ -6,6 +6,7 @@
     "conv",
     "cuthill",
     "deque",
+    "drawmsh",
     "extrap",
     "nfacet",
     "ngauss",
