@@ -1167,12 +1167,12 @@ mod tests {
     }
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
-        let mut fig = Draw::new();
-        fig.show_cell_ids(true).show_point_ids(true);
+        let mut draw = Draw::new();
+        draw.show_cell_ids(true).show_point_ids(true);
         if larger {
-            fig.size(600.0, 600.0);
+            draw.size(600.0, 600.0);
         }
-        fig.all(&mesh, filename).unwrap();
+        draw.all(&mesh, filename).unwrap();
     }
 
     #[test]
@@ -1217,12 +1217,12 @@ mod tests {
         let mesh = Structured::from_blocks_2d(&blocks, GeoKind::Qua8, false).unwrap();
 
         if SAVE_FIGURE {
-            let mut fig = Draw::new();
-            fig.show_point_ids(true)
+            let mut draw = Draw::new();
+            draw.show_point_ids(true)
                 .show_point_marker(true)
                 .show_cell_ids(true)
                 .show_cell_att(true);
-            fig.extra(|plot, before| {
+            draw.extra(|plot, before| {
                 if before {
                     let mut canvas = Canvas::new();
                     canvas.set_face_color("None").set_edge_color("black");
@@ -1233,7 +1233,7 @@ mod tests {
                         .set_figure_size_points(800.0, 300.0);
                 }
             });
-            fig.all(&mesh, "/tmp/gemlab/test_from_blocks_2d.svg").unwrap();
+            draw.all(&mesh, "/tmp/gemlab/test_from_blocks_2d.svg").unwrap();
         }
 
         mesh.check_overlapping_points(0.01).unwrap();
@@ -1324,12 +1324,12 @@ mod tests {
         let mesh = Structured::from_blocks_3d(&blocks, GeoKind::Hex20, false).unwrap();
 
         if SAVE_FIGURE {
-            let mut fig = Draw::new();
-            fig.show_point_ids(true)
+            let mut draw = Draw::new();
+            draw.show_point_ids(true)
                 .show_point_marker(true)
                 .show_cell_ids(true)
                 .show_cell_att(true);
-            fig.extra(|plot, before| {
+            draw.extra(|plot, before| {
                 if before {
                     let mut canvas = Surface::new();
                     canvas.set_surf_color("#d68b1384");
@@ -1342,7 +1342,7 @@ mod tests {
                     plot.set_figure_size_points(1000.0, 1000.0);
                 }
             });
-            fig.all(&mesh, "/tmp/gemlab/test_from_blocks_3d.svg").unwrap();
+            draw.all(&mesh, "/tmp/gemlab/test_from_blocks_3d.svg").unwrap();
         }
 
         mesh.check_overlapping_points(0.01).unwrap();

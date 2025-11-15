@@ -471,8 +471,8 @@ impl<'a> Draw<'a> {
     ///             .draw_circle(0.0, 0.0, 2.0);
     ///
     ///         // draw mesh
-    ///         let mut fig = Draw::new();
-    ///         fig.extra(|plot, before| {
+    ///         let mut draw = Draw::new();
+    ///         draw.extra(|plot, before| {
     ///             if !before {
     ///                 plot.add(&circle_in);
     ///                 plot.add(&circle_out);
@@ -603,19 +603,19 @@ mod tests {
     fn draw_cells_and_points_work() {
         // lin cells ---------------------------------------------------------------------------
         let mesh = Samples::lin_cells();
-        let mut fig = Draw::new();
-        fig.draw_cells(&mesh, true).unwrap();
-        fig.draw_point_dots(&mesh);
+        let mut draw = Draw::new();
+        draw.draw_cells(&mesh, true).unwrap();
+        draw.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
-            draw_cell_local_ids(&mut fig.plot, &mut labels, &mesh, 0.0, 0.05, 0.0);
+            draw_cell_local_ids(&mut draw.plot, &mut labels, &mesh, 0.0, 0.05, 0.0);
             caption.draw(0.6, -0.05, "Lin2");
             caption.draw(1.4 + 0.6, -0.05, "Lin3");
             caption.draw(2.8 + 0.6, -0.05, "Lin4");
             caption.draw(4.2 + 0.6, -0.05, "Lin5");
-            fig.plot.add(&caption);
-            fig.plot
+            draw.plot.add(&caption);
+            draw.plot
                 .set_figure_size_points(600.0, 600.0)
                 .set_frame_borders(false)
                 .set_hide_axes(true)
@@ -627,19 +627,19 @@ mod tests {
 
         // lin cells in 3d ---------------------------------------------------------------------
         let mesh = Samples::lin_cells_3d();
-        let mut fig = Draw::new();
-        fig.draw_cells(&mesh, true).unwrap();
-        fig.draw_point_dots(&mesh);
+        let mut draw = Draw::new();
+        draw.draw_cells(&mesh, true).unwrap();
+        draw.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
-            draw_cell_local_ids(&mut fig.plot, &mut labels, &mesh, 0.0, 0.05, 0.0);
+            draw_cell_local_ids(&mut draw.plot, &mut labels, &mesh, 0.0, 0.05, 0.0);
             caption.draw_3d(1.2, 1.33, 1.33, "Lin2");
             caption.draw_3d(1.4 + 1.2, 1.33, 1.33, "Lin3");
             caption.draw_3d(2.8 + 1.2, 1.33, 1.33, "Lin4");
             caption.draw_3d(4.2 + 1.2, 1.33, 1.33, "Lin5");
-            fig.plot.add(&caption);
-            fig.plot
+            draw.plot.add(&caption);
+            draw.plot
                 .set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)
                 .set_range_3d(0.0, 5.3, 0.0, 1.2, 0.0, 1.2)
@@ -649,19 +649,19 @@ mod tests {
 
         // tri cells ---------------------------------------------------------------------------
         let mesh = Samples::tri_cells();
-        let mut fig = Draw::new();
-        fig.draw_cells(&mesh, true).unwrap();
-        fig.draw_point_dots(&mesh);
+        let mut draw = Draw::new();
+        draw.draw_cells(&mesh, true).unwrap();
+        draw.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
-            draw_cell_local_ids(&mut fig.plot, &mut labels, &mesh, 0.0, 0.02, 0.0);
+            draw_cell_local_ids(&mut draw.plot, &mut labels, &mesh, 0.0, 0.02, 0.0);
             caption.draw(0.5, -0.1, "Tri3");
             caption.draw(1.7, -0.1, "Tri6");
             caption.draw(0.5, 1.1, "Tri10");
             caption.draw(1.7, 1.1, "Tri15");
-            fig.plot.add(&caption);
-            fig.plot
+            draw.plot.add(&caption);
+            draw.plot
                 .set_figure_size_points(600.0, 600.0)
                 .set_frame_borders(false)
                 .set_hide_axes(true)
@@ -673,21 +673,21 @@ mod tests {
 
         // qua cells ---------------------------------------------------------------------------
         let mesh = Samples::qua_cells();
-        let mut fig = Draw::new();
-        fig.draw_cells(&mesh, true).unwrap();
-        fig.draw_point_dots(&mesh);
+        let mut draw = Draw::new();
+        draw.draw_cells(&mesh, true).unwrap();
+        draw.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
-            draw_cell_local_ids(&mut fig.plot, &mut labels, &mesh, -0.02, 0.02, 0.0);
+            draw_cell_local_ids(&mut draw.plot, &mut labels, &mesh, -0.02, 0.02, 0.0);
             caption.draw(0.4, -0.06, "Qua4");
             caption.draw(1.5, -0.06, "Qua8");
             caption.draw(2.6, -0.06, "Qua9");
             caption.draw(0.4, 1.1, "Qua12");
             caption.draw(1.5, 1.1, "Qua16");
             caption.draw(2.6, 1.1, "Qua17");
-            fig.plot.add(&caption);
-            fig.plot
+            draw.plot.add(&caption);
+            draw.plot
                 .set_figure_size_points(600.0, 600.0)
                 .set_frame_borders(false)
                 .set_hide_axes(true)
@@ -699,18 +699,18 @@ mod tests {
 
         // tet cells ---------------------------------------------------------------------------
         let mesh = Samples::tet_cells();
-        let mut fig = Draw::new();
-        fig.draw_cells(&mesh, true).unwrap();
-        fig.draw_point_dots(&mesh);
+        let mut draw = Draw::new();
+        draw.draw_cells(&mesh, true).unwrap();
+        draw.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
-            draw_cell_local_ids(&mut fig.plot, &mut labels, &mesh, 0.03, 0.0, 0.03);
+            draw_cell_local_ids(&mut draw.plot, &mut labels, &mesh, 0.03, 0.0, 0.03);
             caption.draw_3d(0.5, -0.15, 0.0, "Tet4");
             caption.draw_3d(1.7, -0.15, 0.0, "Tet10");
             caption.draw_3d(1.1, 1.05, 0.8, "Tet20");
-            fig.plot.add(&caption);
-            fig.plot
+            draw.plot.add(&caption);
+            draw.plot
                 .set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)
                 .set_range_3d(0.0, 2.2, 0.0, 2.2, 0.0, 2.2)
@@ -720,18 +720,18 @@ mod tests {
 
         // hex cells ---------------------------------------------------------------------------
         let mesh = Samples::hex_cells();
-        let mut fig = Draw::new();
-        fig.draw_cells(&mesh, true).unwrap();
-        fig.draw_point_dots(&mesh);
+        let mut draw = Draw::new();
+        draw.draw_cells(&mesh, true).unwrap();
+        draw.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
-            draw_cell_local_ids(&mut fig.plot, &mut labels, &mesh, 0.03, 0.0, 0.03);
+            draw_cell_local_ids(&mut draw.plot, &mut labels, &mesh, 0.03, 0.0, 0.03);
             caption.draw_3d(0.5, -0.25, 0.0, "Hex8");
             caption.draw_3d(2.3, -0.25, 0.0, "Hex20");
             caption.draw_3d(0.3, 1.1, 2.0, "Hex32");
-            fig.plot.add(&caption);
-            fig.plot
+            draw.plot.add(&caption);
+            draw.plot
                 .set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)
                 .set_range_3d(0.0, 3.0, 0.0, 3.0, 0.0, 2.5)
@@ -741,9 +741,9 @@ mod tests {
 
         // ring --------------------------------------------------------------------------------
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let mut fig = Draw::new();
-        fig.draw_cells(&mesh, true).unwrap();
-        fig.draw_point_dots(&mesh);
+        let mut draw = Draw::new();
+        draw.draw_cells(&mesh, true).unwrap();
+        draw.draw_point_dots(&mesh);
 
         if SAVE_FIGURE {
             let mut circle_in = Canvas::new();
@@ -764,10 +764,10 @@ mod tests {
                 .set_edge_color("#bfbfbfbb")
                 .set_line_width(7.0)
                 .draw_circle(0.0, 0.0, 2.0);
-            fig.plot.add(&circle_in);
-            fig.plot.add(&circle_mi);
-            fig.plot.add(&circle_ou);
-            fig.plot
+            draw.plot.add(&circle_in);
+            draw.plot.add(&circle_mi);
+            draw.plot.add(&circle_ou);
+            draw.plot
                 .set_figure_size_points(600.0, 600.0)
                 .set_equal_axes(true)
                 .set_range(-0.1, 2.1, -0.1, 2.1)
@@ -780,8 +780,8 @@ mod tests {
     fn draw_works_qua12() {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua12();
-            let mut fig = Draw::new();
-            fig.show_cell_ids(true)
+            let mut draw = Draw::new();
+            draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
                 .range_2d(-0.5, 6.0, -0.5, 6.0)
@@ -800,8 +800,8 @@ mod tests {
     fn draw_works_qua16() {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua16();
-            let mut fig = Draw::new();
-            fig.show_cell_ids(true)
+            let mut draw = Draw::new();
+            draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
                 .all(&mesh, "/tmp/gemlab/test_draw_works_qua16.svg")
@@ -813,8 +813,8 @@ mod tests {
     fn draw_works_qua17() {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua17();
-            let mut fig = Draw::new();
-            fig.show_cell_ids(true)
+            let mut draw = Draw::new();
+            draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
                 .all(&mesh, "/tmp/gemlab/test_draw_works_qua17.svg")
@@ -826,8 +826,8 @@ mod tests {
     fn draw_works_mixed_2d() {
         if SAVE_FIGURE {
             let mesh = Samples::mixed_shapes_2d();
-            let mut fig = Draw::new();
-            fig.show_cell_ids(true)
+            let mut draw = Draw::new();
+            draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
                 .all(&mesh, "/tmp/gemlab/test_draw_works_mixed_2d.svg")
@@ -839,19 +839,19 @@ mod tests {
     fn draw_works_hex8() {
         if SAVE_FIGURE {
             let mesh = Samples::two_hex8();
-            let mut fig = Draw::new();
-            fig.show_cell_ids(true)
+            let mut draw = Draw::new();
+            draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
                 .size(600.0, 600.0);
-            fig.canvas_point_ids()
+            draw.canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
                 .set_color("black")
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            fig.all(&mesh, "/tmp/gemlab/test_draw_works_hex8.svg").unwrap();
+            draw.all(&mesh, "/tmp/gemlab/test_draw_works_hex8.svg").unwrap();
         }
     }
 
@@ -859,19 +859,19 @@ mod tests {
     fn draw_works_hex20() {
         if SAVE_FIGURE {
             let mesh = Samples::block_3d_eight_hex20();
-            let mut fig = Draw::new();
-            fig.show_cell_ids(true)
+            let mut draw = Draw::new();
+            draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
                 .size(600.0, 600.0);
-            fig.canvas_point_ids()
+            draw.canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
                 .set_color("black")
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            fig.all(&mesh, "/tmp/gemlab/test_draw_works_hex20.svg").unwrap();
+            draw.all(&mesh, "/tmp/gemlab/test_draw_works_hex20.svg").unwrap();
         }
     }
 
@@ -879,105 +879,105 @@ mod tests {
     fn draw_works_mixed_3d() {
         if SAVE_FIGURE {
             let mesh = Samples::mixed_shapes_3d();
-            let mut fig = Draw::new();
-            fig.show_cell_ids(true)
+            let mut draw = Draw::new();
+            draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
                 .size(600.0, 600.0);
-            fig.canvas_point_ids()
+            draw.canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
                 .set_color("black")
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            fig.all(&mesh, "/tmp/gemlab/test_works_mixed_3d.svg").unwrap();
+            draw.all(&mesh, "/tmp/gemlab/test_works_mixed_3d.svg").unwrap();
         }
     }
 
     #[test]
     fn test_figure_setters() {
-        let mut fig = Draw::new();
+        let mut draw = Draw::new();
 
         // Test show_cell_ids
-        assert!(!fig.show_cell_ids);
-        fig.show_cell_ids(true);
-        assert!(fig.show_cell_ids);
+        assert!(!draw.show_cell_ids);
+        draw.show_cell_ids(true);
+        assert!(draw.show_cell_ids);
 
         // Test show_cell_att
-        assert!(fig.show_cell_att);
-        fig.show_cell_att(false);
-        assert!(!fig.show_cell_att);
+        assert!(draw.show_cell_att);
+        draw.show_cell_att(false);
+        assert!(!draw.show_cell_att);
 
         // Test show_point_ids
-        assert!(!fig.show_point_ids);
-        fig.show_point_ids(true);
-        assert!(fig.show_point_ids);
+        assert!(!draw.show_point_ids);
+        draw.show_point_ids(true);
+        assert!(draw.show_point_ids);
 
         // Test show_point_marker
-        assert!(!fig.show_point_marker);
-        fig.show_point_marker(true);
-        assert!(fig.show_point_marker);
+        assert!(!draw.show_point_marker);
+        draw.show_point_marker(true);
+        assert!(draw.show_point_marker);
 
         // Test show_point_dots
-        assert!(!fig.show_point_dots);
-        fig.show_point_dots(true);
-        assert!(fig.show_point_dots);
+        assert!(!draw.show_point_dots);
+        draw.show_point_dots(true);
+        assert!(draw.show_point_dots);
 
         // Test unequal_axes
-        assert!(!fig.unequal_exes);
-        fig.unequal_exes(true);
-        assert!(fig.unequal_exes);
+        assert!(!draw.unequal_exes);
+        draw.unequal_exes(true);
+        assert!(draw.unequal_exes);
 
         // Test range_2d
-        assert!(fig.range_2d.is_none());
-        fig.range_2d(-1.0, 1.0, -2.0, 2.0);
-        assert_eq!(fig.range_2d, Some((-1.0, 1.0, -2.0, 2.0)));
+        assert!(draw.range_2d.is_none());
+        draw.range_2d(-1.0, 1.0, -2.0, 2.0);
+        assert_eq!(draw.range_2d, Some((-1.0, 1.0, -2.0, 2.0)));
 
         // Test range_3d
-        assert!(fig.range_3d.is_none());
-        fig.range_3d(-1.0, 1.0, -2.0, 2.0, -3.0, 3.0);
-        assert_eq!(fig.range_3d, Some((-1.0, 1.0, -2.0, 2.0, -3.0, 3.0)));
+        assert!(draw.range_3d.is_none());
+        draw.range_3d(-1.0, 1.0, -2.0, 2.0, -3.0, 3.0);
+        assert_eq!(draw.range_3d, Some((-1.0, 1.0, -2.0, 2.0, -3.0, 3.0)));
 
         // Test size
-        assert!(fig.size.is_none());
-        fig.size(800.0, 600.0);
-        assert_eq!(fig.size, Some((800.0, 600.0)));
+        assert!(draw.size.is_none());
+        draw.size(800.0, 600.0);
+        assert_eq!(draw.size, Some((800.0, 600.0)));
 
         // Test extra
-        assert!(fig.extra.is_none());
-        fig.extra(|_, _| {});
-        assert!(fig.extra.is_some());
+        assert!(draw.extra.is_none());
+        draw.extra(|_, _| {});
+        assert!(draw.extra.is_some());
 
         // Test zoom_2d
-        assert!(fig.zoom_2d.is_none());
-        fig.zoom_2d(-0.5, 0.5, -1.0, 1.0, 0.1, 0.2, 0.3, 0.4);
-        assert_eq!(fig.zoom_2d, Some(((-0.5, 0.5, -1.0, 1.0), (0.1, 0.2, 0.3, 0.4))));
+        assert!(draw.zoom_2d.is_none());
+        draw.zoom_2d(-0.5, 0.5, -1.0, 1.0, 0.1, 0.2, 0.3, 0.4);
+        assert_eq!(draw.zoom_2d, Some(((-0.5, 0.5, -1.0, 1.0), (0.1, 0.2, 0.3, 0.4))));
 
         // Test disable_zoom_2d
-        fig.disable_zoom_2d();
-        assert!(fig.zoom_2d.is_none());
+        draw.disable_zoom_2d();
+        assert!(draw.zoom_2d.is_none());
 
         // Test zoom_indicator
-        fig.zoom_indicator("#ff0000", 0.8, 2.5);
-        assert_eq!(fig.zoom_indicator_config, ("#ff0000".to_string(), 0.8, 2.5));
+        draw.zoom_indicator("#ff0000", 0.8, 2.5);
+        assert_eq!(draw.zoom_indicator_config, ("#ff0000".to_string(), 0.8, 2.5));
 
         // Test zoom_extra
-        assert!(fig.zoom_extra.is_none());
-        fig.zoom_extra(|_| {});
-        assert!(fig.zoom_extra.is_some());
+        assert!(draw.zoom_extra.is_none());
+        draw.zoom_extra(|_| {});
+        assert!(draw.zoom_extra.is_some());
 
         // Test method chaining
-        let mut fig = Draw::new();
-        fig.show_cell_ids(true)
+        let mut draw = Draw::new();
+        draw.show_cell_ids(true)
             .show_point_ids(true)
             .show_point_dots(true)
             .size(800.0, 600.0)
             .range_2d(-1.0, 1.0, -1.0, 1.0);
-        assert!(fig.show_cell_ids);
-        assert!(fig.show_point_ids);
-        assert!(fig.show_point_dots);
-        assert_eq!(fig.size, Some((800.0, 600.0)));
-        assert_eq!(fig.range_2d, Some((-1.0, 1.0, -1.0, 1.0)));
+        assert!(draw.show_cell_ids);
+        assert!(draw.show_point_ids);
+        assert!(draw.show_point_dots);
+        assert_eq!(draw.size, Some((800.0, 600.0)));
+        assert_eq!(draw.range_2d, Some((-1.0, 1.0, -1.0, 1.0)));
     }
 }

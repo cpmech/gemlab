@@ -1291,8 +1291,8 @@ mod tests {
             .set_edge_color("#bfbfbfbb")
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, args.rmax);
-        let mut fig = Draw::new();
-        fig.extra(|plot, before| {
+        let mut draw = Draw::new();
+        draw.extra(|plot, before| {
             if !before {
                 plot.add(&circle_in);
                 plot.add(&circle_mid);
@@ -1304,8 +1304,8 @@ mod tests {
     }
 
     fn draw(mesh: Mesh, block: &Block, set_range: bool, filename: &str, pre: impl Fn(&mut Plot)) {
-        let mut fig = Draw::new();
-        fig.show_cell_ids(true)
+        let mut draw = Draw::new();
+        draw.show_cell_ids(true)
             .show_point_ids(true)
             .show_point_dots(true)
             .size(600.0, 600.0)
@@ -1313,7 +1313,7 @@ mod tests {
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
-        fig.extra(|plot, before| {
+        draw.extra(|plot, before| {
             if !before {
                 pre(plot);
                 block.draw(plot, false, set_range).unwrap();
@@ -1823,8 +1823,8 @@ mod tests {
         assert_eq!(&mesh.cells[2].points, &[3, 2, 6, 7]);
         assert_eq!(&mesh.cells[3].points, &[2, 5, 8, 6]);
         if SAVE_FIGURE {
-            let mut fig = Draw::new();
-            fig.show_point_ids(true)
+            let mut draw = Draw::new();
+            draw.show_point_ids(true)
                 .size(600.0, 600.0)
                 .all(&mesh, "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg")
                 .unwrap();
@@ -2126,9 +2126,9 @@ mod tests {
         assert_eq!(&mesh.cells[1].points, &[1, 8, 9, 2, 5, 10, 11, 6]);
         assert_eq!(&mesh.cells[7].points, &[6, 11, 17, 14, 20, 23, 26, 24]);
         if SAVE_FIGURE {
-            let mut fig = Draw::new();
-            fig.show_point_ids(true).size(600.0, 600.0);
-            fig.all(&mesh, "/tmp/gemlab/test_subdivide_3d_o2_works.svg").unwrap();
+            let mut draw = Draw::new();
+            draw.show_point_ids(true).size(600.0, 600.0);
+            draw.all(&mesh, "/tmp/gemlab/test_subdivide_3d_o2_works.svg").unwrap();
         }
     }
 
@@ -2338,9 +2338,9 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            let mut fig = Draw::new();
-            fig.size(600.0, 600.0);
-            fig.all(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d.svg")
+            let mut draw = Draw::new();
+            draw.size(600.0, 600.0);
+            draw.all(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d.svg")
                 .unwrap();
         }
     }
@@ -2380,8 +2380,8 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            let mut fig = Draw::new();
-            fig.size(600.0, 600.0)
+            let mut draw = Draw::new();
+            draw.size(600.0, 600.0)
                 .all(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg")
                 .unwrap();
         }

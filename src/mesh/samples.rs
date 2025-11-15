@@ -2161,12 +2161,12 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
-        let mut fig = Draw::new();
-        fig.show_cell_ids(true).show_point_ids(true);
+        let mut draw = Draw::new();
+        draw.show_cell_ids(true).show_point_ids(true);
         if larger {
-            fig.size(600.0, 600.0);
+            draw.size(600.0, 600.0);
         }
-        fig.all(&mesh, filename).unwrap();
+        draw.all(&mesh, filename).unwrap();
     }
 
     #[test]

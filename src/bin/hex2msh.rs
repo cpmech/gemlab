@@ -71,10 +71,10 @@ fn main() -> Result<(), StrError> {
 
     // write SVG file with wireframe
     if options.svg_figure {
-        let mut fig = Draw::new();
-        fig.size(1000.0, 1000.0);
-        fig.show_point_dots(options.show_points);
-        fig.all(&mesh, &format!("{}/{}.svg", options.out_dir, fn_stem))?;
+        let mut draw = Draw::new();
+        draw.size(1000.0, 1000.0);
+        draw.show_point_dots(options.show_points);
+        draw.all(&mesh, &format!("{}/{}.svg", options.out_dir, fn_stem))?;
         println!("Generated SVG file: {}/{}.svg", options.out_dir, fn_stem);
     }
     println!();

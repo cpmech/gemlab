@@ -44,8 +44,8 @@ fn main() -> Result<(), StrError> {
     assert_eq!(mesh.cells[0].points.len(), 3);
     assert_eq!(mesh.cells[2].points.len(), 4);
 
-    let mut fig = Draw::new();
-    fig.show_cell_ids(true).show_point_ids(true);
+    let mut draw = Draw::new();
+    draw.show_cell_ids(true).show_point_ids(true);
 
-    fig.all(&mesh, "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg")
+    draw.all(&mesh, "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg")
 }
