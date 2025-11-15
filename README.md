@@ -14,6 +14,8 @@
   - [Details](#details)
   - [Setting Cargo.toml](#setting-cargotoml)
 - [Examples](#examples)
+  - [MSH file format](#msh-file-format)
+  - [Numerical integration](#numerical-integration)
 - [Roadmap](#roadmap)
 - [Appendix A - Shapes and local numbering of nodes](#appendix-a---shapes-and-local-numbering-of-nodes)
   - [Lines (Lin)](#lines-lin)
@@ -77,6 +79,73 @@ gemlab = "*"
 
 
 ## Examples
+
+### MSH file format
+
+The MSH file format contains three mandatory sections and two optional sections. The mandatory sections are `header`, `points`, and `cells`. We use "cells" here to refer to 2D polygons or 3D polyhedra (aka Elements in the Finite Element Method). The `header` section specifies the space dimension (2 or 3), the number of points, the number of cells, and the optional number of marked edges and faces. The optional sections specify the marked edges and faces. An example of MSH file is shown below:
+
+```text
+#
+#           8-------------11
+#          /.             /|
+#     {-5}/ .        {-5}/ |
+#        /  .   {-9}    /  |{123}
+#       /   .          /   |       id = 1
+# 2.0  9-------------10    |       attribute = 2
+#      |    .         |    |
+#      |    4---------|----7*
+#      |   /.         |   /|
+#      |  / .         |  / |
+#      | /  .         | /  |{-4}
+#      |/   .         |/   |
+# 1.0  5--------------6    |       id = 0
+#      |    .         |{-8}|       attribute = 1
+#      |    0---------|----3  0.0
+#      |   /          |   /
+#      |  /           |  /
+#      | /            | /
+#      |/             |/
+# 0.0  1*-------------2*  1.0
+#     0.0            1.0
+#
+# header
+# ndim npoint ncell nmarked_edge nmarked_face
+     3     12     2            4            2
+
+# points
+# id marker x y z
+   0  0 0.0 0.0 0.0
+   1 -1 1.0 0.0 0.0
+   2 -1 1.0 1.0 0.0
+   3  0 0.0 1.0 0.0
+   4  0 0.0 0.0 1.0
+   5  0 1.0 0.0 1.0
+   6  0 1.0 1.0 1.0
+   7 -1 0.0 1.0 1.0
+   8  0 0.0 0.0 2.0
+   9  0 1.0 0.0 2.0
+  10  0 1.0 1.0 2.0
+  11  0 0.0 1.0 2.0
+
+# cells
+# id attribute kind  point_ids...
+   0   1 hex8  0 1 2 3 4 5  6  7
+   1   2 hex8  4 5 6 7 8 9 10 11
+
+# marked edges
+# marker p1 p2
+123 7 11
+-5 11 10
+-4 7 3
+-5 8 9
+
+# marked faces
+# marker p1 p2 p3 {p4}
+-8 3 2 7 6
+-9 8 10 9 11
+```
+
+### Numerical integration
 
 ```rust
 use gemlab::integ::Gauss;
