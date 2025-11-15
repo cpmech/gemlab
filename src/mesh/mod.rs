@@ -39,7 +39,7 @@ mod check;
 mod convert_2d;
 mod draw;
 mod draw_cell;
-mod edges;
+mod edges_algos;
 mod enums;
 mod features;
 mod generators_qua_hex;
