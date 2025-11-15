@@ -28,6 +28,9 @@ pub struct Draw<'a> {
     /// Canvas to draw lin cells
     canvas_lin_cells: Canvas,
 
+    /// Canvas to draw edge markers
+    canvas_edge_markers: Text,
+
     /// Shows cell ids
     show_cell_ids: bool,
 
@@ -42,6 +45,9 @@ pub struct Draw<'a> {
 
     /// Shows point dots
     show_point_dots: bool,
+
+    /// Shows edge markers
+    show_edge_markers: bool,
 
     /// Generates the plot without equal axes
     unequal_exes: bool,
@@ -93,6 +99,7 @@ impl<'a> Draw<'a> {
         let mut canvas_cell_ids = Text::new();
         let mut canvas_cells = Canvas::new();
         let mut canvas_lin_cells = Canvas::new();
+        let mut canvas_edge_markers = Text::new();
         canvas_edges
             .set_face_color("None")
             .set_line_width(1.0)
@@ -130,6 +137,15 @@ impl<'a> Draw<'a> {
             .set_face_color("None")
             .set_edge_color("#cd0000")
             .set_line_width(2.0);
+        canvas_edge_markers
+            .set_color("#ff00ff")
+            .set_fontsize(7.0)
+            .set_align_horizontal("center")
+            .set_align_vertical("center")
+            .set_bbox(true)
+            .set_bbox_facecolor("white")
+            .set_bbox_edgecolor("None")
+            .set_bbox_style("round,pad=0.15");
         Draw {
             plot: Plot::new(),
             canvas_edges,
@@ -138,11 +154,13 @@ impl<'a> Draw<'a> {
             canvas_cell_ids,
             canvas_cells,
             canvas_lin_cells,
+            canvas_edge_markers,
             show_cell_ids: false,
             show_cell_att: true,
             show_point_ids: false,
             show_point_marker: false,
             show_point_dots: false,
+            show_edge_markers: false,
             unequal_exes: false,
             range_2d: None,
             range_3d: None,
@@ -211,6 +229,12 @@ impl<'a> Draw<'a> {
     /// Shows point dots
     pub fn show_point_dots(&mut self, value: bool) -> &mut Self {
         self.show_point_dots = value;
+        self
+    }
+
+    /// Shows edge markers
+    pub fn show_edge_markers(&mut self, value: bool) -> &mut Self {
+        self.show_edge_markers = value;
         self
     }
 
@@ -470,6 +494,23 @@ impl<'a> Draw<'a> {
         Ok(())
     }
 
+    /// Draws edge markers
+    pub fn edge_markers(&mut self, mesh: &Mesh) {
+        let mut x = Vector::new(mesh.ndim);
+        for (marker, p1, p2) in &mesh.marked_edges {
+            x.fill(0.0);
+            for i in 0..mesh.ndim {
+                x[i] += mesh.points[*p1].coords[i] + mesh.points[*p2].coords[i];
+            }
+            for i in 0..mesh.ndim {
+                x[i] /= 2.0;
+            }
+            self.canvas_edge_markers
+                .draw(x[0], x[1], format!("{}", marker).as_str());
+        }
+        self.plot.add(&self.canvas_edge_markers);
+    }
+
     /// Draws the mesh
     ///
     /// # Input
@@ -537,6 +578,9 @@ impl<'a> Draw<'a> {
         }
         if self.show_point_ids {
             self.point_ids(mesh);
+        }
+        if self.show_edge_markers {
+            self.edge_markers(mesh);
         }
         if mesh.ndim == 2 {
             self.plot.grid_and_labels("x", "y");
@@ -1014,5 +1058,18 @@ mod tests {
         assert!(draw.show_point_dots);
         assert_eq!(draw.size, Some((800.0, 600.0)));
         assert_eq!(draw.range_2d, Some((-1.0, 1.0, -1.0, 1.0)));
+    }
+
+    #[test]
+    fn draw_edge_markers_works() {
+        if true {
+            let mesh = Samples::two_qua4();
+            let mut draw = Draw::new();
+            draw.show_edge_markers(true)
+                .show_point_ids(true)
+                .show_point_dots(true)
+                .all(&mesh, "/tmp/gemlab/test_draw_edge_markers_works.svg")
+                .unwrap();
+        }
     }
 }
