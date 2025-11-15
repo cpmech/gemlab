@@ -296,78 +296,104 @@ impl<'a> Draw<'a> {
     }
 
     /// Shows cell ids
+    ///
+    /// Default: `false`
     pub fn show_cell_ids(&mut self, value: bool) -> &mut Self {
         self.show_cell_ids = value;
         self
     }
 
     /// Shows cell attribute within parenthesis
+    ///
+    /// Default: `true`
     pub fn show_cell_att(&mut self, value: bool) -> &mut Self {
         self.show_cell_att = value;
         self
     }
 
     /// Shows point ids
+    ///
+    /// Default: `false`
     pub fn show_point_ids(&mut self, value: bool) -> &mut Self {
         self.show_point_ids = value;
         self
     }
 
     /// Shows point marker within parenthesis (if not zero)
+    ///
+    /// Default: `false`
     pub fn show_point_marker(&mut self, value: bool) -> &mut Self {
         self.show_point_marker = value;
         self
     }
 
     /// Shows point dots
+    ///
+    /// Default: `false`
     pub fn show_point_dots(&mut self, value: bool) -> &mut Self {
         self.show_point_dots = value;
         self
     }
 
     /// Shows edge markers
+    ///
+    /// Default: `false`
     pub fn show_edge_markers(&mut self, value: bool) -> &mut Self {
         self.show_edge_markers = value;
         self
     }
 
     /// Shows face markers
+    ///
+    /// Default: `false`
     pub fn show_face_markers(&mut self, value: bool) -> &mut Self {
         self.show_face_markers = value;
         self
     }
 
     /// Shows normal vectors on boundaries
+    ///
+    /// Default: `false`
     pub fn show_normal_vectors(&mut self, value: bool) -> &mut Self {
         self.show_normal_vectors = value;
         self
     }
 
     /// Generates the plot without equal axes
+    ///
+    /// Default: `false`
     pub fn set_unequal_exes(&mut self, value: bool) -> &mut Self {
         self.unequal_exes = value;
         self
     }
 
     /// Specifies the plot range in 2D
+    ///
+    /// Default: `None` (automatic range)
     pub fn set_range_2d(&mut self, xmin: f64, xmax: f64, ymin: f64, ymax: f64) -> &mut Self {
         self.range_2d = Some((xmin, xmax, ymin, ymax));
         self
     }
 
     /// Specifies the plot range in 3D
+    ///
+    /// Default: `None` (automatic range)
     pub fn set_range_3d(&mut self, xmin: f64, xmax: f64, ymin: f64, ymax: f64, zmin: f64, zmax: f64) -> &mut Self {
         self.range_3d = Some((xmin, xmax, ymin, ymax, zmin, zmax));
         self
     }
 
     /// Specifies the figure size in points
+    ///
+    /// Default: `None` (automatic size)
     pub fn set_size(&mut self, width: f64, height: f64) -> &mut Self {
         self.size = Some((width, height));
         self
     }
 
     /// Sets a callback function to perform extra drawing on the plot area
+    ///
+    /// Default: `None`
     ///
     /// The function is `|plot, before| { ... }` where:
     ///
@@ -433,12 +459,16 @@ impl<'a> Draw<'a> {
     }
 
     /// Disables the mesh zooming
+    ///
+    /// Default: `None` (no zoom)
     pub fn disable_zoom_2d(&mut self) -> &mut Self {
         self.zoom_2d = None;
         self
     }
 
     /// Configures some characteristics of the zoom indicator
+    ///
+    /// Default: `("#f9d835", 1.0, 2.0)`
     ///
     /// # Input
     ///
@@ -451,6 +481,8 @@ impl<'a> Draw<'a> {
     }
 
     /// Sets a callback function to perform extra drawing on the zoom area
+    ///
+    /// Default: `None`
     ///
     /// The function is `|inset| {}` where:
     ///
