@@ -12,22 +12,16 @@ pub struct Draw<'a> {
     plot: Plot,
 
     /// Multiplier used to set the drawing area range
-    ///
-    /// Default: 0.3
     m_range: f64,
 
-    /// Gap factor for edge markers
-    ///
-    /// Default: 0.1
-    gap_edge_marker: f64,
-
     /// Tolerance to decide if an edge is horizontal or vertical
-    ///
-    /// Default: 1e-3
     tol_edge_marker: f64,
 
     /// Multiplier to scale the length of the normal vectors
     m_normal_vector: f64,
+
+    /// Multiplier to scale the length of the normal vectors for edge markers
+    m_normal_vector_edge_marker: f64,
 
     /// Canvas to draw edges
     canvas_edges: Canvas,
@@ -188,10 +182,10 @@ impl<'a> Draw<'a> {
             .set_line_width(2.0);
         Draw {
             plot: Plot::new(),
-            m_range: 0.3,
-            gap_edge_marker: 0.1,
+            m_range: 0.2,
             tol_edge_marker: 1e-3,
             m_normal_vector: 0.05,
+            m_normal_vector_edge_marker: 0.1,
             canvas_edges,
             canvas_points,
             canvas_point_ids,
@@ -336,7 +330,7 @@ impl<'a> Draw<'a> {
     /// use gemlab::StrError;
     /// use plotpy::Text;
     ///
-    /// const SAVE_FIGURE: bool = true;
+    /// const SAVE_FIGURE: bool = false;
     ///
     /// fn main() -> Result<(), StrError> {
     ///     if SAVE_FIGURE {
@@ -548,7 +542,11 @@ impl<'a> Draw<'a> {
         let ksi = &[0.0, 0.0];
         let mut un = Vector::new(ndim);
         let mut x = Vector::new(ndim);
-        let sc = self.gap_edge_marker;
+        let mut sum = 0.0;
+        for i in 0..ndim {
+            sum += f64::abs(features.max[i] - features.min[i]) * f64::abs(features.max[i] - features.min[i]);
+        }
+        let s = f64::sqrt(sum) * self.m_normal_vector_edge_marker;
         for (marker, p1, p2) in &mesh.marked_edges {
             if ndim == 2 {
                 let mut key = (*p1, *p2);
@@ -566,8 +564,8 @@ impl<'a> Draw<'a> {
                         f64::atan(un[1] / un[0]) * 180.0 / PI
                     };
                     self.canvas_edge_markers.set_rotation(alpha).draw(
-                        x[0] + sc * un[0],
-                        x[1] + sc * un[1],
+                        x[0] + 0.5 * s * un[0],
+                        x[1] + 0.5 * s * un[1],
                         &format!("{}", marker),
                     );
                 }
@@ -1223,7 +1221,7 @@ mod tests {
             let mut draw = Draw::new();
             draw.cells(&mesh, true).unwrap();
             draw.point_dots(&mesh);
-            draw.normal_vectors(&features).unwrap();
+            draw.edge_markers(&features).unwrap();
             draw.plot
                 .set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
