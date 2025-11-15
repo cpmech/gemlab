@@ -26,6 +26,9 @@ pub struct Draw<'a> {
     /// Default: 1e-3
     tol_edge_marker: f64,
 
+    /// Multiplier to scale the length of the normal vectors
+    m_normal_vector: f64,
+
     /// Canvas to draw edges
     canvas_edges: Canvas,
 
@@ -47,8 +50,11 @@ pub struct Draw<'a> {
     /// Canvas to draw edge markers
     canvas_edge_markers: Text,
 
-    /// Canvas to draw normal vectors
-    canvas_normal_vectors: Canvas,
+    /// Canvas to draw normal vectors (2D)
+    canvas_normals_2d: Canvas,
+
+    /// Canvas to draw normal vectors (3D)
+    canvas_normals_3d: Canvas,
 
     /// Shows cell ids
     show_cell_ids: bool,
@@ -67,6 +73,9 @@ pub struct Draw<'a> {
 
     /// Shows edge markers
     show_edge_markers: bool,
+
+    /// Shows normal vectors on boundaries
+    show_normal_vectors: bool,
 
     /// Generates the plot without equal axes
     unequal_exes: bool,
@@ -119,7 +128,8 @@ impl<'a> Draw<'a> {
         let mut canvas_cells = Canvas::new();
         let mut canvas_lin_cells = Canvas::new();
         let mut canvas_edge_markers = Text::new();
-        let mut canvas_normal_vectors = Canvas::new();
+        let mut canvas_normals_2d = Canvas::new();
+        let mut canvas_normals_3d = Canvas::new();
         canvas_edges
             .set_face_color("None")
             .set_line_width(1.0)
@@ -166,17 +176,22 @@ impl<'a> Draw<'a> {
             .set_bbox_facecolor("#fff0a3ff")
             .set_bbox_edgecolor("black")
             .set_bbox_style("square,pad=0.15");
-        canvas_normal_vectors
+        canvas_normals_2d
             .set_face_color("None")
             .set_edge_color("#f400f4ff")
-            .set_line_width(1.5)
+            .set_line_width(2.0)
             .set_arrow_scale(5.0)
             .set_arrow_style("->");
+        canvas_normals_3d
+            .set_face_color("None")
+            .set_edge_color("#f400f4ff")
+            .set_line_width(2.0);
         Draw {
             plot: Plot::new(),
             m_range: 0.3,
             gap_edge_marker: 0.1,
             tol_edge_marker: 1e-3,
+            m_normal_vector: 0.05,
             canvas_edges,
             canvas_points,
             canvas_point_ids,
@@ -184,13 +199,15 @@ impl<'a> Draw<'a> {
             canvas_cells,
             canvas_lin_cells,
             canvas_edge_markers,
-            canvas_normal_vectors,
+            canvas_normals_2d,
+            canvas_normals_3d,
             show_cell_ids: false,
             show_cell_att: true,
             show_point_ids: false,
             show_point_marker: false,
             show_point_dots: false,
             show_edge_markers: false,
+            show_normal_vectors: false,
             unequal_exes: false,
             range_2d: None,
             range_3d: None,
@@ -566,32 +583,57 @@ impl<'a> Draw<'a> {
         Ok(())
     }
 
-    /// Draws normal vectors on boundary edges (2D meshes only)
-    pub fn normal_vectors(&mut self, features: &Features, rel_scale: f64) -> Result<(), StrError> {
+    /// Draws normal vectors on boundary edges
+    pub fn normal_vectors(&mut self, features: &Features) -> Result<(), StrError> {
         let ndim = features.mesh.ndim;
-        let mut sc = 0.0;
+        let mut sum = 0.0;
         for i in 0..ndim {
-            sc += f64::abs(features.max[i] - features.min[i]) * f64::abs(features.max[i] - features.min[i]);
+            sum += f64::abs(features.max[i] - features.min[i]) * f64::abs(features.max[i] - features.min[i]);
         }
-        sc = f64::sqrt(sc) * rel_scale;
+        let s = f64::sqrt(sum) * self.m_normal_vector;
         let ksi = &[0.0, 0.0, 0.0];
         let mut un = Vector::new(ndim);
         let mut x = Vector::new(ndim);
         if ndim == 2 {
-            for (edge_key, cell_side_array) in &features.all_2d_edges {
-                if cell_side_array.len() == 1 {
+            let mut found = false;
+            for (edge_key, edge) in &features.edges {
+                let ncell = features.all_2d_edges.get(edge_key).unwrap().len();
+                if ncell == 1 {
                     // only boundary edges
-                    let edge = features.get_edge_by_key(edge_key);
+                    found = true;
                     let mut pad = Scratchpad::new(ndim, edge.kind)?;
                     features.mesh.set_pad(&mut pad, &edge.points);
                     pad.calc_normal_vector(&mut un, ksi)?;
                     pad.calc_coords(&mut x, ksi)?;
-                    self.canvas_normal_vectors
-                        .draw_arrow(x[0], x[1], x[0] + sc * un[0], x[1] + sc * un[1]);
+                    self.canvas_normals_2d
+                        .draw_arrow(x[0], x[1], x[0] + s * un[0], x[1] + s * un[1]);
                 }
             }
+            if found {
+                self.plot.add(&self.canvas_normals_2d);
+            }
+        } else {
+            let mut found = false;
+            for (face_key, face) in &features.faces {
+                let ncell = features.all_faces.get(face_key).unwrap().len();
+                if ncell == 1 {
+                    // boundary faces only
+                    found = true;
+                    let mut pad = Scratchpad::new(ndim, face.kind)?;
+                    features.mesh.set_pad(&mut pad, &face.points);
+                    pad.calc_normal_vector(&mut un, ksi)?;
+                    pad.calc_coords(&mut x, ksi)?;
+                    self.canvas_normals_3d.polyline_3d_begin();
+                    self.canvas_normals_3d.polyline_3d_add(x[0], x[1], x[2]);
+                    self.canvas_normals_3d
+                        .polyline_3d_add(x[0] + s * un[0], x[1] + s * un[1], x[2] + s * un[2]);
+                    self.canvas_normals_3d.polyline_3d_end();
+                }
+            }
+            if found {
+                self.plot.add(&self.canvas_normals_3d);
+            }
         }
-        self.plot.add(&self.canvas_normal_vectors);
         Ok(())
     }
 
@@ -663,9 +705,14 @@ impl<'a> Draw<'a> {
         if self.show_point_ids {
             self.point_ids(mesh);
         }
-        if self.show_edge_markers {
+        if self.show_edge_markers || self.show_normal_vectors {
             let features = Features::new(mesh, false);
-            self.edge_markers(&features);
+            if self.show_edge_markers {
+                self.edge_markers(&features)?;
+            }
+            if self.show_normal_vectors {
+                self.normal_vectors(&features)?;
+            }
         }
         if mesh.ndim == 2 {
             self.plot.grid_and_labels("x", "y");
@@ -1146,18 +1193,17 @@ mod tests {
     }
 
     #[test]
-    fn draw_edge_markers_and_normals_work() {
+    fn draw_edge_markers_works() {
         if true {
             let mesh = Samples::two_qua4();
             let features = Features::new(&mesh, false);
             let mut draw = Draw::new();
             draw.cells(&mesh, true).unwrap();
             draw.point_dots(&mesh);
-            draw.normal_vectors(&features, 0.1).unwrap();
             draw.edge_markers(&features).unwrap();
             draw.plot
                 .set_equal_axes(true)
-                .save("/tmp/gemlab/test_draw_edge_markers_and_normals_1.svg")
+                .save("/tmp/gemlab/test_draw_edge_markers_works_1.svg")
                 .unwrap();
 
             let mesh = Samples::ring_eight_qua8_rad1_thick1();
@@ -1165,25 +1211,64 @@ mod tests {
             let mut draw = Draw::new();
             draw.cells(&mesh, true).unwrap();
             draw.point_dots(&mesh);
-            draw.normal_vectors(&features, 0.1).unwrap();
             draw.edge_markers(&features).unwrap();
             draw.plot
                 .set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
-                .save("/tmp/gemlab/test_draw_edge_markers_and_normals_2.svg")
+                .save("/tmp/gemlab/test_draw_edge_markers_works_2.svg")
                 .unwrap();
 
             let mesh = Samples::two_hex8();
-            let features = Features::new(&mesh, false);
+            let features = Features::new(&mesh, true);
             let mut draw = Draw::new();
             draw.cells(&mesh, true).unwrap();
-            draw.point_ids(&mesh);
-            draw.normal_vectors(&features, 0.1).unwrap();
-            draw.edge_markers(&features).unwrap();
+            draw.point_dots(&mesh);
+            draw.normal_vectors(&features).unwrap();
             draw.plot
                 .set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
-                .save("/tmp/gemlab/test_draw_edge_markers_and_normals_3.svg")
+                .save("/tmp/gemlab/test_draw_edge_markers_works_3.svg")
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_normals_works() {
+        if true {
+            let mesh = Samples::two_qua4();
+            let features = Features::new(&mesh, false);
+            let mut draw = Draw::new();
+            draw.cells(&mesh, true).unwrap();
+            draw.point_dots(&mesh);
+            draw.normal_vectors(&features).unwrap();
+            draw.plot
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_normals_works_1.svg")
+                .unwrap();
+
+            let mesh = Samples::ring_eight_qua8_rad1_thick1();
+            let features = Features::new(&mesh, false);
+            let mut draw = Draw::new();
+            draw.cells(&mesh, true).unwrap();
+            draw.point_dots(&mesh);
+            draw.normal_vectors(&features).unwrap();
+            draw.plot
+                .set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .save("/tmp/gemlab/test_draw_normals_works_2.svg")
+                .unwrap();
+
+            let mesh = Samples::two_hex8();
+            let features = Features::new(&mesh, true);
+            let mut draw = Draw::new();
+            draw.cells(&mesh, true).unwrap();
+            draw.point_dots(&mesh);
+            draw.normal_vectors(&features).unwrap();
+            draw.plot
+                .set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                // .show("/tmp/gemlab/test_draw_normals_works_3.svg")
+                .save("/tmp/gemlab/test_draw_normals_works_3.svg")
                 .unwrap();
         }
     }
