@@ -215,7 +215,7 @@ mod tests {
         let mut draw = Draw::new();
         draw.show_cell_ids(true).show_point_ids(true);
         if larger {
-            draw.size(600.0, 600.0);
+            draw.set_size(600.0, 600.0);
         }
         draw.all(&mesh, filename).unwrap();
     }

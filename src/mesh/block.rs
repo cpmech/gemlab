@@ -1308,8 +1308,8 @@ mod tests {
         draw.show_cell_ids(true)
             .show_point_ids(true)
             .show_point_dots(true)
-            .size(600.0, 600.0)
-            .canvas_point_ids()
+            .set_size(600.0, 600.0)
+            .get_canvas_point_ids()
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
@@ -1825,7 +1825,7 @@ mod tests {
         if SAVE_FIGURE {
             let mut draw = Draw::new();
             draw.show_point_ids(true)
-                .size(600.0, 600.0)
+                .set_size(600.0, 600.0)
                 .all(&mesh, "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg")
                 .unwrap();
         }
@@ -2127,7 +2127,7 @@ mod tests {
         assert_eq!(&mesh.cells[7].points, &[6, 11, 17, 14, 20, 23, 26, 24]);
         if SAVE_FIGURE {
             let mut draw = Draw::new();
-            draw.show_point_ids(true).size(600.0, 600.0);
+            draw.show_point_ids(true).set_size(600.0, 600.0);
             draw.all(&mesh, "/tmp/gemlab/test_subdivide_3d_o2_works.svg").unwrap();
         }
     }
@@ -2339,7 +2339,7 @@ mod tests {
         }
         if SAVE_FIGURE {
             let mut draw = Draw::new();
-            draw.size(600.0, 600.0);
+            draw.set_size(600.0, 600.0);
             draw.all(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d.svg")
                 .unwrap();
         }
@@ -2381,7 +2381,7 @@ mod tests {
         }
         if SAVE_FIGURE {
             let mut draw = Draw::new();
-            draw.size(600.0, 600.0)
+            draw.set_size(600.0, 600.0)
                 .all(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg")
                 .unwrap();
         }

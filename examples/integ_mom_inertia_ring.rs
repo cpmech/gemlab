@@ -50,6 +50,6 @@ fn main() -> Result<(), StrError> {
     let mut draw = Draw::new();
     draw.show_cell_ids(true)
         .show_point_ids(true)
-        .size(800.0, 800.0)
+        .set_size(800.0, 800.0)
         .all(&mesh, "/tmp/gemlab/example_mom_inertia_ring.svg")
 }

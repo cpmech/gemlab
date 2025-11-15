@@ -69,7 +69,7 @@ fn main() -> Result<(), StrError> {
 
     // draw meshes
     let mut draw = Draw::new();
-    draw.show_cell_ids(true).show_point_ids(true).size(800.0, 800.0);
+    draw.show_cell_ids(true).show_point_ids(true).set_size(800.0, 800.0);
     draw.all(&mesh_1, "/tmp/gemlab/example_mom_inertia_disk_1.svg")?;
     draw.all(&mesh_2, "/tmp/gemlab/example_mom_inertia_disk_2.svg")
 }

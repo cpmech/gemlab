@@ -600,9 +600,9 @@ mod tests {
         let mut draw = Draw::new();
         draw.show_cell_ids(true).show_point_ids(true);
         if larger {
-            draw.size(800.0, 800.0);
+            draw.set_size(800.0, 800.0);
         } else {
-            draw.size(600.0, 600.0);
+            draw.set_size(600.0, 600.0);
         }
         draw.all(&mesh, filename).unwrap();
     }
@@ -1071,7 +1071,7 @@ mod tests {
             .unwrap();
 
         let mut draw = Draw::new();
-        draw.size(800.0, 800.0).show_point_ids(true).show_point_dots(true);
+        draw.set_size(800.0, 800.0).show_point_ids(true).show_point_dots(true);
         draw.extra(|plot, before| {
             if before {
                 plot.add(&cylin_in).add(&cylin_out);

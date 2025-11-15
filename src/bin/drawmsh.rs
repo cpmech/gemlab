@@ -53,7 +53,7 @@ fn main() -> Result<(), StrError> {
     draw.show_point_dots(options.dots)
         .show_point_ids(options.point_ids)
         .show_cell_ids(options.cell_ids)
-        .size(options.width.unwrap_or(800.0), options.height.unwrap_or(800.0));
+        .set_size(options.width.unwrap_or(800.0), options.height.unwrap_or(800.0));
     draw.all(&mesh, &format!("{}/{}.svg", OUT_DIR, fn_stem))?;
     println!("Generated SVG file: {}/{}.svg", OUT_DIR, fn_stem);
     Ok(())

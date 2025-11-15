@@ -155,32 +155,32 @@ impl<'a> Draw<'a> {
     }
 
     /// Get a mutable reference to the canvas edges
-    pub fn canvas_edges(&mut self) -> &mut Canvas {
+    pub fn get_canvas_edges(&mut self) -> &mut Canvas {
         &mut self.canvas_edges
     }
 
     /// Get a mutable reference to the canvas points
-    pub fn canvas_points(&mut self) -> &mut Curve {
+    pub fn get_canvas_points(&mut self) -> &mut Curve {
         &mut self.canvas_points
     }
 
     /// Get a mutable reference to the canvas point ids
-    pub fn canvas_point_ids(&mut self) -> &mut Text {
+    pub fn get_canvas_point_ids(&mut self) -> &mut Text {
         &mut self.canvas_point_ids
     }
 
     /// Get a mutable reference to the canvas cell ids
-    pub fn canvas_cell_ids(&mut self) -> &mut Text {
+    pub fn get_canvas_cell_ids(&mut self) -> &mut Text {
         &mut self.canvas_cell_ids
     }
 
     /// Get a mutable reference to the canvas cells
-    pub fn canvas_cells(&mut self) -> &mut Canvas {
+    pub fn get_canvas_cells(&mut self) -> &mut Canvas {
         &mut self.canvas_cells
     }
 
     /// Get a mutable reference to the canvas lin cells
-    pub fn canvas_lin_cells(&mut self) -> &mut Canvas {
+    pub fn get_canvas_lin_cells(&mut self) -> &mut Canvas {
         &mut self.canvas_lin_cells
     }
 
@@ -215,25 +215,25 @@ impl<'a> Draw<'a> {
     }
 
     /// Generates the plot without equal axes
-    pub fn unequal_exes(&mut self, value: bool) -> &mut Self {
+    pub fn set_unequal_exes(&mut self, value: bool) -> &mut Self {
         self.unequal_exes = value;
         self
     }
 
     /// Specifies the plot range in 2D
-    pub fn range_2d(&mut self, xmin: f64, xmax: f64, ymin: f64, ymax: f64) -> &mut Self {
+    pub fn set_range_2d(&mut self, xmin: f64, xmax: f64, ymin: f64, ymax: f64) -> &mut Self {
         self.range_2d = Some((xmin, xmax, ymin, ymax));
         self
     }
 
     /// Specifies the plot range in 3D
-    pub fn range_3d(&mut self, xmin: f64, xmax: f64, ymin: f64, ymax: f64, zmin: f64, zmax: f64) -> &mut Self {
+    pub fn set_range_3d(&mut self, xmin: f64, xmax: f64, ymin: f64, ymax: f64, zmin: f64, zmax: f64) -> &mut Self {
         self.range_3d = Some((xmin, xmax, ymin, ymax, zmin, zmax));
         self
     }
 
     /// Specifies the figure size in points
-    pub fn size(&mut self, width: f64, height: f64) -> &mut Self {
+    pub fn set_size(&mut self, width: f64, height: f64) -> &mut Self {
         self.size = Some((width, height));
         self
     }
@@ -301,7 +301,7 @@ impl<'a> Draw<'a> {
     }
 
     /// Draws all points (dots)
-    pub fn draw_point_dots(&mut self, mesh: &Mesh) {
+    pub fn point_dots(&mut self, mesh: &Mesh) {
         if mesh.ndim == 2 {
             self.canvas_points.points_begin();
             mesh.points.iter().for_each(|point| {
@@ -322,7 +322,7 @@ impl<'a> Draw<'a> {
     /// Draws all point ids (labels)
     ///
     /// **Note:** Non-zero point markers are shown within parentheses.
-    pub fn draw_point_ids(&mut self, mesh: &Mesh) {
+    pub fn point_ids(&mut self, mesh: &Mesh) {
         if mesh.ndim == 2 {
             mesh.points.iter().for_each(|point| {
                 let msg = if point.marker != 0 && self.show_point_marker {
@@ -347,7 +347,7 @@ impl<'a> Draw<'a> {
     }
 
     /// Draws cells
-    pub fn draw_cells(&mut self, mesh: &Mesh, set_range: bool) -> Result<(), StrError> {
+    pub fn cells(&mut self, mesh: &Mesh, set_range: bool) -> Result<(), StrError> {
         // limits
         let mut xmin = vec![f64::MAX; mesh.ndim];
         let mut xmax = vec![f64::MIN; mesh.ndim];
@@ -389,7 +389,7 @@ impl<'a> Draw<'a> {
     /// Draws ids and attributes of cells
     ///
     /// **Note:** Cell attributes are shown within parentheses.
-    pub fn draw_cell_ids(&mut self, mesh: &Mesh) -> Result<(), StrError> {
+    pub fn cell_ids(&mut self, mesh: &Mesh) -> Result<(), StrError> {
         // auxiliary
         let mut x = Vector::new(mesh.ndim);
 
@@ -493,15 +493,15 @@ impl<'a> Draw<'a> {
         if let Some(callback) = self.extra.as_ref() {
             callback(&mut self.plot, true);
         }
-        self.draw_cells(mesh, true)?;
+        self.cells(mesh, true)?;
         if self.show_cell_ids {
-            self.draw_cell_ids(mesh)?;
+            self.cell_ids(mesh)?;
         }
         if self.show_point_dots {
-            self.draw_point_dots(mesh);
+            self.point_dots(mesh);
         }
         if self.show_point_ids {
-            self.draw_point_ids(mesh);
+            self.point_ids(mesh);
         }
         if mesh.ndim == 2 {
             self.plot.grid_and_labels("x", "y");
@@ -604,8 +604,8 @@ mod tests {
         // lin cells ---------------------------------------------------------------------------
         let mesh = Samples::lin_cells();
         let mut draw = Draw::new();
-        draw.draw_cells(&mesh, true).unwrap();
-        draw.draw_point_dots(&mesh);
+        draw.cells(&mesh, true).unwrap();
+        draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -628,8 +628,8 @@ mod tests {
         // lin cells in 3d ---------------------------------------------------------------------
         let mesh = Samples::lin_cells_3d();
         let mut draw = Draw::new();
-        draw.draw_cells(&mesh, true).unwrap();
-        draw.draw_point_dots(&mesh);
+        draw.cells(&mesh, true).unwrap();
+        draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -650,8 +650,8 @@ mod tests {
         // tri cells ---------------------------------------------------------------------------
         let mesh = Samples::tri_cells();
         let mut draw = Draw::new();
-        draw.draw_cells(&mesh, true).unwrap();
-        draw.draw_point_dots(&mesh);
+        draw.cells(&mesh, true).unwrap();
+        draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -674,8 +674,8 @@ mod tests {
         // qua cells ---------------------------------------------------------------------------
         let mesh = Samples::qua_cells();
         let mut draw = Draw::new();
-        draw.draw_cells(&mesh, true).unwrap();
-        draw.draw_point_dots(&mesh);
+        draw.cells(&mesh, true).unwrap();
+        draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -700,8 +700,8 @@ mod tests {
         // tet cells ---------------------------------------------------------------------------
         let mesh = Samples::tet_cells();
         let mut draw = Draw::new();
-        draw.draw_cells(&mesh, true).unwrap();
-        draw.draw_point_dots(&mesh);
+        draw.cells(&mesh, true).unwrap();
+        draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -721,8 +721,8 @@ mod tests {
         // hex cells ---------------------------------------------------------------------------
         let mesh = Samples::hex_cells();
         let mut draw = Draw::new();
-        draw.draw_cells(&mesh, true).unwrap();
-        draw.draw_point_dots(&mesh);
+        draw.cells(&mesh, true).unwrap();
+        draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
             let (mut labels, mut caption) = labels_and_caption();
@@ -742,8 +742,8 @@ mod tests {
         // ring --------------------------------------------------------------------------------
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let mut draw = Draw::new();
-        draw.draw_cells(&mesh, true).unwrap();
-        draw.draw_point_dots(&mesh);
+        draw.cells(&mesh, true).unwrap();
+        draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
             let mut circle_in = Canvas::new();
@@ -784,7 +784,7 @@ mod tests {
             draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .range_2d(-0.5, 6.0, -0.5, 6.0)
+                .set_range_2d(-0.5, 6.0, -0.5, 6.0)
                 .zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3)
                 .zoom_extra(|inset| {
                     let mut text = Text::new();
@@ -843,8 +843,8 @@ mod tests {
             draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .size(600.0, 600.0);
-            draw.canvas_point_ids()
+                .set_size(600.0, 600.0);
+            draw.get_canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
                 .set_color("black")
@@ -863,8 +863,8 @@ mod tests {
             draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .size(600.0, 600.0);
-            draw.canvas_point_ids()
+                .set_size(600.0, 600.0);
+            draw.get_canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
                 .set_color("black")
@@ -883,8 +883,8 @@ mod tests {
             draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .size(600.0, 600.0);
-            draw.canvas_point_ids()
+                .set_size(600.0, 600.0);
+            draw.get_canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
                 .set_color("black")
@@ -926,22 +926,22 @@ mod tests {
 
         // Test unequal_axes
         assert!(!draw.unequal_exes);
-        draw.unequal_exes(true);
+        draw.set_unequal_exes(true);
         assert!(draw.unequal_exes);
 
         // Test range_2d
         assert!(draw.range_2d.is_none());
-        draw.range_2d(-1.0, 1.0, -2.0, 2.0);
+        draw.set_range_2d(-1.0, 1.0, -2.0, 2.0);
         assert_eq!(draw.range_2d, Some((-1.0, 1.0, -2.0, 2.0)));
 
         // Test range_3d
         assert!(draw.range_3d.is_none());
-        draw.range_3d(-1.0, 1.0, -2.0, 2.0, -3.0, 3.0);
+        draw.set_range_3d(-1.0, 1.0, -2.0, 2.0, -3.0, 3.0);
         assert_eq!(draw.range_3d, Some((-1.0, 1.0, -2.0, 2.0, -3.0, 3.0)));
 
         // Test size
         assert!(draw.size.is_none());
-        draw.size(800.0, 600.0);
+        draw.set_size(800.0, 600.0);
         assert_eq!(draw.size, Some((800.0, 600.0)));
 
         // Test extra
@@ -972,8 +972,8 @@ mod tests {
         draw.show_cell_ids(true)
             .show_point_ids(true)
             .show_point_dots(true)
-            .size(800.0, 600.0)
-            .range_2d(-1.0, 1.0, -1.0, 1.0);
+            .set_size(800.0, 600.0)
+            .set_range_2d(-1.0, 1.0, -1.0, 1.0);
         assert!(draw.show_cell_ids);
         assert!(draw.show_point_ids);
         assert!(draw.show_point_dots);
