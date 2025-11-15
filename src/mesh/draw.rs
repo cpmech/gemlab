@@ -270,6 +270,31 @@ impl<'a> Draw<'a> {
         &mut self.canvas_lin_cells
     }
 
+    /// Get a mutable reference to the canvas edge markers
+    pub fn get_canvas_edge_markers(&mut self) -> &mut Text {
+        &mut self.canvas_edge_markers
+    }
+
+    /// Get a mutable reference to the canvas face markers
+    pub fn get_canvas_face_markers(&mut self) -> &mut Text {
+        &mut self.canvas_face_markers
+    }
+
+    /// Get a mutable reference to the canvas face markers lines
+    pub fn get_canvas_face_markers_lines(&mut self) -> &mut Canvas {
+        &mut self.canvas_face_markers_lines
+    }
+
+    /// Get a mutable reference to the canvas normals 2D
+    pub fn get_canvas_normals_2d(&mut self) -> &mut Canvas {
+        &mut self.canvas_normals_2d
+    }
+
+    /// Get a mutable reference to the canvas normals 3D
+    pub fn get_canvas_normals_3d(&mut self) -> &mut Canvas {
+        &mut self.canvas_normals_3d
+    }
+
     /// Shows cell ids
     pub fn show_cell_ids(&mut self, value: bool) -> &mut Self {
         self.show_cell_ids = value;
@@ -303,6 +328,18 @@ impl<'a> Draw<'a> {
     /// Shows edge markers
     pub fn show_edge_markers(&mut self, value: bool) -> &mut Self {
         self.show_edge_markers = value;
+        self
+    }
+
+    /// Shows face markers
+    pub fn show_face_markers(&mut self, value: bool) -> &mut Self {
+        self.show_face_markers = value;
+        self
+    }
+
+    /// Shows normal vectors on boundaries
+    pub fn show_normal_vectors(&mut self, value: bool) -> &mut Self {
+        self.show_normal_vectors = value;
         self
     }
 
