@@ -365,7 +365,7 @@ impl Block {
                             .set_face_color("None")
                             .set_edge_color("#bfbfbf")
                             .set_line_width(7.0)
-                            .draw_circle(xc, yc, r);
+                            .draw_circle(*xc, *yc, *r);
                         plot.add(&circle);
                     }
                 }
