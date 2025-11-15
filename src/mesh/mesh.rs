@@ -259,7 +259,7 @@ impl Mesh {
         Ok(())
     }
 
-    /// Searches marked points
+    /// Searches points with a given marker
     ///
     /// # Input
     ///
