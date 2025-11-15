@@ -82,7 +82,7 @@ gemlab = "*"
 
 ### MSH file format
 
-The MSH file format contains three mandatory sections and two optional sections. The mandatory sections are `header`, `points`, and `cells`. We use "cells" here to refer to 2D polygons or 3D polyhedra (aka Elements in the Finite Element Method). The `header` section specifies the space dimension (2 or 3), the number of points, the number of cells, and the optional number of marked edges and faces. The optional sections specify the marked edges and faces. An example of MSH file is shown below:
+The MSH file format contains three mandatory sections and two optional sections. The MSH file is a plain text file where comments are marked with `#` and empty lines are allowed. The mandatory sections are `header`, `points`, and `cells`. We use "cells" here to refer to 2D polygons or 3D polyhedra (aka Elements in the Finite Element Method). The `header` section specifies the space dimension (2 or 3), the number of points, the number of cells, and the optional number of marked edges and faces. The optional sections specify the marked edges and faces. An example of MSH file is shown below:
 
 ```text
 #
