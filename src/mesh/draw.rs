@@ -295,6 +295,38 @@ impl<'a> Draw<'a> {
         &mut self.canvas_normals_3d
     }
 
+    /// Sets the multiplier used to set the drawing area range
+    ///
+    /// Default: `0.2`
+    pub fn set_m_range(&mut self, value: f64) -> &mut Self {
+        self.m_range = value;
+        self
+    }
+
+    /// Sets the tolerance to decide if an edge is horizontal or vertical
+    ///
+    /// Default: `1e-3`
+    pub fn set_tol_edge_marker(&mut self, value: f64) -> &mut Self {
+        self.tol_edge_marker = value;
+        self
+    }
+
+    /// Sets the multiplier to scale the length of the normal vectors
+    ///
+    /// Default: `0.05`
+    pub fn set_m_normal_vector(&mut self, value: f64) -> &mut Self {
+        self.m_normal_vector = value;
+        self
+    }
+
+    /// Sets the multiplier to scale the length of the normal vectors for markers
+    ///
+    /// Default: `0.1`
+    pub fn set_m_normal_vector_marker(&mut self, value: f64) -> &mut Self {
+        self.m_normal_vector_marker = value;
+        self
+    }
+
     /// Shows cell ids
     ///
     /// Default: `false`
