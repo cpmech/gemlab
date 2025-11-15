@@ -47,6 +47,9 @@ pub struct Draw<'a> {
     /// Canvas to draw face markers
     canvas_face_markers: Text,
 
+    /// Canvas to draw face markers lines
+    canvas_face_markers_lines: Canvas,
+
     /// Canvas to draw normal vectors (2D)
     canvas_normals_2d: Canvas,
 
@@ -129,6 +132,7 @@ impl<'a> Draw<'a> {
         let mut canvas_lin_cells = Canvas::new();
         let mut canvas_edge_markers = Text::new();
         let mut canvas_face_markers = Text::new();
+        let mut canvas_face_markers_lines = Canvas::new();
         let mut canvas_normals_2d = Canvas::new();
         let mut canvas_normals_3d = Canvas::new();
         canvas_edges
@@ -186,6 +190,10 @@ impl<'a> Draw<'a> {
             .set_bbox_facecolor("#aaffb5ff")
             .set_bbox_edgecolor("black")
             .set_bbox_style("square,pad=0.15");
+        canvas_face_markers_lines
+            .set_face_color("None")
+            .set_edge_color("#000000ff")
+            .set_line_width(1.0);
         canvas_normals_2d
             .set_face_color("None")
             .set_edge_color("#f400f4ff")
@@ -210,6 +218,7 @@ impl<'a> Draw<'a> {
             canvas_lin_cells,
             canvas_edge_markers,
             canvas_face_markers,
+            canvas_face_markers_lines,
             canvas_normals_2d,
             canvas_normals_3d,
             show_cell_ids: false,
@@ -628,9 +637,15 @@ impl<'a> Draw<'a> {
                     x[2] + 0.5 * s * un[2],
                     &format!("{}", marker),
                 );
+                self.canvas_face_markers_lines.polyline_3d_begin();
+                self.canvas_face_markers_lines.polyline_3d_add(x[0], x[1], x[2]);
+                self.canvas_face_markers_lines
+                    .polyline_3d_add(x[0] + s * un[0], x[1] + s * un[1], x[2] + s * un[2]);
+                self.canvas_face_markers_lines.polyline_3d_end();
             }
         }
         self.plot.add(&self.canvas_face_markers);
+        self.plot.add(&self.canvas_face_markers_lines);
         Ok(())
     }
 
@@ -1248,7 +1263,7 @@ mod tests {
 
     #[test]
     fn draw_edge_markers_works() {
-        if true {
+        if SAVE_FIGURE {
             let mesh = Samples::two_qua4();
             let features = Features::new(&mesh, false);
             let mut draw = Draw::new();
@@ -1288,7 +1303,7 @@ mod tests {
 
     #[test]
     fn draw_normals_works() {
-        if true {
+        if SAVE_FIGURE {
             let mesh = Samples::two_qua4();
             let features = Features::new(&mesh, false);
             let mut draw = Draw::new();
@@ -1329,7 +1344,7 @@ mod tests {
 
     #[test]
     fn draw_face_markers_works() {
-        if true {
+        if SAVE_FIGURE {
             let mesh = Samples::two_hex8();
             let features = Features::new(&mesh, true);
             let mut draw = Draw::new();
@@ -1339,8 +1354,8 @@ mod tests {
             draw.plot
                 .set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
-                // .show("/tmp/gemlab/test_draw_face_markers_works.svg")
-                .save("/tmp/gemlab/test_draw_face_markers_works.svg")
+                .show("/tmp/gemlab/test_draw_face_markers_works.svg")
+                // .save("/tmp/gemlab/test_draw_face_markers_works.svg")
                 .unwrap();
         }
     }
