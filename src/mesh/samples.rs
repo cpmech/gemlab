@@ -900,11 +900,11 @@ impl Samples {
     ///      ↑   -100        -200
     /// 1.0  3-----------2-----------5
     ///      |(-4)       |(-3)       |(-6)
-    ///      |    [0]    |    [1]    |
+    ///  -300|    [0]    |    [1]    |-300
     ///      |    (1)    |    (2)    |
     ///      |(-1)       |(-2)       |(-5)
     /// 0.0  0-----------1-----------4  → x
-    ///     0.0         1.0         2.0
+    ///     0.0  -400   1.0  -400   2.0
     /// ```
     ///
     /// ![two_qua4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_two_qua4.svg)
@@ -924,7 +924,12 @@ impl Samples {
                 Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
                 Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
-            marked_edges: vec![(-100, 3, 2), (-200, 2, 5)],
+            marked_edges: vec![
+                (-100, 3, 2),
+                (-200, 2, 5),
+                (-300, 5, 4), (-300, 3, 0),
+                (-400, 0, 1), (-400, 1, 4),
+            ],
             marked_faces: Vec::new(),
         }
     }
@@ -2039,18 +2044,18 @@ impl Samples {
     /// ```
     ///
     /// ```text
-    ///  -3 =---__     point markers
-    ///   |        '*._
-    ///   | -40        *._
-    ///   |               *.  -20
-    ///  -4 ==-__           *.
-    ///          '-.          *
-    ///             *.         *
-    ///          -10  *         *
-    ///                *         *
-    ///                 *         *
-    ///                 #   -30   #
-    ///                -1 ------- -2
+    ///  -3 =---__     point markers        -3 =---__     edge markers
+    ///   |        '*._                      |        '*._
+    ///   | -40        *._                   | -400       *._
+    ///   |               *.  -20            |               *.  -200
+    ///  -4 ==-__           *.              -4 ==-__           *.
+    ///          '-.          *                     '-.          *
+    ///             *.         *                       *.         *
+    ///          -10  *         *                  -100  *         *
+    ///                *         *                        *         *
+    ///                 *         *                        *         *
+    ///                 #   -30   #                        #  -300   #
+    ///                -1 ------- -2                      -1 ------- -2
     /// ```
     ///
     /// ![ring_eight_qua8_rad1_thick1](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_ring_eight_qua8_rad1_thick1.svg)
@@ -2107,7 +2112,12 @@ impl Samples {
                 Cell { id: 6, attribute: 1, kind: GeoKind::Qua8, points: vec![ 9,10,13,12,21,35,23,34] },
                 Cell { id: 7, attribute: 1, kind: GeoKind::Qua8, points: vec![10,11,14,13,22,36,24,35] },
             ],
-            marked_edges: Vec::new(),
+            marked_edges: vec![
+                (-100, 12,  9), (-100,  9,  6), (-100, 6, 3), (-100, 3, 0),
+                (-200, 14, 11), (-200, 11,  8), (-200, 8, 5), (-200, 5, 2),
+                (-300,  0,  1), (-300,  1,  2),
+                (-400, 12, 13), (-400, 13, 14)
+            ],
             marked_faces: Vec::new(),
         }
     }

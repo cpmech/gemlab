@@ -1,14 +1,30 @@
-use super::Mesh;
-use crate::shapes::GeoKind;
+use super::{Features, Mesh};
+use crate::shapes::{GeoKind, Scratchpad};
 use crate::StrError;
 use plotpy::{Canvas, Curve, InsetAxes, Plot, Text};
-use russell_lab::Vector;
+use russell_lab::math::PI;
+use russell_lab::{sort2, sort4, Vector};
 use std::ffi::OsStr;
 
 /// Implements functions to draw cells, edges, and faces or the whole mesh
 pub struct Draw<'a> {
     /// The plotpy structure to draw figures (plots)
     plot: Plot,
+
+    /// Multiplier used to set the drawing area range
+    ///
+    /// Default: 0.3
+    m_range: f64,
+
+    /// Gap factor for edge markers
+    ///
+    /// Default: 0.1
+    gap_edge_marker: f64,
+
+    /// Tolerance to decide if an edge is horizontal or vertical
+    ///
+    /// Default: 1e-3
+    tol_edge_marker: f64,
 
     /// Canvas to draw edges
     canvas_edges: Canvas,
@@ -30,6 +46,9 @@ pub struct Draw<'a> {
 
     /// Canvas to draw edge markers
     canvas_edge_markers: Text,
+
+    /// Canvas to draw normal vectors
+    canvas_normal_vectors: Canvas,
 
     /// Shows cell ids
     show_cell_ids: bool,
@@ -100,6 +119,7 @@ impl<'a> Draw<'a> {
         let mut canvas_cells = Canvas::new();
         let mut canvas_lin_cells = Canvas::new();
         let mut canvas_edge_markers = Text::new();
+        let mut canvas_normal_vectors = Canvas::new();
         canvas_edges
             .set_face_color("None")
             .set_line_width(1.0)
@@ -138,16 +158,25 @@ impl<'a> Draw<'a> {
             .set_edge_color("#cd0000")
             .set_line_width(2.0);
         canvas_edge_markers
-            .set_color("#ff00ff")
-            .set_fontsize(7.0)
+            .set_color("#000000ff")
+            .set_fontsize(9.0)
             .set_align_horizontal("center")
             .set_align_vertical("center")
             .set_bbox(true)
-            .set_bbox_facecolor("white")
-            .set_bbox_edgecolor("None")
-            .set_bbox_style("round,pad=0.15");
+            .set_bbox_facecolor("#fff0a3ff")
+            .set_bbox_edgecolor("black")
+            .set_bbox_style("square,pad=0.15");
+        canvas_normal_vectors
+            .set_face_color("None")
+            .set_edge_color("#f400f4ff")
+            .set_line_width(1.5)
+            .set_arrow_scale(5.0)
+            .set_arrow_style("->");
         Draw {
             plot: Plot::new(),
+            m_range: 0.3,
+            gap_edge_marker: 0.1,
+            tol_edge_marker: 1e-3,
             canvas_edges,
             canvas_points,
             canvas_point_ids,
@@ -155,6 +184,7 @@ impl<'a> Draw<'a> {
             canvas_cells,
             canvas_lin_cells,
             canvas_edge_markers,
+            canvas_normal_vectors,
             show_cell_ids: false,
             show_cell_att: true,
             show_point_ids: false,
@@ -436,8 +466,8 @@ impl<'a> Draw<'a> {
             let dx = xmax[0] - xmin[0];
             let dy = xmax[1] - xmin[1];
             if dx > 0.0 && dy > 0.0 {
-                let gx = 0.05 * dx;
-                let gy = 0.05 * dy;
+                let gx = self.m_range * dx;
+                let gy = self.m_range * dy;
                 self.plot
                     .set_range(xmin[0] - gx, xmax[0] + gx, xmin[1] - gy, xmax[1] + gy);
             }
@@ -495,20 +525,74 @@ impl<'a> Draw<'a> {
     }
 
     /// Draws edge markers
-    pub fn edge_markers(&mut self, mesh: &Mesh) {
-        let mut x = Vector::new(mesh.ndim);
+    pub fn edge_markers(&mut self, features: &Features) -> Result<(), StrError> {
+        let mesh = &features.mesh;
+        let ndim = mesh.ndim;
+        let ksi = &[0.0, 0.0];
+        let mut un = Vector::new(ndim);
+        let mut x = Vector::new(ndim);
+        let sc = self.gap_edge_marker;
         for (marker, p1, p2) in &mesh.marked_edges {
-            x.fill(0.0);
-            for i in 0..mesh.ndim {
-                x[i] += mesh.points[*p1].coords[i] + mesh.points[*p2].coords[i];
+            if ndim == 2 {
+                let mut key = (*p1, *p2);
+                sort2(&mut key);
+                if let Some(edge) = features.edges.get(&key) {
+                    let mut pad = Scratchpad::new(ndim, edge.kind)?;
+                    mesh.set_pad(&mut pad, &edge.points);
+                    pad.calc_normal_vector(&mut un, ksi)?;
+                    pad.calc_coords(&mut x, ksi)?;
+                    let alpha = if f64::abs(un[1]) < self.tol_edge_marker {
+                        0.0
+                    } else if f64::abs(un[0]) < self.tol_edge_marker {
+                        90.0
+                    } else {
+                        f64::atan(un[1] / un[0]) * 180.0 / PI
+                    };
+                    self.canvas_edge_markers.set_rotation(alpha).draw(
+                        x[0] + sc * un[0],
+                        x[1] + sc * un[1],
+                        &format!("{}", marker),
+                    );
+                }
+            } else {
+                for i in 0..ndim {
+                    x[i] = 0.5 * (mesh.points[*p1].coords[i] + mesh.points[*p2].coords[i]);
+                }
+                self.canvas_edge_markers
+                    .draw_3d(x[0], x[1], x[2], &format!("{}", marker));
             }
-            for i in 0..mesh.ndim {
-                x[i] /= 2.0;
-            }
-            self.canvas_edge_markers
-                .draw(x[0], x[1], format!("{}", marker).as_str());
         }
         self.plot.add(&self.canvas_edge_markers);
+        Ok(())
+    }
+
+    /// Draws normal vectors on boundary edges (2D meshes only)
+    pub fn normal_vectors(&mut self, features: &Features, rel_scale: f64) -> Result<(), StrError> {
+        let ndim = features.mesh.ndim;
+        let mut sc = 0.0;
+        for i in 0..ndim {
+            sc += f64::abs(features.max[i] - features.min[i]) * f64::abs(features.max[i] - features.min[i]);
+        }
+        sc = f64::sqrt(sc) * rel_scale;
+        let ksi = &[0.0, 0.0, 0.0];
+        let mut un = Vector::new(ndim);
+        let mut x = Vector::new(ndim);
+        if ndim == 2 {
+            for (edge_key, cell_side_array) in &features.all_2d_edges {
+                if cell_side_array.len() == 1 {
+                    // only boundary edges
+                    let edge = features.get_edge_by_key(edge_key);
+                    let mut pad = Scratchpad::new(ndim, edge.kind)?;
+                    features.mesh.set_pad(&mut pad, &edge.points);
+                    pad.calc_normal_vector(&mut un, ksi)?;
+                    pad.calc_coords(&mut x, ksi)?;
+                    self.canvas_normal_vectors
+                        .draw_arrow(x[0], x[1], x[0] + sc * un[0], x[1] + sc * un[1]);
+                }
+            }
+        }
+        self.plot.add(&self.canvas_normal_vectors);
+        Ok(())
     }
 
     /// Draws the mesh
@@ -580,7 +664,8 @@ impl<'a> Draw<'a> {
             self.point_ids(mesh);
         }
         if self.show_edge_markers {
-            self.edge_markers(mesh);
+            let features = Features::new(mesh, false);
+            self.edge_markers(&features);
         }
         if mesh.ndim == 2 {
             self.plot.grid_and_labels("x", "y");
@@ -634,7 +719,7 @@ impl<'a> Draw<'a> {
 #[cfg(test)]
 mod tests {
     use super::Draw;
-    use crate::mesh::{Mesh, Samples};
+    use crate::mesh::{Features, Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
     const SAVE_FIGURE: bool = false;
@@ -1061,14 +1146,44 @@ mod tests {
     }
 
     #[test]
-    fn draw_edge_markers_works() {
+    fn draw_edge_markers_and_normals_work() {
         if true {
             let mesh = Samples::two_qua4();
+            let features = Features::new(&mesh, false);
             let mut draw = Draw::new();
-            draw.show_edge_markers(true)
-                .show_point_ids(true)
-                .show_point_dots(true)
-                .all(&mesh, "/tmp/gemlab/test_draw_edge_markers_works.svg")
+            draw.cells(&mesh, true).unwrap();
+            draw.point_dots(&mesh);
+            draw.normal_vectors(&features, 0.1).unwrap();
+            draw.edge_markers(&features).unwrap();
+            draw.plot
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/test_draw_edge_markers_and_normals_1.svg")
+                .unwrap();
+
+            let mesh = Samples::ring_eight_qua8_rad1_thick1();
+            let features = Features::new(&mesh, false);
+            let mut draw = Draw::new();
+            draw.cells(&mesh, true).unwrap();
+            draw.point_dots(&mesh);
+            draw.normal_vectors(&features, 0.1).unwrap();
+            draw.edge_markers(&features).unwrap();
+            draw.plot
+                .set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .save("/tmp/gemlab/test_draw_edge_markers_and_normals_2.svg")
+                .unwrap();
+
+            let mesh = Samples::two_hex8();
+            let features = Features::new(&mesh, false);
+            let mut draw = Draw::new();
+            draw.cells(&mesh, true).unwrap();
+            draw.point_ids(&mesh);
+            draw.normal_vectors(&features, 0.1).unwrap();
+            draw.edge_markers(&features).unwrap();
+            draw.plot
+                .set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .save("/tmp/gemlab/test_draw_edge_markers_and_normals_3.svg")
                 .unwrap();
         }
     }

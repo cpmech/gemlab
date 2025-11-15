@@ -813,7 +813,7 @@ mod tests {
     fn derive_works() {
         let mesh = Samples::two_qua4();
         let mesh_clone = mesh.clone();
-        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: -1, coords: [0.0, 0.0] }, Point { id: 1, marker: -2, coords: [1.0, 0.0] }, Point { id: 2, marker: -3, coords: [1.0, 1.0] }, Point { id: 3, marker: -4, coords: [0.0, 1.0] }, Point { id: 4, marker: -5, coords: [2.0, 0.0] }, Point { id: 5, marker: -6, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }], marked_edges: [(-100, 3, 2), (-200, 2, 5)], marked_faces: [] }";
+        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: -1, coords: [0.0, 0.0] }, Point { id: 1, marker: -2, coords: [1.0, 0.0] }, Point { id: 2, marker: -3, coords: [1.0, 1.0] }, Point { id: 3, marker: -4, coords: [0.0, 1.0] }, Point { id: 4, marker: -5, coords: [2.0, 0.0] }, Point { id: 5, marker: -6, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }], marked_edges: [(-100, 3, 2), (-200, 2, 5), (-300, 5, 4), (-300, 3, 0), (-400, 0, 1), (-400, 1, 4)], marked_faces: [] }";
         assert_eq!(format!("{:?}", mesh), correct);
         assert_eq!(mesh_clone.ndim, mesh.ndim);
         assert_eq!(mesh_clone.points.len(), mesh.points.len());
@@ -833,7 +833,7 @@ mod tests {
             text,
             "# header\n\
              # ndim npoint ncell nmarked_edge nmarked_face\n\
-             2 6 2 2 0\n\
+             2 6 2 6 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -852,7 +852,11 @@ mod tests {
              # marked edges\n\
              # marker p1 p2\n\
              -100 3 2\n\
-             -200 2 5\n"
+             -200 2 5\n\
+             -300 5 4\n\
+             -300 3 0\n\
+             -400 0 1\n\
+             -400 1 4\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);

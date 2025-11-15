@@ -132,7 +132,7 @@ use std::collections::{HashMap, HashSet};
 /// ```
 pub struct Features<'a> {
     /// Holds an access to the mesh
-    mesh: &'a Mesh,
+    pub mesh: &'a Mesh,
 
     /// Maps all edge keys to cells sharing the edge (2D only)
     ///
@@ -325,6 +325,11 @@ impl<'a> Features<'a> {
     /// Returns an edge or panics
     pub fn get_edge(&self, a: usize, b: usize) -> &Edge {
         self.edges.get(&(a, b)).expect("cannot find edge with given key")
+    }
+
+    /// Returns an edge or panics
+    pub fn get_edge_by_key(&self, key: &EdgeKey) -> &Edge {
+        self.edges.get(key).expect("cannot find edge with given key")
     }
 
     /// Returns a face or panics

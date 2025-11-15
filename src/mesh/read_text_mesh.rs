@@ -1075,7 +1075,7 @@ mod tests {
         let mesh = Mesh::from_text(
             r"# header
             # ndim npoint ncell nmarked_edge nmarked_face
-                 2      6     2            2            0
+                 2      6     2            6            0
             
             # points
             # id marker x y
@@ -1094,7 +1094,11 @@ mod tests {
             # marked edges
             # marker p1 p2
             -100 3 2
-            -200 2 5",
+            -200 2 5
+            -300 5 4
+            -300 3 0
+            -400 0 1
+            -400 1 4",
         )
         .unwrap();
         let sample = Samples::two_qua4();
