@@ -20,8 +20,8 @@ pub struct Draw<'a> {
     /// Multiplier to scale the length of the normal vectors
     m_normal_vector: f64,
 
-    /// Multiplier to scale the length of the normal vectors for edge markers
-    m_normal_vector_edge_marker: f64,
+    /// Multiplier to scale the length of the normal vectors for markers
+    m_normal_vector_marker: f64,
 
     /// Canvas to draw edges
     canvas_edges: Canvas,
@@ -43,6 +43,9 @@ pub struct Draw<'a> {
 
     /// Canvas to draw edge markers
     canvas_edge_markers: Text,
+
+    /// Canvas to draw face markers
+    canvas_face_markers: Text,
 
     /// Canvas to draw normal vectors (2D)
     canvas_normals_2d: Canvas,
@@ -67,6 +70,9 @@ pub struct Draw<'a> {
 
     /// Shows edge markers
     show_edge_markers: bool,
+
+    /// Shows face markers
+    show_face_markers: bool,
 
     /// Shows normal vectors on boundaries
     show_normal_vectors: bool,
@@ -122,6 +128,7 @@ impl<'a> Draw<'a> {
         let mut canvas_cells = Canvas::new();
         let mut canvas_lin_cells = Canvas::new();
         let mut canvas_edge_markers = Text::new();
+        let mut canvas_face_markers = Text::new();
         let mut canvas_normals_2d = Canvas::new();
         let mut canvas_normals_3d = Canvas::new();
         canvas_edges
@@ -170,6 +177,15 @@ impl<'a> Draw<'a> {
             .set_bbox_facecolor("#fff0a3ff")
             .set_bbox_edgecolor("black")
             .set_bbox_style("square,pad=0.15");
+        canvas_face_markers
+            .set_color("#000000ff")
+            .set_fontsize(9.0)
+            .set_align_horizontal("center")
+            .set_align_vertical("center")
+            .set_bbox(true)
+            .set_bbox_facecolor("#aaffb5ff")
+            .set_bbox_edgecolor("black")
+            .set_bbox_style("square,pad=0.15");
         canvas_normals_2d
             .set_face_color("None")
             .set_edge_color("#f400f4ff")
@@ -185,7 +201,7 @@ impl<'a> Draw<'a> {
             m_range: 0.2,
             tol_edge_marker: 1e-3,
             m_normal_vector: 0.05,
-            m_normal_vector_edge_marker: 0.1,
+            m_normal_vector_marker: 0.1,
             canvas_edges,
             canvas_points,
             canvas_point_ids,
@@ -193,6 +209,7 @@ impl<'a> Draw<'a> {
             canvas_cells,
             canvas_lin_cells,
             canvas_edge_markers,
+            canvas_face_markers,
             canvas_normals_2d,
             canvas_normals_3d,
             show_cell_ids: false,
@@ -201,6 +218,7 @@ impl<'a> Draw<'a> {
             show_point_marker: false,
             show_point_dots: false,
             show_edge_markers: false,
+            show_face_markers: false,
             show_normal_vectors: false,
             unequal_exes: false,
             range_2d: None,
@@ -546,7 +564,7 @@ impl<'a> Draw<'a> {
         for i in 0..ndim {
             sum += f64::abs(features.max[i] - features.min[i]) * f64::abs(features.max[i] - features.min[i]);
         }
-        let s = f64::sqrt(sum) * self.m_normal_vector_edge_marker;
+        let s = f64::sqrt(sum) * self.m_normal_vector_marker;
         for (marker, p1, p2) in &mesh.marked_edges {
             if ndim == 2 {
                 let mut key = (*p1, *p2);
@@ -578,6 +596,41 @@ impl<'a> Draw<'a> {
             }
         }
         self.plot.add(&self.canvas_edge_markers);
+        Ok(())
+    }
+
+    /// Draws face markers
+    pub fn face_markers(&mut self, features: &Features) -> Result<(), StrError> {
+        let mesh = &features.mesh;
+        let ndim = mesh.ndim;
+        if ndim == 2 {
+            return Ok(());
+        }
+        let ksi = &[0.0, 0.0, 0.0];
+        let mut un = Vector::new(ndim);
+        let mut x = Vector::new(ndim);
+        let mut sum = 0.0;
+        for i in 0..ndim {
+            sum += f64::abs(features.max[i] - features.min[i]) * f64::abs(features.max[i] - features.min[i]);
+        }
+        let s = f64::sqrt(sum) * self.m_normal_vector_marker;
+        for (marker, p1, p2, p3, p4) in &mesh.marked_faces {
+            let mut key = (*p1, *p2, *p3, *p4);
+            sort4(&mut key);
+            if let Some(face) = features.faces.get(&key) {
+                let mut pad = Scratchpad::new(ndim, face.kind)?;
+                mesh.set_pad(&mut pad, &face.points);
+                pad.calc_normal_vector(&mut un, ksi)?;
+                pad.calc_coords(&mut x, ksi)?;
+                self.canvas_face_markers.draw_3d(
+                    x[0] + 0.5 * s * un[0],
+                    x[1] + 0.5 * s * un[1],
+                    x[2] + 0.5 * s * un[2],
+                    &format!("{}", marker),
+                );
+            }
+        }
+        self.plot.add(&self.canvas_face_markers);
         Ok(())
     }
 
@@ -703,10 +756,13 @@ impl<'a> Draw<'a> {
         if self.show_point_ids {
             self.point_ids(mesh);
         }
-        if self.show_edge_markers || self.show_normal_vectors {
+        if self.show_edge_markers || self.show_face_markers || self.show_normal_vectors {
             let features = Features::new(mesh, false);
             if self.show_edge_markers {
                 self.edge_markers(&features)?;
+            }
+            if self.show_face_markers {
+                self.face_markers(&features)?;
             }
             if self.show_normal_vectors {
                 self.normal_vectors(&features)?;
@@ -1267,6 +1323,24 @@ mod tests {
                 .set_figure_size_points(600.0, 600.0)
                 // .show("/tmp/gemlab/test_draw_normals_works_3.svg")
                 .save("/tmp/gemlab/test_draw_normals_works_3.svg")
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_face_markers_works() {
+        if true {
+            let mesh = Samples::two_hex8();
+            let features = Features::new(&mesh, true);
+            let mut draw = Draw::new();
+            draw.cells(&mesh, true).unwrap();
+            draw.point_dots(&mesh);
+            draw.face_markers(&features).unwrap();
+            draw.plot
+                .set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                // .show("/tmp/gemlab/test_draw_face_markers_works.svg")
+                .save("/tmp/gemlab/test_draw_face_markers_works.svg")
                 .unwrap();
         }
     }

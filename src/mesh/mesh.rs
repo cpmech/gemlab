@@ -870,7 +870,7 @@ mod tests {
             text,
             "# header\n\
              # ndim npoint ncell nmarked_edge nmarked_face\n\
-             3 12 2 4 2\n\
+             3 12 2 4 4\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -902,7 +902,9 @@ mod tests {
              # marked faces\n\
              # marker p1 p2 p3 {p4}\n\
              -8 3 2 7 6\n\
-             -9 8 10 9 11\n"
+             -9 8 10 9 11\n\
+             -10 1 2 5 6\n\
+             -11 0 1 4 5\n"
         );
         let mesh_in = Mesh::from_text(&text).unwrap();
         assert_eq!(format!("{}", mesh_in), text);

@@ -1107,7 +1107,7 @@ mod tests {
         let mesh = Mesh::from_text(
             r"# header
             # ndim npoint ncell nmarked_edge nmarked_face
-                 3     12     2            4            2
+                 3     12     2            4            4
             
             # points
             # id marker x y z
@@ -1139,7 +1139,9 @@ mod tests {
             # marked faces
             # marker p1 p2 p3 {p4}
             -8 3 2 7 6
-            -9 8 10 9 11",
+            -9 8 10 9 11
+            -10 1 2 5 6
+            -11 0 1 4 5",
         )
         .unwrap();
         let sample = Samples::two_hex8();
