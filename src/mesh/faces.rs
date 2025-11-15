@@ -2,6 +2,7 @@ use super::{CellId, PointId};
 use crate::shapes::GeoKind;
 use russell_lab::sort4;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 /// Defines a unique key for faces by using a quadruple of sorted point indices
 ///
@@ -57,3 +58,27 @@ pub type MapFaceToCells = HashMap<FaceKey, Vec<(CellId, usize)>>;
 ///
 /// Relates a point id to a unique set of FaceKey
 pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
+
+impl fmt::Display for Face {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.points.len() == 3 {
+            let (a, b, c, _) = self.key();
+            write!(f, "({}, {}, {}, MAX)", a, b, c).unwrap();
+        } else {
+            write!(f, "{:?}", self.key()).unwrap();
+        }
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for Faces<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in 0..self.all.len() {
+            if i > 0 {
+                write!(f, ", ").unwrap();
+            }
+            write!(f, "{}", self.all[i]).unwrap();
+        }
+        Ok(())
+    }
+}

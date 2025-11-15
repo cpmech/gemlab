@@ -5,7 +5,6 @@ use super::{Face, FaceKey, Faces, MapFaceToCells, MapPointToFaces};
 use crate::util::GridSearch;
 use crate::StrError;
 use std::collections::{HashMap, HashSet};
-use std::fmt;
 
 /// Holds derived mesh features such as points, edges, and faces on the mesh boundary or the interior
 ///
@@ -863,49 +862,6 @@ impl<'a> Features<'a> {
             Ok(all) => Ok(Faces { all }),
             Err(e) => Err(e),
         }
-    }
-}
-
-impl fmt::Display for Edge {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.key()).unwrap();
-        Ok(())
-    }
-}
-
-impl<'a> fmt::Display for Edges<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for i in 0..self.all.len() {
-            if i > 0 {
-                write!(f, ", ").unwrap();
-            }
-            write!(f, "{}", self.all[i]).unwrap();
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Display for Face {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.points.len() == 3 {
-            let (a, b, c, _) = self.key();
-            write!(f, "({}, {}, {}, MAX)", a, b, c).unwrap();
-        } else {
-            write!(f, "{:?}", self.key()).unwrap();
-        }
-        Ok(())
-    }
-}
-
-impl<'a> fmt::Display for Faces<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for i in 0..self.all.len() {
-            if i > 0 {
-                write!(f, ", ").unwrap();
-            }
-            write!(f, "{}", self.all[i]).unwrap();
-        }
-        Ok(())
     }
 }
 

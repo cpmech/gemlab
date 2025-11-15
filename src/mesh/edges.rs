@@ -2,6 +2,7 @@ use super::{CellId, PointId};
 use crate::shapes::GeoKind;
 use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 /// Defines a unique key for edges by using a pair of sorted point indices
 ///
@@ -241,6 +242,25 @@ impl<'a> Edges<'a> {
         }
 
         (path, points)
+    }
+}
+
+impl fmt::Display for Edge {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.key()).unwrap();
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for Edges<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in 0..self.all.len() {
+            if i > 0 {
+                write!(f, ", ").unwrap();
+            }
+            write!(f, "{}", self.all[i]).unwrap();
+        }
+        Ok(())
     }
 }
 
