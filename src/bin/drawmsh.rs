@@ -15,22 +15,22 @@ struct Options {
     input: PathBuf,
 
     /// Show points in the SVG figure
-    #[structopt(short = "p", long)]
-    show_points: bool,
+    #[structopt(short, long)]
+    dots: bool,
 
     /// Show IDs of points in the SVG figure
-    #[structopt(short = "v", long)]
-    show_point_ids: bool,
+    #[structopt(short, long)]
+    point_ids: bool,
 
     /// Show IDs of cells in the SVG figure
-    #[structopt(short = "c", long)]
-    show_cell_ids: bool,
+    #[structopt(short, long)]
+    cell_ids: bool,
 
-    #[structopt(long)]
-    fig_width: Option<f64>,
+    #[structopt(short, long)]
+    width: Option<f64>,
 
-    #[structopt(long)]
-    fig_height: Option<f64>,
+    #[structopt(short, long)]
+    height: Option<f64>,
 }
 
 fn main() -> Result<(), StrError> {
@@ -50,13 +50,10 @@ fn main() -> Result<(), StrError> {
 
     // write SVG file
     let mut fig = Figure::new();
-    fig.show_point_dots(options.show_points)
-        .show_point_ids(options.show_point_ids)
-        .show_cell_ids(options.show_cell_ids)
-        .size(
-            options.fig_width.unwrap_or(1000.0),
-            options.fig_height.unwrap_or(1000.0),
-        );
+    fig.show_point_dots(options.dots)
+        .show_point_ids(options.point_ids)
+        .show_cell_ids(options.cell_ids)
+        .size(options.width.unwrap_or(800.0), options.height.unwrap_or(800.0));
     fig.draw(&mesh, &format!("{}/{}.svg", OUT_DIR, fn_stem))?;
     println!("Generated SVG file: {}/{}.svg", OUT_DIR, fn_stem);
     Ok(())
