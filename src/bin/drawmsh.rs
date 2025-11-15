@@ -26,11 +26,45 @@ struct Options {
     #[structopt(short, long)]
     cell_ids: bool,
 
+    /// Show point markers
+    #[structopt(short = "v", long)]
+    point_markers: bool,
+
+    /// Show cell attributes
+    #[structopt(short = "a", long)]
+    cell_att: bool,
+
+    /// Show edge markers
+    #[structopt(short, long)]
+    edge_markers: bool,
+
+    /// Show face markers
+    #[structopt(short, long)]
+    face_markers: bool,
+
+    /// Show normal vectors on boundaries
+    #[structopt(short, long)]
+    normals: bool,
+
+    /// Figure width in points
     #[structopt(short, long)]
     width: Option<f64>,
 
+    /// Figure height in points
     #[structopt(short, long)]
     height: Option<f64>,
+
+    /// Multiplier for drawing area range
+    #[structopt(long)]
+    m_range: Option<f64>,
+
+    /// Multiplier for normal vector length
+    #[structopt(long)]
+    m_normal_vector: Option<f64>,
+
+    /// Multiplier for normal vector marker length
+    #[structopt(long)]
+    m_normal_vector_marker: Option<f64>,
 }
 
 fn main() -> Result<(), StrError> {
@@ -48,12 +82,36 @@ fn main() -> Result<(), StrError> {
     // load MSH file
     let mesh = Mesh::read(in_path)?;
 
-    // write SVG file
+    // configure drawing
     let mut draw = Draw::new();
+
+    // Set boolean flags
     draw.show_point_dots(options.dots)
         .show_point_ids(options.point_ids)
         .show_cell_ids(options.cell_ids)
-        .set_size(options.width.unwrap_or(800.0), options.height.unwrap_or(800.0));
+        .show_point_marker(options.point_markers)
+        .show_cell_att(options.cell_att)
+        .show_edge_markers(options.edge_markers)
+        .show_face_markers(options.face_markers)
+        .show_normal_vectors(options.normals);
+
+    // Set figure size
+    if options.width.is_some() || options.height.is_some() {
+        draw.set_size(options.width.unwrap_or(800.0), options.height.unwrap_or(800.0));
+    }
+
+    // Set multipliers
+    if let Some(m_range) = options.m_range {
+        draw.set_m_range(m_range);
+    }
+    if let Some(m_normal_vector) = options.m_normal_vector {
+        draw.set_m_normal_vector(m_normal_vector);
+    }
+    if let Some(m_normal_vector_marker) = options.m_normal_vector_marker {
+        draw.set_m_normal_vector_marker(m_normal_vector_marker);
+    }
+
+    // Write SVG file
     draw.all(&mesh, &format!("{}/{}.svg", OUT_DIR, fn_stem))?;
     println!("Generated SVG file: {}/{}.svg", OUT_DIR, fn_stem);
     Ok(())
