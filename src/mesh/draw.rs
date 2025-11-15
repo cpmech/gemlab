@@ -257,6 +257,37 @@ impl<'a> Draw<'a> {
     ///
     /// * `xmin, xmax, ymin, ymax` - the region to be zoomed
     /// * `u0, v0, w, h` - the position (normalized coordinates) and size (width,height) of the zoomed region
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::mesh::{Draw, Samples};
+    /// use gemlab::StrError;
+    /// use plotpy::Text;
+    ///
+    /// const SAVE_FIGURE: bool = true;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     if SAVE_FIGURE {
+    ///         let mesh = Samples::block_2d_four_qua12();
+    ///         let mut draw = Draw::new();
+    ///         draw.show_cell_ids(true)
+    ///             .show_point_ids(true)
+    ///             .show_point_dots(true)
+    ///             .set_range_2d(-0.5, 6.0, -0.5, 6.0)
+    ///             .zoom_2d(-0.05, 1.55, -0.05, 1.55, 0.6, 0.6, 0.3, 0.3)
+    ///             .zoom_extra(|inset| {
+    ///                 let mut text = Text::new();
+    ///                 text.draw(0.3, 1.0, "HELLO");
+    ///                 inset.add(&text);
+    ///             })
+    ///             .all(&mesh, "/tmp/gemlab/doc_draw_works_qua12.svg")?;
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
+    /// ![doc_draw_works_qua12](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/doc_draw_works_qua12.svg)
     pub fn zoom_2d(
         &mut self,
         xmin: f64,
@@ -295,6 +326,10 @@ impl<'a> Draw<'a> {
     /// The function is `|inset| {}` where:
     ///
     /// * `inset` -- Is the InsetAxes reference for further configuration
+    ///
+    /// # Examples
+    ///
+    /// See [zoom_2d](Self::zoom_2d) method for an example.
     pub fn zoom_extra(&mut self, callback: impl Fn(&mut InsetAxes) + 'a) -> &mut Self {
         self.zoom_extra = Some(Box::new(callback));
         self
