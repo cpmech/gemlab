@@ -472,20 +472,6 @@ impl<'a> Features<'a> {
         res
     }
 
-    /// Searches points with a given marker
-    ///
-    /// Returns a **sorted** array of point ids
-    pub fn search_marked_points(&self, marker: i32) -> Vec<PointId> {
-        let mut point_ids: Vec<_> = self
-            .points
-            .iter()
-            .filter(|id| self.mesh.points[**id].marker == marker)
-            .copied()
-            .collect();
-        point_ids.sort();
-        point_ids
-    }
-
     /// Searches edges with a given marker
     ///
     /// Returns edges sorted by their edge keys
@@ -1154,8 +1140,6 @@ mod tests {
     fn search_marked_points_edges_faces_work() {
         let mesh = Samples::two_hex8();
         let features = Features::new(&mesh, false);
-
-        assert_eq!(features.search_marked_points(-1), vec![1, 2, 7]);
 
         let res = features.search_marked_edges(-4);
         assert_eq!(res.all.iter().map(|e| e.key()).collect::<Vec<_>>(), vec![(3, 7)]);
