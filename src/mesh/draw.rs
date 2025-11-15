@@ -5,8 +5,8 @@ use plotpy::{Canvas, Curve, InsetAxes, Plot, Text};
 use russell_lab::Vector;
 use std::ffi::OsStr;
 
-/// Implements functions to draw cells, edges and faces
-pub struct Figure<'a> {
+/// Implements functions to draw cells, edges, and faces or the whole mesh
+pub struct Draw<'a> {
     /// The plotpy structure to draw figures (plots)
     plot: Plot,
 
@@ -84,7 +84,7 @@ pub struct Figure<'a> {
     zoom_extra: Option<Box<dyn Fn(&mut InsetAxes) + 'a>>,
 }
 
-impl<'a> Figure<'a> {
+impl<'a> Draw<'a> {
     /// Allocates a new instance
     pub fn new() -> Self {
         let mut canvas_edges = Canvas::new();
@@ -130,7 +130,7 @@ impl<'a> Figure<'a> {
             .set_face_color("None")
             .set_edge_color("#cd0000")
             .set_line_width(2.0);
-        Figure {
+        Draw {
             plot: Plot::new(),
             canvas_edges,
             canvas_points,
@@ -445,7 +445,7 @@ impl<'a> Figure<'a> {
     /// # Examples
     ///
     /// ```
-    /// use gemlab::mesh::{Figure, Samples};
+    /// use gemlab::mesh::{Draw, Samples};
     /// use gemlab::StrError;
     /// use plotpy::Canvas;
     ///
@@ -471,7 +471,7 @@ impl<'a> Figure<'a> {
     ///             .draw_circle(0.0, 0.0, 2.0);
     ///
     ///         // draw mesh
-    ///         let mut fig = Figure::new();
+    ///         let mut fig = Draw::new();
     ///         fig.extra(|plot, before| {
     ///             if !before {
     ///                 plot.add(&circle_in);
@@ -479,14 +479,14 @@ impl<'a> Figure<'a> {
     ///             }
     ///         })
     ///         .show_cell_ids(true)
-    ///         .draw(&mesh, "/tmp/gemlab/doc_example_mesh_draw.svg")?;
+    ///         .all(&mesh, "/tmp/gemlab/doc_example_mesh_draw.svg")?;
     ///     }
     ///     Ok(())
     /// }
     /// ```
     ///
     /// ![doc_example_mesh_draw](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/doc_example_mesh_draw.svg)
-    pub fn draw<P>(&mut self, mesh: &Mesh, filepath: &P) -> Result<(), StrError>
+    pub fn all<P>(&mut self, mesh: &Mesh, filepath: &P) -> Result<(), StrError>
     where
         P: AsRef<OsStr> + ?Sized,
     {
@@ -554,7 +554,7 @@ impl<'a> Figure<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::Figure;
+    use super::Draw;
     use crate::mesh::{Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
@@ -603,7 +603,7 @@ mod tests {
     fn draw_cells_and_points_work() {
         // lin cells ---------------------------------------------------------------------------
         let mesh = Samples::lin_cells();
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.draw_cells(&mesh, true).unwrap();
         fig.draw_point_dots(&mesh);
 
@@ -627,7 +627,7 @@ mod tests {
 
         // lin cells in 3d ---------------------------------------------------------------------
         let mesh = Samples::lin_cells_3d();
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.draw_cells(&mesh, true).unwrap();
         fig.draw_point_dots(&mesh);
 
@@ -649,7 +649,7 @@ mod tests {
 
         // tri cells ---------------------------------------------------------------------------
         let mesh = Samples::tri_cells();
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.draw_cells(&mesh, true).unwrap();
         fig.draw_point_dots(&mesh);
 
@@ -673,7 +673,7 @@ mod tests {
 
         // qua cells ---------------------------------------------------------------------------
         let mesh = Samples::qua_cells();
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.draw_cells(&mesh, true).unwrap();
         fig.draw_point_dots(&mesh);
 
@@ -699,7 +699,7 @@ mod tests {
 
         // tet cells ---------------------------------------------------------------------------
         let mesh = Samples::tet_cells();
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.draw_cells(&mesh, true).unwrap();
         fig.draw_point_dots(&mesh);
 
@@ -720,7 +720,7 @@ mod tests {
 
         // hex cells ---------------------------------------------------------------------------
         let mesh = Samples::hex_cells();
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.draw_cells(&mesh, true).unwrap();
         fig.draw_point_dots(&mesh);
 
@@ -741,7 +741,7 @@ mod tests {
 
         // ring --------------------------------------------------------------------------------
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.draw_cells(&mesh, true).unwrap();
         fig.draw_point_dots(&mesh);
 
@@ -780,7 +780,7 @@ mod tests {
     fn draw_works_qua12() {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua12();
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
@@ -791,7 +791,7 @@ mod tests {
                     text.draw(0.3, 1.0, "HELLO");
                     inset.add(&text);
                 })
-                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua12.svg")
+                .all(&mesh, "/tmp/gemlab/test_draw_works_qua12.svg")
                 .unwrap();
         }
     }
@@ -800,11 +800,11 @@ mod tests {
     fn draw_works_qua16() {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua16();
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua16.svg")
+                .all(&mesh, "/tmp/gemlab/test_draw_works_qua16.svg")
                 .unwrap();
         }
     }
@@ -813,11 +813,11 @@ mod tests {
     fn draw_works_qua17() {
         if SAVE_FIGURE {
             let mesh = Samples::block_2d_four_qua17();
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .draw(&mesh, "/tmp/gemlab/test_draw_works_qua17.svg")
+                .all(&mesh, "/tmp/gemlab/test_draw_works_qua17.svg")
                 .unwrap();
         }
     }
@@ -826,11 +826,11 @@ mod tests {
     fn draw_works_mixed_2d() {
         if SAVE_FIGURE {
             let mesh = Samples::mixed_shapes_2d();
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .draw(&mesh, "/tmp/gemlab/test_draw_works_mixed_2d.svg")
+                .all(&mesh, "/tmp/gemlab/test_draw_works_mixed_2d.svg")
                 .unwrap();
         }
     }
@@ -839,7 +839,7 @@ mod tests {
     fn draw_works_hex8() {
         if SAVE_FIGURE {
             let mesh = Samples::two_hex8();
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
@@ -851,7 +851,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            fig.draw(&mesh, "/tmp/gemlab/test_draw_works_hex8.svg").unwrap();
+            fig.all(&mesh, "/tmp/gemlab/test_draw_works_hex8.svg").unwrap();
         }
     }
 
@@ -859,7 +859,7 @@ mod tests {
     fn draw_works_hex20() {
         if SAVE_FIGURE {
             let mesh = Samples::block_3d_eight_hex20();
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
@@ -871,7 +871,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            fig.draw(&mesh, "/tmp/gemlab/test_draw_works_hex20.svg").unwrap();
+            fig.all(&mesh, "/tmp/gemlab/test_draw_works_hex20.svg").unwrap();
         }
     }
 
@@ -879,7 +879,7 @@ mod tests {
     fn draw_works_mixed_3d() {
         if SAVE_FIGURE {
             let mesh = Samples::mixed_shapes_3d();
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
@@ -891,13 +891,13 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            fig.draw(&mesh, "/tmp/gemlab/test_works_mixed_3d.svg").unwrap();
+            fig.all(&mesh, "/tmp/gemlab/test_works_mixed_3d.svg").unwrap();
         }
     }
 
     #[test]
     fn test_figure_setters() {
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
 
         // Test show_cell_ids
         assert!(!fig.show_cell_ids);
@@ -968,7 +968,7 @@ mod tests {
         assert!(fig.zoom_extra.is_some());
 
         // Test method chaining
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.show_cell_ids(true)
             .show_point_ids(true)
             .show_point_dots(true)

@@ -1144,7 +1144,7 @@ mod tests {
     use super::Structured;
     use crate::geometry::point_point_distance;
     use crate::graph::GraphUnd;
-    use crate::mesh::{Blocks2d, Blocks3d, Constraint2d, Constraint3d, Figure, Mesh};
+    use crate::mesh::{Blocks2d, Blocks3d, Constraint2d, Constraint3d, Draw, Mesh};
     use crate::shapes::GeoKind;
     use plotpy::{Canvas, Surface};
     use russell_lab::{approx_eq, array_approx_eq};
@@ -1167,12 +1167,12 @@ mod tests {
     }
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.show_cell_ids(true).show_point_ids(true);
         if larger {
             fig.size(600.0, 600.0);
         }
-        fig.draw(&mesh, filename).unwrap();
+        fig.all(&mesh, filename).unwrap();
     }
 
     #[test]
@@ -1217,7 +1217,7 @@ mod tests {
         let mesh = Structured::from_blocks_2d(&blocks, GeoKind::Qua8, false).unwrap();
 
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_point_ids(true)
                 .show_point_marker(true)
                 .show_cell_ids(true)
@@ -1233,7 +1233,7 @@ mod tests {
                         .set_figure_size_points(800.0, 300.0);
                 }
             });
-            fig.draw(&mesh, "/tmp/gemlab/test_from_blocks_2d.svg").unwrap();
+            fig.all(&mesh, "/tmp/gemlab/test_from_blocks_2d.svg").unwrap();
         }
 
         mesh.check_overlapping_points(0.01).unwrap();
@@ -1324,7 +1324,7 @@ mod tests {
         let mesh = Structured::from_blocks_3d(&blocks, GeoKind::Hex20, false).unwrap();
 
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_point_ids(true)
                 .show_point_marker(true)
                 .show_cell_ids(true)
@@ -1342,7 +1342,7 @@ mod tests {
                     plot.set_figure_size_points(1000.0, 1000.0);
                 }
             });
-            fig.draw(&mesh, "/tmp/gemlab/test_from_blocks_3d.svg").unwrap();
+            fig.all(&mesh, "/tmp/gemlab/test_from_blocks_3d.svg").unwrap();
         }
 
         mesh.check_overlapping_points(0.01).unwrap();

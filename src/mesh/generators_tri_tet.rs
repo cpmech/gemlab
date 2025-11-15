@@ -572,7 +572,7 @@ impl Unstructured {
 mod tests {
     use super::*;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{At, Features, Figure};
+    use crate::mesh::{At, Draw, Features};
     use crate::util::any_x;
     use plotpy::Surface;
     use russell_lab::approx_eq;
@@ -597,14 +597,14 @@ mod tests {
     }
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.show_cell_ids(true).show_point_ids(true);
         if larger {
             fig.size(800.0, 800.0);
         } else {
             fig.size(600.0, 600.0);
         }
-        fig.draw(&mesh, filename).unwrap();
+        fig.all(&mesh, filename).unwrap();
     }
 
     fn check_corner_markers(mesh: &Mesh, o2_3d: bool) {
@@ -1070,14 +1070,14 @@ mod tests {
             .draw_cylinder(&[0.0, 0.0, 0.0], &[0.0, 0.0, 1.0], RMAX, 5, 81)
             .unwrap();
 
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.size(800.0, 800.0).show_point_ids(true).show_point_dots(true);
         fig.extra(|plot, before| {
             if before {
                 plot.add(&cylin_in).add(&cylin_out);
             }
         })
-        .draw(&mesh, filename)
+        .all(&mesh, filename)
         .unwrap();
     }
 

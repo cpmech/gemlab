@@ -69,8 +69,8 @@ fn main() -> Result<(), StrError> {
 
     assert_eq!(format!("{}", mesh), correct);
 
-    let mut fig = Figure::new();
+    let mut fig = Draw::new();
     fig.show_cell_ids(true)
         .show_point_ids(true)
-        .draw(&mesh, "/tmp/gemlab/example_block_2d_qua8.svg")
+        .all(&mesh, "/tmp/gemlab/example_block_2d_qua8.svg")
 }

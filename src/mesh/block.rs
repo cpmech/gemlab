@@ -1264,7 +1264,7 @@ impl Block {
 mod tests {
     use super::{ArgsRing, Block, Constraint2d, Constraint3d};
     use crate::geometry::point_point_distance;
-    use crate::mesh::{Figure, Mesh, Samples};
+    use crate::mesh::{Draw, Mesh, Samples};
     use crate::shapes::GeoKind;
     use plotpy::{Canvas, Plot, Surface};
     use russell_lab::math::{PI, SQRT_2};
@@ -1291,7 +1291,7 @@ mod tests {
             .set_edge_color("#bfbfbfbb")
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, args.rmax);
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.extra(|plot, before| {
             if !before {
                 plot.add(&circle_in);
@@ -1299,12 +1299,12 @@ mod tests {
                 plot.add(&circle_out);
             }
         })
-        .draw(&mesh, filename)
+        .all(&mesh, filename)
         .unwrap();
     }
 
     fn draw(mesh: Mesh, block: &Block, set_range: bool, filename: &str, pre: impl Fn(&mut Plot)) {
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.show_cell_ids(true)
             .show_point_ids(true)
             .show_point_dots(true)
@@ -1319,7 +1319,7 @@ mod tests {
                 block.draw(plot, false, set_range).unwrap();
             }
         })
-        .draw(&mesh, filename)
+        .all(&mesh, filename)
         .unwrap();
     }
 
@@ -1823,10 +1823,10 @@ mod tests {
         assert_eq!(&mesh.cells[2].points, &[3, 2, 6, 7]);
         assert_eq!(&mesh.cells[3].points, &[2, 5, 8, 6]);
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_point_ids(true)
                 .size(600.0, 600.0)
-                .draw(&mesh, "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg")
+                .all(&mesh, "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg")
                 .unwrap();
         }
     }
@@ -2126,9 +2126,9 @@ mod tests {
         assert_eq!(&mesh.cells[1].points, &[1, 8, 9, 2, 5, 10, 11, 6]);
         assert_eq!(&mesh.cells[7].points, &[6, 11, 17, 14, 20, 23, 26, 24]);
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_point_ids(true).size(600.0, 600.0);
-            fig.draw(&mesh, "/tmp/gemlab/test_subdivide_3d_o2_works.svg").unwrap();
+            fig.all(&mesh, "/tmp/gemlab/test_subdivide_3d_o2_works.svg").unwrap();
         }
     }
 
@@ -2338,9 +2338,9 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.size(600.0, 600.0);
-            fig.draw(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d.svg")
+            fig.all(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d.svg")
                 .unwrap();
         }
     }
@@ -2380,9 +2380,9 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.size(600.0, 600.0)
-                .draw(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg")
+                .all(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg")
                 .unwrap();
         }
     }

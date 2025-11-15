@@ -1,4 +1,4 @@
-use gemlab::mesh::{Blocks3d, Figure, GeoKind, Structured};
+use gemlab::mesh::{Blocks3d, Draw, GeoKind, Structured};
 use gemlab::StrError;
 use std::path::Path;
 use std::path::PathBuf;
@@ -71,10 +71,10 @@ fn main() -> Result<(), StrError> {
 
     // write SVG file with wireframe
     if options.svg_figure {
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.size(1000.0, 1000.0);
         fig.show_point_dots(options.show_points);
-        fig.draw(&mesh, &format!("{}/{}.svg", options.out_dir, fn_stem))?;
+        fig.all(&mesh, &format!("{}/{}.svg", options.out_dir, fn_stem))?;
         println!("Generated SVG file: {}/{}.svg", options.out_dir, fn_stem);
     }
     println!();

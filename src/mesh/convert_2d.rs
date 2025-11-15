@@ -205,19 +205,19 @@ impl Mesh {
 
 #[cfg(test)]
 mod tests {
-    use crate::mesh::{Cell, Figure, Mesh, Point, Samples};
+    use crate::mesh::{Cell, Draw, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_lab::array_approx_eq;
 
     const SAVE_FIGURE: bool = false;
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.show_cell_ids(true).show_point_ids(true);
         if larger {
             fig.size(600.0, 600.0);
         }
-        fig.draw(&mesh, filename).unwrap();
+        fig.all(&mesh, filename).unwrap();
     }
 
     #[test]

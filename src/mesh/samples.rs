@@ -2156,17 +2156,17 @@ impl Samples {
 #[cfg(test)]
 mod tests {
     use super::Samples;
-    use crate::mesh::{Figure, Mesh};
+    use crate::mesh::{Draw, Mesh};
 
     const SAVE_FIGURE: bool = false;
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
-        let mut fig = Figure::new();
+        let mut fig = Draw::new();
         fig.show_cell_ids(true).show_point_ids(true);
         if larger {
             fig.size(600.0, 600.0);
         }
-        fig.draw(&mesh, filename).unwrap();
+        fig.all(&mesh, filename).unwrap();
     }
 
     #[test]

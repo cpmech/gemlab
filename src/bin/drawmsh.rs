@@ -1,4 +1,4 @@
-use gemlab::mesh::{Figure, Mesh};
+use gemlab::mesh::{Draw, Mesh};
 use gemlab::StrError;
 use std::path::Path;
 use std::path::PathBuf;
@@ -49,12 +49,12 @@ fn main() -> Result<(), StrError> {
     let mesh = Mesh::read(in_path)?;
 
     // write SVG file
-    let mut fig = Figure::new();
+    let mut fig = Draw::new();
     fig.show_point_dots(options.dots)
         .show_point_ids(options.point_ids)
         .show_cell_ids(options.cell_ids)
         .size(options.width.unwrap_or(800.0), options.height.unwrap_or(800.0));
-    fig.draw(&mesh, &format!("{}/{}.svg", OUT_DIR, fn_stem))?;
+    fig.all(&mesh, &format!("{}/{}.svg", OUT_DIR, fn_stem))?;
     println!("Generated SVG file: {}/{}.svg", OUT_DIR, fn_stem);
     Ok(())
 }

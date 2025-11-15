@@ -582,7 +582,7 @@ impl GraphUnd {
 #[cfg(test)]
 mod tests {
     use super::GraphUnd;
-    use crate::mesh::{Block, Cell, Figure, Mesh, Point, Samples};
+    use crate::mesh::{Block, Cell, Draw, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_lab::NumMatrix;
     use std::collections::HashSet;
@@ -996,9 +996,9 @@ mod tests {
         ];
         mesh.renumber_points(old_to_new).unwrap(); // this is to match the paper's numbers
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_point_ids(true);
-            fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example.svg").unwrap();
+            fig.all(&mesh, "/tmp/gemlab/test_graph_gps_example.svg").unwrap();
         }
         let npoint = mesh.points.len();
 
@@ -1023,9 +1023,9 @@ mod tests {
             for i in 0..npoint {
                 mesh.points[i].marker = 1 + graph.distance[i] as i32; // use markers for the distance
             }
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_point_ids(true).show_point_marker(true);
-            fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_8.svg").unwrap();
+            fig.all(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_8.svg").unwrap();
         }
 
         // print pattern with updated mesh (cm_8)
@@ -1049,9 +1049,9 @@ mod tests {
             for i in 0..npoint {
                 mesh.points[i].marker = 1 + graph.distance[i] as i32; // use markers for the distance
             }
-            let mut fig = Figure::new();
+            let mut fig = Draw::new();
             fig.show_point_ids(true).show_point_marker(true);
-            fig.draw(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_pp.svg").unwrap();
+            fig.all(&mesh, "/tmp/gemlab/test_graph_gps_example_cm_pp.svg").unwrap();
         }
 
         // print pattern with updated mesh (cm_pp)
