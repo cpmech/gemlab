@@ -14,6 +14,10 @@ struct Options {
     #[structopt(parse(from_os_str))]
     input: PathBuf,
 
+    /// Skip mesh checks
+    #[structopt(short = "k", long)]
+    skip_check: bool,
+
     /// Show points in the SVG figure
     #[structopt(short, long)]
     dots: bool,
@@ -97,6 +101,11 @@ fn main() -> Result<(), StrError> {
 
     // load MSH file
     let mesh = Mesh::read(in_path)?;
+
+    // check mesh data
+    if !options.skip_check {
+        mesh.check_all()?;
+    }
 
     // configure drawing
     let mut draw = Draw::new();
