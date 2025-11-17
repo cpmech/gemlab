@@ -1,9 +1,10 @@
-use super::{Features, Mesh};
-use crate::shapes::{GeoKind, Scratchpad};
+use super::{Features, Mesh, PointId};
+use crate::shapes::{GeoClass, GeoKind, Scratchpad};
 use crate::StrError;
 use plotpy::{Canvas, Curve, InsetAxes, Plot, Text};
 use russell_lab::math::PI;
 use russell_lab::{sort2, sort4, Vector};
+use std::collections::HashMap;
 use std::ffi::OsStr;
 
 /// Implements functions to draw cells, edges, and faces or the whole mesh
@@ -40,6 +41,9 @@ pub struct Draw<'a> {
 
     /// Canvas to draw lin cells
     canvas_lin_cells: Canvas,
+
+    /// Canvas to draw shells (triangles and quadrilaterals in 3D)
+    canvas_shells: Canvas,
 
     /// Canvas to draw edge markers
     canvas_edge_markers: Text,
@@ -148,6 +152,7 @@ impl<'a> Draw<'a> {
         let mut canvas_cell_ids = Text::new();
         let mut canvas_cells = Canvas::new();
         let mut canvas_lin_cells = Canvas::new();
+        let mut canvas_shells = Canvas::new();
         let mut canvas_edge_markers = Text::new();
         let mut canvas_face_markers = Text::new();
         let mut canvas_face_markers_lines = Canvas::new();
@@ -192,6 +197,10 @@ impl<'a> Draw<'a> {
             .set_face_color("None")
             .set_edge_color("#cd0000")
             .set_line_width(2.0);
+        canvas_shells
+            .set_edge_color("None")
+            .set_face_color("#32b31880")
+            .set_line_width(1.0);
         canvas_edge_markers
             .set_color("#000000ff")
             .set_fontsize(9.0)
@@ -238,6 +247,7 @@ impl<'a> Draw<'a> {
             canvas_cell_ids,
             canvas_cells,
             canvas_lin_cells,
+            canvas_shells,
             canvas_edge_markers,
             canvas_face_markers,
             canvas_face_markers_lines,
@@ -639,8 +649,17 @@ impl<'a> Draw<'a> {
 
     /// Draws cells
     pub fn cells(&mut self, mesh: &Mesh) -> Result<(), StrError> {
-        // loop over cells
+        // holds the IDs of shell cells
+        let mut shell_cell_ids = Vec::new();
+
+        // loop over cells (draws the wireframe if 3D)
         for cell_id in 0..mesh.cells.len() {
+            if mesh.ndim == 3 {
+                let class = mesh.cells[cell_id].kind.class();
+                if class == GeoClass::Tri || class == GeoClass::Qua {
+                    shell_cell_ids.push(cell_id);
+                }
+            };
             let canvas = if mesh.cells[cell_id].kind.is_lin() {
                 &mut self.canvas_lin_cells
             } else {
@@ -649,7 +668,40 @@ impl<'a> Draw<'a> {
             mesh.draw_cell(canvas, cell_id)?;
         }
 
-        // add to plot
+        // loop over shell cells to draw the 3D surface (the wireframe is already drawn)
+        if shell_cell_ids.len() > 0 {
+            let mut old_point_id_to_new_point_id = HashMap::new();
+            let mut xx: Vec<f64> = Vec::new();
+            let mut yy: Vec<f64> = Vec::new();
+            let mut zz: Vec<f64> = Vec::new();
+            let mut triangles: Vec<Vec<PointId>> = Vec::new();
+            for &cell_id in &shell_cell_ids {
+                let cell = &mesh.cells[cell_id];
+                let cell_npoint = cell.points.len();
+                let mut new_cell_points = Vec::with_capacity(cell_npoint);
+                for p in &cell.points {
+                    let new_point_id = old_point_id_to_new_point_id
+                        .entry(*p)
+                        .or_insert_with(|| {
+                            let npoint_new = xx.len();
+                            xx.push(mesh.points[*p].coords[0]);
+                            yy.push(mesh.points[*p].coords[1]);
+                            zz.push(mesh.points[*p].coords[2]);
+                            npoint_new
+                        })
+                        .clone();
+                    new_cell_points.push(new_point_id);
+                }
+                triangles.push(vec![new_cell_points[0], new_cell_points[1], new_cell_points[2]]);
+                if cell_npoint > 3 {
+                    triangles.push(vec![new_cell_points[2], new_cell_points[3], new_cell_points[0]]);
+                }
+            }
+            self.canvas_shells.draw_triangles_3d(&xx, &yy, &zz, &triangles);
+            self.plot.add(&self.canvas_shells);
+        }
+
+        // add (wireframe) to plot
         self.plot.add(&self.canvas_cells);
         self.plot.add(&self.canvas_lin_cells);
         Ok(())
@@ -1360,7 +1412,8 @@ mod tests {
             draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
-                .set_size(600.0, 600.0);
+                .set_size(800.0, 800.0)
+                .set_view_flag(false);
             draw.get_canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
