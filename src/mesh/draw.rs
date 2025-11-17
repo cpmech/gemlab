@@ -56,6 +56,9 @@ pub struct Draw<'a> {
     /// Canvas to draw normal vectors (3D)
     canvas_normals_3d: Canvas,
 
+    /// Canvas to draw boundary edges in 3D
+    canvas_boundary_edges_3d: Canvas,
+
     /// Canvas to draw boundary faces (3D)
     canvas_boundary_faces: Canvas,
 
@@ -82,6 +85,9 @@ pub struct Draw<'a> {
 
     /// Shows normal vectors on boundaries
     show_normal_vectors: bool,
+
+    /// Draws boundary edges (3D)
+    show_boundary_edges_3d: bool,
 
     /// Draws boundary faces (3D)
     show_boundary_faces: bool,
@@ -141,6 +147,7 @@ impl<'a> Draw<'a> {
         let mut canvas_face_markers_lines = Canvas::new();
         let mut canvas_normals_2d = Canvas::new();
         let mut canvas_normals_3d = Canvas::new();
+        let mut canvas_boundary_edges_3d = Canvas::new();
         let mut canvas_boundary_faces = Canvas::new();
         canvas_edges
             .set_face_color("None")
@@ -211,7 +218,8 @@ impl<'a> Draw<'a> {
             .set_face_color("None")
             .set_edge_color("#f400f4ff")
             .set_line_width(2.0);
-        canvas_boundary_faces.set_face_color("#0095ff80").set_edge_color("None");
+        canvas_boundary_edges_3d.set_edge_color("#001a9eff").set_line_width(2.0);
+        canvas_boundary_faces.set_edge_color("None").set_face_color("#0095ff80");
         Draw {
             plot: Plot::new(),
             m_range: 0.2,
@@ -229,6 +237,7 @@ impl<'a> Draw<'a> {
             canvas_face_markers_lines,
             canvas_normals_2d,
             canvas_normals_3d,
+            canvas_boundary_edges_3d,
             canvas_boundary_faces,
             show_cell_ids: false,
             show_cell_att: true,
@@ -238,6 +247,7 @@ impl<'a> Draw<'a> {
             show_edge_markers: false,
             show_face_markers: false,
             show_normal_vectors: false,
+            show_boundary_edges_3d: true,
             show_boundary_faces: true,
             unequal_exes: false,
             range_2d: None,
@@ -406,9 +416,17 @@ impl<'a> Draw<'a> {
         self
     }
 
+    /// Shows boundary edges (3D)
+    ///
+    /// Default: `true`
+    pub fn show_boundary_edges_3d(&mut self, value: bool) -> &mut Self {
+        self.show_boundary_edges_3d = value;
+        self
+    }
+
     /// Shows boundary faces (3D)
     ///
-    /// Default: `false`
+    /// Default: `true`
     pub fn show_boundary_faces(&mut self, value: bool) -> &mut Self {
         self.show_boundary_faces = value;
         self
@@ -819,8 +837,26 @@ impl<'a> Draw<'a> {
         Ok(())
     }
 
+    /// Draw boundary edges (3D)
+    pub fn boundary_edges_3d(&mut self, features: &Features) {
+        if features.mesh.ndim == 3 {
+            let edge_keys = features.get_boundary_edges();
+            if edge_keys.len() > 0 {
+                for (i, j) in &edge_keys {
+                    let a = &features.mesh.points[*i].coords;
+                    let b = &features.mesh.points[*j].coords;
+                    self.canvas_boundary_edges_3d.polyline_3d_begin();
+                    self.canvas_boundary_edges_3d.polyline_3d_add(a[0], a[1], a[2]);
+                    self.canvas_boundary_edges_3d.polyline_3d_add(b[0], b[1], b[2]);
+                    self.canvas_boundary_edges_3d.polyline_3d_end();
+                }
+                self.plot.add(&self.canvas_boundary_edges_3d);
+            }
+        }
+    }
+
     /// Draw boundary faces (3D)
-    pub fn boundary_faces(&mut self, features: &Features) -> Result<(), StrError> {
+    pub fn boundary_faces(&mut self, features: &Features) {
         if features.mesh.ndim == 3 {
             let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
             if triangles.len() > 0 {
@@ -828,7 +864,6 @@ impl<'a> Draw<'a> {
                 self.plot.add(&self.canvas_boundary_faces);
             }
         }
-        Ok(())
     }
 
     /// Draws the mesh
@@ -899,7 +934,12 @@ impl<'a> Draw<'a> {
         if self.show_point_ids {
             self.point_ids(mesh);
         }
-        if self.show_edge_markers || self.show_face_markers || self.show_normal_vectors || self.show_boundary_faces {
+        if self.show_edge_markers
+            || self.show_face_markers
+            || self.show_normal_vectors
+            || self.show_boundary_edges_3d
+            || self.show_boundary_faces
+        {
             let features = Features::new(mesh, false);
             if self.show_edge_markers {
                 self.edge_markers(&features)?;
@@ -911,7 +951,10 @@ impl<'a> Draw<'a> {
                 self.normal_vectors(&features)?;
             }
             if self.show_boundary_faces {
-                self.boundary_faces(&features)?;
+                self.boundary_faces(&features);
+            }
+            if self.show_boundary_edges_3d {
+                self.boundary_edges_3d(&features);
             }
         }
         if mesh.ndim == 2 {
@@ -1492,15 +1535,34 @@ mod tests {
     }
 
     #[test]
+    fn draw_boundary_edges_works() {
+        if SAVE_FIGURE {
+            // let mesh = Samples::two_hex8();
+            let mesh = Samples::block_3d_eight_hex20();
+            let features = Features::new(&mesh, true);
+            let mut draw = Draw::new();
+            draw.boundary_edges_3d(&features);
+            draw.point_dots(&mesh);
+            draw.plot
+                .set_equal_axes(true)
+                .set_figure_size_points(800.0, 800.0)
+                // .show("/tmp/gemlab/test_draw_boundary_edges_works.svg")
+                .save("/tmp/gemlab/test_draw_boundary_edges_works.svg")
+                .unwrap();
+        }
+    }
+
+    #[test]
     fn draw_boundary_faces_works() {
         if SAVE_FIGURE {
             // let mesh = Samples::two_hex8();
             let mesh = Samples::block_3d_eight_hex20();
             let features = Features::new(&mesh, true);
             let mut draw = Draw::new();
-            draw.cells(&mesh, true).unwrap();
-            draw.boundary_faces(&features).unwrap();
-            draw.point_dots(&mesh);
+            // draw.cells(&mesh, true).unwrap();
+            // draw.point_dots(&mesh);
+            draw.boundary_faces(&features);
+            draw.boundary_edges_3d(&features);
             draw.plot
                 .set_equal_axes(true)
                 .set_figure_size_points(800.0, 800.0)
