@@ -1413,7 +1413,12 @@ mod tests {
                 .show_point_ids(true)
                 .show_point_dots(true)
                 .set_size(800.0, 800.0)
-                .set_view_flag(false);
+                .set_view_flag(false)
+                .extra(|plot, before| {
+                    if !before {
+                        plot.set_camera(30.0, 30.0);
+                    }
+                });
             draw.get_canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
