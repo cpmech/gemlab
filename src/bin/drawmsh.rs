@@ -46,6 +46,18 @@ struct Options {
     #[structopt(short, long)]
     normals: bool,
 
+    /// Hide cells
+    #[structopt(short = "i", long)]
+    hide_cells: bool,
+
+    /// Boundary edges
+    #[structopt(short = "y", long)]
+    boundary_edges: bool,
+
+    /// Boundary faces
+    #[structopt(short = "z", long)]
+    boundary_faces: bool,
+
     /// Figure width in points
     #[structopt(short, long)]
     width: Option<f64>,
@@ -53,6 +65,10 @@ struct Options {
     /// Figure height in points
     #[structopt(short, long)]
     height: Option<f64>,
+
+    /// View the figure interactively in a window (also saves SVG file)
+    #[structopt(long)]
+    view: bool,
 
     /// Multiplier for drawing area range
     #[structopt(long)]
@@ -86,14 +102,18 @@ fn main() -> Result<(), StrError> {
     let mut draw = Draw::new();
 
     // Set boolean flags
-    draw.show_point_dots(options.dots)
+    draw.show_cells(!options.hide_cells)
+        .show_point_dots(options.dots)
         .show_point_ids(options.point_ids)
         .show_cell_ids(options.cell_ids)
         .show_point_marker(options.point_markers)
         .show_cell_att(options.cell_att)
         .show_edge_markers(options.edge_markers)
         .show_face_markers(options.face_markers)
-        .show_normal_vectors(options.normals);
+        .show_normal_vectors(options.normals)
+        .show_boundary_edges_3d(options.boundary_edges)
+        .show_boundary_faces(options.boundary_faces)
+        .set_view_flag(options.view);
 
     // Set figure size
     if options.width.is_some() || options.height.is_some() {

@@ -62,6 +62,9 @@ pub struct Draw<'a> {
     /// Canvas to draw boundary faces (3D)
     canvas_boundary_faces: Canvas,
 
+    /// Shows cells (wireframe in 3D)
+    show_cells: bool,
+
     /// Shows cell ids
     show_cell_ids: bool,
 
@@ -91,6 +94,9 @@ pub struct Draw<'a> {
 
     /// Draws boundary faces (3D)
     show_boundary_faces: bool,
+
+    /// View the figure interactively in a window
+    view: bool,
 
     /// Generates the plot without equal axes
     unequal_exes: bool,
@@ -239,6 +245,7 @@ impl<'a> Draw<'a> {
             canvas_normals_3d,
             canvas_boundary_edges_3d,
             canvas_boundary_faces,
+            show_cells: true,
             show_cell_ids: false,
             show_cell_att: true,
             show_point_ids: false,
@@ -249,6 +256,7 @@ impl<'a> Draw<'a> {
             show_normal_vectors: false,
             show_boundary_edges_3d: true,
             show_boundary_faces: true,
+            view: false,
             unequal_exes: false,
             range_2d: None,
             range_3d: None,
@@ -352,6 +360,14 @@ impl<'a> Draw<'a> {
         self
     }
 
+    /// Shows cells (wireframe in 3D)
+    ///
+    /// Default: `true`
+    pub fn show_cells(&mut self, value: bool) -> &mut Self {
+        self.show_cells = value;
+        self
+    }
+
     /// Shows cell ids
     ///
     /// Default: `false`
@@ -429,6 +445,12 @@ impl<'a> Draw<'a> {
     /// Default: `true`
     pub fn show_boundary_faces(&mut self, value: bool) -> &mut Self {
         self.show_boundary_faces = value;
+        self
+    }
+
+    /// View the figure interactively in a window
+    pub fn set_view_flag(&mut self, value: bool) -> &mut Self {
+        self.view = value;
         self
     }
 
@@ -616,11 +638,7 @@ impl<'a> Draw<'a> {
     }
 
     /// Draws cells
-    pub fn cells(&mut self, mesh: &Mesh, set_range: bool) -> Result<(), StrError> {
-        // limits
-        let mut xmin = vec![f64::MAX; mesh.ndim];
-        let mut xmax = vec![f64::MIN; mesh.ndim];
-
+    pub fn cells(&mut self, mesh: &Mesh) -> Result<(), StrError> {
         // loop over cells
         for cell_id in 0..mesh.cells.len() {
             let canvas = if mesh.cells[cell_id].kind.is_lin() {
@@ -629,29 +647,11 @@ impl<'a> Draw<'a> {
                 &mut self.canvas_cells
             };
             mesh.draw_cell(canvas, cell_id)?;
-            if set_range {
-                for point_id in &mesh.cells[cell_id].points {
-                    for j in 0..mesh.ndim {
-                        xmin[j] = f64::min(xmin[j], mesh.points[*point_id].coords[j]);
-                        xmax[j] = f64::max(xmax[j], mesh.points[*point_id].coords[j]);
-                    }
-                }
-            }
         }
 
         // add to plot
         self.plot.add(&self.canvas_cells);
         self.plot.add(&self.canvas_lin_cells);
-        if set_range {
-            let dx = xmax[0] - xmin[0];
-            let dy = xmax[1] - xmin[1];
-            if dx > 0.0 && dy > 0.0 {
-                let gx = self.m_range * dx;
-                let gy = self.m_range * dy;
-                self.plot
-                    .set_range(xmin[0] - gx, xmax[0] + gx, xmin[1] - gy, xmax[1] + gy);
-            }
-        }
         Ok(())
     }
 
@@ -866,6 +866,19 @@ impl<'a> Draw<'a> {
         }
     }
 
+    /// Configures the plot range
+    fn config_plot_range(&mut self, mesh: &Mesh) {
+        let (xmin, xmax) = mesh.get_limits();
+        let dx = xmax[0] - xmin[0];
+        let dy = xmax[1] - xmin[1];
+        if dx > 0.0 && dy > 0.0 {
+            let gx = self.m_range * dx;
+            let gy = self.m_range * dy;
+            self.plot
+                .set_range(xmin[0] - gx, xmax[0] + gx, xmin[1] - gy, xmax[1] + gy);
+        }
+    }
+
     /// Draws the mesh
     ///
     /// # Input
@@ -924,7 +937,9 @@ impl<'a> Draw<'a> {
         if let Some(callback) = self.extra.as_ref() {
             callback(&mut self.plot, true);
         }
-        self.cells(mesh, true)?;
+        if self.show_cells {
+            self.cells(mesh)?;
+        }
         if self.show_cell_ids {
             self.cell_ids(mesh)?;
         }
@@ -960,17 +975,21 @@ impl<'a> Draw<'a> {
         if mesh.ndim == 2 {
             self.plot.grid_and_labels("x", "y");
         }
-        if !self.unequal_exes {
-            self.plot.set_equal_axes(true);
-        }
         if mesh.ndim == 2 {
             if let Some((xmin, xmax, ymin, ymax)) = self.range_2d {
                 self.plot.set_range(xmin, xmax, ymin, ymax);
+            } else {
+                self.config_plot_range(mesh);
             }
         } else {
             if let Some((xmin, xmax, ymin, ymax, zmin, zmax)) = self.range_3d {
                 self.plot.set_range_3d(xmin, xmax, ymin, ymax, zmin, zmax);
+            } else {
+                self.config_plot_range(mesh);
             }
+        }
+        if !self.unequal_exes {
+            self.plot.set_equal_axes(true);
         }
         if let Some((width, height)) = self.size {
             self.plot.set_figure_size_points(width, height);
@@ -1000,7 +1019,11 @@ impl<'a> Draw<'a> {
             }
             self.plot.add(&inset);
         }
-        self.plot.save(filepath)
+        if self.view {
+            self.plot.show(filepath)
+        } else {
+            self.plot.save(filepath)
+        }
     }
 }
 
@@ -1058,7 +1081,7 @@ mod tests {
         // lin cells ---------------------------------------------------------------------------
         let mesh = Samples::lin_cells();
         let mut draw = Draw::new();
-        draw.cells(&mesh, true).unwrap();
+        draw.cells(&mesh).unwrap();
         draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
@@ -1082,7 +1105,7 @@ mod tests {
         // lin cells in 3d ---------------------------------------------------------------------
         let mesh = Samples::lin_cells_3d();
         let mut draw = Draw::new();
-        draw.cells(&mesh, true).unwrap();
+        draw.cells(&mesh).unwrap();
         draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
@@ -1104,7 +1127,7 @@ mod tests {
         // tri cells ---------------------------------------------------------------------------
         let mesh = Samples::tri_cells();
         let mut draw = Draw::new();
-        draw.cells(&mesh, true).unwrap();
+        draw.cells(&mesh).unwrap();
         draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
@@ -1128,7 +1151,7 @@ mod tests {
         // qua cells ---------------------------------------------------------------------------
         let mesh = Samples::qua_cells();
         let mut draw = Draw::new();
-        draw.cells(&mesh, true).unwrap();
+        draw.cells(&mesh).unwrap();
         draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
@@ -1154,7 +1177,7 @@ mod tests {
         // tet cells ---------------------------------------------------------------------------
         let mesh = Samples::tet_cells();
         let mut draw = Draw::new();
-        draw.cells(&mesh, true).unwrap();
+        draw.cells(&mesh).unwrap();
         draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
@@ -1175,7 +1198,7 @@ mod tests {
         // hex cells ---------------------------------------------------------------------------
         let mesh = Samples::hex_cells();
         let mut draw = Draw::new();
-        draw.cells(&mesh, true).unwrap();
+        draw.cells(&mesh).unwrap();
         draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
@@ -1196,7 +1219,7 @@ mod tests {
         // ring --------------------------------------------------------------------------------
         let mesh = Samples::ring_eight_qua8_rad1_thick1();
         let mut draw = Draw::new();
-        draw.cells(&mesh, true).unwrap();
+        draw.cells(&mesh).unwrap();
         draw.point_dots(&mesh);
 
         if SAVE_FIGURE {
@@ -1441,7 +1464,7 @@ mod tests {
             let mesh = Samples::two_qua4();
             let features = Features::new(&mesh, false);
             let mut draw = Draw::new();
-            draw.cells(&mesh, true).unwrap();
+            draw.cells(&mesh).unwrap();
             draw.point_dots(&mesh);
             draw.edge_markers(&features).unwrap();
             draw.plot
@@ -1452,7 +1475,7 @@ mod tests {
             let mesh = Samples::ring_eight_qua8_rad1_thick1();
             let features = Features::new(&mesh, false);
             let mut draw = Draw::new();
-            draw.cells(&mesh, true).unwrap();
+            draw.cells(&mesh).unwrap();
             draw.point_dots(&mesh);
             draw.edge_markers(&features).unwrap();
             draw.plot
@@ -1464,7 +1487,7 @@ mod tests {
             let mesh = Samples::two_hex8();
             let features = Features::new(&mesh, true);
             let mut draw = Draw::new();
-            draw.cells(&mesh, true).unwrap();
+            draw.cells(&mesh).unwrap();
             draw.point_dots(&mesh);
             draw.edge_markers(&features).unwrap();
             draw.plot
@@ -1481,7 +1504,7 @@ mod tests {
             let mesh = Samples::two_qua4();
             let features = Features::new(&mesh, false);
             let mut draw = Draw::new();
-            draw.cells(&mesh, true).unwrap();
+            draw.cells(&mesh).unwrap();
             draw.point_dots(&mesh);
             draw.normal_vectors(&features).unwrap();
             draw.plot
@@ -1492,7 +1515,7 @@ mod tests {
             let mesh = Samples::ring_eight_qua8_rad1_thick1();
             let features = Features::new(&mesh, false);
             let mut draw = Draw::new();
-            draw.cells(&mesh, true).unwrap();
+            draw.cells(&mesh).unwrap();
             draw.point_dots(&mesh);
             draw.normal_vectors(&features).unwrap();
             draw.plot
@@ -1504,7 +1527,7 @@ mod tests {
             let mesh = Samples::two_hex8();
             let features = Features::new(&mesh, true);
             let mut draw = Draw::new();
-            draw.cells(&mesh, true).unwrap();
+            draw.cells(&mesh).unwrap();
             draw.point_dots(&mesh);
             draw.normal_vectors(&features).unwrap();
             draw.plot
@@ -1522,14 +1545,14 @@ mod tests {
             let mesh = Samples::two_hex8();
             let features = Features::new(&mesh, true);
             let mut draw = Draw::new();
-            draw.cells(&mesh, true).unwrap();
+            draw.cells(&mesh).unwrap();
             draw.point_dots(&mesh);
             draw.face_markers(&features).unwrap();
             draw.plot
                 .set_equal_axes(true)
                 .set_figure_size_points(600.0, 600.0)
-                .show("/tmp/gemlab/test_draw_face_markers_works.svg")
-                // .save("/tmp/gemlab/test_draw_face_markers_works.svg")
+                // .show("/tmp/gemlab/test_draw_face_markers_works.svg")
+                .save("/tmp/gemlab/test_draw_face_markers_works.svg")
                 .unwrap();
         }
     }
@@ -1559,7 +1582,7 @@ mod tests {
             let mesh = Samples::block_3d_eight_hex20();
             let features = Features::new(&mesh, true);
             let mut draw = Draw::new();
-            // draw.cells(&mesh, true).unwrap();
+            // draw.cells(&mesh).unwrap();
             // draw.point_dots(&mesh);
             draw.boundary_faces(&features);
             draw.boundary_edges_3d(&features);
