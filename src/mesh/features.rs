@@ -477,6 +477,57 @@ impl<'a> Features<'a> {
         res
     }
 
+    /// Triangulates the 3D boundary faces into triangles
+    ///
+    /// Note: the order of the output arrays is non-deterministic because it depends
+    /// on the HashMap structures used to extract the boundary features.
+    ///
+    /// # Output
+    ///
+    /// * `xx` -- x coordinates of the triangle points
+    /// * `yy` -- y coordinates of the triangle points
+    /// * `zz` -- z coordinates of the triangle points
+    /// * `triangles` -- indices of the triangle points
+    ///
+    /// # Panics
+    ///
+    /// * Panics if the mesh is not 3D
+    pub fn triangulate_3d_boundary(&self) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<Vec<PointId>>) {
+        // TODO
+        assert_eq!(self.mesh.ndim, 3);
+        let mut old_point_id_to_new_point_id = HashMap::new();
+        let mut xx: Vec<f64> = Vec::new();
+        let mut yy: Vec<f64> = Vec::new();
+        let mut zz: Vec<f64> = Vec::new();
+        let mut triangles: Vec<Vec<PointId>> = Vec::new();
+        for (face_key, face) in &self.faces {
+            let shared_by_ncell = self.all_faces.get(face_key).unwrap().len();
+            if shared_by_ncell == 1 {
+                // this is a boundary face
+                let face_npoint = face.points.len();
+                let mut new_face_points = Vec::with_capacity(face_npoint);
+                for p in &face.points {
+                    let new_point_id = old_point_id_to_new_point_id
+                        .entry(*p)
+                        .or_insert_with(|| {
+                            let npoint_new = xx.len();
+                            xx.push(self.mesh.points[*p].coords[0]);
+                            yy.push(self.mesh.points[*p].coords[1]);
+                            zz.push(self.mesh.points[*p].coords[2]);
+                            npoint_new
+                        })
+                        .clone();
+                    new_face_points.push(new_point_id);
+                }
+                triangles.push(vec![new_face_points[0], new_face_points[1], new_face_points[2]]);
+                if face_npoint > 3 {
+                    triangles.push(vec![new_face_points[2], new_face_points[3], new_face_points[0]]);
+                }
+            }
+        }
+        (xx, yy, zz, triangles)
+    }
+
     /// Searches edges with a given marker
     ///
     /// Returns edges sorted by their edge keys
@@ -1139,6 +1190,59 @@ mod tests {
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 1, 2)));
         assert!(neighbors.contains(&(3, 2, 1)));
+    }
+
+    #[test]
+    fn triangulate_3d_boundary_works() {
+        let key = |x, y, z| format!("{:.1}, {:.1}, {:.1}", x, y, z);
+        let mesh = Samples::two_hex8();
+        let features = Features::new(&mesh, true);
+        let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
+        let pp = vec![
+            "0.0, 0.0, 0.0", //  0
+            "1.0, 0.0, 0.0", //  1
+            "1.0, 1.0, 0.0", //  2
+            "0.0, 1.0, 0.0", //  3
+            "0.0, 0.0, 1.0", //  4
+            "1.0, 0.0, 1.0", //  5
+            "1.0, 1.0, 1.0", //  6
+            "0.0, 1.0, 1.0", //  7
+            "0.0, 0.0, 2.0", //  8
+            "1.0, 0.0, 2.0", //  9
+            "1.0, 1.0, 2.0", // 10
+            "0.0, 1.0, 2.0", // 11
+        ];
+        let boundary_faces = vec![
+            (pp[0], pp[4], pp[7], pp[3]),   // lower, -x face
+            (pp[1], pp[2], pp[6], pp[5]),   // lower, +x face
+            (pp[0], pp[1], pp[5], pp[4]),   // lower, -y face
+            (pp[2], pp[3], pp[7], pp[6]),   // lower, +y face
+            (pp[4], pp[8], pp[11], pp[7]),  // upper, -x face
+            (pp[5], pp[6], pp[10], pp[9]),  // upper, +x face
+            (pp[4], pp[5], pp[9], pp[8]),   // upper, -y face
+            (pp[6], pp[7], pp[11], pp[10]), // upper, +y face
+            (pp[0], pp[3], pp[2], pp[1]),   // lower, -z face
+            (pp[8], pp[9], pp[10], pp[11]), // upper, +z face
+        ];
+        assert_eq!(xx.len(), 12);
+        assert_eq!(yy.len(), 12);
+        assert_eq!(zz.len(), 12);
+        assert_eq!(triangles.len(), boundary_faces.len() * 2); // quads => tris
+        for i in 0..xx.len() {
+            assert!(pp.contains(&key(xx[i], yy[i], zz[i]).as_str()));
+        }
+        let mut connectivity = Vec::new();
+        for tri in &triangles {
+            let a = key(xx[tri[0]], yy[tri[0]], zz[tri[0]]);
+            let b = key(xx[tri[1]], yy[tri[1]], zz[tri[1]]);
+            let c = key(xx[tri[2]], yy[tri[2]], zz[tri[2]]);
+            connectivity.push((a, b, c));
+        }
+        // expected triangles
+        for (k0, k1, k2, k3) in &boundary_faces {
+            assert!(connectivity.contains(&(k0.to_string(), k1.to_string(), k2.to_string())));
+            assert!(connectivity.contains(&(k2.to_string(), k3.to_string(), k0.to_string())));
+        }
     }
 
     #[test]
