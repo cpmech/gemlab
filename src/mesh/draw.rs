@@ -26,8 +26,8 @@ pub struct Draw<'a> {
     /// Canvas to draw edges
     canvas_edges: Canvas,
 
-    /// Canvas to draw points (markers)
-    canvas_points: Curve,
+    /// Canvas to draw points (dot indicators)
+    canvas_point_dots: Curve,
 
     /// Canvas to draw point ids
     canvas_point_ids: Text,
@@ -56,6 +56,9 @@ pub struct Draw<'a> {
     /// Canvas to draw normal vectors (3D)
     canvas_normals_3d: Canvas,
 
+    /// Canvas to draw boundary faces (3D)
+    canvas_boundary_faces: Canvas,
+
     /// Shows cell ids
     show_cell_ids: bool,
 
@@ -79,6 +82,9 @@ pub struct Draw<'a> {
 
     /// Shows normal vectors on boundaries
     show_normal_vectors: bool,
+
+    /// Draws boundary faces (3D)
+    show_boundary_faces: bool,
 
     /// Generates the plot without equal axes
     unequal_exes: bool,
@@ -125,7 +131,7 @@ impl<'a> Draw<'a> {
     /// Allocates a new instance
     pub fn new() -> Self {
         let mut canvas_edges = Canvas::new();
-        let mut canvas_points = Curve::new();
+        let mut canvas_point_dots = Curve::new();
         let mut canvas_point_ids = Text::new();
         let mut canvas_cell_ids = Text::new();
         let mut canvas_cells = Canvas::new();
@@ -135,11 +141,12 @@ impl<'a> Draw<'a> {
         let mut canvas_face_markers_lines = Canvas::new();
         let mut canvas_normals_2d = Canvas::new();
         let mut canvas_normals_3d = Canvas::new();
+        let mut canvas_boundary_faces = Canvas::new();
         canvas_edges
             .set_face_color("None")
             .set_line_width(1.0)
             .set_edge_color("#2440cd");
-        canvas_points
+        canvas_point_dots
             .set_marker_color("black")
             .set_marker_line_color("white")
             .set_marker_style("o")
@@ -204,6 +211,7 @@ impl<'a> Draw<'a> {
             .set_face_color("None")
             .set_edge_color("#f400f4ff")
             .set_line_width(2.0);
+        canvas_boundary_faces.set_face_color("#0095ff80").set_edge_color("None");
         Draw {
             plot: Plot::new(),
             m_range: 0.2,
@@ -211,7 +219,7 @@ impl<'a> Draw<'a> {
             m_normal_vector: 0.05,
             m_normal_vector_marker: 0.1,
             canvas_edges,
-            canvas_points,
+            canvas_point_dots,
             canvas_point_ids,
             canvas_cell_ids,
             canvas_cells,
@@ -221,6 +229,7 @@ impl<'a> Draw<'a> {
             canvas_face_markers_lines,
             canvas_normals_2d,
             canvas_normals_3d,
+            canvas_boundary_faces,
             show_cell_ids: false,
             show_cell_att: true,
             show_point_ids: false,
@@ -229,6 +238,7 @@ impl<'a> Draw<'a> {
             show_edge_markers: false,
             show_face_markers: false,
             show_normal_vectors: false,
+            show_boundary_faces: true,
             unequal_exes: false,
             range_2d: None,
             range_3d: None,
@@ -240,59 +250,64 @@ impl<'a> Draw<'a> {
         }
     }
 
-    /// Get a mutable reference to the canvas edges
+    /// Get a mutable reference to the canvas to draw edges
     pub fn get_canvas_edges(&mut self) -> &mut Canvas {
         &mut self.canvas_edges
     }
 
-    /// Get a mutable reference to the canvas points
+    /// Get a mutable reference to the canvas to draw points
     pub fn get_canvas_points(&mut self) -> &mut Curve {
-        &mut self.canvas_points
+        &mut self.canvas_point_dots
     }
 
-    /// Get a mutable reference to the canvas point ids
+    /// Get a mutable reference to the canvas to draw point ids
     pub fn get_canvas_point_ids(&mut self) -> &mut Text {
         &mut self.canvas_point_ids
     }
 
-    /// Get a mutable reference to the canvas cell ids
+    /// Get a mutable reference to the canvas to draw cell ids
     pub fn get_canvas_cell_ids(&mut self) -> &mut Text {
         &mut self.canvas_cell_ids
     }
 
-    /// Get a mutable reference to the canvas cells
+    /// Get a mutable reference to the canvas to draw cells
     pub fn get_canvas_cells(&mut self) -> &mut Canvas {
         &mut self.canvas_cells
     }
 
-    /// Get a mutable reference to the canvas lin cells
+    /// Get a mutable reference to the canvas to draw lin cells
     pub fn get_canvas_lin_cells(&mut self) -> &mut Canvas {
         &mut self.canvas_lin_cells
     }
 
-    /// Get a mutable reference to the canvas edge markers
+    /// Get a mutable reference to the canvas to draw edge markers
     pub fn get_canvas_edge_markers(&mut self) -> &mut Text {
         &mut self.canvas_edge_markers
     }
 
-    /// Get a mutable reference to the canvas face markers
+    /// Get a mutable reference to the canvas to draw face markers
     pub fn get_canvas_face_markers(&mut self) -> &mut Text {
         &mut self.canvas_face_markers
     }
 
-    /// Get a mutable reference to the canvas face markers lines
+    /// Get a mutable reference to the canvas to draw face markers lines
     pub fn get_canvas_face_markers_lines(&mut self) -> &mut Canvas {
         &mut self.canvas_face_markers_lines
     }
 
-    /// Get a mutable reference to the canvas normals 2D
+    /// Get a mutable reference to the canvas to draw normals 2D
     pub fn get_canvas_normals_2d(&mut self) -> &mut Canvas {
         &mut self.canvas_normals_2d
     }
 
-    /// Get a mutable reference to the canvas normals 3D
+    /// Get a mutable reference to the canvas to draw normals 3D
     pub fn get_canvas_normals_3d(&mut self) -> &mut Canvas {
         &mut self.canvas_normals_3d
+    }
+
+    /// Get a mutable reference to the canvas tro draw boundary faces (3D)
+    pub fn get_canvas_boundary_faces(&mut self) -> &mut Canvas {
+        &mut self.canvas_boundary_faces
     }
 
     /// Sets the multiplier used to set the drawing area range
@@ -388,6 +403,14 @@ impl<'a> Draw<'a> {
     /// Default: `false`
     pub fn show_normal_vectors(&mut self, value: bool) -> &mut Self {
         self.show_normal_vectors = value;
+        self
+    }
+
+    /// Shows boundary faces (3D)
+    ///
+    /// Default: `false`
+    pub fn show_boundary_faces(&mut self, value: bool) -> &mut Self {
+        self.show_boundary_faces = value;
         self
     }
 
@@ -531,20 +554,20 @@ impl<'a> Draw<'a> {
     /// Draws all points (dots)
     pub fn point_dots(&mut self, mesh: &Mesh) {
         if mesh.ndim == 2 {
-            self.canvas_points.points_begin();
+            self.canvas_point_dots.points_begin();
             mesh.points.iter().for_each(|point| {
-                self.canvas_points.points_add(point.coords[0], point.coords[1]);
+                self.canvas_point_dots.points_add(point.coords[0], point.coords[1]);
             });
-            self.canvas_points.points_end();
+            self.canvas_point_dots.points_end();
         } else {
-            self.canvas_points.points_3d_begin();
+            self.canvas_point_dots.points_3d_begin();
             mesh.points.iter().for_each(|point| {
-                self.canvas_points
+                self.canvas_point_dots
                     .points_3d_add(point.coords[0], point.coords[1], point.coords[2]);
             });
-            self.canvas_points.points_3d_end();
+            self.canvas_point_dots.points_3d_end();
         }
-        self.plot.add(&self.canvas_points);
+        self.plot.add(&self.canvas_point_dots);
     }
 
     /// Draws all point ids (labels)
@@ -762,12 +785,10 @@ impl<'a> Draw<'a> {
         let mut un = Vector::new(ndim);
         let mut x = Vector::new(ndim);
         if ndim == 2 {
-            let mut found = false;
             for (edge_key, edge) in &features.edges {
                 let ncell = features.all_2d_edges.get(edge_key).unwrap().len();
                 if ncell == 1 {
                     // only boundary edges
-                    found = true;
                     let mut pad = Scratchpad::new(ndim, edge.kind)?;
                     features.mesh.set_pad(&mut pad, &edge.points);
                     pad.calc_normal_vector(&mut un, ksi)?;
@@ -776,16 +797,12 @@ impl<'a> Draw<'a> {
                         .draw_arrow(x[0], x[1], x[0] + s * un[0], x[1] + s * un[1]);
                 }
             }
-            if found {
-                self.plot.add(&self.canvas_normals_2d);
-            }
+            self.plot.add(&self.canvas_normals_2d);
         } else {
-            let mut found = false;
             for (face_key, face) in &features.faces {
                 let ncell = features.all_faces.get(face_key).unwrap().len();
                 if ncell == 1 {
                     // boundary faces only
-                    found = true;
                     let mut pad = Scratchpad::new(ndim, face.kind)?;
                     features.mesh.set_pad(&mut pad, &face.points);
                     pad.calc_normal_vector(&mut un, ksi)?;
@@ -797,8 +814,18 @@ impl<'a> Draw<'a> {
                     self.canvas_normals_3d.polyline_3d_end();
                 }
             }
-            if found {
-                self.plot.add(&self.canvas_normals_3d);
+            self.plot.add(&self.canvas_normals_3d);
+        }
+        Ok(())
+    }
+
+    /// Draw boundary faces (3D)
+    pub fn boundary_faces(&mut self, features: &Features) -> Result<(), StrError> {
+        if features.mesh.ndim == 3 {
+            let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
+            if triangles.len() > 0 {
+                self.canvas_boundary_faces.draw_triangles_3d(&xx, &yy, &zz, &triangles);
+                self.plot.add(&self.canvas_boundary_faces);
             }
         }
         Ok(())
@@ -872,7 +899,7 @@ impl<'a> Draw<'a> {
         if self.show_point_ids {
             self.point_ids(mesh);
         }
-        if self.show_edge_markers || self.show_face_markers || self.show_normal_vectors {
+        if self.show_edge_markers || self.show_face_markers || self.show_normal_vectors || self.show_boundary_faces {
             let features = Features::new(mesh, false);
             if self.show_edge_markers {
                 self.edge_markers(&features)?;
@@ -882,6 +909,9 @@ impl<'a> Draw<'a> {
             }
             if self.show_normal_vectors {
                 self.normal_vectors(&features)?;
+            }
+            if self.show_boundary_faces {
+                self.boundary_faces(&features)?;
             }
         }
         if mesh.ndim == 2 {
@@ -916,7 +946,7 @@ impl<'a> Draw<'a> {
                 inset.add(&self.canvas_cell_ids);
             }
             if self.show_point_dots {
-                inset.add(&self.canvas_points);
+                inset.add(&self.canvas_point_dots);
             }
             if self.show_point_ids {
                 inset.add(&self.canvas_point_ids);
@@ -1457,6 +1487,25 @@ mod tests {
                 .set_figure_size_points(600.0, 600.0)
                 .show("/tmp/gemlab/test_draw_face_markers_works.svg")
                 // .save("/tmp/gemlab/test_draw_face_markers_works.svg")
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_boundary_faces_works() {
+        if SAVE_FIGURE {
+            // let mesh = Samples::two_hex8();
+            let mesh = Samples::block_3d_eight_hex20();
+            let features = Features::new(&mesh, true);
+            let mut draw = Draw::new();
+            draw.cells(&mesh, true).unwrap();
+            draw.boundary_faces(&features).unwrap();
+            draw.point_dots(&mesh);
+            draw.plot
+                .set_equal_axes(true)
+                .set_figure_size_points(800.0, 800.0)
+                // .show("/tmp/gemlab/test_draw_boundary_faces_works.svg")
+                .save("/tmp/gemlab/test_draw_boundary_faces_works.svg")
                 .unwrap();
         }
     }
