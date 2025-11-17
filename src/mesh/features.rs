@@ -4,6 +4,7 @@ use super::{Edge, EdgeKey, Edges, MapEdge2dToCells, MapPointToEdges};
 use super::{Face, FaceKey, Faces, MapFaceToCells, MapPointToFaces};
 use crate::util::GridSearch;
 use crate::StrError;
+use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
 /// Holds derived mesh features such as points, edges, and faces on the mesh boundary or the interior
@@ -475,6 +476,35 @@ impl<'a> Features<'a> {
             }
         }
         res
+    }
+
+    /// Extracts all boundary edges
+    pub fn get_boundary_edges(&self) -> Vec<EdgeKey> {
+        if self.mesh.ndim == 2 {
+            let mut boundary_edges = Vec::new();
+            for (edge_key, cells) in &self.all_2d_edges {
+                let shared_by_ncell = cells.len();
+                if shared_by_ncell == 1 {
+                    boundary_edges.push(*edge_key);
+                }
+            }
+            boundary_edges
+        } else {
+            let mut edges_keys = HashSet::new();
+            for (face_key, face) in &self.faces {
+                let shared_by_ncell = self.all_faces.get(face_key).unwrap().len();
+                if shared_by_ncell == 1 {
+                    for e in 0..face.kind.nedge() {
+                        let p0 = face.points[face.kind.edge_node_id(e, 0)];
+                        let p1 = face.points[face.kind.edge_node_id(e, 1)];
+                        let mut edge_key = (self.mesh.points[p0].id, self.mesh.points[p1].id);
+                        sort2(&mut edge_key);
+                        edges_keys.insert(edge_key);
+                    }
+                }
+            }
+            edges_keys.into_iter().collect()
+        }
     }
 
     /// Triangulates the 3D boundary faces into triangles
@@ -1189,6 +1219,96 @@ mod tests {
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 1, 2)));
         assert!(neighbors.contains(&(3, 2, 1)));
+    }
+
+    #[test]
+    fn get_boundary_edges_2d_works() {
+        let mesh = Samples::two_qua4();
+        let features = Features::new(&mesh, true);
+        let mut edge_keys = features.get_boundary_edges();
+        edge_keys.sort();
+        assert_eq!(edge_keys, vec![(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)]);
+
+        let mesh = Samples::three_tri6_arrow();
+        let features = Features::new(&mesh, true);
+        let mut edge_keys = features.get_boundary_edges();
+        edge_keys.sort();
+        assert_eq!(edge_keys, vec![(0, 1), (0, 6), (1, 6)]);
+    }
+
+    #[test]
+    fn get_boundary_edges_3d_works() {
+        let mesh = Samples::two_hex8();
+        let features = Features::new(&mesh, true);
+        let mut edge_keys = features.get_boundary_edges();
+        edge_keys.sort();
+        assert_eq!(
+            edge_keys,
+            vec![
+                (0, 1),   //  0
+                (0, 3),   //  1
+                (0, 4),   //  2
+                (1, 2),   //  3
+                (1, 5),   //  4
+                (2, 3),   //  5
+                (2, 6),   //  6
+                (3, 7),   //  7
+                (4, 5),   //  8
+                (4, 7),   //  9
+                (4, 8),   // 10
+                (5, 6),   // 11
+                (5, 9),   // 12
+                (6, 7),   // 13
+                (6, 10),  // 14
+                (7, 11),  // 15
+                (8, 9),   // 16
+                (8, 11),  // 17
+                (9, 10),  // 18
+                (10, 11), // 19
+            ]
+        );
+
+        let mesh = Samples::four_hex8();
+        let features = Features::new(&mesh, true);
+        let mut edge_keys = features.get_boundary_edges();
+        edge_keys.sort();
+        assert_eq!(
+            edge_keys,
+            vec![
+                (0, 1),   //  0
+                (0, 3),   //  1
+                (0, 4),   //  2
+                (1, 2),   //  3
+                (1, 5),   //  4
+                (2, 3),   //  5
+                (2, 6),   //  6
+                (2, 12),  //  7
+                (3, 7),   //  8
+                (3, 13),  //  9
+                (4, 5),   // 10
+                (4, 7),   // 11
+                (4, 8),   // 12
+                (5, 6),   // 13
+                (5, 9),   // 14
+                (6, 10),  // 15
+                (6, 14),  // 16
+                (7, 11),  // 17
+                (7, 15),  // 18
+                (8, 9),   // 19
+                (8, 11),  // 20
+                (9, 10),  // 21
+                (10, 11), // 22
+                (10, 16), // 23
+                (11, 17), // 24
+                (12, 13), // 25
+                (12, 14), // 26
+                (13, 15), // 27
+                (14, 15), // 28
+                (14, 16), // 29
+                (15, 17), // 30
+                (16, 17), // 32
+            ]
+        )
     }
 
     #[test]
