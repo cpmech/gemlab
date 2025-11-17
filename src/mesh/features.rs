@@ -493,7 +493,6 @@ impl<'a> Features<'a> {
     ///
     /// * Panics if the mesh is not 3D
     pub fn triangulate_3d_boundary(&self) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<Vec<PointId>>) {
-        // TODO
         assert_eq!(self.mesh.ndim, 3);
         let mut old_point_id_to_new_point_id = HashMap::new();
         let mut xx: Vec<f64> = Vec::new();
