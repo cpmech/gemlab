@@ -66,6 +66,9 @@ pub struct Draw<'a> {
     /// Canvas to draw boundary faces (3D)
     canvas_boundary_faces: Canvas,
 
+    /// Canvas to draw the glyph indicating the X-Y-Z directions in 3D plots
+    canvas_glyph_3d: Canvas,
+
     /// Shows cells (wireframe in 3D)
     show_cells: bool,
 
@@ -99,11 +102,32 @@ pub struct Draw<'a> {
     /// Draws boundary faces (3D)
     show_boundary_faces: bool,
 
+    /// Shows the glyph indicating the X-Y-Z directions in 3D plots
+    show_glyph_3d: bool,
+
     /// View the figure interactively in a window
     view: bool,
 
     /// Generates the plot without equal axes
     unequal_exes: bool,
+
+    /// Specifies the camera elevation for 3D plots
+    camera_elevation: Option<f64>,
+
+    /// Specifies the camera azimuth for 3D plots
+    camera_azimuth: Option<f64>,
+
+    /// Hides the 3D grid and panes (make them transparent)
+    hide_3d_grid: bool,
+
+    /// Hides the axes (2D or 3D)
+    hide_axes: bool,
+
+    /// Origin point of the 3D glyph
+    glyph_3d_origin: [f64; 3],
+
+    /// Size of the 3D glyph
+    glyph_3d_size: f64,
 
     /// Specifies the plot range (xmin, xmax, ymin, ymax)
     range_2d: Option<(f64, f64, f64, f64)>,
@@ -160,6 +184,7 @@ impl<'a> Draw<'a> {
         let mut canvas_normals_3d = Canvas::new();
         let mut canvas_boundary_edges_3d = Canvas::new();
         let mut canvas_boundary_faces = Canvas::new();
+        let canvas_glyph_3d = Canvas::new();
         canvas_edges
             .set_face_color("None")
             .set_line_width(1.0)
@@ -255,6 +280,7 @@ impl<'a> Draw<'a> {
             canvas_normals_3d,
             canvas_boundary_edges_3d,
             canvas_boundary_faces,
+            canvas_glyph_3d,
             show_cells: true,
             show_cell_ids: false,
             show_cell_att: true,
@@ -266,8 +292,15 @@ impl<'a> Draw<'a> {
             show_normal_vectors: false,
             show_boundary_edges_3d: true,
             show_boundary_faces: true,
+            show_glyph_3d: true,
             view: false,
             unequal_exes: false,
+            camera_elevation: None,
+            camera_azimuth: None,
+            hide_3d_grid: true,
+            hide_axes: false,
+            glyph_3d_size: 1.0,
+            glyph_3d_origin: [0.0, 0.0, 0.0],
             range_2d: None,
             range_3d: None,
             size: None,
@@ -458,6 +491,12 @@ impl<'a> Draw<'a> {
         self
     }
 
+    /// Shows the glyph indicating the X-Y-Z directions in 3D plots
+    pub fn show_glyph_3d(&mut self, value: bool) -> &mut Self {
+        self.show_glyph_3d = value;
+        self
+    }
+
     /// View the figure interactively in a window
     pub fn set_view_flag(&mut self, value: bool) -> &mut Self {
         self.view = value;
@@ -469,6 +508,34 @@ impl<'a> Draw<'a> {
     /// Default: `false`
     pub fn set_unequal_exes(&mut self, value: bool) -> &mut Self {
         self.unequal_exes = value;
+        self
+    }
+
+    /// Sets the camera position for 3D plots (azimuth angles in degrees)
+    pub fn set_camera(&mut self, elevation: f64, azimuth: f64) -> &mut Self {
+        self.camera_elevation = Some(elevation);
+        self.camera_azimuth = Some(azimuth);
+        self
+    }
+
+    /// Sets an option to hide the 3D grid and panes (make them transparent)
+    ///
+    /// Default: `true`
+    pub fn set_hide_3d_grid(&mut self, value: bool) -> &mut Self {
+        self.hide_3d_grid = value;
+        self
+    }
+
+    /// Sets whether to hide the axes (2D or 3D)
+    pub fn set_hide_axes(&mut self, value: bool) -> &mut Self {
+        self.hide_axes = value;
+        self
+    }
+
+    /// Specifies the origin point of the 3D glyph and its size
+    pub fn set_glyph_3d(&mut self, x: f64, y: f64, z: f64, size: f64) -> &mut Self {
+        self.glyph_3d_origin = [x, y, z];
+        self.glyph_3d_size = size;
         self
     }
 
@@ -843,7 +910,7 @@ impl<'a> Draw<'a> {
         Ok(())
     }
 
-    /// Draws normal vectors on boundary edges
+    /// Draws normal vectors on boundary edges, faces, and shells
     pub fn normal_vectors(&mut self, features: &Features) -> Result<(), StrError> {
         let ndim = features.mesh.ndim;
         let mut sum = 0.0;
@@ -851,7 +918,8 @@ impl<'a> Draw<'a> {
             sum += f64::abs(features.max[i] - features.min[i]) * f64::abs(features.max[i] - features.min[i]);
         }
         let s = f64::sqrt(sum) * self.m_normal_vector;
-        let ksi = &[0.0, 0.0, 0.0];
+        let ksi3 = &[1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
+        let ksi4 = &[0.0, 0.0, 0.0];
         let mut un = Vector::new(ndim);
         let mut x = Vector::new(ndim);
         if ndim == 2 {
@@ -861,8 +929,8 @@ impl<'a> Draw<'a> {
                     // only boundary edges
                     let mut pad = Scratchpad::new(ndim, edge.kind)?;
                     features.mesh.set_pad(&mut pad, &edge.points);
-                    pad.calc_normal_vector(&mut un, ksi)?;
-                    pad.calc_coords(&mut x, ksi)?;
+                    pad.calc_normal_vector(&mut un, ksi4)?;
+                    pad.calc_coords(&mut x, ksi4)?;
                     self.canvas_normals_2d
                         .draw_arrow(x[0], x[1], x[0] + s * un[0], x[1] + s * un[1]);
                 }
@@ -875,14 +943,36 @@ impl<'a> Draw<'a> {
                     // boundary faces only
                     let mut pad = Scratchpad::new(ndim, face.kind)?;
                     features.mesh.set_pad(&mut pad, &face.points);
-                    pad.calc_normal_vector(&mut un, ksi)?;
-                    pad.calc_coords(&mut x, ksi)?;
+                    if face.kind.class() == GeoClass::Tri {
+                        pad.calc_normal_vector(&mut un, ksi3)?;
+                        pad.calc_coords(&mut x, ksi3)?;
+                    } else {
+                        pad.calc_normal_vector(&mut un, ksi4)?;
+                        pad.calc_coords(&mut x, ksi4)?;
+                    }
                     self.canvas_normals_3d.polyline_3d_begin();
                     self.canvas_normals_3d.polyline_3d_add(x[0], x[1], x[2]);
                     self.canvas_normals_3d
                         .polyline_3d_add(x[0] + s * un[0], x[1] + s * un[1], x[2] + s * un[2]);
                     self.canvas_normals_3d.polyline_3d_end();
                 }
+            }
+            for cell_id in &features.shells {
+                let cell = &features.mesh.cells[*cell_id];
+                let mut pad = Scratchpad::new(ndim, cell.kind)?;
+                features.mesh.set_pad(&mut pad, &cell.points);
+                if cell.kind.class() == GeoClass::Tri {
+                    pad.calc_normal_vector(&mut un, ksi3)?;
+                    pad.calc_coords(&mut x, ksi3)?;
+                } else {
+                    pad.calc_normal_vector(&mut un, ksi4)?;
+                    pad.calc_coords(&mut x, ksi4)?;
+                }
+                self.canvas_normals_3d.polyline_3d_begin();
+                self.canvas_normals_3d.polyline_3d_add(x[0], x[1], x[2]);
+                self.canvas_normals_3d
+                    .polyline_3d_add(x[0] + s * un[0], x[1] + s * un[1], x[2] + s * un[2]);
+                self.canvas_normals_3d.polyline_3d_end();
             }
             self.plot.add(&self.canvas_normals_3d);
         }
@@ -1070,6 +1160,26 @@ impl<'a> Draw<'a> {
                 callback(&mut inset);
             }
             self.plot.add(&inset);
+        }
+        if let Some(elevation) = self.camera_elevation {
+            if let Some(azimuth) = self.camera_azimuth {
+                self.plot.set_camera(elevation, azimuth);
+            }
+        }
+        if self.hide_3d_grid && mesh.ndim == 3 {
+            self.plot.set_hide_3d_grid(true);
+        }
+        if self.hide_axes {
+            self.plot.set_hide_axes(true);
+        }
+        if self.show_glyph_3d && mesh.ndim == 3 {
+            self.canvas_glyph_3d.set_glyph_size(self.glyph_3d_size);
+            self.canvas_glyph_3d.draw_glyph_3d(
+                self.glyph_3d_origin[0],
+                self.glyph_3d_origin[1],
+                self.glyph_3d_origin[2],
+            );
+            self.plot.add(&self.canvas_glyph_3d);
         }
         if self.view {
             self.plot.show(filepath)
@@ -1412,13 +1522,16 @@ mod tests {
             draw.show_cell_ids(true)
                 .show_point_ids(true)
                 .show_point_dots(true)
+                .show_normal_vectors(true)
+                .set_m_normal_vector(0.08)
+                .set_m_range(0.0)
+                .set_glyph_3d(1.8, 0.2, 0.0, 0.25)
+                .set_hide_axes(true)
+                .set_hide_3d_grid(true)
+                .set_range_3d(0.0, 1.0, -0.5, 2.0, 0.0, 1.0)
                 .set_size(800.0, 800.0)
-                .set_view_flag(false)
-                .extra(|plot, before| {
-                    if !before {
-                        plot.set_camera(30.0, 30.0);
-                    }
-                });
+                .set_camera(30.0, 30.0)
+                .set_view_flag(true);
             draw.get_canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
@@ -1426,7 +1539,7 @@ mod tests {
                 .set_fontsize(10.0)
                 .set_bbox_facecolor("gold")
                 .set_bbox_alpha(0.5);
-            draw.all(&mesh, "/tmp/gemlab/test_works_mixed_3d.svg").unwrap();
+            draw.all(&mesh, "/tmp/gemlab/test_draw_works_mixed_3d.svg").unwrap();
         }
     }
 
