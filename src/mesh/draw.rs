@@ -48,6 +48,9 @@ pub struct Draw<'a> {
     /// Canvas to draw edge markers
     canvas_edge_markers: Text,
 
+    /// Canvas to draw face markers lines
+    canvas_edge_markers_lines: Canvas,
+
     /// Canvas to draw face markers
     canvas_face_markers: Text,
 
@@ -178,6 +181,7 @@ impl<'a> Draw<'a> {
         let mut canvas_lin_cells = Canvas::new();
         let mut canvas_shells = Canvas::new();
         let mut canvas_edge_markers = Text::new();
+        let mut canvas_edge_markers_lines = Canvas::new();
         let mut canvas_face_markers = Text::new();
         let mut canvas_face_markers_lines = Canvas::new();
         let mut canvas_normals_2d = Canvas::new();
@@ -235,6 +239,9 @@ impl<'a> Draw<'a> {
             .set_bbox_facecolor("#fff0a3ff")
             .set_bbox_edgecolor("black")
             .set_bbox_style("square,pad=0.15");
+        canvas_edge_markers_lines
+            .set_edge_color("#000000ff")
+            .set_line_width(1.0);
         canvas_face_markers
             .set_color("#000000ff")
             .set_fontsize(9.0)
@@ -274,6 +281,7 @@ impl<'a> Draw<'a> {
             canvas_lin_cells,
             canvas_shells,
             canvas_edge_markers,
+            canvas_edge_markers_lines,
             canvas_face_markers,
             canvas_face_markers_lines,
             canvas_normals_2d,
@@ -344,6 +352,11 @@ impl<'a> Draw<'a> {
     /// Get a mutable reference to the canvas to draw edge markers
     pub fn get_canvas_edge_markers(&mut self) -> &mut Text {
         &mut self.canvas_edge_markers
+    }
+
+    /// Get a mutable reference to the canvas to draw edge markers lines
+    pub fn get_canvas_edge_markers_lines(&mut self) -> &mut Canvas {
+        &mut self.canvas_edge_markers_lines
     }
 
     /// Get a mutable reference to the canvas to draw face markers
@@ -858,6 +871,8 @@ impl<'a> Draw<'a> {
                         x[1] + 0.5 * s * un[1],
                         &format!("{}", marker),
                     );
+                    self.canvas_edge_markers_lines
+                        .draw_polyline(&[[x[0], x[1]], [x[0] + s * un[0], x[1] + s * un[1]]], false);
                 }
             } else {
                 for i in 0..ndim {
@@ -867,6 +882,7 @@ impl<'a> Draw<'a> {
                     .draw_3d(x[0], x[1], x[2], &format!("{}", marker));
             }
         }
+        self.plot.add(&self.canvas_edge_markers_lines);
         self.plot.add(&self.canvas_edge_markers);
         Ok(())
     }
@@ -913,8 +929,8 @@ impl<'a> Draw<'a> {
                 self.canvas_face_markers_lines.polyline_3d_end();
             }
         }
-        self.plot.add(&self.canvas_face_markers);
         self.plot.add(&self.canvas_face_markers_lines);
+        self.plot.add(&self.canvas_face_markers);
         Ok(())
     }
 

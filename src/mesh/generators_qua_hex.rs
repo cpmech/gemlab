@@ -1221,7 +1221,8 @@ mod tests {
             draw.show_point_ids(true)
                 .show_point_marker(true)
                 .show_cell_ids(true)
-                .show_cell_att(true);
+                .show_cell_att(true)
+                .show_edge_markers(true);
             draw.extra(|plot, before| {
                 if before {
                     let mut canvas = Canvas::new();
@@ -1248,6 +1249,29 @@ mod tests {
         assert_eq!(mesh.cells[3].attribute, 1);
         assert_eq!(mesh.cells[4].attribute, 2);
         assert_eq!(mesh.marked_edges, &[(-100, 13, 14), (-100, 13, 18), (-200, 18, 22)]);
+    }
+
+    #[test]
+    fn from_blocks_2d_works_2() {
+        let blocks = Blocks2d::read_json("data/input/example_qua_input.json").unwrap();
+        let mesh = Structured::from_blocks_2d(&blocks, GeoKind::Qua8, false).unwrap();
+
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.show_point_ids(false)
+                .show_point_marker(true)
+                .show_cell_ids(true)
+                .show_cell_att(true)
+                .show_edge_markers(true)
+                .set_view_flag(false)
+                .set_size(600.0, 600.0);
+            draw.all(&mesh, "/tmp/gemlab/test_from_blocks_2d_2.svg").unwrap();
+        }
+
+        mesh.check_overlapping_points(0.01).unwrap();
+        mesh.check_all().unwrap();
+        assert_eq!(mesh.points.len(), 37);
+        assert_eq!(mesh.cells.len(), 8);
     }
 
     #[test]
