@@ -1,9 +1,10 @@
-use super::Mesh;
+use super::{CellAttribute, Mesh};
 use crate::graph::GraphUnd;
 use crate::mesh::Features;
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 use russell_lab::math::PI;
+use std::collections::HashMap;
 use tritet::{Tetgen, Trigen};
 
 /// Groups generators of unstructured meshes (Tri and Tet only)
@@ -142,7 +143,15 @@ impl Unstructured {
     }
 
     /// Generates a triangular mesh from a Planar Straight Line Graph (PSLG) defined by a Mesh
-    pub fn call_trigen(pslg: &Mesh, holes: &Vec<(f64, f64)>, o2: bool, renumber: bool) -> Result<Mesh, StrError> {
+    pub fn call_trigen(
+        pslg: &Mesh,
+        holes: &Vec<(f64, f64)>,
+        o2: bool,
+        max_areas: Option<HashMap<CellAttribute, f64>>,
+        global_max_area: Option<f64>,
+        global_min_angle: Option<f64>,
+        renumber: bool,
+    ) -> Result<Mesh, StrError> {
         // constants
         let nregion = pslg.cells.len();
         let nhole = holes.len();
@@ -186,7 +195,8 @@ impl Unstructured {
             }
             cen_x /= nnode as f64;
             cen_y /= nnode as f64;
-            trigen.set_region(cell.id, cell.attribute, cen_x, cen_y, None)?;
+            let max_area = max_areas.as_ref().and_then(|ma| ma.get(&cell.attribute)).cloned();
+            trigen.set_region(cell.id, cell.attribute, cen_x, cen_y, max_area)?;
         }
 
         // set holes
@@ -195,7 +205,7 @@ impl Unstructured {
         }
 
         // generate mesh
-        trigen.generate_mesh(false, o2, true, None, None)?;
+        trigen.generate_mesh(false, o2, true, global_max_area, global_min_angle)?;
         let mut mesh = Unstructured::from_trigen(&trigen);
 
         // results
@@ -937,7 +947,7 @@ mod tests {
         let holes = Vec::new();
 
         // convert two_qua4 to triangles
-        let mesh_1 = Unstructured::call_trigen(&pslg, &holes, false, false).unwrap();
+        let mesh_1 = Unstructured::call_trigen(&pslg, &holes, false, None, None, None, false).unwrap();
         mesh_1.check_all().unwrap();
         if SAVE_FIGURE {
             draw(&mesh_1, false, "/tmp/gemlab/test_call_trigen_works_1.svg");
@@ -973,18 +983,17 @@ mod tests {
         assert_eq!(format!("{}", mesh_1), correct_mesh_1);
 
         // convert again (will be the same)
-        let mesh_2 = Unstructured::call_trigen(&mesh_1, &holes, false, false).unwrap();
+        let mesh_2 = Unstructured::call_trigen(&mesh_1, &holes, false, None, None, None, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh_2, false, "/tmp/gemlab/test_call_trigen_works_2.svg");
         }
         assert_eq!(format!("{}", mesh_2), correct_mesh_1);
 
         // now convert but use o2 elements
-        let mesh_3 = Unstructured::call_trigen(&mesh_2, &holes, true, false).unwrap();
+        let mesh_3 = Unstructured::call_trigen(&mesh_2, &holes, true, None, None, None, false).unwrap();
         if SAVE_FIGURE {
             draw(&mesh_3, false, "/tmp/gemlab/test_call_trigen_works_3.svg");
         }
-        println!("{}", mesh_3);
         let correct_mesh_3 = "# header\n\
             # ndim npoint ncell nmarked_edge nmarked_face\n\
             2 15 4 6 0\n\
@@ -1023,6 +1032,29 @@ mod tests {
             -200 2 5\n\
             -300 5 4\n";
         assert_eq!(format!("{}", mesh_3), correct_mesh_3);
+    }
+
+    #[test]
+    fn call_trigen_works_4() {
+        let pslg = Samples::two_qua4();
+        let holes = Vec::new();
+
+        // generate again with more elements
+        let max_areas = HashMap::from([(1, 1.0), (2, 0.1)]);
+        let mesh = Unstructured::call_trigen(&pslg, &holes, false, Some(max_areas), None, None, false).unwrap();
+        assert_eq!(mesh.points.len(), 15);
+        assert_eq!(mesh.cells.len(), 19);
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_call_trigen_works_4.svg");
+        }
+
+        // generate again with more elements
+        let mesh = Unstructured::call_trigen(&pslg, &holes, false, None, Some(0.1), None, false).unwrap();
+        assert_eq!(mesh.points.len(), 22);
+        assert_eq!(mesh.cells.len(), 30);
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_call_trigen_works_5.svg");
+        }
     }
 
     #[test]
