@@ -93,6 +93,31 @@ struct Options {
     /// Camera azimuth angle in degrees (3D only)
     #[structopt(long)]
     azimuth: Option<f64>,
+
+    /// Enable or disable glyph indicating XYZ directions (3D only)
+    #[structopt(long = "glyph-enabled")]
+    glyph_enabled: Option<bool>,
+
+    /// Glyph origin (x y z) (3D only)
+    #[structopt(
+        long,
+        value_names = &["x", "y", "z"],
+        number_of_values = 3,
+        allow_hyphen_values = true
+    )]
+    glyph_origin: Option<Vec<f64>>,
+
+    /// Glyph size (3D only)
+    #[structopt(long)]
+    glyph_size: Option<f64>,
+}
+
+fn get_glyph_origin(values: &Option<Vec<f64>>) -> Result<[f64; 3], StrError> {
+    match values {
+        Some(v) if v.len() == 3 => Ok([v[0], v[1], v[2]]),
+        Some(_) => Err("glyph-origin expects exactly three values"),
+        None => Ok([0.0, 0.0, 0.0]),
+    }
 }
 
 fn main() -> Result<(), StrError> {
@@ -153,6 +178,16 @@ fn main() -> Result<(), StrError> {
         let elevation = options.elevation.unwrap_or(30.0);
         let azimuth = options.azimuth.unwrap_or(30.0);
         draw.set_camera(elevation, azimuth);
+
+        if let Some(enabled) = options.glyph_enabled {
+            draw.show_glyph_3d(enabled);
+        }
+
+        if options.glyph_origin.is_some() || options.glyph_size.is_some() {
+            let origin = get_glyph_origin(&options.glyph_origin)?;
+            let size = options.glyph_size.unwrap_or(1.0);
+            draw.set_glyph_3d(origin[0], origin[1], origin[2], size);
+        }
     }
 
     // Write SVG file
