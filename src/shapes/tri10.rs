@@ -52,6 +52,7 @@ impl Tri10 {
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
     pub const N_INTERIOR_NODE: usize = 1;
+    pub const TRIANGULATE_NTRIANGLE: usize = 9;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri10::EDGE_NNODE]; Tri10::NEDGE] = [
@@ -82,6 +83,19 @@ impl Tri10 {
     ];
 
     pub const INTERIOR_NODES: [usize; Tri10::N_INTERIOR_NODE] = [9];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Tri10::TRIANGULATE_NTRIANGLE] = [
+        [0, 3, 8], // 0
+        [3, 9, 8], // 1
+        [3, 6, 9], // 2
+        [6, 4, 9], // 3
+        [6, 1, 4], // 4
+        [8, 9, 5], // 5
+        [9, 7, 5], // 6
+        [9, 4, 7], // 7
+        [5, 7, 2], // 8
+    ];
 
     /// Computes the interpolation functions
     ///

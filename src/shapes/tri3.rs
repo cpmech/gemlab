@@ -54,6 +54,7 @@ impl Tri3 {
     pub const EDGE_NNODE: usize = 2;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const TRIANGULATE_NTRIANGLE: usize = 1;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri3::EDGE_NNODE]; Tri3::NEDGE] = [
@@ -74,6 +75,11 @@ impl Tri3 {
         [0.0, 0.0],
         [1.0, 0.0],
         [0.0, 1.0],
+    ];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Tri3::TRIANGULATE_NTRIANGLE] = [
+        [0, 1, 2],
     ];
 
     /// Computes the interpolation functions

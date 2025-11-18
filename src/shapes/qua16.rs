@@ -54,6 +54,7 @@ impl Qua16 {
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
     pub const N_INTERIOR_NODE: usize = 4;
+    pub const TRIANGULATE_NTRIANGLE: usize = 18;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua16::EDGE_NNODE]; Qua16::NEDGE] = [
@@ -92,6 +93,28 @@ impl Qua16 {
     ];
 
     pub const INTERIOR_NODES: [usize; Qua16::N_INTERIOR_NODE] = [12, 13, 14, 15];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Qua16::TRIANGULATE_NTRIANGLE] = [
+        [ 0,  4, 11],  //  0
+        [ 4, 12, 11],  //  1
+        [ 4,  8, 12],  //  2
+        [ 8, 13, 12],  //  3
+        [ 8,  1, 13],  //  4
+        [ 1,  5, 13],  //  5
+        [11, 12,  7],  //  6
+        [12, 15,  7],  //  7
+        [12, 13, 15],  //  8
+        [13, 14, 15],  //  9
+        [13,  5, 14],  // 10
+        [ 5,  9, 14],  // 11
+        [ 7, 15,  3],  // 12
+        [15, 10,  3],  // 13
+        [15, 14, 10],  // 14
+        [14,  6, 10],  // 15
+        [14,  9,  6],  // 16
+        [ 9,  2,  6],  // 17
+    ];
 
     /// Computes the interpolation functions
     ///

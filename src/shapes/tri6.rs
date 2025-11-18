@@ -55,6 +55,7 @@ impl Tri6 {
     pub const EDGE_NNODE: usize = 3;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const TRIANGULATE_NTRIANGLE: usize = 4;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri6::EDGE_NNODE]; Tri6::NEDGE] = [
@@ -78,6 +79,14 @@ impl Tri6 {
         [0.5, 0.0],
         [0.5, 0.5],
         [0.0, 0.5],
+    ];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Tri6::TRIANGULATE_NTRIANGLE] = [
+        [0, 3, 5], // 0
+        [3, 4, 5], // 1
+        [3, 1, 4], // 2
+        [5, 4, 2], // 3
     ];
 
     /// Computes the interpolation functions

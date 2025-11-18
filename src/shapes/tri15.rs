@@ -59,6 +59,7 @@ impl Tri15 {
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
     pub const N_INTERIOR_NODE: usize = 3;
+    pub const TRIANGULATE_NTRIANGLE: usize = 16;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Tri15::EDGE_NNODE]; Tri15::NEDGE] = [
@@ -94,6 +95,26 @@ impl Tri15 {
     ];
 
     pub const INTERIOR_NODES: [usize; Tri15::N_INTERIOR_NODE] = [12, 13, 14];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Tri15::TRIANGULATE_NTRIANGLE] = [
+        [ 0,  6, 11],  //  0
+        [ 6, 12, 11],  //  1
+        [ 6,  3, 12],  //  2
+        [ 3, 13, 12],  //  3
+        [ 3,  7, 13],  //  4
+        [ 7,  8, 13],  //  5
+        [ 7,  1,  8],  //  6
+        [11, 12,  5],  //  7
+        [12, 14,  5],  //  8
+        [12, 13, 14],  //  9
+        [13,  4, 14],  // 10
+        [13,  8,  4],  // 11
+        [ 5, 14, 10],  // 12
+        [14,  9, 10],  // 13
+        [14,  4,  9],  // 14
+        [10,  9,  2],  // 15
+    ];
 
     /// Computes the interpolation functions
     ///

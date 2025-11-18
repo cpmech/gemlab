@@ -46,6 +46,8 @@ impl Qua8 {
     pub const EDGE_NNODE: usize = 3;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const TRIANGULATE_NTRIANGLE: usize = 8;
+    pub const TRIANGULATE_EXTRA_NNODE: usize = 1;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua8::EDGE_NNODE]; Qua8::NEDGE] = [
@@ -73,6 +75,23 @@ impl Qua8 {
         [ 1.0,  0.0],
         [ 0.0,  1.0],
         [-1.0,  0.0],
+    ];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Qua8::TRIANGULATE_NTRIANGLE] = [
+        [0, 4, 7], // 0
+        [4, 8, 7], // 1
+        [4, 1, 8], // 2
+        [1, 5, 8], // 3
+        [7, 8, 3], // 4
+        [8, 6, 3], // 5
+        [8, 5, 6], // 6
+        [5, 2, 6], // 7
+    ];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_EXTRA_COORDS: [[f64; Qua8::GEO_NDIM]; Qua8::TRIANGULATE_EXTRA_NNODE] = [
+        [0.0, 0.0],
     ];
 
     /// Computes the interpolation functions

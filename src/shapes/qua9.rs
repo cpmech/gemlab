@@ -48,6 +48,7 @@ impl Qua9 {
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
     pub const N_INTERIOR_NODE: usize = 1;
+    pub const TRIANGULATE_NTRIANGLE: usize = 8;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua9::EDGE_NNODE]; Qua9::NEDGE] = [
@@ -79,6 +80,18 @@ impl Qua9 {
     ];
 
     pub const INTERIOR_NODES: [usize; Qua9::N_INTERIOR_NODE] = [8];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Qua9::TRIANGULATE_NTRIANGLE] = [
+        [0, 4, 7], // 0
+        [4, 8, 7], // 1
+        [4, 1, 8], // 2
+        [1, 5, 8], // 3
+        [7, 8, 3], // 4
+        [8, 6, 3], // 5
+        [8, 5, 6], // 6
+        [5, 2, 6], // 7
+    ];
 
     /// Computes the interpolation functions
     ///
