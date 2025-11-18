@@ -111,11 +111,11 @@ pub struct Draw<'a> {
     /// Generates the plot without equal axes
     unequal_exes: bool,
 
-    /// Specifies the camera elevation for 3D plots
-    camera_elevation: Option<f64>,
+    /// Specifies the camera elevation for 3D plots (default: 30 deg)
+    camera_elevation: f64,
 
-    /// Specifies the camera azimuth for 3D plots
-    camera_azimuth: Option<f64>,
+    /// Specifies the camera azimuth for 3D plots (default: 30 deg)
+    camera_azimuth: f64,
 
     /// Hides the 3D grid and panes (make them transparent)
     hide_3d_grid: bool,
@@ -295,8 +295,8 @@ impl<'a> Draw<'a> {
             show_glyph_3d: true,
             view: false,
             unequal_exes: false,
-            camera_elevation: None,
-            camera_azimuth: None,
+            camera_elevation: 30.0,
+            camera_azimuth: 30.0,
             hide_3d_grid: true,
             hide_axes: false,
             glyph_3d_size: 1.0,
@@ -513,8 +513,8 @@ impl<'a> Draw<'a> {
 
     /// Sets the camera position for 3D plots (azimuth angles in degrees)
     pub fn set_camera(&mut self, elevation: f64, azimuth: f64) -> &mut Self {
-        self.camera_elevation = Some(elevation);
-        self.camera_azimuth = Some(azimuth);
+        self.camera_elevation = elevation;
+        self.camera_azimuth = azimuth;
         self
     }
 
@@ -1161,10 +1161,8 @@ impl<'a> Draw<'a> {
             }
             self.plot.add(&inset);
         }
-        if let Some(elevation) = self.camera_elevation {
-            if let Some(azimuth) = self.camera_azimuth {
-                self.plot.set_camera(elevation, azimuth);
-            }
+        if mesh.ndim == 3 {
+            self.plot.set_camera(self.camera_elevation, self.camera_azimuth);
         }
         if self.hide_3d_grid && mesh.ndim == 3 {
             self.plot.set_hide_3d_grid(true);
@@ -1197,7 +1195,7 @@ mod tests {
     use crate::mesh::{Features, Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
-    const SAVE_FIGURE: bool = false;
+    const SAVE_FIGURE: bool = true;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
@@ -1531,7 +1529,7 @@ mod tests {
                 .set_range_3d(0.0, 1.0, -0.5, 2.0, 0.0, 1.0)
                 .set_size(800.0, 800.0)
                 .set_camera(30.0, 30.0)
-                .set_view_flag(true);
+                .set_view_flag(false);
             draw.get_canvas_point_ids()
                 .set_align_horizontal("left")
                 .set_align_vertical("bottom")
