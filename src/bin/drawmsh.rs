@@ -85,6 +85,14 @@ struct Options {
     /// Multiplier for normal vector marker length
     #[structopt(long)]
     m_normal_vector_marker: Option<f64>,
+
+    /// Camera elevation angle in degrees (3D only)
+    #[structopt(long)]
+    elevation: Option<f64>,
+
+    /// Camera azimuth angle in degrees (3D only)
+    #[structopt(long)]
+    azimuth: Option<f64>,
 }
 
 fn main() -> Result<(), StrError> {
@@ -138,6 +146,13 @@ fn main() -> Result<(), StrError> {
     }
     if let Some(m_normal_vector_marker) = options.m_normal_vector_marker {
         draw.set_m_normal_vector_marker(m_normal_vector_marker);
+    }
+
+    // Set camera for 3D meshes
+    if mesh.ndim == 3 {
+        let elevation = options.elevation.unwrap_or(30.0);
+        let azimuth = options.azimuth.unwrap_or(30.0);
+        draw.set_camera(elevation, azimuth);
     }
 
     // Write SVG file
