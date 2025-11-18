@@ -8,7 +8,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "qua2msh",
-    about = "Generates quad meshes from on a set of blocks. Outputs MSH and VTU files (VTU: only for n4, n8, and n9)."
+    about = "Generates quad meshes from a set of blocks. Outputs MSH and VTU files (VTU: only for n4, n8, and n9)."
 )]
 struct Options {
     /// Input JSON file

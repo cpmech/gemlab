@@ -8,7 +8,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "hex2msh",
-    about = "Generates hex meshes from on a set of blocks. Outputs MSH and VTU files (VTU: only for n8 and n20)."
+    about = "Generates hex meshes from a set of blocks. Outputs MSH and VTU files (VTU: only for n8 and n20)."
 )]
 struct Options {
     /// Input JSON file
