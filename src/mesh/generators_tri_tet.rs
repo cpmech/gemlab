@@ -935,14 +935,14 @@ mod tests {
     fn call_trigen_works_1() {
         let pslg = Samples::two_qua4();
         let holes = Vec::new();
-        let mesh = Unstructured::call_trigen(&pslg, &holes, false, false).unwrap();
-        mesh.check_all().unwrap();
-        if true {
-            draw(&mesh, false, "/tmp/gemlab/test_call_trigen_works_1.svg");
+
+        // convert two_qua4 to triangles
+        let mesh_1 = Unstructured::call_trigen(&pslg, &holes, false, false).unwrap();
+        mesh_1.check_all().unwrap();
+        if SAVE_FIGURE {
+            draw(&mesh_1, false, "/tmp/gemlab/test_call_trigen_works_1.svg");
         }
-        assert_eq!(
-            format!("{}", mesh),
-            "# header\n\
+        let correct_mesh_1 = "# header\n\
              # ndim npoint ncell nmarked_edge nmarked_face\n\
              2 6 4 6 0\n\
              \n\
@@ -969,8 +969,60 @@ mod tests {
              -400 4 1\n\
              -100 3 2\n\
              -200 2 5\n\
-             -300 5 4\n"
-        );
+             -300 5 4\n";
+        assert_eq!(format!("{}", mesh_1), correct_mesh_1);
+
+        // convert again (will be the same)
+        let mesh_2 = Unstructured::call_trigen(&mesh_1, &holes, false, false).unwrap();
+        if SAVE_FIGURE {
+            draw(&mesh_2, false, "/tmp/gemlab/test_call_trigen_works_2.svg");
+        }
+        assert_eq!(format!("{}", mesh_2), correct_mesh_1);
+
+        // now convert but use o2 elements
+        let mesh_3 = Unstructured::call_trigen(&mesh_2, &holes, true, false).unwrap();
+        if SAVE_FIGURE {
+            draw(&mesh_3, false, "/tmp/gemlab/test_call_trigen_works_3.svg");
+        }
+        println!("{}", mesh_3);
+        let correct_mesh_3 = "# header\n\
+            # ndim npoint ncell nmarked_edge nmarked_face\n\
+            2 15 4 6 0\n\
+            \n\
+            # points\n\
+            # id marker x y {z}\n\
+            0 -1 0.0 0.0\n\
+            1 -2 1.0 0.0\n\
+            2 -3 1.0 1.0\n\
+            3 -4 0.0 1.0\n\
+            4 -5 2.0 0.0\n\
+            5 -6 2.0 1.0\n\
+            6 -400 0.5 0.0\n\
+            7 0 0.5 0.5\n\
+            8 -300 0.0 0.5\n\
+            9 0 1.0 0.5\n\
+            10 -100 0.5 1.0\n\
+            11 0 1.5 0.5\n\
+            12 -300 2.0 0.5\n\
+            13 -200 1.5 1.0\n\
+            14 -400 1.5 0.0\n\
+            \n\
+            # cells\n\
+            # id attribute kind points\n\
+            0 1 tri6 0 1 3 6 7 8\n\
+            1 1 tri6 3 1 2 7 9 10\n\
+            2 2 tri6 2 4 5 11 12 13\n\
+            3 2 tri6 4 2 1 11 9 14\n\
+            \n\
+            # marked edges\n\
+            # marker p1 p2\n\
+            -400 1 0\n\
+            -300 0 3\n\
+            -400 4 1\n\
+            -100 3 2\n\
+            -200 2 5\n\
+            -300 5 4\n";
+        assert_eq!(format!("{}", mesh_3), correct_mesh_3);
     }
 
     #[test]
