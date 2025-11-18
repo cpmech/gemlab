@@ -116,10 +116,10 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, CommonArgs, Gauss};
-    use crate::mesh::GeoKind;
+    use crate::mesh::{GeoKind, Mesh};
     use crate::recovery;
     use crate::shapes::Scratchpad;
-    use russell_lab::{vec_approx_eq, Vector};
+    use russell_lab::{vec_approx_eq, vec_inner, Vector};
 
     #[test]
     fn capture_some_errors() {
@@ -245,5 +245,38 @@ mod tests {
         })
         .unwrap();
         vec_approx_eq(&a, a_correct, 1e-14);
+    }
+
+    #[test]
+    fn vec_01_ns_bry_works_3d_plane() {
+        // Blender:
+        // Apply a Quaternion rotation of (5/6, 1/6, 1/2, 1/6) to the plane with normal (0,0,1)
+        let mesh = Mesh::read("data/blender/single-plane.blend.msh").unwrap();
+
+        // check unit normal
+        // Mathematica:
+        // w = ResourceFunction["Quaternion"][5/6, 1/6, 1/2, 1/6];
+        // m = ResourceFunction["QuaternionToRotationMatrix"][w];
+        // un = {0, 0, 1};
+        // m . un
+        // Output: {8/9, -(1/9), 4/9}
+        let un_correct = Vector::from(&[8.0 / 9.0, -(1.0 / 9.0), 4.0 / 9.0]);
+
+        // integration points
+        let mut pad = mesh.get_pad(0);
+        let class = pad.kind.class();
+        let ips = Gauss::new_sized(class, 4).unwrap();
+
+        // perform integration with constant flow vector
+        let w = Vector::from(&[1.0, 2.0, 3.0]);
+        let s = vec_inner(&w, &un_correct);
+        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut args = CommonArgs::new(&mut pad, &ips);
+        integ::vec_01_ns_bry(&mut a, &mut args, |_, un, _| {
+            vec_approx_eq(&un, &un_correct, 1e-7); // note that blender is single precision
+            Ok(vec_inner(&w, un))
+        })
+        .unwrap();
+        vec_approx_eq(&a, &[s, s, s, s], 1e-7);
     }
 }

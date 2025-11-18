@@ -1,3 +1,4 @@
 /target
 Cargo.lock
 .aider*
+*.blend[0-9]*
