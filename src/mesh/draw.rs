@@ -292,7 +292,7 @@ impl<'a> Draw<'a> {
             show_normal_vectors: false,
             show_boundary_edges_3d: true,
             show_boundary_faces: true,
-            show_glyph_3d: true,
+            show_glyph_3d: false,
             view: false,
             unequal_exes: false,
             camera_elevation: 30.0,
@@ -492,6 +492,8 @@ impl<'a> Draw<'a> {
     }
 
     /// Shows the glyph indicating the X-Y-Z directions in 3D plots
+    ///
+    /// Default: `false`
     pub fn show_glyph_3d(&mut self, value: bool) -> &mut Self {
         self.show_glyph_3d = value;
         self
@@ -876,7 +878,8 @@ impl<'a> Draw<'a> {
         if ndim == 2 {
             return Ok(());
         }
-        let ksi = &[0.0, 0.0, 0.0];
+        let ksi3 = &[1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
+        let ksi4 = &[0.0, 0.0, 0.0];
         let mut un = Vector::new(ndim);
         let mut x = Vector::new(ndim);
         let mut sum = 0.0;
@@ -890,8 +893,13 @@ impl<'a> Draw<'a> {
             if let Some(face) = features.faces.get(&key) {
                 let mut pad = Scratchpad::new(ndim, face.kind)?;
                 mesh.set_pad(&mut pad, &face.points);
-                pad.calc_normal_vector(&mut un, ksi)?;
-                pad.calc_coords(&mut x, ksi)?;
+                if face.kind.class() == GeoClass::Tri {
+                    pad.calc_normal_vector(&mut un, ksi3)?;
+                    pad.calc_coords(&mut x, ksi3)?;
+                } else {
+                    pad.calc_normal_vector(&mut un, ksi4)?;
+                    pad.calc_coords(&mut x, ksi4)?;
+                }
                 self.canvas_face_markers.draw_3d(
                     x[0] + 0.5 * s * un[0],
                     x[1] + 0.5 * s * un[1],

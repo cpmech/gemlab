@@ -105,12 +105,16 @@ impl Unstructured {
                 mesh.marked_edges.push((marker, a, b));
             }
         }
-
-        // done
         mesh
     }
 
     /// Allocates a mesh from the data stored in a Tetgen instance
+    ///
+    /// # Notes
+    ///
+    /// 1. Zero face markers are ignored.
+    /// 2. TetGen automatically assigns the marker 1 for points on the boundary
+    /// thus, we cannot use the marker 1 to identify corner points
     pub fn from_tetgen(tetgen: &Tetgen) -> Mesh {
         // allocate data
         const NDIM: usize = 3;
@@ -139,6 +143,16 @@ impl Unstructured {
                 mesh.cells[i].points[m] = tetgen.out_cell_point(i, m);
             }
         }
+
+        // set marked faces
+        let mut pp = [0i32; 6];
+        for i in 0..tetgen.out_n_marked_face() {
+            let (marker, _) = tetgen.out_marked_face(i, &mut pp);
+            if marker != 0 {
+                mesh.marked_faces
+                    .push((marker, pp[0] as usize, pp[1] as usize, pp[2] as usize, usize::MAX));
+            }
+        }
         mesh
     }
 
@@ -152,10 +166,15 @@ impl Unstructured {
         global_min_angle: Option<f64>,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
+        // check
+        if pslg.ndim != 2 {
+            return Err("the PSLG mesh must be 2D");
+        }
+
         // constants
+        let npoint = pslg.points.len();
         let nregion = pslg.cells.len();
         let nhole = holes.len();
-        let npoint = pslg.points.len();
         let extract_all = true; // we need interior edges as well
         let features = Features::new(&pslg, extract_all);
         let nsegment = features.edges.len();
@@ -217,15 +236,99 @@ impl Unstructured {
 
     /// Generates a tetrahedral mesh from a Piecewise Linear Complex (PLC) defined by a Mesh
     ///
-    /// The mesh must contain only faces (shells) and each face must be either a Tri3 or a Qua4.
-    pub fn from_plc(
+    /// The PLC must contain only faces (shells) and each face must be either a Tri3 or a Qua4.
+    pub fn call_tetgen(
         plc: &Mesh,
         regions: &Vec<(i32, f64, f64, f64)>,
-        holes: &Vec<(f64, f64)>,
+        holes: &Vec<(f64, f64, f64)>,
         o2: bool,
+        max_areas: Option<HashMap<CellAttribute, f64>>,
+        global_max_volume: Option<f64>,
+        global_min_angle: Option<f64>,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
-        Err("TODO")
+        // check
+        if plc.ndim != 3 {
+            return Err("the PLC mesh must be 3D");
+        }
+
+        // constants
+        let npoint = plc.points.len();
+        let nregion = regions.len();
+        let nhole = holes.len();
+
+        // extract features
+        let extract_all = true; // we need all facets
+        let features = Features::new(&plc, extract_all);
+        let nfacet = features.shells.len() + features.faces.len();
+
+        // shells: counter the number of points on each facet
+        let mut facet_npoint = Vec::with_capacity(nfacet);
+        for cell_id in &features.shells {
+            facet_npoint.push(plc.cells[*cell_id].points.len());
+        }
+
+        // faces: counter the number of points on each facet
+        let mut sorted_face_keys: Vec<_> = features.faces.keys().cloned().collect();
+        sorted_face_keys.sort();
+        for i in 0..sorted_face_keys.len() {
+            let face = &features.faces.get(&sorted_face_keys[i]).unwrap();
+            facet_npoint.push(face.points.len());
+        }
+
+        // allocate trigen structure
+        let mut tetgen = Tetgen::new(npoint, Some(facet_npoint), Some(nregion), Some(nhole))?;
+
+        // set points
+        for i in 0..npoint {
+            tetgen.set_point(
+                i,
+                plc.points[i].marker,
+                plc.points[i].coords[0],
+                plc.points[i].coords[1],
+                plc.points[i].coords[2],
+            )?;
+        }
+
+        // shells: set facets
+        for (i, cell_id) in features.shells.iter().enumerate() {
+            let facet = &plc.cells[*cell_id];
+            tetgen.set_facet_marker(i, facet.attribute)?;
+            for (m, p) in facet.points.iter().enumerate() {
+                tetgen.set_facet_point(i, m, *p)?;
+            }
+        }
+
+        // faces: set facets
+        let start = features.shells.len();
+        for (i, face_key) in sorted_face_keys.iter().enumerate() {
+            let facet = &features.faces.get(face_key).unwrap();
+            tetgen.set_facet_marker(start + i, facet.marker)?;
+            for (m, p) in facet.points.iter().enumerate() {
+                tetgen.set_facet_point(start + i, m, *p)?;
+            }
+        }
+
+        // set regions
+        for (i, region) in regions.iter().enumerate() {
+            let max_area = max_areas.as_ref().and_then(|ma| ma.get(&region.0)).cloned();
+            tetgen.set_region(i, region.0, region.1, region.2, region.3, max_area)?;
+        }
+
+        // set holes
+        for (i, hole) in holes.iter().enumerate() {
+            tetgen.set_hole(i, hole.0, hole.1, hole.2)?;
+        }
+
+        // generate mesh
+        tetgen.generate_mesh(false, o2, global_max_volume, global_min_angle)?;
+        let mut mesh = Unstructured::from_tetgen(&tetgen);
+
+        // results
+        if renumber {
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
     }
 
     /// Generates a mesh representing a quarter of a ring in 2D
@@ -703,7 +806,8 @@ mod tests {
             .show_cell_att(true)
             .show_point_marker(true)
             .show_edge_markers(true)
-            .show_face_markers(true);
+            .show_face_markers(true)
+            .set_view_flag(false);
         if larger {
             draw.set_size(800.0, 800.0);
         } else {
@@ -1058,10 +1162,78 @@ mod tests {
     }
 
     #[test]
-    fn from_plc_works() {
-        let att1 = 8;
-        let att2 = 16;
-        let regions = vec![(att1, 0.5, 0.5), (att2, 1.5, 0.5)];
+    fn call_tetgen_works_1() {
+        let plc = Samples::two_hex8();
+        let regions = vec![(1, 0.5, 0.5, 0.5), (2, 0.5, 0.5, 1.5)];
+        let holes = Vec::new();
+        let mesh = Unstructured::call_tetgen(&plc, &regions, &holes, false, None, None, None, false).unwrap();
+        if SAVE_FIGURE {
+            draw(&mesh, true, "/tmp/gemlab/test_call_tetgen_works_1.svg");
+        }
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 12);
+        assert_eq!(mesh.cells.len(), 12);
+        println!("{}", mesh);
+        let correct = "# header\n\
+            # ndim npoint ncell nmarked_edge nmarked_face\n\
+            3 12 12 0 8\n\
+            \n\
+            # points\n\
+            # id marker x y {z}\n\
+            0 0 0.0 0.0 0.0\n\
+            1 -1 1.0 0.0 0.0\n\
+            2 -1 1.0 1.0 0.0\n\
+            3 0 0.0 1.0 0.0\n\
+            4 0 0.0 0.0 1.0\n\
+            5 0 1.0 0.0 1.0\n\
+            6 0 1.0 1.0 1.0\n\
+            7 -1 0.0 1.0 1.0\n\
+            8 0 0.0 0.0 2.0\n\
+            9 0 1.0 0.0 2.0\n\
+            10 0 1.0 1.0 2.0\n\
+            11 0 0.0 1.0 2.0\n\
+            \n\
+            # cells\n\
+            # id attribute kind points\n\
+            0 1 tet4 0 3 7 2\n\
+            1 1 tet4 0 2 6 1\n\
+            2 1 tet4 0 6 5 1\n\
+            3 2 tet4 8 9 4 10\n\
+            4 2 tet4 8 4 11 10\n\
+            5 1 tet4 0 7 4 6\n\
+            6 1 tet4 7 0 2 6\n\
+            7 1 tet4 4 0 6 5\n\
+            8 2 tet4 4 7 11 6\n\
+            9 2 tet4 4 11 10 6\n\
+            10 2 tet4 9 4 10 5\n\
+            11 2 tet4 10 4 6 5\n\
+            \n\
+            # marked faces\n\
+            # marker p1 p2 p3 {p4}\n\
+            -8 2 7 3\n\
+            -10 1 6 2\n\
+            -10 1 5 6\n\
+            -11 1 0 5\n\
+            -9 9 8 10\n\
+            -9 10 8 11\n\
+            -8 6 7 2\n\
+            -11 0 4 5\n";
+        assert_eq!(format!("{}", mesh), correct);
+    }
+
+    #[test]
+    fn call_tetgen_works_2() {
+        let plc = Samples::one_hex8();
+        let regions = vec![(1, 0.5, 0.5, 0.5)];
+        let holes = Vec::new();
+        let max_vol = HashMap::from([(1, 0.3)]);
+        let mesh = Unstructured::call_tetgen(&plc, &regions, &holes, false, Some(max_vol), None, None, false).unwrap();
+        if SAVE_FIGURE {
+            draw(&mesh, true, "/tmp/gemlab/test_call_tetgen_works_2.svg");
+        }
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 14);
+        assert_eq!(mesh.cells.len(), 24);
     }
 
     #[test]
