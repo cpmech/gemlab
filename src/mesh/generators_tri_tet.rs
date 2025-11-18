@@ -1,5 +1,6 @@
 use super::Mesh;
 use crate::graph::GraphUnd;
+use crate::mesh::Features;
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
 use russell_lab::math::PI;
@@ -78,7 +79,7 @@ impl Unstructured {
         let kind = if nnode == 6 { GeoKind::Tri6 } else { GeoKind::Tri3 };
         let mut mesh = Mesh::new_zero_homogeneous(NDIM, npoint, ncell, kind).unwrap();
 
-        // set mesh data
+        // set essential mesh data
         for i in 0..npoint {
             let marker = trigen.out_point_marker(i);
             mesh.points[i].id = i;
@@ -93,6 +94,18 @@ impl Unstructured {
                 mesh.cells[i].points[m] = trigen.out_cell_point(i, m);
             }
         }
+
+        // set marked edges
+        for i in 0..trigen.out_nsegment() {
+            let marker = trigen.out_segment_marker(i);
+            if marker != 0 {
+                let a = trigen.out_segment_point(i, 0);
+                let b = trigen.out_segment_point(i, 1);
+                mesh.marked_edges.push((marker, a, b));
+            }
+        }
+
+        // done
         mesh
     }
 
@@ -126,6 +139,83 @@ impl Unstructured {
             }
         }
         mesh
+    }
+
+    /// Generates a triangular mesh from a Planar Straight Line Graph (PSLG) defined by a Mesh
+    pub fn call_trigen(pslg: &Mesh, holes: &Vec<(f64, f64)>, o2: bool, renumber: bool) -> Result<Mesh, StrError> {
+        // constants
+        let nregion = pslg.cells.len();
+        let nhole = holes.len();
+        let npoint = pslg.points.len();
+        let extract_all = true; // we need interior edges as well
+        let features = Features::new(&pslg, extract_all);
+        let nsegment = features.edges.len();
+
+        // allocate trigen structure
+        let mut trigen = Trigen::new(npoint, Some(nsegment), Some(nregion), Some(nhole))?;
+
+        // set points
+        for i in 0..npoint {
+            trigen.set_point(
+                i,
+                pslg.points[i].marker,
+                pslg.points[i].coords[0],
+                pslg.points[i].coords[1],
+            )?;
+        }
+
+        // set segments
+        let mut sorted_edge_keys: Vec<_> = features.edges.keys().cloned().collect();
+        sorted_edge_keys.sort();
+        for i in 0..sorted_edge_keys.len() {
+            let edge = &features.edges.get(&sorted_edge_keys[i]).unwrap();
+            if edge.points.len() != 2 {
+                return Err("edges must have 2 points");
+            }
+            trigen.set_segment(i, edge.marker, edge.points[0], edge.points[1])?;
+        }
+
+        // set regions
+        for cell in &pslg.cells {
+            let mut cen_x = 0.0;
+            let mut cen_y = 0.0;
+            let nnode = cell.points.len();
+            for p in &cell.points {
+                cen_x += pslg.points[*p].coords[0];
+                cen_y += pslg.points[*p].coords[1];
+            }
+            cen_x /= nnode as f64;
+            cen_y /= nnode as f64;
+            trigen.set_region(cell.id, cell.attribute, cen_x, cen_y, None)?;
+        }
+
+        // set holes
+        for (i, hole) in holes.iter().enumerate() {
+            trigen.set_hole(i, hole.0, hole.1)?;
+        }
+
+        // generate mesh
+        trigen.generate_mesh(false, o2, true, None, None)?;
+        let mut mesh = Unstructured::from_trigen(&trigen);
+
+        // results
+        if renumber {
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
+    }
+
+    /// Generates a tetrahedral mesh from a Piecewise Linear Complex (PLC) defined by a Mesh
+    ///
+    /// The mesh must contain only faces (shells) and each face must be either a Tri3 or a Qua4.
+    pub fn from_plc(
+        plc: &Mesh,
+        regions: &Vec<(i32, f64, f64, f64)>,
+        holes: &Vec<(f64, f64)>,
+        o2: bool,
+        renumber: bool,
+    ) -> Result<Mesh, StrError> {
+        Err("TODO")
     }
 
     /// Generates a mesh representing a quarter of a ring in 2D
@@ -572,7 +662,7 @@ impl Unstructured {
 mod tests {
     use super::*;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{At, Draw, Features};
+    use crate::mesh::{At, Draw, Features, Samples};
     use crate::util::any_x;
     use plotpy::Surface;
     use russell_lab::approx_eq;
@@ -598,7 +688,12 @@ mod tests {
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
         let mut draw = Draw::new();
-        draw.show_cell_ids(true).show_point_ids(true);
+        draw.show_cell_ids(true)
+            .show_point_ids(true)
+            .show_cell_att(true)
+            .show_point_marker(true)
+            .show_edge_markers(true)
+            .show_face_markers(true);
         if larger {
             draw.set_size(800.0, 800.0);
         } else {
@@ -834,6 +929,55 @@ mod tests {
         assert_eq!(mesh.cells[0].attribute, 8);
         assert_eq!(mesh.cells[0].kind, GeoKind::Tri6);
         assert_eq!(mesh.cells[0].points, vec![0, 1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn call_trigen_works_1() {
+        let pslg = Samples::two_qua4();
+        let holes = Vec::new();
+        let mesh = Unstructured::call_trigen(&pslg, &holes, false, false).unwrap();
+        mesh.check_all().unwrap();
+        if true {
+            draw(&mesh, false, "/tmp/gemlab/test_call_trigen_works_1.svg");
+        }
+        assert_eq!(
+            format!("{}", mesh),
+            "# header\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 6 4 6 0\n\
+             \n\
+             # points\n\
+             # id marker x y {z}\n\
+             0 -1 0.0 0.0\n\
+             1 -2 1.0 0.0\n\
+             2 -3 1.0 1.0\n\
+             3 -4 0.0 1.0\n\
+             4 -5 2.0 0.0\n\
+             5 -6 2.0 1.0\n\
+             \n\
+             # cells\n\
+             # id attribute kind points\n\
+             0 1 tri3 0 1 3\n\
+             1 1 tri3 3 1 2\n\
+             2 2 tri3 2 4 5\n\
+             3 2 tri3 4 2 1\n\
+             \n\
+             # marked edges\n\
+             # marker p1 p2\n\
+             -400 1 0\n\
+             -300 0 3\n\
+             -400 4 1\n\
+             -100 3 2\n\
+             -200 2 5\n\
+             -300 5 4\n"
+        );
+    }
+
+    #[test]
+    fn from_plc_works() {
+        let att1 = 8;
+        let att2 = 16;
+        let regions = vec![(att1, 0.5, 0.5), (att2, 1.5, 0.5)];
     }
 
     #[test]
