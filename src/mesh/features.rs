@@ -2,9 +2,11 @@ use super::algorithms::{extract_all_2d_edges, extract_all_faces, extract_feature
 use super::{At, CellId, Mesh, PointId};
 use super::{Edge, EdgeKey, Edges, MapEdge2dToCells, MapPointToEdges};
 use super::{Face, FaceKey, Faces, MapFaceToCells, MapPointToFaces};
+use crate::mesh::GeoKind;
+use crate::shapes::Scratchpad;
 use crate::util::GridSearch;
 use crate::StrError;
-use russell_lab::sort2;
+use russell_lab::{sort2, Vector};
 use std::collections::{HashMap, HashSet};
 
 /// Holds derived mesh features such as points, edges, and faces on the mesh boundary or the interior
@@ -529,6 +531,9 @@ impl<'a> Features<'a> {
         let mut yy: Vec<f64> = Vec::new();
         let mut zz: Vec<f64> = Vec::new();
         let mut triangles: Vec<Vec<PointId>> = Vec::new();
+        let mut pad_qua8 = Scratchpad::new(3, GeoKind::Qua8).unwrap();
+        let mut x_cen = Vector::new(3);
+        let ksi = [0.0, 0.0, 0.0];
         for (face_key, face) in &self.faces {
             let shared_by_ncell = self.all_faces.get(face_key).unwrap().len();
             if shared_by_ncell == 1 {
@@ -548,9 +553,37 @@ impl<'a> Features<'a> {
                         .clone();
                     new_face_points.push(new_point_id);
                 }
-                triangles.push(vec![new_face_points[0], new_face_points[1], new_face_points[2]]);
-                if face_npoint > 3 {
-                    triangles.push(vec![new_face_points[2], new_face_points[3], new_face_points[0]]);
+                match face.kind {
+                    GeoKind::Tri3 => {
+                        triangles.push(vec![new_face_points[0], new_face_points[1], new_face_points[2]]);
+                    }
+                    GeoKind::Tri6 => {
+                        triangles.push(vec![new_face_points[0], new_face_points[3], new_face_points[5]]);
+                        triangles.push(vec![new_face_points[3], new_face_points[4], new_face_points[5]]);
+                        triangles.push(vec![new_face_points[3], new_face_points[1], new_face_points[4]]);
+                        triangles.push(vec![new_face_points[5], new_face_points[4], new_face_points[2]]);
+                    }
+                    GeoKind::Qua4 => {
+                        triangles.push(vec![new_face_points[0], new_face_points[1], new_face_points[2]]);
+                        triangles.push(vec![new_face_points[2], new_face_points[3], new_face_points[0]]);
+                    }
+                    GeoKind::Qua8 => {
+                        self.mesh.set_pad(&mut pad_qua8, &face.points);
+                        pad_qua8.calc_coords(&mut x_cen, &ksi).unwrap();
+                        let p8 = xx.len();
+                        xx.push(x_cen[0]);
+                        yy.push(x_cen[1]);
+                        zz.push(x_cen[2]);
+                        triangles.push(vec![new_face_points[0], new_face_points[4], p8]);
+                        triangles.push(vec![new_face_points[4], new_face_points[5], p8]);
+                        triangles.push(vec![new_face_points[5], new_face_points[2], p8]);
+                        triangles.push(vec![new_face_points[2], new_face_points[6], p8]);
+                        triangles.push(vec![new_face_points[6], new_face_points[7], p8]);
+                        triangles.push(vec![new_face_points[7], new_face_points[0], p8]);
+                        triangles.push(vec![new_face_points[4], new_face_points[1], new_face_points[5]]);
+                        triangles.push(vec![new_face_points[6], new_face_points[3], new_face_points[7]]);
+                    }
+                    _ => panic!("Tri3, Tri6, Qua4, or Qua8 faces required for triangulation"),
                 }
             }
         }
@@ -941,7 +974,7 @@ impl<'a> Features<'a> {
 #[cfg(test)]
 mod tests {
     use super::{Edge, Edges, Face, Faces, Features};
-    use crate::mesh::{At, Samples};
+    use crate::mesh::{At, Draw, Samples};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
     use plotpy::Plot;
@@ -1312,7 +1345,7 @@ mod tests {
     }
 
     #[test]
-    fn triangulate_3d_boundary_works() {
+    fn triangulate_3d_boundary_works_hex8() {
         let key = |x, y, z| format!("{:.1}, {:.1}, {:.1}", x, y, z);
         let mesh = Samples::two_hex8();
         let features = Features::new(&mesh, true);
@@ -1362,6 +1395,90 @@ mod tests {
             assert!(connectivity.contains(&(k0.to_string(), k1.to_string(), k2.to_string())));
             assert!(connectivity.contains(&(k2.to_string(), k3.to_string(), k0.to_string())));
         }
+    }
+
+    #[test]
+    fn triangulate_3d_boundary_works_hex20() {
+        let mesh = Samples::one_hex20(0.1, -0.1);
+        let features = Features::new(&mesh, true);
+        let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.get_canvas_boundary_faces()
+                .set_edge_color("black")
+                .set_line_style(":");
+            draw.show_cells(true)
+                .show_boundary_edges_3d(false)
+                .show_point_ids(false)
+                .show_point_marker(false)
+                .show_cell_ids(false)
+                .show_cell_att(false)
+                .show_normal_vectors(true)
+                .set_view_flag(false)
+                .set_size(800.0, 800.0);
+            draw.all(&mesh, "/tmp/gemlab/test_triangulate_3d_boundary_hex20.svg")
+                .unwrap();
+        }
+        assert_eq!(xx.len(), 20 + 6); // +6 center nodes on each face
+        assert_eq!(yy.len(), 20 + 6); // +6 center nodes on each face
+        assert_eq!(zz.len(), 20 + 6); // +6 center nodes on each face
+        assert_eq!(triangles.len(), 6 * 8); // 6 faces, 8 tris per face
+    }
+
+    #[test]
+    fn triangulate_3d_boundary_works_tet4() {
+        let mesh = Samples::one_tet4();
+        let features = Features::new(&mesh, true);
+        let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.get_canvas_boundary_faces()
+                .set_edge_color("black")
+                .set_line_style(":");
+            draw.show_cells(true)
+                .show_boundary_edges_3d(false)
+                .show_point_ids(false)
+                .show_point_marker(false)
+                .show_cell_ids(false)
+                .show_cell_att(false)
+                .show_normal_vectors(true)
+                .set_view_flag(false)
+                .set_size(800.0, 800.0);
+            draw.all(&mesh, "/tmp/gemlab/test_triangulate_3d_boundary_tet4.svg")
+                .unwrap();
+        }
+        assert_eq!(xx.len(), 4);
+        assert_eq!(yy.len(), 4);
+        assert_eq!(zz.len(), 4);
+        assert_eq!(triangles.len(), 4);
+    }
+
+    #[test]
+    fn triangulate_3d_boundary_works_tet10() {
+        let mesh = Samples::one_tet10(0.1);
+        let features = Features::new(&mesh, true);
+        let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.get_canvas_boundary_faces()
+                .set_edge_color("black")
+                .set_line_style(":");
+            draw.show_cells(true)
+                .show_boundary_edges_3d(false)
+                .show_point_ids(false)
+                .show_point_marker(false)
+                .show_cell_ids(false)
+                .show_cell_att(false)
+                .show_normal_vectors(true)
+                .set_view_flag(false)
+                .set_size(800.0, 800.0);
+            draw.all(&mesh, "/tmp/gemlab/test_triangulate_3d_boundary_tet10.svg")
+                .unwrap();
+        }
+        assert_eq!(xx.len(), 10);
+        assert_eq!(yy.len(), 10);
+        assert_eq!(zz.len(), 10);
+        assert_eq!(triangles.len(), 4 * 4); // 4 faces, 4 tris per face
     }
 
     #[test]

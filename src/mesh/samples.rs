@@ -1000,6 +1000,31 @@ impl Samples {
         }
     }
 
+    /// Returns a mesh with one Tet10
+    #[rustfmt::skip]
+    pub fn one_tet10(d: f64) -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id: 0, marker: -1, coords: vec![0.0  , 0.0  , 0.0] },
+                Point { id: 1, marker: -1, coords: vec![1.0  , 0.0  , 0.0] },
+                Point { id: 2, marker: -1, coords: vec![0.0  , 1.0  , 0.0] },
+                Point { id: 3, marker: -1, coords: vec![0.0  , 0.0  , 1.0] },
+                Point { id: 4, marker: -2, coords: vec![0.5+d, 0.0  , 0.0] },
+                Point { id: 5, marker: -2, coords: vec![0.5-d, 0.5-d, 0.0] },
+                Point { id: 6, marker: -2, coords: vec![0.0+d, 0.5  , 0.0] },
+                Point { id: 7, marker: -2, coords: vec![0.0+d, 0.0+d, 0.5] },
+                Point { id: 8, marker: -2, coords: vec![0.5  , 0.0  , 0.5] },
+                Point { id: 9, marker: -2, coords: vec![0.0  , 0.5  , 0.5] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Tet10, points: vec![0,1,2,3,4,5,6,7,8,9] },
+            ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
+        }
+    }
+
     /// Returns a mesh with one Hex8
     ///
     /// ```text
@@ -1164,6 +1189,58 @@ impl Samples {
             ],
             marked_edges: Vec::new(),
             marked_faces: vec![(-100, 8, 9,10,11), (-200,10,11,16,17)],
+        }
+    }
+
+    /// Returns a mesh with one Hex20
+    /// 
+    /// ``text
+    ///             4_______15_______7 
+    ///           ,'|              ,'|    
+    ///        12'  |            ,'  | 
+    ///       ,'    16         ,14   | 
+    ///     ,'      |        ,'      19
+    ///   5'=====13========6'        | 
+    ///   |         |      |         | 
+    ///   |         |      |         | 
+    ///   |         0_____ | _11_____3 
+    ///  17       ,'       |       ,'  
+    ///   |     8'        18     ,'    
+    ///   |   ,'           |   ,10     
+    ///   | ,'             | ,'        
+    ///   1_______9________2'          
+    /// ```
+    #[rustfmt::skip]
+    pub fn one_hex20(d: f64, e: f64) -> Mesh {
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id:  0, marker: -1, coords: vec![0.0  , 0.0  , 0.0] }, //  0
+                Point { id:  1, marker: -1, coords: vec![1.0  , 0.0  , 0.0] }, //  1
+                Point { id:  2, marker: -1, coords: vec![1.0  , 1.0  , 0.0] }, //  2
+                Point { id:  3, marker: -1, coords: vec![0.0  , 1.0  , 0.0] }, //  3
+                Point { id:  4, marker: -2, coords: vec![0.0  , 0.0  , 1.0] }, //  4
+                Point { id:  5, marker: -2, coords: vec![1.0  , 0.0  , 1.0] }, //  5
+                Point { id:  6, marker: -2, coords: vec![1.0  , 1.0  , 1.0] }, //  6
+                Point { id:  7, marker: -2, coords: vec![0.0  , 1.0  , 1.0] }, //  7
+                Point { id:  8, marker: -1, coords: vec![0.5  , 0.0+d, 0.0] }, //  8
+                Point { id:  9, marker: -1, coords: vec![1.0-d, 0.5  , 0.0] }, //  9
+                Point { id: 10, marker: -1, coords: vec![0.5  , 1.0-d, 0.0] }, // 10
+                Point { id: 11, marker: -1, coords: vec![0.0+d, 0.5  , 0.0] }, // 11
+                Point { id: 12, marker: -2, coords: vec![0.5  , 0.0+e, 1.0] }, // 12
+                Point { id: 13, marker: -2, coords: vec![1.0-e, 0.5  , 1.0] }, // 13
+                Point { id: 14, marker: -2, coords: vec![0.5  , 1.0-e, 1.0] }, // 14
+                Point { id: 15, marker: -2, coords: vec![0.0+e, 0.5  , 1.0] }, // 15
+                Point { id: 16, marker: -3, coords: vec![0.0  , 0.0  , 0.5] }, // 16
+                Point { id: 17, marker: -3, coords: vec![1.0  , 0.0  , 0.5] }, // 17
+                Point { id: 18, marker: -3, coords: vec![1.0  , 1.0  , 0.5] }, // 18
+                Point { id: 19, marker: -3, coords: vec![0.0  , 1.0  , 0.5] }, // 19
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Hex20, points: vec![0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19] },
+            ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         }
     }
 
@@ -2371,6 +2448,15 @@ mod tests {
             draw(&mesh, false, "/tmp/gemlab/test_mesh_one_tet4.svg");
         }
 
+        let mesh = Samples::one_tet10(0.0);
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 10);
+        assert_eq!(mesh.cells.len(), 1);
+        mesh.check_all().unwrap();
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_one_tet10.svg");
+        }
+
         let mesh = Samples::one_hex8();
         assert_eq!(mesh.ndim, 3);
         assert_eq!(mesh.points.len(), 8);
@@ -2396,6 +2482,15 @@ mod tests {
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw(&mesh, true, "/tmp/gemlab/test_mesh_four_hex8.svg");
+        }
+
+        let mesh = Samples::one_hex20(0.0, 0.0);
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 20);
+        assert_eq!(mesh.cells.len(), 1);
+        mesh.check_all().unwrap();
+        if SAVE_FIGURE {
+            draw(&mesh, false, "/tmp/gemlab/test_mesh_one_hex20.svg");
         }
 
         let mesh = Samples::mixed_shapes_2d();
