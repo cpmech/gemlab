@@ -115,15 +115,94 @@ impl Triangulation {
 mod tests {
     use super::Triangulation;
     use crate::mesh::Samples;
+    use plotpy::{Canvas, Plot};
+
+    const SAVE_FIGURE: bool = false;
 
     #[test]
     fn triangulate_surface_works_1() {
         let mesh = Samples::one_qua4();
         let surface: Vec<_> = mesh.cells.iter().collect();
         let res = Triangulation::from_surface(&mesh, &surface);
+        if SAVE_FIGURE {
+            let mut canvas = Canvas::new();
+            canvas.draw_triangles(&res.xx, &res.yy, &res.triangles);
+            let mut plot = Plot::new();
+            plot.add(&canvas)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/triangulate_surface_works_1.svg")
+                .unwrap();
+        }
         assert_eq!(res.xx.len(), 4);
         assert_eq!(res.yy.len(), 4);
         assert_eq!(res.zz.len(), 0);
         assert_eq!(res.triangles.len(), 2);
+    }
+
+    #[test]
+    fn triangulate_surface_works_2() {
+        let mesh = Samples::qua8_tri6_lin2();
+        let surface: Vec<_> = mesh.cells.iter().collect();
+        let res = Triangulation::from_surface(&mesh, &surface);
+        if SAVE_FIGURE {
+            let mut canvas = Canvas::new();
+            canvas.draw_triangles(&res.xx, &res.yy, &res.triangles);
+            let mut plot = Plot::new();
+            plot.add(&canvas)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/triangulate_surface_works_2.svg")
+                .unwrap();
+        }
+        let npoint = mesh.points.len() + 1; // extra point at the center of Qua8
+        assert_eq!(res.xx.len(), npoint);
+        assert_eq!(res.yy.len(), npoint);
+        assert_eq!(res.zz.len(), 0);
+        assert_eq!(res.triangles.len(), 8 + 4); // 8 from Qua8 and 4 from Tri6
+    }
+
+    #[test]
+    fn triangulate_surface_works_3() {
+        let mesh = Samples::qua8_tri6_lin2_three_dimensional();
+        let surface: Vec<_> = mesh.cells.iter().collect();
+        let res = Triangulation::from_surface(&mesh, &surface);
+        if SAVE_FIGURE {
+            let mut canvas = Canvas::new();
+            canvas.draw_triangles_3d(&res.xx, &res.yy, &res.zz, &res.triangles);
+            let mut plot = Plot::new();
+            plot.add(&canvas)
+                .set_equal_axes(true)
+                .set_camera(30.0, 90.0)
+                .set_figure_size_points(600.0, 600.0)
+                .save("/tmp/gemlab/triangulate_surface_works_3.svg")
+                .unwrap();
+        }
+        let npoint = mesh.points.len() + 1; // extra point at the center of Qua8
+        assert_eq!(res.xx.len(), npoint);
+        assert_eq!(res.yy.len(), npoint);
+        assert_eq!(res.zz.len(), npoint);
+        assert_eq!(res.triangles.len(), 8 + 4); // 8 from Qua8 and 4 from Tri6
+    }
+
+    #[test]
+    fn triangulate_surface_works_4() {
+        let mesh = Samples::block_2d_four_qua12();
+        let surface: Vec<_> = mesh.cells.iter().collect();
+        let res = Triangulation::from_surface(&mesh, &surface);
+        if SAVE_FIGURE {
+            let mut canvas = Canvas::new();
+            canvas.draw_triangles(&res.xx, &res.yy, &res.triangles);
+            let mut plot = Plot::new();
+            plot.add(&canvas)
+                .set_equal_axes(true)
+                .save("/tmp/gemlab/triangulate_surface_works_4.svg")
+                .unwrap();
+        }
+        let ncell = 4;
+        let ntriangle = ncell * 18; // 4 Qua12, each triangulated into 2*9 triangles
+        let npoint = mesh.points.len() + 4 * ncell; // 4 extra points per Qua12
+        assert_eq!(res.xx.len(), npoint);
+        assert_eq!(res.yy.len(), npoint);
+        assert_eq!(res.zz.len(), 0);
+        assert_eq!(res.triangles.len(), ntriangle);
     }
 }
