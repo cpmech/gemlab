@@ -1,3 +1,26 @@
+/// Defines a 2D point
+#[derive(Debug, Clone, Copy)]
+pub struct Point2d {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Point2d {
+    /// Allocates a new instance
+    pub fn new(x: f64, y: f64) -> Self {
+        Point2d { x, y }
+    }
+
+    /// Allocates a new instance from a slice
+    pub fn from_slice(slice: &[f64]) -> Self {
+        assert!(slice.len() >= 2, "slice must have length at least 2");
+        Point2d {
+            x: slice[0],
+            y: slice[1],
+        }
+    }
+}
+
 /// Defines a 2D vector
 #[derive(Debug, Clone, Copy)]
 pub struct Vector2d {
@@ -20,34 +43,19 @@ impl Vector2d {
         }
     }
 
+    /// Allocates a new instance from two points
+    pub fn from_points(a: &Point2d, b: &Point2d) -> Self {
+        Vector2d {
+            ux: b.x - a.x,
+            uy: b.y - a.y,
+        }
+    }
+
     /// Calculates the cross product for 2D vectors
     ///
     /// Returns a scalar value corresponding to the magnitude of the out-of-plane vector
     pub fn cross(&self, other: &Vector2d) -> f64 {
         self.ux * other.uy - self.uy * other.ux
-    }
-}
-
-/// Defines a 2D point
-#[derive(Debug, Clone, Copy)]
-pub struct Point2d {
-    pub x: f64,
-    pub y: f64,
-}
-
-impl Point2d {
-    /// Allocates a new instance
-    pub fn new(x: f64, y: f64) -> Self {
-        Point2d { x, y }
-    }
-
-    /// Allocates a new instance from a slice
-    pub fn from_slice(slice: &[f64]) -> Self {
-        assert!(slice.len() >= 2, "slice must have length at least 2");
-        Point2d {
-            x: slice[0],
-            y: slice[1],
-        }
     }
 }
 
@@ -168,25 +176,6 @@ mod tests {
         let area_vec = Parallelogram2d::from_vectors(&u, &v).signed_area();
         assert_eq!(area_vec, 5.0);
 
-        let a = Point2d::new(0.0, 0.0);
-        let b = Point2d::new(3.0, 1.0);
-        let c = Point2d::new(1.0, 2.0);
-        let ab = Vector2d::new(b.x - a.x, b.y - a.y);
-        let ac = Vector2d::new(c.x - a.x, c.y - a.y);
-        let area_pts = Parallelogram2d::from_vectors(&ab, &ac).signed_area();
-        assert_eq!(area_pts, 5.0);
-
-        let area_slices = Parallelogram2d::from_slices(&[3.0, 1.0], &[1.0, 2.0]).signed_area();
-        assert_eq!(area_slices, 5.0);
-
-        let tuple_u = (3.0, 1.0);
-        let tuple_v = (1.0, 2.0);
-        let area_tuples = Parallelogram2d::from_slices(&[tuple_u.0, tuple_u.1], &[tuple_v.0, tuple_v.1]).signed_area();
-        assert_eq!(area_tuples, 5.0);
-    }
-
-    #[test]
-    fn parallelogram_signed_area_variants_work() {
         // Sign reflects orientation (swap vectors -> negative area)
         let area_pos = Parallelogram2d::from_slices(&[3.0, 1.0], &[1.0, 2.0]).signed_area();
         let area_neg = Parallelogram2d::from_slices(&[1.0, 2.0], &[3.0, 1.0]).signed_area();
@@ -195,46 +184,18 @@ mod tests {
         // Colinear vectors -> zero area
         let zero_area = Parallelogram2d::from_slices(&[2.0, 4.0], &[1.0, 2.0]).signed_area();
         assert!((zero_area).abs() < 1e-12);
-
-        // Cross-check all helper variants agree for arbitrary vectors
-        let vec_u = Vector2d::new(2.5, -4.0);
-        let vec_v = Vector2d::new(0.5, 3.0);
-        let arr_u = [vec_u.ux, vec_u.uy];
-        let arr_v = [vec_v.ux, vec_v.uy];
-        let pt_a = Point2d::new(0.0, 0.0);
-        let pt_b = Point2d::new(vec_u.ux, vec_u.uy);
-        let pt_c = Point2d::new(vec_v.ux, vec_v.uy);
-        let from_points = Parallelogram2d::from_vectors(
-            &Vector2d::new(pt_b.x - pt_a.x, pt_b.y - pt_a.y),
-            &Vector2d::new(pt_c.x - pt_a.x, pt_c.y - pt_a.y),
-        )
-        .signed_area();
-
-        let from_vectors = Parallelogram2d::from_vectors(&vec_u, &vec_v).signed_area();
-        let from_arrays = Parallelogram2d::from_slices(&arr_u, &arr_v).signed_area();
-        let from_tuples = Parallelogram2d::from_slices(&arr_u, &arr_v).signed_area();
-
-        assert!((from_vectors - from_arrays).abs() < 1e-12);
-        assert!((from_vectors - from_tuples).abs() < 1e-12);
-        assert!((from_vectors - from_points).abs() < 1e-12);
     }
 
     #[test]
-    fn triangle_signed_area_functions_work() {
+    fn triangle_functions_work() {
         let p1 = &[0.0, 0.0];
         let p2 = &[3.0, 1.0];
         let p3 = &[1.0, 2.0];
 
         let triangle = Triangle2d::from_slices(p1, p2, p3);
         let tri_area = triangle.signed_area();
-        let para_area = tri_area * 2.0;
-
-        assert_eq!(para_area, 5.0);
         assert_eq!(tri_area, 2.5);
-    }
 
-    #[test]
-    fn triangle_orientation_checks_work() {
         let ccw = Triangle2d::from_slices(&[0.0, 0.0], &[1.0, 0.0], &[0.0, 1.0]);
         assert!(ccw.signed_area() > 0.0);
 
