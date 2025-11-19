@@ -1,4 +1,4 @@
-use gemlab::geometry::Circle;
+use gemlab::geometry::{Circle2d, Point2d};
 use gemlab::util::GridSearch;
 use gemlab::StrError;
 use plotpy::Plot;
@@ -20,20 +20,20 @@ fn main() -> Result<(), StrError> {
 
     // circles
     let circles = vec![
-        Circle {
-            center: [5.0, 2.0],
+        Circle2d {
+            center: Point2d::new(5.0, 2.0),
             radius: 1.0,
         },
-        Circle {
-            center: [7.5, 5.0],
+        Circle2d {
+            center: Point2d::new(7.5, 5.0),
             radius: 1.2,
         },
-        Circle {
-            center: [5.0, 7.5],
+        Circle2d {
+            center: Point2d::new(5.0, 7.5),
             radius: 1.4,
         },
-        Circle {
-            center: [2.5, 5.0],
+        Circle2d {
+            center: Point2d::new(2.5, 5.0),
             radius: 1.2,
         },
     ];
@@ -44,8 +44,8 @@ fn main() -> Result<(), StrError> {
     for c in &circles {
         for n in 0..NPOINT {
             let alpha = (n as f64) * 2.0 * PI / (NPOINT as f64);
-            x[0] = c.center[0] + c.radius * f64::cos(alpha);
-            x[1] = c.center[1] + c.radius * f64::sin(alpha);
+            x[0] = c.center.x + c.radius * f64::cos(alpha);
+            x[1] = c.center.y + c.radius * f64::sin(alpha);
             grid.insert(id, &x)?;
             id += 1;
         }
@@ -82,7 +82,7 @@ fn main() -> Result<(), StrError> {
     let mut start_id = 0;
     let mut end_id = NPOINT;
     for c in &circles {
-        let res = grid.search_on_circle(&c.center, c.radius, |_| true)?;
+        let res = grid.search_on_circle(&[c.center.x, c.center.y], c.radius, |_| true)?;
         check(&res, &(start_id..end_id).collect::<Vec<_>>());
         start_id += NPOINT;
         end_id += NPOINT;

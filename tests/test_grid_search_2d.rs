@@ -1,4 +1,4 @@
-use gemlab::geometry::Circle;
+use gemlab::geometry::{Circle2d, Point2d};
 use gemlab::util::{any_x, GridSearch};
 use gemlab::StrError;
 use plotpy::Plot;
@@ -14,29 +14,29 @@ fn test_grid_search_2d() -> Result<(), StrError> {
     let mut id = 0;
 
     // circle at y=0.5
-    let bot = Circle {
-        center: [0.5, 0.5],
+    let bot = Circle2d {
+        center: Point2d::new(0.5, 0.5),
         radius: 0.3,
     };
     let npoint = 12;
     let mut x = vec![0.0; 2];
     for n in 0..npoint {
         let alpha = (n as f64) * 2.0 * PI / (npoint as f64);
-        x[0] = bot.center[0] + bot.radius * f64::cos(alpha);
-        x[1] = bot.center[1] + bot.radius * f64::sin(alpha);
+        x[0] = bot.center.x + bot.radius * f64::cos(alpha);
+        x[1] = bot.center.y + bot.radius * f64::sin(alpha);
         grid.insert(id, &x)?;
         id += 1;
     }
 
     // circle at y=1.5
-    let top = Circle {
-        center: [0.5, 1.5],
+    let top = Circle2d {
+        center: Point2d::new(0.5, 1.5),
         radius: 0.2,
     };
     for n in 0..npoint {
         let alpha = (n as f64) * 2.0 * PI / (npoint as f64);
-        x[0] = top.center[0] + top.radius * f64::cos(alpha);
-        x[1] = top.center[1] + top.radius * f64::sin(alpha);
+        x[0] = top.center.x + top.radius * f64::cos(alpha);
+        x[1] = top.center.y + top.radius * f64::sin(alpha);
         grid.insert(id, &x)?;
         id += 1;
     }
@@ -62,14 +62,14 @@ fn test_grid_search_2d() -> Result<(), StrError> {
     }
 
     // search points on bot circle
-    let res = grid.search_on_circle(&bot.center, bot.radius, any_x)?;
+    let res = grid.search_on_circle(&[bot.center.x, bot.center.y], bot.radius, any_x)?;
     let mut points: Vec<_> = res.iter().copied().collect();
     points.sort();
     let correct = (0..npoint).collect::<Vec<_>>();
     assert_eq!(points, correct);
 
     // search points on top circle
-    let res = grid.search_on_circle(&top.center, top.radius, any_x)?;
+    let res = grid.search_on_circle(&[top.center.x, top.center.y], top.radius, any_x)?;
     let mut points: Vec<_> = res.iter().copied().collect();
     points.sort();
     let correct = (npoint..npoint * 2).collect::<Vec<_>>();

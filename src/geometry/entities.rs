@@ -1,5 +1,5 @@
 /// Defines a 2D point
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Point2d {
     pub x: f64,
     pub y: f64,
@@ -22,7 +22,7 @@ impl Point2d {
 }
 
 /// Defines a 2D vector
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Vector2d {
     pub ux: f64,
     pub uy: f64,
@@ -60,6 +60,7 @@ impl Vector2d {
 }
 
 /// Defines a parallelogram in 2D space
+#[derive(Clone, Copy, Debug)]
 pub struct Parallelogram2d {
     pub u: Vector2d,
     pub v: Vector2d,
@@ -88,7 +89,7 @@ impl Parallelogram2d {
 }
 
 /// Defines a triangle in 2D space
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Triangle2d {
     pub a: Point2d,
     pub b: Point2d,
@@ -129,20 +130,21 @@ impl Triangle2d {
 /// # Examples
 ///
 /// ```
-/// use gemlab::geometry::Circle;
+/// use gemlab::geometry::{Circle2d, Point2d};
 ///
-/// let circle = Circle {
-///     center: [0.0, 0.0],
+/// let circle = Circle2d {
+///     center: Point2d::new(0.0, 0.0),
 ///     radius: 1.0,
 /// };
 ///
-/// assert_eq!(circle.center, [0.0, 0.0]);
+/// assert_eq!(circle.center.x, 0.0);
+/// assert_eq!(circle.center.y, 0.0);
 /// assert_eq!(circle.radius, 1.0);
 /// ```
-#[derive(Clone, Debug)]
-pub struct Circle {
+#[derive(Clone, Copy, Debug)]
+pub struct Circle2d {
     /// The center of the circle
-    pub center: [f64; 2],
+    pub center: Point2d,
 
     /// The radius of the circle
     pub radius: f64,
@@ -156,18 +158,21 @@ mod tests {
 
     #[test]
     fn derive_methods_work() {
+        // Point2d
         let point = Point2d::new(1.0, 2.0);
         let clone = point.clone();
         let correct = "Point2d { x: 1.0, y: 2.0 }";
         assert_eq!(format!("{:?}", point), correct);
         assert_eq!(format!("{:?}", clone), correct);
 
+        // Vector2d
         let vector = Vector2d::new(3.0, 4.0);
         let clone = vector.clone();
         let correct = "Vector2d { ux: 3.0, uy: 4.0 }";
         assert_eq!(format!("{:?}", vector), correct);
         assert_eq!(format!("{:?}", clone), correct);
 
+        // Triangle2d
         let triangle = Triangle2d {
             a: Point2d::new(0.0, 0.0),
             b: Point2d::new(1.0, 0.0),
@@ -178,12 +183,13 @@ mod tests {
         assert_eq!(format!("{:?}", triangle), correct);
         assert_eq!(format!("{:?}", clone), correct);
 
-        let circle = Circle {
-            center: [-1.0, -1.0],
+        // Circle2d
+        let circle = Circle2d {
+            center: Point2d::new(-1.0, -1.0),
             radius: 2.0,
         };
         let clone = circle.clone();
-        let correct = "Circle { center: [-1.0, -1.0], radius: 2.0 }";
+        let correct = "Circle2d { center: Point2d { x: -1.0, y: -1.0 }, radius: 2.0 }";
         assert_eq!(format!("{:?}", circle), correct);
         assert_eq!(format!("{:?}", clone), correct);
     }
