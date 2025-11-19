@@ -32,6 +32,7 @@
 //!
 
 mod algorithms;
+mod as_cell;
 mod block;
 mod blocks2d;
 mod blocks3d;
@@ -51,8 +52,10 @@ mod mesh;
 mod paraview;
 mod read_text_mesh;
 mod samples;
+mod triangulate_surface;
 mod write_text_file;
 
+pub use as_cell::*;
 pub use block::*;
 pub use blocks2d::*;
 pub use blocks3d::*;
@@ -67,6 +70,7 @@ pub use grid_cells::*;
 pub use join_meshes::*;
 pub use mesh::*;
 pub use samples::*;
+pub use triangulate_surface::*;
 
 // re-export GeoKind
 pub use crate::shapes::GeoCase;

@@ -1,4 +1,4 @@
-use super::{CellId, PointId};
+use super::{AsCell, CellId, PointId};
 use crate::shapes::GeoKind;
 use russell_lab::sort4;
 use std::collections::{HashMap, HashSet};
@@ -58,6 +58,20 @@ pub type MapFaceToCells = HashMap<FaceKey, Vec<(CellId, usize)>>;
 ///
 /// Relates a point id to a unique set of FaceKey
 pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
+
+impl AsCell for Face {
+    fn kind(&self) -> GeoKind {
+        self.kind
+    }
+
+    fn marker(&self) -> i32 {
+        self.marker
+    }
+
+    fn points(&self) -> &[PointId] {
+        &self.points
+    }
+}
 
 impl fmt::Display for Face {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

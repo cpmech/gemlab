@@ -1024,9 +1024,10 @@ impl<'a> Draw<'a> {
     /// Draw boundary faces (3D)
     pub fn boundary_faces(&mut self, features: &Features) {
         if features.mesh.ndim == 3 {
-            let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
-            if triangles.len() > 0 {
-                self.canvas_boundary_faces.draw_triangles_3d(&xx, &yy, &zz, &triangles);
+            let res = features.triangulate_3d_boundary();
+            if res.triangles.len() > 0 {
+                self.canvas_boundary_faces
+                    .draw_triangles_3d(&res.xx, &res.yy, &res.zz, &res.triangles);
                 self.plot.add(&self.canvas_boundary_faces);
             }
         }

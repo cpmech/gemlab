@@ -1,11 +1,10 @@
 use super::algorithms::{extract_all_2d_edges, extract_all_faces, extract_features_2d, extract_features_3d};
-use super::{At, CellId, Mesh, PointId};
+use super::{At, CellId, Mesh, PointId, Triangulation};
 use super::{Edge, EdgeKey, Edges, MapEdge2dToCells, MapPointToEdges};
 use super::{Face, FaceKey, Faces, MapFaceToCells, MapPointToFaces};
-use crate::shapes::Scratchpad;
 use crate::util::GridSearch;
 use crate::StrError;
-use russell_lab::{sort2, Vector};
+use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
 /// Holds derived mesh features such as points, edges, and faces on the mesh boundary or the interior
@@ -513,86 +512,33 @@ impl<'a> Features<'a> {
     /// Note: the order of the output arrays is non-deterministic because it depends
     /// on the HashMap structures used to extract the boundary features.
     ///
-    /// # Output
-    ///
-    /// * `xx` -- x coordinates of the triangle points
-    /// * `yy` -- y coordinates of the triangle points
-    /// * `zz` -- z coordinates of the triangle points
-    /// * `triangles` -- indices of the triangle points
+    /// **Note:** Only Tri and Qua cells will be triangulated; other cell classes will be ignored.
+    /// Therefore, the result may be empty if no Tri or Qua cells are found on the surface.
     ///
     /// # Panics
     ///
     /// * Panics if the mesh is not 3D
-    pub fn triangulate_3d_boundary(&self) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<Vec<PointId>>) {
+    pub fn triangulate_3d_boundary(&self) -> Triangulation {
         // check
         let ndim = 3;
         assert_eq!(self.mesh.ndim, ndim);
 
-        // auxiliary
-        let mut old_point_id_to_new_point_id = HashMap::new();
-        let mut pads = HashMap::new();
-        let mut x_work = Vector::new(ndim);
-        let mut connectivity = vec![0; 3];
+        // collect boundary faces
+        let surface: Vec<_> = self
+            .faces
+            .iter()
+            .filter_map(|(face_key, face)| {
+                let shared_by_ncell = self.all_faces.get(face_key).unwrap().len();
+                if shared_by_ncell == 1 {
+                    Some(face)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
-        // results
-        let mut xx: Vec<f64> = Vec::new();
-        let mut yy: Vec<f64> = Vec::new();
-        let mut zz: Vec<f64> = Vec::new();
-        let mut triangles: Vec<Vec<PointId>> = Vec::new();
-
-        // loop over all faces and detect boundary faces (using "shared_by_ncell")
-        for (face_key, face) in &self.faces {
-            let shared_by_ncell = self.all_faces.get(face_key).unwrap().len();
-            if shared_by_ncell == 1 {
-                // constants
-                let kind = face.kind;
-                let nnode = kind.nnode();
-                let extra_nnode = kind.triangulate_extra_nnode();
-                let mut extra_points = vec![usize::MAX; extra_nnode];
-
-                // set scratchpad
-                let pad = pads.entry(kind).or_insert_with(|| Scratchpad::new(ndim, kind).unwrap());
-                self.mesh.set_pad(pad, &face.points);
-
-                // loop over triangles and add them to the list of triangles
-                pad.triangulate(&mut x_work, |_, i, m, x| {
-                    let p = if m < nnode {
-                        // existing point
-                        let p_old = face.points[m];
-                        old_point_id_to_new_point_id
-                            .entry(p_old)
-                            .or_insert_with(|| {
-                                let p_new = xx.len();
-                                xx.push(x[0]);
-                                yy.push(x[1]);
-                                zz.push(x[2]);
-                                p_new
-                            })
-                            .clone()
-                    } else {
-                        // extra point
-                        let k = m - nnode;
-                        if extra_points[k] == usize::MAX {
-                            let p_new = xx.len();
-                            extra_points[k] = p_new;
-                            xx.push(x[0]);
-                            yy.push(x[1]);
-                            zz.push(x[2]);
-                            p_new
-                        } else {
-                            extra_points[k]
-                        }
-                    };
-                    connectivity[i] = p;
-                    if i == 2 {
-                        // last corner
-                        triangles.push(connectivity.clone());
-                    }
-                })
-                .unwrap();
-            }
-        }
-        (xx, yy, zz, triangles)
+        // perform triangulation
+        Triangulation::from_surface(self.mesh, &surface)
     }
 
     /// Searches edges with a given marker
@@ -1354,7 +1300,7 @@ mod tests {
         let key = |x, y, z| format!("{:.1}, {:.1}, {:.1}", x, y, z);
         let mesh = Samples::two_hex8();
         let features = Features::new(&mesh, true);
-        let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
+        let res = features.triangulate_3d_boundary();
         let pp = vec![
             "0.0, 0.0, 0.0", //  0
             "1.0, 0.0, 0.0", //  1
@@ -1381,18 +1327,18 @@ mod tests {
             (pp[0], pp[3], pp[2], pp[1]),   // lower, -z face
             (pp[8], pp[9], pp[10], pp[11]), // upper, +z face
         ];
-        assert_eq!(xx.len(), 12);
-        assert_eq!(yy.len(), 12);
-        assert_eq!(zz.len(), 12);
-        assert_eq!(triangles.len(), boundary_faces.len() * 2); // quads => tris
-        for i in 0..xx.len() {
-            assert!(pp.contains(&key(xx[i], yy[i], zz[i]).as_str()));
+        assert_eq!(res.xx.len(), 12);
+        assert_eq!(res.yy.len(), 12);
+        assert_eq!(res.zz.len(), 12);
+        assert_eq!(res.triangles.len(), boundary_faces.len() * 2); // quads => tris
+        for i in 0..res.xx.len() {
+            assert!(pp.contains(&key(res.xx[i], res.yy[i], res.zz[i]).as_str()));
         }
         let mut connectivity = Vec::new();
-        for tri in &triangles {
-            let a = key(xx[tri[0]], yy[tri[0]], zz[tri[0]]);
-            let b = key(xx[tri[1]], yy[tri[1]], zz[tri[1]]);
-            let c = key(xx[tri[2]], yy[tri[2]], zz[tri[2]]);
+        for tri in &res.triangles {
+            let a = key(res.xx[tri[0]], res.yy[tri[0]], res.zz[tri[0]]);
+            let b = key(res.xx[tri[1]], res.yy[tri[1]], res.zz[tri[1]]);
+            let c = key(res.xx[tri[2]], res.yy[tri[2]], res.zz[tri[2]]);
             connectivity.push((a, b, c));
         }
         // expected triangles
@@ -1406,7 +1352,7 @@ mod tests {
     fn triangulate_3d_boundary_works_hex20() {
         let mesh = Samples::one_hex20(0.1, -0.1, 0.1);
         let features = Features::new(&mesh, true);
-        let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
+        let res = features.triangulate_3d_boundary();
         if SAVE_FIGURE {
             let mut draw = Draw::new();
             draw.get_canvas_boundary_faces()
@@ -1424,17 +1370,17 @@ mod tests {
             draw.all(&mesh, "/tmp/gemlab/test_triangulate_3d_boundary_hex20.svg")
                 .unwrap();
         }
-        assert_eq!(xx.len(), 20 + 6); // +6 center nodes on each face
-        assert_eq!(yy.len(), 20 + 6); // +6 center nodes on each face
-        assert_eq!(zz.len(), 20 + 6); // +6 center nodes on each face
-        assert_eq!(triangles.len(), 6 * 8); // 6 faces, 8 tris per face
+        assert_eq!(res.xx.len(), 20 + 6); // +6 center nodes on each face
+        assert_eq!(res.yy.len(), 20 + 6); // +6 center nodes on each face
+        assert_eq!(res.zz.len(), 20 + 6); // +6 center nodes on each face
+        assert_eq!(res.triangles.len(), 6 * 8); // 6 faces, 8 tris per face
     }
 
     #[test]
     fn triangulate_3d_boundary_works_tet4() {
         let mesh = Samples::one_tet4();
         let features = Features::new(&mesh, true);
-        let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
+        let res = features.triangulate_3d_boundary();
         if SAVE_FIGURE {
             let mut draw = Draw::new();
             draw.get_canvas_boundary_faces()
@@ -1452,17 +1398,17 @@ mod tests {
             draw.all(&mesh, "/tmp/gemlab/test_triangulate_3d_boundary_tet4.svg")
                 .unwrap();
         }
-        assert_eq!(xx.len(), 4);
-        assert_eq!(yy.len(), 4);
-        assert_eq!(zz.len(), 4);
-        assert_eq!(triangles.len(), 4);
+        assert_eq!(res.xx.len(), 4);
+        assert_eq!(res.yy.len(), 4);
+        assert_eq!(res.zz.len(), 4);
+        assert_eq!(res.triangles.len(), 4);
     }
 
     #[test]
     fn triangulate_3d_boundary_works_tet10() {
         let mesh = Samples::one_tet10(0.1);
         let features = Features::new(&mesh, true);
-        let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
+        let res = features.triangulate_3d_boundary();
         if SAVE_FIGURE {
             let mut draw = Draw::new();
             draw.get_canvas_boundary_faces()
@@ -1480,10 +1426,10 @@ mod tests {
             draw.all(&mesh, "/tmp/gemlab/test_triangulate_3d_boundary_tet10.svg")
                 .unwrap();
         }
-        assert_eq!(xx.len(), 10);
-        assert_eq!(yy.len(), 10);
-        assert_eq!(zz.len(), 10);
-        assert_eq!(triangles.len(), 4 * 4); // 4 faces, 4 tris per face
+        assert_eq!(res.xx.len(), 10);
+        assert_eq!(res.yy.len(), 10);
+        assert_eq!(res.zz.len(), 10);
+        assert_eq!(res.triangles.len(), 4 * 4); // 4 faces, 4 tris per face
     }
 
     #[test]

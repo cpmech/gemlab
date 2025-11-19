@@ -1,3 +1,4 @@
+use super::AsCell;
 use crate::shapes::{GeoKind, Scratchpad};
 use crate::StrError;
 use russell_lab::{argsort2_f64, argsort3_f64};
@@ -53,6 +54,20 @@ pub struct Cell {
     ///
     /// Note: The list of nodes must follow a **counter-clockwise order**.
     pub points: Vec<PointId>,
+}
+
+impl AsCell for Cell {
+    fn kind(&self) -> GeoKind {
+        self.kind
+    }
+
+    fn marker(&self) -> i32 {
+        self.attribute
+    }
+
+    fn points(&self) -> &[PointId] {
+        &self.points
+    }
 }
 
 /// Holds mesh data
