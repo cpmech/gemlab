@@ -1,8 +1,6 @@
-#![allow(unused)]
-
 use super::{GeoClass, Scratchpad};
 use crate::StrError;
-use russell_lab::{mat_vec_mul, vec_norm, Norm, Vector};
+use russell_lab::Vector;
 
 impl Scratchpad {
     /// Triangulates a Tri or Qua shape
@@ -49,38 +47,76 @@ impl Scratchpad {
 
 #[cfg(test)]
 mod tests {
+    use crate::geometry::{Point2d, Triangle2d};
     use crate::shapes::scratchpad_testing::aux;
-    use crate::shapes::GeoKind;
-    use crate::shapes::Scratchpad;
+    use crate::shapes::{GeoClass, GeoKind};
     use plotpy::{Canvas, Plot};
-    use russell_lab::math::{ONE_BY_3, SQRT_3};
-    use russell_lab::{array_approx_eq, vec_approx_eq, Vector};
+    use russell_lab::approx_eq;
+    use russell_lab::math::PI;
 
     const SAVE_FIGURE: bool = false;
 
     #[test]
     fn pad_triangulate_works() {
-        let space_ndim = 3; // shells in 3D
-                            // for kind in [GeoKind::Qua8] {
+        let ninety = PI / 2.0;
+        let forty_five = PI / 4.0;
         for kind in GeoKind::VALUES {
             let ntriangle = kind.triangulate_ntriangle();
             if ntriangle > 0 {
-                let mut pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
-                // pad.xxt.set(2, 4, 3.0);
-                // pad.xxt.set(2, 6, 5.0);
-                println!("Testing kind {:?}", kind);
-                let mut nnode_total = kind.nnode() + kind.triangulate_extra_nnode();
+                let edge_nnode = kind.edge_nnode();
+                let n_quads = (edge_nnode - 1) * (edge_nnode - 1);
+                if kind.class() == GeoClass::Tri {
+                    assert_eq!(ntriangle, n_quads);
+                } else {
+                    assert_eq!(ntriangle, n_quads * 2);
+                }
+                let expected_area = if kind.class() == GeoClass::Tri {
+                    2.0 / (ntriangle as f64)
+                } else {
+                    4.0 / (ntriangle as f64)
+                };
+                // let mut pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
+                let mut pad = aux::gen_scratchpad_with_coords_aligned(kind);
+                let nnode_total = kind.nnode() + kind.triangulate_extra_nnode();
                 let mut xx = vec![0.0; nnode_total];
                 let mut yy = vec![0.0; nnode_total];
-                let mut zz = vec![0.0; nnode_total];
+                let zz = vec![0.0; nnode_total];
                 let mut triangles = vec![vec![0; 3]; ntriangle];
                 pad.triangulate(|t, i, m, x| {
-                    println!("t = {}, i = {}, m = {},  x = {:?}", t, i, m, x.as_data());
                     xx[m] = x[0];
                     yy[m] = x[1];
-                    zz[m] = x[2];
                     triangles[t][i] = m;
-                });
+                })
+                .unwrap();
+                for t in 0..ntriangle {
+                    let a = triangles[t][0];
+                    let b = triangles[t][1];
+                    let c = triangles[t][2];
+                    let xa = Point2d::from_slice(&[xx[a], yy[a]]);
+                    let xb = Point2d::from_slice(&[xx[b], yy[b]]);
+                    let xc = Point2d::from_slice(&[xx[c], yy[c]]);
+                    let tri = Triangle2d::from_points(&xa, &xb, &xc);
+                    approx_eq(tri.signed_area(), expected_area, 1e-14);
+                    let (h0, h1, h2) = tri.internal_angles();
+                    if kind.class() == GeoClass::Tri {
+                        let mut angles = vec![h0, h1, h2];
+                        angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                        let (smallest, middle, largest) = (angles[0], angles[1], angles[2]);
+                        approx_eq(smallest, forty_five, 1e-14);
+                        approx_eq(middle, forty_five, 1e-14);
+                        approx_eq(largest, ninety, 1e-14);
+                    } else {
+                        if t % 2 == 0 {
+                            approx_eq(h0, ninety, 1e-14);
+                            approx_eq(h1, forty_five, 1e-14);
+                            approx_eq(h2, forty_five, 1e-14);
+                        } else {
+                            approx_eq(h0, forty_five, 1e-14);
+                            approx_eq(h1, ninety, 1e-14);
+                            approx_eq(h2, forty_five, 1e-14);
+                        }
+                    }
+                }
                 if SAVE_FIGURE {
                     let mut canvas = Canvas::new();
                     canvas.draw_triangles_3d(&xx, &yy, &zz, &triangles);
