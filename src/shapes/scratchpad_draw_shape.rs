@@ -75,7 +75,11 @@ impl Scratchpad {
                     }
                 }
             } else {
-                let m_corner_max = if self.kind.is_tri_or_tet() { 4 } else { 8 };
+                let mut m_corner_max = if self.kind.is_tri_or_tet() { 4 } else { 8 };
+                if self.kind.ndim() == 2 {
+                    // shell (2D shape in 3D space => ignore the difference between corners and middle nodes)
+                    m_corner_max = 0
+                }
                 for m in 0..self.kind.nnode() {
                     if m < m_corner_max {
                         labels_corner.draw_3d(

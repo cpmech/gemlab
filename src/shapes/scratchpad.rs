@@ -181,6 +181,11 @@ impl Scratchpad {
         })
     }
 
+    /// Returns the space ndim constant (2 or 3)
+    pub fn get_space_ndim(&self) -> usize {
+        self.xxt.nrow()
+    }
+
     /// Sets the component of the coordinates matrix corresponding to node-m, dimension-j
     ///
     /// # Input
@@ -340,6 +345,7 @@ mod tests {
             let kind = GeoKind::VALUES[i];
             let space_ndim = usize::max(2, kind.ndim());
             let pad = Scratchpad::new(space_ndim, kind).unwrap();
+            assert_eq!(pad.get_space_ndim(), space_ndim);
             assert_eq!(pad.kind, kind);
             assert_eq!(pad.interp.dim(), nnode[i]);
             assert_eq!(pad.deriv.dims(), (nnode[i], geo_ndim[i]));

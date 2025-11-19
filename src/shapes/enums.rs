@@ -1289,7 +1289,10 @@ impl GeoKind {
 
     /// Returns the number of triangles if the shape is to be triangulated
     ///
-    /// Note: This functionality is only available for Tri and Qua shapes
+    /// # Notes
+    ///
+    /// 1. This functionality is only available for Tri and Qua shapes
+    /// 2. The total number of nodes will be equal to `kind.nnode() + kind.triangulate_extra_nnode()`
     pub fn triangulate_ntriangle(&self) -> usize {
         match self {
             // Lin
@@ -1320,21 +1323,25 @@ impl GeoKind {
         }
     }
 
-    /// Returns the node index corresponding to a triangle in the triangulation of the shape
+    /// Returns the node indices corresponding to a triangle in the triangulation of the shape
     ///
     /// # Arguments
     ///
     /// * `t` -- is the triangle index; from 0 to [GeoKind::triangulate_ntriangle()]
-    /// * `i` -- is the node index in the triangle; in `0, 1, 2`
+    /// * `i` -- is the triangle's node index: 0, 1, or 2 (tri-angle ;-)
     ///
-    /// Note: This functionality is only available for Tri and Qua shapes
-    pub fn triangulate_triangle_node(&self, t: usize, i: usize) -> usize {
+    /// # Notes
+    ///
+    /// 1. This functionality is only available for Tri and Qua shapes
+    /// 2. The total number of nodes will be equal to `kind.nnode() + kind.triangulate_extra_nnode()`
+    pub fn triangulate_triangle_nodes(&self, t: usize, i: usize) -> usize {
+        const UNAVAILABLE: usize = usize::MAX;
         match self {
             // Lin
-            GeoKind::Lin2 => 0,
-            GeoKind::Lin3 => 0,
-            GeoKind::Lin4 => 0,
-            GeoKind::Lin5 => 0,
+            GeoKind::Lin2 => UNAVAILABLE,
+            GeoKind::Lin3 => UNAVAILABLE,
+            GeoKind::Lin4 => UNAVAILABLE,
+            GeoKind::Lin5 => UNAVAILABLE,
             // Tri
             GeoKind::Tri3 => Tri3::TRIANGULATE_TRIANGLES[t][i],
             GeoKind::Tri6 => Tri6::TRIANGULATE_TRIANGLES[t][i],
@@ -1348,19 +1355,22 @@ impl GeoKind {
             GeoKind::Qua16 => Qua16::TRIANGULATE_TRIANGLES[t][i],
             GeoKind::Qua17 => Qua17::TRIANGULATE_TRIANGLES[t][i],
             // Tet
-            GeoKind::Tet4 => 0,
-            GeoKind::Tet10 => 0,
-            GeoKind::Tet20 => 0,
+            GeoKind::Tet4 => UNAVAILABLE,
+            GeoKind::Tet10 => UNAVAILABLE,
+            GeoKind::Tet20 => UNAVAILABLE,
             // Hex
-            GeoKind::Hex8 => 0,
-            GeoKind::Hex20 => 0,
-            GeoKind::Hex32 => 0,
+            GeoKind::Hex8 => UNAVAILABLE,
+            GeoKind::Hex20 => UNAVAILABLE,
+            GeoKind::Hex32 => UNAVAILABLE,
         }
     }
 
     /// Returns the number of extra nodes required to triangulate this shape
     ///
-    /// Note: This functionality is only available for Tri and Qua shapes
+    /// # Notes
+    ///
+    /// 1. This functionality is only available for Tri and Qua shapes
+    /// 2. The total number of nodes will be equal to `kind.nnode() + kind.triangulate_extra_nnode()`
     pub fn triangulate_extra_nnode(&self) -> usize {
         match self {
             // Lin
@@ -1391,39 +1401,65 @@ impl GeoKind {
         }
     }
 
-    /// Returns the i-th component of the extra coordinates required to triangulate this shape
+    /// Returns the reference coordinates at the extra node required to triangulate this shape
     ///
     /// # Arguments
     ///
-    /// * `i` -- is the index of the extra node; from 0 to [GeoKind::triangulate_extra_nnode()]
-    /// * `j` -- is the coordinate index; from 0 to [GeoKind::ndim()]
-    pub fn triangulate_extra_coord(&self, i: usize, j: usize) -> f64 {
+    /// * `k` -- is the index of the extra node; from 0 to [GeoKind::triangulate_extra_nnode()].
+    ///
+    /// # Example
+    ///
+    /// The standard and extra reference coordinates can be accessed as follows:
+    ///
+    /// ```
+    /// # use gemlab::shapes::GeoKind;
+    /// let kind = GeoKind::Qua8;
+    /// for t in 0..kind.triangulate_ntriangle() {
+    ///     for i in 0..3 {
+    ///         let m = kind.triangulate_triangle_nodes(t, i);
+    ///         let ksi = if m >= kind.nnode() {
+    ///             let k = m - kind.nnode();
+    ///             kind.triangulate_extra_coords(k)
+    ///         } else {
+    ///             kind.reference_coords(m)
+    ///         };
+    ///         println!("t = {t}, i = {i}, m = {m}, ksi = ({}, {})", ksi[0], ksi[1]);
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Notes
+    ///
+    /// 1. This functionality is only available for Tri and Qua shapes
+    /// 2. The total number of nodes will be equal to `kind.nnode() + kind.triangulate_extra_nnode()`
+    pub fn triangulate_extra_coords(&self, k: usize) -> &'static [f64] {
+        const EMPTY: &'static [f64] = &[];
         match self {
             // Lin
-            GeoKind::Lin2 => 0.0,
-            GeoKind::Lin3 => 0.0,
-            GeoKind::Lin4 => 0.0,
-            GeoKind::Lin5 => 0.0,
+            GeoKind::Lin2 => EMPTY,
+            GeoKind::Lin3 => EMPTY,
+            GeoKind::Lin4 => EMPTY,
+            GeoKind::Lin5 => EMPTY,
             // Tri
-            GeoKind::Tri3 => 0.0,
-            GeoKind::Tri6 => 0.0,
-            GeoKind::Tri10 => 0.0,
-            GeoKind::Tri15 => 0.0,
+            GeoKind::Tri3 => EMPTY,
+            GeoKind::Tri6 => EMPTY,
+            GeoKind::Tri10 => EMPTY,
+            GeoKind::Tri15 => EMPTY,
             // Qua
-            GeoKind::Qua4 => 0.0,
-            GeoKind::Qua8 => Qua8::TRIANGULATE_EXTRA_COORDS[i][j],
-            GeoKind::Qua9 => 0.0,
-            GeoKind::Qua12 => Qua12::TRIANGULATE_EXTRA_COORDS[i][j],
-            GeoKind::Qua16 => 0.0,
-            GeoKind::Qua17 => Qua17::TRIANGULATE_EXTRA_COORDS[i][j],
+            GeoKind::Qua4 => EMPTY,
+            GeoKind::Qua8 => &Qua8::TRIANGULATE_EXTRA_COORDS[k],
+            GeoKind::Qua9 => EMPTY,
+            GeoKind::Qua12 => &Qua12::TRIANGULATE_EXTRA_COORDS[k],
+            GeoKind::Qua16 => EMPTY,
+            GeoKind::Qua17 => &Qua17::TRIANGULATE_EXTRA_COORDS[k],
             // Tet
-            GeoKind::Tet4 => 0.0,
-            GeoKind::Tet10 => 0.0,
-            GeoKind::Tet20 => 0.0,
+            GeoKind::Tet4 => EMPTY,
+            GeoKind::Tet10 => EMPTY,
+            GeoKind::Tet20 => EMPTY,
             // Hex
-            GeoKind::Hex8 => 0.0,
-            GeoKind::Hex20 => 0.0,
-            GeoKind::Hex32 => 0.0,
+            GeoKind::Hex8 => EMPTY,
+            GeoKind::Hex20 => EMPTY,
+            GeoKind::Hex32 => EMPTY,
         }
     }
 
@@ -1986,92 +2022,134 @@ mod tests {
 
     #[test]
     fn triangulate_functions_are_consistent() {
+        const UNAVAILABLE: usize = usize::MAX;
+        const EMPTY: &'static [f64] = &[];
         for kind in GeoKind::VALUES {
             match kind {
                 // Lin
                 GeoKind::Lin2 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Lin3 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Lin4 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Lin5 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 // Tri
                 GeoKind::Tri3 => {
                     assert_eq!(kind.triangulate_ntriangle(), 1);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Tri6 => {
                     assert_eq!(kind.triangulate_ntriangle(), 4);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Tri10 => {
                     assert_eq!(kind.triangulate_ntriangle(), 9);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Tri15 => {
                     assert_eq!(kind.triangulate_ntriangle(), 16);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 // Qua
                 GeoKind::Qua4 => {
                     assert_eq!(kind.triangulate_ntriangle(), 2);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Qua8 => {
                     assert_eq!(kind.triangulate_ntriangle(), 8);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 1);
+                    assert_eq!(kind.triangulate_extra_coords(0), &[0.0, 0.0]);
                 }
                 GeoKind::Qua9 => {
                     assert_eq!(kind.triangulate_ntriangle(), 8);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Qua12 => {
                     assert_eq!(kind.triangulate_ntriangle(), 18);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 4);
+                    assert_eq!(kind.triangulate_extra_coords(0), &[-1.0 / 3.0, -1.0 / 3.0]);
                 }
                 GeoKind::Qua16 => {
                     assert_eq!(kind.triangulate_ntriangle(), 18);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Qua17 => {
                     assert_eq!(kind.triangulate_ntriangle(), 32);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 8);
+                    assert_eq!(kind.triangulate_extra_coords(0), &[-0.5, -0.5]);
                 }
                 // Tet
                 GeoKind::Tet4 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Tet10 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Tet20 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 // Hex
                 GeoKind::Hex8 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Hex20 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
                 GeoKind::Hex32 => {
                     assert_eq!(kind.triangulate_ntriangle(), 0);
+                    assert_eq!(kind.triangulate_triangle_nodes(0, 0), UNAVAILABLE);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
+                    assert_eq!(kind.triangulate_extra_coords(0), EMPTY);
                 }
             }
         }

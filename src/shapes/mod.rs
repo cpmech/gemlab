@@ -340,6 +340,7 @@ mod scratchpad_calc_jacobian;
 mod scratchpad_calc_normal_vector;
 mod scratchpad_draw_shape;
 mod scratchpad_testing;
+mod scratchpad_triangulate;
 mod tet10;
 mod tet20;
 mod tet4;
