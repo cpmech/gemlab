@@ -1,10 +1,10 @@
-use super::{Features, Mesh, PointId};
+use super::{Features, Mesh};
+use crate::mesh::Triangulation;
 use crate::shapes::{GeoClass, GeoKind, Scratchpad};
 use crate::StrError;
 use plotpy::{Canvas, Curve, InsetAxes, Plot, Text};
 use russell_lab::math::PI;
 use russell_lab::{sort2, sort4, Vector};
-use std::collections::HashMap;
 use std::ffi::OsStr;
 
 /// Implements functions to draw cells, edges, and faces or the whole mesh
@@ -752,34 +752,10 @@ impl<'a> Draw<'a> {
 
         // loop over shell cells to draw the 3D surface (the wireframe is already drawn)
         if shell_cell_ids.len() > 0 {
-            let mut old_point_id_to_new_point_id = HashMap::new();
-            let mut xx: Vec<f64> = Vec::new();
-            let mut yy: Vec<f64> = Vec::new();
-            let mut zz: Vec<f64> = Vec::new();
-            let mut triangles: Vec<Vec<PointId>> = Vec::new();
-            for &cell_id in &shell_cell_ids {
-                let cell = &mesh.cells[cell_id];
-                let cell_npoint = cell.points.len();
-                let mut new_cell_points = Vec::with_capacity(cell_npoint);
-                for p in &cell.points {
-                    let new_point_id = old_point_id_to_new_point_id
-                        .entry(*p)
-                        .or_insert_with(|| {
-                            let npoint_new = xx.len();
-                            xx.push(mesh.points[*p].coords[0]);
-                            yy.push(mesh.points[*p].coords[1]);
-                            zz.push(mesh.points[*p].coords[2]);
-                            npoint_new
-                        })
-                        .clone();
-                    new_cell_points.push(new_point_id);
-                }
-                triangles.push(vec![new_cell_points[0], new_cell_points[1], new_cell_points[2]]);
-                if cell_npoint > 3 {
-                    triangles.push(vec![new_cell_points[2], new_cell_points[3], new_cell_points[0]]);
-                }
-            }
-            self.canvas_shells.draw_triangles_3d(&xx, &yy, &zz, &triangles);
+            let surface: Vec<_> = shell_cell_ids.iter().map(|&id| &mesh.cells[id]).collect();
+            let res = Triangulation::from_surface(mesh, &surface);
+            self.canvas_shells
+                .draw_triangles_3d(&res.xx, &res.yy, &res.zz, &res.triangles);
             self.plot.add(&self.canvas_shells);
         }
 
