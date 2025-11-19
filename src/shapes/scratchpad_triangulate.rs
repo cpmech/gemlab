@@ -75,7 +75,6 @@ mod tests {
                 } else {
                     4.0 / (ntriangle as f64)
                 };
-                // let mut pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
                 let mut pad = aux::gen_scratchpad_with_coords_aligned(kind);
                 let nnode_total = kind.nnode() + kind.triangulate_extra_nnode();
                 let mut xx = vec![0.0; nnode_total];
@@ -126,6 +125,50 @@ mod tests {
                     plot.set_figure_size_points(600.0, 600.0)
                         .set_equal_axes(true)
                         .save(format!("/tmp/gemlab/test_pad_triangulation_works_{}.svg", kind.to_string()).as_str())
+                        .unwrap();
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn pad_triangulate_works_2() {
+        let space_ndim = 3; // shells
+        for kind in GeoKind::VALUES {
+            let ntriangle = kind.triangulate_ntriangle();
+            if ntriangle > 0 {
+                let mut pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
+                let nnode_total = kind.nnode() + kind.triangulate_extra_nnode();
+                let mut xx = vec![0.0; nnode_total];
+                let mut yy = vec![0.0; nnode_total];
+                let mut zz = vec![0.0; nnode_total];
+                let mut triangles = vec![vec![0; 3]; ntriangle];
+                pad.triangulate(|t, i, m, x| {
+                    xx[m] = x[0];
+                    yy[m] = x[1];
+                    zz[m] = x[2];
+                    triangles[t][i] = m;
+                })
+                .unwrap();
+                for t in 0..ntriangle {
+                    let a = triangles[t][0];
+                    let b = triangles[t][1];
+                    let c = triangles[t][2];
+                    let xa = Point2d::from_slice(&[xx[a], yy[a]]);
+                    let xb = Point2d::from_slice(&[xx[b], yy[b]]);
+                    let xc = Point2d::from_slice(&[xx[c], yy[c]]);
+                    let tri = Triangle2d::from_points(&xa, &xb, &xc);
+                    assert!(tri.signed_area() > 0.0);
+                }
+                if SAVE_FIGURE {
+                    let mut canvas = Canvas::new();
+                    canvas.draw_triangles_3d(&xx, &yy, &zz, &triangles);
+                    let mut plot = Plot::new();
+                    pad.draw_shape(&mut plot, "", true, false).unwrap();
+                    plot.add(&canvas);
+                    plot.set_figure_size_points(600.0, 600.0)
+                        .set_equal_axes(true)
+                        .save(format!("/tmp/gemlab/test_pad_triangulation_works_2_{}.svg", kind.to_string()).as_str())
                         .unwrap();
                 }
             }
