@@ -1936,7 +1936,7 @@ mod tests {
                     assert_eq!(kind.is_qua_or_hex(), false);
                 }
                 GeoClass::Tri => {
-                    assert_eq!(kind.edge_node_id(0, 0), 1); // it always going to be the next node, after 0
+                    assert_eq!(kind.edge_node_id(0, 0), 1); // always going to be the next node, after 0
                     assert_eq!(kind.edge_node_id_inward(0, 0), 0);
                     assert_eq!(kind.is_lin(), false);
                     assert_eq!(kind.is_tri_or_tet(), true);
@@ -1948,7 +1948,7 @@ mod tests {
                     }
                 }
                 GeoClass::Qua => {
-                    assert_eq!(kind.edge_node_id(0, 0), 1); // it always going to be the next node, after 0
+                    assert_eq!(kind.edge_node_id(0, 0), 1); // always going to be the next node, after 0
                     assert_eq!(kind.edge_node_id_inward(0, 0), 0);
                     assert_eq!(kind.is_lin(), false);
                     assert_eq!(kind.is_tri_or_tet(), false);
@@ -1990,88 +1990,88 @@ mod tests {
             match kind {
                 // Lin
                 GeoKind::Lin2 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
                 GeoKind::Lin3 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
                 GeoKind::Lin4 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
                 GeoKind::Lin5 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
                 // Tri
                 GeoKind::Tri3 => {
                     assert_eq!(kind.triangulate_ntriangle(), 1);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 0);
                 }
                 GeoKind::Tri6 => {
                     assert_eq!(kind.triangulate_ntriangle(), 4);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 0);
                 }
                 GeoKind::Tri10 => {
                     assert_eq!(kind.triangulate_ntriangle(), 9);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 0);
                 }
                 GeoKind::Tri15 => {
                     assert_eq!(kind.triangulate_ntriangle(), 16);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 0);
                 }
                 // Qua
                 GeoKind::Qua4 => {
                     assert_eq!(kind.triangulate_ntriangle(), 2);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 0);
                 }
                 GeoKind::Qua8 => {
                     assert_eq!(kind.triangulate_ntriangle(), 8);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 1);
                 }
                 GeoKind::Qua9 => {
                     assert_eq!(kind.triangulate_ntriangle(), 8);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 0);
                 }
                 GeoKind::Qua12 => {
                     assert_eq!(kind.triangulate_ntriangle(), 18);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 4);
                 }
                 GeoKind::Qua16 => {
                     assert_eq!(kind.triangulate_ntriangle(), 18);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 0);
                 }
                 GeoKind::Qua17 => {
                     assert_eq!(kind.triangulate_ntriangle(), 32);
-                    //
+                    assert_eq!(kind.triangulate_extra_nnode(), 8);
                 }
                 // Tet
                 GeoKind::Tet4 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
                 GeoKind::Tet10 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
                 GeoKind::Tet20 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
                 // Hex
                 GeoKind::Hex8 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
                 GeoKind::Hex20 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
                 GeoKind::Hex32 => {
+                    assert_eq!(kind.triangulate_ntriangle(), 0);
                     assert_eq!(kind.triangulate_extra_nnode(), 0);
-                    //
                 }
             }
         }
