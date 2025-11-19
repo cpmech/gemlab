@@ -172,6 +172,16 @@ mod tests {
         assert_eq!(format!("{:?}", vector), correct);
         assert_eq!(format!("{:?}", clone), correct);
 
+        // Parallelogram2d
+        let para = Parallelogram2d {
+            u: Vector2d::new(1.0, 2.0),
+            v: Vector2d::new(3.0, 4.0),
+        };
+        let clone = para.clone();
+        let correct = "Parallelogram2d { u: Vector2d { ux: 1.0, uy: 2.0 }, v: Vector2d { ux: 3.0, uy: 4.0 } }";
+        assert_eq!(format!("{:?}", para), correct);
+        assert_eq!(format!("{:?}", clone), correct);
+
         // Triangle2d
         let triangle = Triangle2d {
             a: Point2d::new(0.0, 0.0),
