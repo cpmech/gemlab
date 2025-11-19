@@ -88,6 +88,7 @@ impl Parallelogram2d {
 }
 
 /// Defines a triangle in 2D space
+#[derive(Debug, Clone, Copy)]
 pub struct Triangle2d {
     pub a: Point2d,
     pub b: Point2d,
@@ -154,7 +155,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn circle_traits_work() {
+    fn derive_methods_work() {
+        let point = Point2d::new(1.0, 2.0);
+        let clone = point.clone();
+        let correct = "Point2d { x: 1.0, y: 2.0 }";
+        assert_eq!(format!("{:?}", point), correct);
+        assert_eq!(format!("{:?}", clone), correct);
+
+        let vector = Vector2d::new(3.0, 4.0);
+        let clone = vector.clone();
+        let correct = "Vector2d { ux: 3.0, uy: 4.0 }";
+        assert_eq!(format!("{:?}", vector), correct);
+        assert_eq!(format!("{:?}", clone), correct);
+
+        let triangle = Triangle2d {
+            a: Point2d::new(0.0, 0.0),
+            b: Point2d::new(1.0, 0.0),
+            c: Point2d::new(0.0, 1.0),
+        };
+        let clone = triangle.clone();
+        let correct = "Triangle2d { a: Point2d { x: 0.0, y: 0.0 }, b: Point2d { x: 1.0, y: 0.0 }, c: Point2d { x: 0.0, y: 1.0 } }";
+        assert_eq!(format!("{:?}", triangle), correct);
+        assert_eq!(format!("{:?}", clone), correct);
+
         let circle = Circle {
             center: [-1.0, -1.0],
             radius: 2.0,
@@ -163,6 +186,15 @@ mod tests {
         let correct = "Circle { center: [-1.0, -1.0], radius: 2.0 }";
         assert_eq!(format!("{:?}", circle), correct);
         assert_eq!(format!("{:?}", clone), correct);
+    }
+
+    #[test]
+    fn point2d_and_vector_2d_work() {
+        let p1 = Point2d::new(1.0, 2.0);
+        let p2 = Point2d::new(4.0, 3.0);
+        let vec = Vector2d::from_points(&p1, &p2);
+        assert_eq!(vec.ux, 3.0);
+        assert_eq!(vec.uy, 1.0);
     }
 
     #[test]
