@@ -237,4 +237,194 @@ mod tests {
         let colinear = Triangle2d::from_slices(&[0.0, 0.0], &[1.0, 1.0], &[2.0, 2.0]);
         assert_eq!(colinear.signed_area(), 0.0);
     }
+
+    #[test]
+    #[should_panic(expected = "slice must have length at least 2")]
+    fn point2d_from_slice_panics_on_short_input() {
+        Point2d::from_slice(&[1.0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "slice must have length at least 2")]
+    fn vector2d_from_slice_panics_on_short_input() {
+        Vector2d::from_slice(&[1.0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "slice must have length at least 2")]
+    fn parallelogram2d_from_slices_panics_on_short_u() {
+        Parallelogram2d::from_slices(&[1.0], &[1.0, 2.0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "slice must have length at least 2")]
+    fn parallelogram2d_from_slices_panics_on_short_v() {
+        Parallelogram2d::from_slices(&[1.0, 2.0], &[1.0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "slice must have length at least 2")]
+    fn triangle2d_from_slices_panics_on_short_a() {
+        Triangle2d::from_slices(&[1.0], &[1.0, 2.0], &[3.0, 4.0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "slice must have length at least 2")]
+    fn triangle2d_from_slices_panics_on_short_b() {
+        Triangle2d::from_slices(&[1.0, 2.0], &[1.0], &[3.0, 4.0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "slice must have length at least 2")]
+    fn triangle2d_from_slices_panics_on_short_c() {
+        Triangle2d::from_slices(&[1.0, 2.0], &[3.0, 4.0], &[1.0]);
+    }
+
+    #[test]
+    fn edge_case_zero_vectors() {
+        // Zero vector cross product
+        let zero = Vector2d::new(0.0, 0.0);
+        let v = Vector2d::new(1.0, 2.0);
+        assert_eq!(zero.cross(&v), 0.0);
+        assert_eq!(v.cross(&zero), 0.0);
+        assert_eq!(zero.cross(&zero), 0.0);
+
+        // Parallelogram with zero vector
+        let para = Parallelogram2d::from_vectors(&zero, &v);
+        assert_eq!(para.signed_area(), 0.0);
+    }
+
+    #[test]
+    fn edge_case_identical_points() {
+        // Triangle with all identical points
+        let tri = Triangle2d::from_points(
+            &Point2d::new(1.0, 2.0),
+            &Point2d::new(1.0, 2.0),
+            &Point2d::new(1.0, 2.0),
+        );
+        assert_eq!(tri.signed_area(), 0.0);
+
+        // Triangle with two identical points
+        let tri2 = Triangle2d::from_points(
+            &Point2d::new(0.0, 0.0),
+            &Point2d::new(1.0, 1.0),
+            &Point2d::new(1.0, 1.0),
+        );
+        assert_eq!(tri2.signed_area(), 0.0);
+    }
+
+    #[test]
+    fn edge_case_negative_coordinates() {
+        // All negative coordinates - compute expected area manually
+        // Triangle with vertices at (-3,-2), (-1,-4), (-5,-1)
+        // vec_ab = (-1 - (-3), -4 - (-2)) = (2, -2)
+        // vec_ac = (-5 - (-3), -1 - (-2)) = (-2, 1)
+        // cross = 2*1 - (-2)*(-2) = 2 - 4 = -2
+        // signed_area = -2 / 2 = -1
+        let tri = Triangle2d::from_slices(&[-3.0, -2.0], &[-1.0, -4.0], &[-5.0, -1.0]);
+        let area = tri.signed_area();
+        assert!((area - (-1.0)).abs() < 1e-12);
+
+        // Mixed positive and negative
+        let para = Parallelogram2d::from_slices(&[-2.0, 3.0], &[4.0, -1.0]);
+        let area = para.signed_area();
+        assert_eq!(area, -10.0);
+    }
+
+    #[test]
+    fn edge_case_very_small_values() {
+        // Very small but non-zero values
+        let epsilon = 1e-15;
+        let v1 = Vector2d::new(epsilon, epsilon);
+        let v2 = Vector2d::new(epsilon, -epsilon);
+        let cross = v1.cross(&v2);
+        assert!((cross - (-2.0 * epsilon * epsilon)).abs() < 1e-30);
+    }
+
+    #[test]
+    fn edge_case_very_large_values() {
+        // Very large values
+        let large = 1e100;
+        let v1 = Vector2d::new(large, 0.0);
+        let v2 = Vector2d::new(0.0, large);
+        let cross = v1.cross(&v2);
+        assert_eq!(cross, large * large);
+    }
+
+    #[test]
+    fn edge_case_parallel_vectors() {
+        // Parallel vectors (same direction)
+        let v1 = Vector2d::new(2.0, 4.0);
+        let v2 = Vector2d::new(1.0, 2.0);
+        assert_eq!(v1.cross(&v2), 0.0);
+
+        // Parallel vectors (opposite direction)
+        let v3 = Vector2d::new(-3.0, -6.0);
+        assert_eq!(v1.cross(&v3), 0.0);
+    }
+
+    #[test]
+    fn edge_case_perpendicular_vectors() {
+        // Unit perpendicular vectors
+        let v1 = Vector2d::new(1.0, 0.0);
+        let v2 = Vector2d::new(0.0, 1.0);
+        assert_eq!(v1.cross(&v2), 1.0);
+        assert_eq!(v2.cross(&v1), -1.0);
+
+        // Scaled perpendicular vectors
+        let v3 = Vector2d::new(3.0, 0.0);
+        let v4 = Vector2d::new(0.0, 2.0);
+        assert_eq!(v3.cross(&v4), 6.0);
+    }
+
+    #[test]
+    fn edge_case_slice_with_extra_elements() {
+        // from_slice should work with slices longer than 2
+        let long_slice = &[1.0, 2.0, 3.0, 4.0, 5.0];
+        let point = Point2d::from_slice(long_slice);
+        assert_eq!(point.x, 1.0);
+        assert_eq!(point.y, 2.0);
+
+        let vector = Vector2d::from_slice(long_slice);
+        assert_eq!(vector.ux, 1.0);
+        assert_eq!(vector.uy, 2.0);
+
+        let para = Parallelogram2d::from_slices(long_slice, &[6.0, 7.0, 8.0]);
+        assert_eq!(para.u.ux, 1.0);
+        assert_eq!(para.u.uy, 2.0);
+        assert_eq!(para.v.ux, 6.0);
+        assert_eq!(para.v.uy, 7.0);
+    }
+
+    #[test]
+    fn edge_case_triangle_area_symmetry() {
+        // Rotating vertices should preserve absolute area
+        let a = Point2d::new(0.0, 0.0);
+        let b = Point2d::new(4.0, 0.0);
+        let c = Point2d::new(2.0, 3.0);
+
+        let tri1 = Triangle2d::from_points(&a, &b, &c);
+        let tri2 = Triangle2d::from_points(&b, &c, &a);
+        let tri3 = Triangle2d::from_points(&c, &a, &b);
+
+        let area1 = tri1.signed_area();
+        let area2 = tri2.signed_area();
+        let area3 = tri3.signed_area();
+
+        assert_eq!(area1, area2);
+        assert_eq!(area2, area3);
+        assert_eq!(area1, 6.0);
+    }
+
+    #[test]
+    fn edge_case_cross_product_anti_commutativity() {
+        // Cross product should be anti-commutative: a × b = -(b × a)
+        let v1 = Vector2d::new(3.5, -2.7);
+        let v2 = Vector2d::new(1.2, 4.8);
+
+        let cross12 = v1.cross(&v2);
+        let cross21 = v2.cross(&v1);
+
+        assert_eq!(cross12, -cross21);
+    }
 }
