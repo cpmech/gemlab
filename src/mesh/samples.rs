@@ -979,6 +979,49 @@ impl Samples {
         }
     }
 
+    /// Returns a mesh with one Qua8, one Tri6, and two Lin2 in three-dimensional space
+    ///
+    /// ```text
+    ///     -500        -400
+    ///       8------7------6._
+    ///      /        [3](3)/  '-.5
+    ///     /  [0]         /      '-._
+    ///    9  (1)        10  [1]     _'4 -300
+    ///   /              /  (2)  .-'
+    ///  /        [2](3)/  __.3'
+    /// 0------1------2.-''
+    /// -100         -200
+    /// ```
+    #[rustfmt::skip]
+    pub fn qua8_tri6_lin2_three_dimensional() -> Mesh {
+        let h = 0.866; // ~ SQRT_3 / 2
+        let m = h / 2.0;
+        Mesh {
+            ndim: 3,
+            points: vec![
+                Point { id:  0, marker: -100, coords: vec![0.0,   0.0 , 0.5] },
+                Point { id:  1, marker:    0, coords: vec![0.5,   0.0 , 0.2] },
+                Point { id:  2, marker: -200, coords: vec![1.0,   0.0 , 0.4] },
+                Point { id:  3, marker:    0, coords: vec![1.0+m, 0.25, 1.0] },
+                Point { id:  4, marker: -300, coords: vec![1.0+h, 0.5 , 2.0] },
+                Point { id:  5, marker:    0, coords: vec![1.0+m, 0.75, 1.0] },
+                Point { id:  6, marker: -400, coords: vec![1.0,   1.0 , 0.4] },
+                Point { id:  7, marker:    0, coords: vec![0.5,   1.0 , 0.2] },
+                Point { id:  8, marker: -500, coords: vec![0.0,   1.0 , 0.5] },
+                Point { id:  9, marker:    0, coords: vec![0.0,   0.5 , 0.5] },
+                Point { id: 10, marker:    0, coords: vec![1.0,   0.5 , 0.4] },
+            ],
+            cells: vec![
+                Cell { id: 0, attribute: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
+                Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
+                Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
+                Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
+            ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
+        }
+    }
+
     /// Returns a mesh with one Tet4
     ///
     /// ![one_tet4](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/test_mesh_one_tet4.svg)
@@ -1193,22 +1236,22 @@ impl Samples {
     }
 
     /// Returns a mesh with one Hex20
-    /// 
+    ///
     /// ```text
-    ///             4_______15_______7 
-    ///           ,'|              ,'|    
-    ///        12'  |            ,'  | 
-    ///       ,'    16         ,14   | 
+    ///             4_______15_______7
+    ///           ,'|              ,'|
+    ///        12'  |            ,'  |
+    ///       ,'    16         ,14   |
     ///     ,'      |        ,'      19
-    ///   5'=====13========6'        | 
-    ///   |         |      |         | 
-    ///   |         |      |         | 
-    ///   |         0_____ | _11_____3 
-    ///  17       ,'       |       ,'  
-    ///   |     8'        18     ,'    
-    ///   |   ,'           |   ,10     
-    ///   | ,'             | ,'        
-    ///   1_______9________2'          
+    ///   5'=====13========6'        |
+    ///   |         |      |         |
+    ///   |         |      |         |
+    ///   |         0_____ | _11_____3
+    ///  17       ,'       |       ,'
+    ///   |     8'        18     ,'
+    ///   |   ,'           |   ,10
+    ///   | ,'             | ,'
+    ///   1_______9________2'
     /// ```
     #[rustfmt::skip]
     pub fn one_hex20(d: f64, e: f64, f:f64) -> Mesh {
@@ -1908,11 +1951,11 @@ impl Samples {
                 (-2, 24, 26),
             ],
             marked_faces: vec![
-                (-100,  0,  3,  4,  7), 
+                (-100,  0,  3,  4,  7),
                 (-300,  0,  1,  4,  5),
                 (-500,  0,  1,  2,  3),
                 //
-                (-200,  8,  9, 10, 11), 
+                (-200,  8,  9, 10, 11),
                 (-300,  1,  5,  8, 10),
                 (-500,  1,  2,  8,  9),
                 //
@@ -2257,7 +2300,6 @@ mod tests {
     }
 
     #[test]
-    #[rustfmt::skip]
     fn samples_work() {
         let mesh = Samples::lin_cells();
         assert_eq!(mesh.ndim, 2);
@@ -2437,6 +2479,22 @@ mod tests {
         mesh.check_all().unwrap();
         if SAVE_FIGURE {
             draw(&mesh, false, "/tmp/gemlab/test_mesh_qua8_tri6_lin2.svg");
+        }
+
+        let mesh = Samples::qua8_tri6_lin2_three_dimensional();
+        assert_eq!(mesh.ndim, 3);
+        assert_eq!(mesh.points.len(), 11);
+        assert_eq!(mesh.cells.len(), 4);
+        mesh.check_all().unwrap();
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.show_cell_ids(true)
+                .show_point_ids(true)
+                .set_size(800.0, 800.0)
+                .set_view_flag(false)
+                .set_camera(30.0, 90.0);
+            draw.all(&mesh, "/tmp/gemlab/test_mesh_qua8_tri6_lin2_three_dimensional.svg")
+                .unwrap();
         }
 
         let mesh = Samples::one_tet4();
