@@ -123,6 +123,54 @@ impl Triangle2d {
         };
         vec_ab.cross(&vec_ac) / 2.0
     }
+
+    /// Computes the three internal angles (in radians) at vertices a, b, and c
+    ///
+    /// Returns `(angle_at_a, angle_at_b, angle_at_c)` where each angle is in [0, π]
+    ///
+    /// Uses the law of cosines: cos(angle) = (u·v) / (|u||v|)
+    /// where u and v are the two edges meeting at each vertex.
+    pub fn internal_angles(&self) -> (f64, f64, f64) {
+        // Edge vectors
+        let ab = Vector2d::from_points(&self.a, &self.b);
+        let ac = Vector2d::from_points(&self.a, &self.c);
+        let ba = Vector2d::from_points(&self.b, &self.a);
+        let bc = Vector2d::from_points(&self.b, &self.c);
+        let ca = Vector2d::from_points(&self.c, &self.a);
+        let cb = Vector2d::from_points(&self.c, &self.b);
+
+        // Angle at vertex a (between edges ab and ac)
+        let dot_a = ab.ux * ac.ux + ab.uy * ac.uy;
+        let len_ab = (ab.ux * ab.ux + ab.uy * ab.uy).sqrt();
+        let len_ac = (ac.ux * ac.ux + ac.uy * ac.uy).sqrt();
+        let angle_a = if len_ab > 0.0 && len_ac > 0.0 {
+            (dot_a / (len_ab * len_ac)).acos()
+        } else {
+            0.0
+        };
+
+        // Angle at vertex b (between edges ba and bc)
+        let dot_b = ba.ux * bc.ux + ba.uy * bc.uy;
+        let len_ba = (ba.ux * ba.ux + ba.uy * ba.uy).sqrt();
+        let len_bc = (bc.ux * bc.ux + bc.uy * bc.uy).sqrt();
+        let angle_b = if len_ba > 0.0 && len_bc > 0.0 {
+            (dot_b / (len_ba * len_bc)).acos()
+        } else {
+            0.0
+        };
+
+        // Angle at vertex c (between edges ca and cb)
+        let dot_c = ca.ux * cb.ux + ca.uy * cb.uy;
+        let len_ca = (ca.ux * ca.ux + ca.uy * ca.uy).sqrt();
+        let len_cb = (cb.ux * cb.ux + cb.uy * cb.uy).sqrt();
+        let angle_c = if len_ca > 0.0 && len_cb > 0.0 {
+            (dot_c / (len_ca * len_cb)).acos()
+        } else {
+            0.0
+        };
+
+        (angle_a, angle_b, angle_c)
+    }
 }
 
 /// Holds data defining a circle in 2D
@@ -442,5 +490,63 @@ mod tests {
         let cross21 = v2.cross(&v1);
 
         assert_eq!(cross12, -cross21);
+    }
+
+    #[test]
+    fn triangle_internal_angles_work() {
+        use std::f64::consts::PI;
+
+        // Right triangle with legs 3 and 4 (hypotenuse 5)
+        let right_tri = Triangle2d::from_points(
+            &Point2d::new(0.0, 0.0),
+            &Point2d::new(3.0, 0.0),
+            &Point2d::new(0.0, 4.0),
+        );
+        let (angle_a, angle_b, angle_c) = right_tri.internal_angles();
+
+        // Angle at a should be 90 degrees (π/2)
+        assert!((angle_a - PI / 2.0).abs() < 1e-10);
+
+        // Sum of all angles should be π
+        let sum = angle_a + angle_b + angle_c;
+        assert!((sum - PI).abs() < 1e-10);
+
+        // Other angles should be complementary to 90 degrees
+        assert!((angle_b + angle_c - PI / 2.0).abs() < 1e-10);
+
+        // Equilateral triangle (all angles should be 60 degrees = π/3)
+        let side = 2.0;
+        let height = side * (3.0_f64).sqrt() / 2.0;
+        let equilateral = Triangle2d::from_points(
+            &Point2d::new(0.0, 0.0),
+            &Point2d::new(side, 0.0),
+            &Point2d::new(side / 2.0, height),
+        );
+        let (ea, eb, ec) = equilateral.internal_angles();
+        assert!((ea - PI / 3.0).abs() < 1e-10);
+        assert!((eb - PI / 3.0).abs() < 1e-10);
+        assert!((ec - PI / 3.0).abs() < 1e-10);
+
+        // Isosceles triangle (two equal angles)
+        let isosceles = Triangle2d::from_points(
+            &Point2d::new(0.0, 0.0),
+            &Point2d::new(2.0, 0.0),
+            &Point2d::new(1.0, 3.0),
+        );
+        let (ia, ib, ic) = isosceles.internal_angles();
+        // Vertices a=(0,0) and b=(2,0) are at the base, c=(1,3) is apex
+        // So angles at a and b should be equal
+        assert!((ia - ib).abs() < 1e-10);
+        // Sum should still be π
+        assert!((ia + ib + ic - PI).abs() < 1e-10);
+
+        // Very flat triangle - angles still sum to π
+        let flat = Triangle2d::from_points(
+            &Point2d::new(0.0, 0.0),
+            &Point2d::new(10.0, 0.0),
+            &Point2d::new(5.0, 0.1),
+        );
+        let (fa, fb, fc) = flat.internal_angles();
+        assert!((fa + fb + fc - PI).abs() < 1e-10);
     }
 }
