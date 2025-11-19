@@ -2,7 +2,6 @@ use super::algorithms::{extract_all_2d_edges, extract_all_faces, extract_feature
 use super::{At, CellId, Mesh, PointId};
 use super::{Edge, EdgeKey, Edges, MapEdge2dToCells, MapPointToEdges};
 use super::{Face, FaceKey, Faces, MapFaceToCells, MapPointToFaces};
-use crate::mesh::GeoKind;
 use crate::shapes::Scratchpad;
 use crate::util::GridSearch;
 use crate::StrError;
@@ -525,66 +524,72 @@ impl<'a> Features<'a> {
     ///
     /// * Panics if the mesh is not 3D
     pub fn triangulate_3d_boundary(&self) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<Vec<PointId>>) {
-        assert_eq!(self.mesh.ndim, 3);
+        // check
+        let ndim = 3;
+        assert_eq!(self.mesh.ndim, ndim);
+
+        // auxiliary
         let mut old_point_id_to_new_point_id = HashMap::new();
+        let mut pads = HashMap::new();
+        let mut x_work = Vector::new(ndim);
+        let mut connectivity = vec![0; 3];
+
+        // results
         let mut xx: Vec<f64> = Vec::new();
         let mut yy: Vec<f64> = Vec::new();
         let mut zz: Vec<f64> = Vec::new();
         let mut triangles: Vec<Vec<PointId>> = Vec::new();
-        let mut pad_qua8 = Scratchpad::new(3, GeoKind::Qua8).unwrap();
-        let mut x_cen = Vector::new(3);
-        let ksi = [0.0, 0.0, 0.0];
+
+        // loop over all faces and detect boundary faces (using "shared_by_ncell")
         for (face_key, face) in &self.faces {
             let shared_by_ncell = self.all_faces.get(face_key).unwrap().len();
             if shared_by_ncell == 1 {
-                // this is a boundary face
-                let face_npoint = face.points.len();
-                let mut new_face_points = Vec::with_capacity(face_npoint);
-                for p in &face.points {
-                    let new_point_id = old_point_id_to_new_point_id
-                        .entry(*p)
-                        .or_insert_with(|| {
-                            let npoint_new = xx.len();
-                            xx.push(self.mesh.points[*p].coords[0]);
-                            yy.push(self.mesh.points[*p].coords[1]);
-                            zz.push(self.mesh.points[*p].coords[2]);
-                            npoint_new
-                        })
-                        .clone();
-                    new_face_points.push(new_point_id);
-                }
-                match face.kind {
-                    GeoKind::Tri3 => {
-                        triangles.push(vec![new_face_points[0], new_face_points[1], new_face_points[2]]);
+                // constants
+                let kind = face.kind;
+                let nnode = kind.nnode();
+                let extra_nnode = kind.triangulate_extra_nnode();
+                let mut extra_points = vec![usize::MAX; extra_nnode];
+
+                // set scratchpad
+                let pad = pads.entry(kind).or_insert_with(|| Scratchpad::new(ndim, kind).unwrap());
+                self.mesh.set_pad(pad, &face.points);
+
+                // loop over triangles and add them to the list of triangles
+                pad.triangulate(&mut x_work, |_, i, m, x| {
+                    let p = if m < nnode {
+                        // existing point
+                        let p_old = face.points[m];
+                        old_point_id_to_new_point_id
+                            .entry(p_old)
+                            .or_insert_with(|| {
+                                let p_new = xx.len();
+                                xx.push(x[0]);
+                                yy.push(x[1]);
+                                zz.push(x[2]);
+                                p_new
+                            })
+                            .clone()
+                    } else {
+                        // extra point
+                        let k = m - nnode;
+                        if extra_points[k] == usize::MAX {
+                            let p_new = xx.len();
+                            extra_points[k] = p_new;
+                            xx.push(x[0]);
+                            yy.push(x[1]);
+                            zz.push(x[2]);
+                            p_new
+                        } else {
+                            extra_points[k]
+                        }
+                    };
+                    connectivity[i] = p;
+                    if i == 2 {
+                        // last corner
+                        triangles.push(connectivity.clone());
                     }
-                    GeoKind::Tri6 => {
-                        triangles.push(vec![new_face_points[0], new_face_points[3], new_face_points[5]]);
-                        triangles.push(vec![new_face_points[3], new_face_points[4], new_face_points[5]]);
-                        triangles.push(vec![new_face_points[3], new_face_points[1], new_face_points[4]]);
-                        triangles.push(vec![new_face_points[5], new_face_points[4], new_face_points[2]]);
-                    }
-                    GeoKind::Qua4 => {
-                        triangles.push(vec![new_face_points[0], new_face_points[1], new_face_points[2]]);
-                        triangles.push(vec![new_face_points[2], new_face_points[3], new_face_points[0]]);
-                    }
-                    GeoKind::Qua8 => {
-                        self.mesh.set_pad(&mut pad_qua8, &face.points);
-                        pad_qua8.calc_coords(&mut x_cen, &ksi).unwrap();
-                        let p8 = xx.len();
-                        xx.push(x_cen[0]);
-                        yy.push(x_cen[1]);
-                        zz.push(x_cen[2]);
-                        triangles.push(vec![new_face_points[0], new_face_points[4], p8]);
-                        triangles.push(vec![new_face_points[4], new_face_points[5], p8]);
-                        triangles.push(vec![new_face_points[5], new_face_points[2], p8]);
-                        triangles.push(vec![new_face_points[2], new_face_points[6], p8]);
-                        triangles.push(vec![new_face_points[6], new_face_points[7], p8]);
-                        triangles.push(vec![new_face_points[7], new_face_points[0], p8]);
-                        triangles.push(vec![new_face_points[4], new_face_points[1], new_face_points[5]]);
-                        triangles.push(vec![new_face_points[6], new_face_points[3], new_face_points[7]]);
-                    }
-                    _ => panic!("Tri3, Tri6, Qua4, or Qua8 faces required for triangulation"),
-                }
+                })
+                .unwrap();
             }
         }
         (xx, yy, zz, triangles)
@@ -1392,14 +1397,14 @@ mod tests {
         }
         // expected triangles
         for (k0, k1, k2, k3) in &boundary_faces {
-            assert!(connectivity.contains(&(k0.to_string(), k1.to_string(), k2.to_string())));
-            assert!(connectivity.contains(&(k2.to_string(), k3.to_string(), k0.to_string())));
+            assert!(connectivity.contains(&(k0.to_string(), k1.to_string(), k3.to_string())));
+            assert!(connectivity.contains(&(k1.to_string(), k2.to_string(), k3.to_string())));
         }
     }
 
     #[test]
     fn triangulate_3d_boundary_works_hex20() {
-        let mesh = Samples::one_hex20(0.1, -0.1);
+        let mesh = Samples::one_hex20(0.1, -0.1, 0.1);
         let features = Features::new(&mesh, true);
         let (xx, yy, zz, triangles) = features.triangulate_3d_boundary();
         if SAVE_FIGURE {
