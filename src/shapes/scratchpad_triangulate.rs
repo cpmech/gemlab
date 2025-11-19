@@ -8,13 +8,23 @@ impl Scratchpad {
     /// This function connects the existing nodes of a GeoKind to make triangles.
     /// For some shapes, a few extra nodes are defined.
     ///
+    /// # Input
+    ///
+    /// * `x_work` -- is a workspace vector with dim = space_ndim
+    ///
+    /// # Output
+    ///
     /// The results are available via the callback function: `f(t, i, m, x)` where:
     ///
     /// * `t` -- is the index of the triangle in `0..kind.triangulate_ntriangle()`
     /// * `i` -- is the corner index in `0..3`
     /// * `m` -- is the node number in `0..(kind.nnode()+kind.triangulate_extra_nnode())`
     /// * `x` -- holds the real coordinates of the node
-    pub fn triangulate<F>(&mut self, mut f: F) -> Result<(), StrError>
+    ///
+    /// # Notes
+    ///
+    /// 1. This function works with Tri and Qua classes only
+    pub fn triangulate<F>(&mut self, x_work: &mut Vector, mut f: F) -> Result<(), StrError>
     where
         F: FnMut(usize, usize, usize, &Vector),
     {
@@ -24,9 +34,11 @@ impl Scratchpad {
         if !tri_or_qua {
             return Err("triangulate works with Tri and Qua classes only");
         }
-        let nnode = kind.nnode();
         let space_ndim = self.get_space_ndim();
-        let mut x = Vector::new(space_ndim);
+        if x_work.dim() != space_ndim {
+            return Err("x_work.dim() must equal space_ndim");
+        }
+        let nnode = kind.nnode();
         for t in 0..kind.triangulate_ntriangle() {
             for i in 0..3 {
                 let m = kind.triangulate_triangle_nodes(t, i);
@@ -34,14 +46,14 @@ impl Scratchpad {
                     // interpolation required
                     let k = m - nnode;
                     let ksi = kind.triangulate_extra_coords(k);
-                    self.calc_coords(&mut x, ksi)?;
+                    self.calc_coords(x_work, ksi)?;
                 } else {
                     // no interpolation required
                     for j in 0..space_ndim {
-                        x[j] = self.xxt.get(j, m);
+                        x_work[j] = self.xxt.get(j, m);
                     }
                 };
-                f(t, i, m, &x);
+                f(t, i, m, x_work);
             }
         }
         Ok(())
@@ -56,8 +68,8 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoClass, GeoKind};
     use plotpy::{Canvas, Plot};
-    use russell_lab::approx_eq;
     use russell_lab::math::PI;
+    use russell_lab::{approx_eq, Vector};
 
     const SAVE_FIGURE: bool = false;
 
@@ -65,6 +77,8 @@ mod tests {
     fn pad_triangulate_works() {
         let ninety = PI / 2.0;
         let forty_five = PI / 4.0;
+        let space_ndim = 2;
+        let mut x_work = Vector::new(space_ndim);
         for kind in GeoKind::VALUES {
             let ntriangle = kind.triangulate_ntriangle();
             if ntriangle > 0 {
@@ -84,9 +98,8 @@ mod tests {
                 let nnode_total = kind.nnode() + kind.triangulate_extra_nnode();
                 let mut xx = vec![0.0; nnode_total];
                 let mut yy = vec![0.0; nnode_total];
-                let zz = vec![0.0; nnode_total];
                 let mut triangles = vec![vec![0; 3]; ntriangle];
-                pad.triangulate(|t, i, m, x| {
+                pad.triangulate(&mut x_work, |t, i, m, x| {
                     xx[m] = x[0];
                     yy[m] = x[1];
                     triangles[t][i] = m;
@@ -123,7 +136,7 @@ mod tests {
                 }
                 if SAVE_FIGURE {
                     let mut canvas = Canvas::new();
-                    canvas.draw_triangles_3d(&xx, &yy, &zz, &triangles);
+                    canvas.draw_triangles(&xx, &yy, &triangles);
                     let mut plot = Plot::new();
                     pad.draw_shape(&mut plot, "", true, false).unwrap();
                     plot.add(&canvas);
@@ -139,6 +152,7 @@ mod tests {
     #[test]
     fn pad_triangulate_works_2() {
         let space_ndim = 3; // shells
+        let mut x_work = Vector::new(space_ndim);
         for kind in GeoKind::VALUES {
             let ntriangle = kind.triangulate_ntriangle();
             if ntriangle > 0 {
@@ -148,7 +162,7 @@ mod tests {
                 let mut yy = vec![0.0; nnode_total];
                 let mut zz = vec![0.0; nnode_total];
                 let mut triangles = vec![vec![0; 3]; ntriangle];
-                pad.triangulate(|t, i, m, x| {
+                pad.triangulate(&mut x_work, |t, i, m, x| {
                     xx[m] = x[0];
                     yy[m] = x[1];
                     zz[m] = x[2];
