@@ -5,6 +5,17 @@ use crate::StrError;
 use russell_lab::{mat_vec_mul, vec_norm, Norm, Vector};
 
 impl Scratchpad {
+    /// Triangulates a Tri or Qua shape
+    ///
+    /// This function connects the existing nodes of a GeoKind to make triangles.
+    /// For some shapes, a few extra nodes are defined.
+    ///
+    /// The results are available via the callback function: `f(t, i, m, x)` where:
+    ///
+    /// * `t` -- is the index of the triangle in `0..kind.triangulate_ntriangle()`
+    /// * `i` -- is the corner index in `0..3`
+    /// * `m` -- is the node number in `0..(kind.nnode()+kind.triangulate_extra_nnode())`
+    /// * `x` -- holds the real coordinates of the node
     pub fn triangulate<F>(&mut self, mut f: F) -> Result<(), StrError>
     where
         F: FnMut(usize, usize, usize, &Vector),
@@ -17,10 +28,6 @@ impl Scratchpad {
         }
         let space_ndim = self.get_space_ndim();
         let mut x = Vector::new(space_ndim);
-        // let xx = Vec::new();
-        // let yy = Vec::new();
-        // let zz = Vec::new();
-        // let triangles = Vec::new();
         for t in 0..kind.triangulate_ntriangle() {
             for i in 0..3 {
                 let m = kind.triangulate_triangle_nodes(t, i);
@@ -33,10 +40,8 @@ impl Scratchpad {
                 self.calc_coords(&mut x, ksi)?;
                 f(t, i, m, &x);
             }
-            println!();
         }
         Ok(())
-        // (xx, yy, zz, triangles)
     }
 }
 
