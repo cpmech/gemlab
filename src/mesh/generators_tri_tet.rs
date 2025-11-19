@@ -242,7 +242,7 @@ impl Unstructured {
         regions: &Vec<(i32, f64, f64, f64)>,
         holes: &Vec<(f64, f64, f64)>,
         o2: bool,
-        max_areas: Option<HashMap<CellAttribute, f64>>,
+        max_volumes: Option<HashMap<CellAttribute, f64>>,
         global_max_volume: Option<f64>,
         global_min_angle: Option<f64>,
         renumber: bool,
@@ -311,8 +311,8 @@ impl Unstructured {
 
         // set regions
         for (i, region) in regions.iter().enumerate() {
-            let max_area = max_areas.as_ref().and_then(|ma| ma.get(&region.0)).cloned();
-            tetgen.set_region(i, region.0, region.1, region.2, region.3, max_area)?;
+            let max_volume = max_volumes.as_ref().and_then(|ma| ma.get(&region.0)).cloned();
+            tetgen.set_region(i, region.0, region.1, region.2, region.3, max_volume)?;
         }
 
         // set holes
