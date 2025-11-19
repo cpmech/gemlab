@@ -24,18 +24,23 @@ impl Scratchpad {
         if !tri_or_qua {
             return Err("triangulate works with Tri and Qua classes only");
         }
+        let nnode = kind.nnode();
         let space_ndim = self.get_space_ndim();
         let mut x = Vector::new(space_ndim);
         for t in 0..kind.triangulate_ntriangle() {
             for i in 0..3 {
                 let m = kind.triangulate_triangle_nodes(t, i);
-                let ksi = if m >= kind.nnode() {
-                    let k = m - kind.nnode();
-                    kind.triangulate_extra_coords(k)
+                if m >= nnode {
+                    // interpolation required
+                    let k = m - nnode;
+                    let ksi = kind.triangulate_extra_coords(k);
+                    self.calc_coords(&mut x, ksi)?;
                 } else {
-                    kind.reference_coords(m)
+                    // no interpolation required
+                    for j in 0..space_ndim {
+                        x[j] = self.xxt.get(j, m);
+                    }
                 };
-                self.calc_coords(&mut x, ksi)?;
                 f(t, i, m, &x);
             }
         }
