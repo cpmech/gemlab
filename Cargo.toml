@@ -12,12 +12,18 @@ categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
 
 [dependencies]
-plotpy = "1.14"
-russell_lab = "1.10"
-russell_sparse = "1.10"
-russell_stat = "1.10"
-russell_tensor = "1.10"
-tritet = "2.0"
+plotpy = { path = "../plotpy" }
+russell_lab = { path = "../russell/russell_lab", features = ["intel_mkl"] }
+russell_sparse = { path = "../russell/russell_sparse", features = [
+  "local_suitesparse",
+  "with_mumps",
+  "intel_mkl",
+] }
+russell_stat = { path = "../russell/russell_stat", features = ["intel_mkl"] }
+russell_tensor = { path = "../russell/russell_tensor", features = [
+  "intel_mkl",
+] }
+tritet = { path = "../tritet" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 structopt = "0.3"
