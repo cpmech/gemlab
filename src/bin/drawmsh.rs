@@ -71,7 +71,7 @@ struct Options {
     height: Option<f64>,
 
     /// View the figure interactively in a window (also saves SVG file)
-    #[structopt(long)]
+    #[structopt(short = "V", long)]
     view: bool,
 
     /// Multiplier for drawing area range
