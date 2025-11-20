@@ -91,7 +91,7 @@ The MSH file format contains three mandatory sections and two optional sections.
 #     {-5}/ .        {-5}/ |
 #        /  .   {-9}    /  |{123}
 #       /   .          /   |       id = 1
-# 2.0  9-------------10    |       attribute = 2
+# 2.0  9-------------10    |       marker = 2
 #      |    .         |    |
 #      |    4---------|----7*
 #      |   /.         |   /|
@@ -99,7 +99,7 @@ The MSH file format contains three mandatory sections and two optional sections.
 #      | /  .         | /  |{-4}
 #      |/   .         |/   |
 # 1.0  5--------------6    |       id = 0
-#      |    .         |{-8}|       attribute = 1
+#      |    .         |{-8}|       marker = 1
 #      |    0---------|----3  0.0
 #      |   /          |   /
 #      |  /           |  /
@@ -128,9 +128,9 @@ The MSH file format contains three mandatory sections and two optional sections.
   11  0 0.0 1.0 2.0
 
 # cells
-# id attribute kind  point_ids...
-   0   1 hex8  0 1 2 3 4 5  6  7
-   1   2 hex8  4 5 6 7 8 9 10 11
+# id marker kind points
+   0  1  hex8  0 1 2 3 4 5  6  7
+   1  2  hex8  4 5 6 7 8 9 10 11
 
 # marked edges
 # marker p1 p2

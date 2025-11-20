@@ -142,8 +142,8 @@ impl DataForReadTextMesh {
         }
 
         let attribute: i32 = match data.next() {
-            Some(v) => v.parse().map_err(|_| "cannot parse cell attribute")?,
-            None => return Err("cannot read cell attribute"),
+            Some(v) => v.parse().map_err(|_| "cannot parse cell marker")?,
+            None => return Err("cannot read cell marker"),
         };
 
         let str_kind = match data.next() {
@@ -170,7 +170,7 @@ impl DataForReadTextMesh {
 
         mesh.cells.push(Cell {
             id,
-            attribute,
+            marker: attribute,
             kind,
             points,
         });
@@ -266,9 +266,9 @@ impl Mesh {
     /// 2. The points list where each line contains the `id` of the point, which must be **equal to the position** in the list,
     ///    followed by the `x` and `y` (and `z`) coordinates;
     /// 3. The cells list where each line contains the `id` of the cell, which must be **equal to the position** in the list,
-    ///    the attribute (`att`) of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
+    ///    the `marker` of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
     ///
-    /// The text file looks like this (the hash tag indicates a comment/the mesh below is just an example which won't work):
+    /// The text file looks like this (the `#` character indicates a comment):
     ///
     /// ```text
     /// # header
@@ -283,7 +283,7 @@ impl Mesh {
     /// # ... more points should follow
     ///
     /// # cells
-    /// # id attribute kind point_ids...
+    /// # id marker kind points
     ///    0 1 tri3 0 1 3
     ///    1 1 qua4 1 4 6 3
     ///    2 2 tet4 0 3 7 2
@@ -437,26 +437,39 @@ impl Mesh {
     /// 2. The points list where each line contains the `id` of the point, which must be **equal to the position** in the list,
     ///    followed by the `x` and `y` (and `z`) coordinates;
     /// 3. The cells list where each line contains the `id` of the cell, which must be **equal to the position** in the list,
-    ///    the attribute (`att`) of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
+    ///    the `marker` of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
     ///
-    /// The text looks like this (the hash tag indicates a comment/the mesh below is just an example which won't work):
+    /// The text looks like this (the `#` character indicates a comment):
     ///
     /// ```text
     /// # header
-    /// # ndim npoint ncell
-    ///      2      8     5
+    /// # ndim npoint ncell nmarked_edge nmarked_face
+    ///      3      8     5            3            2
     ///
     /// # points
-    /// # id marker x y
-    ///    0 0 0.0 0.0
-    ///    1 0 0.5 0.0
-    ///    2 0 1.0 0.0
+    /// # id marker x y {z}
+    ///    0 0 0.0 0.0 0.0
+    ///    1 0 0.5 0.0 0.0
+    ///    2 0 1.0 0.0 0.0
     /// # ... more points should follow
     ///
     /// # cells
-    /// # id attribute kind point_ids...
+    /// # id marker kind points
     ///    0 1 tri3 0 1 3
     ///    1 1 qua4 1 4 6 3
+    ///    2 2 tet4 0 3 7 2
+    /// # ... more cells should follow
+    ///
+    /// # marked edges
+    /// # marker p1 p2
+    /// -100 0 1
+    /// -100 9 8
+    /// -200 8 3
+    ///
+    /// # marked faces
+    /// # marker p1 p2 p3 {p4}
+    /// -10 4 7 4
+    /// -10 1 2 3
     /// ```
     ///
     /// where we can see that different cell (shape) kinds can be present in the same mesh.
@@ -729,11 +742,11 @@ mod tests {
 
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 \n")).err(),
-            Some("cannot read cell attribute")
+            Some("cannot read cell marker")
         );
         assert_eq!(
             data.parse_cell(&mut mesh, &String::from(" 0 wrong")).err(),
-            Some("cannot parse cell attribute")
+            Some("cannot parse cell marker")
         );
 
         assert_eq!(
@@ -981,7 +994,7 @@ mod tests {
                     5 0 2.0 1.0\n\
                  \n\
                  # cells\n\
-                 # id attribute kind  point_ids...\n\
+                 # id marker kind points\n\
                     0   1 qua4  0 1 2 3\n"
             )
             .err(),
@@ -1000,7 +1013,7 @@ mod tests {
                     2 0 1.0 1.0  1\n\
                     3 0 0.0 1.0  1\n\
                  # cells\n\
-                 # id attribute kind  point_ids...\n\
+                 # id marker kind points\n\
                     0   1 qua4  0 1 2 3\n"
             )
             .err(),
@@ -1019,7 +1032,7 @@ mod tests {
                     2 0 1.0 1.0\n\
                     3 0 0.0 1.0\n\
                  # cells\n\
-                 # id attribute kind  point_ids + wrong...\n\
+                 # id marker kind  point_ids + wrong...\n\
                     0   1 qua4  0 1 2 3       4\n"
             )
             .err(),
@@ -1038,7 +1051,7 @@ mod tests {
                     2 0 1.0 1.0\n\
                     3 0 0.0 1.0\n\
                  # cells\n\
-                 # id attribute kind  point_ids...\n\
+                 # id marker kind points\n\
                     0   1 Qua4  0 1 2 3     \n"
             )
             .err(),
@@ -1063,7 +1076,7 @@ mod tests {
               5 0 3.0 0.0
 
               # cells
-              # id attribute kind point_ids...
+              # id marker kind points
               0 1 lin2 0 1
               1 2 qua4 1 2 3 4
               2 1 lin2 2 5",
@@ -1087,7 +1100,7 @@ mod tests {
                5 -6 2.0 1.0
             
             # cells
-            # id attribute kind  point_ids...
+            # id marker kind points
                0   1 qua4  0 1 2 3
                1   2 qua4  1 4 5 2
                
@@ -1125,7 +1138,7 @@ mod tests {
               11  0 0.0 1.0 2.0
             
             # cells
-            # id attribute kind  point_ids...
+            # id marker kind points
                0   1 hex8  0 1 2 3 4 5  6  7
                1   2 hex8  4 5 6 7 8 9 10 11
                
@@ -1164,7 +1177,7 @@ mod tests {
                        4 0 0.5 0.5\n\
                        \n\
                        # cells\n\
-                       # id attribute kind points\n\
+                       # id marker kind points\n\
                        0 1 tri3 1 2 4\n\
                        1 1 tri3 3 0 4\n\
                        2 1 tri3 4 2 3\n\
@@ -1199,7 +1212,7 @@ mod tests {
                        7 -8 0.0 1.0 1.0\n\
                        \n\
                        # cells\n\
-                       # id attribute kind points\n\
+                       # id marker kind points\n\
                        0 1 tet4 0 3 7 2\n\
                        1 1 tet4 0 7 4 6\n\
                        2 1 tet4 5 0 4 6\n\

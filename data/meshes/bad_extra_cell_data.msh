@@ -12,6 +12,6 @@
    5      0 2.0 1.0
 
 # cells
-# id attribute kind  point_ids... wrong
+# id marker kind  points  wrong
    0   1 qua4  0 1 2 3      123
    1   0 qua4  1 4 5 2      123

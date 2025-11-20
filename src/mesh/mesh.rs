@@ -22,8 +22,8 @@ pub type PointMarker = i32;
 /// Aliases usize as Cell ID
 pub type CellId = usize;
 
-/// Aliases usize as Cell's attribute
-pub type CellAttribute = i32;
+/// Aliases i32 as Cell Marker
+pub type CellMarker = i32;
 
 /// Holds point data
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -44,8 +44,8 @@ pub struct Cell {
     /// Identification number which equals the index of the cell in the mesh
     pub id: CellId,
 
-    /// Attribute number
-    pub attribute: CellAttribute,
+    /// Holds a marker that can be used to group cells (e.g., material type)
+    pub marker: CellMarker,
 
     /// The kind of cell
     pub kind: GeoKind,
@@ -62,7 +62,7 @@ impl AsCell for Cell {
     }
 
     fn marker(&self) -> i32 {
-        self.attribute
+        self.marker
     }
 
     fn points(&self) -> &[PointId] {
@@ -79,7 +79,7 @@ impl AsCell for Cell {
 /// use gemlab::shapes::GeoKind;
 ///
 /// //          [#] indicates id
-/// //      y   (#) indicates attribute
+/// //      y   (#) indicates marker
 /// //      ↑
 /// // 1.0  3-----------2-----------5
 /// //      |           |           |
@@ -100,8 +100,8 @@ impl AsCell for Cell {
 ///         Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
 ///     ],
 ///     cells: vec![
-///         Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-///         Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+///         Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+///         Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
 ///     ],
 ///     marked_edges: Vec::new(),
 ///     marked_faces: Vec::new(),
@@ -183,7 +183,7 @@ impl Mesh {
     ///     for e in 0..2 {
     ///         let cell = &mesh.cells[e];
     ///         assert_eq!(cell.id, e);
-    ///         assert_eq!(cell.attribute, 1);
+    ///         assert_eq!(cell.marker, 1);
     ///         assert_eq!(cell.kind, GeoKind::Tri3);
     ///         assert_eq!(cell.points, vec![0, 0, 0]);
     ///     }
@@ -226,7 +226,7 @@ impl Mesh {
         for i in 0..ncell {
             cells.push(Cell {
                 id: i,
-                attribute: 1,
+                marker: 1,
                 kind,
                 points: vec![0; nnode],
             });
@@ -326,10 +326,10 @@ impl Mesh {
     ///             Point { id: 10, marker:    0, coords: vec![1.0,   0.5 ] },
     ///         ],
     ///         cells: vec![
-    ///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
-    ///             Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
-    ///             Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
-    ///             Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
+    ///             Cell { id: 0, marker: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
+    ///             Cell { id: 1, marker: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
+    ///             Cell { id: 2, marker: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
+    ///             Cell { id: 3, marker: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
     ///         ],
     ///         marked_edges: Vec::new(),
     ///         marked_faces: Vec::new(),
@@ -414,10 +414,10 @@ impl Mesh {
     ///             Point { id: 10, marker: 0, coords: vec![1.0,   0.5 ] },
     ///         ],
     ///         cells: vec![
-    ///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
-    ///             Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
-    ///             Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
-    ///             Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
+    ///             Cell { id: 0, marker: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
+    ///             Cell { id: 1, marker: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
+    ///             Cell { id: 2, marker: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
+    ///             Cell { id: 3, marker: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
     ///         ],
     ///         marked_edges: Vec::new(),
     ///         marked_faces: Vec::new(),
@@ -677,13 +677,13 @@ impl fmt::Display for Mesh {
 
         // write cells
         write!(f, "\n# cells\n").unwrap();
-        write!(f, "# id attribute kind points\n").unwrap();
+        write!(f, "# id marker kind points\n").unwrap();
         self.cells.iter().for_each(|cell| {
             write!(
                 f,
                 "{} {} {}{}\n",
                 cell.id,
-                cell.attribute,
+                cell.marker,
                 cell.kind.to_string(),
                 cell.points.iter().fold(&mut String::new(), |acc, cur| {
                     write!(acc, " {}", cur).unwrap();
@@ -759,7 +759,7 @@ mod tests {
         for i in 0..2 {
             let cell = &mesh.cells[i];
             assert_eq!(cell.id, i);
-            assert_eq!(cell.attribute, 1);
+            assert_eq!(cell.marker, 1);
             assert_eq!(cell.kind, GeoKind::Tri3);
             assert_eq!(cell.points, vec![0, 0, 0]);
         }
@@ -810,7 +810,7 @@ mod tests {
                5 -6 2.0 1.0
             
             # cells
-            # id attribute kind point_ids...
+            # id marker kind points
                0   1 qua4 0 1 2 3
                1   0 qua4 1 4 5 2
                
@@ -828,7 +828,7 @@ mod tests {
     fn derive_works() {
         let mesh = Samples::two_qua4();
         let mesh_clone = mesh.clone();
-        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: -1, coords: [0.0, 0.0] }, Point { id: 1, marker: -2, coords: [1.0, 0.0] }, Point { id: 2, marker: -3, coords: [1.0, 1.0] }, Point { id: 3, marker: -4, coords: [0.0, 1.0] }, Point { id: 4, marker: -5, coords: [2.0, 0.0] }, Point { id: 5, marker: -6, coords: [2.0, 1.0] }], cells: [Cell { id: 0, attribute: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, attribute: 2, kind: Qua4, points: [1, 4, 5, 2] }], marked_edges: [(-100, 3, 2), (-200, 2, 5), (-300, 5, 4), (-300, 3, 0), (-400, 0, 1), (-400, 1, 4)], marked_faces: [] }";
+        let correct ="Mesh { ndim: 2, points: [Point { id: 0, marker: -1, coords: [0.0, 0.0] }, Point { id: 1, marker: -2, coords: [1.0, 0.0] }, Point { id: 2, marker: -3, coords: [1.0, 1.0] }, Point { id: 3, marker: -4, coords: [0.0, 1.0] }, Point { id: 4, marker: -5, coords: [2.0, 0.0] }, Point { id: 5, marker: -6, coords: [2.0, 1.0] }], cells: [Cell { id: 0, marker: 1, kind: Qua4, points: [0, 1, 2, 3] }, Cell { id: 1, marker: 2, kind: Qua4, points: [1, 4, 5, 2] }], marked_edges: [(-100, 3, 2), (-200, 2, 5), (-300, 5, 4), (-300, 3, 0), (-400, 0, 1), (-400, 1, 4)], marked_faces: [] }";
         assert_eq!(format!("{:?}", mesh), correct);
         assert_eq!(mesh_clone.ndim, mesh.ndim);
         assert_eq!(mesh_clone.points.len(), mesh.points.len());
@@ -860,7 +860,7 @@ mod tests {
              5 -6 2.0 1.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 1 qua4 0 1 2 3\n\
              1 2 qua4 1 4 5 2\n\
              \n\
@@ -903,7 +903,7 @@ mod tests {
              11 0 0.0 1.0 2.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 1 hex8 0 1 2 3 4 5 6 7\n\
              1 2 hex8 4 5 6 7 8 9 10 11\n\
              \n\

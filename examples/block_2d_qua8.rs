@@ -60,7 +60,7 @@ fn main() -> Result<(), StrError> {
 20 0 1.5 2.0
 
 # cells
-# id attribute kind points
+# id marker kind points
 0 1 qua8 0 1 2 3 4 5 6 7
 1 1 qua8 1 8 9 2 10 11 12 5
 2 1 qua8 3 2 13 14 6 15 16 17

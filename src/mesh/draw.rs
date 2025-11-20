@@ -798,7 +798,7 @@ impl<'a> Draw<'a> {
 
             // add label
             let msg = if self.show_cell_att {
-                format!("{}({})", cell.id, cell.attribute)
+                format!("{}({})", cell.id, cell.marker)
             } else {
                 format!("{}", cell.id)
             };

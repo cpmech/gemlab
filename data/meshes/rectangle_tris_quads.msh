@@ -51,7 +51,7 @@
   15 -2 1.0 3.1
 
 # cells
-# id attribute kind  point_ids...
+# id marker kind points
    0 111 tri3  0 4 3
    1 111 tri3  0 1 4
    2 111 tri3  1 5 4

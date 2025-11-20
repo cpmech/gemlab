@@ -36,8 +36,8 @@ use std::collections::{HashMap, HashSet};
 ///             Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
 ///         ],
 ///         cells: vec![
-///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+///             Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
 ///         ],
 ///         marked_edges: Vec::new(),
 ///         marked_faces: Vec::new(),
@@ -90,7 +90,7 @@ use std::collections::{HashMap, HashSet};
 ///              Point { id: 7, marker: 0, coords: vec![0.0, 1.0, 1.0] },
 ///          ],
 ///          cells: vec![
-///              Cell { id: 0, attribute: 1, kind: GeoKind::Hex8,
+///              Cell { id: 0, marker: 1, kind: GeoKind::Hex8,
 ///                                  points: vec![0,1,2,3, 4,5,6,7] },
 ///          ],
 ///          marked_edges: Vec::new(),
@@ -433,8 +433,8 @@ impl<'a> Features<'a> {
     ///             Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
     ///         ],
     ///         cells: vec![
-    ///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-    ///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+    ///             Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+    ///             Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
     ///         ],
     ///         marked_edges: Vec::new(),
     ///         marked_faces: Vec::new(),
@@ -939,7 +939,7 @@ mod tests {
         //      ^
         // 1.0  3------6------2
         //      |             |    [#] indicates id
-        //      |             |    (#) indicates attribute
+        //      |             |    (#) indicates marker
         //      7     [0]     5
         //      |     (1)     |
         //      |             |
@@ -957,7 +957,7 @@ mod tests {
         //      4--------------7  1.0
         //     /.             /|
         //    / .            / |    [#] indicates id
-        //   /  .           /  |    (#) indicates attribute
+        //   /  .           /  |    (#) indicates marker
         //  /   .          /   |
         // 5--------------6    |          z
         // |    .         |    |          ↑
@@ -1683,7 +1683,7 @@ mod tests {
         // 1.0              4-----------3
         //                  |           |
         //                  |    [1]    |   [*] indicates id
-        //                  |    (2)    |   (*) indicates attribute
+        //                  |    (2)    |   (*) indicates marker
         //                  |           |
         // 0.0  0-----------1-----------2-----------5
         //           [0]                     [2]
@@ -2151,7 +2151,7 @@ mod tests {
         // 1.0              4-----------3
         //                  |           |
         //                  |    [1]    |   [*] indicates id
-        //                  |    (2)    |   (*) indicates attribute
+        //                  |    (2)    |   (*) indicates marker
         //                  |           |
         // 0.0  0-----------1-----------2-----------5
         //           [0]                     [2]

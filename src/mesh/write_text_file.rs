@@ -17,26 +17,39 @@ impl Mesh {
     /// 2. The points list where each line contains the `id` of the point, which must be **equal to the position** in the list,
     ///    followed by the `x` and `y` (and `z`) coordinates;
     /// 3. The cells list where each line contains the `id` of the cell, which must be **equal to the position** in the list,
-    ///    the attribute (`att`) of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
+    ///    the `marker` of the cell, the `kind` of the cell, followed by the IDs of the points that define the cell (connectivity).
     ///
-    /// The text file looks like this (the hash tag indicates a comment/the mesh below is just an example which won't work):
+    /// The text looks like this (the `#` character indicates a comment):
     ///
     /// ```text
     /// # header
     /// # ndim npoint ncell nmarked_edge nmarked_face
-    ///      2      8     5            0            0
+    ///      3      8     5            3            2
     ///
     /// # points
-    /// # id marker x y
-    ///    0 0 0.0 0.0
-    ///    1 0 0.5 0.0
-    ///    2 0 1.0 0.0
+    /// # id marker x y {z}
+    ///    0 0 0.0 0.0 0.0
+    ///    1 0 0.5 0.0 0.0
+    ///    2 0 1.0 0.0 0.0
     /// # ... more points should follow
     ///
     /// # cells
-    /// # id attribute kind point_ids...
+    /// # id marker kind points
     ///    0 1 tri3 0 1 3
     ///    1 1 qua4 1 4 6 3
+    ///    2 2 tet4 0 3 7 2
+    /// # ... more cells should follow
+    ///
+    /// # marked edges
+    /// # marker p1 p2
+    /// -100 0 1
+    /// -100 9 8
+    /// -200 8 3
+    ///
+    /// # marked faces
+    /// # marker p1 p2 p3 {p4}
+    /// -10 4 7 4
+    /// -10 1 2 3
     /// ```
     ///
     /// where we can see that different cell (shape) kinds can be present in the same mesh.
@@ -126,7 +139,7 @@ mod tests {
              10 0 1.0 0.5\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 1 qua8 0 2 6 8 1 10 7 9\n\
              1 2 tri6 2 4 6 3 5 10\n\
              2 3 lin2 2 10\n\

@@ -58,7 +58,7 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     for cell in &b.cells {
         mesh.cells.push(Cell {
             id: new_cell_id,
-            attribute: cell.attribute,
+            marker: cell.marker,
             kind: cell.kind,
             points: cell.points.iter().map(|id| map_old_to_new_point_id_b[*id]).collect(),
         });
@@ -226,10 +226,10 @@ mod tests {
         assert_eq!(mesh.cells[1].points, &[1, 4, 5, 2]);
         assert_eq!(mesh.cells[2].points, &[3, 2, 6, 7]);
         assert_eq!(mesh.cells[3].points, &[2, 5, 8, 6]);
-        assert_eq!(mesh.cells[0].attribute, 1);
-        assert_eq!(mesh.cells[1].attribute, 2);
-        assert_eq!(mesh.cells[2].attribute, 1);
-        assert_eq!(mesh.cells[3].attribute, 2);
+        assert_eq!(mesh.cells[0].marker, 1);
+        assert_eq!(mesh.cells[1].marker, 2);
+        assert_eq!(mesh.cells[2].marker, 1);
+        assert_eq!(mesh.cells[3].marker, 2);
         assert_eq!(
             mesh.marked_edges,
             vec![
@@ -429,7 +429,7 @@ mod tests {
              11 -6 2.0 3.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 1 qua4 0 1 2 3\n\
              1 2 qua4 1 4 5 2\n\
              2 1 qua4 3 2 6 7\n\

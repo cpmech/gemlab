@@ -1033,7 +1033,7 @@ impl Block {
                     // new cell
                     let cell = Cell {
                         id: cell_id,
-                        attribute: self.attribute,
+                        marker: self.attribute,
                         kind: target,
                         points,
                     };

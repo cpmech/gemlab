@@ -1245,9 +1245,9 @@ mod tests {
         array_approx_eq(&mesh.points[9].coords, &[1.0, l], 1e-15);
         array_approx_eq(&mesh.points[22].coords, &[w, h], 1e-15);
         array_approx_eq(&mesh.points[24].coords, &[w + m - r, l], 1e-15);
-        assert_eq!(mesh.cells[0].attribute, 1);
-        assert_eq!(mesh.cells[3].attribute, 1);
-        assert_eq!(mesh.cells[4].attribute, 2);
+        assert_eq!(mesh.cells[0].marker, 1);
+        assert_eq!(mesh.cells[3].marker, 1);
+        assert_eq!(mesh.cells[4].marker, 2);
         assert_eq!(mesh.marked_edges, &[(-100, 13, 14), (-100, 13, 18), (-200, 18, 22)]);
     }
 
@@ -1378,10 +1378,10 @@ mod tests {
         array_approx_eq(&mesh.points[40].coords, &[w + m - r, 0.5, 0.5], 1e-15);
         array_approx_eq(&mesh.points[47].coords, &[w + m - r, 0.5, 1.0], 1e-15);
         array_approx_eq(&mesh.points[45].coords, &[2.0, 1.0, 1.0], 1e-15);
-        assert_eq!(mesh.cells[0].attribute, 1);
-        assert_eq!(mesh.cells[1].attribute, 1);
-        assert_eq!(mesh.cells[2].attribute, 2);
-        assert_eq!(mesh.cells[3].attribute, 2);
+        assert_eq!(mesh.cells[0].marker, 1);
+        assert_eq!(mesh.cells[1].marker, 1);
+        assert_eq!(mesh.cells[2].marker, 2);
+        assert_eq!(mesh.cells[3].marker, 2);
         // println!("{}", mesh);
         assert_eq!(
             mesh.marked_edges,
@@ -1797,7 +1797,7 @@ mod tests {
              3 0 1.0 5.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 10 qua4 0 1 2 3\n"
         );
 
@@ -1825,7 +1825,7 @@ mod tests {
              5 0 3.0 5.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 20 qua4 0 1 2 3\n\
              1 20 qua4 1 4 5 2\n"
         );
@@ -1866,7 +1866,7 @@ mod tests {
              5 0 1.0 5.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 10 qua4 0 1 2 3\n\
              1 20 qua4 3 2 4 5\n"
         );
@@ -1910,7 +1910,7 @@ mod tests {
              8 0 3.0 5.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 10 qua4 0 1 2 3\n\
              1 10 qua4 1 4 5 2\n\
              2 20 qua4 3 2 6 7\n\

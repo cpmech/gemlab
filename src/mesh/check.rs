@@ -167,8 +167,8 @@ mod tests {
                 Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -224,8 +224,8 @@ mod tests {
                 Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -273,8 +273,8 @@ mod tests {
                 Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -349,7 +349,7 @@ mod tests {
                 Point { id: 7, marker: 0, coords: vec![0.0, 1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -407,8 +407,8 @@ mod tests {
                 Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),

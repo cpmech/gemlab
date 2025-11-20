@@ -1,4 +1,4 @@
-use super::{CellAttribute, Mesh};
+use super::{CellMarker, Mesh};
 use crate::graph::GraphUnd;
 use crate::mesh::Features;
 use crate::shapes::{GeoClass, GeoKind};
@@ -90,7 +90,7 @@ impl Unstructured {
         }
         for i in 0..ncell {
             mesh.cells[i].id = i;
-            mesh.cells[i].attribute = trigen.out_cell_attribute(i);
+            mesh.cells[i].marker = trigen.out_cell_attribute(i);
             for m in 0..nnode {
                 mesh.cells[i].points[m] = trigen.out_cell_point(i, m);
             }
@@ -138,7 +138,7 @@ impl Unstructured {
         }
         for i in 0..ncell {
             mesh.cells[i].id = i;
-            mesh.cells[i].attribute = tetgen.out_cell_attribute(i);
+            mesh.cells[i].marker = tetgen.out_cell_attribute(i);
             for m in 0..nnode {
                 mesh.cells[i].points[m] = tetgen.out_cell_point(i, m);
             }
@@ -161,7 +161,7 @@ impl Unstructured {
         pslg: &Mesh,
         holes: &Vec<(f64, f64)>,
         o2: bool,
-        max_areas: Option<HashMap<CellAttribute, f64>>,
+        max_areas: Option<HashMap<CellMarker, f64>>,
         global_max_area: Option<f64>,
         global_min_angle: Option<f64>,
         renumber: bool,
@@ -214,8 +214,8 @@ impl Unstructured {
             }
             cen_x /= nnode as f64;
             cen_y /= nnode as f64;
-            let max_area = max_areas.as_ref().and_then(|ma| ma.get(&cell.attribute)).cloned();
-            trigen.set_region(cell.id, cell.attribute, cen_x, cen_y, max_area)?;
+            let max_area = max_areas.as_ref().and_then(|ma| ma.get(&cell.marker)).cloned();
+            trigen.set_region(cell.id, cell.marker, cen_x, cen_y, max_area)?;
         }
 
         // set holes
@@ -242,7 +242,7 @@ impl Unstructured {
         regions: &Vec<(i32, f64, f64, f64)>,
         holes: &Vec<(f64, f64, f64)>,
         o2: bool,
-        max_volumes: Option<HashMap<CellAttribute, f64>>,
+        max_volumes: Option<HashMap<CellMarker, f64>>,
         global_max_volume: Option<f64>,
         global_min_angle: Option<f64>,
         renumber: bool,
@@ -293,7 +293,7 @@ impl Unstructured {
         // shells: set facets
         for (i, cell_id) in features.shells.iter().enumerate() {
             let facet = &plc.cells[*cell_id];
-            tetgen.set_facet_marker(i, facet.attribute)?;
+            tetgen.set_facet_marker(i, facet.marker)?;
             for (m, p) in facet.points.iter().enumerate() {
                 tetgen.set_facet_point(i, m, *p)?;
             }
@@ -910,7 +910,7 @@ mod tests {
         assert_eq!(mesh.points[2].marker, -300);
         assert_eq!(mesh.points[2].coords, vec![0.0, 1.0]);
         assert_eq!(mesh.cells[0].id, 0);
-        assert_eq!(mesh.cells[0].attribute, 8);
+        assert_eq!(mesh.cells[0].marker, 8);
         assert_eq!(mesh.cells[0].kind, GeoKind::Tri3);
         assert_eq!(mesh.cells[0].points, vec![0, 1, 2]);
     }
@@ -1040,7 +1040,7 @@ mod tests {
         assert_eq!(mesh.points[5].marker, -30);
         assert_eq!(mesh.points[5].coords, vec![0.0, 0.5]);
         assert_eq!(mesh.cells[0].id, 0);
-        assert_eq!(mesh.cells[0].attribute, 8);
+        assert_eq!(mesh.cells[0].marker, 8);
         assert_eq!(mesh.cells[0].kind, GeoKind::Tri6);
         assert_eq!(mesh.cells[0].points, vec![0, 1, 2, 3, 4, 5]);
     }
@@ -1070,7 +1070,7 @@ mod tests {
              5 -6 2.0 1.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 1 tri3 0 1 3\n\
              1 1 tri3 3 1 2\n\
              2 2 tri3 2 4 5\n\
@@ -1121,7 +1121,7 @@ mod tests {
             14 -400 1.5 0.0\n\
             \n\
             # cells\n\
-            # id attribute kind points\n\
+            # id marker kind points\n\
             0 1 tri6 0 1 3 6 7 8\n\
             1 1 tri6 3 1 2 7 9 10\n\
             2 2 tri6 2 4 5 11 12 13\n\
@@ -1194,7 +1194,7 @@ mod tests {
             11 0 0.0 1.0 2.0\n\
             \n\
             # cells\n\
-            # id attribute kind points\n\
+            # id marker kind points\n\
             0 1 tet4 0 3 7 2\n\
             1 1 tet4 0 2 6 1\n\
             2 1 tet4 0 6 5 1\n\

@@ -14,7 +14,7 @@ fn main() -> Result<(), StrError> {
     for e in 0..2 {
         let cell = &mesh.cells[e];
         assert_eq!(cell.id, e);
-        assert_eq!(cell.attribute, 1);
+        assert_eq!(cell.marker, 1);
         assert_eq!(cell.kind, GeoKind::Tri3);
         assert_eq!(cell.points, vec![0, 0, 0]);
     }

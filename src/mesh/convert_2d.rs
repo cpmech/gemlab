@@ -91,7 +91,7 @@ impl Mesh {
         // zeroed new cell
         let zero_cell = Cell {
             id: 0,
-            attribute: 0,
+            marker: 0,
             kind: target,
             points: vec![UNSET; target_nnode],
         };
@@ -142,7 +142,7 @@ impl Mesh {
 
             // set the new cell data
             dest.cells[cell_id].id = cell_id;
-            dest.cells[cell_id].attribute = self.cells[cell_id].attribute;
+            dest.cells[cell_id].marker = self.cells[cell_id].marker;
 
             // handle corner nodes
             for m in 0..ncorner {
@@ -236,7 +236,7 @@ mod tests {
                 Point { id: 7, marker: 0, coords: vec![0.0, 1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -264,7 +264,7 @@ mod tests {
                 Point { id: 2, marker: 0, coords: vec![0.5, 0.85] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -282,7 +282,7 @@ mod tests {
                 Point { id: 1, marker: 0, coords: vec![1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -302,8 +302,8 @@ mod tests {
                 Point { id: 3, marker: 0, coords: vec![1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
-                Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+                Cell { id: 1, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -331,8 +331,8 @@ mod tests {
                 Point { id: 8, marker: -10, coords: vec![0.0,-2.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -429,8 +429,8 @@ mod tests {
                 Point { id: 8, marker: -10, coords: vec![0.0,-2.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
@@ -506,8 +506,8 @@ mod tests {
                 Point { id: 8, marker: -10, coords: vec![0.0,-2.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
             marked_edges: Vec::new(),
             marked_faces: Vec::new(),
