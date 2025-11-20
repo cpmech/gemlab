@@ -90,7 +90,7 @@ impl Unstructured {
         }
         for i in 0..ncell {
             mesh.cells[i].id = i;
-            mesh.cells[i].marker = trigen.out_cell_attribute(i);
+            mesh.cells[i].marker = trigen.out_cell_marker(i);
             for m in 0..nnode {
                 mesh.cells[i].points[m] = trigen.out_cell_point(i, m);
             }
@@ -138,7 +138,7 @@ impl Unstructured {
         }
         for i in 0..ncell {
             mesh.cells[i].id = i;
-            mesh.cells[i].marker = tetgen.out_cell_attribute(i);
+            mesh.cells[i].marker = tetgen.out_cell_marker(i);
             for m in 0..nnode {
                 mesh.cells[i].points[m] = tetgen.out_cell_point(i, m);
             }
