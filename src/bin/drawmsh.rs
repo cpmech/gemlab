@@ -34,9 +34,9 @@ struct Options {
     #[structopt(short = "v", long)]
     point_markers: bool,
 
-    /// Show cell attributes
+    /// Show cell markers
     #[structopt(short = "a", long)]
-    cell_att: bool,
+    cell_markers: bool,
 
     /// Show edge markers
     #[structopt(short, long)]
@@ -149,7 +149,7 @@ fn main() -> Result<(), StrError> {
         .show_point_ids(options.point_ids)
         .show_cell_ids(options.cell_ids)
         .show_point_marker(options.point_markers)
-        .show_cell_att(options.cell_att)
+        .show_cell_marker(options.cell_markers)
         .show_edge_markers(options.edge_markers)
         .show_face_markers(options.face_markers)
         .show_normal_vectors(options.normals)

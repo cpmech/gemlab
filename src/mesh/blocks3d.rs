@@ -18,8 +18,8 @@ pub struct Blocks3d {
 
     /// List of regions defining each block
     ///
-    /// Each block is defined by `(attribute, p1, p2, p3, p4, p5, p6, p7, p8)` where
-    /// `attribute` is an integer attribute for the block and
+    /// Each block is defined by `(marker, p1, p2, p3, p4, p5, p6, p7, p8)` where
+    /// `marker` is an integer to identify a group of blocks and
     /// `p1`, `p2`, `p3`, `p4`, `p5`, `p6`, `p7`, `p8` are the indices of the corner points of the block.
     ///
     /// (length = number of blocks)
@@ -128,7 +128,7 @@ mod tests {
                 (2.0, 1.0, 1.0), // 11
             ],
             regions: vec![
-                (1, 0, 1, 2, 3, 6, 7, 8, 9), // attribute, p1, p2, p3, p4, p5, p6, p7, p8
+                (1, 0, 1, 2, 3, 6, 7, 8, 9), // marker, p1, p2, p3, p4, p5, p6, p7, p8
                 (2, 1, 4, 5, 2, 7, 10, 11, 8),
             ],
             div_weights: vec![

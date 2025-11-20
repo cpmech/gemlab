@@ -1363,7 +1363,7 @@ mod tests {
                 .show_point_ids(false)
                 .show_point_marker(false)
                 .show_cell_ids(false)
-                .show_cell_att(false)
+                .show_cell_marker(false)
                 .show_normal_vectors(true)
                 .set_view_flag(false)
                 .set_size(800.0, 800.0);
@@ -1391,7 +1391,7 @@ mod tests {
                 .show_point_ids(false)
                 .show_point_marker(false)
                 .show_cell_ids(false)
-                .show_cell_att(false)
+                .show_cell_marker(false)
                 .show_normal_vectors(true)
                 .set_view_flag(false)
                 .set_size(800.0, 800.0);
@@ -1419,7 +1419,7 @@ mod tests {
                 .show_point_ids(false)
                 .show_point_marker(false)
                 .show_cell_ids(false)
-                .show_cell_att(false)
+                .show_cell_marker(false)
                 .show_normal_vectors(true)
                 .set_view_flag(false)
                 .set_size(800.0, 800.0);

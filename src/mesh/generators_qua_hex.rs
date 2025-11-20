@@ -40,8 +40,8 @@ impl Structured {
             let c3 = blocks.points[pp[3]];
             let mut b = Block::new(&[[c0.0, c0.1], [c1.0, c1.1], [c2.0, c2.1], [c3.0, c3.1]])?;
 
-            // set attribute
-            b.set_attribute(att);
+            // set marker
+            b.set_marker(att);
 
             // set division weights
             let (wx, wy) = &blocks.div_weights[i];
@@ -104,7 +104,7 @@ impl Structured {
 
         // loop over each block
         for i in 0..nb {
-            let att = blocks.regions[i].0;
+            let marker = blocks.regions[i].0;
             let pp = [
                 blocks.regions[i].1,
                 blocks.regions[i].2,
@@ -134,8 +134,8 @@ impl Structured {
                 [c7.0, c7.1, c7.2],
             ])?;
 
-            // set attribute
-            b.set_attribute(att);
+            // set marker
+            b.set_marker(marker);
 
             // set division weights
             let (wx, wy, wz) = &blocks.div_weights[i];
@@ -1058,7 +1058,7 @@ impl Structured {
     /// * `ny` -- is the number of spacings between `y[i]` and `y[i+1]`. The length of `ny`, which
     ///   is equal to the number of layers, must be equal to the length of `y` minus one, i.e.,
     ///   `n_layer = ny.len() = y.len() - 1`
-    /// * `attributes` -- is a list of attributes for each layer; it's length is equal to `n_layer`
+    /// * `markers` -- is a list of markers for each layer; it's length is equal to `n_layer`
     /// * `target` -- is the resulting GeoKind and must be a [crate::shapes::GeoClass::Qua]
     /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn rectangle(
@@ -1069,7 +1069,7 @@ impl Structured {
         nb: usize,
         y: &[f64],
         ny: &[usize],
-        attributes: &[i32],
+        markers: &[i32],
         target: GeoKind,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
@@ -1091,8 +1091,8 @@ impl Structured {
         if ny.len() != n_layer {
             return Err("ny.len() must be equal to n_layer = y.len() - 1");
         }
-        if attributes.len() != n_layer {
-            return Err("attributes.len() must be equal to n_layer = y.len() - 1");
+        if markers.len() != n_layer {
+            return Err("markers.len() must be equal to n_layer = y.len() - 1");
         }
         let mut meshes = Vec::new();
         let mut ya = y[0];
@@ -1106,8 +1106,8 @@ impl Structured {
                 let mut bb = Block::new(&[[xxb, ya], [xc, ya], [xc, yb], [xxb, yb]]).unwrap();
                 ba.set_ndiv(&[na, ny[l]]).unwrap();
                 bb.set_ndiv(&[nb, ny[l]]).unwrap();
-                ba.set_attribute(attributes[l]);
-                bb.set_attribute(attributes[l]);
+                ba.set_marker(markers[l]);
+                bb.set_marker(markers[l]);
                 meshes.push(ba.subdivide(target)?);
                 meshes.push(bb.subdivide(target).unwrap());
                 ya = yb;
@@ -1120,7 +1120,7 @@ impl Structured {
                 }
                 let mut block = Block::new(&[[xa, ya], [xc, ya], [xc, yb], [xa, yb]]).unwrap();
                 block.set_ndiv(&[na, ny[l]]).unwrap();
-                block.set_attribute(attributes[l]);
+                block.set_marker(markers[l]);
                 let mesh = block.subdivide(target)?;
                 if n_layer == 1 {
                     return Ok(mesh);
@@ -1199,7 +1199,7 @@ mod tests {
                 (w, h),         // 5
             ],
             regions: vec![
-                (1, 0, 1, 2, 3), // attribute, p1, p2, p3, p4
+                (1, 0, 1, 2, 3), // marker, p1, p2, p3, p4
                 (2, 1, 4, 5, 2),
             ],
             div_weights: vec![
@@ -1221,7 +1221,7 @@ mod tests {
             draw.show_point_ids(true)
                 .show_point_marker(true)
                 .show_cell_ids(true)
-                .show_cell_att(true)
+                .show_cell_marker(true)
                 .show_edge_markers(true);
             draw.extra(|plot, before| {
                 if before {
@@ -1261,7 +1261,7 @@ mod tests {
             draw.show_point_ids(false)
                 .show_point_marker(true)
                 .show_cell_ids(true)
-                .show_cell_att(true)
+                .show_cell_marker(true)
                 .show_edge_markers(true)
                 .set_view_flag(false)
                 .set_size(600.0, 600.0);
@@ -1329,7 +1329,7 @@ mod tests {
                 (2.0, 1.0, 1.0), // 11
             ],
             regions: vec![
-                (1, 0, 1, 2, 3, 6, 7, 8, 9), // attribute, p1, p2, p3, p4, p5, p6, p7, p8
+                (1, 0, 1, 2, 3, 6, 7, 8, 9), // marker, p1, p2, p3, p4, p5, p6, p7, p8
                 (2, 1, 4, 5, 2, 7, 10, 11, 8),
             ],
             div_weights: vec![
@@ -1352,7 +1352,7 @@ mod tests {
             draw.show_point_ids(true)
                 .show_point_marker(true)
                 .show_cell_ids(true)
-                .show_cell_att(true);
+                .show_cell_marker(true);
             draw.extra(|plot, before| {
                 if before {
                     let mut canvas = Surface::new();
@@ -1726,7 +1726,7 @@ mod tests {
         );
         assert_eq!(
             Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[], GeoKind::Qua4, false).err(),
-            Some("attributes.len() must be equal to n_layer = y.len() - 1")
+            Some("markers.len() must be equal to n_layer = y.len() - 1")
         );
         assert_eq!(
             Structured::rectangle(0.0, None, 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4, false).err(),

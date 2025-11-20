@@ -78,8 +78,8 @@ pub struct Draw<'a> {
     /// Shows cell ids
     show_cell_ids: bool,
 
-    /// Shows cell attribute within parenthesis
-    show_cell_att: bool,
+    /// Shows cell marker within parenthesis
+    show_cell_marker: bool,
 
     /// Shows point ids
     show_point_ids: bool,
@@ -291,7 +291,7 @@ impl<'a> Draw<'a> {
             canvas_glyph_3d,
             show_cells: true,
             show_cell_ids: false,
-            show_cell_att: true,
+            show_cell_marker: true,
             show_point_ids: false,
             show_point_marker: false,
             show_point_dots: false,
@@ -432,11 +432,11 @@ impl<'a> Draw<'a> {
         self
     }
 
-    /// Shows cell attribute within parenthesis
+    /// Shows cell marker within parenthesis
     ///
     /// Default: `true`
-    pub fn show_cell_att(&mut self, value: bool) -> &mut Self {
-        self.show_cell_att = value;
+    pub fn show_cell_marker(&mut self, value: bool) -> &mut Self {
+        self.show_cell_marker = value;
         self
     }
 
@@ -765,9 +765,9 @@ impl<'a> Draw<'a> {
         Ok(())
     }
 
-    /// Draws ids and attributes of cells
+    /// Draws ids and markers of cells
     ///
-    /// **Note:** Cell attributes are shown within parentheses.
+    /// **Note:** Cell markers are shown within parentheses.
     pub fn cell_ids(&mut self, mesh: &Mesh) -> Result<(), StrError> {
         // auxiliary
         let mut x = Vector::new(mesh.ndim);
@@ -797,7 +797,7 @@ impl<'a> Draw<'a> {
             }
 
             // add label
-            let msg = if self.show_cell_att {
+            let msg = if self.show_cell_marker {
                 format!("{}({})", cell.id, cell.marker)
             } else {
                 format!("{}", cell.id)
@@ -1552,9 +1552,9 @@ mod tests {
         assert!(draw.show_cell_ids);
 
         // Test show_cell_att
-        assert!(draw.show_cell_att);
-        draw.show_cell_att(false);
-        assert!(!draw.show_cell_att);
+        assert!(draw.show_cell_marker);
+        draw.show_cell_marker(false);
+        assert!(!draw.show_cell_marker);
 
         // Test show_point_ids
         assert!(!draw.show_point_ids);

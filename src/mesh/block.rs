@@ -154,13 +154,13 @@ const TOL_DISTANCE: f64 = 1e-8;
 /// }
 /// ```
 pub struct Block {
-    /// Attribute of all elements in this block
-    attribute: i32,
+    /// Marker for all elements in this block
+    marker: i32,
 
     /// Space dimension
     ndim: usize,
 
-    /// number of divisions along each dim (ndim)
+    /// Number of divisions along each dim (ndim)
     ndiv: Vec<usize>,
 
     /// Delta ksi along each dim (ndim, {ndiv0,ndiv1,ndiv2})
@@ -192,8 +192,8 @@ impl Block {
     /// Length of shape along each direction in reference coords space
     const NAT_LENGTH: f64 = 2.0;
 
-    /// Default attribute
-    const ATTRIBUTE: i32 = 1;
+    /// Default marker
+    const MARKER: i32 = 1;
 
     /// Allocate a new instance
     ///
@@ -299,7 +299,7 @@ impl Block {
 
         // block
         Ok(Block {
-            attribute: Block::ATTRIBUTE,
+            marker: Block::MARKER,
             ndim,
             ndiv: vec![ndiv; ndim],
             delta_ksi: vec![vec![del_ksi; ndiv]; ndim],
@@ -375,8 +375,8 @@ impl Block {
     }
 
     /// Sets group
-    pub fn set_attribute(&mut self, attribute: i32) -> &mut Self {
-        self.attribute = attribute;
+    pub fn set_marker(&mut self, marker: i32) -> &mut Self {
+        self.marker = marker;
         self
     }
 
@@ -1033,7 +1033,7 @@ impl Block {
                     // new cell
                     let cell = Cell {
                         id: cell_id,
-                        marker: self.attribute,
+                        marker: self.marker,
                         kind: target,
                         points,
                     };
@@ -1415,7 +1415,7 @@ mod tests {
     #[test]
     fn new_works() {
         let b2d = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]]).unwrap();
-        assert_eq!(b2d.attribute, 1);
+        assert_eq!(b2d.marker, 1);
         assert_eq!(b2d.ndim, 2);
         assert_eq!(b2d.ndiv, &[2, 2]);
         assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
@@ -1457,7 +1457,7 @@ mod tests {
             [0.0, 2.0, 2.0],
         ])
         .unwrap();
-        assert_eq!(b3d.attribute, 1);
+        assert_eq!(b3d.marker, 1);
         assert_eq!(b3d.ndim, 3);
         assert_eq!(
             format!("{}", b3d.pad.xxt),
@@ -1504,10 +1504,10 @@ mod tests {
     }
 
     #[test]
-    fn set_attribute_works() {
+    fn set_marker_works() {
         let mut block = Block::new_square(1.0);
-        block.set_attribute(2);
-        assert_eq!(block.attribute, 2);
+        block.set_marker(2);
+        assert_eq!(block.marker, 2);
     }
 
     #[test]

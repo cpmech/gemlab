@@ -803,7 +803,7 @@ mod tests {
         let mut draw = Draw::new();
         draw.show_cell_ids(true)
             .show_point_ids(true)
-            .show_cell_att(true)
+            .show_cell_marker(true)
             .show_point_marker(true)
             .show_edge_markers(true)
             .show_face_markers(true)
