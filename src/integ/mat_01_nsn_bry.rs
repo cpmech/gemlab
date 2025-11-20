@@ -43,7 +43,7 @@ use russell_lab::{Matrix, Vector};
 ///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
 /// * `args` --- Common arguments
-/// * `fn_s` -- Function `f(p,un,N)→s` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_s` -- Function `f(p,un,N)→s` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   the **unit** normal vector `un(x(ιᵖ))`, and shape functions N(ιᵖ).
 pub fn mat_01_nsn_bry<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_s: F) -> Result<(), StrError>
 where
@@ -76,10 +76,10 @@ where
     }
 
     // loop over integration points
-    for p in 0..args.ips.len() {
+    for p in 0..args.gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &args.ips[p];
-        let weight = args.ips[p][3];
+        let iota = args.gauss.coords(p);
+        let weight = args.gauss.weight(p);
 
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -115,7 +115,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1};
+    use crate::integ::{self, AnalyticalTri3, CommonArgs, Gauss};
     use crate::shapes::{GeoClass, GeoKind, Scratchpad};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
 
@@ -127,20 +127,23 @@ mod tests {
         let nn = Vector::new(0);
         let f = |_, _: &Vector, _: &Vector| Ok(0.0);
         assert_eq!(f(0, &un, &nn).unwrap(), 0.0);
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         assert_eq!(
             integ::mat_01_nsn_bry(&mut kk, &mut args, f).err(),
             Some("in 2D, geometry ndim must be equal to 1 (a line)")
         );
         let mut pad = aux::gen_pad_tet4();
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         let mut kk = Matrix::new(4, 4);
         assert_eq!(
             integ::mat_01_nsn_bry(&mut kk, &mut args, f).err(),
             Some("in 3D, geometry ndim must be equal to 2 (a surface)")
         );
         let mut pad = aux::gen_pad_lin2(1.0);
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         let mut kk = Matrix::new(2, 2);
         args.ii0 = 1;
         assert_eq!(
@@ -154,7 +157,6 @@ mod tests {
             Some("ncol(K) must be ≥ jj0 + nnode")
         );
         args.jj0 = 0;
-        args.ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
             integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Err("stop")).err(),
             Some("stop")
@@ -179,27 +181,27 @@ mod tests {
         let pad = aux::gen_pad_tri3();
         let s = 12.0;
         let ana = AnalyticalTri3::new(&pad);
-        let ips = integ::points(GeoClass::Lin, 2).unwrap();
+        let gauss = Gauss::new_sized(GeoClass::Lin, 2).unwrap();
 
         // side # 0
         let mut pad_side = tri3_extract_pad_side(&pad, 0);
         let kk_correct = ana.mat_01_nsn_bry(0, s, false);
         let mut kk = Matrix::new(2, 2);
-        let mut args = CommonArgs::new(&mut pad_side, ips);
+        let mut args = CommonArgs::new(&mut pad_side, &gauss);
         integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Ok(s)).unwrap();
         mat_approx_eq(&kk, &kk_correct, 1e-15);
 
         // side # 1
         let mut pad_side = tri3_extract_pad_side(&pad, 1);
         let kk_correct = ana.mat_01_nsn_bry(1, s, false);
-        let mut args = CommonArgs::new(&mut pad_side, ips);
+        let mut args = CommonArgs::new(&mut pad_side, &gauss);
         integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Ok(s)).unwrap();
         mat_approx_eq(&kk, &kk_correct, 1e-14);
 
         // side # 2
         let mut pad_side = tri3_extract_pad_side(&pad, 2);
         let kk_correct = ana.mat_01_nsn_bry(2, s, false);
-        let mut args = CommonArgs::new(&mut pad_side, ips);
+        let mut args = CommonArgs::new(&mut pad_side, &gauss);
         integ::mat_01_nsn_bry(&mut kk, &mut args, |_, _, _| Ok(s)).unwrap();
         mat_approx_eq(&kk, &kk_correct, 1e-14);
     }

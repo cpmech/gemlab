@@ -1,65 +1,13 @@
 use super::algorithms::{extract_all_2d_edges, extract_all_faces, extract_features_2d, extract_features_3d};
-use super::{At, CellId, Mesh, PointId};
-use crate::prelude::GeoClass;
-use crate::shapes::GeoKind;
+use super::{At, CellId, Mesh, PointId, Triangulation};
+use super::{Edge, EdgeKey, Edges, MapEdge2dToCells, MapPointToEdges};
+use super::{Face, FaceKey, Faces, MapFaceToCells, MapPointToFaces};
 use crate::util::GridSearch;
 use crate::StrError;
+use russell_lab::sort2;
 use std::collections::{HashMap, HashSet};
 
-/// Aliases (usize,usize) as the key of edges
-///
-/// **Note:** Since the local numbering scheme runs over "corners" first,
-/// we can compare edges using only two points; i.e., the middle points don't matter.
-pub type EdgeKey = (usize, usize);
-
-/// Aliases (usize,usize,usize,usize) as the key of faces
-///
-/// **Note:** If a face has at most 3 points, the fourth entry in the key will be
-/// set to the total number of points. In this way, we can compare 4-node (or more nodes)
-/// faces with each other. Further, since the local numbering scheme runs over the
-/// "corners" first, the middle points don't matter.
-pub type FaceKey = (usize, usize, usize, usize);
-
-/// Holds the point ids of an edge or a face
-///
-/// * An edge is an entity belonging to a solid cell in 2D or a face in 3D
-/// * A face is an entity belonging to a solid cell in 3D
-#[derive(Clone, Debug)]
-pub struct Feature {
-    /// Geometry kind
-    pub kind: GeoKind,
-
-    /// List of points defining this edge or face; in the right (FEM) order (i.e., unsorted)
-    pub points: Vec<PointId>,
-}
-
-/// Maps edges to cells sharing the edge (2D only)
-///
-/// Relates edge keys to `Vec<(cell_id, e)>` where:
-///
-/// * `cell_id` -- is he id of the cell sharing the edge
-/// * `e` -- is the cell's local edge index
-pub type MapEdge2dToCells = HashMap<EdgeKey, Vec<(CellId, usize)>>;
-
-/// Maps faces to cells sharing the face (3D only)
-///
-/// Relates face keys to `Vec<(cell_id, f)>` where:
-///
-/// * `cell_id` -- is the id of the cell sharing the face
-/// * `f` -- is the cell's local face index
-pub type MapFaceToCells = HashMap<FaceKey, Vec<(CellId, usize)>>;
-
-/// Maps a point id to edges sharing the point
-///
-/// Relates a point id to a unique set of EdgeKey
-pub type MapPointToEdges = HashMap<PointId, HashSet<EdgeKey>>;
-
-/// Maps a point id to faces sharing the point
-///
-/// Relates a point id to a unique set of FaceKey
-pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
-
-/// Holds points, edges and faces on the mesh boundary or interior
+/// Holds derived mesh features such as points, edges, and faces on the mesh boundary or the interior
 ///
 /// # Examples
 ///
@@ -88,9 +36,11 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 ///             Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
 ///         ],
 ///         cells: vec![
-///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+///             Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+///             Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
 ///         ],
+///         marked_edges: Vec::new(),
+///         marked_faces: Vec::new(),
 ///     };
 ///
 ///     let features = Features::new(&mesh, false);
@@ -140,9 +90,11 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 ///              Point { id: 7, marker: 0, coords: vec![0.0, 1.0, 1.0] },
 ///          ],
 ///          cells: vec![
-///              Cell { id: 0, attribute: 1, kind: GeoKind::Hex8,
+///              Cell { id: 0, marker: 1, kind: GeoKind::Hex8,
 ///                                  points: vec![0,1,2,3, 4,5,6,7] },
 ///          ],
+///          marked_edges: Vec::new(),
+///          marked_faces: Vec::new(),
 ///      };
 ///
 ///     let features = Features::new(&mesh, false);
@@ -181,7 +133,7 @@ pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 /// ```
 pub struct Features<'a> {
     /// Holds an access to the mesh
-    mesh: &'a Mesh,
+    pub mesh: &'a Mesh,
 
     /// Maps all edge keys to cells sharing the edge (2D only)
     ///
@@ -217,7 +169,8 @@ pub struct Features<'a> {
     /// 2. In 3D, a boundary edge belongs to a boundary face
     /// 3. In 2D, an interior edge is such that it is shared by **more** than one 2D cell (1D cells are ignored)
     /// 4. In 3D, an interior edge belongs to an interior face
-    pub edges: HashMap<EdgeKey, Feature>,
+    /// 5. 1D cells in 2D go to the `cables` array
+    pub edges: HashMap<EdgeKey, Edge>,
 
     /// Set of faces on the mesh boundary, interior, or both boundary and interior
     ///
@@ -225,10 +178,15 @@ pub struct Features<'a> {
     ///
     /// 1. A boundary face is such that it is shared by one 3D cell only (2D cells are ignored)
     /// 2. An interior face is such that it is shared by **more** than one 3D cell (2D cells are ignored)
-    pub faces: HashMap<FaceKey, Feature>,
+    /// 3. 1D cells in 3D go to the `cables` array
+    /// 4. 2D cells in 3D go to the `shells` array
+    pub faces: HashMap<FaceKey, Face>,
 
-    /// Holds the ids of linear cells (GeoKind::Lin) in 2D or 3D
-    pub lines: Vec<CellId>,
+    /// Holds the ids of linear cells; GeoKind::Lin with geo_ndim = 1 in 2D or 3D
+    pub cables: Vec<CellId>,
+
+    /// Holds the ids of 2D cells (geo_ndim = 2) in 3D (space_ndim = 3)
+    pub shells: Vec<CellId>,
 
     /// The minimum coordinates of the points (space_ndim)
     pub min: Vec<f64>,
@@ -257,7 +215,7 @@ impl<'a> Features<'a> {
     ///
     /// # Notes
     ///
-    /// * You may want to call [Mesh::check_all] to capture (some) errors of the mesh first
+    /// * You may want to call [Mesh::check_all()] to capture (some) errors of the mesh first
     ///
     /// # Panics
     ///
@@ -271,8 +229,8 @@ impl<'a> Features<'a> {
         let all_2d_edges: MapEdge2dToCells;
         let all_faces: MapFaceToCells;
         let mut points: HashSet<PointId>;
-        let edges: HashMap<EdgeKey, Feature>;
-        let faces: HashMap<FaceKey, Feature>;
+        let edges: HashMap<EdgeKey, Edge>;
+        let faces: HashMap<FaceKey, Face>;
         let mut min: Vec<f64>;
         let mut max: Vec<f64>;
 
@@ -330,18 +288,22 @@ impl<'a> Features<'a> {
             }
         }
 
-        // linear cells
-        let lines: Vec<_> = mesh
+        // CABLE cells
+        let cables: Vec<_> = mesh
             .cells
             .iter()
-            .filter_map(|cell| {
-                if cell.kind.class() == GeoClass::Lin {
-                    Some(cell.id)
-                } else {
-                    None
-                }
-            })
+            .filter_map(|cell| if cell.kind.ndim() == 1 { Some(cell.id) } else { None })
             .collect();
+
+        // SHELL cells
+        let shells = if mesh.ndim == 3 {
+            mesh.cells
+                .iter()
+                .filter_map(|cell| if cell.kind.ndim() == 2 { Some(cell.id) } else { None })
+                .collect()
+        } else {
+            Vec::new()
+        };
 
         // results
         Features {
@@ -351,7 +313,8 @@ impl<'a> Features<'a> {
             points,
             edges,
             faces,
-            lines,
+            cables,
+            shells,
             min,
             max,
             grid,
@@ -361,13 +324,72 @@ impl<'a> Features<'a> {
     }
 
     /// Returns an edge or panics
-    pub fn get_edge(&self, a: usize, b: usize) -> &Feature {
+    pub fn get_edge(&self, a: usize, b: usize) -> &Edge {
         self.edges.get(&(a, b)).expect("cannot find edge with given key")
     }
 
-    /// Returns an face or panics
-    pub fn get_face(&self, a: usize, b: usize, c: usize, d: usize) -> &Feature {
+    /// Returns an edge or panics
+    pub fn get_edge_by_key(&self, key: &EdgeKey) -> &Edge {
+        self.edges.get(key).expect("cannot find edge with given key")
+    }
+
+    /// Returns a face or panics
+    pub fn get_face(&self, a: usize, b: usize, c: usize, d: usize) -> &Face {
         self.faces.get(&(a, b, c, d)).expect("cannot find face with given key")
+    }
+
+    /// Returns cells sharing a given (2D) edge
+    ///
+    /// Returns a **sorted** list of Cell IDs
+    pub fn get_cells_via_2d_edge(&self, edge: &Edge) -> Vec<CellId> {
+        let cells = self.all_2d_edges.get(&edge.key()).expect("cannot find 2D edge");
+        let mut ids: Vec<_> = cells.iter().map(|c| c.0).collect();
+        ids.sort();
+        ids
+    }
+
+    /// Returns cells sharing a given face
+    ///
+    /// Returns a **sorted** list of Cell IDs
+    pub fn get_cells_via_face(&self, face: &Face) -> Vec<CellId> {
+        let cells = self.all_faces.get(&face.key()).expect("cannot find face");
+        let mut ids: Vec<_> = cells.iter().map(|c| c.0).collect();
+        ids.sort();
+        ids
+    }
+
+    /// Returns many cells sharing a given (2D) edge
+    ///
+    /// Returns a **sorted** list of Cell IDs
+    pub fn get_cells_via_2d_edges(&self, edges: &Edges) -> Vec<CellId> {
+        let mut ids: Vec<_> = edges.all.iter().flat_map(|e| self.get_cells_via_2d_edge(e)).collect();
+        ids.sort();
+        ids
+    }
+
+    /// Returns many cells sharing a given face
+    ///
+    /// Returns a **sorted** list of Cell IDs
+    pub fn get_cells_via_faces(&self, faces: &Faces) -> Vec<CellId> {
+        let mut ids: Vec<_> = faces.all.iter().flat_map(|f| self.get_cells_via_face(f)).collect();
+        ids.sort();
+        ids
+    }
+
+    /// Returns all points (sorted) on a set of (2D) edges
+    pub fn get_points_via_2d_edges(&self, edges: &Edges) -> Vec<PointId> {
+        let mut point_ids: Vec<_> = edges.all.iter().flat_map(|e| e.points.clone()).collect();
+        point_ids.sort();
+        point_ids.dedup();
+        point_ids
+    }
+
+    /// Returns all points (sorted) on a set of faces
+    pub fn get_points_via_faces(&self, faces: &Faces) -> Vec<PointId> {
+        let mut point_ids: Vec<_> = faces.all.iter().flat_map(|f| f.points.clone()).collect();
+        point_ids.sort();
+        point_ids.dedup();
+        point_ids
     }
 
     /// Returns all neighbors of a 2D cell
@@ -376,7 +398,7 @@ impl<'a> Features<'a> {
     ///
     /// * `mesh` -- the mesh
     /// * `edges` -- the edge-to-cells map
-    /// * `e` -- the index of the edge (see [GeoKind::edge_node_id])
+    /// * `e` -- the index of the edge (see [edge_node_id](crate::shapes::GeoKind::edge_node_id))
     ///
     /// # Output
     ///
@@ -411,9 +433,11 @@ impl<'a> Features<'a> {
     ///             Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
     ///         ],
     ///         cells: vec![
-    ///             Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-    ///             Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+    ///             Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+    ///             Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
     ///         ],
+    ///         marked_edges: Vec::new(),
+    ///         marked_faces: Vec::new(),
     ///     };
     ///
     ///     let features = Features::new(&mesh, true);
@@ -452,6 +476,87 @@ impl<'a> Features<'a> {
             }
         }
         res
+    }
+
+    /// Extracts all boundary edges
+    pub fn get_boundary_edges(&self) -> Vec<EdgeKey> {
+        if self.mesh.ndim == 2 {
+            let mut boundary_edges = Vec::new();
+            for (edge_key, cells) in &self.all_2d_edges {
+                let shared_by_ncell = cells.len();
+                if shared_by_ncell == 1 {
+                    boundary_edges.push(*edge_key);
+                }
+            }
+            boundary_edges
+        } else {
+            let mut edges_keys = HashSet::new();
+            for (face_key, face) in &self.faces {
+                let shared_by_ncell = self.all_faces.get(face_key).unwrap().len();
+                if shared_by_ncell == 1 {
+                    for e in 0..face.kind.nedge() {
+                        let p0 = face.points[face.kind.edge_node_id(e, 0)];
+                        let p1 = face.points[face.kind.edge_node_id(e, 1)];
+                        let mut edge_key = (self.mesh.points[p0].id, self.mesh.points[p1].id);
+                        sort2(&mut edge_key);
+                        edges_keys.insert(edge_key);
+                    }
+                }
+            }
+            edges_keys.into_iter().collect()
+        }
+    }
+
+    /// Triangulates the 3D boundary faces into triangles
+    ///
+    /// Note: the order of the output arrays is non-deterministic because it depends
+    /// on the HashMap structures used to extract the boundary features.
+    ///
+    /// **Note:** Only Tri and Qua cells will be triangulated; other cell classes will be ignored.
+    /// Therefore, the result may be empty if no Tri or Qua cells are found on the surface.
+    ///
+    /// # Panics
+    ///
+    /// * Panics if the mesh is not 3D
+    pub fn triangulate_3d_boundary(&self) -> Triangulation {
+        // check
+        let ndim = 3;
+        assert_eq!(self.mesh.ndim, ndim);
+
+        // collect boundary faces
+        let surface: Vec<_> = self
+            .faces
+            .iter()
+            .filter_map(|(face_key, face)| {
+                let shared_by_ncell = self.all_faces.get(face_key).unwrap().len();
+                if shared_by_ncell == 1 {
+                    Some(face)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // perform triangulation
+        Triangulation::from_surface(self.mesh, &surface)
+    }
+
+    /// Searches edges with a given marker
+    ///
+    /// Returns edges sorted by their edge keys
+    pub fn search_marked_edges(&self, marker: i32) -> Edges {
+        let mut all: Vec<_> = self.edges.values().filter(|edge| edge.marker == marker).collect();
+        all.sort_by_key(|edge| edge.key());
+        Edges { all }
+    }
+
+    /// Searches faces with a given marker
+    ///
+    /// Returns faces sorted by their face keys
+    pub fn search_marked_faces(&self, marker: i32) -> Faces {
+        let mut all: Vec<_> = self.faces.values().filter(|face| face.marker == marker).collect();
+        all.sort_by_key(|face| face.key());
+        Faces { all }
     }
 
     /// Searches point ids
@@ -593,12 +698,14 @@ impl<'a> Features<'a> {
         let point_ids = self.search_point_ids(at, filter)?;
         for point_id in &point_ids {
             // select all edges connected to the found points
-            let edges = self.point_to_edges.get(point_id).unwrap(); // unwrap here because there should be no hanging edges
-            for edge_key in edges {
-                // accept edge when at least two edge points validate "At"
-                if point_ids.contains(&edge_key.0) && point_ids.contains(&edge_key.1) {
-                    edge_keys.insert(*edge_key);
+            if let Some(edges) = self.point_to_edges.get(point_id) {
+                for edge_key in edges {
+                    // accept edge when at least two edge points validate "At"
+                    if point_ids.contains(&edge_key.0) && point_ids.contains(&edge_key.1) {
+                        edge_keys.insert(*edge_key);
+                    }
                 }
+                // the None branch means that the point is not attached to any edge; i.e., a CABLE or SHELL point
             }
         }
         if edge_keys.len() == 0 {
@@ -630,27 +737,28 @@ impl<'a> Features<'a> {
         if self.mesh.ndim != 3 {
             return Err("cannot find face keys in 2D");
         }
-        let npoint = self.mesh.points.len();
         let mut face_keys: HashSet<FaceKey> = HashSet::new();
         // search all points constrained by "at" and "filter"
         let point_ids = self.search_point_ids(at, filter)?;
         for point_id in &point_ids {
             // select all faces connected to the found points
-            let faces = self.point_to_faces.get(point_id).unwrap(); // unwrap here because there should be no hanging faces
-            for face_key in faces {
-                // accept face when at least four face points validate "At"
-                let fourth_is_ok = if face_key.3 == npoint {
-                    true
-                } else {
-                    point_ids.contains(&face_key.3)
-                };
-                if point_ids.contains(&face_key.0)
-                    && point_ids.contains(&face_key.1)
-                    && point_ids.contains(&face_key.2)
-                    && fourth_is_ok
-                {
-                    face_keys.insert(*face_key);
+            if let Some(faces) = self.point_to_faces.get(point_id) {
+                for face_key in faces {
+                    // accept face when at least four face points validate "At"
+                    let fourth_is_ok = if face_key.3 == usize::MAX {
+                        true
+                    } else {
+                        point_ids.contains(&face_key.3)
+                    };
+                    if point_ids.contains(&face_key.0)
+                        && point_ids.contains(&face_key.1)
+                        && point_ids.contains(&face_key.2)
+                        && fourth_is_ok
+                    {
+                        face_keys.insert(*face_key);
+                    }
                 }
+                // the None branch means that the point is not attached to any face; i.e., a SHELL point
             }
         }
         if face_keys.len() == 0 {
@@ -675,7 +783,7 @@ impl<'a> Features<'a> {
     ///
     /// * If at least one point has been found, returns an array such that the edge keys are **sorted**
     /// * Otherwise, returns an error
-    pub fn search_edges<F>(&self, at: At, filter: F) -> Result<Vec<&Feature>, StrError>
+    pub fn search_edges<F>(&self, at: At, filter: F) -> Result<Edges, StrError>
     where
         F: FnMut(&[f64]) -> bool,
     {
@@ -688,7 +796,10 @@ impl<'a> Features<'a> {
                     .ok_or("INTERNAL ERROR: features.edges data is inconsistent")
             })
             .collect();
-        results
+        match results {
+            Ok(all) => Ok(Edges { all }),
+            Err(e) => Err(e),
+        }
     }
 
     /// Searches faces
@@ -705,7 +816,7 @@ impl<'a> Features<'a> {
     ///
     /// * If at least one point has been found, returns an array such that the face keys are **sorted**
     /// * Otherwise, returns an error
-    pub fn search_faces<F>(&self, at: At, filter: F) -> Result<Vec<&Feature>, StrError>
+    pub fn search_faces<F>(&self, at: At, filter: F) -> Result<Faces, StrError>
     where
         F: FnMut(&[f64]) -> bool,
     {
@@ -718,7 +829,10 @@ impl<'a> Features<'a> {
                     .ok_or("INTERNAL ERROR: features.faces data is inconsistent")
             })
             .collect();
-        results
+        match results {
+            Ok(all) => Ok(Faces { all }),
+            Err(e) => Err(e),
+        }
     }
 
     /// Searches many edges using a list of constraints
@@ -736,7 +850,7 @@ impl<'a> Features<'a> {
     /// * Returns edges sorted by keys
     /// * **Warning** Every `At` in the `ats` must generate at least one edge,
     ///   otherwise an error will occur.
-    pub fn search_many_edges<F>(&self, ats: &[At], mut filter: F) -> Result<Vec<&Feature>, StrError>
+    pub fn search_many_edges<F>(&self, ats: &[At], mut filter: F) -> Result<Edges, StrError>
     where
         F: FnMut(&[f64]) -> bool,
     {
@@ -757,7 +871,10 @@ impl<'a> Features<'a> {
                     .ok_or("INTERNAL ERROR: features.edges data is inconsistent")
             })
             .collect();
-        results
+        match results {
+            Ok(all) => Ok(Edges { all }),
+            Err(e) => Err(e),
+        }
     }
 
     /// Search many faces using a list of constraints
@@ -775,7 +892,7 @@ impl<'a> Features<'a> {
     /// * Returns faces sorted by keys
     /// * **Warning** Every `At` in the `ats` must generate at least one face,
     ///   otherwise an error will occur.
-    pub fn search_many_faces<F>(&self, ats: &[At], mut filter: F) -> Result<Vec<&Feature>, StrError>
+    pub fn search_many_faces<F>(&self, ats: &[At], mut filter: F) -> Result<Faces, StrError>
     where
         F: FnMut(&[f64]) -> bool,
     {
@@ -796,7 +913,10 @@ impl<'a> Features<'a> {
                     .ok_or("INTERNAL ERROR: features.faces data is inconsistent")
             })
             .collect();
-        results
+        match results {
+            Ok(all) => Ok(Faces { all }),
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -804,8 +924,8 @@ impl<'a> Features<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Feature, Features};
-    use crate::mesh::{At, Samples};
+    use super::{Edge, Edges, Face, Faces, Features};
+    use crate::mesh::{At, Draw, Samples};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
     use plotpy::Plot;
@@ -814,11 +934,30 @@ mod tests {
     const SAVE_FIGURE: bool = false;
 
     #[test]
-    fn new_and_get_methods_work() {
+    fn new_and_basic_get_methods_work_2d() {
+        //      y
+        //      ^
+        // 1.0  3------6------2
+        //      |             |    [#] indicates id
+        //      |             |    (#) indicates marker
+        //      7     [0]     5
+        //      |     (1)     |
+        //      |             |
+        // 0.0  0------4------1 -> x
+        //     0.0           1.0
+        let mesh = Samples::one_qua8();
+        let feat = Features::new(&mesh, false);
+        let edge = feat.get_edge(2, 3);
+        assert_eq!(edge.points, &[3, 2, 6]);
+        assert_eq!(edge.key(), (2, 3));
+    }
+
+    #[test]
+    fn new_and_basic_get_methods_work_3d_1() {
         //      4--------------7  1.0
         //     /.             /|
         //    / .            / |    [#] indicates id
-        //   /  .           /  |    (#) indicates attribute
+        //   /  .           /  |    (#) indicates marker
         //  /   .          /   |
         // 5--------------6    |          z
         // |    .         |    |          ↑
@@ -829,11 +968,68 @@ mod tests {
         // |/             |/
         // 1--------------2   1.0
         let mesh = Samples::one_hex8();
-        let features = Features::new(&mesh, false);
-        let edge = features.get_edge(4, 5);
-        let face = features.get_face(0, 1, 4, 5);
+        let feat = Features::new(&mesh, false);
+        let edge = feat.get_edge(4, 5);
+        let face = feat.get_face(0, 1, 4, 5);
         assert_eq!(edge.points, &[4, 5]);
         assert_eq!(face.points, &[0, 1, 5, 4]);
+        assert_eq!(edge.key(), (4, 5));
+        assert_eq!(face.key(), (0, 1, 4, 5));
+    }
+
+    #[test]
+    fn new_and_basic_get_methods_work_3d_2() {
+        let mesh = Samples::one_tet4();
+        let feat = Features::new(&mesh, false);
+        let edge = feat.get_edge(1, 2);
+        let face = feat.get_face(0, 1, 3, usize::MAX);
+        assert_eq!(edge.points, &[1, 2]);
+        assert_eq!(face.points, &[0, 1, 3]);
+        assert_eq!(edge.key(), (1, 2));
+        assert_eq!(face.key(), (0, 1, 3, usize::MAX));
+        assert_eq!(feat.get_cells_via_face(&face), &[0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot find edge with given key")]
+    fn get_edge_panics_on_notfound_edge() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //                  5------------6    |            |
+        //                  |    .       |`.  |            |
+        //                  |    0-------|--`.3------------9
+        //                  |   /        |   /`.          /
+        //                  |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, true);
+        feat.get_edge(7, 10); // hanging edge, i.e., CABLE
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot find face with given key")]
+    fn get_face_panics_on_notfound_face() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //                  5------------6    |            |
+        //                  |    .       |`.  |            |
+        //                  |    0-------|--`.3------------9
+        //                  |   /        |   /`.          /
+        //                  |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, true);
+        feat.get_face(3, 7, 9, 10); // hanging face, i.e., SHELL
     }
 
     #[test]
@@ -906,20 +1102,42 @@ mod tests {
 
     #[test]
     fn derive_works() {
-        let edge = Feature {
+        let edge = Edge {
             kind: GeoKind::Lin3,
             points: vec![10, 20, 33],
+            marker: 0,
         };
-        let face = Feature {
+        let face = Face {
             kind: GeoKind::Qua4,
             points: vec![1, 2, 3, 4],
+            marker: 0,
         };
         let edge_clone = edge.clone();
         let face_clone = face.clone();
-        assert_eq!(format!("{:?}", edge), "Feature { kind: Lin3, points: [10, 20, 33] }");
-        assert_eq!(format!("{:?}", face), "Feature { kind: Qua4, points: [1, 2, 3, 4] }");
+        assert_eq!(
+            format!("{:?}", edge),
+            "Edge { kind: Lin3, points: [10, 20, 33], marker: 0 }"
+        );
+        assert_eq!(
+            format!("{:?}", face),
+            "Face { kind: Qua4, points: [1, 2, 3, 4], marker: 0 }"
+        );
         assert_eq!(edge_clone.points.len(), 3);
         assert_eq!(face_clone.points.len(), 4);
+        assert_eq!(edge.key(), (10, 20));
+        assert_eq!(face.key(), (1, 2, 3, 4));
+        let edges = Edges { all: vec![&edge] };
+        let faces = Faces { all: vec![&face] };
+        let edges_clone = edges.clone();
+        let faces_clone = faces.clone();
+        assert_eq!(
+            format!("{:?}", edges_clone),
+            "Edges { all: [Edge { kind: Lin3, points: [10, 20, 33], marker: 0 }] }"
+        );
+        assert_eq!(
+            format!("{:?}", faces_clone),
+            "Faces { all: [Face { kind: Qua4, points: [1, 2, 3, 4], marker: 0 }] }"
+        );
     }
 
     #[test]
@@ -985,6 +1203,257 @@ mod tests {
         assert_eq!(neighbors.len(), 2);
         assert!(neighbors.contains(&(0, 1, 2)));
         assert!(neighbors.contains(&(3, 2, 1)));
+    }
+
+    #[test]
+    fn get_boundary_edges_2d_works() {
+        let mesh = Samples::two_qua4();
+        let features = Features::new(&mesh, true);
+        let mut edge_keys = features.get_boundary_edges();
+        edge_keys.sort();
+        assert_eq!(edge_keys, vec![(0, 1), (0, 3), (1, 4), (2, 3), (2, 5), (4, 5)]);
+
+        let mesh = Samples::three_tri6_arrow();
+        let features = Features::new(&mesh, true);
+        let mut edge_keys = features.get_boundary_edges();
+        edge_keys.sort();
+        assert_eq!(edge_keys, vec![(0, 1), (0, 6), (1, 6)]);
+    }
+
+    #[test]
+    fn get_boundary_edges_3d_works() {
+        let mesh = Samples::two_hex8();
+        let features = Features::new(&mesh, true);
+        let mut edge_keys = features.get_boundary_edges();
+        edge_keys.sort();
+        assert_eq!(
+            edge_keys,
+            vec![
+                (0, 1),   //  0
+                (0, 3),   //  1
+                (0, 4),   //  2
+                (1, 2),   //  3
+                (1, 5),   //  4
+                (2, 3),   //  5
+                (2, 6),   //  6
+                (3, 7),   //  7
+                (4, 5),   //  8
+                (4, 7),   //  9
+                (4, 8),   // 10
+                (5, 6),   // 11
+                (5, 9),   // 12
+                (6, 7),   // 13
+                (6, 10),  // 14
+                (7, 11),  // 15
+                (8, 9),   // 16
+                (8, 11),  // 17
+                (9, 10),  // 18
+                (10, 11), // 19
+            ]
+        );
+
+        let mesh = Samples::four_hex8();
+        let features = Features::new(&mesh, true);
+        let mut edge_keys = features.get_boundary_edges();
+        edge_keys.sort();
+        assert_eq!(
+            edge_keys,
+            vec![
+                (0, 1),   //  0
+                (0, 3),   //  1
+                (0, 4),   //  2
+                (1, 2),   //  3
+                (1, 5),   //  4
+                (2, 3),   //  5
+                (2, 6),   //  6
+                (2, 12),  //  7
+                (3, 7),   //  8
+                (3, 13),  //  9
+                (4, 5),   // 10
+                (4, 7),   // 11
+                (4, 8),   // 12
+                (5, 6),   // 13
+                (5, 9),   // 14
+                (6, 10),  // 15
+                (6, 14),  // 16
+                (7, 11),  // 17
+                (7, 15),  // 18
+                (8, 9),   // 19
+                (8, 11),  // 20
+                (9, 10),  // 21
+                (10, 11), // 22
+                (10, 16), // 23
+                (11, 17), // 24
+                (12, 13), // 25
+                (12, 14), // 26
+                (13, 15), // 27
+                (14, 15), // 28
+                (14, 16), // 29
+                (15, 17), // 30
+                (16, 17), // 32
+            ]
+        )
+    }
+
+    #[test]
+    fn triangulate_3d_boundary_works_hex8() {
+        let key = |x, y, z| format!("{:.1}, {:.1}, {:.1}", x, y, z);
+        let mesh = Samples::two_hex8();
+        let features = Features::new(&mesh, true);
+        let res = features.triangulate_3d_boundary();
+        let pp = vec![
+            "0.0, 0.0, 0.0", //  0
+            "1.0, 0.0, 0.0", //  1
+            "1.0, 1.0, 0.0", //  2
+            "0.0, 1.0, 0.0", //  3
+            "0.0, 0.0, 1.0", //  4
+            "1.0, 0.0, 1.0", //  5
+            "1.0, 1.0, 1.0", //  6
+            "0.0, 1.0, 1.0", //  7
+            "0.0, 0.0, 2.0", //  8
+            "1.0, 0.0, 2.0", //  9
+            "1.0, 1.0, 2.0", // 10
+            "0.0, 1.0, 2.0", // 11
+        ];
+        let boundary_faces = vec![
+            (pp[0], pp[4], pp[7], pp[3]),   // lower, -x face
+            (pp[1], pp[2], pp[6], pp[5]),   // lower, +x face
+            (pp[0], pp[1], pp[5], pp[4]),   // lower, -y face
+            (pp[2], pp[3], pp[7], pp[6]),   // lower, +y face
+            (pp[4], pp[8], pp[11], pp[7]),  // upper, -x face
+            (pp[5], pp[6], pp[10], pp[9]),  // upper, +x face
+            (pp[4], pp[5], pp[9], pp[8]),   // upper, -y face
+            (pp[6], pp[7], pp[11], pp[10]), // upper, +y face
+            (pp[0], pp[3], pp[2], pp[1]),   // lower, -z face
+            (pp[8], pp[9], pp[10], pp[11]), // upper, +z face
+        ];
+        assert_eq!(res.xx.len(), 12);
+        assert_eq!(res.yy.len(), 12);
+        assert_eq!(res.zz.len(), 12);
+        assert_eq!(res.triangles.len(), boundary_faces.len() * 2); // quads => tris
+        for i in 0..res.xx.len() {
+            assert!(pp.contains(&key(res.xx[i], res.yy[i], res.zz[i]).as_str()));
+        }
+        let mut connectivity = Vec::new();
+        for tri in &res.triangles {
+            let a = key(res.xx[tri[0]], res.yy[tri[0]], res.zz[tri[0]]);
+            let b = key(res.xx[tri[1]], res.yy[tri[1]], res.zz[tri[1]]);
+            let c = key(res.xx[tri[2]], res.yy[tri[2]], res.zz[tri[2]]);
+            connectivity.push((a, b, c));
+        }
+        // expected triangles
+        for (k0, k1, k2, k3) in &boundary_faces {
+            assert!(connectivity.contains(&(k0.to_string(), k1.to_string(), k3.to_string())));
+            assert!(connectivity.contains(&(k1.to_string(), k2.to_string(), k3.to_string())));
+        }
+    }
+
+    #[test]
+    fn triangulate_3d_boundary_works_hex20() {
+        let mesh = Samples::one_hex20(0.1, -0.1, 0.1);
+        let features = Features::new(&mesh, true);
+        let res = features.triangulate_3d_boundary();
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.get_canvas_boundary_faces()
+                .set_edge_color("black")
+                .set_line_style(":");
+            draw.show_cells(true)
+                .show_boundary_edges_3d(false)
+                .show_point_ids(false)
+                .show_point_marker(false)
+                .show_cell_ids(false)
+                .show_cell_marker(false)
+                .show_normal_vectors(true)
+                .set_view_flag(false)
+                .set_size(800.0, 800.0);
+            draw.all(&mesh, "/tmp/gemlab/test_triangulate_3d_boundary_hex20.svg")
+                .unwrap();
+        }
+        assert_eq!(res.xx.len(), 20 + 6); // +6 center nodes on each face
+        assert_eq!(res.yy.len(), 20 + 6); // +6 center nodes on each face
+        assert_eq!(res.zz.len(), 20 + 6); // +6 center nodes on each face
+        assert_eq!(res.triangles.len(), 6 * 8); // 6 faces, 8 tris per face
+    }
+
+    #[test]
+    fn triangulate_3d_boundary_works_tet4() {
+        let mesh = Samples::one_tet4();
+        let features = Features::new(&mesh, true);
+        let res = features.triangulate_3d_boundary();
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.get_canvas_boundary_faces()
+                .set_edge_color("black")
+                .set_line_style(":");
+            draw.show_cells(true)
+                .show_boundary_edges_3d(false)
+                .show_point_ids(false)
+                .show_point_marker(false)
+                .show_cell_ids(false)
+                .show_cell_marker(false)
+                .show_normal_vectors(true)
+                .set_view_flag(false)
+                .set_size(800.0, 800.0);
+            draw.all(&mesh, "/tmp/gemlab/test_triangulate_3d_boundary_tet4.svg")
+                .unwrap();
+        }
+        assert_eq!(res.xx.len(), 4);
+        assert_eq!(res.yy.len(), 4);
+        assert_eq!(res.zz.len(), 4);
+        assert_eq!(res.triangles.len(), 4);
+    }
+
+    #[test]
+    fn triangulate_3d_boundary_works_tet10() {
+        let mesh = Samples::one_tet10(0.1);
+        let features = Features::new(&mesh, true);
+        let res = features.triangulate_3d_boundary();
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.get_canvas_boundary_faces()
+                .set_edge_color("black")
+                .set_line_style(":");
+            draw.show_cells(true)
+                .show_boundary_edges_3d(false)
+                .show_point_ids(false)
+                .show_point_marker(false)
+                .show_cell_ids(false)
+                .show_cell_marker(false)
+                .show_normal_vectors(true)
+                .set_view_flag(false)
+                .set_size(800.0, 800.0);
+            draw.all(&mesh, "/tmp/gemlab/test_triangulate_3d_boundary_tet10.svg")
+                .unwrap();
+        }
+        assert_eq!(res.xx.len(), 10);
+        assert_eq!(res.yy.len(), 10);
+        assert_eq!(res.zz.len(), 10);
+        assert_eq!(res.triangles.len(), 4 * 4); // 4 faces, 4 tris per face
+    }
+
+    #[test]
+    fn search_marked_points_edges_faces_work() {
+        let mesh = Samples::two_hex8();
+        let features = Features::new(&mesh, false);
+
+        let res = features.search_marked_edges(-4);
+        assert_eq!(res.all.iter().map(|e| e.key()).collect::<Vec<_>>(), vec![(3, 7)]);
+
+        let res = features.search_marked_edges(-5);
+        assert_eq!(
+            res.all.iter().map(|e| e.key()).collect::<Vec<_>>(),
+            vec![(8, 9), (10, 11)]
+        );
+
+        let res = features.search_marked_faces(-8);
+        assert_eq!(res.all.iter().map(|f| f.key()).collect::<Vec<_>>(), vec![(2, 3, 6, 7)]);
+
+        let res = features.search_marked_faces(-9);
+        assert_eq!(
+            res.all.iter().map(|f| f.key()).collect::<Vec<_>>(),
+            vec![(8, 9, 10, 11)]
+        );
     }
 
     #[test]
@@ -1133,6 +1602,36 @@ mod tests {
     }
 
     #[test]
+    fn search_points_works_3d_mixed() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //         z        5------------6    |            |
+        //         ↑        |    .       |`.  |            |
+        //         o → y    |    0-------|--`.3------------9
+        //        ↙         |   /        |   /`.          /
+        //      x           |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, true);
+        assert_eq!(feat.search_point_ids(At::X(0.0), any_x).unwrap(), &[0, 3, 4, 7, 9, 10]);
+        assert_eq!(feat.search_point_ids(At::Y(1.0), any_x).unwrap(), &[2, 3, 6, 7]);
+        assert_eq!(feat.search_point_ids(At::XZ(0.0, 1.0), any_x).unwrap(), &[4, 7, 10]);
+        assert_eq!(
+            feat.search_point_ids(At::XZ(1.0, 0.0), any_x).unwrap(),
+            &[1, 2, 8, 11, 12]
+        );
+        assert_eq!(
+            feat.search_point_ids(At::Z(0.0), any_x).unwrap(),
+            &[0, 1, 2, 3, 8, 9, 11, 12]
+        );
+    }
+
+    #[test]
     fn search_edges_works_2d() {
         // 3--------2--------5
         // |        |        |
@@ -1162,9 +1661,9 @@ mod tests {
 
         // high-level function
         let res = feat.search_edges(At::Y(0.0), any_x).unwrap();
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0].points, &[1, 0]);
-        assert_eq!(res[1].points, &[4, 1]);
+        assert_eq!(res.all.len(), 2);
+        assert_eq!(res.all[0].points, &[1, 0]);
+        assert_eq!(res.all[1].points, &[4, 1]);
         assert_eq!(
             feat.search_edges(At::XYZ(0.0, 0.0, 0.0), any_x).err(),
             Some("At::XYZ works in 3D only")
@@ -1174,9 +1673,26 @@ mod tests {
         let res = feat
             .search_many_edges(&[At::X(0.0), At::X(2.0), At::Y(0.0), At::Y(1.0)], any_x)
             .unwrap();
-        assert_eq!(res.len(), 6);
-        let keys: Vec<_> = res.iter().map(|r| (r.points[0], r.points[1])).collect();
+        assert_eq!(res.all.len(), 6);
+        let keys: Vec<_> = res.all.iter().map(|r| (r.points[0], r.points[1])).collect();
         assert_eq!(keys, &[(1, 0), (0, 3), (4, 1), (3, 2), (2, 5), (5, 4)]);
+    }
+
+    #[test]
+    fn search_edges_works_2d_mixed() {
+        // 1.0              4-----------3
+        //                  |           |
+        //                  |    [1]    |   [*] indicates id
+        //                  |    (2)    |   (*) indicates marker
+        //                  |           |
+        // 0.0  0-----------1-----------2-----------5
+        //           [0]                     [2]
+        //           (1)                     (1)
+        let mesh = Samples::mixed_shapes_2d();
+        let feat = Features::new(&mesh, false);
+        assert_eq!(feat.cables, &[0, 2]);
+        // note that (0,1) and (2,5) are NOT edge; they're CABLE
+        assert_eq!(feat.search_edge_keys(At::Y(0.0), any_x).unwrap(), &[(1, 2)]);
     }
 
     #[test]
@@ -1304,18 +1820,50 @@ mod tests {
 
         // high-level function
         let res = feat.search_edges(At::XY(0.0, 0.0), any_x).unwrap();
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0].points, &[0, 4]);
-        assert_eq!(res[1].points, &[4, 8]);
+        assert_eq!(res.all.len(), 2);
+        assert_eq!(res.all[0].points, &[0, 4]);
+        assert_eq!(res.all[1].points, &[4, 8]);
 
         // many faces
         let res = feat.search_many_faces(&[At::Z(0.0), At::Z(2.0)], any_x).unwrap();
-        assert_eq!(res.len(), 2);
+        assert_eq!(res.all.len(), 2);
         let keys: Vec<_> = res
+            .all
             .iter()
             .map(|r| (r.points[0], r.points[1], r.points[2], r.points[3]))
             .collect();
         assert_eq!(keys, &[(0, 3, 2, 1), (8, 9, 10, 11)]);
+    }
+
+    #[test]
+    fn search_edges_works_3d_mixed() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //         z        5------------6    |            |
+        //         ↑        |    .       |`.  |            |
+        //         o → y    |    0-------|--`.3------------9
+        //        ↙         |   /        |   /`.          /
+        //      x           |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, true);
+        assert_eq!(feat.cables, &[4]);
+        assert_eq!(feat.shells, &[2, 3]);
+        // note that (11,12) and (1,11) are not edges; they are CABLE
+        assert_eq!(
+            feat.search_edge_keys(At::XZ(1.0, 0.0), any_x).unwrap(),
+            &[(1, 2), (2, 8)]
+        );
+        // note that (7,10) and (9,10) are not edges because they belong to SHELL (hanging faces)
+        assert_eq!(
+            feat.search_edge_keys(At::X(0.0), any_x).unwrap(),
+            &[(0, 3), (0, 4), (3, 7), (4, 7)]
+        );
     }
 
     #[test]
@@ -1460,12 +2008,35 @@ mod tests {
 
         // high-level function
         let res = feat.search_faces(At::Z(0.0), any_x).unwrap();
-        assert_eq!(res.len(), 1);
-        assert_eq!(res[0].points, &[0, 3, 2, 1]);
+        assert_eq!(res.all.len(), 1);
+        assert_eq!(res.all[0].points, &[0, 3, 2, 1]);
         assert_eq!(
             feat.search_faces(At::Circle(0.0, 0.0, 1.0), any_x).err(),
             Some("At::Circle works in 2D only")
         );
+    }
+
+    #[test]
+    fn search_faces_works_mixed() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //         z        5------------6    |            |
+        //         ↑        |    .       |`.  |            |
+        //         o → y    |    0-------|--`.3------------9
+        //        ↙         |   /        |   /`.          /
+        //      x           |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, true);
+        assert_eq!(feat.cables, &[4]);
+        assert_eq!(feat.shells, &[2, 3]);
+        // note that (3,7,9,10) is not face because it is SHELL (hanging face)
+        assert_eq!(feat.search_face_keys(At::X(0.0), any_x).unwrap(), &[(0, 3, 4, 7)]);
     }
 
     #[test]
@@ -1532,5 +2103,136 @@ mod tests {
             feat.search_edge_keys(At::Circle(0.0, 0.0, rr), any_x).unwrap(),
             &[(2, 5), (5, 8), (8, 11), (11, 14)],
         );
+    }
+
+    #[test]
+    fn display_works_1() {
+        //       8-------------11  2.0
+        //      /.             /|
+        //     / .            / |
+        //    /  .           /  |
+        //   /   .          /   |
+        //  9-------------10    |
+        //  |    .         |    |
+        //  |    4---------|----7  1.0
+        //  |   /. [1]     |   /|
+        //  |  / . (2)     |  / |
+        //  | /  .         | /  |
+        //  |/   .         |/   |
+        //  5--------------6    |          z
+        //  |    .         |    |          ↑
+        //  |    0---------|----3  0.0     o → y
+        //  |   /  [0]     |   /          ↙
+        //  |  /   (1)     |  /          x
+        //  | /            | /
+        //  |/             |/
+        //  1--------------2   1.0
+        // 0.0            1.0
+        let mesh = Samples::two_hex8();
+        let features = Features::new(&mesh, false);
+        let edges = features.search_edges(At::Z(0.0), any_x).unwrap();
+        let faces = features.search_faces(At::Y(1.0), any_x).unwrap();
+        assert_eq!(format!("{}", edges), "(0, 1), (0, 3), (1, 2), (2, 3)");
+        assert_eq!(format!("{}", faces), "(2, 3, 6, 7), (6, 7, 10, 11)");
+    }
+
+    #[test]
+    fn display_works_2() {
+        let mesh = Samples::one_tet4();
+        let features = Features::new(&mesh, false);
+        let edges = features.search_edges(At::Z(0.0), any_x).unwrap();
+        let faces = features.search_faces(At::X(0.0), any_x).unwrap();
+        assert_eq!(format!("{}", edges), "(0, 1), (0, 2), (1, 2)");
+        assert_eq!(format!("{}", faces), "(0, 2, 3, MAX)");
+    }
+
+    #[test]
+    fn get_cells_and_points_methods_work_2d_1() {
+        // 1.0              4-----------3
+        //                  |           |
+        //                  |    [1]    |   [*] indicates id
+        //                  |    (2)    |   (*) indicates marker
+        //                  |           |
+        // 0.0  0-----------1-----------2-----------5
+        //           [0]                     [2]
+        //           (1)                     (1)
+        let mesh = Samples::mixed_shapes_2d();
+        let feat = Features::new(&mesh, false);
+        let edge = feat.get_edge(1, 2);
+        let edges = Edges { all: vec![&edge] };
+        assert_eq!(feat.get_cells_via_2d_edge(&edge), &[1]);
+        assert_eq!(feat.get_cells_via_2d_edges(&edges), &[1]);
+        assert_eq!(feat.get_points_via_2d_edges(&edges), &[1, 2]);
+    }
+
+    #[test]
+    fn get_cells_and_points_methods_work_2d_2() {
+        // 7---------------6---------------8
+        // |               |               |
+        // |               |               |
+        // |      [2]      |      [3]      |
+        // |               |               |
+        // |               |               |
+        // 3---------------2---------------5
+        // |               |               |
+        // |               |               |
+        // |      [0]      |      [1]      |
+        // |               |               |
+        // |               |               |
+        // 0---------------1---------------4
+        let mesh = Samples::block_2d_four_qua4();
+        let feat = Features::new(&mesh, true); // need interior edges
+        let edge_a = feat.get_edge(2, 3);
+        let edge_b = feat.get_edge(2, 5);
+        let edges = Edges {
+            all: vec![&edge_a, &edge_b],
+        };
+        assert_eq!(feat.get_cells_via_2d_edge(&edge_a), &[0, 2]);
+        assert_eq!(feat.get_cells_via_2d_edge(&edge_b), &[1, 3]);
+        assert_eq!(feat.get_cells_via_2d_edges(&edges), &[0, 1, 2, 3]);
+        assert_eq!(feat.get_points_via_2d_edges(&edges), &[2, 3, 5]);
+    }
+
+    #[test]
+    fn get_cells_and_points_methods_work_3d_1() {
+        //                       4------------7-----------10
+        //                      /.           /|            |
+        //                     / .          / |            |
+        //                    /  .         /  |            |
+        //                   /   .        /   |            |
+        //         z        5------------6    |            |
+        //         ↑        |    .       |`.  |            |
+        //         o → y    |    0-------|--`.3------------9
+        //        ↙         |   /        |   /`.          /
+        //      x           |  /         |  /   `.       /
+        //                  | /          | /      `.    /
+        //                  |/           |/         `. /
+        //  12-----11-------1------------2------------8
+        let mesh = Samples::mixed_shapes_3d();
+        let feat = Features::new(&mesh, false);
+        let face_a = feat.get_face(2, 3, 6, 7);
+        let face_b = feat.get_face(2, 3, 6, usize::MAX);
+        let faces = Faces {
+            all: vec![&face_a, &face_b],
+        };
+        assert_eq!(feat.get_cells_via_face(&face_a), &[0]);
+        assert_eq!(feat.get_cells_via_face(&face_b), &[1]);
+        assert_eq!(feat.get_cells_via_faces(&faces), &[0, 1]);
+        assert_eq!(feat.get_points_via_faces(&faces), &[2, 3, 6, 7]);
+    }
+
+    #[test]
+    fn get_cells_and_points_methods_work_3d_2() {
+        let mesh = Samples::block_3d_eight_hex8();
+        let feat = Features::new(&mesh, true); // need interior faces
+        let face_a = feat.get_face(2, 3, 6, 7);
+        let face_b = feat.get_face(6, 7, 20, 21);
+        let faces = Faces {
+            all: vec![&face_a, &face_b],
+        };
+        assert_eq!(feat.get_cells_via_face(&face_a), &[0, 2]);
+        assert_eq!(feat.get_cells_via_face(&face_b), &[4, 6]);
+        assert_eq!(feat.get_cells_via_faces(&faces), &[0, 2, 4, 6]);
+        assert_eq!(feat.get_points_via_faces(&faces), &[2, 3, 6, 7, 20, 21]);
     }
 }

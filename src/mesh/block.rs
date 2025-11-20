@@ -5,7 +5,8 @@ use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
 use russell_lab::math::PI;
-use russell_lab::Vector;
+use russell_lab::{sort2, sort4, Vector};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Arguments to transform the Block generated mesh into a ring
@@ -38,15 +39,15 @@ pub struct ArgsRing {
 }
 
 /// Defines constraints for a side of a block (2D)
-#[derive(Clone, Debug)]
-pub enum Constraint2D {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Constraint2d {
     /// Circumference specified by (xc,yc,radius)
     Circle(f64, f64, f64),
 }
 
 /// Defines constraints for a side of a block (3D)
-#[derive(Clone, Debug)]
-pub enum Constraint3D {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Constraint3d {
     /// Surface of a cylinder parallel to x specified by (yc,zc,radius)
     CylinderX(f64, f64, f64),
 
@@ -153,26 +154,29 @@ const TOL_DISTANCE: f64 = 1e-8;
 /// }
 /// ```
 pub struct Block {
-    /// Attribute of all elements in this block
-    attribute: usize,
+    /// Marker for all elements in this block
+    marker: i32,
 
     /// Space dimension
     ndim: usize,
 
-    /// number of divisions along each dim (ndim)
+    /// Number of divisions along each dim (ndim)
     ndiv: Vec<usize>,
 
     /// Delta ksi along each dim (ndim, {ndiv0,ndiv1,ndiv2})
     delta_ksi: Vec<Vec<f64>>,
 
     /// Constraints on edges (nedge) (2D only)
-    edge_constraints: HashMap<usize, Constraint2D>,
+    edge_constraints: HashMap<usize, Constraint2d>,
 
     /// Constraints on faces (nface) (3D only)
-    face_constraints: HashMap<usize, Constraint3D>,
+    face_constraints: HashMap<usize, Constraint3d>,
 
-    /// Has constraints?
-    has_constraints: bool,
+    /// Holds markers on edges (nedge) (2D only)
+    edge_markers: HashMap<usize, i32>,
+
+    /// Holds markers on faces (nface) (3D only)
+    face_markers: HashMap<usize, i32>,
 
     /// Scratchpad for the block
     pad: Scratchpad,
@@ -188,11 +192,8 @@ impl Block {
     /// Length of shape along each direction in reference coords space
     const NAT_LENGTH: f64 = 2.0;
 
-    /// Default number of divisions
-    const NDIV: usize = 2;
-
-    /// Default attribute
-    const ATTRIBUTE: usize = 1;
+    /// Default marker
+    const MARKER: i32 = 1;
 
     /// Allocate a new instance
     ///
@@ -286,15 +287,26 @@ impl Block {
             }
         };
 
+        // check if the determinant of the Jacobian is positive at the center of the block
+        let det_jac = pad.calc_jacobian(&[0.0, 0.0, 0.0])?;
+        if det_jac <= 0.0 {
+            return Err("the determinant of the Jacobian is non-positive at the center of the block");
+        }
+
+        // default number of divisions and default delta ksi
+        let ndiv = 2;
+        let del_ksi = Block::NAT_LENGTH / (ndiv as f64);
+
         // block
         Ok(Block {
-            attribute: Block::ATTRIBUTE,
+            marker: Block::MARKER,
             ndim,
-            ndiv: vec![Block::NDIV; ndim],
-            delta_ksi: vec![vec![1.0; Block::NDIV]; ndim],
+            ndiv: vec![ndiv; ndim],
+            delta_ksi: vec![vec![del_ksi; ndiv]; ndim],
             edge_constraints: HashMap::new(),
             face_constraints: HashMap::new(),
-            has_constraints: false,
+            edge_markers: HashMap::new(),
+            face_markers: HashMap::new(),
             pad,
             args_ring: ArgsRing {
                 amin: 0.0,
@@ -344,16 +356,16 @@ impl Block {
 
     /// Draws this block
     pub fn draw(&self, plot: &mut Plot, with_ids: bool, set_range: bool) -> Result<(), StrError> {
-        if self.ndim == 2 && self.has_constraints {
+        if self.ndim == 2 && self.edge_constraints.len() > 0 {
             for ct in self.edge_constraints.values() {
                 match ct {
-                    Constraint2D::Circle(xc, yc, r) => {
+                    Constraint2d::Circle(xc, yc, r) => {
                         let mut circle = Canvas::new();
                         circle
                             .set_face_color("None")
                             .set_edge_color("#bfbfbf")
                             .set_line_width(7.0)
-                            .draw_circle(xc, yc, r);
+                            .draw_circle(*xc, *yc, *r);
                         plot.add(&circle);
                     }
                 }
@@ -363,8 +375,8 @@ impl Block {
     }
 
     /// Sets group
-    pub fn set_attribute(&mut self, attribute: usize) -> &mut Self {
-        self.attribute = attribute;
+    pub fn set_marker(&mut self, marker: i32) -> &mut Self {
+        self.marker = marker;
         self
     }
 
@@ -394,6 +406,82 @@ impl Block {
         Ok(self)
     }
 
+    /// Sets the division weights for 2D blocks
+    ///
+    /// # Input
+    ///
+    /// * `wx` -- (ndiv_x) the weights for divisions along x
+    /// * `wy` -- (ndiv_y) the weights for divisions along y
+    ///
+    /// **Note:** the sum of weights must be ≥ 1.
+    pub fn set_div_weights_2d(&mut self, wx: &[f64], wy: &[f64]) -> Result<&mut Self, StrError> {
+        if self.ndim != 2 {
+            return Err("this method works only for 2D blocks");
+        }
+        if wx.len() < 1 {
+            return Err("the length of the wx array must be ≥ 1");
+        }
+        if wy.len() < 1 {
+            return Err("the length of the wy array must be ≥ 1");
+        }
+        let sum_wx = wx.iter().fold(0.0, |acc, w| acc + w);
+        let sum_wy = wy.iter().fold(0.0, |acc, w| acc + w);
+        if sum_wx < 1.0 {
+            return Err("the sum of wx must be ≥ 1.0");
+        }
+        if sum_wy < 1.0 {
+            return Err("the sum of wy must be ≥ 1.0");
+        }
+        self.ndiv[0] = wx.len();
+        self.ndiv[1] = wy.len();
+        self.delta_ksi[0] = wx.iter().map(|w| w * Block::NAT_LENGTH / sum_wx).collect();
+        self.delta_ksi[1] = wy.iter().map(|w| w * Block::NAT_LENGTH / sum_wy).collect();
+        Ok(self)
+    }
+
+    /// Sets the division weights for 3D blocks
+    ///
+    /// # Input
+    ///
+    /// * `wx` -- (ndiv_x) the weights for divisions along x
+    /// * `wy` -- (ndiv_y) the weights for divisions along y
+    /// * `wz` -- (ndiv_z) the weights for divisions along z
+    ///
+    /// **Note:** the sum of weights must be ≥ 1.
+    pub fn set_div_weights_3d(&mut self, wx: &[f64], wy: &[f64], wz: &[f64]) -> Result<&mut Self, StrError> {
+        if self.ndim != 3 {
+            return Err("this method works only for 3D blocks");
+        }
+        if wx.len() < 1 {
+            return Err("the length of the wx array must be ≥ 1");
+        }
+        if wy.len() < 1 {
+            return Err("the length of the wy array must be ≥ 1");
+        }
+        if wz.len() < 1 {
+            return Err("the length of the wz array must be ≥ 1");
+        }
+        let sum_wx = wx.iter().fold(0.0, |acc, w| acc + w);
+        let sum_wy = wy.iter().fold(0.0, |acc, w| acc + w);
+        let sum_wz = wz.iter().fold(0.0, |acc, w| acc + w);
+        if sum_wx < 1.0 {
+            return Err("the sum of wx must be ≥ 1.0");
+        }
+        if sum_wy < 1.0 {
+            return Err("the sum of wy must be ≥ 1.0");
+        }
+        if sum_wz < 1.0 {
+            return Err("the sum of wz must be ≥ 1.0");
+        }
+        self.ndiv[0] = wx.len();
+        self.ndiv[1] = wy.len();
+        self.ndiv[2] = wz.len();
+        self.delta_ksi[0] = wx.iter().map(|w| w * Block::NAT_LENGTH / sum_wx).collect();
+        self.delta_ksi[1] = wy.iter().map(|w| w * Block::NAT_LENGTH / sum_wy).collect();
+        self.delta_ksi[2] = wz.iter().map(|w| w * Block::NAT_LENGTH / sum_wz).collect();
+        Ok(self)
+    }
+
     /// Sets (or removes) a constraint to an edge of this block
     ///
     /// # Input
@@ -410,7 +498,7 @@ impl Block {
     ///
     /// Therefore, make sure that multiple constraints are compatible one with another. In other words,
     /// the effect of two constraints on a point (e.g. at a corner) must be equal.
-    pub fn set_edge_constraint(&mut self, e: usize, value: Option<Constraint2D>) -> Result<&mut Self, StrError> {
+    pub fn set_edge_constraint(&mut self, e: usize, value: Option<Constraint2d>) -> Result<&mut Self, StrError> {
         if self.ndim != 2 {
             return Err("set_edge_constraint requires ndim = 2");
         }
@@ -425,7 +513,6 @@ impl Block {
                 self.edge_constraints.remove(&e);
             }
         }
-        self.has_constraints = self.edge_constraints.len() > 0;
         Ok(self)
     }
 
@@ -445,7 +532,7 @@ impl Block {
     ///
     /// Therefore, make sure that multiple constraints are compatible one with another. In other words,
     /// the effect of two constraints on a point (e.g. at a corner) must be equal.
-    pub fn set_face_constraint(&mut self, f: usize, value: Option<Constraint3D>) -> Result<&mut Self, StrError> {
+    pub fn set_face_constraint(&mut self, f: usize, value: Option<Constraint3d>) -> Result<&mut Self, StrError> {
         if self.ndim != 3 {
             return Err("set_face_constraint requires ndim = 3");
         }
@@ -460,7 +547,43 @@ impl Block {
                 self.face_constraints.remove(&f);
             }
         }
-        self.has_constraints = self.face_constraints.len() > 0;
+        Ok(self)
+    }
+
+    /// Sets a marker to an edge of this block
+    ///
+    /// # Input
+    ///
+    /// * `e` -- index of edge; must be < 4 in 2D or < 12 in 3D
+    /// * `marker` -- the marker
+    pub fn set_edge_marker(&mut self, e: usize, value: i32) -> Result<&mut Self, StrError> {
+        if self.ndim == 2 {
+            if e > 3 {
+                return Err("edge index must be < 4 (nedge) in 2D");
+            }
+        } else {
+            if e > 11 {
+                return Err("edge index must be < 12 (nedge) in 3D");
+            }
+        }
+        self.edge_markers.insert(e, value);
+        Ok(self)
+    }
+
+    /// Sets a marker to a face of this block
+    ///
+    /// # Input
+    ///
+    /// * `f` -- index of face; must be < 6 (nface)
+    /// * `marker` -- the marker
+    pub fn set_face_marker(&mut self, f: usize, value: i32) -> Result<&mut Self, StrError> {
+        if self.ndim != 3 {
+            return Err("set_face_marker requires ndim = 3");
+        }
+        if f > 5 {
+            return Err("face index must be < 6 (nface)");
+        }
+        self.face_markers.insert(f, value);
         Ok(self)
     }
 
@@ -556,10 +679,13 @@ impl Block {
             ndim,
             points: Vec::new(),
             cells: Vec::new(),
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // constants
         let target_nnode = target.nnode();
+        let has_constraints = self.edge_constraints.len() > 0 || self.face_constraints.len() > 0;
 
         // constants used only if there are constraints and
         // the constraint causes some middle edge nodes to move
@@ -568,7 +694,7 @@ impl Block {
         let target_edge_kind = target.edge_kind().unwrap();
         let target_edge_nnode = target.edge_nnode();
         let target_n_interior_nodes = target.n_interior_nodes();
-        let mut serendipity = if self.has_constraints {
+        let mut serendipity = if has_constraints {
             match target {
                 GeoKind::Qua9 => Some(Scratchpad::new(ndim, GeoKind::Qua8)?),
                 GeoKind::Qua16 => Some(Scratchpad::new(ndim, GeoKind::Qua12)?),
@@ -666,7 +792,7 @@ impl Block {
                                 } else {
                                     // compute real coordinates of point using the block's
                                     self.pad.calc_coords(&mut x, &ksi)?;
-                                    if self.has_constraints {
+                                    if has_constraints {
                                         if let Some(side) = self.handle_constraints(&mut x, &ksi)? {
                                             constrained_point_to_side.insert(point_id, side);
                                         }
@@ -687,7 +813,7 @@ impl Block {
 
                     // fix middle edge nodes after corner movement due to constraints
                     // (only process edges with more than 2 nodes; i.e., those with middle/interior nodes)
-                    if self.has_constraints && target_edge_nnode > 2 {
+                    if has_constraints && target_edge_nnode > 2 {
                         for (point_id, side) in &constrained_point_to_side {
                             for e in 0..target_nedge {
                                 // only process an edge that is orthogonal to the constrained side (edge/face)
@@ -750,26 +876,189 @@ impl Block {
                         }
                     }
 
+                    // set marked edges
+                    if self.edge_markers.len() > 0 {
+                        if self.ndim == 2 {
+                            let cell_touches_xm = i == 0; // x-minus boundary
+                            let cell_touches_ym = j == 0; // y-minus boundary
+                            let cell_touches_xp = i == nx - 1; // x-plus boundary
+                            let cell_touches_yp = j == ny - 1; // y-plus boundary
+                            if cell_touches_xm || cell_touches_ym || cell_touches_xp || cell_touches_yp {
+                                // this is a boundary cell
+                                for e in 0..4 {
+                                    //      2
+                                    //  +-------+
+                                    //  |       |
+                                    // 3|       |1
+                                    //  |       |
+                                    //  +-------+
+                                    //      0
+                                    let corner_edge = match e {
+                                        0 => cell_touches_ym,
+                                        1 => cell_touches_xp,
+                                        2 => cell_touches_yp,
+                                        3 => cell_touches_xm,
+                                        _ => unreachable!(),
+                                    };
+                                    if corner_edge {
+                                        if let Some(marker) = self.edge_markers.get(&e) {
+                                            let p1 = points[target.edge_node_id(e, 0)];
+                                            let p2 = points[target.edge_node_id(e, 1)];
+                                            let mut key = (p1, p2);
+                                            sort2(&mut key);
+                                            mesh.marked_edges.push((*marker, key.0, key.1));
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            let cell_touches_xm = i == 0; // x-minus boundary
+                            let cell_touches_ym = j == 0; // y-minus boundary
+                            let cell_touches_zm = k == 0; // z-minus boundary
+                            let cell_touches_xp = i == nx - 1; // x-plus boundary
+                            let cell_touches_yp = j == ny - 1; // y-plus boundary
+                            let cell_touches_zp = k == nz - 1; // z-plus boundary
+                            if cell_touches_xm
+                                || cell_touches_ym
+                                || cell_touches_zm
+                                || cell_touches_xp
+                                || cell_touches_yp
+                                || cell_touches_zp
+                            {
+                                // this is a boundary cell
+                                for e in 0..12 {
+                                    //                 z       7
+                                    //                 +----------------+
+                                    //               ,'|              ,'|
+                                    //           4 ,'  |8          6,'  |
+                                    //           ,'    |          ,'    |
+                                    //         ,'      |   5    ,'      |11
+                                    //       +'===============+'        |
+                                    //       |         |      |         |
+                                    //       |         |      |  3      |
+                                    //       |         .- - - | -  - - -+ y
+                                    //      9|       ,'       |       ,'
+                                    //       |    0,'         |10   ,'
+                                    //       |   ,'           |   ,' 2
+                                    //       | ,'             | ,'
+                                    //       +----------------+'
+                                    //      x        1
+                                    let corner_edge = match e {
+                                        // bottom edges
+                                        0 => cell_touches_ym && cell_touches_zm,
+                                        1 => cell_touches_xp && cell_touches_zm,
+                                        2 => cell_touches_yp && cell_touches_zm,
+                                        3 => cell_touches_xm && cell_touches_zm,
+                                        // top edges
+                                        4 => cell_touches_ym && cell_touches_zp,
+                                        5 => cell_touches_xp && cell_touches_zp,
+                                        6 => cell_touches_yp && cell_touches_zp,
+                                        7 => cell_touches_xm && cell_touches_zp,
+                                        // vertical edges
+                                        8 => cell_touches_xm && cell_touches_ym,
+                                        9 => cell_touches_xp && cell_touches_ym,
+                                        10 => cell_touches_xp && cell_touches_yp,
+                                        11 => cell_touches_xm && cell_touches_yp,
+                                        _ => unreachable!(),
+                                    };
+                                    if corner_edge {
+                                        if let Some(marker) = self.edge_markers.get(&e) {
+                                            let p1 = points[target.edge_node_id(e, 0)];
+                                            let p2 = points[target.edge_node_id(e, 1)];
+                                            let mut key = (p1, p2);
+                                            sort2(&mut key);
+                                            mesh.marked_edges.push((*marker, key.0, key.1));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // set marked faces
+                    if self.face_markers.len() > 0 {
+                        let cell_touches_xm = i == 0; // x-minus boundary
+                        let cell_touches_ym = j == 0; // y-minus boundary
+                        let cell_touches_zm = k == 0; // z-minus boundary
+                        let cell_touches_xp = i == nx - 1; // x-plus boundary
+                        let cell_touches_yp = j == ny - 1; // y-plus boundary
+                        let cell_touches_zp = k == nz - 1; // z-plus boundary
+                        if cell_touches_xm
+                            || cell_touches_ym
+                            || cell_touches_zm
+                            || cell_touches_xp
+                            || cell_touches_yp
+                            || cell_touches_zp
+                        {
+                            // this is a boundary cell
+                            for f in 0..6 {
+                                //            +----------------+
+                                //          ,'|              ,'|
+                                //        ,'  |  ___       ,'  |
+                                //      ,'    |,'5,'  [0],'    |
+                                //    ,'      |~~~     ,'      |
+                                //  +'===============+'  ,'|   |
+                                //  |   ,'|   |      |   |3|   |
+                                //  |   |2|   |      |   |,'   |
+                                //  |   |,'   +- - - | +- - - -+
+                                //  |       ,'       |       ,'
+                                //  |     ,' [1]  ___|     ,'
+                                //  |   ,'      ,'4,'|   ,'
+                                //  | ,'        ~~~  | ,'
+                                //  +----------------+'
+                                let bry_face = match f {
+                                    0 => cell_touches_xm,
+                                    1 => cell_touches_xp,
+                                    2 => cell_touches_ym,
+                                    3 => cell_touches_yp,
+                                    4 => cell_touches_zm,
+                                    5 => cell_touches_zp,
+                                    _ => unreachable!(),
+                                };
+                                if bry_face {
+                                    if let Some(marker) = self.face_markers.get(&f) {
+                                        let p1 = points[target.face_node_id(f, 0)];
+                                        let p2 = points[target.face_node_id(f, 1)];
+                                        let p3 = points[target.face_node_id(f, 2)];
+                                        let p4 = points[target.face_node_id(f, 3)];
+                                        let mut key = (p1, p2, p3, p4);
+                                        sort4(&mut key);
+                                        mesh.marked_faces.push((*marker, key.0, key.1, key.2, key.3));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // new cell
                     let cell = Cell {
                         id: cell_id,
-                        attribute: self.attribute,
+                        marker: self.marker,
                         kind: target,
                         points,
                     };
                     mesh.cells.push(cell);
 
                     // next x-center
-                    center[0] += self.delta_ksi[0][i];
+                    if i + 1 < nx {
+                        // add half of this cell and half of the next cell in case the deltas are unequal
+                        center[0] += (self.delta_ksi[0][i] + self.delta_ksi[0][i + 1]) / 2.0;
+                    }
                 }
 
                 // next y-center
-                center[1] += self.delta_ksi[1][j];
+                if j + 1 < ny {
+                    // add half of this cell and half of the next cell in case the deltas are unequal
+                    center[1] += (self.delta_ksi[1][j] + self.delta_ksi[1][j + 1]) / 2.0;
+                }
             }
 
             // next z-center
             if ndim == 3 {
-                center[2] += self.delta_ksi[2][k];
+                if k + 1 < nz {
+                    // add half of this cell and half of the next cell in case the deltas are unequal
+                    center[2] += (self.delta_ksi[2][k] + self.delta_ksi[2][k + 1]) / 2.0;
+                }
             }
         }
         Ok(mesh)
@@ -889,9 +1178,9 @@ impl Block {
     /// Applies 2D constraint
     ///
     /// Returns true if the constraint has been applied; otherwise, returns false
-    fn apply_constraint_2d(&self, x: &mut Vector, ct: &Constraint2D) -> Result<bool, StrError> {
+    fn apply_constraint_2d(&self, x: &mut Vector, ct: &Constraint2d) -> Result<bool, StrError> {
         match ct {
-            Constraint2D::Circle(xc, yc, r) => {
+            Constraint2d::Circle(xc, yc, r) => {
                 let dx = x[0] - xc;
                 let dy = x[1] - yc;
                 let d = f64::sqrt(dx * dx + dy * dy);
@@ -914,9 +1203,9 @@ impl Block {
     /// Applies 3D constraint
     ///
     /// Returns true if the constraint has been applied; otherwise, returns false
-    fn apply_constraint_3d(&self, x: &mut Vector, ct: &Constraint3D) -> Result<bool, StrError> {
+    fn apply_constraint_3d(&self, x: &mut Vector, ct: &Constraint3d) -> Result<bool, StrError> {
         match ct {
-            Constraint3D::CylinderX(yc, zc, r) => {
+            Constraint3d::CylinderX(yc, zc, r) => {
                 let dy = x[1] - yc;
                 let dz = x[2] - zc;
                 let d = f64::sqrt(dy * dy + dz * dz);
@@ -932,7 +1221,7 @@ impl Block {
                     return Ok(true);
                 }
             }
-            Constraint3D::CylinderY(xc, zc, r) => {
+            Constraint3d::CylinderY(xc, zc, r) => {
                 let dx = x[0] - xc;
                 let dz = x[2] - zc;
                 let d = f64::sqrt(dx * dx + dz * dz);
@@ -948,7 +1237,7 @@ impl Block {
                     return Ok(true);
                 }
             }
-            Constraint3D::CylinderZ(xc, yc, r) => {
+            Constraint3d::CylinderZ(xc, yc, r) => {
                 let dx = x[0] - xc;
                 let dy = x[1] - yc;
                 let d = f64::sqrt(dx * dx + dy * dy);
@@ -973,9 +1262,9 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
-    use super::{ArgsRing, Block, Constraint2D, Constraint3D};
+    use super::{ArgsRing, Block, Constraint2d, Constraint3d};
     use crate::geometry::point_point_distance;
-    use crate::mesh::{Figure, Mesh, Samples};
+    use crate::mesh::{Draw, Mesh, Samples};
     use crate::shapes::GeoKind;
     use plotpy::{Canvas, Plot, Surface};
     use russell_lab::math::{PI, SQRT_2};
@@ -1002,35 +1291,35 @@ mod tests {
             .set_edge_color("#bfbfbfbb")
             .set_line_width(7.0)
             .draw_circle(0.0, 0.0, args.rmax);
-        mesh.draw(None, filename, |plot, before| {
+        let mut draw = Draw::new();
+        draw.extra(|plot, before| {
             if !before {
                 plot.add(&circle_in);
                 plot.add(&circle_mid);
                 plot.add(&circle_out);
             }
         })
+        .all(&mesh, filename)
         .unwrap();
     }
 
-    fn draw<F>(mesh: Mesh, block: &Block, set_range: bool, filename: &str, mut pre: F)
-    where
-        F: FnMut(&mut Plot),
-    {
-        let mut fig = Figure::new();
-        fig.cell_ids = true;
-        fig.point_ids = true;
-        fig.point_dots = true;
-        fig.figure_size = Some((600.0, 600.0));
-        fig.canvas_point_ids
+    fn draw(mesh: Mesh, block: &Block, set_range: bool, filename: &str, pre: impl Fn(&mut Plot)) {
+        let mut draw = Draw::new();
+        draw.show_cell_ids(true)
+            .show_point_ids(true)
+            .show_point_dots(true)
+            .set_size(600.0, 600.0)
+            .get_canvas_point_ids()
             .set_bbox(false)
             .set_align_horizontal("left")
             .set_align_vertical("bottom");
-        mesh.draw(Some(fig), filename, |plot, before| {
+        draw.extra(|plot, before| {
             if !before {
                 pre(plot);
                 block.draw(plot, false, set_range).unwrap();
             }
         })
+        .all(&mesh, filename)
         .unwrap();
     }
 
@@ -1048,13 +1337,13 @@ mod tests {
         let correct = "ArgsRing { amin: 1.0, amax: 2.0, rmin: 3.0, rmax: 4.0, zmin: 5.0, zmax: 6.0 }";
         assert_eq!(format!("{:?}", clone), correct);
 
-        let constraint = Constraint2D::Circle(2.0, 3.0, 1.0);
+        let constraint = Constraint2d::Circle(2.0, 3.0, 1.0);
         let clone = constraint.clone();
         let correct = "Circle(2.0, 3.0, 1.0)";
         assert_eq!(format!("{:?}", constraint), correct);
         assert_eq!(format!("{:?}", clone), correct);
 
-        let constraint = Constraint3D::CylinderZ(2.0, 3.0, 1.0);
+        let constraint = Constraint3d::CylinderZ(2.0, 3.0, 1.0);
         let clone = constraint.clone();
         let correct = "CylinderZ(2.0, 3.0, 1.0)";
         assert_eq!(format!("{:?}", constraint), correct);
@@ -1072,9 +1361,61 @@ mod tests {
     }
 
     #[test]
+    fn new_fails_on_wrong_jacobian() {
+        assert_eq!(
+            Block::new(&[
+                [0.0, 0.0], // 0
+                [1.0, 0.0], // 1
+                [0.0, 1.0], // 2 (swapped with 3)
+                [1.0, 1.0], // 3 (swapped with 2)
+            ])
+            .err(),
+            Some("cannot compute inverse due to zero determinant")
+        );
+        assert_eq!(
+            Block::new(&[
+                [0.0, 0.0], // 0
+                [0.0, 1.0], // 1 (going clockwise == incorrect)
+                [1.0, 1.0], // 2
+                [1.0, 0.0], // 3
+            ])
+            .err(),
+            Some("the determinant of the Jacobian is non-positive at the center of the block")
+        );
+        assert_eq!(
+            Block::new(&[
+                [0.0, 0.0, 0.0], // 0
+                [1.0, 0.0, 0.0], // 1
+                [1.0, 1.0, 0.0], // 2
+                [0.0, 1.0, 0.0], // 3
+                [0.0, 0.0, 0.0], // 4 (flat block)
+                [1.0, 0.0, 0.0], // 5 (flat block)
+                [1.0, 1.0, 0.0], // 6 (flat block)
+                [0.0, 1.0, 0.0], // 7 (flat block)
+            ])
+            .err(),
+            Some("cannot compute inverse due to zero determinant")
+        );
+        assert_eq!(
+            Block::new(&[
+                [0.0, 0.0, 0.0], // 0
+                [0.0, 1.0, 0.0], // 3 (going clockwise == incorrect)
+                [1.0, 1.0, 0.0], // 2
+                [1.0, 0.0, 0.0], // 1
+                [0.0, 1.0, 1.0], // 7
+                [1.0, 1.0, 1.0], // 6
+                [1.0, 0.0, 1.0], // 5
+                [0.0, 0.0, 1.0], // 4
+            ])
+            .err(),
+            Some("the determinant of the Jacobian is non-positive at the center of the block")
+        );
+    }
+
+    #[test]
     fn new_works() {
         let b2d = Block::new(&[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]]).unwrap();
-        assert_eq!(b2d.attribute, 1);
+        assert_eq!(b2d.marker, 1);
         assert_eq!(b2d.ndim, 2);
         assert_eq!(b2d.ndiv, &[2, 2]);
         assert_eq!(format!("{:?}", b2d.delta_ksi), "[[1.0, 1.0], [1.0, 1.0]]");
@@ -1116,7 +1457,7 @@ mod tests {
             [0.0, 2.0, 2.0],
         ])
         .unwrap();
-        assert_eq!(b3d.attribute, 1);
+        assert_eq!(b3d.marker, 1);
         assert_eq!(b3d.ndim, 3);
         assert_eq!(
             format!("{}", b3d.pad.xxt),
@@ -1163,10 +1504,10 @@ mod tests {
     }
 
     #[test]
-    fn set_attribute_works() {
+    fn set_marker_works() {
         let mut block = Block::new_square(1.0);
-        block.set_attribute(2);
-        assert_eq!(block.attribute, 2);
+        block.set_marker(2);
+        assert_eq!(block.marker, 2);
     }
 
     #[test]
@@ -1180,17 +1521,98 @@ mod tests {
     }
 
     #[test]
+    fn set_div_weights_2d_works() {
+        let mut block = Block::new_cube(1.0);
+        assert_eq!(
+            block.set_div_weights_2d(&[1.0], &[1.0]).err(),
+            Some("this method works only for 2D blocks")
+        );
+        let mut block = Block::new_square(1.0);
+        assert_eq!(
+            block.set_div_weights_2d(&[], &[1.0]).err(),
+            Some("the length of the wx array must be ≥ 1")
+        );
+        assert_eq!(
+            block.set_div_weights_2d(&[1.0], &[]).err(),
+            Some("the length of the wy array must be ≥ 1")
+        );
+        assert_eq!(
+            block.set_div_weights_2d(&[0.99999999], &[1.0]).err(),
+            Some("the sum of wx must be ≥ 1.0")
+        );
+        assert_eq!(
+            block.set_div_weights_2d(&[1.0], &[0.99999999]).err(),
+            Some("the sum of wy must be ≥ 1.0")
+        );
+        block.set_div_weights_2d(&[5.0, 10.0, 20.0, 65.0], &[5.0, 5.0]).unwrap();
+        assert_eq!(block.ndiv.len(), 2); // 2D
+        assert_eq!(block.ndiv[0], 4); // 4 divisions along x
+        assert_eq!(block.ndiv[1], 2); // 2 divisions along y
+        assert_eq!(
+            block.delta_ksi[0],
+            &[
+                2.0 * 5.0 / 100.0, // 2.0 is due to NAT_LENGTH
+                2.0 * 10.0 / 100.0,
+                2.0 * 20.0 / 100.0,
+                2.0 * 65.0 / 100.0
+            ]
+        );
+        assert_eq!(block.delta_ksi[1], &[2.0 * 5.0 / (5.0 + 5.0), 2.0 * 5.0 / (5.0 + 5.0)]);
+    }
+
+    #[test]
+    fn set_div_weights_3d_works() {
+        let mut block = Block::new_square(1.0);
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[1.0], &[1.0]).err(),
+            Some("this method works only for 3D blocks")
+        );
+        let mut block = Block::new_cube(1.0);
+        assert_eq!(
+            block.set_div_weights_3d(&[], &[1.0], &[1.0]).err(),
+            Some("the length of the wx array must be ≥ 1")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[], &[1.0]).err(),
+            Some("the length of the wy array must be ≥ 1")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[1.0], &[]).err(),
+            Some("the length of the wz array must be ≥ 1")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[0.999999995], &[1.0], &[1.0]).err(),
+            Some("the sum of wx must be ≥ 1.0")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[0.999999995], &[1.0]).err(),
+            Some("the sum of wy must be ≥ 1.0")
+        );
+        assert_eq!(
+            block.set_div_weights_3d(&[1.0], &[1.0], &[0.999999995]).err(),
+            Some("the sum of wz must be ≥ 1.0")
+        );
+        block
+            .set_div_weights_3d(&[5.0, 10.0, 25.0], &[5.0, 5.0], &[2.0, 6.0])
+            .unwrap();
+        assert_eq!(block.ndiv.len(), 3); // 3D
+        assert_eq!(block.ndiv[0], 3); // 4 divisions along x
+        assert_eq!(block.ndiv[1], 2); // 2 divisions along y
+        assert_eq!(block.ndiv[2], 2); // 2 divisions along z
+        assert_eq!(block.delta_ksi[0], &[0.25, 0.5, 1.25]);
+        assert_eq!(block.delta_ksi[1], &[1.0, 1.0]);
+        assert_eq!(block.delta_ksi[2], &[0.5, 1.5]);
+    }
+
+    #[test]
     fn set_edge_constraint_works() {
         let mut block = Block::new_square(1.0);
-        let ct = Constraint2D::Circle(-1.0, -1.0, 2.0);
+        let ct = Constraint2d::Circle(-1.0, -1.0, 2.0);
         assert_eq!(format!("{:?}", block.edge_constraints), "{}");
-        assert_eq!(block.has_constraints, false);
         block.set_edge_constraint(0, Some(ct)).unwrap();
         assert_eq!(format!("{:?}", block.edge_constraints), "{0: Circle(-1.0, -1.0, 2.0)}");
-        assert_eq!(block.has_constraints, true);
         block.set_edge_constraint(0, None).unwrap();
         assert_eq!(format!("{:?}", block.edge_constraints), "{}");
-        assert_eq!(block.has_constraints, false);
         assert_eq!(
             block.set_edge_constraint(4, None).err(),
             Some("edge index must be < 4 (nedge)")
@@ -1205,18 +1627,15 @@ mod tests {
     #[test]
     fn set_face_constraint_works() {
         let mut block = Block::new_cube(1.0);
-        let ct = Constraint3D::CylinderZ(-1.0, -1.0, 2.0);
+        let ct = Constraint3d::CylinderZ(-1.0, -1.0, 2.0);
         assert_eq!(format!("{:?}", block.face_constraints), "{}");
-        assert_eq!(block.has_constraints, false);
         block.set_face_constraint(0, Some(ct)).unwrap();
         assert_eq!(
             format!("{:?}", block.face_constraints),
             "{0: CylinderZ(-1.0, -1.0, 2.0)}"
         );
-        assert_eq!(block.has_constraints, true);
         block.set_face_constraint(0, None).unwrap();
         assert_eq!(format!("{:?}", block.face_constraints), "{}");
-        assert_eq!(block.has_constraints, false);
         assert_eq!(
             block.set_face_constraint(6, None).err(),
             Some("face index must be < 6 (nface)")
@@ -1225,6 +1644,42 @@ mod tests {
         assert_eq!(
             block_2d.set_face_constraint(0, None).err(),
             Some("set_face_constraint requires ndim = 3")
+        );
+    }
+
+    #[test]
+    fn set_edge_marker_works() {
+        let mut block = Block::new_square(1.0);
+        assert_eq!(format!("{:?}", block.edge_markers), "{}");
+        block.set_edge_marker(0, -10).unwrap();
+        assert_eq!(format!("{:?}", block.edge_markers), "{0: -10}");
+        assert_eq!(
+            block.set_edge_marker(4, -10).err(),
+            Some("edge index must be < 4 (nedge) in 2D")
+        );
+        let mut block_3d = Block::new_cube(1.0);
+        block_3d.set_edge_marker(0, -100).unwrap();
+        assert_eq!(format!("{:?}", block_3d.edge_markers), "{0: -100}");
+        assert_eq!(
+            block_3d.set_edge_marker(12, -100).err(),
+            Some("edge index must be < 12 (nedge) in 3D")
+        );
+    }
+
+    #[test]
+    fn set_face_marker_works() {
+        let mut block = Block::new_cube(1.0);
+        assert_eq!(format!("{:?}", block.face_markers), "{}");
+        block.set_face_marker(0, -100).unwrap();
+        assert_eq!(format!("{:?}", block.face_markers), "{0: -100}");
+        assert_eq!(
+            block.set_face_marker(6, -10).err(),
+            Some("face index must be < 6 (nface)")
+        );
+        let mut block_2d = Block::new_square(1.0);
+        assert_eq!(
+            block_2d.set_face_marker(0, -10).err(),
+            Some("set_face_marker requires ndim = 3")
         );
     }
 
@@ -1296,19 +1751,21 @@ mod tests {
 
     #[test]
     fn subdivide_2d_qua4_works() {
-        // 7---------------6---------------8
-        // |               |               |
-        // |               |               |
-        // |      [2]      |      [3]      |
-        // |               |               |
-        // |               |               |
-        // 3---------------2---------------5
-        // |               |               |
-        // |               |               |
-        // |      [0]      |      [1]      |
-        // |               |               |
-        // |               |               |
-        // 0---------------1---------------4
+        //            -300            -300
+        //      7---------------6---------------8
+        //      |               |               |
+        //      |               |               |
+        //  -400|      [2]      |      [3]      |-200
+        //      |               |               |
+        //      |               |               |
+        //      3---------------2---------------5
+        //      |               |               |
+        //      |               |               |
+        //  -400|      [0]      |      [1]      |-200
+        //      |               |               |
+        //      |               |               |
+        //      0---------------1---------------4
+        //            -100             -100
         #[rustfmt::skip]
         let mut block = Block::new(&[
             [0.0, 0.0],
@@ -1316,10 +1773,62 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ]).unwrap();
+        block.set_edge_marker(0, -100).unwrap();
+        block.set_edge_marker(1, -200).unwrap();
+        block.set_edge_marker(2, -300).unwrap();
+        block.set_edge_marker(3, -400).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         let correct = Samples::block_2d_four_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         mesh.check_all().unwrap();
+    }
+
+    #[test]
+    fn subdivide_2d_qua4_weighted_works() {
+        // 7---------6---------------------8
+        // |         |                     |
+        // |         |                     |
+        // |         |                     |
+        // |   [2]   |         [3]         |
+        // |         |                     |
+        // |         |                     |
+        // |         |                     |
+        // 3---------2---------------------5
+        // |         |                     |
+        // |   [0]   |         [1]         |
+        // |         |                     |
+        // 0---------1---------------------4
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [0.0, 0.0],
+            [3.0, 0.0],
+            [3.0, 3.0],
+            [0.0, 3.0],
+        ]).unwrap();
+        block.set_div_weights_2d(&[1.0, 2.0], &[1.0, 2.0]).unwrap();
+        let mesh = block.subdivide(GeoKind::Qua4).unwrap();
+        assert_eq!(mesh.points.len(), 9);
+        assert_eq!(mesh.cells.len(), 4);
+        array_approx_eq(&mesh.points[0].coords, &[0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[1].coords, &[1.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[2].coords, &[1.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[3].coords, &[0.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[4].coords, &[3.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[5].coords, &[3.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[6].coords, &[1.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[7].coords, &[0.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[8].coords, &[3.0, 3.0], 1e-15);
+        assert_eq!(&mesh.cells[0].points, &[0, 1, 2, 3]);
+        assert_eq!(&mesh.cells[1].points, &[1, 4, 5, 2]);
+        assert_eq!(&mesh.cells[2].points, &[3, 2, 6, 7]);
+        assert_eq!(&mesh.cells[3].points, &[2, 5, 8, 6]);
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.show_point_ids(true)
+                .set_size(600.0, 600.0)
+                .all(&mesh, "/tmp/gemlab/test_subdivide_2d_qua4_weighted_works.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -1331,6 +1840,10 @@ mod tests {
             [2.0, 2.0],
             [0.0, 2.0],
         ]).unwrap();
+        block.set_edge_marker(0, -100).unwrap();
+        block.set_edge_marker(1, -200).unwrap();
+        block.set_edge_marker(2, -300).unwrap();
+        block.set_edge_marker(3, -400).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         let correct = Samples::block_2d_four_qua4();
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
@@ -1498,16 +2011,18 @@ mod tests {
 
     #[test]
     fn subdivide_3d_works() {
+        //               z
+        //               |         -1                -1
         //              18------------------21------------------25
         //              /.                  /.                  /|
         //             / .                 / .                 / |
-        //            /  .                /  .                /  |
+        //            /  .                /  .              -2/  |
         //           /   .               /   .               /   |
         //          /    .              /    .              /    |
         //        19------------------20------------------24     |
         //        /.     .            /.     .            /|     |
-        //       / .     .           / .     .           / |     |
-        //      /  .     .          /  .     .          /  |     |
+        //       / .     .           / .     .           / |     |-3
+        //      /  .     .          /  .     .        -2/  |     |
         //     /   .     .         /   .     .         /   |     |
         //    /    .     .        /    .     .        /    |     |
         //  22==================23==================26     |     |
@@ -1520,7 +2035,7 @@ mod tests {
         //   |     . /   .       |     . /   .       |     | /   |
         //   |     ./    .       |     ./    .       |     |/    |
         //   |     5 - - - - - - | - - 6 - - - - - - | - -14     |
-        //   |    /.     .       |    /.     .       |    /|     |
+        //   |    /.     .       |    /.     .       |    /|     |-3
         //   |   / .     .       |   / .     .       |   / |     |
         //   |  /  .     .       |  /  .     .       |  /  |     |
         //   | /   .     .       | /   .     .       | /   |     |
@@ -1528,7 +2043,7 @@ mod tests {
         //  10==================11==================17     |     |
         //   |     .     .       |     .     .       |     |     |
         //   |     .     .       |     .     .       |     |     |
-        //   |     .     0 - - - | - - . - - 3 - - - | - - | - -13
+        //   |     .     0 - - - | - - . - - 3 - - - | - - | - -13 ---> y
         //   |     .    /        |     .    /        |     |    /
         //   |     .   /         |     .   /         |     |   /
         //   |     .  /          |     .  /          |     |  /
@@ -1541,6 +2056,8 @@ mod tests {
         //   | /                 | /                 | /
         //   |/                  |/                  |/
         //   8===================9==================16
+        //  /         -4                  -4
+        // x
         #[rustfmt::skip]
         let mut block = Block::new(&[
             [0.0, 0.0, 0.0],
@@ -1552,10 +2069,67 @@ mod tests {
             [2.0, 2.0, 4.0],
             [0.0, 2.0, 4.0],
         ]).unwrap();
+        block.set_edge_marker(1, -4).unwrap();
+        block.set_edge_marker(6, -2).unwrap();
+        block.set_edge_marker(7, -1).unwrap();
+        block.set_edge_marker(11, -3).unwrap();
+        block.set_face_marker(0, -100).unwrap();
+        block.set_face_marker(1, -200).unwrap();
+        block.set_face_marker(2, -300).unwrap();
+        block.set_face_marker(3, -400).unwrap();
+        block.set_face_marker(4, -500).unwrap();
+        block.set_face_marker(5, -600).unwrap();
         let mesh = block.subdivide(GeoKind::Hex8).unwrap();
         let correct = Samples::block_3d_eight_hex8();
+        // println!("{}", mesh);
         assert_eq!(format!("{:?}", mesh), format!("{:?}", correct));
         mesh.check_all().unwrap();
+    }
+
+    #[test]
+    fn subdivide_3d_weighted_works() {
+        #[rustfmt::skip]
+        let mut block = Block::new(&[
+            [0.0, 0.0, 0.0],
+            [3.0, 0.0, 0.0],
+            [3.0, 3.0, 0.0],
+            [0.0, 3.0, 0.0],
+            [0.0, 0.0, 3.0],
+            [3.0, 0.0, 3.0],
+            [3.0, 3.0, 3.0],
+            [0.0, 3.0, 3.0],
+        ]).unwrap();
+        block.set_div_weights_3d(&[1.0, 2.0], &[1.0, 2.0], &[1.0, 2.0]).unwrap();
+        let mesh = block.subdivide(GeoKind::Hex8).unwrap();
+        mesh.check_all().unwrap();
+        assert_eq!(mesh.points.len(), 27);
+        assert_eq!(mesh.cells.len(), 8);
+        array_approx_eq(&mesh.points[0].coords, &[0.0, 0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[1].coords, &[1.0, 0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[2].coords, &[1.0, 1.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[3].coords, &[0.0, 1.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[4].coords, &[0.0, 0.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[5].coords, &[1.0, 0.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[6].coords, &[1.0, 1.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[7].coords, &[0.0, 1.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[8].coords, &[3.0, 0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[9].coords, &[3.0, 1.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[10].coords, &[3.0, 0.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[11].coords, &[3.0, 1.0, 1.0], 1e-14); // <<
+        array_approx_eq(&mesh.points[22].coords, &[3.0, 0.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[23].coords, &[3.0, 1.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[18].coords, &[0.0, 0.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[19].coords, &[1.0, 0.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[20].coords, &[1.0, 1.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[21].coords, &[0.0, 1.0, 3.0], 1e-15);
+        assert_eq!(&mesh.cells[0].points, &[0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(&mesh.cells[1].points, &[1, 8, 9, 2, 5, 10, 11, 6]);
+        assert_eq!(&mesh.cells[7].points, &[6, 11, 17, 14, 20, 23, 26, 24]);
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.show_point_ids(true).set_size(600.0, 600.0);
+            draw.all(&mesh, "/tmp/gemlab/test_subdivide_3d_o2_works.svg").unwrap();
+        }
     }
 
     #[test]
@@ -1764,14 +2338,10 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
-            fig.figure_size = Some((600.0, 600.0));
-            mesh.draw(
-                Some(fig),
-                "/tmp/gemlab/test_block_transform_into_ring_3d.svg",
-                |_, _| {},
-            )
-            .unwrap();
+            let mut draw = Draw::new();
+            draw.set_size(600.0, 600.0);
+            draw.all(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d.svg")
+                .unwrap();
         }
     }
 
@@ -1810,14 +2380,10 @@ mod tests {
             }
         }
         if SAVE_FIGURE {
-            let mut fig = Figure::new();
-            fig.figure_size = Some((600.0, 600.0));
-            mesh.draw(
-                Some(fig),
-                "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg",
-                |_, _| {},
-            )
-            .unwrap();
+            let mut draw = Draw::new();
+            draw.set_size(600.0, 600.0)
+                .all(&mesh, "/tmp/gemlab/test_block_transform_into_ring_3d_hex32.svg")
+                .unwrap();
         }
     }
 
@@ -1831,7 +2397,7 @@ mod tests {
             [0.0, 2.0],
         ]).unwrap();
         block
-            .set_edge_constraint(0, Some(Constraint2D::Circle(0.0, 0.0, 1.0)))
+            .set_edge_constraint(0, Some(Constraint2d::Circle(0.0, 0.0, 1.0)))
             .unwrap();
         assert_eq!(
             block.subdivide(GeoKind::Qua4).err(),
@@ -1852,7 +2418,7 @@ mod tests {
         block.set_ndiv(&[2, 2]).unwrap();
 
         // circle pushes point
-        let ct = Constraint2D::Circle(0.0, 0.0, 1.0);
+        let ct = Constraint2d::Circle(0.0, 0.0, 1.0);
         block.set_edge_constraint(3, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [0, 3, 7] {
@@ -1870,7 +2436,7 @@ mod tests {
         }
 
         // circle pulls point
-        let ct = Constraint2D::Circle(0.0, 0.0, 0.5);
+        let ct = Constraint2d::Circle(0.0, 0.0, 0.5);
         block.set_edge_constraint(3, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [0, 3, 7] {
@@ -1903,7 +2469,7 @@ mod tests {
         let beta = f64::asin(SQRT_2 / (2.0 * r));
         let theta = PI / 4.0 - beta;
         let xc = -r * f64::sin(theta);
-        let ct = Constraint2D::Circle(xc, xc, r);
+        let ct = Constraint2d::Circle(xc, xc, r);
         block.set_edge_constraint(3, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         // side 3
@@ -1944,16 +2510,16 @@ mod tests {
         let cen_minus = -half_l - r * f64::cos(theta);
         let cen_plus = half_l + r * f64::cos(theta);
         block
-            .set_edge_constraint(0, Some(Constraint2D::Circle(0.0, cen_minus, r)))
+            .set_edge_constraint(0, Some(Constraint2d::Circle(0.0, cen_minus, r)))
             .unwrap();
         block
-            .set_edge_constraint(1, Some(Constraint2D::Circle(cen_plus, 0.0, r)))
+            .set_edge_constraint(1, Some(Constraint2d::Circle(cen_plus, 0.0, r)))
             .unwrap();
         block
-            .set_edge_constraint(2, Some(Constraint2D::Circle(0.0, cen_plus, r)))
+            .set_edge_constraint(2, Some(Constraint2d::Circle(0.0, cen_plus, r)))
             .unwrap();
         block
-            .set_edge_constraint(3, Some(Constraint2D::Circle(cen_minus, 0.0, r)))
+            .set_edge_constraint(3, Some(Constraint2d::Circle(cen_minus, 0.0, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         mesh.check_all().unwrap();
@@ -2021,16 +2587,16 @@ mod tests {
         let cen_minus = -half_l - r * f64::cos(theta);
         let cen_plus = half_l + r * f64::cos(theta);
         block
-            .set_face_constraint(0, Some(Constraint3D::CylinderZ(cen_minus, 0.0, r)))
+            .set_face_constraint(0, Some(Constraint3d::CylinderZ(cen_minus, 0.0, r)))
             .unwrap();
         block
-            .set_face_constraint(1, Some(Constraint3D::CylinderZ(cen_plus, 0.0, r)))
+            .set_face_constraint(1, Some(Constraint3d::CylinderZ(cen_plus, 0.0, r)))
             .unwrap();
         block
-            .set_face_constraint(2, Some(Constraint3D::CylinderZ(0.0, cen_minus, r)))
+            .set_face_constraint(2, Some(Constraint3d::CylinderZ(0.0, cen_minus, r)))
             .unwrap();
         block
-            .set_face_constraint(3, Some(Constraint3D::CylinderZ(0.0, cen_plus, r)))
+            .set_face_constraint(3, Some(Constraint3d::CylinderZ(0.0, cen_plus, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
         mesh.check_all().unwrap();
@@ -2161,10 +2727,10 @@ mod tests {
         let cen_minus = -half_l - r * f64::cos(theta);
         let cen_plus = half_l + r * f64::cos(theta);
         block
-            .set_face_constraint(4, Some(Constraint3D::CylinderX(0.0, cen_minus, r)))
+            .set_face_constraint(4, Some(Constraint3d::CylinderX(0.0, cen_minus, r)))
             .unwrap();
         block
-            .set_face_constraint(5, Some(Constraint3D::CylinderY(0.0, cen_plus, r)))
+            .set_face_constraint(5, Some(Constraint3d::CylinderY(0.0, cen_plus, r)))
             .unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
         mesh.check_all().unwrap();
@@ -2244,7 +2810,7 @@ mod tests {
     fn constraints_2d_handles_imprecision() {
         let mut block = Block::new_square(6.0);
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, 6.0);
+        let ct = Constraint2d::Circle(0.0, 0.0, 6.0);
         block.set_edge_constraint(1, Some(ct.clone())).unwrap();
         block.set_edge_constraint(2, Some(ct.clone())).unwrap();
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
@@ -2275,7 +2841,7 @@ mod tests {
         let p = 1.15 * m / SQRT_2;
         let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]]).unwrap();
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        let ct = Constraint2d::Circle(0.0, 0.0, radius);
         block.set_edge_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         for p in [13, 16, 14, 27, 26, 38, 37] {
@@ -2306,7 +2872,7 @@ mod tests {
         let p = 1.15 * m / SQRT_2;
         let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]]).unwrap();
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        let ct = Constraint2d::Circle(0.0, 0.0, radius);
         block.set_edge_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua9).unwrap();
         for p in [15, 18, 16, 32, 31, 46, 45] {
@@ -2337,7 +2903,7 @@ mod tests {
         let p = 1.15 * m / SQRT_2;
         let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]]).unwrap();
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        let ct = Constraint2d::Circle(0.0, 0.0, radius);
         block.set_edge_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua16).unwrap();
         for (a, c, d, b) in [
@@ -2378,7 +2944,7 @@ mod tests {
         let p = 1.15 * m / SQRT_2;
         let mut block = Block::new(&[[m, 0.0], [radius, 0.0], [n, n], [p, p]]).unwrap();
         block.set_ndiv(&[3, 3]).unwrap();
-        let ct = Constraint2D::Circle(0.0, 0.0, radius);
+        let ct = Constraint2d::Circle(0.0, 0.0, radius);
         block.set_edge_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Qua17).unwrap();
         for (a, mid, b) in [(82, 92, 90), (54, 64, 62), (20, 34, 32)] {
@@ -2415,7 +2981,7 @@ mod tests {
             [     p,   p, 1.0],
         ]).unwrap();
         block.set_ndiv(&[2, 2, 1]).unwrap();
-        let ct = Constraint3D::CylinderZ(0.0, 0.0, radius);
+        let ct = Constraint3d::CylinderZ(0.0, 0.0, radius);
         block.set_face_constraint(1, Some(ct)).unwrap();
         let mesh = block.subdivide(GeoKind::Hex20).unwrap();
         for p in [

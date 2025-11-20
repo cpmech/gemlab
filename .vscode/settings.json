@@ -1,10 +1,19 @@
 {
   "cSpell.words": [
+    "argsort",
     "Bbᵐᵢ",
+    "connectivities",
     "conv",
     "cuthill",
     "deque",
+    "drawmsh",
+    "extrap",
     "nfacet",
-    "Stockmeyer"
+    "ngauss",
+    "nmarked",
+    "PINV",
+    "Stockmeyer",
+    "Warshall",
+    "zrange"
   ]
 }

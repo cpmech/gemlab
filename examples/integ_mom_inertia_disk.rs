@@ -1,5 +1,6 @@
-use gemlab::integ::{default_points, points_coords, scalar_field};
+use gemlab::integ::{scalar_field, Gauss};
 use gemlab::prelude::*;
+use gemlab::recovery::get_points_coords;
 use gemlab::StrError;
 use russell_lab::approx_eq;
 use russell_lab::math::PI;
@@ -12,7 +13,7 @@ fn main() -> Result<(), StrError> {
     let mesh_2 = Structured::quarter_disk_2d_b(r / 2.0, r, 3, 3, kind, false)?;
 
     // allocate integration points and Scratchpad
-    let ips = default_points(kind);
+    let gauss = Gauss::new(kind);
     let mut pad = Scratchpad::new(2, kind)?;
 
     // mesh 1: sum contribution of all cells
@@ -22,10 +23,10 @@ fn main() -> Result<(), StrError> {
         mesh_1.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = points_coords(&mut pad, ips)?;
+        let x_ips = get_points_coords(&mut pad, &gauss)?;
 
         // perform the integration over the domain of a single cell
-        second_mom_inertia_mesh_1 += scalar_field(&mut pad, ips, |p| {
+        second_mom_inertia_mesh_1 += scalar_field(&mut pad, &gauss, |p| {
             let y = x_ips[p][1];
             Ok(y * y)
         })?;
@@ -39,10 +40,10 @@ fn main() -> Result<(), StrError> {
         mesh_2.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = points_coords(&mut pad, ips)?;
+        let x_ips = get_points_coords(&mut pad, &gauss)?;
 
         // perform the integration over the domain of a single cell
-        second_mom_inertia_mesh_2 += scalar_field(&mut pad, ips, |p| {
+        second_mom_inertia_mesh_2 += scalar_field(&mut pad, &gauss, |p| {
             let y = x_ips[p][1];
             Ok(y * y)
         })?;
@@ -67,15 +68,8 @@ fn main() -> Result<(), StrError> {
     approx_eq(second_mom_inertia_mesh_2, correct, 1e-5);
 
     // draw meshes
-    let mut fig_1 = Figure::new();
-    fig_1.cell_ids = true;
-    fig_1.point_ids = true;
-    fig_1.figure_size = Some((800.0, 800.0));
-    mesh_1.draw(Some(fig_1), "/tmp/gemlab/example_mom_inertia_disk_1.svg", |_, _| {})?;
-
-    let mut fig_2 = Figure::new();
-    fig_2.cell_ids = true;
-    fig_2.point_ids = true;
-    fig_2.figure_size = Some((800.0, 800.0));
-    mesh_2.draw(Some(fig_2), "/tmp/gemlab/example_mom_inertia_disk_2.svg", |_, _| {})
+    let mut draw = Draw::new();
+    draw.show_cell_ids(true).show_point_ids(true).set_size(800.0, 800.0);
+    draw.all(&mesh_1, "/tmp/gemlab/example_mom_inertia_disk_1.svg")?;
+    draw.all(&mesh_2, "/tmp/gemlab/example_mom_inertia_disk_2.svg")
 }

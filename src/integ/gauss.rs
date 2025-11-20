@@ -1,179 +1,270 @@
 use crate::shapes::{GeoClass, GeoKind};
 use crate::StrError;
+use russell_lab::Matrix;
 
-/// Defines an alias for integration points data (coordinates and weights)
+/// Holds a set of integration points ("Gauss") associated with a GeoClass
 ///
-/// Each integration point (IP) is defined by 3 reference
-/// coordinates (r, s, t) and the weight (w).
+/// # Reference
 ///
-/// The 1D and 2D geometries have `s` and/or `t` equal to zero as appropriate.
-///
-/// The data structure is a 2D array such that [[f64; 4]; NIP]
-/// where `NIP` is the number of integration points in a particular set.
-/// Therein, `4` corresponds to (r, s, t) and the weight (w).
-pub type IntegPointData = &'static [[f64; 4]];
+/// 1. Durand R and Farias MM (2014) A local extrapolation method for finite elements,
+///    Advances in Engineering Software, 67:1-9 <https://doi.org/10.1016/j.advengsoft.2013.07.002>
+pub struct Gauss {
+    /// Holds the geometry class
+    pub class: GeoClass,
 
-/// Returns a default set of integration points and weights
-///
-/// **Note:** The default set is chosen based on the number of nodes
-/// and the "probable" use case in finite element analyses.
-///
-/// # Examples
-///
-/// ```
-/// use gemlab::integ;
-/// use gemlab::shapes::GeoKind;
-///
-/// let ips = integ::default_points(GeoKind::Tet4);
-/// assert_eq!(ips.len(), 4);
-/// ```
-pub fn default_points(kind: GeoKind) -> IntegPointData {
-    match kind {
-        // Lin
-        GeoKind::Lin2 => &IP_LIN_LEGENDRE_2,
-        GeoKind::Lin3 => &IP_LIN_LEGENDRE_3,
-        GeoKind::Lin4 => &IP_LIN_LEGENDRE_4,
-        GeoKind::Lin5 => &IP_LIN_LEGENDRE_5,
-        // Tri
-        GeoKind::Tri3 => &IP_TRI_INTERNAL_3,
-        GeoKind::Tri6 => &IP_TRI_FELIPPA_7,
-        GeoKind::Tri10 => &IP_TRI_INTERNAL_12,
-        GeoKind::Tri15 => &IP_TRI_INTERNAL_16,
-        // Qua
-        GeoKind::Qua4 => &IP_QUA_LEGENDRE_4,
-        GeoKind::Qua8 => &IP_QUA_LEGENDRE_9,
-        GeoKind::Qua9 => &IP_QUA_LEGENDRE_9,
-        GeoKind::Qua12 => &IP_QUA_LEGENDRE_16,
-        GeoKind::Qua16 => &IP_QUA_LEGENDRE_16,
-        GeoKind::Qua17 => &IP_QUA_LEGENDRE_16,
-        // Tet
-        GeoKind::Tet4 => &IP_TET_INTERNAL_4,
-        GeoKind::Tet10 => &IP_TET_FELIPPA_14,
-        GeoKind::Tet20 => &IP_TET_FELIPPA_24,
-        // Hex
-        GeoKind::Hex8 => &IP_HEX_LEGENDRE_8,
-        GeoKind::Hex20 => &IP_HEX_LEGENDRE_27,
-        GeoKind::Hex32 => &IP_HEX_LEGENDRE_64,
-    }
+    /// Holds the reference (natural) coordinates and weights in the array
+    /// [[f64; 4]; NIP], where `NIP` is the number of integration points and
+    /// `4` corresponds to the `r`, `s`, `t` coordinates and the weight `w`.
+    ///
+    /// In 1D, `r` and `t` are equal to zero. In 2D, `t` is equal to zero.
+    ///
+    /// The 1D and 2D geometries have `s` and/or `t` equal to zero, as appropriate.
+    data: &'static [[f64; 4]],
+
+    /// Holds the augmented natural coordinates matrix (for the extrapolation algorithm)
+    ///
+    /// See paragraph after Eq (30) of Reference # 1.
+    pub ksi_hat: Option<Matrix>,
+
+    /// Holds the pseudo-inverse matrix of the ksi_hat matrix (for the extrapolation algorithm)
+    ///
+    /// See paragraph after Eq (30) of Reference # 1.
+    pub ksi_hat_inv: Option<Matrix>,
 }
 
-/// Selects integration points constants (coordinates and weights)
-///
-/// # Input
-///
-/// * `class` -- The geometry class
-/// * `n_integ_point` -- Number of integration points desired (see Options below)
-///
-/// # Options
-///
-/// `n_integ_point` for **Lin** class:
-///
-/// * `1` -- Conventional Legendre integration points and weights
-/// * `2` -- Conventional Legendre integration points and weights
-/// * `3` -- Conventional Legendre integration points and weights
-/// * `4` -- Conventional Legendre integration points and weights
-/// * `5` -- Conventional Legendre integration points and weights
-///
-/// `n_integ_point` for **Tri** class:
-///
-/// * `1` -- Internal integration points and weights
-/// * `3` -- Internal integration points and weights
-/// * `4` -- Internal integration points and weights
-/// * `6` -- Internal integration points and weights (based on Felippa's code)
-/// * `7` -- Internal integration points and weights (based on Felippa's code)
-/// * `12` -- Internal integration points and weights
-/// * `16` -- Internal integration points and weights
-///
-/// `n_integ_point` for **Qua** class:
-///
-/// * `1` -- Conventional Legendre integration points and weights
-/// * `4` -- Conventional Legendre integration points and weights
-/// * `9` -- Conventional Legendre integration points and weights
-/// * `16` -- Conventional Legendre integration points and weights
-///
-/// `n_integ_point` for **Tet** class:
-///
-/// * `1` -- Internal integration points and weights, degree 1
-/// * `4` -- Internal integration points and weights, degree 2 (based on Felippa's code)
-/// * `5` -- Internal integration points and weights, degree 3 (with negative weight)
-/// * `8` -- Felippa's ips and weights, degree 3 (based on Felippa's code)
-/// * `14` -- Felippa's ips and weights, degree 4 (based on Felippa's code)
-/// * `15` -- Felippa's ips and weights, degree 5 (based on Felippa's code)
-/// * `24` -- Felippa's ips and weights, degree 6 (based on Felippa's code)
-///
-/// `n_integ_point` for **Hex** class:
-///
-/// * `6` -- Iron's integration points and weights
-/// * `8` -- Conventional Legendre integration points and weights, degree 3
-/// * `14` -- Iron's integration points and weights
-/// * `27` -- Conventional Legendre integration points and weights, degree 5
-/// * `64` -- Conventional Legendre integration points and weights, degree 7
-///
-/// # Examples
-///
-/// ```
-/// use gemlab::integ;
-/// use gemlab::shapes::GeoClass;
-/// use gemlab::StrError;
-///
-/// fn main() -> Result<(), StrError> {
-///     let ips = integ::points(GeoClass::Tet, 1)?;
-///     assert_eq!(ips, [[0.25, 0.25, 0.25, 1.0/6.0]]);
-///     Ok(())
-/// }
-/// ```
-pub fn points(class: GeoClass, n_integ_point: usize) -> Result<IntegPointData, StrError> {
-    let ips: IntegPointData = match class {
-        // Lin
-        GeoClass::Lin => match n_integ_point {
-            1 => &IP_LIN_LEGENDRE_1,
-            2 => &IP_LIN_LEGENDRE_2,
-            3 => &IP_LIN_LEGENDRE_3,
-            4 => &IP_LIN_LEGENDRE_4,
-            5 => &IP_LIN_LEGENDRE_5,
-            _ => return Err("desired number of integration points is not available for Lin class"),
-        },
-        // Tri
-        GeoClass::Tri => match n_integ_point {
-            1 => &IP_TRI_INTERNAL_1,
-            3 => &IP_TRI_INTERNAL_3,
-            4 => &IP_TRI_INTERNAL_4,
-            6 => &IP_TRI_FELIPPA_6,
-            7 => &IP_TRI_FELIPPA_7,
-            12 => &IP_TRI_INTERNAL_12,
-            16 => &IP_TRI_INTERNAL_16,
-            _ => return Err("desired number of integration points is not available for Tri class"),
-        },
-        // Qua
-        GeoClass::Qua => match n_integ_point {
-            1 => &IP_QUA_LEGENDRE_1,
-            4 => &IP_QUA_LEGENDRE_4,
-            9 => &IP_QUA_LEGENDRE_9,
-            16 => &IP_QUA_LEGENDRE_16,
-            _ => return Err("desired number of integration points is not available for Qua class"),
-        },
-        // Tet
-        GeoClass::Tet => match n_integ_point {
-            1 => &IP_TET_INTERNAL_1,
-            4 => &IP_TET_INTERNAL_4,
-            5 => &IP_TET_INTERNAL_5,
-            8 => &IP_TET_FELIPPA_8,
-            14 => &IP_TET_FELIPPA_14,
-            15 => &IP_TET_FELIPPA_15,
-            24 => &IP_TET_FELIPPA_24,
-            _ => return Err("desired number of integration points is not available for Tet class"),
-        },
-        // Hex
-        GeoClass::Hex => match n_integ_point {
-            6 => &IP_HEX_IRONS_6,
-            8 => &IP_HEX_LEGENDRE_8,
-            14 => &IP_HEX_IRONS_14,
-            27 => &IP_HEX_LEGENDRE_27,
-            64 => &IP_HEX_LEGENDRE_64,
-            _ => return Err("desired number of integration points is not available for Hex class"),
-        },
-    };
-    Ok(ips)
+impl Gauss {
+    /// Allocates a new instance with default number of integration points
+    ///
+    /// **Note:** The default set is decided based on the number of nodes in GeoKind
+    /// and the possible use case in finite element analyses.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::integ::Gauss;
+    /// use gemlab::shapes::GeoKind;
+    ///
+    /// let gauss = Gauss::new(GeoKind::Tet4);
+    /// assert_eq!(gauss.npoint(), 4);
+    /// ```
+    pub fn new(kind: GeoKind) -> Self {
+        let data: &'static [[f64; 4]] = match kind {
+            // Lin
+            GeoKind::Lin2 => &IP_LIN_LEGENDRE_2,
+            GeoKind::Lin3 => &IP_LIN_LEGENDRE_3,
+            GeoKind::Lin4 => &IP_LIN_LEGENDRE_4,
+            GeoKind::Lin5 => &IP_LIN_LEGENDRE_5,
+            // Tri
+            GeoKind::Tri3 => &IP_TRI_INTERNAL_3,
+            GeoKind::Tri6 => &IP_TRI_FELIPPA_7,
+            GeoKind::Tri10 => &IP_TRI_INTERNAL_12,
+            GeoKind::Tri15 => &IP_TRI_INTERNAL_16,
+            // Qua
+            GeoKind::Qua4 => &IP_QUA_LEGENDRE_4,
+            GeoKind::Qua8 => &IP_QUA_LEGENDRE_9,
+            GeoKind::Qua9 => &IP_QUA_LEGENDRE_9,
+            GeoKind::Qua12 => &IP_QUA_LEGENDRE_16,
+            GeoKind::Qua16 => &IP_QUA_LEGENDRE_16,
+            GeoKind::Qua17 => &IP_QUA_LEGENDRE_16,
+            // Tet
+            GeoKind::Tet4 => &IP_TET_INTERNAL_4,
+            GeoKind::Tet10 => &IP_TET_FELIPPA_14,
+            GeoKind::Tet20 => &IP_TET_FELIPPA_24,
+            // Hex
+            GeoKind::Hex8 => &IP_HEX_LEGENDRE_8,
+            GeoKind::Hex20 => &IP_HEX_LEGENDRE_27,
+            GeoKind::Hex32 => &IP_HEX_LEGENDRE_64,
+        };
+        Gauss {
+            class: kind.class(),
+            data,
+            ksi_hat: None,
+            ksi_hat_inv: None,
+        }
+    }
+
+    /// Allocates a new instance given the GeoClass and number of integration points
+    ///
+    /// # Input
+    ///
+    /// * `class` -- The geometry class
+    /// * `ngauss` -- Number of integration points (see Options below)
+    ///
+    /// # Options
+    ///
+    /// `ngauss` for **Lin** class:
+    ///
+    /// * `1` -- Conventional Legendre integration points and weights
+    /// * `2` -- Conventional Legendre integration points and weights
+    /// * `3` -- Conventional Legendre integration points and weights
+    /// * `4` -- Conventional Legendre integration points and weights
+    /// * `5` -- Conventional Legendre integration points and weights
+    ///
+    /// `ngauss` for **Tri** class:
+    ///
+    /// * `1` -- Internal integration points and weights
+    /// * `3` -- Internal integration points and weights
+    /// * `4` -- Internal integration points and weights
+    /// * `6` -- Internal integration points and weights (based on Felippa's code)
+    /// * `7` -- Internal integration points and weights (based on Felippa's code)
+    /// * `12` -- Internal integration points and weights
+    /// * `16` -- Internal integration points and weights
+    ///
+    /// `ngauss` for **Qua** class:
+    ///
+    /// * `1` -- Conventional Legendre integration points and weights
+    /// * `4` -- Conventional Legendre integration points and weights
+    /// * `9` -- Conventional Legendre integration points and weights
+    /// * `16` -- Conventional Legendre integration points and weights
+    ///
+    /// `ngauss` for **Tet** class:
+    ///
+    /// * `1` -- Internal integration points and weights, degree 1
+    /// * `4` -- Internal integration points and weights, degree 2 (based on Felippa's code)
+    /// * `5` -- Internal integration points and weights, degree 3 (with negative weight)
+    /// * `8` -- Felippa's ips and weights, degree 3 (based on Felippa's code)
+    /// * `14` -- Felippa's ips and weights, degree 4 (based on Felippa's code)
+    /// * `15` -- Felippa's ips and weights, degree 5 (based on Felippa's code)
+    /// * `24` -- Felippa's ips and weights, degree 6 (based on Felippa's code)
+    ///
+    /// `ngauss` for **Hex** class:
+    ///
+    /// * `6` -- Iron's integration points and weights
+    /// * `8` -- Conventional Legendre integration points and weights, degree 3
+    /// * `14` -- Iron's integration points and weights
+    /// * `27` -- Conventional Legendre integration points and weights, degree 5
+    /// * `64` -- Conventional Legendre integration points and weights, degree 7
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::integ::Gauss;
+    /// use gemlab::shapes::GeoClass;
+    /// use gemlab::StrError;
+    ///
+    /// fn main() -> Result<(), StrError> {
+    ///     let gauss = Gauss::new_sized(GeoClass::Tet, 1)?;
+    ///     assert_eq!(gauss.coords(0), &[0.25, 0.25, 0.25, 1.0/6.0]);
+    ///     assert_eq!(gauss.weight(0), 1.0/6.0);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn new_sized(class: GeoClass, ngauss: usize) -> Result<Self, StrError> {
+        let data: &'static [[f64; 4]] = match class {
+            // Lin
+            GeoClass::Lin => match ngauss {
+                1 => &IP_LIN_LEGENDRE_1,
+                2 => &IP_LIN_LEGENDRE_2,
+                3 => &IP_LIN_LEGENDRE_3,
+                4 => &IP_LIN_LEGENDRE_4,
+                5 => &IP_LIN_LEGENDRE_5,
+                _ => return Err("requested number of integration points is not available for Lin class"),
+            },
+            // Tri
+            GeoClass::Tri => match ngauss {
+                1 => &IP_TRI_INTERNAL_1,
+                3 => &IP_TRI_INTERNAL_3,
+                4 => &IP_TRI_INTERNAL_4,
+                6 => &IP_TRI_FELIPPA_6,
+                7 => &IP_TRI_FELIPPA_7,
+                12 => &IP_TRI_INTERNAL_12,
+                16 => &IP_TRI_INTERNAL_16,
+                _ => return Err("requested number of integration points is not available for Tri class"),
+            },
+            // Qua
+            GeoClass::Qua => match ngauss {
+                1 => &IP_QUA_LEGENDRE_1,
+                4 => &IP_QUA_LEGENDRE_4,
+                9 => &IP_QUA_LEGENDRE_9,
+                16 => &IP_QUA_LEGENDRE_16,
+                _ => return Err("requested number of integration points is not available for Qua class"),
+            },
+            // Tet
+            GeoClass::Tet => match ngauss {
+                1 => &IP_TET_INTERNAL_1,
+                4 => &IP_TET_INTERNAL_4,
+                5 => &IP_TET_INTERNAL_5,
+                8 => &IP_TET_FELIPPA_8,
+                14 => &IP_TET_FELIPPA_14,
+                15 => &IP_TET_FELIPPA_15,
+                24 => &IP_TET_FELIPPA_24,
+                _ => return Err("requested number of integration points is not available for Tet class"),
+            },
+            // Hex
+            GeoClass::Hex => match ngauss {
+                6 => &IP_HEX_IRONS_6,
+                8 => &IP_HEX_LEGENDRE_8,
+                14 => &IP_HEX_IRONS_14,
+                27 => &IP_HEX_LEGENDRE_27,
+                64 => &IP_HEX_LEGENDRE_64,
+                _ => return Err("requested number of integration points is not available for Hex class"),
+            },
+        };
+        Ok(Gauss {
+            class,
+            data,
+            ksi_hat: None,
+            ksi_hat_inv: None,
+        })
+    }
+
+    /// Allocates a new instance using either default or specified number of points
+    ///
+    /// # Input
+    ///
+    /// * `ngauss` -- Number of integration points (see options in [Gauss::new_sized()]).
+    ///   If None, the default number is selected as described in [Gauss::new()]
+    pub fn new_or_sized(kind: GeoKind, ngauss: Option<usize>) -> Result<Self, StrError> {
+        match ngauss {
+            Some(n) => Gauss::new_sized(kind.class(), n),
+            None => Ok(Gauss::new(kind)),
+        }
+    }
+
+    /// Returns the number of integration points
+    #[inline]
+    pub fn npoint(&self) -> usize {
+        self.data.len()
+    }
+
+    /// Returns an access to the natural (reference) coordinates
+    ///
+    /// # Input
+    ///
+    /// * `p` -- the index of the integration point; must be in `0 ≤ p < npoint`
+    ///   Otherwise a panic will occur.
+    ///
+    /// # Output
+    ///
+    /// * `coords` -- the `r`, `s`, `t` coordinates (followed by the weight---that can be ignored)
+    ///   Note that, in 1D, `r` and `t` are equal to zero, and in 2D, `t` is equal to zero.
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if `p` is not in `0 ≤ p < npoint`
+    #[inline]
+    pub fn coords(&self, p: usize) -> &[f64; 4] {
+        &self.data[p]
+    }
+
+    /// Returns the weight
+    ///
+    /// # Input
+    ///
+    /// * `p` -- the index of the integration point; must be in `0 ≤ p < npoint`
+    ///   Otherwise a panic will occur.
+    ///
+    /// # Output
+    ///
+    /// * `weight` -- the weight associated with the integration point
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if `p` is not in `0 ≤ p < npoint`
+    #[inline]
+    pub fn weight(&self, p: usize) -> f64 {
+        self.data[p][3]
+    }
 }
 
 //
@@ -186,20 +277,20 @@ pub fn points(class: GeoClass, n_integ_point: usize) -> Result<IntegPointData, S
 
 /// Conventional Legendre integration points and weights
 #[rustfmt::skip]
-pub const IP_LIN_LEGENDRE_1: [[f64; 4]; 1] = [
+const IP_LIN_LEGENDRE_1: [[f64; 4]; 1] = [
     [0.0, 0.0, 0.0, 2.0]
 ];
 
 /// Conventional Legendre integration points and weights
 #[rustfmt::skip]
-pub const IP_LIN_LEGENDRE_2: [[f64; 4]; 2] = [
+const IP_LIN_LEGENDRE_2: [[f64; 4]; 2] = [
     [-0.5773502691896257, 0.0, 0.0, 1.0],
     [ 0.5773502691896257, 0.0, 0.0, 1.0],
 ];
 
 /// Conventional Legendre integration points and weights
 #[rustfmt::skip]
-pub const IP_LIN_LEGENDRE_3: [[f64; 4]; 3] = [
+const IP_LIN_LEGENDRE_3: [[f64; 4]; 3] = [
     [-0.7745966692414834, 0.0, 0.0, 0.5555555555555556],
     [ 0.0000000000000000, 0.0, 0.0, 0.8888888888888888],
     [ 0.7745966692414834, 0.0, 0.0, 0.5555555555555556],
@@ -207,7 +298,7 @@ pub const IP_LIN_LEGENDRE_3: [[f64; 4]; 3] = [
 
 /// Conventional Legendre integration points and weights
 #[rustfmt::skip]
-pub const IP_LIN_LEGENDRE_4: [[f64; 4]; 4] = [
+const IP_LIN_LEGENDRE_4: [[f64; 4]; 4] = [
     [-0.8611363115940526, 0.0, 0.0, 0.3478548451374538],
     [-0.3399810435848562, 0.0, 0.0, 0.6521451548625462],
     [ 0.3399810435848562, 0.0, 0.0, 0.6521451548625462],
@@ -216,7 +307,7 @@ pub const IP_LIN_LEGENDRE_4: [[f64; 4]; 4] = [
 
 /// Conventional Legendre integration points and weights
 #[rustfmt::skip]
-pub const IP_LIN_LEGENDRE_5: [[f64; 4]; 5] = [
+const IP_LIN_LEGENDRE_5: [[f64; 4]; 5] = [
     [-0.9061798459386640, 0.0, 0.0, 0.2369268850561891],
     [-0.5384693101056831, 0.0, 0.0, 0.4786286704993665],
     [ 0.0000000000000000, 0.0, 0.0, 0.5688888888888889],
@@ -230,13 +321,13 @@ pub const IP_LIN_LEGENDRE_5: [[f64; 4]; 5] = [
 
 /// Internal integration points and weights
 #[rustfmt::skip]
-pub const IP_TRI_INTERNAL_1: [[f64; 4]; 1] = [
+const IP_TRI_INTERNAL_1: [[f64; 4]; 1] = [
     [1.0 / 3.0, 1.0 / 3.0, 0.0, 1.0 / 2.0],
 ];
 
 /// Internal integration points and weights
 #[rustfmt::skip]
-pub const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
+const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
     [1.0 / 6.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
     [2.0 / 3.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
     [1.0 / 6.0, 2.0 / 3.0, 0.0, 1.0 / 6.0],
@@ -244,7 +335,7 @@ pub const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
 
 /// Internal integration points and weights
 #[rustfmt::skip]
-pub const IP_TRI_INTERNAL_4: [[f64; 4]; 4] = [
+const IP_TRI_INTERNAL_4: [[f64; 4]; 4] = [
     [1.0 / 3.0, 1.0 / 3.0, 0.0, -27.0 / 96.0],
     [1.0 / 5.0, 1.0 / 5.0, 0.0,  25.0 / 96.0],
     [3.0 / 5.0, 1.0 / 5.0, 0.0,  25.0 / 96.0],
@@ -253,7 +344,7 @@ pub const IP_TRI_INTERNAL_4: [[f64; 4]; 4] = [
 
 /// Internal integration points and weights, 6 points
 #[rustfmt::skip]
-pub const IP_TRI_FELIPPA_6: [[f64; 4]; 6] = [
+const IP_TRI_FELIPPA_6: [[f64; 4]; 6] = [
     [0.44594849091596488632,  0.44594849091596488632,  0.0, 0.11169079483900573285 ],
     [0.10810301816807022736,  0.44594849091596488632,  0.0, 0.11169079483900573285 ],
     [0.44594849091596488632,  0.10810301816807022736,  0.0, 0.11169079483900573285 ],
@@ -264,7 +355,7 @@ pub const IP_TRI_FELIPPA_6: [[f64; 4]; 6] = [
 
 /// Internal integration points and weights, 7 points
 #[rustfmt::skip]
-pub const IP_TRI_FELIPPA_7: [[f64; 4]; 7] = [
+const IP_TRI_FELIPPA_7: [[f64; 4]; 7] = [
     [0.10128650732345633880,  0.10128650732345633880,  0.0, 0.062969590272413576298],
     [0.79742698535308732240,  0.10128650732345633880,  0.0, 0.062969590272413576298],
     [0.10128650732345633880,  0.79742698535308732240,  0.0, 0.062969590272413576298],
@@ -276,7 +367,7 @@ pub const IP_TRI_FELIPPA_7: [[f64; 4]; 7] = [
 
 /// Internal integration points and weights
 #[rustfmt::skip]
-pub const IP_TRI_INTERNAL_12: [[f64; 4]; 12] = [
+const IP_TRI_INTERNAL_12: [[f64; 4]; 12] = [
     [0.873821971016996, 0.063089014491502, 0.0, 0.0254224531851035],
     [0.063089014491502, 0.873821971016996, 0.0, 0.0254224531851035],
     [0.063089014491502, 0.063089014491502, 0.0, 0.0254224531851035],
@@ -293,7 +384,7 @@ pub const IP_TRI_INTERNAL_12: [[f64; 4]; 12] = [
 
 /// Internal integration points and weights
 #[rustfmt::skip]
-pub const IP_TRI_INTERNAL_16: [[f64; 4]; 16] = [
+const IP_TRI_INTERNAL_16: [[f64; 4]; 16] = [
     [3.33333333333333e-01, 3.33333333333333e-01, 0.0, 7.21578038388935e-02],
     [8.14148234145540e-02, 4.59292588292723e-01, 0.0, 4.75458171336425e-02],
     [4.59292588292723e-01, 8.14148234145540e-02, 0.0, 4.75458171336425e-02],
@@ -318,13 +409,13 @@ pub const IP_TRI_INTERNAL_16: [[f64; 4]; 16] = [
 
 /// Conventional Legendre integration points and weights
 #[rustfmt::skip]
-pub const IP_QUA_LEGENDRE_1: [[f64; 4]; 1] = [
+const IP_QUA_LEGENDRE_1: [[f64; 4]; 1] = [
     [0.0, 0.0, 0.0, 4.0],
 ];
 
 /// Conventional Legendre integration points and weights
 #[rustfmt::skip]
-pub const IP_QUA_LEGENDRE_4: [[f64; 4]; 4] = [
+const IP_QUA_LEGENDRE_4: [[f64; 4]; 4] = [
     [-0.5773502691896257, -0.5773502691896257, 0.0, 1.0],
     [ 0.5773502691896257, -0.5773502691896257, 0.0, 1.0],
     [-0.5773502691896257,  0.5773502691896257, 0.0, 1.0],
@@ -333,7 +424,7 @@ pub const IP_QUA_LEGENDRE_4: [[f64; 4]; 4] = [
 
 /// Conventional Legendre integration points and weights
 #[rustfmt::skip]
-pub const IP_QUA_LEGENDRE_9: [[f64; 4]; 9] = [
+const IP_QUA_LEGENDRE_9: [[f64; 4]; 9] = [
     [-0.7745966692414834, -0.7745966692414834, 0.0, 25.0 / 81.0],
     [ 0.0000000000000000, -0.7745966692414834, 0.0, 40.0 / 81.0],
     [ 0.7745966692414834, -0.7745966692414834, 0.0, 25.0 / 81.0],
@@ -347,7 +438,7 @@ pub const IP_QUA_LEGENDRE_9: [[f64; 4]; 9] = [
 
 /// Conventional Legendre integration points and weights
 #[rustfmt::skip]
-pub const IP_QUA_LEGENDRE_16: [[f64; 4]; 16] = [
+const IP_QUA_LEGENDRE_16: [[f64; 4]; 16] = [
     [-0.8611363115940526, -0.8611363115940526, 0.0, 0.1210029932856019],
     [-0.3399810435848563, -0.8611363115940526, 0.0, 0.2268518518518519],
     [ 0.3399810435848563, -0.8611363115940526, 0.0, 0.2268518518518519],
@@ -375,7 +466,7 @@ pub const IP_QUA_LEGENDRE_16: [[f64; 4]; 16] = [
 /// Reference: Wriggers (2008), page 12, table 4.5,
 /// Nonlinear Finite Element Methods, Springer.
 #[rustfmt::skip]
-pub const IP_TET_INTERNAL_1: [[f64; 4]; 1] = [
+const IP_TET_INTERNAL_1: [[f64; 4]; 1] = [
     [1.0 / 4.0, 1.0 / 4.0, 1.0 / 4.0, 1.0 / 6.0],
 ];
 
@@ -384,7 +475,7 @@ pub const IP_TET_INTERNAL_1: [[f64; 4]; 1] = [
 /// References: Felippa Advanced FEM, page 17-21, Table 17.1. See also Felippa (2004) A compendium of
 /// FEM integration formulas for symbolic work Engineering Computations, 21, 7/8, pg 867
 #[rustfmt::skip]
-pub const IP_TET_INTERNAL_4: [[f64; 4]; 4] = [
+const IP_TET_INTERNAL_4: [[f64; 4]; 4] = [
     [0.13819660112501051518, 0.13819660112501051518, 0.13819660112501051518, 0.041666666666666666667],
     [0.58541019662496845446, 0.13819660112501051518, 0.13819660112501051518, 0.041666666666666666667], 
     [0.13819660112501051518, 0.58541019662496845446, 0.13819660112501051518, 0.041666666666666666667],
@@ -396,7 +487,7 @@ pub const IP_TET_INTERNAL_4: [[f64; 4]; 4] = [
 /// Reference: Wriggers (2008), page 12, table 4.5,
 /// Nonlinear Finite Element Methods, Springer.
 #[rustfmt::skip]
-pub const IP_TET_INTERNAL_5: [[f64; 4]; 5] = [
+const IP_TET_INTERNAL_5: [[f64; 4]; 5] = [
     [1.0 / 4.0, 1.0 / 4.0, 1.0 / 4.0, -2.0 / 15.0],
     [1.0 / 6.0, 1.0 / 6.0, 1.0 / 6.0,  3.0 / 40.0],
     [1.0 / 6.0, 1.0 / 6.0, 1.0 / 2.0,  3.0 / 40.0],
@@ -409,7 +500,7 @@ pub const IP_TET_INTERNAL_5: [[f64; 4]; 5] = [
 /// References: Felippa Advanced FEM, page 17-21, Table 17.1. See also Felippa (2004) A compendium of
 /// FEM integration formulas for symbolic work Engineering Computations, 21, 7/8, pg 867
 #[rustfmt::skip]
-pub const IP_TET_FELIPPA_8: [[f64; 4]; 8] = [
+const IP_TET_FELIPPA_8: [[f64; 4]; 8] = [
     [0.32805469671142664734,  0.32805469671142664734,  0.32805469671142664734,  0.023087994418643690387], 
     [0.015835909865720057993, 0.32805469671142664734,  0.32805469671142664734,  0.023087994418643690387], 
     [0.32805469671142664734,  0.015835909865720057993, 0.32805469671142664734,  0.023087994418643690387], 
@@ -425,7 +516,7 @@ pub const IP_TET_FELIPPA_8: [[f64; 4]; 8] = [
 /// References: Felippa Advanced FEM, page 17-21, Table 17.1. See also Felippa (2004) A compendium of
 /// FEM integration formulas for symbolic work Engineering Computations, 21, 7/8, pg 867
 #[rustfmt::skip]
-pub const IP_TET_FELIPPA_14: [[f64; 4]; 14] = [
+const IP_TET_FELIPPA_14: [[f64; 4]; 14] = [
     [0.092735250310891226402, 0.092735250310891226402, 0.092735250310891226402, 0.012248840519393658257 ], 
     [0.72179424906732632079,  0.092735250310891226402, 0.092735250310891226402, 0.012248840519393658257 ], 
     [0.092735250310891226402, 0.72179424906732632079,  0.092735250310891226402, 0.012248840519393658257 ], 
@@ -447,7 +538,7 @@ pub const IP_TET_FELIPPA_14: [[f64; 4]; 14] = [
 /// References: Felippa Advanced FEM, page 17-21, Table 17.1. See also Felippa (2004) A compendium of
 /// FEM integration formulas for symbolic work Engineering Computations, 21, 7/8, pg 867
 #[rustfmt::skip]
-pub const IP_TET_FELIPPA_15: [[f64; 4]; 15] = [
+const IP_TET_FELIPPA_15: [[f64; 4]; 15] = [
     [0.091971078052723032789, 0.091971078052723032789, 0.091971078052723032789, 0.011989513963169770002 ], 
     [0.72408676584183090163,  0.091971078052723032789, 0.091971078052723032789, 0.011989513963169770002 ], 
     [0.091971078052723032789, 0.72408676584183090163,  0.091971078052723032789, 0.011989513963169770002 ], 
@@ -470,7 +561,7 @@ pub const IP_TET_FELIPPA_15: [[f64; 4]; 15] = [
 /// References: Felippa Advanced FEM, page 17-21, Table 17.1. See also Felippa (2004) A compendium of
 /// FEM integration formulas for symbolic work Engineering Computations, 21, 7/8, pg 867
 #[rustfmt::skip]
-pub const IP_TET_FELIPPA_24: [[f64; 4]; 24] = [
+const IP_TET_FELIPPA_24: [[f64; 4]; 24] = [
     [0.21460287125915202929,  0.21460287125915202929,  0.21460287125915202929,  0.0066537917096945820166], 
     [0.35619138622254391213,  0.21460287125915202929,  0.21460287125915202929,  0.0066537917096945820166], 
     [0.21460287125915202929,  0.35619138622254391213,  0.21460287125915202929,  0.0066537917096945820166], 
@@ -503,7 +594,7 @@ pub const IP_TET_FELIPPA_24: [[f64; 4]; 24] = [
 
 /// Iron's integration points and weights
 #[rustfmt::skip]
-pub const IP_HEX_IRONS_6: [[f64; 4]; 6] = [
+const IP_HEX_IRONS_6: [[f64; 4]; 6] = [
     [-1.0,  0.0,  0.0, 4.0 / 3.0],
     [ 1.0,  0.0,  0.0, 4.0 / 3.0],
     [ 0.0, -1.0,  0.0, 4.0 / 3.0],
@@ -514,7 +605,7 @@ pub const IP_HEX_IRONS_6: [[f64; 4]; 6] = [
 
 /// Conventional Legendre integration points and weights, 8 points, degree 3
 #[rustfmt::skip]
-pub const IP_HEX_LEGENDRE_8: [[f64; 4]; 8] = [
+const IP_HEX_LEGENDRE_8: [[f64; 4]; 8] = [
     [-0.5773502691896257, -0.5773502691896257, -0.5773502691896257, 1.0],
     [ 0.5773502691896257, -0.5773502691896257, -0.5773502691896257, 1.0],
     [-0.5773502691896257,  0.5773502691896257, -0.5773502691896257, 1.0],
@@ -527,7 +618,7 @@ pub const IP_HEX_LEGENDRE_8: [[f64; 4]; 8] = [
 
 /// Iron's integration points and weights, 14 points
 #[rustfmt::skip]
-pub const IP_HEX_IRONS_14: [[f64; 4]; 14] = [
+const IP_HEX_IRONS_14: [[f64; 4]; 14] = [
     [ 0.7958224257542215,  0.0000000000000000,  0.0000000000000000,  0.8864265927977839],
     [-0.7958224257542215,  0.0000000000000000,  0.0000000000000000,  0.8864265927977839],
     [ 0.0000000000000000,  0.7958224257542215,  0.0000000000000000,  0.8864265927977839],
@@ -546,7 +637,7 @@ pub const IP_HEX_IRONS_14: [[f64; 4]; 14] = [
 
 /// Conventional Legendre integration points and weights, 27 points, degree 5
 #[rustfmt::skip]
-pub const IP_HEX_LEGENDRE_27: [[f64; 4]; 27] = [
+const IP_HEX_LEGENDRE_27: [[f64; 4]; 27] = [
     [-0.774596669241483, -0.774596669241483, -0.774596669241483, 0.171467764060357],
     [ 0.000000000000000, -0.774596669241483, -0.774596669241483, 0.274348422496571],
     [ 0.774596669241483, -0.774596669241483, -0.774596669241483, 0.171467764060357],
@@ -578,7 +669,7 @@ pub const IP_HEX_LEGENDRE_27: [[f64; 4]; 27] = [
 
 /// Conventional Legendre integration points and weights, 64 points, degree 7
 #[rustfmt::skip]
-pub const IP_HEX_LEGENDRE_64: [[f64; 4]; 64] = [
+const IP_HEX_LEGENDRE_64: [[f64; 4]; 64] = [
     [-0.86113631159405257522, -0.86113631159405257522, -0.86113631159405257522, 0.04209147749053145454],
     [-0.33998104358485626480, -0.86113631159405257522, -0.86113631159405257522, 0.07891151579507055098],
     [ 0.33998104358485626480, -0.86113631159405257522, -0.86113631159405257522, 0.07891151579507055098],
@@ -649,88 +740,99 @@ pub const IP_HEX_LEGENDRE_64: [[f64; 4]; 64] = [
 
 #[cfg(test)]
 mod tests {
-    use super::{default_points, points};
+    use super::Gauss;
     use crate::shapes::{GeoClass, GeoKind};
 
     #[test]
-    fn default_points_works() {
+    fn new_works() {
         // Lin
-        assert_eq!(default_points(GeoKind::Lin2).len(), 2);
-        assert_eq!(default_points(GeoKind::Lin3).len(), 3);
-        assert_eq!(default_points(GeoKind::Lin4).len(), 4);
-        assert_eq!(default_points(GeoKind::Lin5).len(), 5);
+        assert_eq!(Gauss::new(GeoKind::Lin2).data.len(), 2);
+        assert_eq!(Gauss::new(GeoKind::Lin3).data.len(), 3);
+        assert_eq!(Gauss::new(GeoKind::Lin4).data.len(), 4);
+        assert_eq!(Gauss::new(GeoKind::Lin5).data.len(), 5);
         // Tri
-        assert_eq!(default_points(GeoKind::Tri3).len(), 3);
-        assert_eq!(default_points(GeoKind::Tri6).len(), 7);
-        assert_eq!(default_points(GeoKind::Tri10).len(), 12);
-        assert_eq!(default_points(GeoKind::Tri15).len(), 16);
+        assert_eq!(Gauss::new(GeoKind::Tri3).data.len(), 3);
+        assert_eq!(Gauss::new(GeoKind::Tri6).data.len(), 7);
+        assert_eq!(Gauss::new(GeoKind::Tri10).data.len(), 12);
+        assert_eq!(Gauss::new(GeoKind::Tri15).data.len(), 16);
         // Qua
-        assert_eq!(default_points(GeoKind::Qua4).len(), 4);
-        assert_eq!(default_points(GeoKind::Qua8).len(), 9);
-        assert_eq!(default_points(GeoKind::Qua9).len(), 9);
-        assert_eq!(default_points(GeoKind::Qua12).len(), 16);
-        assert_eq!(default_points(GeoKind::Qua16).len(), 16);
-        assert_eq!(default_points(GeoKind::Qua17).len(), 16);
+        assert_eq!(Gauss::new(GeoKind::Qua4).data.len(), 4);
+        assert_eq!(Gauss::new(GeoKind::Qua8).data.len(), 9);
+        assert_eq!(Gauss::new(GeoKind::Qua9).data.len(), 9);
+        assert_eq!(Gauss::new(GeoKind::Qua12).data.len(), 16);
+        assert_eq!(Gauss::new(GeoKind::Qua16).data.len(), 16);
+        assert_eq!(Gauss::new(GeoKind::Qua17).data.len(), 16);
         // Tet
-        assert_eq!(default_points(GeoKind::Tet4).len(), 4);
-        assert_eq!(default_points(GeoKind::Tet10).len(), 14);
-        assert_eq!(default_points(GeoKind::Tet20).len(), 24);
+        assert_eq!(Gauss::new(GeoKind::Tet4).data.len(), 4);
+        assert_eq!(Gauss::new(GeoKind::Tet10).data.len(), 14);
+        assert_eq!(Gauss::new(GeoKind::Tet20).data.len(), 24);
         // Hex
-        assert_eq!(default_points(GeoKind::Hex8).len(), 8);
-        assert_eq!(default_points(GeoKind::Hex20).len(), 27);
-        assert_eq!(default_points(GeoKind::Hex32).len(), 64);
+        assert_eq!(Gauss::new(GeoKind::Hex8).data.len(), 8);
+        assert_eq!(Gauss::new(GeoKind::Hex20).data.len(), 27);
+        assert_eq!(Gauss::new(GeoKind::Hex32).data.len(), 64);
     }
 
     #[test]
-    fn get_points_works() {
+    fn new_sized_works() {
         // Lin
-        for n_integ_point in [1, 2, 3, 4, 5] {
-            let ips = points(GeoClass::Lin, n_integ_point).unwrap();
-            assert_eq!(ips.len(), n_integ_point);
+        for ngauss in [1, 2, 3, 4, 5] {
+            let gauss = Gauss::new_sized(GeoClass::Lin, ngauss).unwrap();
+            assert_eq!(gauss.class, GeoClass::Lin);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
-            points(GeoClass::Lin, 100).err(),
-            Some("desired number of integration points is not available for Lin class")
+            Gauss::new_sized(GeoClass::Lin, 100).err(),
+            Some("requested number of integration points is not available for Lin class")
         );
 
         // Tri
-        for n_integ_point in [1, 3, 4, 6, 7, 12, 16] {
-            let ips = points(GeoClass::Tri, n_integ_point).unwrap();
-            assert_eq!(ips.len(), n_integ_point);
+        for ngauss in [1, 3, 4, 6, 7, 12, 16] {
+            let gauss = Gauss::new_sized(GeoClass::Tri, ngauss).unwrap();
+            assert_eq!(gauss.class, GeoClass::Tri);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
-            points(GeoClass::Tri, 100).err(),
-            Some("desired number of integration points is not available for Tri class")
+            Gauss::new_sized(GeoClass::Tri, 100).err(),
+            Some("requested number of integration points is not available for Tri class")
         );
 
         // Qua
-        for n_integ_point in [1, 4, 9, 16] {
-            let ips = points(GeoClass::Qua, n_integ_point).unwrap();
-            assert_eq!(ips.len(), n_integ_point);
+        for ngauss in [1, 4, 9, 16] {
+            let gauss = Gauss::new_sized(GeoClass::Qua, ngauss).unwrap();
+            assert_eq!(gauss.class, GeoClass::Qua);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
-            points(GeoClass::Qua, 100).err(),
-            Some("desired number of integration points is not available for Qua class")
+            Gauss::new_sized(GeoClass::Qua, 100).err(),
+            Some("requested number of integration points is not available for Qua class")
         );
 
         // Tet
-        for n_integ_point in [1, 4, 5, 8, 14, 15, 24] {
-            let ips = points(GeoClass::Tet, n_integ_point).unwrap();
-            assert_eq!(ips.len(), n_integ_point);
+        for ngauss in [1, 4, 5, 8, 14, 15, 24] {
+            let gauss = Gauss::new_sized(GeoClass::Tet, ngauss).unwrap();
+            assert_eq!(gauss.class, GeoClass::Tet);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
-            points(GeoClass::Tet, 100).err(),
-            Some("desired number of integration points is not available for Tet class")
+            Gauss::new_sized(GeoClass::Tet, 100).err(),
+            Some("requested number of integration points is not available for Tet class")
         );
 
         // Hex
-        for n_integ_point in [6, 8, 14, 27, 64] {
-            let ips = points(GeoClass::Hex, n_integ_point).unwrap();
-            assert_eq!(ips.len(), n_integ_point);
+        for ngauss in [6, 8, 14, 27, 64] {
+            let gauss = Gauss::new_sized(GeoClass::Hex, ngauss).unwrap();
+            assert_eq!(gauss.class, GeoClass::Hex);
+            assert_eq!(gauss.data.len(), ngauss);
         }
         assert_eq!(
-            points(GeoClass::Hex, 100).err(),
-            Some("desired number of integration points is not available for Hex class")
+            Gauss::new_sized(GeoClass::Hex, 100).err(),
+            Some("requested number of integration points is not available for Hex class")
         );
+    }
+
+    #[test]
+    fn new_or_sized_works() {
+        assert_eq!(Gauss::new_or_sized(GeoKind::Qua8, None).unwrap().npoint(), 9);
+        assert_eq!(Gauss::new_or_sized(GeoKind::Qua8, Some(1)).unwrap().npoint(), 1);
     }
 }

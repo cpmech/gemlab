@@ -32,11 +32,13 @@ fn main() -> Result<(), StrError> {
             Point { id: 10, marker:    0, coords: vec![1.0,   0.5 ] },
         ],
         cells: vec![
-            Cell { id: 0, attribute: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
-            Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
-            Cell { id: 2, attribute: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
-            Cell { id: 3, attribute: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
+            Cell { id: 0, marker: 1, kind: GeoKind::Qua8, points: vec![0, 2, 6, 8, 1, 10, 7, 9] },
+            Cell { id: 1, marker: 2, kind: GeoKind::Tri6, points: vec![2, 4, 6, 3, 5, 10] },
+            Cell { id: 2, marker: 3, kind: GeoKind::Lin2, points: vec![2, 10] },
+            Cell { id: 3, marker: 3, kind: GeoKind::Lin2, points: vec![10, 6] },
         ],
+        marked_edges: Vec::new(),
+        marked_faces: Vec::new(),
     };
     assert_eq!(mesh.search_marked_points(-200, |_| true)?, &[2]);
     assert_eq!(mesh.search_marked_points(-400, |_| true)?, &[6]);

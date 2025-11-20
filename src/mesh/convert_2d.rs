@@ -91,7 +91,7 @@ impl Mesh {
         // zeroed new cell
         let zero_cell = Cell {
             id: 0,
-            attribute: 0,
+            marker: 0,
             kind: target,
             points: vec![UNSET; target_nnode],
         };
@@ -101,6 +101,8 @@ impl Mesh {
             ndim: self.ndim,
             points: Vec::new(),
             cells: vec![zero_cell; ncell],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // scratchpad for point interpolation (based on the original mesh)
@@ -140,7 +142,7 @@ impl Mesh {
 
             // set the new cell data
             dest.cells[cell_id].id = cell_id;
-            dest.cells[cell_id].attribute = self.cells[cell_id].attribute;
+            dest.cells[cell_id].marker = self.cells[cell_id].marker;
 
             // handle corner nodes
             for m in 0..ncorner {
@@ -203,20 +205,19 @@ impl Mesh {
 
 #[cfg(test)]
 mod tests {
-    use crate::mesh::{Cell, Figure, Mesh, Point, Samples};
+    use crate::mesh::{Cell, Draw, Mesh, Point, Samples};
     use crate::shapes::GeoKind;
     use russell_lab::array_approx_eq;
 
     const SAVE_FIGURE: bool = false;
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
-        let mut fig = Figure::new();
-        fig.cell_ids = true;
-        fig.point_ids = true;
+        let mut draw = Draw::new();
+        draw.show_cell_ids(true).show_point_ids(true);
         if larger {
-            fig.figure_size = Some((600.0, 600.0));
+            draw.set_size(600.0, 600.0);
         }
-        mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
+        draw.all(&mesh, filename).unwrap();
     }
 
     #[test]
@@ -235,8 +236,10 @@ mod tests {
                 Point { id: 7, marker: 0, coords: vec![0.0, 1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(mesh.convert_2d(GeoKind::Tri15).err(), Some("ndim must be equal to 2"));
 
@@ -244,6 +247,8 @@ mod tests {
             ndim: 2,
             points: vec![],
             cells: vec![],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(
             mesh.convert_2d(GeoKind::Tri15).err(),
@@ -259,8 +264,10 @@ mod tests {
                 Point { id: 2, marker: 0, coords: vec![0.5, 0.85] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(
             mesh.convert_2d(GeoKind::Qua8).err(),
@@ -275,8 +282,10 @@ mod tests {
                 Point { id: 1, marker: 0, coords: vec![1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Lin2, points: vec![0, 1] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(
             mesh.convert_2d(GeoKind::Lin3).err(),
@@ -293,9 +302,11 @@ mod tests {
                 Point { id: 3, marker: 0, coords: vec![1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
-                Cell { id: 1, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+                Cell { id: 1, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         assert_eq!(
             mesh.convert_2d(GeoKind::Tri6).err(),
@@ -320,9 +331,11 @@ mod tests {
                 Point { id: 8, marker: -10, coords: vec![0.0,-2.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_all().unwrap();
 
@@ -416,9 +429,11 @@ mod tests {
                 Point { id: 8, marker: -10, coords: vec![0.0,-2.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_all().unwrap();
 
@@ -491,9 +506,11 @@ mod tests {
                 Point { id: 8, marker: -10, coords: vec![0.0,-2.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri6, points: vec![1, 2, 0, 4, 5, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Tri6, points: vec![0, 6, 1, 8, 7, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_all().unwrap();
 

@@ -4,7 +4,8 @@ mod algorithms;
 mod entities;
 mod tetrahedron;
 mod triangle;
-pub use crate::geometry::algorithms::*;
-pub use crate::geometry::entities::*;
-pub use crate::geometry::tetrahedron::*;
-pub use crate::geometry::triangle::*;
+
+pub use algorithms::*;
+pub use entities::*;
+pub use tetrahedron::*;
+pub use triangle::*;

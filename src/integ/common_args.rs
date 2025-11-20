@@ -1,14 +1,13 @@
+use super::Gauss;
 use crate::shapes::Scratchpad;
-
-use super::IntegPointData;
 
 /// Holds common arguments for the numerical integration functions
 pub struct CommonArgs<'a> {
     /// The temporary interpolation, Jacobian, gradient  variables computed at an integration point
     pub pad: &'a mut Scratchpad,
 
-    /// Integration points (n_integ_point)
-    pub ips: IntegPointData,
+    /// Integration points
+    pub gauss: &'a Gauss,
 
     /// Fills the output vector or matrix with zeros, otherwise accumulate values
     pub clear: bool,
@@ -30,10 +29,10 @@ pub struct CommonArgs<'a> {
 
 impl<'a> CommonArgs<'a> {
     /// Allocates new instance
-    pub fn new(pad: &'a mut Scratchpad, ips: IntegPointData) -> Self {
+    pub fn new(pad: &'a mut Scratchpad, gauss: &'a Gauss) -> Self {
         CommonArgs {
             pad,
-            ips,
+            gauss,
             clear: true,
             axisymmetric: false,
             alpha: 1.0,

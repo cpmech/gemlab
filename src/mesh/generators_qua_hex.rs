@@ -1,12 +1,197 @@
-use super::{join_meshes, ArgsRing, Block, Constraint2D, Constraint3D, Graph, Mesh};
+use super::{join_meshes, ArgsRing, Block, Blocks2d, Blocks3d, Constraint2d, Constraint3d, Mesh};
+use crate::graph::GraphUnd;
 use crate::shapes::GeoKind;
 use crate::StrError;
 use russell_lab::math::{COS_PI_BY_8, ONE_BY_SQRT_2, PI, SIN_PI_BY_8, SQRT_2};
+use russell_lab::{sort2, sort4};
+use std::collections::HashMap;
 
 /// Groups generators of structured meshes (Qua and Hex -- sometimes Tri)
 pub struct Structured {}
 
 impl Structured {
+    /// Generates a structured mesh from a set of blocks in 2D
+    pub fn from_blocks_2d(blocks: &Blocks2d, target: GeoKind, renumber: bool) -> Result<Mesh, StrError> {
+        // allocate empty meshes array
+        let nb = blocks.regions.len();
+        let mut meshes = Vec::with_capacity(nb);
+
+        // create a map of boundary markers
+        let mut marked_edges_map = HashMap::new();
+        blocks.marked_edges.iter().for_each(|(marker, p1, p2)| {
+            let mut edge_key = (*p1, *p2);
+            sort2(&mut edge_key);
+            marked_edges_map.insert(edge_key, *marker);
+        });
+
+        // loop over each block
+        for i in 0..nb {
+            // allocate block
+            let att = blocks.regions[i].0;
+            let pp = [
+                blocks.regions[i].1,
+                blocks.regions[i].2,
+                blocks.regions[i].3,
+                blocks.regions[i].4,
+            ];
+            let c0 = blocks.points[pp[0]];
+            let c1 = blocks.points[pp[1]];
+            let c2 = blocks.points[pp[2]];
+            let c3 = blocks.points[pp[3]];
+            let mut b = Block::new(&[[c0.0, c0.1], [c1.0, c1.1], [c2.0, c2.1], [c3.0, c3.1]])?;
+
+            // set marker
+            b.set_marker(att);
+
+            // set division weights
+            let (wx, wy) = &blocks.div_weights[i];
+            if wx.len() > 0 && wy.len() > 0 {
+                b.set_div_weights_2d(wx, wy)?;
+            }
+
+            // set constraints
+            if let Some(c) = blocks.edge_constraints[i].as_ref() {
+                b.set_edge_constraint(c.0, Some(c.1.clone()))?;
+            }
+
+            // set marked edges
+            if marked_edges_map.len() > 0 {
+                let kind = GeoKind::Qua4;
+                for e in 0..4 {
+                    let j0 = kind.edge_node_id(e, 0);
+                    let j1 = kind.edge_node_id(e, 1);
+                    let mut edge_key = (pp[j0], pp[j1]);
+                    sort2(&mut edge_key);
+                    if let Some(marker) = marked_edges_map.get(&edge_key) {
+                        b.set_edge_marker(e, *marker)?;
+                    }
+                }
+            }
+
+            // subdivide block => create mesh
+            meshes.push(b.subdivide(target)?);
+        }
+
+        // join all meshes
+        let mut mesh = join_meshes(&meshes.iter().collect::<Vec<_>>())?;
+
+        // renumber the vertices
+        if renumber {
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
+    }
+
+    /// Generates a structured mesh from a set of blocks in 3D
+    pub fn from_blocks_3d(blocks: &Blocks3d, target: GeoKind, renumber: bool) -> Result<Mesh, StrError> {
+        // allocate empty meshes array
+        let nb = blocks.regions.len();
+        let mut meshes = Vec::with_capacity(nb);
+
+        // create a map of boundary markers
+        let mut marked_edges_map = HashMap::new();
+        let mut marked_faces_map = HashMap::new();
+        blocks.marked_edges.iter().for_each(|(marker, p1, p2)| {
+            let mut edge_key = (*p1, *p2);
+            sort2(&mut edge_key);
+            marked_edges_map.insert(edge_key, *marker);
+        });
+        blocks.marked_faces.iter().for_each(|(marker, p1, p2, p3, p4)| {
+            let mut face_key = (*p1, *p2, *p3, *p4);
+            sort4(&mut face_key);
+            marked_faces_map.insert(face_key, *marker);
+        });
+
+        // loop over each block
+        for i in 0..nb {
+            let marker = blocks.regions[i].0;
+            let pp = [
+                blocks.regions[i].1,
+                blocks.regions[i].2,
+                blocks.regions[i].3,
+                blocks.regions[i].4,
+                blocks.regions[i].5,
+                blocks.regions[i].6,
+                blocks.regions[i].7,
+                blocks.regions[i].8,
+            ];
+            let c0 = blocks.points[pp[0]];
+            let c1 = blocks.points[pp[1]];
+            let c2 = blocks.points[pp[2]];
+            let c3 = blocks.points[pp[3]];
+            let c4 = blocks.points[pp[4]];
+            let c5 = blocks.points[pp[5]];
+            let c6 = blocks.points[pp[6]];
+            let c7 = blocks.points[pp[7]];
+            let mut b = Block::new(&[
+                [c0.0, c0.1, c0.2],
+                [c1.0, c1.1, c1.2],
+                [c2.0, c2.1, c2.2],
+                [c3.0, c3.1, c3.2],
+                [c4.0, c4.1, c4.2],
+                [c5.0, c5.1, c5.2],
+                [c6.0, c6.1, c6.2],
+                [c7.0, c7.1, c7.2],
+            ])?;
+
+            // set marker
+            b.set_marker(marker);
+
+            // set division weights
+            let (wx, wy, wz) = &blocks.div_weights[i];
+            if wx.len() > 0 && wy.len() > 0 && wz.len() > 0 {
+                b.set_div_weights_3d(wx, wy, wz)?;
+            }
+
+            // set constraints
+            if let Some(c) = blocks.face_constraints[i].as_ref() {
+                b.set_face_constraint(c.0, Some(c.1.clone()))?;
+            }
+
+            // set marked edges
+            if marked_edges_map.len() > 0 {
+                let kind = GeoKind::Hex8;
+                for e in 0..12 {
+                    let j0 = kind.edge_node_id(e, 0);
+                    let j1 = kind.edge_node_id(e, 1);
+                    let mut edge_key = (pp[j0], pp[j1]);
+                    sort2(&mut edge_key);
+                    if let Some(marker) = marked_edges_map.get(&edge_key) {
+                        b.set_edge_marker(e, *marker)?;
+                    }
+                }
+            }
+
+            // set marked faces
+            if marked_faces_map.len() > 0 {
+                let kind = GeoKind::Hex8;
+                for f in 0..6 {
+                    let j0 = kind.face_node_id(f, 0);
+                    let j1 = kind.face_node_id(f, 1);
+                    let j2 = kind.face_node_id(f, 2);
+                    let j3 = kind.face_node_id(f, 3);
+                    let mut face_key = (pp[j0], pp[j1], pp[j2], pp[j3]);
+                    sort4(&mut face_key);
+                    if let Some(marker) = marked_faces_map.get(&face_key) {
+                        b.set_face_marker(f, *marker)?;
+                    }
+                }
+            }
+
+            // subdivide block => create mesh
+            meshes.push(b.subdivide(target)?);
+        }
+
+        // join all meshes
+        let mut mesh = join_meshes(&meshes.iter().collect::<Vec<_>>())?;
+
+        // renumber the vertices
+        if renumber {
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
+        }
+        Ok(mesh)
+    }
+
     /// Generates a mesh representing a quarter of a ring in 2D
     ///
     /// ```text
@@ -31,20 +216,31 @@ impl Structured {
     ///
     /// * `rmin` -- inner radius
     /// * `rmax` -- outer radius
-    /// * `nr` -- number of divisions along the radius (must be > 0)
+    /// * `wr` -- weights for divisions along the radius (the len must be > 0 and the sum must be ≥ 1.0)
     /// * `na` -- number of divisions along alpha (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
     /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn quarter_ring_2d(
         rmin: f64,
         rmax: f64,
-        nr: usize,
+        wr: &[f64],
         na: usize,
         target: GeoKind,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
+        if wr.len() < 1 {
+            return Err("the length of wr must be ≥ 1");
+        }
+        let sum_wr = wr.iter().fold(0.0, |acc, w| acc + w);
+        if sum_wr < 1.0 {
+            return Err("the sum of wr must be ≥ 1.0");
+        }
+        if na < 1 {
+            return Err("na must be ≥ 1");
+        }
         let mut block = Block::new_square(1.0);
-        block.set_ndiv(&[nr, na])?;
+        let wa = vec![1.0; na];
+        block.set_div_weights_2d(wr, &wa).unwrap();
         block.set_transform_into_ring(Some(ArgsRing {
             amin: 0.0,
             amax: PI / 2.0,
@@ -55,7 +251,7 @@ impl Structured {
         }))?;
         let mut mesh = block.subdivide(target)?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -85,7 +281,7 @@ impl Structured {
     /// * `rmin` -- inner radius
     /// * `rmax` -- outer radius
     /// * `z` -- thickness (zmin = 0.0)
-    /// * `nr` -- number of divisions along the radius (must be > 0)
+    /// * `wr` -- weights for divisions along the radius (the len must be > 0 and the sum must be ≥ 1.0)
     /// * `na` -- number of divisions along alpha (must be > 0)
     /// * `nz` -- number of divisions along z (thickness) (must be > 0)
     /// * `target` -- [crate::shapes::GeoClass::Qua] shapes only
@@ -94,14 +290,29 @@ impl Structured {
         rmin: f64,
         rmax: f64,
         z: f64,
-        nr: usize,
+        wr: &[f64],
         na: usize,
         nz: usize,
         target: GeoKind,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
+        if wr.len() < 1 {
+            return Err("the length of wr must be ≥ 1");
+        }
+        let sum_wr = wr.iter().fold(0.0, |acc, w| acc + w);
+        if sum_wr < 1.0 {
+            return Err("the sum of wr must be ≥ 1.0");
+        }
+        if na < 1 {
+            return Err("na must be ≥ 1");
+        }
+        if nz < 1 {
+            return Err("nz must be ≥ 1");
+        }
         let mut block = Block::new_cube(1.0);
-        block.set_ndiv(&[nr, na, nz])?;
+        let wa = vec![1.0; na];
+        let wz = vec![1.0; nz];
+        block.set_div_weights_3d(wr, &wa, &wz).unwrap();
         block.set_transform_into_ring(Some(ArgsRing {
             amin: 0.0,
             amax: PI / 2.0,
@@ -112,7 +323,7 @@ impl Structured {
         }))?;
         let mut mesh = block.subdivide(target)?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -156,7 +367,7 @@ impl Structured {
         block_1.set_ndiv(&[na, na])?;
         block_2.set_ndiv(&[nb, na])?;
         block_3.set_ndiv(&[na, nb])?;
-        let ct = Constraint2D::Circle(0.0, 0.0, r);
+        let ct = Constraint2d::Circle(0.0, 0.0, r);
         block_2.set_edge_constraint(1, Some(ct.clone()))?;
         block_3.set_edge_constraint(2, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -164,7 +375,7 @@ impl Structured {
         let mesh_3 = block_3.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -257,7 +468,7 @@ impl Structured {
         block_1.set_ndiv(&[na, na])?;
         block_2.set_ndiv(&[nb, na])?;
         block_3.set_ndiv(&[na, nb])?;
-        let ct = Constraint2D::Circle(0.0, 0.0, r);
+        let ct = Constraint2d::Circle(0.0, 0.0, r);
         block_2.set_edge_constraint(1, Some(ct.clone()))?;
         block_3.set_edge_constraint(2, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -265,7 +476,7 @@ impl Structured {
         let mesh_3 = block_3.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -349,7 +560,7 @@ impl Structured {
         block_1.set_ndiv(&[na, na, nz])?;
         block_2.set_ndiv(&[nb, na, nz])?;
         block_3.set_ndiv(&[na, nb, nz])?;
-        let ct = Constraint3D::CylinderZ(0.0, 0.0, r);
+        let ct = Constraint3d::CylinderZ(0.0, 0.0, r);
         block_2.set_face_constraint(1, Some(ct.clone()))?;
         block_3.set_face_constraint(3, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -357,7 +568,7 @@ impl Structured {
         let mesh_3 = block_3.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -491,7 +702,7 @@ impl Structured {
         block_1.set_ndiv(&[na, na, nz])?;
         block_2.set_ndiv(&[nb, na, nz])?;
         block_3.set_ndiv(&[na, nb, nz])?;
-        let ct = Constraint3D::CylinderZ(0.0, 0.0, r);
+        let ct = Constraint3d::CylinderZ(0.0, 0.0, r);
         block_2.set_face_constraint(1, Some(ct.clone()))?;
         block_3.set_face_constraint(3, Some(ct))?;
         let mesh_1 = block_1.subdivide(target)?;
@@ -499,7 +710,7 @@ impl Structured {
         let mesh_3 = block_3.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -607,8 +818,8 @@ impl Structured {
             [0.0,  n],
             [ d1, d3],
         ])?;
-        let ct_r = Constraint2D::Circle(0.0, 0.0, r);
-        let ct_ra = Constraint2D::Circle(0.0, 0.0, ra);
+        let ct_r = Constraint2d::Circle(0.0, 0.0, r);
+        let ct_ra = Constraint2d::Circle(0.0, 0.0, ra);
         block_1.set_edge_constraint(3, Some(ct_r.clone()))?;
         block_1.set_edge_constraint(1, Some(ct_ra.clone()))?;
         block_1.set_ndiv(&[na, n45])?;
@@ -625,7 +836,7 @@ impl Structured {
         let mesh_4 = block_4.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -786,8 +997,8 @@ impl Structured {
             [0.0,  l,  hz],
             [0.0, ra,  hz],
         ])?;
-        let ct_r = Constraint3D::CylinderZ(0.0, 0.0, r);
-        let ct_ra = Constraint3D::CylinderZ(0.0, 0.0, ra);
+        let ct_r = Constraint3d::CylinderZ(0.0, 0.0, r);
+        let ct_ra = Constraint3d::CylinderZ(0.0, 0.0, ra);
         block_1.set_face_constraint(0, Some(ct_r.clone()))?;
         block_1.set_face_constraint(1, Some(ct_ra.clone()))?;
         block_1.set_ndiv(&[na, n45, nz])?;
@@ -804,7 +1015,7 @@ impl Structured {
         let mesh_4 = block_4.subdivide(target)?;
         let mut mesh = join_meshes(&[&mesh_1, &mesh_2, &mesh_3, &mesh_4])?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -847,7 +1058,7 @@ impl Structured {
     /// * `ny` -- is the number of spacings between `y[i]` and `y[i+1]`. The length of `ny`, which
     ///   is equal to the number of layers, must be equal to the length of `y` minus one, i.e.,
     ///   `n_layer = ny.len() = y.len() - 1`
-    /// * `attributes` -- is a list of attributes for each layer; it's length is equal to `n_layer`
+    /// * `markers` -- is a list of markers for each layer; it's length is equal to `n_layer`
     /// * `target` -- is the resulting GeoKind and must be a [crate::shapes::GeoClass::Qua]
     /// * `renumber` -- renumbers the points to minimize the bandwidth of the associated graph's matrix
     pub fn rectangle(
@@ -858,7 +1069,7 @@ impl Structured {
         nb: usize,
         y: &[f64],
         ny: &[usize],
-        attributes: &[usize],
+        markers: &[i32],
         target: GeoKind,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
@@ -880,8 +1091,8 @@ impl Structured {
         if ny.len() != n_layer {
             return Err("ny.len() must be equal to n_layer = y.len() - 1");
         }
-        if attributes.len() != n_layer {
-            return Err("attributes.len() must be equal to n_layer = y.len() - 1");
+        if markers.len() != n_layer {
+            return Err("markers.len() must be equal to n_layer = y.len() - 1");
         }
         let mut meshes = Vec::new();
         let mut ya = y[0];
@@ -895,8 +1106,8 @@ impl Structured {
                 let mut bb = Block::new(&[[xxb, ya], [xc, ya], [xc, yb], [xxb, yb]]).unwrap();
                 ba.set_ndiv(&[na, ny[l]]).unwrap();
                 bb.set_ndiv(&[nb, ny[l]]).unwrap();
-                ba.set_attribute(attributes[l]);
-                bb.set_attribute(attributes[l]);
+                ba.set_marker(markers[l]);
+                bb.set_marker(markers[l]);
                 meshes.push(ba.subdivide(target)?);
                 meshes.push(bb.subdivide(target).unwrap());
                 ya = yb;
@@ -909,7 +1120,7 @@ impl Structured {
                 }
                 let mut block = Block::new(&[[xa, ya], [xc, ya], [xc, yb], [xa, yb]]).unwrap();
                 block.set_ndiv(&[na, ny[l]]).unwrap();
-                block.set_attribute(attributes[l]);
+                block.set_marker(markers[l]);
                 let mesh = block.subdivide(target)?;
                 if n_layer == 1 {
                     return Ok(mesh);
@@ -920,7 +1131,7 @@ impl Structured {
         }
         let mut mesh = join_meshes(&meshes.iter().collect::<Vec<_>>())?;
         if renumber {
-            Graph::renumber_mesh(&mut mesh, false)?;
+            GraphUnd::renumber_mesh(&mut mesh, false)?;
         }
         Ok(mesh)
     }
@@ -932,20 +1143,22 @@ impl Structured {
 mod tests {
     use super::Structured;
     use crate::geometry::point_point_distance;
-    use crate::mesh::{Figure, Graph, Mesh};
+    use crate::graph::GraphUnd;
+    use crate::mesh::{Blocks2d, Blocks3d, Constraint2d, Constraint3d, Draw, Mesh};
     use crate::shapes::GeoKind;
+    use plotpy::{Canvas, Surface};
     use russell_lab::{approx_eq, array_approx_eq};
 
     const SAVE_FIGURE: bool = false;
     const MAX_NPOINT_PRINT: usize = 200;
 
     fn print_bandwidth(mesh: &mut Mesh) {
-        let graph = Graph::new(&mesh, false).unwrap();
+        let graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph.print_non_zero_pattern();
         }
-        Graph::renumber_mesh(mesh, false).unwrap();
-        let graph_after = Graph::new(&mesh, false).unwrap();
+        GraphUnd::renumber_mesh(mesh, false).unwrap();
+        let graph_after = GraphUnd::from_mesh(&mesh, true, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph_after.print_non_zero_pattern();
         }
@@ -954,26 +1167,263 @@ mod tests {
     }
 
     fn draw(mesh: &Mesh, larger: bool, filename: &str) {
-        let mut fig = Figure::new();
-        fig.cell_ids = true;
-        fig.point_ids = true;
+        let mut draw = Draw::new();
+        draw.show_cell_ids(true).show_point_ids(true);
         if larger {
-            fig.figure_size = Some((600.0, 600.0));
+            draw.set_size(600.0, 600.0);
         }
-        mesh.draw(Some(fig), filename, |_, _| {}).unwrap();
+        draw.all(&mesh, filename).unwrap();
+    }
+
+    #[test]
+    fn from_blocks_2d_works() {
+        let r = 0.866;
+        let w = 2.0;
+        let h = 1.0;
+        let l = h / 2.0;
+        let m = f64::sqrt(r * r - l * l);
+        //     -100        -200
+        // 3-----------2-----------5
+        // |           |           |
+        // |           |           |
+        // |           |           |
+        // |           |           |
+        // 0-----------1-----------4
+        let blocks = Blocks2d {
+            points: vec![
+                (0.0, 0.0),     // 0
+                (w / 2.0, 0.0), // 1
+                (w / 2.0, h),   // 2
+                (0.0, h),       // 3
+                (w, 0.0),       // 4
+                (w, h),         // 5
+            ],
+            regions: vec![
+                (1, 0, 1, 2, 3), // marker, p1, p2, p3, p4
+                (2, 1, 4, 5, 2),
+            ],
+            div_weights: vec![
+                (Vec::new(), Vec::new()), // default number of divisions and weighting
+                (vec![1.0], vec![1.0]),   // one division with weight 1.0 along each direction
+            ],
+            edge_constraints: vec![
+                None,                                         // block 0
+                Some((1, Constraint2d::Circle(w + m, l, r))), // block 1
+            ],
+            marked_edges: vec![(-100, 3, 2), (-200, 2, 5)],
+        };
+        // blocks.write_json("/tmp/gemlab/example_qua_input.json").unwrap();
+
+        let mesh = Structured::from_blocks_2d(&blocks, GeoKind::Qua8, false).unwrap();
+
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.show_point_ids(true)
+                .show_point_marker(true)
+                .show_cell_ids(true)
+                .show_cell_marker(true)
+                .show_edge_markers(true);
+            draw.extra(|plot, before| {
+                if before {
+                    let mut canvas = Canvas::new();
+                    canvas.set_face_color("None").set_edge_color("black");
+                    canvas.draw_circle(w + m, l, r);
+                    plot.add(&canvas);
+                } else {
+                    plot.set_range(-0.5, 4.0, -0.5, 1.5)
+                        .set_figure_size_points(800.0, 300.0);
+                }
+            });
+            draw.all(&mesh, "/tmp/gemlab/test_from_blocks_2d.svg").unwrap();
+        }
+
+        mesh.check_overlapping_points(0.01).unwrap();
+        mesh.check_all().unwrap();
+        assert_eq!(mesh.points.len(), 26);
+        assert_eq!(mesh.cells.len(), 5);
+        array_approx_eq(&mesh.points[2].coords, &[0.5, l], 1e-15);
+        array_approx_eq(&mesh.points[9].coords, &[1.0, l], 1e-15);
+        array_approx_eq(&mesh.points[22].coords, &[w, h], 1e-15);
+        array_approx_eq(&mesh.points[24].coords, &[w + m - r, l], 1e-15);
+        assert_eq!(mesh.cells[0].marker, 1);
+        assert_eq!(mesh.cells[3].marker, 1);
+        assert_eq!(mesh.cells[4].marker, 2);
+        assert_eq!(mesh.marked_edges, &[(-100, 13, 14), (-100, 13, 18), (-200, 18, 22)]);
+    }
+
+    #[test]
+    fn from_blocks_2d_works_2() {
+        let blocks = Blocks2d::read_json("data/input/example_qua_input.json").unwrap();
+        let mesh = Structured::from_blocks_2d(&blocks, GeoKind::Qua8, false).unwrap();
+
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.show_point_ids(false)
+                .show_point_marker(true)
+                .show_cell_ids(true)
+                .show_cell_marker(true)
+                .show_edge_markers(true)
+                .set_view_flag(false)
+                .set_size(600.0, 600.0);
+            draw.all(&mesh, "/tmp/gemlab/test_from_blocks_2d_2.svg").unwrap();
+        }
+
+        mesh.check_overlapping_points(0.01).unwrap();
+        mesh.check_all().unwrap();
+        assert_eq!(mesh.points.len(), 37);
+        assert_eq!(mesh.cells.len(), 8);
+    }
+
+    #[test]
+    fn from_blocks_3d_works() {
+        let r = 0.866;
+        let w = 2.0;
+        let h = 1.0;
+        let l = h / 2.0;
+        let m = f64::sqrt(r * r - l * l);
+        //               z
+        //               |       -1
+        //               6-------------------9
+        //              /.                  /|
+        //             / .                 / |
+        //            /  .    -200      -2/  |
+        //           /   .               /   |
+        //          /    .              /    |
+        //         7-------------------8     |
+        //        /.     .            /|     |
+        //       / .     .           / |     |-3
+        //      /  .     .          /  |     |
+        //     /   .     .         /   |     |
+        //    /    .     .        /    |     |
+        //  10==================11     |     |
+        //   |     .     .       |     |     |
+        //   |     .     .       |     |     |
+        //   |     .     0 - - - | - - | - - 3 ---y
+        //   |     .    /        |     |    /
+        //   |     .   /         | -3  |   /
+        //   |     .  /          |  0  |  /
+        //   |     . /  -100     |  0  | /
+        //   |     ./            |     |/
+        //   |     1 - - - - - - | - - 2
+        //   |    /              |    /
+        //   |   /               |   /
+        //   |  /                |  /
+        //   | /                 | /
+        //   |/                  |/
+        //   4===================5
+        //  /        -4
+        // x
+        let blocks = Blocks3d {
+            points: vec![
+                (0.0, 0.0, 0.0), //  0
+                (1.0, 0.0, 0.0), //  1
+                (1.0, 1.0, 0.0), //  2
+                (0.0, 1.0, 0.0), //  3
+                (2.0, 0.0, 0.0), //  4
+                (2.0, 1.0, 0.0), //  5
+                (0.0, 0.0, 1.0), //  6
+                (1.0, 0.0, 1.0), //  7
+                (1.0, 1.0, 1.0), //  8
+                (0.0, 1.0, 1.0), //  9
+                (2.0, 0.0, 1.0), // 10
+                (2.0, 1.0, 1.0), // 11
+            ],
+            regions: vec![
+                (1, 0, 1, 2, 3, 6, 7, 8, 9), // marker, p1, p2, p3, p4, p5, p6, p7, p8
+                (2, 1, 4, 5, 2, 7, 10, 11, 8),
+            ],
+            div_weights: vec![
+                (vec![1.0], vec![1.0], vec![1.0, 1.0]), // b0
+                (vec![1.0], vec![1.0], vec![1.0, 1.0]), // b1
+            ],
+            face_constraints: vec![
+                None,                                            // block 0
+                Some((1, Constraint3d::CylinderZ(w + m, l, r))), // block 1
+            ],
+            marked_edges: vec![(-4, 4, 5), (-3, 9, 3), (-1, 6, 9), (-2, 8, 9)],
+            marked_faces: vec![(-100, 4, 5, 11, 10), (-200, 6, 7, 8, 9), (-300, 11, 8, 2, 5)],
+        };
+        // blocks.write_json("/tmp/gemlab/example_hex_input.json").unwrap();
+
+        let mesh = Structured::from_blocks_3d(&blocks, GeoKind::Hex20, false).unwrap();
+
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.show_point_ids(true)
+                .show_point_marker(true)
+                .show_cell_ids(true)
+                .show_cell_marker(true);
+            draw.extra(|plot, before| {
+                if before {
+                    let mut canvas = Surface::new();
+                    canvas.set_surf_color("#d68b1384");
+                    let xc = w + m;
+                    let yc = l;
+                    canvas.draw_cylinder(&[xc, yc, 0.0], &[xc, yc, 1.0], r, 1, 32).unwrap();
+                    plot.add(&canvas);
+                } else {
+                    // plot.set_range(-0.5, 4.0, -0.5, 1.5)
+                    plot.set_figure_size_points(1000.0, 1000.0);
+                }
+            });
+            draw.all(&mesh, "/tmp/gemlab/test_from_blocks_3d.svg").unwrap();
+        }
+
+        mesh.check_overlapping_points(0.01).unwrap();
+        mesh.check_all().unwrap();
+        assert_eq!(mesh.points.len(), 51);
+        assert_eq!(mesh.cells.len(), 4);
+        array_approx_eq(&mesh.points[6].coords, &[1.0, 1.0, 0.5], 1e-15);
+        array_approx_eq(&mesh.points[32].coords, &[2.0, 0.0, 0.0], 1e-15);
+        array_approx_eq(&mesh.points[40].coords, &[w + m - r, 0.5, 0.5], 1e-15);
+        array_approx_eq(&mesh.points[47].coords, &[w + m - r, 0.5, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[45].coords, &[2.0, 1.0, 1.0], 1e-15);
+        assert_eq!(mesh.cells[0].marker, 1);
+        assert_eq!(mesh.cells[1].marker, 1);
+        assert_eq!(mesh.cells[2].marker, 2);
+        assert_eq!(mesh.cells[3].marker, 2);
+        // println!("{}", mesh);
+        assert_eq!(
+            mesh.marked_edges,
+            &[
+                (-3, 3, 7), //
+                (-3, 7, 23),
+                (-1, 20, 23),
+                (-2, 22, 23),
+                (-4, 32, 33),
+            ]
+        );
+        assert_eq!(
+            mesh.marked_faces,
+            &[
+                (-300, 2, 6, 33, 35),
+                (-300, 6, 22, 35, 45),
+                (-200, 20, 21, 22, 23),
+                (-100, 32, 33, 34, 35),
+                (-100, 34, 35, 44, 45)
+            ]
+        );
     }
 
     #[test]
     fn quarter_ring_2d_captures_errors() {
         assert_eq!(
-            Structured::quarter_ring_2d(3.0, 6.0, 0, 1, GeoKind::Qua16, false).err(),
-            Some("ndiv must be ≥ 1")
+            Structured::quarter_ring_2d(3.0, 6.0, &[], 1, GeoKind::Qua16, false).err(),
+            Some("the length of wr must be ≥ 1")
+        );
+        assert_eq!(
+            Structured::quarter_ring_2d(3.0, 6.0, &[0.0], 1, GeoKind::Qua16, false).err(),
+            Some("the sum of wr must be ≥ 1.0")
+        );
+        assert_eq!(
+            Structured::quarter_ring_2d(3.0, 6.0, &[1.0], 0, GeoKind::Qua16, false).err(),
+            Some("na must be ≥ 1")
         );
     }
 
     #[test]
     fn quarter_ring_2d_works() {
-        let mesh = Structured::quarter_ring_2d(3.0, 6.0, 1, 1, GeoKind::Qua16, false).unwrap();
+        let mesh = Structured::quarter_ring_2d(3.0, 6.0, &[1.0], 1, GeoKind::Qua16, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 16);
         assert_eq!(mesh.cells.len(), 1);
@@ -1001,14 +1451,26 @@ mod tests {
     #[test]
     fn quarter_ring_3d_captures_errors() {
         assert_eq!(
-            Structured::quarter_ring_3d(3.0, 6.0, 2.0, 0, 1, 1, GeoKind::Hex8, false).err(),
-            Some("ndiv must be ≥ 1")
+            Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[], 1, 1, GeoKind::Hex8, false).err(),
+            Some("the length of wr must be ≥ 1")
+        );
+        assert_eq!(
+            Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[0.0], 1, 1, GeoKind::Hex8, false).err(),
+            Some("the sum of wr must be ≥ 1.0")
+        );
+        assert_eq!(
+            Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[1.0], 0, 1, GeoKind::Hex8, false).err(),
+            Some("na must be ≥ 1")
+        );
+        assert_eq!(
+            Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[1.0], 1, 0, GeoKind::Hex8, false).err(),
+            Some("nz must be ≥ 1")
         );
     }
 
     #[test]
     fn quarter_ring_3d_works() {
-        let mut mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, 1, 2, 1, GeoKind::Hex32, false).unwrap();
+        let mut mesh = Structured::quarter_ring_3d(3.0, 6.0, 2.0, &[1.0], 2, 1, GeoKind::Hex32, false).unwrap();
         mesh.check_overlapping_points(0.02).unwrap();
         assert_eq!(mesh.points.len(), 52);
         assert_eq!(mesh.cells.len(), 2);
@@ -1264,7 +1726,7 @@ mod tests {
         );
         assert_eq!(
             Structured::rectangle(0.0, None, 1.0, 1, 1, &[1.0, 2.0], &[1], &[], GeoKind::Qua4, false).err(),
-            Some("attributes.len() must be equal to n_layer = y.len() - 1")
+            Some("markers.len() must be equal to n_layer = y.len() - 1")
         );
         assert_eq!(
             Structured::rectangle(0.0, None, 1.0, 1, 1, &[2.0, 2.0], &[1], &[10], GeoKind::Qua4, false).err(),
@@ -1324,8 +1786,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
-             # ndim npoint ncell\n\
-             2 4 1\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 4 1 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -1335,7 +1797,7 @@ mod tests {
              3 0 1.0 5.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 10 qua4 0 1 2 3\n"
         );
 
@@ -1350,8 +1812,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
-             # ndim npoint ncell\n\
-             2 6 2\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 6 2 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -1363,7 +1825,7 @@ mod tests {
              5 0 3.0 5.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 20 qua4 0 1 2 3\n\
              1 20 qua4 1 4 5 2\n"
         );
@@ -1391,8 +1853,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
-             # ndim npoint ncell\n\
-             2 6 2\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 6 2 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -1404,7 +1866,7 @@ mod tests {
              5 0 1.0 5.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 10 qua4 0 1 2 3\n\
              1 20 qua4 3 2 4 5\n"
         );
@@ -1432,8 +1894,8 @@ mod tests {
         assert_eq!(
             format!("{}", mesh),
             "# header\n\
-             # ndim npoint ncell\n\
-             2 9 4\n\
+             # ndim npoint ncell nmarked_edge nmarked_face\n\
+             2 9 4 0 0\n\
              \n\
              # points\n\
              # id marker x y {z}\n\
@@ -1448,7 +1910,7 @@ mod tests {
              8 0 3.0 5.0\n\
              \n\
              # cells\n\
-             # id attribute kind points\n\
+             # id marker kind points\n\
              0 10 qua4 0 1 2 3\n\
              1 10 qua4 1 4 5 2\n\
              2 20 qua4 3 2 6 7\n\

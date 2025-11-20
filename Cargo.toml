@@ -1,6 +1,6 @@
 [package]
 name = "gemlab"
-version = "1.1.0"
+version = "2.0.0"
 edition = "2021"
 license = "MIT"
 description = "Geometry and meshes laboratory for finite element analyses"
@@ -12,14 +12,15 @@ categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
 
 [dependencies]
-plotpy = "0.6"
-russell_lab = "1.5"
-russell_sparse = "1.5"
-russell_stat = "1.5"
-russell_tensor = "1.5"
+plotpy = "1.14"
+russell_lab = "1.10"
+russell_sparse = "1.10"
+russell_stat = "1.10"
+russell_tensor = "1.10"
+tritet = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tritet = "0.4"
+structopt = "0.3"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.7"

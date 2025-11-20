@@ -1,0 +1,25 @@
+# header
+# ndim npoint ncell nmarked_edge nmarked_face
+2 5 4 4 0
+
+# points
+# id marker x y
+0 -1 0.0 0.0
+1 -2 1.0 0.0
+2 -3 1.0 1.0
+3 -4 0.0 1.0
+4 0 0.5 0.5
+
+# cells
+# id marker kind points
+0 1 tri3 1 2 4
+1 1 tri3 3 0 4
+2 1 tri3 4 2 3
+3 1 tri3 0 1 4
+
+# marked edges
+# marker p1 p2
+-10 1 0
+-20 2 1
+-30 3 2
+-40 0 3

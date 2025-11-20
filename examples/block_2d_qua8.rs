@@ -32,8 +32,8 @@ fn main() -> Result<(), StrError> {
     println!("{}", mesh);
 
     let correct = "# header
-# ndim npoint ncell
-2 21 4
+# ndim npoint ncell nmarked_edge nmarked_face
+2 21 4 0 0
 
 # points
 # id marker x y {z}
@@ -60,7 +60,7 @@ fn main() -> Result<(), StrError> {
 20 0 1.5 2.0
 
 # cells
-# id attribute kind points
+# id marker kind points
 0 1 qua8 0 1 2 3 4 5 6 7
 1 1 qua8 1 8 9 2 10 11 12 5
 2 1 qua8 3 2 13 14 6 15 16 17
@@ -69,8 +69,8 @@ fn main() -> Result<(), StrError> {
 
     assert_eq!(format!("{}", mesh), correct);
 
-    let mut fig = Figure::new();
-    fig.cell_ids = true;
-    fig.point_ids = true;
-    mesh.draw(Some(fig), "/tmp/gemlab/example_block_2d_qua8.svg", |_, _| {})
+    let mut draw = Draw::new();
+    draw.show_cell_ids(true)
+        .show_point_ids(true)
+        .all(&mesh, "/tmp/gemlab/example_block_2d_qua8.svg")
 }

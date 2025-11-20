@@ -1,18 +1,18 @@
 #
 #          [#] indicates id
-#      y   (#) indicates attribute
-#      ↑
+#      y   (#) indicates marker
+#      ↑   -100        -200
 # 1.0  3-----------2-----------5
 #      |(-4)       |(-3)       |(-6)
-#      |    [0]    |    [1]    |
+#  -300|    [0]    |    [1]    |-300
 #      |    (1)    |    (2)    |
 #      |(-1)       |(-2)       |(-5)
 # 0.0  0-----------1-----------4  → x
-#     0.0         1.0         2.0
+#     0.0  -400   1.0  -400   2.0
 #
 # header
-# ndim npoint ncell
-     2      6     2
+# ndim npoint ncell nmarked_edge nmarked_face
+     2      6     2            6            0
 
 # points
 # id marker x y
@@ -24,6 +24,15 @@
    5 -6 2.0 1.0
 
 # cells
-# id attribute kind  point_ids...
+# id marker kind points
    0   1 qua4  0 1 2 3
    1   2 qua4  1 4 5 2
+
+# marked edges
+# marker p1 p2
+-100 3 2
+-200 2 5
+-300 5 4
+-300 3 0
+-400 0 1
+-400 1 4

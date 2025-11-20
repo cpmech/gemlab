@@ -1,5 +1,6 @@
-use gemlab::integ::{default_points, points_coords, scalar_field};
+use gemlab::integ::{scalar_field, Gauss};
 use gemlab::prelude::*;
+use gemlab::recovery::get_points_coords;
 use gemlab::StrError;
 use russell_lab::approx_eq;
 use russell_lab::math::PI;
@@ -8,10 +9,12 @@ fn main() -> Result<(), StrError> {
     // generate mesh
     let (rmin, rmax) = (1.0, 3.0);
     let kind = GeoKind::Qua17;
-    let mesh = Structured::quarter_ring_2d(rmin, rmax, 4, 8, kind, false)?;
+    let nr = 4;
+    let wr = vec![1.0; nr];
+    let mesh = Structured::quarter_ring_2d(rmin, rmax, &wr, 8, kind, false)?;
 
     // allocate integration points and Scratchpad
-    let ips = default_points(kind);
+    let gauss = Gauss::new(kind);
     let mut pad = Scratchpad::new(2, kind)?;
 
     // sum contribution of all cells
@@ -21,10 +24,10 @@ fn main() -> Result<(), StrError> {
         mesh.set_pad(&mut pad, &cell.points);
 
         // calculate the coordinates of the integration points
-        let x_ips = points_coords(&mut pad, ips)?;
+        let x_ips = get_points_coords(&mut pad, &gauss)?;
 
         // perform the integration over the domain of a single cell
-        second_mom_inertia += scalar_field(&mut pad, ips, |p| {
+        second_mom_inertia += scalar_field(&mut pad, &gauss, |p| {
             let y = x_ips[p][1];
             Ok(y * y)
         })?;
@@ -44,9 +47,9 @@ fn main() -> Result<(), StrError> {
     approx_eq(second_mom_inertia, correct, 1e-7);
 
     // draw mesh
-    let mut fig = Figure::new();
-    fig.cell_ids = true;
-    fig.point_ids = true;
-    fig.figure_size = Some((800.0, 800.0));
-    mesh.draw(Some(fig), "/tmp/gemlab/example_mom_inertia_ring.svg", |_, _| {})
+    let mut draw = Draw::new();
+    draw.show_cell_ids(true)
+        .show_point_ids(true)
+        .set_size(800.0, 800.0)
+        .all(&mesh, "/tmp/gemlab/example_mom_inertia_ring.svg")
 }

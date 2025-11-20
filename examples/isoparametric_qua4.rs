@@ -42,7 +42,7 @@ fn main() -> Result<(), StrError> {
 
     // compute interpolation functions @ ksi_middle
     let ksi_middle = &[0.0, 0.0];
-    (pad.fn_interp)(&mut pad.interp, ksi_middle);
+    pad.calc_interp(ksi_middle);
 
     // perform summation
     let nnode = pad.kind.nnode();

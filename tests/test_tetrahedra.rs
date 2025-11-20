@@ -6,10 +6,9 @@ use std::collections::HashMap;
 #[test]
 fn test_tetrahedra() -> Result<(), StrError> {
     // read mesh
-    let mesh = Mesh::from_text_file("./data/meshes/five_tets_within_cube.msh")?;
+    let mesh = Mesh::read("./data/meshes/five_tets_within_cube.msh")?;
     let features = Features::new(&mesh, false);
-    let npoint = mesh.points.len();
-    assert_eq!(npoint, 8);
+    assert_eq!(mesh.points.len(), 8);
     assert_eq!(mesh.cells.len(), 5);
 
     // cells
@@ -20,37 +19,37 @@ fn test_tetrahedra() -> Result<(), StrError> {
     assert_eq!(mesh.cells[4].points, &[0, 2, 7, 5]);
 
     // x-min
-    let face = features.faces.get(&(0, 3, 7, npoint)).unwrap();
+    let face = features.faces.get(&(0, 3, 7, usize::MAX)).unwrap();
     assert_eq!(face.points, &[3, 0, 7]);
-    let face = features.faces.get(&(0, 4, 7, npoint)).unwrap();
+    let face = features.faces.get(&(0, 4, 7, usize::MAX)).unwrap();
     assert_eq!(face.points, &[4, 7, 0]);
     // x-max
-    let face = features.faces.get(&(1, 2, 5, npoint)).unwrap();
+    let face = features.faces.get(&(1, 2, 5, usize::MAX)).unwrap();
     assert_eq!(face.points, &[1, 2, 5]);
-    let face = features.faces.get(&(2, 5, 6, npoint)).unwrap();
+    let face = features.faces.get(&(2, 5, 6, usize::MAX)).unwrap();
     assert_eq!(face.points, &[6, 5, 2]);
     // y-min
-    let face = features.faces.get(&(0, 1, 5, npoint)).unwrap();
+    let face = features.faces.get(&(0, 1, 5, usize::MAX)).unwrap();
     assert_eq!(face.points, &[1, 5, 0]);
-    let face = features.faces.get(&(0, 4, 5, npoint)).unwrap();
+    let face = features.faces.get(&(0, 4, 5, usize::MAX)).unwrap();
     assert_eq!(face.points, &[4, 0, 5]);
     // y-max
-    let face = features.faces.get(&(2, 3, 7, npoint)).unwrap();
+    let face = features.faces.get(&(2, 3, 7, usize::MAX)).unwrap();
     assert_eq!(face.points, &[3, 7, 2]);
-    let face = features.faces.get(&(2, 6, 7, npoint)).unwrap();
+    let face = features.faces.get(&(2, 6, 7, usize::MAX)).unwrap();
     assert_eq!(face.points, &[6, 2, 7]);
     // z-min
-    let face = features.faces.get(&(0, 1, 2, npoint)).unwrap();
+    let face = features.faces.get(&(0, 1, 2, usize::MAX)).unwrap();
     assert_eq!(face.points, &[1, 0, 2]);
-    let face = features.faces.get(&(0, 2, 3, npoint)).unwrap();
+    let face = features.faces.get(&(0, 2, 3, usize::MAX)).unwrap();
     assert_eq!(face.points, &[3, 2, 0]);
     // z-max
-    let face = features.faces.get(&(4, 5, 7, npoint)).unwrap();
+    let face = features.faces.get(&(4, 5, 7, usize::MAX)).unwrap();
     assert_eq!(face.points, &[4, 5, 7]);
-    let face = features.faces.get(&(5, 6, 7, npoint)).unwrap();
+    let face = features.faces.get(&(5, 6, 7, usize::MAX)).unwrap();
     assert_eq!(face.points, &[6, 7, 5]);
     // internal
-    assert!(features.faces.get(&(0, 2, 7, npoint)).is_none());
+    assert!(features.faces.get(&(0, 2, 7, usize::MAX)).is_none());
 
     // the norm of the normal vector should be equal to face_area / 0.5
     // where 0.5 corresponds to the face_area in the reference system
@@ -58,18 +57,18 @@ fn test_tetrahedra() -> Result<(), StrError> {
 
     // face keys and correct normal vectors (solutions)
     let solutions = HashMap::from([
-        ((0, 3, 7, npoint), (l, [-1.0, 0.0, 0.0])), // x-min
-        ((0, 4, 7, npoint), (l, [-1.0, 0.0, 0.0])), // x-min
-        ((1, 2, 5, npoint), (l, [1.0, 0.0, 0.0])),  // x-max
-        ((2, 5, 6, npoint), (l, [1.0, 0.0, 0.0])),  // x-max
-        ((0, 1, 5, npoint), (l, [0.0, -1.0, 0.0])), // y-min
-        ((0, 4, 5, npoint), (l, [0.0, -1.0, 0.0])), // y-min
-        ((2, 3, 7, npoint), (l, [0.0, 1.0, 0.0])),  // y-max
-        ((2, 6, 7, npoint), (l, [0.0, 1.0, 0.0])),  // y-max
-        ((0, 1, 2, npoint), (l, [0.0, 0.0, -1.0])), // z-min
-        ((0, 2, 3, npoint), (l, [0.0, 0.0, -1.0])), // z-min
-        ((4, 5, 7, npoint), (l, [0.0, 0.0, 1.0])),  // z-max
-        ((5, 6, 7, npoint), (l, [0.0, 0.0, 1.0])),  // z-max
+        ((0, 3, 7, usize::MAX), (l, [-1.0, 0.0, 0.0])), // x-min
+        ((0, 4, 7, usize::MAX), (l, [-1.0, 0.0, 0.0])), // x-min
+        ((1, 2, 5, usize::MAX), (l, [1.0, 0.0, 0.0])),  // x-max
+        ((2, 5, 6, usize::MAX), (l, [1.0, 0.0, 0.0])),  // x-max
+        ((0, 1, 5, usize::MAX), (l, [0.0, -1.0, 0.0])), // y-min
+        ((0, 4, 5, usize::MAX), (l, [0.0, -1.0, 0.0])), // y-min
+        ((2, 3, 7, usize::MAX), (l, [0.0, 1.0, 0.0])),  // y-max
+        ((2, 6, 7, usize::MAX), (l, [0.0, 1.0, 0.0])),  // y-max
+        ((0, 1, 2, usize::MAX), (l, [0.0, 0.0, -1.0])), // z-min
+        ((0, 2, 3, usize::MAX), (l, [0.0, 0.0, -1.0])), // z-min
+        ((4, 5, 7, usize::MAX), (l, [0.0, 0.0, 1.0])),  // z-max
+        ((5, 6, 7, usize::MAX), (l, [0.0, 0.0, 1.0])),  // z-max
     ]);
 
     // check if the normal vectors at boundary are outward
@@ -90,16 +89,16 @@ fn test_tetrahedra() -> Result<(), StrError> {
 
     // search faces
     let faces = feat.search_face_keys(At::X(0.0), any_x)?;
-    assert_eq!(&faces, &[(0, 3, 7, npoint), (0, 4, 7, npoint)]);
+    assert_eq!(&faces, &[(0, 3, 7, usize::MAX), (0, 4, 7, usize::MAX)]);
     let faces = feat.search_face_keys(At::X(2.0), any_x)?;
-    assert_eq!(&faces, &[(1, 2, 5, npoint), (2, 5, 6, npoint)]);
+    assert_eq!(&faces, &[(1, 2, 5, usize::MAX), (2, 5, 6, usize::MAX)]);
     let faces = feat.search_face_keys(At::Y(0.0), any_x)?;
-    assert_eq!(&faces, &[(0, 1, 5, npoint), (0, 4, 5, npoint)]);
+    assert_eq!(&faces, &[(0, 1, 5, usize::MAX), (0, 4, 5, usize::MAX)]);
     let faces = feat.search_face_keys(At::Y(2.0), any_x)?;
-    assert_eq!(&faces, &[(2, 3, 7, npoint), (2, 6, 7, npoint)]);
+    assert_eq!(&faces, &[(2, 3, 7, usize::MAX), (2, 6, 7, usize::MAX)]);
     let faces = feat.search_face_keys(At::Z(0.0), any_x)?;
-    assert_eq!(&faces, &[(0, 1, 2, npoint), (0, 2, 3, npoint)]);
+    assert_eq!(&faces, &[(0, 1, 2, usize::MAX), (0, 2, 3, usize::MAX)]);
     let faces = feat.search_face_keys(At::Z(2.0), any_x)?;
-    assert_eq!(&faces, &[(4, 5, 7, npoint), (5, 6, 7, npoint)]);
+    assert_eq!(&faces, &[(4, 5, 7, usize::MAX), (5, 6, 7, usize::MAX)]);
     Ok(())
 }

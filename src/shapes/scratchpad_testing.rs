@@ -240,13 +240,17 @@ mod tests {
     use crate::StrError;
     use russell_lab::{approx_eq, deriv1_approx_eq};
 
+    const SAVE_FIGURE: bool = false;
+
     #[test]
     #[allow(unused_variables, unused_mut)]
     fn draw_point_coords_2d_works() {
         let mut plot = draw_point_coords_2d(0.0, 1.0);
-        // plot.set_figure_size_points(1000.0, 600.0)
-        //     .save("/tmp/gemlab/test_draw_point_coords_2d.svg")
-        //     .unwrap();
+        if SAVE_FIGURE {
+            plot.set_figure_size_points(1000.0, 600.0)
+                .save("/tmp/gemlab/test_draw_point_coords_2d.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -414,7 +418,7 @@ mod tests {
                 let ksi = kind.reference_coords(m);
 
                 // compute interpolation function Nⁿ(ξᵐ)
-                (pad.fn_interp)(&mut pad.interp, ksi);
+                pad.calc_interp(ksi);
 
                 // check: Nⁿ(ξᵐ) = 1 if m==n; 0 otherwise
                 for n in 0..nnode {

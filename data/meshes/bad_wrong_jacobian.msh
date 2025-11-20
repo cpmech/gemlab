@@ -21,8 +21,8 @@
 #  1--------------2
 #
 # header
-# ndim npoint ncell
-     3     12     2
+# ndim npoint ncell nmarked_edge nmarked_face
+     3     12     2            0            0
 
 # points
 # id marker x y z
@@ -40,7 +40,7 @@
   11 0 0.0 1.0 2.0
 
 # cells
-# id attribute kind  (wrong) point_ids...
+# id marker kind  (wrong) points
    0   1 hex8  0 3 2 1 4 7  6  5
    1   0 hex8  4 5 6 7 8 9 10 11
    

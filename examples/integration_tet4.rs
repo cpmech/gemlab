@@ -1,4 +1,4 @@
-use gemlab::integ;
+use gemlab::integ::{self, Gauss};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
 use russell_lab::Matrix;
@@ -32,8 +32,8 @@ fn main() -> Result<(), StrError> {
     let nnode = pad.kind.nnode();
     let nrow = nnode * space_ndim;
     let mut kk = Matrix::new(nrow, nrow);
-    let ips = integ::default_points(pad.kind);
-    let mut args = integ::CommonArgs::new(&mut pad, ips);
+    let gauss = Gauss::new(pad.kind);
+    let mut args = integ::CommonArgs::new(&mut pad, &gauss);
     integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
         dd.set_tensor(1.0, model.get_modulus());
         Ok(())

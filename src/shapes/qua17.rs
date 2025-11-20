@@ -60,6 +60,8 @@ impl Qua17 {
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
     pub const N_INTERIOR_NODE: usize = 1;
+    pub const TRIANGULATE_NTRIANGLE: usize = 32;
+    pub const TRIANGULATE_EXTRA_NNODE: usize = 8;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua17::EDGE_NNODE]; Qua17::NEDGE] = [
@@ -99,6 +101,54 @@ impl Qua17 {
     ];
 
     pub const INTERIOR_NODES: [usize; Qua17::N_INTERIOR_NODE] = [/*16*/ 8];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Qua17::TRIANGULATE_NTRIANGLE] = [
+        [ 0,  9, 16],  //  0
+        [ 9, 17, 16],  //  1
+        [ 9,  4, 17],  //  2
+        [ 4, 21, 17],  //  3
+        [ 4, 10, 21],  //  4
+        [10, 18, 21],  //  5
+        [10,  1, 18],  //  6
+        [ 1, 11, 18],  //  7
+        [16, 17,  7],  //  8
+        [17, 24,  7],  //  9
+        [17, 21, 24],  // 10
+        [21,  8, 24],  // 11
+        [21, 18,  8],  // 12
+        [18, 22,  8],  // 13
+        [18, 11, 22],  // 14
+        [11,  5, 22],  // 15
+        [ 7, 24, 15],  // 16
+        [24, 20, 15],  // 17
+        [24,  8, 20],  // 18
+        [ 8, 23, 20],  // 19
+        [ 8, 22, 23],  // 20
+        [22, 19, 23],  // 21
+        [22,  5, 19],  // 22
+        [ 5, 12, 19],  // 23
+        [15, 20,  3],  // 24
+        [20, 14,  3],  // 25
+        [20, 23, 14],  // 26
+        [23,  6, 14],  // 27
+        [23, 19,  6],  // 28
+        [19, 13,  6],  // 29
+        [19, 12, 13],  // 30
+        [12,  2, 13],  // 31
+    ];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_EXTRA_COORDS: [[f64; Qua17::GEO_NDIM]; Qua17::TRIANGULATE_EXTRA_NNODE] = [
+        [-0.5, -0.5], // 17
+        [ 0.5, -0.5], // 18
+        [ 0.5,  0.5], // 19
+        [-0.5,  0.5], // 20
+        [ 0.0, -0.5], // 21
+        [ 0.5,  0.0], // 22
+        [ 0.0,  0.5], // 23
+        [-0.5,  0.0], // 24
+    ];
 
     /// Computes the interpolation functions
     ///

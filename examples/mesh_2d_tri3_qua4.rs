@@ -29,7 +29,7 @@ fn main() -> Result<(), StrError> {
              7 0 1.0 1.0
           
           # cells
-          # id attribute kind point_ids...
+          # id marker kind points
              0 1 tri3 0 1 3
              1 1 tri3 1 2 4
              2 1 qua4 1 4 6 3
@@ -44,9 +44,8 @@ fn main() -> Result<(), StrError> {
     assert_eq!(mesh.cells[0].points.len(), 3);
     assert_eq!(mesh.cells[2].points.len(), 4);
 
-    let mut fig = Figure::new();
-    fig.cell_ids = true;
-    fig.point_ids = true;
+    let mut draw = Draw::new();
+    draw.show_cell_ids(true).show_point_ids(true);
 
-    mesh.draw(Some(fig), "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg", |_, _| {})
+    draw.all(&mesh, "/tmp/gemlab/example_mesh_2d_tri3_qua4.svg")
 }

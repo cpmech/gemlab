@@ -284,7 +284,9 @@ impl<'a> GridCells<'a> {
             tetrahedron_coords(ksi_or_zeta, xa, xb, xc, xd, x);
             return in_tetrahedron(&ksi_or_zeta);
         }
-        return false; // TODO
+
+        // TODO: handle other cell kinds
+        panic!("GridCells can only handle Tri3 and Tet4 cells at the moment");
     }
 
     /// Searches the cell where the given point falls in
@@ -536,9 +538,9 @@ mod tests {
     use super::GridCells;
     use crate::mesh::{Cell, Mesh, Point, Samples, GRID_CELLS_BORDER_TOL, GRID_CELLS_TOLERANCE};
     use crate::shapes::GeoKind;
-
-    #[allow(unused_imports)]
     use plotpy::Plot;
+
+    const SAVE_FIGURE: bool = false;
 
     #[test]
     fn new_handles_errors() {
@@ -581,9 +583,11 @@ mod tests {
                 Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
-                Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, marker: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         let tolerance = 1e-3;
         let border_tol = 0.1;
@@ -645,15 +649,15 @@ mod tests {
 
         let mut plot = Plot::new();
         grid.draw(&mut plot, true).unwrap();
-        // if true {
-        //     plot.set_equal_axes(true)
-        //         .set_figure_size_points(600.0, 600.0)
-        //         .grid_and_labels("x", "y")
-        //         .set_ticks_x(0.2, 0.0, "")
-        //         .set_ticks_y(0.2, 0.0, "")
-        //         .save("/tmp/gemlab/test_grid_cells_new_works_1.svg")
-        //         .unwrap();
-        // }
+        if SAVE_FIGURE {
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .grid_and_labels("x", "y")
+                .set_ticks_x(0.2, 0.0, "")
+                .set_ticks_y(0.2, 0.0, "")
+                .save("/tmp/gemlab/test_grid_cells_new_works_1.svg")
+                .unwrap();
+        }
 
         // with zero border
         let grid = GridCells::new(&mesh, None, Some(0.0), None, None).unwrap();
@@ -675,9 +679,11 @@ mod tests {
                 Point { id: 3, marker: 0, coords: vec![0.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
-                Cell { id: 1, attribute: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Tri3, points: vec![0, 1, 3] },
+                Cell { id: 1, marker: 1, kind: GeoKind::Tri3, points: vec![1, 2, 3] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         let tolerance = 1e-3;
         let border_tol = 0.1;
@@ -709,15 +715,15 @@ mod tests {
         );
         let mut plot = Plot::new();
         grid.draw(&mut plot, true).unwrap();
-        // if true {
-        //     plot.set_equal_axes(true)
-        //         .set_figure_size_points(600.0, 600.0)
-        //         .grid_and_labels("x", "y")
-        //         .set_ticks_x(0.2, 0.0, "")
-        //         .set_ticks_y(0.2, 0.0, "")
-        //         .save("/tmp/gemlab/test_grid_cells_new_works_2.svg")
-        //         .unwrap();
-        // }
+        if SAVE_FIGURE {
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .grid_and_labels("x", "y")
+                .set_ticks_x(0.2, 0.0, "")
+                .set_ticks_y(0.2, 0.0, "")
+                .save("/tmp/gemlab/test_grid_cells_new_works_2.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -753,12 +759,12 @@ mod tests {
         );
         let mut plot = Plot::new();
         grid.draw(&mut plot, true).unwrap();
-        // if true {
-        //     plot.set_equal_axes(true)
-        //         .set_figure_size_points(600.0, 600.0)
-        //         .save("/tmp/gemlab/test_grid_cells_new_works_3.svg")
-        //         .unwrap();
-        // }
+        if SAVE_FIGURE {
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .save("/tmp/gemlab/test_grid_cells_new_works_3.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -801,15 +807,15 @@ mod tests {
         );
         let mut plot = Plot::new();
         grid.draw(&mut plot, true).unwrap();
-        // if true {
-        //     plot.set_equal_axes(true)
-        //         .grid_and_labels("x", "y")
-        //         .set_ticks_x(0.1, 0.0, "")
-        //         .set_ticks_y(0.1, 0.0, "")
-        //         .set_figure_size_points(600.0, 600.0)
-        //         .save("/tmp/gemlab/test_grid_cells_new_works_large_cells.svg")
-        //         .unwrap();
-        // }
+        if SAVE_FIGURE {
+            plot.set_equal_axes(true)
+                .grid_and_labels("x", "y")
+                .set_ticks_x(0.1, 0.0, "")
+                .set_ticks_y(0.1, 0.0, "")
+                .set_figure_size_points(600.0, 600.0)
+                .save("/tmp/gemlab/test_grid_cells_new_works_large_cells.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -840,17 +846,17 @@ mod tests {
             None => panic!("cannot find cell_id"),
         }
 
-        // if true {
-        //     let mut plot = Plot::new();
-        //     grid.draw(&mut plot, true).unwrap();
-        //     plot.set_equal_axes(true)
-        //         .grid_and_labels("x", "y")
-        //         .set_ticks_x(0.1, 0.0, "")
-        //         .set_ticks_y(0.1, 0.0, "")
-        //         .set_figure_size_points(600.0, 600.0)
-        //         .save("/tmp/gemlab/test_grid_cells_find_works_1.svg")
-        //         .unwrap();
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            grid.draw(&mut plot, true).unwrap();
+            plot.set_equal_axes(true)
+                .grid_and_labels("x", "y")
+                .set_ticks_x(0.1, 0.0, "")
+                .set_ticks_y(0.1, 0.0, "")
+                .set_figure_size_points(600.0, 600.0)
+                .save("/tmp/gemlab/test_grid_cells_find_works_1.svg")
+                .unwrap();
+        }
     }
 
     #[test]
@@ -944,13 +950,13 @@ mod tests {
             Some("given point coordinates are outside the grid")
         );
 
-        // if true {
-        //     let mut plot = Plot::new();
-        //     grid.draw(&mut plot, true).unwrap();
-        //     plot.set_equal_axes(true)
-        //         .set_figure_size_points(600.0, 600.0)
-        //         .save("/tmp/gemlab/test_grid_cells_find_works_3.svg")
-        //         .unwrap();
-        // }
+        if SAVE_FIGURE {
+            let mut plot = Plot::new();
+            grid.draw(&mut plot, true).unwrap();
+            plot.set_equal_axes(true)
+                .set_figure_size_points(600.0, 600.0)
+                .save("/tmp/gemlab/test_grid_cells_find_works_3.svg")
+                .unwrap();
+        }
     }
 }

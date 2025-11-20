@@ -41,6 +41,29 @@
 //! |     2      |     `SOLID`      |     `SHELL`      |
 //! |     3      |    impossible    |     `SOLID`      |
 //!
+//! # Interpolation functions
+//!
+//! The interpolation functions are such that:
+//!
+//! ```text
+//! → →         →  →
+//! u(ξ) = Σ Nᵐ(ξ) uᵐ
+//!        m
+//! ```
+//!
+//! for any quantity `uᵐ` specified at the nodes of an element/shape. Above, `ξ` is the (geo_ndim)
+//! vector of reference coordinates, and `Nᵐ` are the (nnode) interpolation functions.
+//!
+//! Given an (nnode,ncol) **matrix** of nodal values `U`, we can calculate the (ncol) **vector** of
+//! interpolated values `u` by means of
+//!
+//! ```text
+//!   u   =     Uᵀ     ⋅   N
+//! (ncol) (ncol,nnode) (nnode)
+//! ```
+//!
+//! where `N` is an (nnode) **vector** formed with all `Nᵐ` values.
+//!
 //! # Isoparametric formulation
 //!
 //! The isoparametric formulation establishes that we can calculate the coordinates `x(ξ)`
@@ -317,6 +340,7 @@ mod scratchpad_calc_jacobian;
 mod scratchpad_calc_normal_vector;
 mod scratchpad_draw_shape;
 mod scratchpad_testing;
+mod scratchpad_triangulate;
 mod tet10;
 mod tet20;
 mod tet4;
@@ -324,26 +348,27 @@ mod tri10;
 mod tri15;
 mod tri3;
 mod tri6;
-pub use crate::shapes::enums::*;
-pub use crate::shapes::hex20::*;
-pub use crate::shapes::hex32::*;
-pub use crate::shapes::hex8::*;
-pub use crate::shapes::lin2::*;
-pub use crate::shapes::lin3::*;
-pub use crate::shapes::lin4::*;
-pub use crate::shapes::lin5::*;
-pub use crate::shapes::qua12::*;
-pub use crate::shapes::qua16::*;
-pub use crate::shapes::qua17::*;
-pub use crate::shapes::qua4::*;
-pub use crate::shapes::qua8::*;
-pub use crate::shapes::qua9::*;
-pub use crate::shapes::scratchpad::*;
-pub use crate::shapes::scratchpad_calc_jacobian::*;
-pub use crate::shapes::tet10::*;
-pub use crate::shapes::tet20::*;
-pub use crate::shapes::tet4::*;
-pub use crate::shapes::tri10::*;
-pub use crate::shapes::tri15::*;
-pub use crate::shapes::tri3::*;
-pub use crate::shapes::tri6::*;
+
+pub use enums::*;
+pub use hex20::*;
+pub use hex32::*;
+pub use hex8::*;
+pub use lin2::*;
+pub use lin3::*;
+pub use lin4::*;
+pub use lin5::*;
+pub use qua12::*;
+pub use qua16::*;
+pub use qua17::*;
+pub use qua4::*;
+pub use qua8::*;
+pub use qua9::*;
+pub use scratchpad::*;
+pub use scratchpad_calc_jacobian::*;
+pub use tet10::*;
+pub use tet20::*;
+pub use tet4::*;
+pub use tri10::*;
+pub use tri15::*;
+pub use tri3::*;
+pub use tri6::*;

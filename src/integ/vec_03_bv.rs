@@ -2,15 +2,15 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Implements the vector(V) dot gradient(B) integration case 03
+/// Implements the gradient(B) dot vector(V) integration case 03
 ///
 /// Callback function: `f(w, p, N, B)`
 ///
 /// Vector dot gradient:
 ///
 /// ```text
-///      ⌠ → →    →  → →
-/// cᵐ = │ w(x) · Bᵐ(x(ξ)) α dΩ
+///      ⌠ →  → →     → →
+/// cᵐ = │ Bᵐ(x(ξ)) · w(x) α dΩ
 ///      ⌡
 ///      Ωₑ
 /// ```
@@ -18,8 +18,8 @@ use russell_lab::{Matrix, Vector};
 /// The numerical integration is:
 ///
 /// ```text
-///      nip-1  → →     →  →       →
-/// cᵐ ≈   Σ    w(ιᵖ) · Bᵐ(ιᵖ) |J|(ιᵖ) wᵖ α
+///      nip-1  →  →     → →       →
+/// cᵐ ≈   Σ    Bᵐ(ιᵖ) · w(ιᵖ) |J|(ιᵖ) wᵖ α
 ///       p=0
 /// ```
 ///
@@ -40,7 +40,7 @@ use russell_lab::{Matrix, Vector};
 /// * `c` -- A vector containing all `cᵐ` values, one after another, and sequentially placed as shown above.
 ///   `m` is the index of the node. The length must be `c.len() ≥ ii0 + nnode`.
 /// * `args` --- Common arguments
-/// * `fn_w` -- Function `f(w,p,N,B)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_w` -- Function `f(w,p,N,B)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   shape functions N(ιᵖ), and gradients B(ιᵖ). `w.dim() = space_ndim`.
 ///
 /// # Examples
@@ -48,7 +48,7 @@ use russell_lab::{Matrix, Vector};
 /// See also the `examples` directory.
 ///
 /// ```
-/// use gemlab::integ;
+/// use gemlab::integ::{self, CommonArgs, Gauss};
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_lab::{Vector, vec_approx_eq};
@@ -62,10 +62,10 @@ use russell_lab::{Matrix, Vector};
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = integ::default_points(pad.kind);
+///     let gauss = Gauss::new(pad.kind);
 ///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
-///     let mut args = integ::CommonArgs::new(&mut pad, ips);
-///     integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
+///     let mut args = CommonArgs::new(&mut pad, &gauss);
+///     integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
 ///         w[0] = 1.0;
 ///         w[1] = 2.0;
 ///         Ok(())
@@ -81,7 +81,7 @@ use russell_lab::{Matrix, Vector};
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_03_vb<F>(c: &mut Vector, args: &mut CommonArgs, mut fn_w: F) -> Result<(), StrError>
+pub fn vec_03_bv<F>(c: &mut Vector, args: &mut CommonArgs, mut fn_w: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
@@ -101,10 +101,10 @@ where
     }
 
     // loop over integration points
-    for p in 0..args.ips.len() {
+    for p in 0..args.gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &args.ips[p];
-        let weight = args.ips[p][3];
+        let iota = args.gauss.coords(p);
+        let weight = args.gauss.weight(p);
 
         // calculate Jacobian and Gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -145,7 +145,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
+    use crate::recovery;
     use russell_lab::{vec_approx_eq, Matrix, Vector};
 
     #[test]
@@ -157,10 +158,11 @@ mod tests {
         let bb = Matrix::new(0, 0);
         let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(());
         f(&mut w, 0, &nn, &bb).unwrap();
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
-            integ::vec_03_vb(&mut c, &mut args, f).err(),
+            integ::vec_03_bv(&mut c, &mut args, f).err(),
             Some("c.len() must be ≥ ii0 + nnode")
         );
     }
@@ -174,19 +176,19 @@ mod tests {
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
-        let c_correct = ana.vec_03_vb(W0, W1);
+        let c_correct = ana.vec_03_bv(W0, W1);
 
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
+            integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 Ok(())
@@ -203,20 +205,20 @@ mod tests {
 
         // solution
         let ana = AnalyticalTri3::new(&pad);
-        let c_correct = ana.vec_03_vb_bilinear(&pad);
+        let c_correct = ana.vec_03_bv_bilinear(&pad);
 
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14];
-        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
-            integ::vec_03_vb(&mut c, &mut args, |w, p, _, _| {
+            let x_ips = recovery::get_points_coords(&mut args.pad, ips).unwrap();
+            integ::vec_03_bv(&mut c, &mut args, |w, p, _, _| {
                 w[0] = x_ips[p][0];
                 w[1] = x_ips[p][1];
                 Ok(())
@@ -236,14 +238,14 @@ mod tests {
         const W1: f64 = 3.0;
         const W2: f64 = 4.0;
         let ana = AnalyticalTet4::new(&pad);
-        let c_correct = ana.vec_03_vb(W0, W1, W2);
+        let c_correct = ana.vec_03_bv(W0, W1, W2);
 
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // check
@@ -251,7 +253,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
+            integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
                 w[0] = W0;
                 w[1] = W1;
                 w[2] = W2;

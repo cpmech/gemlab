@@ -1,3 +1,4 @@
+use crate::integ::Gauss;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::Vector;
@@ -15,17 +16,18 @@ use russell_lab::Vector;
 ///
 /// # Input
 ///
-/// * `integ_points` -- Integration points' constants (n_integ_point)
+/// * `integ_points` -- Integration points' constants (ngauss)
 ///
 /// # Output
 ///
-/// * Returns an array with `n_integ_point` (number of integration points) vectors, where
+/// * Returns an array with `ngauss` (number of integration points) vectors, where
 ///   each vector has a dimension equal to `space_ndim`.
 ///
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ::points_coords;
+/// use gemlab::integ::Gauss;
+/// use gemlab::recovery::get_points_coords;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 ///
@@ -48,27 +50,21 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 0, 0.0);
 ///     pad.set_xx(2, 1, 6.0);
 ///
-///     // the last column of the array below contains the weight
-///     const IP_TRI_INTERNAL_3: [[f64; 4]; 3] = [
-///         [1.0 / 6.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
-///         [2.0 / 3.0, 1.0 / 6.0, 0.0, 1.0 / 6.0],
-///         [1.0 / 6.0, 2.0 / 3.0, 0.0, 1.0 / 6.0],
-///     ];
-///
-///     let x_ips = points_coords(&mut pad, &IP_TRI_INTERNAL_3)?;
+///     let gauss = Gauss::new_sized(pad.kind.class(), 3)?;
+///     let x_ips = get_points_coords(&mut pad, &gauss)?;
 ///     assert_eq!(x_ips[0].as_data(), &[1.0, 1.0]);
 ///     assert_eq!(x_ips[1].as_data(), &[4.0, 1.0]);
 ///     assert_eq!(x_ips[2].as_data(), &[1.0, 4.0]);
 ///     Ok(())
 /// }
-///
 /// ```
-pub fn points_coords(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<Vec<Vector>, StrError> {
+pub fn get_points_coords(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Vec<Vector>, StrError> {
     let space_ndim = pad.xxt.dims().0;
     let mut all_coords = Vec::new();
-    for iota in integ_points {
+    let ngauss = gauss.npoint();
+    for p in 0..ngauss {
         let mut x = Vector::new(space_ndim);
-        pad.calc_coords(&mut x, iota)?;
+        pad.calc_coords(&mut x, gauss.coords(p))?;
         all_coords.push(x);
     }
     Ok(all_coords)
@@ -78,8 +74,8 @@ pub fn points_coords(pad: &mut Scratchpad, integ_points: &[[f64; 4]]) -> Result<
 
 #[cfg(test)]
 mod tests {
-    use super::points_coords;
-    use crate::integ::IP_QUA_LEGENDRE_4;
+    use super::get_points_coords;
+    use crate::integ::Gauss;
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::approx_eq;
 
@@ -105,7 +101,8 @@ mod tests {
         pad.set_xx(3, 0, 0.0);
         pad.set_xx(3, 1, h);
 
-        let x_ips = points_coords(&mut pad, &IP_QUA_LEGENDRE_4).unwrap();
+        let gauss = Gauss::new_sized(pad.kind.class(), 4).unwrap();
+        let x_ips = get_points_coords(&mut pad, &gauss).unwrap();
 
         approx_eq(x_ips[0][0], w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
         approx_eq(x_ips[0][1], h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);

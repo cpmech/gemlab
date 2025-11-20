@@ -24,8 +24,8 @@
 #      0.0        1.0        2.0                   4.0
 #
 # header
-# ndim npoint ncell
-     2     16    12
+# ndim npoint ncell nmarked_edge nmarked_face
+     2     16    12            9            0
 
 # points
 # id marker x y
@@ -47,11 +47,11 @@
   12 0 2.0 3.0
   13 0 4.0 3.0
 
-  14 0 0.0 3.1
-  15 0 1.0 3.1
+  14 -1 0.0 3.1
+  15 -2 1.0 3.1
 
 # cells
-# id attribute kind  point_ids...
+# id marker kind points
    0 111 tri3  0 4 3
    1 111 tri3  0 1 4
    2 111 tri3  1 5 4
@@ -67,3 +67,15 @@
   10 222 qua4  8 9 13 12
 
   11 333 qua4  10 11 15 14
+
+# marked edges
+# marker p1 p2
+-10 0 1
+-10 1 2
+-20 3 7
+-20 7 10
+-20 0 3
+-20 2 6
+-20 6 9
+-20 9 13
+-30 14 15

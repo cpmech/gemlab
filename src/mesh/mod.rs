@@ -32,12 +32,17 @@
 //!
 
 mod algorithms;
+mod as_cell;
 mod block;
+mod blocks2d;
+mod blocks3d;
 mod check;
 mod convert_2d;
+mod draw;
 mod draw_cell;
-mod drawing;
+mod edges;
 mod enums;
+mod faces;
 mod features;
 mod generators_qua_hex;
 mod generators_tri_tet;
@@ -47,15 +52,27 @@ mod mesh;
 mod paraview;
 mod read_text_mesh;
 mod samples;
+mod triangulate_surface;
 mod write_text_file;
-pub use crate::mesh::algorithms::*;
-pub use crate::mesh::block::*;
-pub use crate::mesh::drawing::*;
-pub use crate::mesh::enums::*;
-pub use crate::mesh::features::*;
-pub use crate::mesh::generators_qua_hex::*;
-pub use crate::mesh::generators_tri_tet::*;
-pub use crate::mesh::grid_cells::*;
-pub use crate::mesh::join_meshes::*;
-pub use crate::mesh::mesh::*;
-pub use crate::mesh::samples::*;
+
+pub use as_cell::*;
+pub use block::*;
+pub use blocks2d::*;
+pub use blocks3d::*;
+pub use draw::*;
+pub use edges::*;
+pub use enums::*;
+pub use faces::*;
+pub use features::*;
+pub use generators_qua_hex::*;
+pub use generators_tri_tet::*;
+pub use grid_cells::*;
+pub use join_meshes::*;
+pub use mesh::*;
+pub use samples::*;
+pub use triangulate_surface::*;
+
+// re-export GeoKind
+pub use crate::shapes::GeoCase;
+pub use crate::shapes::GeoClass;
+pub use crate::shapes::GeoKind;

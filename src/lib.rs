@@ -4,9 +4,11 @@
 pub type StrError = &'static str;
 
 pub mod geometry;
+pub mod graph;
 pub mod integ;
 pub mod mesh;
 pub mod prelude;
+pub mod recovery;
 pub mod shapes;
 pub mod util;
 

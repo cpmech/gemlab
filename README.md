@@ -14,6 +14,8 @@
   - [Details](#details)
   - [Setting Cargo.toml](#setting-cargotoml)
 - [Examples](#examples)
+  - [MSH file format](#msh-file-format)
+  - [Numerical integration](#numerical-integration)
 - [Roadmap](#roadmap)
 - [Appendix A - Shapes and local numbering of nodes](#appendix-a---shapes-and-local-numbering-of-nodes)
   - [Lines (Lin)](#lines-lin)
@@ -78,8 +80,75 @@ gemlab = "*"
 
 ## Examples
 
+### MSH file format
+
+The MSH file format contains three mandatory sections and two optional sections. The MSH file is a plain text file where comments are marked with `#` and empty lines are allowed. The mandatory sections are `header`, `points`, and `cells`. We use "cells" here to refer to 2D polygons or 3D polyhedra (aka Elements in the Finite Element Method). The `header` section specifies the space dimension (2 or 3), the number of points, the number of cells, and the optional number of marked edges and faces. The optional sections specify the marked edges and faces. An example of MSH file is shown below:
+
+```text
+#
+#           8-------------11
+#          /.             /|
+#     {-5}/ .        {-5}/ |
+#        /  .   {-9}    /  |{123}
+#       /   .          /   |       id = 1
+# 2.0  9-------------10    |       marker = 2
+#      |    .         |    |
+#      |    4---------|----7*
+#      |   /.         |   /|
+#      |  / .         |  / |
+#      | /  .         | /  |{-4}
+#      |/   .         |/   |
+# 1.0  5--------------6    |       id = 0
+#      |    .         |{-8}|       marker = 1
+#      |    0---------|----3  0.0
+#      |   /          |   /
+#      |  /           |  /
+#      | /            | /
+#      |/             |/
+# 0.0  1*-------------2*  1.0
+#     0.0            1.0
+#
+# header
+# ndim npoint ncell nmarked_edge nmarked_face
+     3     12     2            4            2
+
+# points
+# id marker x y z
+   0  0 0.0 0.0 0.0
+   1 -1 1.0 0.0 0.0
+   2 -1 1.0 1.0 0.0
+   3  0 0.0 1.0 0.0
+   4  0 0.0 0.0 1.0
+   5  0 1.0 0.0 1.0
+   6  0 1.0 1.0 1.0
+   7 -1 0.0 1.0 1.0
+   8  0 0.0 0.0 2.0
+   9  0 1.0 0.0 2.0
+  10  0 1.0 1.0 2.0
+  11  0 0.0 1.0 2.0
+
+# cells
+# id marker kind points
+   0  1  hex8  0 1 2 3 4 5  6  7
+   1  2  hex8  4 5 6 7 8 9 10 11
+
+# marked edges
+# marker p1 p2
+123 7 11
+-5 11 10
+-4 7 3
+-5 8 9
+
+# marked faces
+# marker p1 p2 p3 {p4}
+-8 3 2 7 6
+-9 8 10 9 11
+```
+
+### Numerical integration
+
 ```rust
-use gemlab::integ;
+use gemlab::integ::Gauss;
 use gemlab::mesh::{At, Features, Mesh};
 use gemlab::shapes::Scratchpad;
 use gemlab::StrError;
@@ -99,7 +168,7 @@ fn main() -> Result<(), StrError> {
     // 0.0  0------`1'------2
     //     0.0     0.5     1.0
     let path = "./data/meshes/four_tri3_one_qua4.msh";
-    let mesh = Mesh::from_text_file(path)?;
+    let mesh = Mesh::read(path)?;
 
     // Extract features such boundary edges and faces.
     // Search entities along the boundary of the mesh given coordinates.
@@ -115,11 +184,11 @@ fn main() -> Result<(), StrError> {
     let cell_2 = &mesh.cells[2];
     let mut pad = Scratchpad::new(ndim, cell_2.kind)?;
     mesh.set_pad(&mut pad, &cell_2.points);
-    let ips = integ::default_points(cell_2.kind);
+    let gauss = Gauss::new(cell_2.kind);
     let mut area = 0.0;
-    for p in 0..ips.len() {
-        let iota = &ips[p];
-        let weight = ips[p][3];
+    for p in 0..gauss.npoint() {
+        let iota = gauss.coords(p);
+        let weight = gauss.weight(p);
         let det_jac = pad.calc_jacobian(iota)?;
         area += weight * det_jac;
     }

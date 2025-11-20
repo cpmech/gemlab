@@ -50,13 +50,13 @@ use russell_lab::Vector;
 ///   sequentially placed as shown above. `m` is the index of the node.
 ///   The length must be `a.len() ≥ ii0 + nnode`
 /// * `args` --- Common arguments
-/// * `fn_s` -- Function `f(p,N)` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_s` -- Function `f(p,N)` that computes `s(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   and shape functions N(ιᵖ).
 ///
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ;
+/// use gemlab::integ::{self, CommonArgs, Gauss};
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_lab::{vec_approx_eq, Vector};
@@ -70,9 +70,9 @@ use russell_lab::Vector;
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = integ::default_points(pad.kind);
+///     let gauss = Gauss::new(pad.kind);
 ///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
-///     let mut args = integ::CommonArgs::new(&mut pad, ips);
+///     let mut args = CommonArgs::new(&mut pad, &gauss);
 ///     integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
 ///     // aᵐ = cₛ A / 3 = 10
@@ -97,10 +97,10 @@ where
     }
 
     // loop over integration points
-    for p in 0..args.ips.len() {
+    for p in 0..args.gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &args.ips[p];
-        let weight = args.ips[p][3];
+        let iota = args.gauss.coords(p);
+        let weight = args.gauss.weight(p);
 
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -134,7 +134,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
+    use crate::recovery;
     use russell_lab::{vec_approx_eq, Vector};
 
     #[test]
@@ -144,7 +145,8 @@ mod tests {
         let nn = Vector::new(0);
         let f = |_: usize, _: &Vector| Ok(0.0);
         assert_eq!(f(0, &nn).unwrap(), 0.0);
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
             integ::vec_01_ns(&mut a, &mut args, f).err(),
@@ -176,14 +178,17 @@ mod tests {
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-15, 1e-14, 1e-14, 1e-14];
-        let selection: Vec<_> = [2, 3, 4, 5].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [2, 3, 4, 5]
+            .iter()
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
+            .collect();
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut args.pad, ips).unwrap();
             integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][0])).unwrap();
             vec_approx_eq(&a, a_correct, tol);
         });
@@ -204,7 +209,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 4, 12, 16]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // check
@@ -227,11 +232,11 @@ mod tests {
         let a_correct = ana.vec_01_ns(CS);
 
         // integration points
-        // Note that the tolerance is high for n_integ_point = 1
+        // Note that the tolerance is high for ngauss = 1
         // because the numerical integration performs poorly with few IPs
         let class = pad.kind.class();
         let tolerances = [1e-13, 1e-13];
-        let selection: Vec<_> = [1, 4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 4].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
@@ -253,13 +258,13 @@ mod tests {
         let a_correct = ana.vec_01_ns_linear_along_z(&pad);
 
         // integration points
-        // Note that the tolerance is high for n_integ_point = 1
+        // Note that the tolerance is high for ngauss = 1
         // because the numerical integration performs poorly with few IPs
         let class = pad.kind.class();
         let tolerances = [0.56, 1e-15, 1e-14, 1e-15, 1e-15, 1e-15, 1e-15, 1e-15];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // check
@@ -267,7 +272,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut args.pad, ips).unwrap();
             integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][2])).unwrap();
             vec_approx_eq(&a, &a_correct, tol);
         });

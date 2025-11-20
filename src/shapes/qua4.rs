@@ -45,6 +45,7 @@ impl Qua4 {
     pub const EDGE_NNODE: usize = 2;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const TRIANGULATE_NTRIANGLE: usize = 2;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua4::EDGE_NNODE]; Qua4::NEDGE] = [
@@ -68,6 +69,12 @@ impl Qua4 {
         [ 1.0, -1.0],
         [ 1.0,  1.0],
         [-1.0,  1.0],
+    ];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Qua4::TRIANGULATE_NTRIANGLE] = [
+        [0, 1, 3],
+        [1, 2, 3],
     ];
 
     /// Computes the interpolation functions

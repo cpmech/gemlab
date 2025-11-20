@@ -1,6 +1,6 @@
-use super::{EdgeKey, FaceKey, Feature, Mesh};
+use super::{Edge, EdgeKey, Face, FaceKey, Mesh};
 use crate::shapes::DET_JAC_NOT_AVAILABLE;
-use crate::shapes::{geo_case, GeoCase, Scratchpad};
+use crate::shapes::{GeoCase, Scratchpad};
 use crate::util::GridSearch;
 use crate::StrError;
 use russell_lab::math::ONE_BY_3;
@@ -46,7 +46,7 @@ impl Mesh {
             let mut pad = Scratchpad::new(self.ndim, cell.kind)?;
             self.set_pad(&mut pad, &cell.points);
             let det_jac = pad.calc_jacobian(&ksi)?;
-            if geo_case(cell.kind.ndim(), self.ndim) == GeoCase::Shell {
+            if GeoCase::new(cell.kind.ndim(), self.ndim) == GeoCase::Shell {
                 assert_eq!(det_jac, DET_JAC_NOT_AVAILABLE);
             } else {
                 if det_jac < 0.0 {
@@ -70,7 +70,7 @@ impl Mesh {
     /// Note: the solutions map holds the magnitude of the normal, followed by the unit normal.
     pub fn check_2d_edge_normals(
         &self,
-        edges: &HashMap<EdgeKey, Feature>,
+        edges: &HashMap<EdgeKey, Edge>,
         solutions: &HashMap<EdgeKey, (f64, [f64; 2])>,
         tolerance: f64,
     ) -> Result<(), StrError> {
@@ -96,7 +96,7 @@ impl Mesh {
     /// Note: the solutions map holds the magnitude of the normal, followed by the unit normal.
     pub fn check_face_normals(
         &self,
-        faces: &HashMap<FaceKey, Feature>,
+        faces: &HashMap<FaceKey, Face>,
         solutions: &HashMap<FaceKey, (f64, [f64; 3])>,
         tolerance: f64,
     ) -> Result<(), StrError> {
@@ -143,7 +143,7 @@ impl Mesh {
 
 #[cfg(test)]
 mod tests {
-    use crate::mesh::{Cell, Feature, Mesh, Point};
+    use crate::mesh::{Cell, Edge, Face, Mesh, Point};
     use crate::shapes::GeoKind;
     use std::collections::HashMap;
 
@@ -167,9 +167,11 @@ mod tests {
                 Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_ids_and_kind().expect("should not fail");
 
@@ -222,9 +224,11 @@ mod tests {
                 Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_jacobian().expect("should not fail");
 
@@ -269,9 +273,11 @@ mod tests {
                 Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // the magnitude (l) of the normal vector should be equal to
@@ -280,12 +286,12 @@ mod tests {
 
         #[rustfmt::skip]
         let mut edges = HashMap::from([
-            ((0, 3), Feature { kind: GeoKind::Lin2, points: vec![0, 3] }),
-            ((2, 3), Feature { kind: GeoKind::Lin2, points: vec![3, 2] }),
-            ((2, 5), Feature { kind: GeoKind::Lin2, points: vec![2, 5] }),
-            ((4, 5), Feature { kind: GeoKind::Lin2, points: vec![5, 4] }),
-            ((1, 4), Feature { kind: GeoKind::Lin2, points: vec![4, 1] }),
-            ((0, 1), Feature { kind: GeoKind::Lin2, points: vec![1, 0] }),
+            ((0, 3), Edge { kind: GeoKind::Lin2, points: vec![0, 3], marker: 0 }),
+            ((2, 3), Edge { kind: GeoKind::Lin2, points: vec![3, 2], marker: 0 }),
+            ((2, 5), Edge { kind: GeoKind::Lin2, points: vec![2, 5], marker: 0 }),
+            ((4, 5), Edge { kind: GeoKind::Lin2, points: vec![5, 4], marker: 0 }),
+            ((1, 4), Edge { kind: GeoKind::Lin2, points: vec![4, 1], marker: 0 }),
+            ((0, 1), Edge { kind: GeoKind::Lin2, points: vec![1, 0], marker: 0 }),
         ]);
         let solutions = HashMap::from([
             ((0, 3), (l, [-1.0, 0.0])),
@@ -343,8 +349,10 @@ mod tests {
                 Point { id: 7, marker: 0, coords: vec![0.0, 1.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Hex8, points: vec![0,1,2,3, 4,5,6,7] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
 
         // the magnitude (l) of the normal vector should be equal to
@@ -353,12 +361,12 @@ mod tests {
 
         #[rustfmt::skip]
         let mut faces = HashMap::from([
-            ((0, 3, 4, 7), Feature { kind: GeoKind::Qua4, points: vec![0, 4, 7, 3] }),
-            ((1, 2, 5, 6), Feature { kind: GeoKind::Qua4, points: vec![1, 2, 6, 5] }),
-            ((0, 1, 4, 5), Feature { kind: GeoKind::Qua4, points: vec![0, 1, 5, 4] }),
-            ((2, 3, 6, 7), Feature { kind: GeoKind::Qua4, points: vec![2, 3, 7, 6] }),
-            ((0, 1, 2, 3), Feature { kind: GeoKind::Qua4, points: vec![0, 3, 2, 1] }),
-            ((4, 5, 6, 7), Feature { kind: GeoKind::Qua4, points: vec![4, 5, 6, 7] }),
+            ((0, 3, 4, 7), Face { kind: GeoKind::Qua4, points: vec![0, 4, 7, 3], marker: 0 }),
+            ((1, 2, 5, 6), Face { kind: GeoKind::Qua4, points: vec![1, 2, 6, 5], marker: 0 }),
+            ((0, 1, 4, 5), Face { kind: GeoKind::Qua4, points: vec![0, 1, 5, 4], marker: 0 }),
+            ((2, 3, 6, 7), Face { kind: GeoKind::Qua4, points: vec![2, 3, 7, 6], marker: 0 }),
+            ((0, 1, 2, 3), Face { kind: GeoKind::Qua4, points: vec![0, 3, 2, 1], marker: 0 }),
+            ((4, 5, 6, 7), Face { kind: GeoKind::Qua4, points: vec![4, 5, 6, 7], marker: 0 }),
         ]);
         let solutions = HashMap::from([
             ((0, 3, 4, 7), (l, [-1.0, 0.0, 0.0])),
@@ -399,9 +407,11 @@ mod tests {
                 Point { id: 5, marker: 0, coords: vec![2.0, 1.0] },
             ],
             cells: vec![
-                Cell { id: 0, attribute: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
-                Cell { id: 1, attribute: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
+                Cell { id: 0, marker: 1, kind: GeoKind::Qua4, points: vec![0, 1, 2, 3] },
+                Cell { id: 1, marker: 2, kind: GeoKind::Qua4, points: vec![1, 4, 5, 2] },
             ],
+            marked_edges: Vec::new(),
+            marked_faces: Vec::new(),
         };
         mesh.check_overlapping_points(1e-2).expect("should not fail");
 

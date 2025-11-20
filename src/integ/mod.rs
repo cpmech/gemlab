@@ -2,7 +2,7 @@
 //!
 //! # Definitions
 //!
-//! * `n_integ_point` -- number of integration (Gauss) points
+//! * `ngauss` -- number of integration (Gauss) points
 //! * `|J|` -- the determinant of the Jacobian dx/dξ
 //! * `||J||` -- the norm of the Jacobian vector for lines in multi-dimensions
 //! * `ξ` -- ksi (or xi) -- coordinates in the reference space
@@ -41,6 +41,17 @@
 //!      Ωₑ
 //! ```
 //!
+//! ## VEC 01(bry): Shape(N) times scalar(S) (boundary integral version)
+//!
+//! Function [vec_01_ns_bry()]
+//!
+//! ```text
+//!      ⌠    → →     →
+//! aᵐ = │ Nᵐ(x(ξ)) s(x) dΩ
+//!      ⌡
+//!      Ωₑ
+//! ```
+//!
 //! ## VEC 02: Shape(N) times vector(V)
 //!
 //! Function [vec_02_nv()]
@@ -65,24 +76,24 @@
 //!
 //! ## VEC 03: Vector(V) dot gradient(B)
 //!
-//! Function [vec_03_vb()]
+//! Function [vec_03_bv()]
 //!
 //! ```text
-//!      ⌠ → →    →  → →
-//! cᵐ = │ w(x) · Bᵐ(x(ξ)) dΩ
+//!      ⌠ →  → →     → →
+//! cᵐ = │ Bᵐ(x(ξ)) · w(x) dΩ
 //!      ⌡
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 04: Tensor(T) dot gradient(B)
+//! ## VEC 04: gradient(B) dot transpose tensor(T)
 //!
-//! Function [vec_04_tb()]
+//! Function [vec_04_bt()]
 //!
 //! ```text
-//! →    ⌠   →    →  → →
-//! dᵐ = │ σ(x) · Bᵐ(x(ξ)) dΩ
-//!      ⌡ ▔
-//!      Ωₑ
+//! →    ⌠ →  → →        →      ⌠   →    →  → →
+//! dᵐ = │ Bᵐ(x(ξ)) · σᵀ(x) dΩ  │ σ(x) · Bᵐ(x(ξ)) dΩ
+//!      ⌡            ▔         ⌡ ▔
+//!      Ωₑ                     Ωₑ
 //! ```
 //!
 //! # Matrix results: Integration of some combinations involving N, tensors, and B, resulting in matrices
@@ -295,7 +306,7 @@ mod analytical_qua8;
 mod analytical_tet4;
 mod analytical_tri3;
 mod common_args;
-mod integ_points;
+mod gauss;
 mod mat_01_nsn;
 mod mat_01_nsn_bry;
 mod mat_02_bvn;
@@ -307,35 +318,36 @@ mod mat_07_bsn;
 mod mat_08_ntn;
 mod mat_09_nvb;
 mod mat_10_bdb;
-mod point_coords;
 mod scalar_field;
 mod testing;
 mod vec_01_ns;
+mod vec_01_ns_bry;
 mod vec_02_nv;
 mod vec_02_nv_bry;
-mod vec_03_vb;
-mod vec_04_tb;
-pub use crate::integ::analytical_qua4::*;
-pub use crate::integ::analytical_qua8::*;
-pub use crate::integ::analytical_tet4::*;
-pub use crate::integ::analytical_tri3::*;
-pub use crate::integ::common_args::*;
-pub use crate::integ::integ_points::*;
-pub use crate::integ::mat_01_nsn::*;
-pub use crate::integ::mat_01_nsn_bry::*;
-pub use crate::integ::mat_02_bvn::*;
-pub use crate::integ::mat_03_btb::*;
-pub use crate::integ::mat_04_nsb::*;
-pub use crate::integ::mat_05_btn::*;
-pub use crate::integ::mat_06_nvn::*;
-pub use crate::integ::mat_07_bsn::*;
-pub use crate::integ::mat_08_ntn::*;
-pub use crate::integ::mat_09_nvb::*;
-pub use crate::integ::mat_10_bdb::*;
-pub use crate::integ::point_coords::*;
-pub use crate::integ::scalar_field::*;
-pub use crate::integ::vec_01_ns::*;
-pub use crate::integ::vec_02_nv::*;
-pub use crate::integ::vec_02_nv_bry::*;
-pub use crate::integ::vec_03_vb::*;
-pub use crate::integ::vec_04_tb::*;
+mod vec_03_bv;
+mod vec_04_bt;
+
+pub use analytical_qua4::*;
+pub use analytical_qua8::*;
+pub use analytical_tet4::*;
+pub use analytical_tri3::*;
+pub use common_args::*;
+pub use gauss::*;
+pub use mat_01_nsn::*;
+pub use mat_01_nsn_bry::*;
+pub use mat_02_bvn::*;
+pub use mat_03_btb::*;
+pub use mat_04_nsb::*;
+pub use mat_05_btn::*;
+pub use mat_06_nvn::*;
+pub use mat_07_bsn::*;
+pub use mat_08_ntn::*;
+pub use mat_09_nvb::*;
+pub use mat_10_bdb::*;
+pub use scalar_field::*;
+pub use vec_01_ns::*;
+pub use vec_01_ns_bry::*;
+pub use vec_02_nv::*;
+pub use vec_02_nv_bry::*;
+pub use vec_03_bv::*;
+pub use vec_04_bt::*;

@@ -1,4 +1,4 @@
-use super::IntegPointData;
+use super::Gauss;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 
@@ -22,13 +22,13 @@ use crate::StrError;
 /// # Input
 ///
 /// * `pad` -- **modified** Scratchpad
-/// * `ips` -- Integration points (n_integ_point)
-/// * `fn_s` -- Function `f(p)` corresponding to `s(x(ιᵖ))` with `0 ≤ p ≤ n_integ_point`
+/// * `ips` -- Integration points (ngauss)
+/// * `fn_s` -- Function `f(p)` corresponding to `s(x(ιᵖ))` with `0 ≤ p ≤ ngauss`
 ///
 /// # Output
 ///
 /// * Returns `I`, the result of integration.
-pub fn scalar_field<F>(pad: &mut Scratchpad, ips: IntegPointData, mut fn_s: F) -> Result<f64, StrError>
+pub fn scalar_field<F>(pad: &mut Scratchpad, gauss: &Gauss, mut fn_s: F) -> Result<f64, StrError>
 where
     F: FnMut(usize) -> Result<f64, StrError>,
 {
@@ -36,10 +36,10 @@ where
     let mut ii = 0.0;
 
     // loop over integration points
-    for p in 0..ips.len() {
+    for p in 0..gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &ips[p];
-        let weight = ips[p][3];
+        let iota = gauss.coords(p);
+        let weight = gauss.weight(p);
 
         // calculate Jacobian
         let det_jac = pad.calc_jacobian(iota)?;
@@ -58,7 +58,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::scalar_field;
-    use crate::integ;
+    use crate::integ::Gauss;
+    use crate::recovery;
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::approx_eq;
 
@@ -96,7 +97,7 @@ mod tests {
         let class = pad.kind.class();
         let selection: Vec<_> = [1, 4, 9, 16]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // s(x) is constant = 1; i.e., the integral will result in the area of the "diamond" shape
@@ -113,7 +114,7 @@ mod tests {
         let ii_correct = 8.0 / 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -128,7 +129,7 @@ mod tests {
         let ii_correct = 3.0;
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -198,7 +199,7 @@ mod tests {
         let class = pad.kind.class();
         let selection: Vec<_> = [6, 8, 14, 27, 64]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // s(x) is constant = 1; i.e., the integral will result in the volume
@@ -215,7 +216,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];
@@ -231,7 +232,7 @@ mod tests {
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-14, 1e-14];
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
-            let x_ips = integ::points_coords(&mut pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
                 let x = x_ips[p][0];
                 let y = x_ips[p][1];

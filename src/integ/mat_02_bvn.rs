@@ -43,7 +43,7 @@ use russell_lab::{Matrix, Vector};
 ///   sequentially placed as shown above. `m` and `n` are the indices of the nodes.
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
 /// * `args` --- Common arguments
-/// * `fn_v` -- Function `f(v,p,N,B)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_v` -- Function `f(v,p,N,B)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   shape functions N(ιᵖ), and gradients B(ιᵖ). `v.dim() = space_ndim`.
 pub fn mat_02_bvn<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
@@ -69,10 +69,10 @@ where
     }
 
     // loop over integration points
-    for p in 0..args.ips.len() {
+    for p in 0..args.gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &args.ips[p];
-        let weight = args.ips[p][3];
+        let iota = args.gauss.coords(p);
+        let weight = args.gauss.weight(p);
 
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -125,7 +125,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, IP_LIN_LEGENDRE_1, IP_TRI_INTERNAL_1};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
+    use crate::recovery;
     use russell_lab::{mat_approx_eq, Matrix, Vector};
 
     #[test]
@@ -137,7 +138,8 @@ mod tests {
         let bb = Matrix::new(0, 0);
         let f = |_v: &mut Vector, _p: usize, _nn: &Vector, _bb: &Matrix| Ok(());
         f(&mut v, 0, &nn, &bb).unwrap();
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
             integ::mat_02_bvn(&mut kk, &mut args, f).err(),
@@ -151,14 +153,14 @@ mod tests {
         );
         args.jj0 = 0;
         // more errors
-        args.ips = &IP_LIN_LEGENDRE_1;
         assert_eq!(
             integ::mat_02_bvn(&mut kk, &mut args, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_qua4(0.0, 0.0, 1.0, 1.0);
         let mut kk = Matrix::new(4, 4);
-        let mut args = CommonArgs::new(&mut pad, &IP_TRI_INTERNAL_1);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         assert_eq!(
             integ::mat_02_bvn(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
             Some("stop")
@@ -175,7 +177,7 @@ mod tests {
         let kk_correct = ana.mat_02_bvn(v0, v1);
         let class = pad.kind.class();
         let tolerances = [1e-15];
-        let selection: Vec<_> = [3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
@@ -191,11 +193,11 @@ mod tests {
         let kk_correct = ana.mat_02_bvn_bilinear(&pad);
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-15];
-        let selection: Vec<_> = [3, 6].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [3, 6].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            let x_ips = integ::points_coords(&mut args.pad, ips).unwrap();
+            let x_ips = recovery::get_points_coords(&mut args.pad, ips).unwrap();
             integ::mat_02_bvn(&mut kk, &mut args, |v, p, _, _| {
                 v[0] = x_ips[p][0];
                 v[1] = x_ips[p][1];
@@ -216,7 +218,7 @@ mod tests {
         // println!("{}", kk_correct);
         let class = pad.kind.class();
         let tolerances = [1e-15];
-        let selection: Vec<_> = [4].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [4].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);

@@ -1,4 +1,4 @@
-use gemlab::integ::{self, AnalyticalTri3, CommonArgs};
+use gemlab::integ::{self, AnalyticalTri3, CommonArgs, Gauss};
 use gemlab::prelude::*;
 use gemlab::shapes::Tri3;
 use russell_lab::{mat_approx_eq, vec_approx_eq, Matrix, Vector};
@@ -18,8 +18,10 @@ fn generate_pads() -> (Scratchpad, Scratchpad, Scratchpad, AnalyticalTri3) {
             Point { id: 2, marker: 0, coords: vec![20.0, 12.0] },
         ],
         cells: vec![
-            Cell { id: 0, attribute: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
+            Cell { id: 0, marker: 1, kind: GeoKind::Tri3, points: vec![0, 1, 2] },
         ],
+        marked_edges: Vec::new(),
+        marked_faces: Vec::new(),
     };
     let mut pad_tri = Scratchpad::new(2, GeoKind::Tri3).unwrap();
     let mut pad_conv = Scratchpad::new(2, GeoKind::Lin2).unwrap();
@@ -41,14 +43,14 @@ fn test_integ_heat_axis_1() {
     println!("flux: coords =\n{}", pad_flux.xxt);
 
     // tri: arguments and integration points
-    let ips_tri = integ::points(GeoClass::Tri, 3).unwrap(); // One integration point is enough
-    let mut args_tri = CommonArgs::new(&mut pad_tri, ips_tri);
+    let ips_tri = Gauss::new_sized(GeoClass::Tri, 3).unwrap(); // One integration point is enough
+    let mut args_tri = CommonArgs::new(&mut pad_tri, &ips_tri);
     args_tri.axisymmetric = true;
 
     // lin: sides of triangle
-    let ips_lin = integ::points(GeoClass::Lin, 2).unwrap(); // IMPORTANT: we need at least 2 integration points
-    let mut args_conv = CommonArgs::new(&mut pad_conv, ips_lin);
-    let mut args_flux = CommonArgs::new(&mut pad_flux, ips_lin);
+    let ips_lin = Gauss::new_sized(GeoClass::Lin, 2).unwrap(); // IMPORTANT: we need at least 2 integration points
+    let mut args_conv = CommonArgs::new(&mut pad_conv, &ips_lin);
+    let mut args_flux = CommonArgs::new(&mut pad_flux, &ips_lin);
     args_conv.axisymmetric = true;
     args_flux.axisymmetric = true;
 

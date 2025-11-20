@@ -1,4 +1,4 @@
-use gemlab::integ;
+use gemlab::integ::Gauss;
 use gemlab::mesh::{At, Features, Mesh};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::util::any_x;
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 #[test]
 fn test_column_distorted_tris_quads() -> Result<(), StrError> {
     // read mesh
-    let mesh = Mesh::from_text_file("./data/meshes/column_distorted_tris_quads.msh")?;
+    let mesh = Mesh::read("./data/meshes/column_distorted_tris_quads.msh")?;
     let features = Features::new(&mesh, false);
 
     // check sizes
@@ -87,7 +87,7 @@ fn test_column_distorted_tris_quads() -> Result<(), StrError> {
 #[test]
 fn test_rectangle_tris_quads() -> Result<(), StrError> {
     // read mesh
-    let mesh = Mesh::from_text_file("./data/meshes/rectangle_tris_quads.msh")?;
+    let mesh = Mesh::read("./data/meshes/rectangle_tris_quads.msh")?;
     let features = Features::new(&mesh, false);
 
     // the magnitude of the normal vector should be equal to edge_length / 2.0
@@ -125,11 +125,11 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
     pad_edge_7_11.set_xx(0, 1, p[7].coords[1]);
     pad_edge_7_11.set_xx(1, 0, p[11].coords[0]);
     pad_edge_7_11.set_xx(1, 1, p[11].coords[1]);
-    let ips = integ::default_points(pad_edge_7_11.kind);
+    let gauss = Gauss::new(pad_edge_7_11.kind);
     let mut length_numerical = 0.0;
-    for index in 0..ips.len() {
-        let iota = &ips[index];
-        let weight = ips[index][3];
+    for p in 0..gauss.npoint() {
+        let iota = gauss.coords(p);
+        let weight = gauss.weight(p);
         let det_jac = pad_edge_7_11.calc_jacobian(iota)?;
         length_numerical += weight * det_jac;
     }
@@ -143,11 +143,11 @@ fn test_rectangle_tris_quads() -> Result<(), StrError> {
             pad_cell_5.set_xx(m, j, p[cell.points[m]].coords[j]);
         }
     }
-    let ips = integ::default_points(pad_cell_5.kind);
+    let gauss = Gauss::new(pad_cell_5.kind);
     let mut area_numerical = 0.0;
-    for p in 0..ips.len() {
-        let iota = &ips[p];
-        let weight = ips[p][3];
+    for p in 0..gauss.npoint() {
+        let iota = gauss.coords(p);
+        let weight = gauss.weight(p);
         let det_jac = pad_cell_5.calc_jacobian(iota)?;
         area_numerical += weight * det_jac;
     }

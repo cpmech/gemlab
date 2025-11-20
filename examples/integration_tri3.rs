@@ -1,4 +1,4 @@
-use gemlab::integ;
+use gemlab::integ::{self, Gauss};
 use gemlab::shapes::{GeoKind, Scratchpad};
 use gemlab::StrError;
 use russell_lab::{vec_approx_eq, Vector};
@@ -35,9 +35,9 @@ fn main() -> Result<(), StrError> {
     //       3  │ 1 │   │ 36 │
     //          └   ┘   └    ┘
     let nnode = pad.kind.nnode();
-    let ips = integ::default_points(pad.kind);
+    let gauss = Gauss::new(pad.kind);
     let mut a = Vector::filled(nnode, 0.0);
-    let mut args = integ::CommonArgs::new(&mut pad, ips);
+    let mut args = integ::CommonArgs::new(&mut pad, &gauss);
     integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(18.0))?;
     assert_eq!(
         format!("{:.1}", a),
@@ -109,7 +109,7 @@ fn main() -> Result<(), StrError> {
     //     │  6 │
     //     └    ┘
     let mut c = Vector::filled(nnode, 0.0);
-    integ::vec_03_vb(&mut c, &mut args, |w, _, _, _| {
+    integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
         w[0] = -2.0;
         w[1] = 4.0;
         Ok(())
@@ -124,7 +124,7 @@ fn main() -> Result<(), StrError> {
     );
 
     // check
-    let c_correct = ana.vec_03_vb(-2.0, 4.0);
+    let c_correct = ana.vec_03_bv(-2.0, 4.0);
     vec_approx_eq(&c, &c_correct, 1e-15);
 
     // tensor dot gradient, returns vector 'd'
@@ -149,7 +149,7 @@ fn main() -> Result<(), StrError> {
     //     └     ┘
     let (s00, s11, s01) = (6.0, 4.0, 2.0);
     let mut d = Vector::filled(nnode * space_ndim, 0.0);
-    integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+    integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
         sig.sym_set(0, 0, s00);
         sig.sym_set(1, 1, s11);
         sig.sym_set(0, 1, s01);
@@ -173,7 +173,7 @@ fn main() -> Result<(), StrError> {
         Mandel::Symmetric2D,
     )
     .unwrap();
-    let d_correct = ana.vec_04_tb(&sig, false);
+    let d_correct = ana.vec_04_bt(&sig, false);
     vec_approx_eq(&d, &d_correct, 1e-15);
     Ok(())
 }

@@ -1,3 +1,9 @@
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+/// TODO: Move these functions to Triangle2d impl block ///
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+
 /// Calculates the triangle (three) coordinates
 ///
 /// # Output
@@ -55,7 +61,7 @@ mod tests {
             canvas.polycurve_begin();
             for m in 0..3 {
                 let code = if m == 0 { PolyCode::MoveTo } else { PolyCode::LineTo };
-                canvas.polycurve_add(&triangles[t][m][0], &triangles[t][m][1], code);
+                canvas.polycurve_add(triangles[t][m][0], triangles[t][m][1], code);
                 xc += triangles[t][m][0];
                 yc += triangles[t][m][1];
             }

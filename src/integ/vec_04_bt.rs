@@ -4,17 +4,17 @@ use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::{Mandel, Tensor2};
 
-/// Implements the tensor(T) dot gradient(B) integration case 04
+/// Implements the gradient(B) dot transpose tensor(T) integration case 04
 ///
 /// Callback function: `f(σ, p, N, B)`
 ///
 /// Tensor dot gradient:
 ///
 /// ```text
-/// →    ⌠   →    →  → →
-/// dᵐ = │ σ(x) · Bᵐ(x(ξ)) α dΩ
-///      ⌡ ▔
-///      Ωₑ
+/// →    ⌠  →  → →        →         ⌠   →    →  → →
+/// dᵐ = │  Bᵐ(x(ξ)) · σᵀ(x) α dΩ = │ σ(x) · Bᵐ(x(ξ)) α dΩ
+///      ⌡             ▔            ⌡ ▔
+///      Ωₑ                         Ωₑ
 /// ```
 ///
 /// The numerical integration is:
@@ -49,13 +49,13 @@ use russell_tensor::{Mandel, Tensor2};
 ///   as shown above (in 2D). `m` is the index of the node and `i` corresponds to `space_ndim`.
 ///   The length must be `d.len() ≥ ii0 + nnode ⋅ space_ndim`
 /// * `args` --- Common arguments
-/// * `fn_sig` -- Function `f(σ,p,N,B)` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ n_integ_point`,
+/// * `fn_sig` -- Function `f(σ,p,N,B)` that computes `σ(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   shape functions N(ιᵖ), and the gradients B(ιᵖ). `σ` is set for `space_ndim`.
 ///
 /// # Examples
 ///
 /// ```
-/// use gemlab::integ;
+/// use gemlab::integ::{self, CommonArgs, Gauss};
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
 /// use russell_lab::{Vector, vec_approx_eq};
@@ -69,10 +69,10 @@ use russell_tensor::{Mandel, Tensor2};
 ///     pad.set_xx(1, 1, 3.0);
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
-///     let ips = integ::default_points(pad.kind);
+///     let gauss = Gauss::new(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
-///     let mut args = integ::CommonArgs::new(&mut pad, ips);
-///     integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+///     let mut args = CommonArgs::new(&mut pad, &gauss);
+///     integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
 ///         sig.sym_set(0, 0, 1.0);
 ///         sig.sym_set(1, 1, 2.0);
 ///         sig.sym_set(0, 1, 3.0);
@@ -90,7 +90,7 @@ use russell_tensor::{Mandel, Tensor2};
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_04_tb<F>(d: &mut Vector, args: &mut CommonArgs, mut fn_sig: F) -> Result<(), StrError>
+pub fn vec_04_bt<F>(d: &mut Vector, args: &mut CommonArgs, mut fn_sig: F) -> Result<(), StrError>
 where
     F: FnMut(&mut Tensor2, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
@@ -112,10 +112,10 @@ where
     }
 
     // loop over integration points
-    for index in 0..args.ips.len() {
+    for p in 0..args.gauss.npoint() {
         // ksi coordinates and weight
-        let iota = &args.ips[index];
-        let weight = args.ips[index][3];
+        let iota = args.gauss.coords(p);
+        let weight = args.gauss.weight(p);
 
         // calculate Jacobian and Gradient
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
@@ -124,7 +124,7 @@ where
         // calculate σ tensor
         let nn = &args.pad.interp;
         let bb = &args.pad.gradient;
-        fn_sig(&mut sig, index, nn, bb)?;
+        fn_sig(&mut sig, p, nn, bb)?;
 
         // add contribution to d vector
         let c = det_jac * weight * args.alpha;
@@ -141,7 +141,7 @@ where
     Ok(())
 }
 
-/// Adds contribution to the d-vector in vec_04_tb
+/// Adds contribution to the d-vector in vec_04_bt
 #[inline]
 fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, args: &mut CommonArgs) {
     let t = sig.vector();
@@ -162,7 +162,7 @@ fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, ar
     }
 }
 
-/// Adds contribution to the d-vector in vec_04_tb (axisymmetric case)
+/// Adds contribution to the d-vector in vec_04_bt (axisymmetric case)
 #[inline]
 fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Tensor2, args: &mut CommonArgs) {
     let t = sig.vector();
@@ -181,7 +181,7 @@ fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Ten
 #[cfg(test)]
 mod tests {
     use crate::integ::testing::aux;
-    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs};
+    use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use russell_lab::{vec_approx_eq, Matrix, Vector};
     use russell_tensor::{Mandel, Tensor2};
 
@@ -194,10 +194,11 @@ mod tests {
         let bb = Matrix::new(0, 0);
         let f = |_: &mut Tensor2, _, _: &Vector, _: &Matrix| Ok(());
         f(&mut sig, 0, &nn, &bb).unwrap();
-        let mut args = CommonArgs::new(&mut pad, &[]);
+        let gauss = Gauss::new(pad.kind);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
-            integ::vec_04_tb(&mut d, &mut args, f).err(),
+            integ::vec_04_bt(&mut d, &mut args, f).err(),
             Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -221,14 +222,14 @@ mod tests {
             Mandel::Symmetric2D,
         )
         .unwrap();
-        let d_correct = ana.vec_04_tb(&sig, false);
+        let d_correct = ana.vec_04_bt(&sig, false);
 
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14, 1e-14, 1e-13, 1e-14];
         let selection: Vec<_> = [1, 3, 4, 12, 16]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // check
@@ -237,7 +238,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+            integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -265,21 +266,21 @@ mod tests {
             Mandel::Symmetric2D,
         )
         .unwrap();
-        let d_correct = ana.vec_04_tb(&sig, true);
+        let d_correct = ana.vec_04_bt(&sig, true);
 
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-13, 1e-13];
-        let selection: Vec<_> = [1, 3].iter().map(|n| integ::points(class, *n).unwrap()).collect();
+        let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
         let (space_ndim, nnode) = pad.xxt.dims();
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
-            println!("nip={}, tol={:.e}", ips.len(), tol);
+            // println!("nip={}, tol={:.e}", ips.data.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             args.axisymmetric = true;
-            integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+            integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
                 sig.sym_set(0, 0, S00);
                 sig.sym_set(1, 1, S11);
                 sig.sym_set(2, 2, S22);
@@ -304,14 +305,14 @@ mod tests {
             [7.0, 6.0, 4.0],
         ], Mandel::Symmetric).unwrap();
         let ana = AnalyticalTet4::new(&pad);
-        let d_correct = ana.vec_04_tb(&tt);
+        let d_correct = ana.vec_04_bt(&tt);
 
         // integration points
         let class = pad.kind.class();
         let tolerances = [1e-14, 1e-14, 1e-13, 1e-14, 1e-13, 1e-13, 1e-13];
         let selection: Vec<_> = [1, 4, 5, 8, 14, 15, 24]
             .iter()
-            .map(|n| integ::points(class, *n).unwrap())
+            .map(|n| Gauss::new_sized(class, *n).unwrap())
             .collect();
 
         // check
@@ -320,7 +321,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_04_tb(&mut d, &mut args, |sig, _, _, _| {
+            integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
                 sig.set_tensor(1.0, &tt);
                 Ok(())
             })

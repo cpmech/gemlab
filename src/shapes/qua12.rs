@@ -53,6 +53,8 @@ impl Qua12 {
     pub const EDGE_NNODE: usize = 4;
     pub const FACE_NNODE: usize = 0;
     pub const FACE_NEDGE: usize = 0;
+    pub const TRIANGULATE_NTRIANGLE: usize = 18;
+    pub const TRIANGULATE_EXTRA_NNODE: usize = 4;
 
     #[rustfmt::skip]
     pub const EDGE_NODE_IDS: [[usize; Qua12::EDGE_NNODE]; Qua12::NEDGE] = [
@@ -84,6 +86,36 @@ impl Qua12 {
         [ 1.0       ,  1.0 / 3.0 ],
         [-1.0 / 3.0 ,  1.0       ],
         [-1.0       , -1.0 / 3.0 ],
+    ];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_TRIANGLES: [[usize; 3]; Qua12::TRIANGULATE_NTRIANGLE] = [
+        [ 0,  4, 11],  //  0
+        [ 4, 12, 11],  //  1
+        [ 4,  8, 12],  //  2
+        [ 8, 13, 12],  //  3
+        [ 8,  1, 13],  //  4
+        [ 1,  5, 13],  //  5
+        [11, 12,  7],  //  6
+        [12, 15,  7],  //  7
+        [12, 13, 15],  //  8
+        [13, 14, 15],  //  9
+        [13,  5, 14],  // 10
+        [ 5,  9, 14],  // 11
+        [ 7, 15,  3],  // 12
+        [15, 10,  3],  // 13
+        [15, 14, 10],  // 14
+        [14,  6, 10],  // 15
+        [14,  9,  6],  // 16
+        [ 9,  2,  6],  // 17
+    ];
+
+    #[rustfmt::skip]
+    pub const TRIANGULATE_EXTRA_COORDS: [[f64; Qua12::GEO_NDIM]; Qua12::TRIANGULATE_EXTRA_NNODE] = [
+        [-1.0 / 3.0 , -1.0 / 3.0 ], // 12
+        [ 1.0 / 3.0 , -1.0 / 3.0 ], // 13
+        [ 1.0 / 3.0 ,  1.0 / 3.0 ], // 14
+        [-1.0 / 3.0 ,  1.0 / 3.0 ], // 15
     ];
 
     /// Computes the interpolation functions

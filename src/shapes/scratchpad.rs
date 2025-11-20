@@ -2,10 +2,10 @@ use super::{FnDeriv, FnInterp, GeoKind};
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
 
-/// Holds the variables used by the functions in the sub-module named op
+/// Holds the interpolation functions, gradients, and associated structures
 ///
-/// Basically, this struct holds the variables calculated by the interpolation
-/// and derivative functions, including the Jacobian, inverse Jacobian, and gradients.
+/// This struct holds the variables calculated by the interpolation and derivative functions,
+/// including the Jacobian, inverse Jacobian, and gradients.
 ///
 /// # Sequence of computations for the gradient
 ///
@@ -55,8 +55,8 @@ use russell_lab::{Matrix, Vector};
 ///
 /// # Warning
 ///
-/// All members are **readonly** and should not be modified externally. The functions
-/// in the op (operators) sub-module are the only ones allowed to modify the scratchpad.
+/// All members are **readonly** and should not be modified externally. Use the member
+/// functions to calculate the data members of this struct.
 #[derive(Clone)]
 pub struct Scratchpad {
     /// The kind of the shape
@@ -181,6 +181,11 @@ impl Scratchpad {
         })
     }
 
+    /// Returns the space ndim constant (2 or 3)
+    pub fn get_space_ndim(&self) -> usize {
+        self.xxt.nrow()
+    }
+
     /// Sets the component of the coordinates matrix corresponding to node-m, dimension-j
     ///
     /// # Input
@@ -262,6 +267,36 @@ impl Scratchpad {
             self.ok_xxt = true;
         }
     }
+
+    /// Calculates the interpolation functions at a reference coordinate
+    ///
+    /// The interpolation functions are such that:
+    ///
+    /// ```text
+    /// → →         →  →
+    /// u(ξ) = Σ Nᵐ(ξ) uᵐ
+    ///        m
+    /// ```
+    ///
+    /// for any quantity `uᵐ` specified at the nodes of an element/shape. Above, `ξ` is the (geo_ndim)
+    /// vector of reference coordinates, and `Nᵐ` are the (nnode) interpolation functions.
+    ///
+    /// # Input
+    ///
+    /// * `ksi` -- set of coordinates in the reference space; its length must be ≥ `geo_ndim`
+    ///
+    /// # Output
+    ///
+    /// * `interp` -- the results are available in the `interp` data member
+    ///
+    /// # Panics
+    ///
+    /// None of the dimensions are checked, thus a panic my occur if the
+    /// arguments have dimensions incompatible with the related [GeoKind].
+    #[inline]
+    pub fn calc_interp(&mut self, ksi: &[f64]) {
+        (self.fn_interp)(&mut self.interp, ksi);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -310,6 +345,7 @@ mod tests {
             let kind = GeoKind::VALUES[i];
             let space_ndim = usize::max(2, kind.ndim());
             let pad = Scratchpad::new(space_ndim, kind).unwrap();
+            assert_eq!(pad.get_space_ndim(), space_ndim);
             assert_eq!(pad.kind, kind);
             assert_eq!(pad.interp.dim(), nnode[i]);
             assert_eq!(pad.deriv.dims(), (nnode[i], geo_ndim[i]));
