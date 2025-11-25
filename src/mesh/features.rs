@@ -376,6 +376,38 @@ impl<'a> Features<'a> {
         ids
     }
 
+    /// Returns all cells (sorted) connected to a set of points
+    ///
+    /// Important: This function uses the `point_to_edges` and `all_2d_edges`.
+    /// Therefore, if needed, **internal edges** must be extracted too.
+    pub fn get_cells_via_points_2d(&self, point_ids: &[PointId]) -> Vec<CellId> {
+        // 1. Allocate an empty HashSet of CellId
+        let mut cell_ids = HashSet::new();
+
+        // 2. Loop over point ids
+        for &point_id in point_ids {
+            // 3. Loop over edges connected to points (using point_to_edges)
+            if let Some(edge_keys) = self.point_to_edges.get(&point_id) {
+                for edge_key in edge_keys {
+                    // 4. Loop over cells connected to edges (using all_2d_edges)
+                    if let Some(cells) = self.all_2d_edges.get(edge_key) {
+                        for &(cell_id, _local_edge) in cells {
+                            // 5. Insert a CellId into the HashSet
+                            cell_ids.insert(cell_id);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Collect the HashSet into a Vec
+        let mut ids: Vec<_> = cell_ids.into_iter().collect();
+
+        // 7. Sort and return the vec
+        ids.sort();
+        ids
+    }
+
     /// Returns all points (sorted) on a set of (2D) edges
     pub fn get_points_via_2d_edges(&self, edges: &Edges) -> Vec<PointId> {
         let mut point_ids: Vec<_> = edges.all.iter().flat_map(|e| e.points.clone()).collect();
@@ -925,7 +957,7 @@ impl<'a> Features<'a> {
 #[cfg(test)]
 mod tests {
     use super::{Edge, Edges, Face, Faces, Features};
-    use crate::mesh::{At, Draw, Samples};
+    use crate::mesh::{At, Draw, Mesh, Samples};
     use crate::shapes::GeoKind;
     use crate::util::any_x;
     use plotpy::Plot;
@@ -2234,5 +2266,110 @@ mod tests {
         assert_eq!(feat.get_cells_via_face(&face_b), &[4, 6]);
         assert_eq!(feat.get_cells_via_faces(&faces), &[0, 2, 4, 6]);
         assert_eq!(feat.get_points_via_faces(&faces), &[2, 3, 6, 7, 20, 21]);
+    }
+
+    #[test]
+    fn get_cells_via_points_2d_work_1() {
+        let mesh = Samples::block_2d_four_qua4();
+
+        let feat = Features::new(&mesh, false);
+        let cell_ids = feat.get_cells_via_points_2d(&[1, 2]);
+        assert_eq!(cell_ids, vec![0, 1]);
+
+        let feat = Features::new(&mesh, true);
+        let cell_ids = feat.get_cells_via_points_2d(&[1, 2]);
+        assert_eq!(cell_ids, vec![0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn get_cells_via_points_2d_work_2() {
+        // L-shaped domain discretized with unstructured triangular elements
+        let mesh = Mesh::from_text(
+            r"
+# header
+# ndim npoint ncell nmarked_edge nmarked_face
+2 18 22 12 0
+
+# points
+# id marker x y {z}
+0 1 0.0 0.0
+1 1 2.0 0.0
+2 1 2.0 1.0
+3 1 1.0 1.0
+4 4 1.0 2.0
+5 4 0.0 2.0
+6 1 1.0 0.0
+7 1 0.0 1.0
+8 1 0.5 0.0
+9 0 1.0 0.5
+10 0 1.5 0.25
+11 1 2.0 0.5
+12 0 0.25 0.5
+13 0 0.5 0.9375
+14 0 0.68359375 1.5
+15 4 0.5 2.0
+16 0 1.5 0.7916666666666667
+17 1 0.0 1.5
+
+# cells
+# id marker kind points
+0 1 tri3 0 12 7
+1 1 tri3 6 1 10
+2 1 tri3 8 6 9
+3 1 tri3 13 14 17
+4 1 tri3 16 9 10
+5 1 tri3 10 11 16
+6 1 tri3 6 10 9
+7 1 tri3 8 9 12
+8 1 tri3 12 9 13
+9 1 tri3 14 13 3
+10 1 tri3 2 16 11
+11 1 tri3 13 9 3
+12 1 tri3 0 8 12
+13 1 tri3 10 1 11
+14 1 tri3 3 4 14
+15 1 tri3 7 12 13
+16 1 tri3 5 17 15
+17 1 tri3 13 17 7
+18 1 tri3 2 3 16
+19 1 tri3 14 4 15
+20 1 tri3 9 16 3
+21 1 tri3 15 17 14
+
+# marked edges
+# marker p1 p2
+1 6 8
+1 1 6
+1 2 11
+1 2 3
+1 4 3
+4 5 15
+1 0 7
+1 8 0
+1 11 1
+1 7 17
+4 15 4
+1 17 5
+",
+        )
+        .unwrap();
+        if SAVE_FIGURE {
+            let mut draw = Draw::new();
+            draw.show_cells(true)
+                .show_point_ids(true)
+                .show_point_marker(true)
+                .show_cell_ids(true)
+                .show_cell_marker(true)
+                .show_edge_markers(true)
+                .set_view_flag(false)
+                .set_size(800.0, 800.0);
+            draw.all(&mesh, "/tmp/gemlab/test_get_cells_via_points_2d_work_2.svg")
+                .unwrap();
+        }
+
+        let feat = Features::new(&mesh, true);
+        let cell_ids = feat.get_cells_via_points_2d(&[3, 9, 6]);
+        println!("cell_ids = {:?}", cell_ids);
+        assert_eq!(cell_ids, vec![1, 2, 4, 6, 7, 8, 9, 11, 14, 18, 20]);
     }
 }

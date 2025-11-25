@@ -12,7 +12,7 @@ categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
 
 [dependencies]
-plotpy = { path = "../plotpy" }
+plotpy = "1.14"
 russell_lab = { path = "../russell/russell_lab", features = ["intel_mkl"] }
 russell_sparse = { path = "../russell/russell_sparse", features = [
   "local_suitesparse",
