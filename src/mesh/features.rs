@@ -921,6 +921,8 @@ impl<'a> Features<'a> {
 
     /// Search points, cells, and edges in 2D
     ///
+    /// Returns `(point_ids, cell_ids, edges)`
+    ///
     /// # Arguments
     ///
     /// * `cells_by_points` -- If `true`, all cells connected to the found points will be returned,
