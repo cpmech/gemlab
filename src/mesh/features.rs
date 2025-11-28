@@ -376,38 +376,6 @@ impl<'a> Features<'a> {
         ids
     }
 
-    /// Returns all cells (sorted) connected to a set of points
-    ///
-    /// Important: This function uses the `point_to_edges` and `all_2d_edges`.
-    /// Therefore, if needed, **internal edges** must be extracted too.
-    pub fn get_cells_via_points_2d(&self, point_ids: &[PointId]) -> Vec<CellId> {
-        // 1. Allocate an empty HashSet of CellId
-        let mut cell_ids = HashSet::new();
-
-        // 2. Loop over point ids
-        for &point_id in point_ids {
-            // 3. Loop over edges connected to points (using point_to_edges)
-            if let Some(edge_keys) = self.point_to_edges.get(&point_id) {
-                for edge_key in edge_keys {
-                    // 4. Loop over cells connected to edges (using all_2d_edges)
-                    if let Some(cells) = self.all_2d_edges.get(edge_key) {
-                        for &(cell_id, _local_edge) in cells {
-                            // 5. Insert a CellId into the HashSet
-                            cell_ids.insert(cell_id);
-                        }
-                    }
-                }
-            }
-        }
-
-        // 6. Collect the HashSet into a Vec
-        let mut ids: Vec<_> = cell_ids.into_iter().collect();
-
-        // 7. Sort and return the vec
-        ids.sort();
-        ids
-    }
-
     /// Returns all points (sorted) on a set of (2D) edges
     pub fn get_points_via_2d_edges(&self, edges: &Edges) -> Vec<PointId> {
         let mut point_ids: Vec<_> = edges.all.iter().flat_map(|e| e.points.clone()).collect();
@@ -949,6 +917,86 @@ impl<'a> Features<'a> {
             Ok(all) => Ok(Faces { all }),
             Err(e) => Err(e),
         }
+    }
+
+    /// Search points, cells, and edges in 2D
+    ///
+    /// # Arguments
+    ///
+    /// * `cells_by_points` -- If `true`, all cells connected to the found points will be returned,
+    ///   even if they are not connected to the found edges. If `false`, only cells connected to the found
+    ///   edges will be returned, i.e., `cells_by_points = false` corresponds to `cells_by_edges = true`.
+    /// * `at` -- the constraint to find **points**
+    /// * `filter` -- function `fn(x) -> bool` to impose further constraints on the point coordinates
+    ///
+    /// Note: Unless `extract_all` was set to `true` when allocating this instance, only boundary edges
+    /// will be found, affecting the resulting cells as well.
+    pub fn search_features_2d<F>(
+        &self,
+        cells_by_points: bool,
+        at: At,
+        mut filter: F,
+    ) -> Result<(Vec<PointId>, Vec<CellId>, Edges), StrError>
+    where
+        F: FnMut(&[f64]) -> bool,
+    {
+        // Check
+        if self.mesh.ndim != 2 {
+            return Err("search_features_2d works in 2D only");
+        }
+
+        // Search all points constrained by "at" and "filter"
+        let point_ids = self.search_point_ids(at, &mut filter)?;
+
+        // Allocate structures to hold the results
+        let mut edge_keys_set = HashSet::new();
+        let mut cell_ids_set = HashSet::new();
+
+        // Loop over point ids
+        for point_id in &point_ids {
+            // Loop over edges connected to points (using point_to_edges)
+            if let Some(edge_keys) = self.point_to_edges.get(&point_id) {
+                for edge_key in edge_keys {
+                    // Accept edge when at least two edge points validate "At"
+                    let accept_edge = if point_ids.contains(&edge_key.0) && point_ids.contains(&edge_key.1) {
+                        edge_keys_set.insert(*edge_key);
+                        true
+                    } else {
+                        false
+                    };
+                    if cells_by_points || accept_edge {
+                        // Loop over cells connected to edges (using all_2d_edges)
+                        if let Some(cells) = self.all_2d_edges.get(edge_key) {
+                            for &(cell_id, _local_edge_index) in cells {
+                                // Insert a CellId into the HashSet
+                                cell_ids_set.insert(cell_id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sort edge keys and prepare the Edges structure
+        let mut edge_keys: Vec<_> = edge_keys_set.into_iter().collect();
+        edge_keys.sort();
+        let mut edges = Edges {
+            all: Vec::with_capacity(edge_keys.len()),
+        };
+        for edge_key in edge_keys {
+            let edge = self
+                .edges
+                .get(&edge_key)
+                .ok_or("INTERNAL ERROR: features.edges data is inconsistent")?;
+            edges.all.push(edge);
+        }
+
+        // Sort cell ids
+        let mut cell_ids: Vec<_> = cell_ids_set.into_iter().collect();
+        cell_ids.sort();
+
+        // Return the results
+        Ok((point_ids, cell_ids, edges))
     }
 }
 
@@ -2269,20 +2317,91 @@ mod tests {
     }
 
     #[test]
-    fn get_cells_via_points_2d_work_1() {
+    fn search_features_2d_works_1() {
         let mesh = Samples::block_2d_four_qua4();
 
-        let feat = Features::new(&mesh, false);
-        let cell_ids = feat.get_cells_via_points_2d(&[1, 2]);
-        assert_eq!(cell_ids, vec![0, 1]);
+        let feat_bry = Features::new(&mesh, false); // no internal edges
+        let feat_int = Features::new(&mesh, true); // all edges including internal edges
 
-        let feat = Features::new(&mesh, true);
-        let cell_ids = feat.get_cells_via_points_2d(&[1, 2]);
+        // cells_by_points -----------------------------------------------------------------------
+        let cells_by_points = true;
+
+        // points along x=1.0 (but the internal is not included)
+        let (point_ids, cell_ids, edges) = feat_bry
+            .search_features_2d(cells_by_points, At::X(1.0), |_| true)
+            .unwrap();
+        assert_eq!(point_ids, vec![1, 6]);
         assert_eq!(cell_ids, vec![0, 1, 2, 3]);
+        assert_eq!(edges.all.len(), 0);
+
+        // points along x=1.0 with y<=1.0 (but the internal is not included)
+        let (point_ids, cell_ids, edges) = feat_bry
+            .search_features_2d(cells_by_points, At::X(1.0), |x| x[1] <= 1.0)
+            .unwrap();
+        assert_eq!(point_ids, vec![1]);
+        assert_eq!(cell_ids, vec![0, 1]);
+        assert_eq!(edges.all.len(), 0);
+
+        // points along x=1.0 (with internal edges)
+        let (point_ids, cell_ids, edges) = feat_int
+            .search_features_2d(cells_by_points, At::X(1.0), |_| true)
+            .unwrap();
+        assert_eq!(point_ids, vec![1, 2, 6]);
+        assert_eq!(cell_ids, vec![0, 1, 2, 3]);
+        assert_eq!(
+            edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(),
+            vec![(1, 2), (2, 6)]
+        );
+
+        // points along x=1.0 with y<=1.0 (with internal edges)
+        let (point_ids, cell_ids, edges) = feat_int
+            .search_features_2d(cells_by_points, At::X(1.0), |x| x[1] <= 1.0)
+            .unwrap();
+        assert_eq!(point_ids, vec![1, 2]);
+        assert_eq!(cell_ids, vec![0, 1, 2, 3]); // cells # 2 and 3 are selected because they share point 2
+        assert_eq!(edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(), vec![(1, 2)]);
+
+        // cells_by_edges -----------------------------------------------------------------------
+        let cells_by_points = false; // only cells attached to edges are returned
+
+        // points along x=1.0 (but the internal is not included)
+        let (point_ids, cell_ids, edges) = feat_bry
+            .search_features_2d(cells_by_points, At::X(1.0), |_| true)
+            .unwrap();
+        assert_eq!(point_ids, vec![1, 6]);
+        assert_eq!(cell_ids.len(), 0); // no cells attached to internal edges are found (because internal edges are not included)
+        assert_eq!(edges.all.len(), 0);
+
+        // points along x=1.0 with y<=1.0 (but the internal is not included)
+        let (point_ids, cell_ids, edges) = feat_bry
+            .search_features_2d(cells_by_points, At::X(1.0), |x| x[1] <= 1.0)
+            .unwrap();
+        assert_eq!(point_ids, vec![1]);
+        assert_eq!(cell_ids.len(), 0); // no cells attached to internal edges are found (because internal edges are not included)
+        assert_eq!(edges.all.len(), 0);
+
+        // points along x=1.0 (with internal edges)
+        let (point_ids, cell_ids, edges) = feat_int
+            .search_features_2d(cells_by_points, At::X(1.0), |_| true)
+            .unwrap();
+        assert_eq!(point_ids, vec![1, 2, 6]);
+        assert_eq!(cell_ids, vec![0, 1, 2, 3]);
+        assert_eq!(
+            edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(),
+            vec![(1, 2), (2, 6)]
+        );
+
+        // points along x=1.0 with y<=1.0 (with internal edges)
+        let (point_ids, cell_ids, edges) = feat_int
+            .search_features_2d(cells_by_points, At::X(1.0), |x| x[1] <= 1.0)
+            .unwrap();
+        assert_eq!(point_ids, vec![1, 2]);
+        assert_eq!(cell_ids, vec![0, 1]); // cells # 2 and 3 are not included because they do not share edge (1, 2)
+        assert_eq!(edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(), vec![(1, 2)]);
     }
 
     #[test]
-    fn get_cells_via_points_2d_work_2() {
+    fn search_features_2d_works_2() {
         // L-shaped domain discretized with unstructured triangular elements
         let mesh = Mesh::from_text(
             r"
@@ -2363,13 +2482,93 @@ mod tests {
                 .show_edge_markers(true)
                 .set_view_flag(false)
                 .set_size(800.0, 800.0);
-            draw.all(&mesh, "/tmp/gemlab/test_get_cells_via_points_2d_work_2.svg")
+            draw.all(&mesh, "/tmp/gemlab/test_search_features_2d_works_2.svg")
                 .unwrap();
         }
 
-        let feat = Features::new(&mesh, true);
-        let cell_ids = feat.get_cells_via_points_2d(&[3, 9, 6]);
-        println!("cell_ids = {:?}", cell_ids);
+        let feat_bry = Features::new(&mesh, false); // no internal edges
+        let feat_int = Features::new(&mesh, true); // all edges including internal edges
+
+        // cells_by_points -----------------------------------------------------------------------
+        let cells_by_points = true;
+
+        // points along x=1.0 (but the internal is not included)
+        let (point_ids, cell_ids, edges) = feat_bry
+            .search_features_2d(cells_by_points, At::X(1.0), |_| true)
+            .unwrap();
+        assert_eq!(point_ids, vec![3, 4, 6]);
+        assert_eq!(cell_ids, vec![1, 2, 14, 18, 19]); // only boundary cells
+        assert_eq!(edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(), vec![(3, 4)]);
+
+        // points along x=1.0 with y<=1.0 (but the internal is not included)
+        let (point_ids, cell_ids, edges) = feat_bry
+            .search_features_2d(cells_by_points, At::X(1.0), |x| x[1] <= 1.0)
+            .unwrap();
+        assert_eq!(point_ids, vec![3, 6]);
+        assert_eq!(cell_ids, vec![1, 2, 14, 18]);
+        assert_eq!(edges.all.len(), 0); // no boundary edges
+
+        // points along x=1.0 (with internal edges)
+        let (point_ids, cell_ids, edges) = feat_int
+            .search_features_2d(cells_by_points, At::X(1.0), |_| true)
+            .unwrap();
+        assert_eq!(point_ids, vec![3, 4, 6, 9]);
+        assert_eq!(cell_ids, vec![1, 2, 4, 6, 7, 8, 9, 11, 14, 18, 19, 20]);
+        assert_eq!(
+            edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(),
+            vec![(3, 4), (3, 9), (6, 9)]
+        );
+
+        // points along x=1.0 with y<=1.0 (with internal edges)
+        let (point_ids, cell_ids, edges) = feat_int
+            .search_features_2d(cells_by_points, At::X(1.0), |x| x[1] <= 1.0)
+            .unwrap();
+        assert_eq!(point_ids, vec![3, 6, 9]);
         assert_eq!(cell_ids, vec![1, 2, 4, 6, 7, 8, 9, 11, 14, 18, 20]);
+        assert_eq!(
+            edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(),
+            vec![(3, 9), (6, 9)]
+        );
+
+        // cells_by_edges -----------------------------------------------------------------------
+        let cells_by_points = false;
+
+        // points along x=1.0 (but the internal is not included)
+        let (point_ids, cell_ids, edges) = feat_bry
+            .search_features_2d(cells_by_points, At::X(1.0), |_| true)
+            .unwrap();
+        assert_eq!(point_ids, vec![3, 4, 6]);
+        assert_eq!(cell_ids, vec![14]); // only boundary cells attached to boundary edges
+        assert_eq!(edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(), vec![(3, 4)]);
+
+        // points along x=1.0 with y<=1.0 (but the internal is not included)
+        let (point_ids, cell_ids, edges) = feat_bry
+            .search_features_2d(cells_by_points, At::X(1.0), |x| x[1] <= 1.0)
+            .unwrap();
+        assert_eq!(point_ids, vec![3, 6]);
+        assert_eq!(cell_ids.len(), 0); // no boundary cells attached to boundary edges are found
+        assert_eq!(edges.all.len(), 0); // no boundary edges
+
+        // points along x=1.0 (with internal edges)
+        let (point_ids, cell_ids, edges) = feat_int
+            .search_features_2d(cells_by_points, At::X(1.0), |_| true)
+            .unwrap();
+        assert_eq!(point_ids, vec![3, 4, 6, 9]);
+        assert_eq!(cell_ids, vec![2, 6, 11, 14, 20]);
+        assert_eq!(
+            edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(),
+            vec![(3, 4), (3, 9), (6, 9)]
+        );
+
+        // points along x=1.0 with y<=1.0 (with internal edges)
+        let (point_ids, cell_ids, edges) = feat_int
+            .search_features_2d(cells_by_points, At::X(1.0), |x| x[1] <= 1.0)
+            .unwrap();
+        assert_eq!(point_ids, vec![3, 6, 9]);
+        assert_eq!(cell_ids, vec![2, 6, 11, 20]);
+        assert_eq!(
+            edges.all.iter().map(|e| e.key()).collect::<Vec<_>>(),
+            vec![(3, 9), (6, 9)]
+        );
     }
 }
