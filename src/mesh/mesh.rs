@@ -10,9 +10,6 @@ use std::fs::{self, File};
 use std::io::BufReader;
 use std::path::Path;
 
-/// Defines a tolerance to compare points in [Mesh::get_sorted_points()]
-pub const TOL_COMPARE_POINTS: f64 = 1e-6;
-
 /// Aliases usize as Point ID
 pub type PointId = usize;
 
@@ -516,13 +513,6 @@ impl Mesh {
     /// # Notes
     ///
     /// 1. The filter is applied before sorting the points.
-    /// 2. The tolerance to compare points is [TOL_COMPARE_POINTS] times the range of the coordinates; i.e.:
-    ///
-    /// ```text
-    /// tol_x = TOL_COMPARE_POINTS * (xmax - xmin)
-    /// tol_y = TOL_COMPARE_POINTS * (ymax - ymin)
-    /// tol_z = TOL_COMPARE_POINTS * (zmax - zmin)
-    /// ```
     ///
     /// # Output
     ///
@@ -579,17 +569,10 @@ impl Mesh {
                 }
             }
         }
-        // calculate tolerances to compare point coordinates
-        let (min, max) = self.get_limits();
-        let mut tol = vec![TOL_COMPARE_POINTS; self.ndim];
-        for i in 0..self.ndim {
-            tol[i] *= max[i] - min[i];
-        }
-        // sort nodes by x → y → z
         let sorted_indices = if d3 {
-            argsort3_f64(&zz, &yy, &xx, &tol)
+            argsort3_f64(&zz, &yy, &xx)
         } else {
-            argsort2_f64(&yy, &xx, &tol)
+            argsort2_f64(&yy, &xx)
         };
         sorted_indices.iter().map(|&i| k2id[&i]).collect()
     }
