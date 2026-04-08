@@ -415,6 +415,8 @@ impl<'a> Features<'a> {
     /// Returns many cells sharing a given (2D) edge
     ///
     /// Returns a **sorted** list of Cell IDs
+    ///
+    /// **Note:** If a cell shares multiple edges from the collection, it will appear multiple times.
     pub fn get_cells_via_2d_edges(&self, edges: &Edges) -> Vec<CellId> {
         let mut ids: Vec<_> = edges.all.iter().flat_map(|e| self.get_cells_via_2d_edge(e)).collect();
         ids.sort();
@@ -460,6 +462,8 @@ impl<'a> Features<'a> {
     /// Returns many cells sharing a given face
     ///
     /// Returns a **sorted** list of Cell IDs
+    ///
+    /// **Note:** If a cell shares multiple faces from the collection, it will appear multiple times.
     pub fn get_cells_via_faces(&self, faces: &Faces) -> Vec<CellId> {
         let mut ids: Vec<_> = faces.all.iter().flat_map(|f| self.get_cells_via_face(f)).collect();
         ids.sort();
