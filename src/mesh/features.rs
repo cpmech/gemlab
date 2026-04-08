@@ -348,6 +348,36 @@ impl<'a> Features<'a> {
         ids
     }
 
+    /// Returns cells sharing a given (2D) edge along with the edge points
+    ///
+    /// Returns a **sorted** (by Cell ID) list of tuples containing:
+    /// * Cell ID
+    /// * Vector of point IDs on the edge
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::mesh::{Features, Samples};
+    ///
+    /// // 1.0              4-----------3
+    /// //                  |           |
+    /// //                  |    [1]    |
+    /// //                  |           |
+    /// // 0.0  0-----------1-----------2-----------5
+    /// //           [0]                     [2]
+    /// let mesh = Samples::mixed_shapes_2d();
+    /// let feat = Features::new(&mesh, false);
+    /// let edge = feat.get_edge(1, 2);
+    /// let pairs = feat.get_cells_pairs_via_2d_edge(&edge);
+    /// assert_eq!(pairs, vec![(1, vec![2, 1])]);
+    /// ```
+    pub fn get_cells_pairs_via_2d_edge(&self, edge: &Edge) -> Vec<(CellId, Vec<PointId>)> {
+        let cells = self.all_2d_edges.get(&edge.key()).expect("cannot find 2D edge");
+        let mut pairs: Vec<_> = cells.iter().map(|c| (c.0, edge.points.clone())).collect();
+        pairs.sort_by_key(|p| p.0);
+        pairs
+    }
+
     /// Returns cells sharing a given face
     ///
     /// Returns a **sorted** list of Cell IDs
@@ -2245,6 +2275,7 @@ mod tests {
         assert_eq!(feat.get_cells_via_2d_edge(&edge), &[1]);
         assert_eq!(feat.get_cells_via_2d_edges(&edges), &[1]);
         assert_eq!(feat.get_points_via_2d_edges(&edges), &[1, 2]);
+        assert_eq!(feat.get_cells_pairs_via_2d_edge(&edge), vec![(1, vec![2, 1])]);
     }
 
     #[test]
@@ -2273,6 +2304,14 @@ mod tests {
         assert_eq!(feat.get_cells_via_2d_edge(&edge_b), &[1, 3]);
         assert_eq!(feat.get_cells_via_2d_edges(&edges), &[0, 1, 2, 3]);
         assert_eq!(feat.get_points_via_2d_edges(&edges), &[2, 3, 5]);
+        assert_eq!(
+            feat.get_cells_pairs_via_2d_edge(&edge_a),
+            vec![(0, vec![3, 2]), (2, vec![3, 2])]
+        );
+        assert_eq!(
+            feat.get_cells_pairs_via_2d_edge(&edge_b),
+            vec![(1, vec![2, 5]), (3, vec![2, 5])]
+        );
     }
 
     #[test]
