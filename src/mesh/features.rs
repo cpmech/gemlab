@@ -466,6 +466,36 @@ impl<'a> Features<'a> {
         ids
     }
 
+    /// Returns many cells sharing given faces along with the face points
+    ///
+    /// Returns a **sorted** (by Cell ID) list of tuples containing:
+    /// * Cell ID
+    /// * Vector of point IDs on the face
+    ///
+    /// **Note:** If a cell shares multiple faces from the collection, it will appear multiple times.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::mesh::{Faces, Features, Samples};
+    ///
+    /// let mesh = Samples::one_tet4();
+    /// let feat = Features::new(&mesh, false);
+    /// let face = feat.get_face(0, 1, 3, usize::MAX);
+    /// let faces = Faces { all: vec![&face] };
+    /// let pairs = feat.get_cells_pairs_via_faces(&faces);
+    /// assert_eq!(pairs, vec![(0, vec![0, 1, 3])]);
+    /// ```
+    pub fn get_cells_pairs_via_faces(&self, faces: &Faces) -> Vec<(CellId, Vec<PointId>)> {
+        let mut pairs: Vec<_> = faces
+            .all
+            .iter()
+            .flat_map(|f| self.get_cells_pairs_via_face(f))
+            .collect();
+        pairs.sort_by_key(|p| p.0);
+        pairs
+    }
+
     /// Returns all points (sorted) on a set of (2D) edges
     pub fn get_points_via_2d_edges(&self, edges: &Edges) -> Vec<PointId> {
         let mut point_ids: Vec<_> = edges.all.iter().flat_map(|e| e.points.clone()).collect();
@@ -2408,6 +2438,10 @@ mod tests {
         assert_eq!(feat.get_points_via_faces(&faces), &[2, 3, 6, 7]);
         assert_eq!(feat.get_cells_pairs_via_face(&face_a), vec![(0, vec![2, 3, 7, 6])]);
         assert_eq!(feat.get_cells_pairs_via_face(&face_b), vec![(1, vec![2, 6, 3])]);
+        assert_eq!(
+            feat.get_cells_pairs_via_faces(&faces),
+            vec![(0, vec![2, 3, 7, 6]), (1, vec![2, 6, 3])]
+        );
     }
 
     #[test]
@@ -2430,6 +2464,15 @@ mod tests {
         assert_eq!(
             feat.get_cells_pairs_via_face(&face_b),
             vec![(4, vec![6, 7, 21, 20]), (6, vec![6, 7, 21, 20])]
+        );
+        assert_eq!(
+            feat.get_cells_pairs_via_faces(&faces),
+            vec![
+                (0, vec![2, 3, 7, 6]),
+                (2, vec![2, 3, 7, 6]),
+                (4, vec![6, 7, 21, 20]),
+                (6, vec![6, 7, 21, 20])
+            ]
         );
     }
 
