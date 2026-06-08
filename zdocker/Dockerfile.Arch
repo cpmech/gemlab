@@ -3,7 +3,7 @@ FROM archlinux:base-devel
 # Update keyring first to avoid GPG errors on a fresh Arch image,
 # then upgrade the system and install Rust and core dependencies.
 RUN pacman -Sy --noconfirm archlinux-keyring && \
-    pacman -Syu --noconfirm rust blas-openblas cargo python-matplotlib rust suitesparse
+    pacman -Syu --noconfirm rust blas-openblas rust suitesparse
 
 # Create a non-root user for building and testing
 RUN useradd -m user
