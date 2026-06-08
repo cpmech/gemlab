@@ -243,6 +243,38 @@ impl<'a> Edges<'a> {
 
         (path, points)
     }
+
+    /// Returns a sorted list of all unique points in the collection of edges
+    ///
+    /// # Returns
+    ///
+    /// A vector containing all unique point IDs from all edges in `self.all`, sorted in ascending order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::mesh::{Edge, Edges};
+    /// use gemlab::shapes::GeoKind;
+    ///
+    /// let e1 = Edge { kind: GeoKind::Lin2, points: vec![1, 2], marker: 0 };
+    /// let e2 = Edge { kind: GeoKind::Lin2, points: vec![2, 3], marker: 0 };
+    /// let e3 = Edge { kind: GeoKind::Lin3, points: vec![3, 4, 5], marker: 0 };
+    /// let edges = Edges { all: vec![&e1, &e2, &e3] };
+    ///
+    /// let points = edges.all_points();
+    /// assert_eq!(points, vec![1, 2, 3, 4, 5]);
+    /// ```
+    pub fn all_points(&self) -> Vec<PointId> {
+        let mut points_set = HashSet::new();
+        for edge in &self.all {
+            for &point in &edge.points {
+                points_set.insert(point);
+            }
+        }
+        let mut points: Vec<_> = points_set.into_iter().collect();
+        points.sort();
+        points
+    }
 }
 
 impl fmt::Display for Edge {
@@ -585,5 +617,42 @@ mod tests {
         let edges = Edges { all: vec![&e2, &e3] };
         println!("{:?}", edges.any_path());
         assert_eq!(edges.any_path(), (vec![0, 1], vec![3, 14, 6, 13, 2, 28, 21, 27, 18]));
+    }
+
+    #[test]
+    fn all_points_works() {
+        // Test with Lin2 edges
+        let all = generate_sample_lin2();
+
+        // Empty list of edges
+        let empty = Edges { all: vec![] };
+        assert!(empty.all_points().is_empty());
+
+        // Single edge
+        let single = Edges { all: vec![&all[9]] };
+        assert_eq!(single.all_points(), vec![3, 4]);
+
+        // Multiple edges with some shared points
+        let multiple = Edges {
+            all: vec![&all[0], &all[1], &all[2]],
+        };
+        assert_eq!(multiple.all_points(), vec![2, 3, 5, 10]);
+
+        // All edges (should get all unique points, sorted)
+        let all_edges = Edges {
+            all: vec![
+                &all[0], &all[1], &all[2], &all[3], &all[4], &all[5], &all[6], &all[7], &all[8], &all[9], &all[10],
+                &all[11], &all[12], &all[13],
+            ],
+        };
+        assert_eq!(all_edges.all_points(), vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+        // Test with Lin3 edges
+        let all_lin3 = generate_sample_lin3();
+        let edges_lin3 = Edges {
+            all: vec![&all_lin3[0], &all_lin3[1]],
+        };
+        // Points include middle nodes (100, 101)
+        assert_eq!(edges_lin3.all_points(), vec![2, 3, 5, 100, 101]);
     }
 }

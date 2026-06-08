@@ -1,7 +1,8 @@
 # Geometry, meshes, and numerical integration for finite element analyses <!-- omit from toc -->
 
 [![codecov](https://codecov.io/gh/cpmech/gemlab/graph/badge.svg?token=OjQKQ0PrNF)](https://codecov.io/gh/cpmech/gemlab)
-[![Test & Coverage](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/test_and_coverage.yml)
+[![Arch](https://github.com/cpmech/gemlab/actions/workflows/arch.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/arch.yml)
+[![Ubuntu](https://github.com/cpmech/gemlab/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/ubuntu.yml)
 
 [![documentation](https://img.shields.io/badge/gemlab-documentation-blue)](https://docs.rs/gemlab)
 
@@ -10,9 +11,12 @@
 - [Introduction](#introduction)
   - [Documentation](#documentation)
 - [Installation](#installation)
-  - [TL;DR (Debian/Ubuntu/Linux)](#tldr-debianubuntulinux)
-  - [Details](#details)
-  - [Setting Cargo.toml](#setting-cargotoml)
+  - [Arch Linux](#arch-linux)
+    - [1. Default](#1-default)
+    - [2. Alternative](#2-alternative)
+  - [Debian/Ubuntu Linux](#debianubuntu-linux)
+    - [1. Default](#1-default-1)
+    - [2. Alternative](#2-alternative-1)
 - [Examples](#examples)
   - [MSH file format](#msh-file-format)
   - [Numerical integration](#numerical-integration)
@@ -38,43 +42,43 @@ This crate contains structures and functions for geometry computations, generate
 
 ## Installation
 
-At this moment, Gemlab works on **Linux** (Debian/Ubuntu; and maybe Arch).
+This crate depends on [Russell (Rust Scientific Library)](https://github.com/cpmech/russell) and, therefore, has the same dependencies as `russell`. Among the combinations described in `russell` website, the following are recommended here:
 
-### TL;DR (Debian/Ubuntu/Linux)
+1. **Default** - Use [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) and [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse)
+2. **Alternative** - Use [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html) and locally compiled [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) and the [MUMPS solver](https://mumps-solver.org)
 
-First:
+Therefore, the following (re-exported) **features** are available here:
 
-```bash
-sudo apt-get install -y --no-install-recommends \
-    g++ \
-    gdb \
-    gfortran \
-    liblapacke-dev \
-    libmumps-seq-dev \
-    libopenblas-dev \
-    libsuitesparse-dev
-```
+* `intel_mkl` - Tells `russell` to use Intel MKL
+* `local_sparse` - Tells `russell` that the local linear solvers are available locally
 
-Then:
+### Arch Linux
+
+#### 1. Default
+
+Install some dependencies:
 
 ```bash
-cargo add gemlab
+  pacman -Syu blas-openblas python-matplotlib suitesparse
 ```
 
-### Details
+#### 2. Alternative
 
-This crates depends on `russell_lab` and, hence, needs some external libraries. See the [installation of required dependencies](https://github.com/cpmech/russell) on `russell_lab`.
+Check [Russell (Rust Scientific Library)](https://github.com/cpmech/russell) out for detailed instructions on how to install the optional dependencies.
 
-### Setting Cargo.toml
+### Debian/Ubuntu Linux
 
-[![Crates.io](https://img.shields.io/crates/v/gemlab.svg)](https://crates.io/crates/gemlab)
+#### 1. Default
 
-👆 Check the crate version and update your Cargo.toml accordingly:
+Install some dependencies:
 
-```toml
-[dependencies]
-gemlab = "*"
+```bash
+sudo apt-get install -y liblapacke-dev libopenblas-dev libsuitesparse-dev python3-matplotlib
 ```
+
+#### 2. Alternative
+
+Check [Russell (Rust Scientific Library)](https://github.com/cpmech/russell) out for detailed instructions on how to install the optional dependencies.
 
 
 

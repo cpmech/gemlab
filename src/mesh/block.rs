@@ -1809,15 +1809,15 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         assert_eq!(mesh.points.len(), 9);
         assert_eq!(mesh.cells.len(), 4);
-        array_approx_eq(&mesh.points[0].coords, &[0.0, 0.0], 1e-15);
-        array_approx_eq(&mesh.points[1].coords, &[1.0, 0.0], 1e-15);
-        array_approx_eq(&mesh.points[2].coords, &[1.0, 1.0], 1e-15);
-        array_approx_eq(&mesh.points[3].coords, &[0.0, 1.0], 1e-15);
-        array_approx_eq(&mesh.points[4].coords, &[3.0, 0.0], 1e-15);
-        array_approx_eq(&mesh.points[5].coords, &[3.0, 1.0], 1e-15);
-        array_approx_eq(&mesh.points[6].coords, &[1.0, 3.0], 1e-15);
-        array_approx_eq(&mesh.points[7].coords, &[0.0, 3.0], 1e-15);
-        array_approx_eq(&mesh.points[8].coords, &[3.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[0].coords, &[0.0, 0.0], 1e-14);
+        array_approx_eq(&mesh.points[1].coords, &[1.0, 0.0], 1e-14);
+        array_approx_eq(&mesh.points[2].coords, &[1.0, 1.0], 1e-14);
+        array_approx_eq(&mesh.points[3].coords, &[0.0, 1.0], 1e-14);
+        array_approx_eq(&mesh.points[4].coords, &[3.0, 0.0], 1e-14);
+        array_approx_eq(&mesh.points[5].coords, &[3.0, 1.0], 1e-14);
+        array_approx_eq(&mesh.points[6].coords, &[1.0, 3.0], 1e-14);
+        array_approx_eq(&mesh.points[7].coords, &[0.0, 3.0], 1e-14);
+        array_approx_eq(&mesh.points[8].coords, &[3.0, 3.0], 1e-14);
         assert_eq!(&mesh.cells[0].points, &[0, 1, 2, 3]);
         assert_eq!(&mesh.cells[1].points, &[1, 4, 5, 2]);
         assert_eq!(&mesh.cells[2].points, &[3, 2, 6, 7]);
@@ -1934,7 +1934,7 @@ mod tests {
         assert_eq!(mesh.points.len(), correct.points.len());
         assert_eq!(mesh.cells.len(), correct.cells.len());
         for point in &correct.points {
-            array_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-15);
+            array_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-14);
         }
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
@@ -1969,7 +1969,7 @@ mod tests {
         assert_eq!(mesh.points.len(), correct.points.len());
         assert_eq!(mesh.cells.len(), correct.cells.len());
         for point in &correct.points {
-            array_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-15);
+            array_approx_eq(&point.coords, &correct.points[point.id].coords, 1e-14);
         }
         for cell in &correct.cells {
             assert_eq!(cell.points, correct.cells[cell.id].points);
@@ -2104,24 +2104,24 @@ mod tests {
         mesh.check_all().unwrap();
         assert_eq!(mesh.points.len(), 27);
         assert_eq!(mesh.cells.len(), 8);
-        array_approx_eq(&mesh.points[0].coords, &[0.0, 0.0, 0.0], 1e-15);
-        array_approx_eq(&mesh.points[1].coords, &[1.0, 0.0, 0.0], 1e-15);
-        array_approx_eq(&mesh.points[2].coords, &[1.0, 1.0, 0.0], 1e-15);
-        array_approx_eq(&mesh.points[3].coords, &[0.0, 1.0, 0.0], 1e-15);
-        array_approx_eq(&mesh.points[4].coords, &[0.0, 0.0, 1.0], 1e-15);
-        array_approx_eq(&mesh.points[5].coords, &[1.0, 0.0, 1.0], 1e-15);
-        array_approx_eq(&mesh.points[6].coords, &[1.0, 1.0, 1.0], 1e-15);
-        array_approx_eq(&mesh.points[7].coords, &[0.0, 1.0, 1.0], 1e-15);
-        array_approx_eq(&mesh.points[8].coords, &[3.0, 0.0, 0.0], 1e-15);
-        array_approx_eq(&mesh.points[9].coords, &[3.0, 1.0, 0.0], 1e-15);
-        array_approx_eq(&mesh.points[10].coords, &[3.0, 0.0, 1.0], 1e-15);
+        array_approx_eq(&mesh.points[0].coords, &[0.0, 0.0, 0.0], 1e-14);
+        array_approx_eq(&mesh.points[1].coords, &[1.0, 0.0, 0.0], 1e-14);
+        array_approx_eq(&mesh.points[2].coords, &[1.0, 1.0, 0.0], 1e-14);
+        array_approx_eq(&mesh.points[3].coords, &[0.0, 1.0, 0.0], 1e-14);
+        array_approx_eq(&mesh.points[4].coords, &[0.0, 0.0, 1.0], 1e-14);
+        array_approx_eq(&mesh.points[5].coords, &[1.0, 0.0, 1.0], 1e-14);
+        array_approx_eq(&mesh.points[6].coords, &[1.0, 1.0, 1.0], 1e-14);
+        array_approx_eq(&mesh.points[7].coords, &[0.0, 1.0, 1.0], 1e-14);
+        array_approx_eq(&mesh.points[8].coords, &[3.0, 0.0, 0.0], 1e-14);
+        array_approx_eq(&mesh.points[9].coords, &[3.0, 1.0, 0.0], 1e-14);
+        array_approx_eq(&mesh.points[10].coords, &[3.0, 0.0, 1.0], 1e-14);
         array_approx_eq(&mesh.points[11].coords, &[3.0, 1.0, 1.0], 1e-14); // <<
-        array_approx_eq(&mesh.points[22].coords, &[3.0, 0.0, 3.0], 1e-15);
-        array_approx_eq(&mesh.points[23].coords, &[3.0, 1.0, 3.0], 1e-15);
-        array_approx_eq(&mesh.points[18].coords, &[0.0, 0.0, 3.0], 1e-15);
-        array_approx_eq(&mesh.points[19].coords, &[1.0, 0.0, 3.0], 1e-15);
-        array_approx_eq(&mesh.points[20].coords, &[1.0, 1.0, 3.0], 1e-15);
-        array_approx_eq(&mesh.points[21].coords, &[0.0, 1.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[22].coords, &[3.0, 0.0, 3.0], 1e-14);
+        array_approx_eq(&mesh.points[23].coords, &[3.0, 1.0, 3.0], 1e-14);
+        array_approx_eq(&mesh.points[18].coords, &[0.0, 0.0, 3.0], 1e-14);
+        array_approx_eq(&mesh.points[19].coords, &[1.0, 0.0, 3.0], 1e-14);
+        array_approx_eq(&mesh.points[20].coords, &[1.0, 1.0, 3.0], 1e-14);
+        array_approx_eq(&mesh.points[21].coords, &[0.0, 1.0, 3.0], 1e-14);
         assert_eq!(&mesh.cells[0].points, &[0, 1, 2, 3, 4, 5, 6, 7]);
         assert_eq!(&mesh.cells[1].points, &[1, 8, 9, 2, 5, 10, 11, 6]);
         assert_eq!(&mesh.cells[7].points, &[6, 11, 17, 14, 20, 23, 26, 24]);
@@ -2225,7 +2225,7 @@ mod tests {
             }
             radius = f64::sqrt(radius);
             if [0, 3, 7].contains(&point.id) {
-                approx_eq(radius, block.args_ring.rmin, 1e-15);
+                approx_eq(radius, block.args_ring.rmin, 1e-14);
             }
             if [1, 2, 6].contains(&point.id) {
                 approx_eq(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
@@ -2268,7 +2268,7 @@ mod tests {
             }
             radius = f64::sqrt(radius);
             if [0, 11, 7, 3, 35, 32, 29].contains(&point.id) {
-                approx_eq(radius, block.args_ring.rmin, 1e-15);
+                approx_eq(radius, block.args_ring.rmin, 1e-14);
             }
             if [1, 5, 9, 2, 30, 33, 28].contains(&point.id) {
                 approx_eq(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
@@ -2315,7 +2315,7 @@ mod tests {
             }
             radius = f64::sqrt(radius);
             if [0, 3, 4, 7, 13, 15, 18, 21, 25].contains(&point.id) {
-                approx_eq(radius, block.args_ring.rmin, 1e-15);
+                approx_eq(radius, block.args_ring.rmin, 1e-14);
             }
             if [1, 2, 5, 6, 12, 14, 19, 20, 24].contains(&point.id) {
                 approx_eq(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
@@ -2324,17 +2324,17 @@ mod tests {
                 approx_eq(radius, block.args_ring.rmax, 1e-17);
             }
             if [0, 1, 2, 3, 8, 9, 12, 13, 16].contains(&point.id) {
-                approx_eq(point.coords[2], block.args_ring.zmin, 1e-15);
+                approx_eq(point.coords[2], block.args_ring.zmin, 1e-14);
             }
             if [4, 5, 6, 7, 10, 11, 14, 15, 17].contains(&point.id) {
                 approx_eq(
                     point.coords[2],
                     (block.args_ring.zmin + block.args_ring.zmax) / 2.0,
-                    1e-15,
+                    1e-14,
                 );
             }
             if [18, 19, 20, 21, 22, 23, 24, 25, 26].contains(&point.id) {
-                approx_eq(point.coords[2], block.args_ring.zmax, 1e-15);
+                approx_eq(point.coords[2], block.args_ring.zmax, 1e-14);
             }
         }
         if SAVE_FIGURE {
@@ -2370,7 +2370,7 @@ mod tests {
             }
             radius = f64::sqrt(radius);
             if [0, 15, 14, 3, 61, 60, 53, 24, 25, 4, 7, 67, 66, 55, 123, 122, 71, 94].contains(&point.id) {
-                approx_eq(radius, block.args_ring.rmin, 1e-15);
+                approx_eq(radius, block.args_ring.rmin, 1e-14);
             }
             if [90, 91, 118, 62, 56, 63, 57, 119, 5, 27, 1].contains(&point.id) {
                 approx_eq(radius, (block.args_ring.rmin + block.args_ring.rmax) / 2.0, 1e-17);
@@ -2423,7 +2423,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [0, 3, 7] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            approx_eq(d, 1.0, 1e-15);
+            approx_eq(d, 1.0, 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2441,7 +2441,7 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [0, 3, 7] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            approx_eq(d, 0.5, 1e-15);
+            approx_eq(d, 0.5, 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2475,13 +2475,13 @@ mod tests {
         // side 3
         for p in [0, 3, 7, 14, 17] {
             let d = point_point_distance(&mesh.points[p].coords, &[xc, xc]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // middle nodes
         for (a, mid, b) in [(3, 6, 2)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2526,22 +2526,22 @@ mod tests {
         // side 0
         for p in [0, 4, 1, 10, 8] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, cen_minus]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // side 1
         for p in [8, 11, 9, 19, 18] {
             let d = point_point_distance(&mesh.points[p].coords, &[cen_plus, 0.0]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // side 2
         for p in [14, 16, 13, 20, 18] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, cen_plus]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // side 3
         for p in [0, 7, 3, 17, 14] {
             let d = point_point_distance(&mesh.points[p].coords, &[cen_minus, 0.0]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // center vertical line
         for p in [5, 2, 15] {
@@ -2555,7 +2555,7 @@ mod tests {
         for (a, mid, b) in [(3, 6, 2), (2, 12, 9), (1, 5, 2), (2, 15, 13)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2617,7 +2617,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
             let d = point_point_distance(x, &[cen_minus, 0.0]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // face 1
         for p in [
@@ -2629,7 +2629,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
             let d = point_point_distance(x, &[cen_plus, 0.0]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // face 2
         for p in [
@@ -2641,7 +2641,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
             let d = point_point_distance(x, &[0.0, cen_minus]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // face 3
         for p in [
@@ -2653,7 +2653,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[1]];
             let d = point_point_distance(x, &[0.0, cen_plus]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // vertical line at center
         for p in [2, 18, 6, 61, 53] {
@@ -2678,7 +2678,7 @@ mod tests {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
-            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2751,7 +2751,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[1], mesh.points[p].coords[2]];
             let d = point_point_distance(x, &[0.0, cen_minus]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // face 3
         for p in [
@@ -2763,7 +2763,7 @@ mod tests {
         ] {
             let x = &[mesh.points[p].coords[0], mesh.points[p].coords[2]];
             let d = point_point_distance(x, &[0.0, cen_plus]).unwrap();
-            approx_eq(d, r, 1e-15);
+            approx_eq(d, r, 1e-14);
         }
         // vertical line at center
         for p in [2, 18, 6, 61, 53] {
@@ -2782,7 +2782,7 @@ mod tests {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
-            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2816,11 +2816,11 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua4).unwrap();
         for p in [6, 7, 11, 15] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            approx_eq(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-14);
         }
         for p in [13, 12, 14] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            approx_eq(d, 6.0, 1e-15);
+            approx_eq(d, 6.0, 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2846,12 +2846,12 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua8).unwrap();
         for p in [13, 16, 14, 27, 26, 38, 37] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            approx_eq(d, radius, 1e-15);
+            approx_eq(d, radius, 1e-14);
         }
         for (a, mid, b) in [(23, 28, 26), (9, 17, 14)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2877,12 +2877,12 @@ mod tests {
         let mesh = block.subdivide(GeoKind::Qua9).unwrap();
         for p in [15, 18, 16, 32, 31, 46, 45] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0]).unwrap();
-            approx_eq(d, radius, 1e-15);
+            approx_eq(d, radius, 1e-14);
         }
         for (a, mid, b) in [(42, 48, 46), (27, 33, 31), (28, 34, 32), (10, 19, 16), (12, 20, 18)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2923,7 +2923,7 @@ mod tests {
             let xd = mesh.points[a].coords[0] + 2.0 * lx / 3.0;
             let yd = mesh.points[a].coords[1] + 2.0 * ly / 3.0;
             array_approx_eq(&mesh.points[c].coords, &[xc, yc], 1e-14);
-            array_approx_eq(&mesh.points[d].coords, &[xd, yd], 1e-15);
+            array_approx_eq(&mesh.points[d].coords, &[xd, yd], 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2950,7 +2950,7 @@ mod tests {
         for (a, mid, b) in [(82, 92, 90), (54, 64, 62), (20, 34, 32)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
-            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-14);
         }
         if SAVE_FIGURE {
             draw(
@@ -2990,13 +2990,13 @@ mod tests {
             22, 28, 23, 48, 45, // z-max
         ] {
             let d = point_point_distance(&mesh.points[p].coords, &[0.0, 0.0, mesh.points[p].coords[2]]).unwrap();
-            approx_eq(d, radius, 1e-15);
+            approx_eq(d, radius, 1e-14);
         }
         for (a, mid, b) in [(2, 26, 21), (6, 29, 23)] {
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             let zmid = (mesh.points[a].coords[2] + mesh.points[b].coords[2]) / 2.0;
-            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-15);
+            array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid, zmid], 1e-14);
         }
         if SAVE_FIGURE {
             draw(

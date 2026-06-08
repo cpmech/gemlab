@@ -59,6 +59,39 @@ pub type MapFaceToCells = HashMap<FaceKey, Vec<(CellId, usize)>>;
 /// Relates a point id to a unique set of FaceKey
 pub type MapPointToFaces = HashMap<PointId, HashSet<FaceKey>>;
 
+impl<'a> Faces<'a> {
+    /// Returns a sorted list of all unique points in the collection of faces
+    ///
+    /// # Returns
+    ///
+    /// A vector containing all unique point IDs from all faces in `self.all`, sorted in ascending order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gemlab::mesh::{Face, Faces};
+    /// use gemlab::shapes::GeoKind;
+    ///
+    /// let f1 = Face { kind: GeoKind::Tri3, points: vec![1, 2, 3], marker: 0 };
+    /// let f2 = Face { kind: GeoKind::Tri3, points: vec![2, 3, 4], marker: 0 };
+    /// let faces = Faces { all: vec![&f1, &f2] };
+    ///
+    /// let points = faces.all_points();
+    /// assert_eq!(points, vec![1, 2, 3, 4]);
+    /// ```
+    pub fn all_points(&self) -> Vec<PointId> {
+        let mut points_set = HashSet::new();
+        for face in &self.all {
+            for &point in &face.points {
+                points_set.insert(point);
+            }
+        }
+        let mut points: Vec<_> = points_set.into_iter().collect();
+        points.sort();
+        points
+    }
+}
+
 impl AsCell for Face {
     fn kind(&self) -> GeoKind {
         self.kind
@@ -94,5 +127,65 @@ impl<'a> fmt::Display for Faces<'a> {
             write!(f, "{}", self.all[i]).unwrap();
         }
         Ok(())
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use super::{Face, Faces};
+    use crate::shapes::GeoKind;
+
+    #[rustfmt::skip]
+    fn generate_sample_1() -> Vec<Face> {
+        vec![
+            Face { kind: GeoKind::Tri3, points: vec![1, 2, 3], marker: 0 },
+            Face { kind: GeoKind::Tri3, points: vec![4, 5, 6], marker: 0 },
+        ]
+    }
+
+    #[rustfmt::skip]
+    fn generate_sample_2() -> Vec<Face> {
+        vec![
+            Face { kind: GeoKind::Qua4, points: vec![1, 2, 3, 4], marker: 0 },
+            Face { kind: GeoKind::Qua4, points: vec![2, 5, 6, 3], marker: 0 },
+            Face { kind: GeoKind::Tri6, points: vec![7, 8, 9, 10, 11, 12], marker: 0 },
+        ]
+    }
+
+    #[test]
+    fn all_points_works() {
+        // Empty list of faces
+        let empty = Faces { all: vec![] };
+        assert!(empty.all_points().is_empty());
+
+        // Single face (Tri3)
+        let all = generate_sample_1();
+        let single = Faces { all: vec![&all[0]] };
+        assert_eq!(single.all_points(), vec![1, 2, 3]);
+
+        // Two faces with no shared points
+        let two_faces = Faces {
+            all: vec![&all[0], &all[1]],
+        };
+        assert_eq!(two_faces.all_points(), vec![1, 2, 3, 4, 5, 6]);
+
+        // Mixed face types with shared points
+        let all2 = generate_sample_2();
+        let mixed = Faces {
+            all: vec![&all2[0], &all2[1]],
+        };
+        assert_eq!(mixed.all_points(), vec![1, 2, 3, 4, 5, 6]);
+
+        // Higher-order face (Tri6 with middle nodes)
+        let higher_order = Faces { all: vec![&all2[2]] };
+        assert_eq!(higher_order.all_points(), vec![7, 8, 9, 10, 11, 12]);
+
+        // All faces together
+        let all_faces = Faces {
+            all: vec![&all2[0], &all2[1], &all2[2]],
+        };
+        assert_eq!(all_faces.all_points(), vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     }
 }

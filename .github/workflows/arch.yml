@@ -1,0 +1,19 @@
+name: Arch
+on: [pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - alternative: ""
+            label: Default
+          - alternative: "1"
+            label: Alternative
+    name: test (${{ matrix.label }})
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build docker image
+        run: |
+          bash zscripts/docker-build-arch.bash ${{ matrix.alternative }}

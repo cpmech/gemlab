@@ -4,6 +4,43 @@ use russell_lab::Matrix;
 
 /// Holds a set of integration points ("Gauss") associated with a GeoClass
 ///
+/// # Illustration
+///
+/// ## Tri
+///
+/// ![Tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tri_1.svg)
+/// ![Tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tri_3.svg)
+/// ![Tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tri_4.svg)
+/// ![Tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tri_6.svg)
+/// ![Tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tri_7.svg)
+/// ![Tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tri_12.svg)
+/// ![Tri](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tri_16.svg)
+///
+/// ## Qua
+///
+/// ![Qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_qua_1.svg)
+/// ![Qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_qua_4.svg)
+/// ![Qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_qua_9.svg)
+/// ![Qua](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_qua_16.svg)
+///
+/// ## Tet
+///
+/// ![Tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tet_1.svg)
+/// ![Tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tet_4.svg)
+/// ![Tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tet_5.svg)
+/// ![Tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tet_8.svg)
+/// ![Tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tet_14.svg)
+/// ![Tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tet_15.svg)
+/// ![Tet](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_tet_24.svg)
+///
+/// ## Hex
+///
+/// ![Hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_hex_6.svg)
+/// ![Hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_hex_8.svg)
+/// ![Hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_hex_14.svg)
+/// ![Hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_hex_27.svg)
+/// ![Hex](https://raw.githubusercontent.com/cpmech/gemlab/main/data/figures/gauss_points_hex_64.svg)
+///
 /// # Reference
 ///
 /// 1. Durand R and Farias MM (2014) A local extrapolation method for finite elements,
@@ -835,4 +872,215 @@ mod tests {
         assert_eq!(Gauss::new_or_sized(GeoKind::Qua8, None).unwrap().npoint(), 9);
         assert_eq!(Gauss::new_or_sized(GeoKind::Qua8, Some(1)).unwrap().npoint(), 1);
     }
+
+    // Do not delete the code below (used to draw the Gauss points)
+
+    /*
+
+    use plotpy::{Canvas, Plot, Text};
+
+    #[test]
+    fn draw_gauss_points_tri() {
+        for ng in [1, 3, 4, 6, 7, 12, 16] {
+            let mut plot = Plot::new();
+            let mut canvas = Canvas::new();
+            canvas
+                .set_face_color("None")
+                .set_line_width(2.0)
+                .draw_polyline(&[[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]], true);
+            plot.add(&canvas);
+            let color = "#000000";
+            let size = 0.01;
+            let gap = 0.015;
+            canvas.set_face_color(color).set_edge_color(color);
+            let mut text1 = Text::new();
+            let mut text2 = Text::new();
+            text1
+                .set_color("#eb0707")
+                .set_fontsize(12.0)
+                .set_align_horizontal("center")
+                .set_align_vertical("bottom");
+            text2.set_align_horizontal("center").set_align_vertical("top");
+            let gauss = Gauss::new_sized(GeoClass::Tri, ng).unwrap();
+            for (i, point) in gauss.data.iter().enumerate() {
+                text1.draw(point[0], point[1] + gap, &format!("{}", 1 + i));
+                text2.draw(point[0], point[1] - gap, &format!("({:.3}, {:.3})", point[0], point[1]));
+                canvas.draw_circle(point[0], point[1], size);
+            }
+            plot.add(&canvas)
+                .add(&text1)
+                .add(&text2)
+                .set_range(-0.1, 1.1, -0.1, 1.1)
+                .set_rotation_ticks_x(90.0)
+                .set_ticks_x(0.25, -1.0, "")
+                .set_equal_axes(true)
+                .grid_and_labels("$\\xi_1$", "$\\xi_2$")
+                .set_figure_size_points(500.0, 500.0)
+                .save(&format!("/tmp/gemlab/gauss_points_tri_{}.svg", ng))
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_gauss_points_qua() {
+        const COMPARE_HYPLAS: bool = false;
+        const HYPLAS4: [[f64; 2]; 4] = [
+            [-0.577350269189626, -0.577350269189626],
+            [-0.577350269189626, 0.577350269189626],
+            [0.577350269189626, -0.577350269189626],
+            [0.577350269189626, 0.577350269189626],
+        ];
+        const HYPLAS9: [[f64; 2]; 9] = [
+            [-0.774596669241483, -0.774596669241483],
+            [-0.774596669241483, 0.0],
+            [-0.774596669241483, 0.774596669241483],
+            [0.0, -0.774596669241483],
+            [0.0, 0.0],
+            [0.0, 0.774596669241483],
+            [0.774596669241483, -0.774596669241483],
+            [0.774596669241483, 0.0],
+            [0.774596669241483, 0.774596669241483],
+        ];
+        for ng in [1, 4, 9, 16] {
+            let mut plot = Plot::new();
+            let mut canvas = Canvas::new();
+            canvas
+                .set_face_color("None")
+                .set_line_width(2.0)
+                .draw_rectangle(-1.0, -1.0, 2.0, 2.0);
+            plot.add(&canvas);
+            let color = "#000000";
+            let size = 0.025;
+            let gap = 0.03;
+            canvas.set_face_color(color).set_edge_color(color);
+            let mut text1 = Text::new();
+            let mut text2 = Text::new();
+            text1
+                .set_color("#eb0707")
+                .set_fontsize(12.0)
+                .set_align_horizontal("center")
+                .set_align_vertical("bottom");
+            text2.set_align_horizontal("center").set_align_vertical("top");
+            let gauss = Gauss::new_sized(GeoClass::Qua, ng).unwrap();
+            for (i, point) in gauss.data.iter().enumerate() {
+                text1.draw(point[0], point[1] + gap, &format!("{}", 1 + i));
+                text2.draw(point[0], point[1] - gap, &format!("({:.3}, {:.3})", point[0], point[1]));
+                canvas.draw_circle(point[0], point[1], size);
+            }
+            if COMPARE_HYPLAS && (ng == 4 || ng == 9) {
+                canvas.set_face_color("None").set_edge_color("green");
+                text1.set_align_vertical("top");
+                for i in 0..ng {
+                    if ng == 4 {
+                        canvas.draw_circle(HYPLAS4[i][0], HYPLAS4[i][1], 2.0 * size);
+                        text1.draw(HYPLAS4[i][0], HYPLAS4[i][1] - 2.0 * gap, &format!("{}", 1 + i));
+                    } else {
+                        canvas.draw_circle(HYPLAS9[i][0], HYPLAS9[i][1], 2.0 * size);
+                        text1.draw(HYPLAS9[i][0], HYPLAS9[i][1] - 2.0 * gap, &format!("{}", 1 + i));
+                    }
+                }
+            }
+            plot.add(&canvas)
+                .add(&text1)
+                .add(&text2)
+                .set_range(-1.1, 1.1, -1.1, 1.1)
+                .set_rotation_ticks_x(90.0)
+                .set_ticks_x(0.25, -1.0, "")
+                .set_equal_axes(true)
+                .grid_and_labels("$\\xi_1$", "$\\xi_2$")
+                .set_figure_size_points(500.0, 500.0)
+                .save(&format!("/tmp/gemlab/gauss_points_qua_{}.svg", ng))
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_gauss_points_tet() {
+        for ng in [1, 4, 5, 8, 14, 15, 24] {
+            let mut plot = Plot::new();
+            let mut canvas = Canvas::new();
+            canvas.set_face_color("None").set_line_width(2.0).draw_polyline(
+                &[
+                    [0.0, 0.0, 0.0],
+                    [1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0],
+                    [1.0, 0.0, 0.0],
+                ],
+                false,
+            );
+            canvas.draw_polyline(&[[0.0, 0.0, 1.0], [0.0, 1.0, 0.0]], false);
+            plot.add(&canvas);
+            let mut text1 = Text::new();
+            text1
+                .set_color("#eb0707")
+                .set_fontsize(12.0)
+                .set_bbox(true)
+                .set_bbox_facecolor("white")
+                .set_bbox_style("square,pad=0.05")
+                .set_align_horizontal("center")
+                .set_align_vertical("center");
+            let gauss = Gauss::new_sized(GeoClass::Tet, ng).unwrap();
+            for (i, point) in gauss.data.iter().enumerate() {
+                text1.draw_3d(point[0], point[1], point[2], &format!("{}", 1 + i));
+            }
+            plot.add(&canvas)
+                .add(&text1)
+                .set_equal_axes(true)
+                .set_camera(30.0, 15.0)
+                .set_labels_3d("$\\xi_1$", "$\\xi_2$", "$\\xi_3$")
+                .set_figure_size_points(500.0, 500.0)
+                .save(&format!("/tmp/gemlab/gauss_points_tet_{}.svg", ng))
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn draw_gauss_points_hex() {
+        for ng in [6, 8, 14, 27, 64] {
+            let mut plot = Plot::new();
+            let mut canvas = Canvas::new();
+            canvas.set_face_color("None").set_line_width(2.0).draw_polyline(
+                &[
+                    [-1.0, -1.0, -1.0],
+                    [1.0, -1.0, -1.0],
+                    [1.0, 1.0, -1.0],
+                    [-1.0, 1.0, -1.0],
+                ],
+                true,
+            );
+            canvas.draw_polyline(
+                &[[-1.0, -1.0, 1.0], [1.0, -1.0, 1.0], [1.0, 1.0, 1.0], [-1.0, 1.0, 1.0]],
+                true,
+            );
+            canvas.draw_polyline(&[[-1.0, -1.0, -1.0], [-1.0, -1.0, 1.0]], false);
+            canvas.draw_polyline(&[[1.0, -1.0, -1.0], [1.0, -1.0, 1.0]], false);
+            canvas.draw_polyline(&[[1.0, 1.0, -1.0], [1.0, 1.0, 1.0]], false);
+            canvas.draw_polyline(&[[-1.0, 1.0, -1.0], [-1.0, 1.0, 1.0]], false);
+            plot.add(&canvas);
+            let mut text1 = Text::new();
+            text1
+                .set_color("#eb0707")
+                .set_fontsize(12.0)
+                .set_bbox(true)
+                .set_bbox_facecolor("white")
+                .set_bbox_style("square,pad=0.05")
+                .set_align_horizontal("center")
+                .set_align_vertical("center");
+            let gauss = Gauss::new_sized(GeoClass::Hex, ng).unwrap();
+            for (i, point) in gauss.data.iter().enumerate() {
+                text1.draw_3d(point[0], point[1], point[2], &format!("{}", 1 + i));
+            }
+            plot.add(&canvas)
+                .add(&text1)
+                .set_equal_axes(true)
+                .set_camera(30.0, 15.0)
+                .set_labels_3d("$\\xi_1$", "$\\xi_2$", "$\\xi_3$")
+                .set_figure_size_points(500.0, 500.0)
+                .save(&format!("/tmp/gemlab/gauss_points_hex_{}.svg", ng))
+                .unwrap();
+        }
+    }
+    */
 }
