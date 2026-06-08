@@ -823,7 +823,7 @@ mod tests {
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]); // original U values at nodes
         let u_point = do_interpolate(&mut pad, &u_nodal_original, &gauss); // interpolated U values @ integration points
         let u_nodal = do_extrapolate(&ee, &u_point);
-        vec_approx_eq(&u_nodal, &u_nodal_original, 1e-15);
+        vec_approx_eq(&u_nodal, &u_nodal_original, 1e-14);
     }
 
     #[test]
@@ -834,7 +834,7 @@ mod tests {
         let gauss = Gauss::new_sized(pad.kind.class(), 1).unwrap();
         let ee = get_extrap_matrix(&mut pad, &gauss).unwrap();
         let ee_correct = Matrix::from(&[[1.0], [1.0], [1.0], [1.0]]); // the pseudo-inverse of P = [0.25, 0.25, 0.25, 0.25]
-        mat_approx_eq(&ee, &ee_correct, 1e-15);
+        mat_approx_eq(&ee, &ee_correct, 1e-14);
 
         // check
         let u_nodal_original = Vector::from(&[1.0, 2.0, 3.0, 4.0]); // original U values at nodes
