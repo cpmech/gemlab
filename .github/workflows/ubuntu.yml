@@ -1,13 +1,13 @@
-name: Test & Coverage
+name: Ubuntu
 on: [pull_request]
 jobs:
-  test_and_coverage:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install Libraries
         run: |
-          sudo apt-get update -y && sudo apt-get install -y liblapacke-dev libmumps-seq-dev libopenblas-dev libsuitesparse-dev python3-matplotlib
+          sudo apt-get update -y && sudo apt-get install -y liblapacke-dev libopenblas-dev libsuitesparse-dev python3-matplotlib
       - name: Run tests
         run: |
           cargo test -- --nocapture

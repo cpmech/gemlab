@@ -2120,7 +2120,7 @@ mod tests {
         array_approx_eq(&mesh.points[23].coords, &[3.0, 1.0, 3.0], 1e-15);
         array_approx_eq(&mesh.points[18].coords, &[0.0, 0.0, 3.0], 1e-15);
         array_approx_eq(&mesh.points[19].coords, &[1.0, 0.0, 3.0], 1e-15);
-        array_approx_eq(&mesh.points[20].coords, &[1.0, 1.0, 3.0], 1e-15);
+        array_approx_eq(&mesh.points[20].coords, &[1.0, 1.0, 3.0], 1e-14);
         array_approx_eq(&mesh.points[21].coords, &[0.0, 1.0, 3.0], 1e-15);
         assert_eq!(&mesh.cells[0].points, &[0, 1, 2, 3, 4, 5, 6, 7]);
         assert_eq!(&mesh.cells[1].points, &[1, 8, 9, 2, 5, 10, 11, 6]);

@@ -11,6 +11,15 @@ readme = "README.md"
 categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
 
+[features]
+intel_mkl = [
+    "russell_lab/intel_mkl",
+    "russell_sparse/intel_mkl",
+    "russell_stat/intel_mkl",
+    "russell_tensor/intel_mkl",
+]
+local_sparse = ["russell_sparse/local_sparse"]
+
 [dependencies]
 plotpy = "1.23"
 russell_lab = "2.1"
