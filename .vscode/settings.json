@@ -8,11 +8,17 @@
     "deque",
     "drawmsh",
     "extrap",
+    "gemlab",
     "nfacet",
     "ngauss",
     "nmarked",
     "PINV",
+    "plotpy",
+    "serde",
     "Stockmeyer",
+    "structopt",
+    "tetgen",
+    "tritet",
     "Warshall",
     "zrange"
   ]
