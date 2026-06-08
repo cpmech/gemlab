@@ -13,7 +13,7 @@ jobs:
             label: Alternative
     name: test (${{ matrix.label }})
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build docker image
         run: |
           bash zscripts/docker-build-arch.bash ${{ matrix.alternative }}
