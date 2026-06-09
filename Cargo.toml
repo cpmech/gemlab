@@ -22,10 +22,10 @@ local_sparse = ["russell_sparse/local_sparse"]
 
 [dependencies]
 plotpy = "1.23"
-russell_lab = "2.1"
-russell_sparse = "2.1"
-russell_stat = "2.1"
-russell_tensor = "2.1"
+russell_lab = "2.2"
+russell_sparse = "2.2"
+russell_stat = "2.2"
+russell_tensor = "2.2"
 tritet = { version = "3.2", features = ["with_tetgen"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
