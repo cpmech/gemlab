@@ -51,6 +51,7 @@ Therefore, the following (re-exported) **features** are available here:
 
 * `intel_mkl` - Tells `russell` to use Intel MKL
 * `local_sparse` - Tells `russell` that the local linear solvers are available locally
+* `cudss` - Tells `russell` to enable the [NVIDIA cuDSS solver](https://developer.nvidia.com/cudss)
 
 ### Arch Linux
 
