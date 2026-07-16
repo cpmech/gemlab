@@ -23,14 +23,14 @@ cudss = ["russell_sparse/cudss"]
 
 [dependencies]
 plotpy = "1.23"
-russell_lab = "2.7"
-russell_sparse = "2.7"
-russell_stat = "2.7"
-russell_tensor = "2.7"
+russell_lab = "2.8"
+russell_sparse = "2.8"
+russell_stat = "2.8"
+russell_tensor = "2.8"
 tritet = { version = "3.2", features = ["with_tetgen"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.150"
 structopt = "0.3"
 
 [dev-dependencies]
-criterion = "0.8.2"
+criterion = "0.8"
