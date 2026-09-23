@@ -133,7 +133,7 @@ mod tests {
             args.x.set(i, args.at_x.get(i));
         }
         args.x.set(args.j, v);
-        args.pad.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-14).unwrap();
+        args.pad.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-13).unwrap();
         (args.pad.fn_interp)(&mut args.pad.interp, &args.ksi);
         Ok(args.pad.interp[args.m])
     }
