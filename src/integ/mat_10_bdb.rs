@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::{Mandel, Tensor4};
+use russell_tensor::Tensor4;
 
 /// Implements the gradient(B) dot 4th-tensor(D) dot gradient(B) integration case 10 (e.g., stiffness matrix)
 ///
@@ -84,17 +84,16 @@ use russell_tensor::{Mandel, Tensor4};
 ///     // constants
 ///     let young = 480.0;
 ///     let poisson = 1.0 / 3.0;
-///     let two_dim = false;
 ///     let plane_stress = false;
-///     let model = LinElasticity::new(young, poisson, two_dim, plane_stress);
+///     let model = LinElasticity::<6>::new(young, poisson, plane_stress).unwrap();
 ///
 ///     // stiffness
 ///     let nrow = pad.kind.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let gauss = Gauss::new(pad.kind);
 ///     let mut args = CommonArgs::new(&mut pad, &gauss);
-///     integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-///         dd.set_tensor(1.0, model.get_modulus());
+///     integ::mat_10_bdb::<6, _>(&mut kk, &mut args, |dd, _, _, _| {
+///         dd.set_tensor(1.0, model.stiffness());
 ///         Ok(())
 ///     })?;
 ///
@@ -118,9 +117,9 @@ use russell_tensor::{Mandel, Tensor4};
 ///     Ok(())
 /// }
 /// ```
-pub fn mat_10_bdb<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_dd: F) -> Result<(), StrError>
+pub fn mat_10_bdb<const N: usize, F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_dd: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor4, usize, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor4<N>, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
@@ -134,9 +133,12 @@ where
     if args.axisymmetric && space_ndim != 2 {
         return Err("axisymmetric requires space_ndim = 2");
     }
+    if N != 2 * space_ndim {
+        return Err("tensor dimension N must equal 2 * space_ndim");
+    }
 
     // allocate auxiliary tensor
-    let mut dd = Tensor4::new(Mandel::new(2 * space_ndim));
+    let mut dd = Tensor4::<N>::new();
 
     // clear output matrix
     if args.clear {
@@ -176,10 +178,17 @@ where
 /// Adds contribution to the K-matrix in mat_10_bdb
 #[inline]
 #[rustfmt::skip]
-fn add_to_kk(kk: &mut Matrix, ndim: usize, nnode: usize, c: f64, dd: &Tensor4, args: &mut CommonArgs) {
+fn add_to_kk<const N: usize>(
+    kk: &mut Matrix,
+    ndim: usize,
+    nnode: usize,
+    c: f64,
+    dd: &Tensor4<N>,
+    args: &mut CommonArgs,
+) {
     let s = SQRT_2;
     let b = &args.pad.gradient;
-    let d = dd.matrix();
+    let d = dd;
     let (ii0, jj0) = (args.ii0, args.jj0);
     if ndim == 2 {
         for m in 0..nnode {
@@ -210,9 +219,16 @@ fn add_to_kk(kk: &mut Matrix, ndim: usize, nnode: usize, c: f64, dd: &Tensor4, a
 /// Adds contribution to the K-matrix in mat_10_bdb (axisymmetric case)
 #[inline]
 #[rustfmt::skip]
-fn add_to_kk_axisymmetric(kk: &mut Matrix, nnode: usize, c: f64, r: f64, dd: &Tensor4, args: &mut CommonArgs) {
+fn add_to_kk_axisymmetric<const N: usize>(
+    kk: &mut Matrix,
+    nnode: usize,
+    c: f64,
+    r: f64,
+    dd: &Tensor4<N>,
+    args: &mut CommonArgs,
+) {
     let s = SQRT_2;
-    let d = dd.matrix();
+    let d = dd;
     let nn = &args.pad.interp;
     let b = &args.pad.gradient;
     let (ii0, jj0) = (args.ii0, args.jj0);
@@ -285,9 +301,9 @@ fn calc_bb_matrix(bb_mat: &mut Matrix, pad: &Scratchpad, axisymmetric: bool) -> 
 ///
 /// Kij += α Bki ⋅ Dkl ⋅ Blj
 /// ```
-fn add_to_stiff_mat(kk: &mut Matrix, alpha: f64, bb: &Matrix, dd: &Matrix) {
+fn add_to_stiff_mat<const N: usize>(kk: &mut Matrix, alpha: f64, bb: &Matrix, dd: &Tensor4<N>) {
     let (m, n) = bb.dims();
-    assert_eq!(dd.dims(), (m, m));
+    assert_eq!(m, N);
     assert_eq!(kk.dims(), (n, n));
     for i in 0..n {
         for j in 0..n {
@@ -301,9 +317,9 @@ fn add_to_stiff_mat(kk: &mut Matrix, alpha: f64, bb: &Matrix, dd: &Matrix) {
 }
 
 /// Alternative version of `mat_10_bdb`
-pub fn mat_10_bdb_alt<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_dd: F) -> Result<(), StrError>
+pub fn mat_10_bdb_alt<const N: usize, F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_dd: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor4, usize, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor4<N>, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
@@ -317,10 +333,13 @@ where
     if args.axisymmetric && space_ndim != 2 {
         return Err("axisymmetric requires space_ndim = 2");
     }
+    if N != 2 * space_ndim {
+        return Err("tensor dimension N must equal 2 * space_ndim");
+    }
 
     // allocate auxiliary tensor
     let ncp = 2 * space_ndim;
-    let mut dd = Tensor4::new(Mandel::new(ncp));
+    let mut dd = Tensor4::<N>::new();
 
     // allocate B matrix
     let mut bb_mat = Matrix::new(ncp, nnode * space_ndim);
@@ -346,9 +365,9 @@ where
         fn_dd(&mut dd, p, nn, bb)?;
 
         // add contribution to K matrix
-        let radius = calc_bb_matrix(&mut bb_mat, &args.pad, args.axisymmetric);
+        let radius = calc_bb_matrix(&mut bb_mat, args.pad, args.axisymmetric);
         let coef = det_jac * weight * args.alpha * radius;
-        add_to_stiff_mat(kk, coef, &bb_mat, dd.matrix());
+        add_to_stiff_mat(kk, coef, &bb_mat, &dd);
     }
     Ok(())
 }
@@ -361,41 +380,41 @@ mod tests {
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
-    use russell_tensor::{LinElasticity, Mandel, Tensor4};
+    use russell_tensor::{LinElasticity, Tensor4};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
-        let mut dd = Tensor4::new(Mandel::Symmetric2D);
+        let mut dd = Tensor4::<4>::new();
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
-        let f = |_: &mut Tensor4, _: usize, _: &Vector, _: &Matrix| Ok(());
+        let f = |_: &mut Tensor4<4>, _: usize, _: &Vector, _: &Matrix| Ok(());
         f(&mut dd, 0, &nn, &bb).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_10_bdb(&mut kk, &mut args, f).err(),
+            integ::mat_10_bdb::<4, _>(&mut kk, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_10_bdb(&mut kk, &mut args, f).err(),
+            integ::mat_10_bdb::<4, _>(&mut kk, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         args.jj0 = 0;
         // more errors
         assert_eq!(
-            integ::mat_10_bdb(&mut kk, &mut args, f).err(),
+            integ::mat_10_bdb::<4, _>(&mut kk, &mut args, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         assert_eq!(
-            integ::mat_10_bdb(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
+            integ::mat_10_bdb::<4, _>(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
             Some("stop")
         );
         // check axisymmetric flag
@@ -404,7 +423,7 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.axisymmetric = true;
         assert_eq!(
-            integ::mat_10_bdb(&mut kk, &mut args, f).err(),
+            integ::mat_10_bdb::<4, _>(&mut kk, &mut args, f).err(),
             Some("axisymmetric requires space_ndim = 2")
         );
     }
@@ -440,7 +459,7 @@ mod tests {
         let poisson = 0.2;
         let thickness = 0.25;
         let plane_stress = true;
-        let model = LinElasticity::new(young, poisson, true, plane_stress);
+        let model = LinElasticity::<4>::new(young, poisson, plane_stress).unwrap();
 
         // stiffness
         let class = pad.kind.class();
@@ -451,8 +470,8 @@ mod tests {
         let gauss = Gauss::new_sized(class, 1).unwrap();
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.alpha = thickness;
-        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.set_tensor(1.0, model.get_modulus());
+        integ::mat_10_bdb::<4, _>(&mut kk, &mut args, |dd, _, _, _| {
+            dd.set_tensor(1.0, model.stiffness());
             Ok(())
         })
         .unwrap();
@@ -483,16 +502,16 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             args.alpha = thickness;
-            integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-                dd.set_tensor(1.0, model.get_modulus());
+            integ::mat_10_bdb::<4, _>(&mut kk, &mut args, |dd, _, _, _| {
+                dd.set_tensor(1.0, model.stiffness());
                 Ok(())
             })
             .unwrap();
             // compare with analytical solution
             mat_approx_eq(&kk_correct, &kk, tol);
             // compare with alternative version
-            integ::mat_10_bdb_alt(&mut kk_alt, &mut args, |dd, _, _, _| {
-                dd.set_tensor(1.0, model.get_modulus());
+            integ::mat_10_bdb_alt::<4, _>(&mut kk_alt, &mut args, |dd, _, _, _| {
+                dd.set_tensor(1.0, model.stiffness());
                 Ok(())
             })
             .unwrap();
@@ -508,7 +527,7 @@ mod tests {
         // constants
         let young = 480.0;
         let poisson = 1.0 / 3.0;
-        let model = LinElasticity::new(young, poisson, false, false);
+        let model = LinElasticity::<6>::new(young, poisson, false).unwrap();
 
         // analytical solution
         let mut ana = AnalyticalTet4::new(&pad);
@@ -528,16 +547,16 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-                dd.set_tensor(1.0, model.get_modulus());
+            integ::mat_10_bdb::<6, _>(&mut kk, &mut args, |dd, _, _, _| {
+                dd.set_tensor(1.0, model.stiffness());
                 Ok(())
             })
             .unwrap();
             // compare with analytical solution
             mat_approx_eq(&kk, &kk_correct, tol);
             // compare with alternative version
-            integ::mat_10_bdb_alt(&mut kk_alt, &mut args, |dd, _, _, _| {
-                dd.set_tensor(1.0, model.get_modulus());
+            integ::mat_10_bdb_alt::<6, _>(&mut kk_alt, &mut args, |dd, _, _, _| {
+                dd.set_tensor(1.0, model.stiffness());
                 Ok(())
             })
             .unwrap();
@@ -554,7 +573,7 @@ mod tests {
         // constants
         let young = 96.0;
         let poisson = 1.0 / 3.0;
-        let model = LinElasticity::new(young, poisson, true, false);
+        let model = LinElasticity::<4>::new(young, poisson, false).unwrap();
 
         // allocate K matrix
         let class = pad.kind.class();
@@ -612,14 +631,14 @@ mod tests {
         let gauss = Gauss::new_sized(class, 1).unwrap();
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.axisymmetric = true;
-        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.set_tensor(1.0, model.get_modulus());
+        integ::mat_10_bdb::<4, _>(&mut kk, &mut args, |dd, _, _, _| {
+            dd.set_tensor(1.0, model.stiffness());
             Ok(())
         })
         .unwrap();
         mat_approx_eq(&kk, &felippa_1x1, 1e-13);
-        integ::mat_10_bdb_alt(&mut kk_alt, &mut args, |dd, _, _, _| {
-            dd.set_tensor(1.0, model.get_modulus());
+        integ::mat_10_bdb_alt::<4, _>(&mut kk_alt, &mut args, |dd, _, _, _| {
+            dd.set_tensor(1.0, model.stiffness());
             Ok(())
         })
         .unwrap();
@@ -628,14 +647,14 @@ mod tests {
         let gauss = Gauss::new_sized(class, 4).unwrap();
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.axisymmetric = true;
-        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.set_tensor(1.0, model.get_modulus());
+        integ::mat_10_bdb::<4, _>(&mut kk, &mut args, |dd, _, _, _| {
+            dd.set_tensor(1.0, model.stiffness());
             Ok(())
         })
         .unwrap();
         mat_approx_eq(&kk, &felippa_2x2, 1e-13);
-        integ::mat_10_bdb_alt(&mut kk_alt, &mut args, |dd, _, _, _| {
-            dd.set_tensor(1.0, model.get_modulus());
+        integ::mat_10_bdb_alt::<4, _>(&mut kk_alt, &mut args, |dd, _, _, _| {
+            dd.set_tensor(1.0, model.stiffness());
             Ok(())
         })
         .unwrap();
@@ -644,14 +663,14 @@ mod tests {
         let gauss = Gauss::new_sized(class, 9).unwrap();
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.axisymmetric = true;
-        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.set_tensor(1.0, model.get_modulus());
+        integ::mat_10_bdb::<4, _>(&mut kk, &mut args, |dd, _, _, _| {
+            dd.set_tensor(1.0, model.stiffness());
             Ok(())
         })
         .unwrap();
         mat_approx_eq(&kk, &felippa_3x3, 1e-13);
-        integ::mat_10_bdb_alt(&mut kk_alt, &mut args, |dd, _, _, _| {
-            dd.set_tensor(1.0, model.get_modulus());
+        integ::mat_10_bdb_alt::<4, _>(&mut kk_alt, &mut args, |dd, _, _, _| {
+            dd.set_tensor(1.0, model.stiffness());
             Ok(())
         })
         .unwrap();
@@ -660,14 +679,14 @@ mod tests {
         let gauss = Gauss::new_sized(class, 16).unwrap();
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.axisymmetric = true;
-        integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-            dd.set_tensor(1.0, model.get_modulus());
+        integ::mat_10_bdb::<4, _>(&mut kk, &mut args, |dd, _, _, _| {
+            dd.set_tensor(1.0, model.stiffness());
             Ok(())
         })
         .unwrap();
         mat_approx_eq(&kk, &felippa_4x4, 1e-12);
-        integ::mat_10_bdb_alt(&mut kk_alt, &mut args, |dd, _, _, _| {
-            dd.set_tensor(1.0, model.get_modulus());
+        integ::mat_10_bdb_alt::<4, _>(&mut kk_alt, &mut args, |dd, _, _, _| {
+            dd.set_tensor(1.0, model.stiffness());
             Ok(())
         })
         .unwrap();

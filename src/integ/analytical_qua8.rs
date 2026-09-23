@@ -72,11 +72,11 @@ impl AnalyticalQua8 {
 
     /// Performs the coupled g-t-n integration with constant tensor field
     #[rustfmt::skip]
-    pub fn mat_05_btn(&self, tt: &Tensor2) -> Matrix {
+    pub fn mat_05_btn(&self, tt: &Tensor2<4>) -> Matrix {
         let a = self.a;
         let b = self.b;
-        let (t00,t01) = (tt.get(0,0), tt.get(0,1));
-        let (t10,t11) = (tt.get(1,0), tt.get(1,1));
+        let (t00,t01) = (tt.get_std(0,0), tt.get_std(0,1));
+        let (t10,t11) = (tt.get_std(1,0), tt.get_std(1,1));
         Matrix::from(&[
             [(b*t00 + a*t10)/18.,(b*t01 + a*t11)/18.,(b*t00 + 2.*a*t10)/18.,(b*t01 + 2.*a*t11)/18.,(b*t00 + a*t10)/9.,(b*t01 + a*t11)/9.,(2.*b*t00 + a*t10)/18.,(2.*b*t01 + a*t11)/18., (-4.*b*t00 - 3.*a*t10)/9.,(-4.*b*t01 - 3.*a*t11)/9.,(-3.*b*t00 - 2.*a*t10)/9.,(-3.*b*t01 - 2.*a*t11)/9.,(-2.*b*t00 - 3.*a*t10)/9.,(-2.*b*t01 - 3.*a*t11)/9.,(-3.*b*t00 - 4.*a*t10)/9., (-3.*b*t01 - 4.*a*t11)/9.],
             [(-(b*t00) + 2.*a*t10)/18.,(-(b*t01) + 2.*a*t11)/18.,(-(b*t00) + a*t10)/18.,(-(b*t01) + a*t11)/18.,(-2.*b*t00 + a*t10)/18.,(-2.*b*t01 + a*t11)/18., (-(b*t00) + a*t10)/9.,(-(b*t01) + a*t11)/9.,(4.*b*t00 - 3.*a*t10)/9.,(4.*b*t01 - 3.*a*t11)/9.,(3.*b*t00 - 4.*a*t10)/9.,(3.*b*t01 - 4.*a*t11)/9.,(2.*b*t00 - 3.*a*t10)/9.,(2.*b*t01 - 3.*a*t11)/9., (3.*b*t00 - 2.*a*t10)/9.,(3.*b*t01 - 2.*a*t11)/9.],

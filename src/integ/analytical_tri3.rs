@@ -177,7 +177,7 @@ impl AnalyticalTri3 {
     /// # Input
     ///
     /// * `pad` -- The same shape used in `new` because we need the nodal coordinates here
-    ///            Do not change the coordinates, otherwise the values will be wrong.
+    ///   Do not change the coordinates, otherwise the values will be wrong.
     #[rustfmt::skip]
     pub fn vec_03_bv_bilinear(&self, pad: &Scratchpad) -> Vector {
         let (x0, x1, x2) = (pad.xxt.get(0,0), pad.xxt.get(0,1), pad.xxt.get(0,2));
@@ -191,12 +191,12 @@ impl AnalyticalTri3 {
 
     /// Integrates gradient dot transpose tensor with constant tensor function σ(x) = {σ₀₀, σ₁₁, σ₂₂, σ₀₁√2}
     #[rustfmt::skip]
-    pub fn vec_04_bt(&self, tt: &Tensor2, axisymmetric: bool) -> Vector {
+    pub fn vec_04_bt(&self, tt: &Tensor2<4>, axisymmetric: bool) -> Vector {
         let (x0, x1, x2) = (self.x0, self.x1, self.x2);
         let (b00, b01) = (self.bb.get(0,0), self.bb.get(0,1));
         let (b10, b11) = (self.bb.get(1,0), self.bb.get(1,1));
         let (b20, b21) = (self.bb.get(2,0), self.bb.get(2,1));
-        let (t0, t1, t2, t3) = (tt.vector()[0], tt.vector()[1], tt.vector()[2], tt.vector()[3]);
+        let (t0, t1, t2, t3) = (tt.get(0), tt.get(1), tt.get(2), tt.get(3));
         if axisymmetric {
             let c = self.area / 3.0;
             Vector::from(&[
@@ -334,13 +334,19 @@ impl AnalyticalTri3 {
     /// K = Bᵀ ⋅ D ⋅ B ⋅ th ⋅ area
     /// ```
     pub fn mat_10_bdb(&self, young: f64, poisson: f64, plane_stress: bool, th: f64) -> Result<Matrix, StrError> {
-        let ela = LinElasticity::new(young, poisson, true, plane_stress);
-        let dd = ela.get_modulus();
+        let ela = LinElasticity::<4>::new(young, poisson, plane_stress).unwrap();
+        let dd = ela.stiffness();
         let dim_dd = 4;
         let dim_kk = 6;
+        let mut dd_mat = Matrix::new(dim_dd, dim_dd);
+        for i in 0..dim_dd {
+            for j in 0..dim_dd {
+                dd_mat.set(i, j, dd.get(i, j));
+            }
+        }
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, dd.matrix(), 0.0).unwrap();
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd_mat, 0.0).unwrap();
         mat_mat_mul(&mut kk, th * self.area, &bb_t_dd, &self.bbe, 0.0).unwrap();
         Ok(kk)
     }

@@ -266,7 +266,7 @@ impl GridSearch {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     /// Inserts a new item to a container in the grid
@@ -608,14 +608,9 @@ impl GridSearch {
     /// Draws grid and items
     pub fn draw(&self, plot: &mut Plot, with_ids: bool) -> Result<(), StrError> {
         // draw grid
-        let mut xmin = vec![0.0; self.ndim];
-        let mut xmax = vec![0.0; self.ndim];
-        let mut ndiv = vec![0; self.ndim];
-        for i in 0..self.ndim {
-            xmin[i] = self.xmin[i];
-            xmax[i] = self.xmax[i];
-            ndiv[i] = self.ndiv[i];
-        }
+        let xmin = self.xmin[..self.ndim].to_vec();
+        let xmax = self.xmax[..self.ndim].to_vec();
+        let ndiv = self.ndiv[..self.ndim].to_vec();
         let mut canvas = Canvas::new();
         canvas
             .set_alt_text_color("#5d5d5d")
@@ -769,7 +764,7 @@ impl GridSearch {
     /// such as when calculating point-to-point distances
     #[inline]
     fn update_or_insert(&mut self, key: ContainerKey, id: ItemId, x: &[f64]) {
-        let container = self.containers.entry(key).or_insert(HashMap::new());
+        let container = self.containers.entry(key).or_default();
         container.insert(id, x.to_vec());
     }
 
@@ -833,9 +828,9 @@ impl fmt::Display for GridSearch {
         indices.sort();
         for index in indices {
             let container = self.containers.get(index).unwrap();
-            let mut ids: Vec<_> = container.keys().map(|id| *id).collect();
+            let mut ids: Vec<_> = container.keys().copied().collect();
             ids.sort();
-            write!(f, "{}: {:?}\n", index, ids).unwrap();
+            writeln!(f, "{}: {:?}", index, ids).unwrap();
             for id in ids {
                 unique_items.insert(id);
             }
@@ -843,10 +838,10 @@ impl fmt::Display for GridSearch {
         // summary
         let mut ids: Vec<_> = unique_items.iter().collect();
         ids.sort();
-        write!(f, "ids = {:?}\n", ids).unwrap();
-        write!(f, "nitem = {}\n", unique_items.len()).unwrap();
-        write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();
-        write!(f, "ndiv = {:?}\n", self.ndiv).unwrap();
+        writeln!(f, "ids = {:?}", ids).unwrap();
+        writeln!(f, "nitem = {}", unique_items.len()).unwrap();
+        writeln!(f, "ncontainer = {}", self.containers.len()).unwrap();
+        writeln!(f, "ndiv = {:?}", self.ndiv).unwrap();
         Ok(())
     }
 }
@@ -904,18 +899,14 @@ mod tests {
     ];
 
     fn add_sample_points_to_grid_2d(grid: &mut GridSearch) {
-        let mut id = 100;
-        for x in &POINTS_2D {
-            grid.insert(id, x).unwrap();
-            id += 1;
+        for (i, x) in POINTS_2D.iter().enumerate() {
+            grid.insert(100 + i, x).unwrap();
         }
     }
 
     fn add_sample_points_to_grid_3d(grid: &mut GridSearch) {
-        let mut id = 100;
-        for x in &POINTS_3D {
-            grid.insert(id, x).unwrap();
-            id += 1;
+        for (i, x) in POINTS_3D.iter().enumerate() {
+            grid.insert(100 + i, x).unwrap();
         }
     }
 
@@ -1331,26 +1322,22 @@ mod tests {
 
         let mut grid = sample_grid_2d();
         add_sample_points_to_grid_2d(&mut grid);
-        let mut id = 100;
-        for x in &POINTS_2D {
-            let mut y = x.clone();
+        for (i, x) in POINTS_2D.iter().enumerate() {
+            let mut y = *x;
             y[0] += NOISE;
             y[1] -= NOISE;
-            assert_eq!(grid.search(&y).unwrap(), Some(id));
-            id += 1;
+            assert_eq!(grid.search(&y).unwrap(), Some(100 + i));
         }
         assert_eq!(grid.search(&[-0.2, 0.7]).unwrap(), None);
 
         let mut grid = sample_grid_3d();
         add_sample_points_to_grid_3d(&mut grid);
-        let mut id = 100;
-        for x in &POINTS_3D {
-            let mut y = x.clone();
+        for (i, x) in POINTS_3D.iter().enumerate() {
+            let mut y = *x;
             y[0] += NOISE;
             y[1] -= NOISE;
             y[2] += NOISE;
-            assert_eq!(grid.search(&y).unwrap(), Some(id));
-            id += 1;
+            assert_eq!(grid.search(&y).unwrap(), Some(100 + i));
         }
         assert_eq!(grid.search(&[-0.9, 0.9, 0.9]).unwrap(), None);
     }
@@ -1394,7 +1381,7 @@ mod tests {
 
     #[test]
     fn search_on_line_handles_wrong_input() {
-        assert_eq!(any_x(&vec![]), true);
+        assert_eq!(any_x(&[]), true);
         let grid = sample_grid_2d();
         assert_eq!(
             grid.search_on_line(&[0.0], &[1.0, 1.0], any_x),

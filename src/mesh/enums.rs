@@ -38,6 +38,7 @@ mod tests {
     use super::At;
 
     #[test]
+    #[allow(clippy::clone_on_copy)] // test the derived Clone implementation
     fn derive_methods_work() {
         let at = At::X(0.0);
         let at_clone = at.clone();

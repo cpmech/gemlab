@@ -116,7 +116,7 @@ mod tests {
                     approx_eq(tri.signed_area(), expected_area, 1e-14);
                     let (h0, h1, h2) = tri.internal_angles();
                     if kind.class() == GeoClass::Tri {
-                        let mut angles = vec![h0, h1, h2];
+                        let mut angles = [h0, h1, h2];
                         angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
                         let (smallest, middle, largest) = (angles[0], angles[1], angles[2]);
                         approx_eq(smallest, forty_five, 1e-14);

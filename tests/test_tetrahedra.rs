@@ -49,7 +49,7 @@ fn test_tetrahedra() -> Result<(), StrError> {
     let face = features.faces.get(&(5, 6, 7, usize::MAX)).unwrap();
     assert_eq!(face.points, &[6, 7, 5]);
     // internal
-    assert!(features.faces.get(&(0, 2, 7, usize::MAX)).is_none());
+    assert!(!features.faces.contains_key(&(0, 2, 7, usize::MAX)));
 
     // the norm of the normal vector should be equal to face_area / 0.5
     // where 0.5 corresponds to the face_area in the reference system

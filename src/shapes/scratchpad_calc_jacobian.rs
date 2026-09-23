@@ -45,7 +45,7 @@ impl Scratchpad {
     /// * Returns one of the following:
     ///     * `CABLE`: (geo_ndim = 1 and space_ndim = 2 or 3), returns the norm of the Jacobian vector
     ///     * `SHELL`: (geo_ndim = 2 and space_ndim = 3), returns [DET_JAC_NOT_AVAILABLE] indicating that the
-    ///        determinant of the Jacobian is not available and the inverse Jacobian has not been computed
+    ///       determinant of the Jacobian is not available and the inverse Jacobian has not been computed
     ///     * `SOLID`: (geo_ndim = space_ndim), returns the determinant of the Jacobian
     ///
     /// # Input

@@ -166,7 +166,7 @@ mod tests {
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
-        let x_ips = recovery::get_points_coords(&mut args.pad, &ips).unwrap();
+        let x_ips = recovery::get_points_coords(args.pad, &ips).unwrap();
         integ::vec_01_ns_bry(&mut a, &mut args, |p, _, _| Ok(x_ips[p][0])).unwrap();
         vec_approx_eq(&a, a_correct, 1e-15);
     }
@@ -236,7 +236,7 @@ mod tests {
         // check
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
-        let x_ips = recovery::get_points_coords(&mut args.pad, &ips).unwrap();
+        let x_ips = recovery::get_points_coords(args.pad, &ips).unwrap();
         integ::vec_01_ns_bry(&mut a, &mut args, |p, un, _| {
             let x = x_ips[p][0];
             let y = x_ips[p][1];
@@ -273,7 +273,7 @@ mod tests {
         let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
         integ::vec_01_ns_bry(&mut a, &mut args, |_, un, _| {
-            vec_approx_eq(&un, &un_correct, 1e-7); // note that blender is single precision
+            vec_approx_eq(un, &un_correct, 1e-7); // note that blender is single precision
             Ok(vec_inner(&w, un))
         })
         .unwrap();

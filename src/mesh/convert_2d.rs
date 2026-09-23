@@ -217,7 +217,7 @@ mod tests {
         if larger {
             draw.set_size(600.0, 600.0);
         }
-        draw.all(&mesh, filename).unwrap();
+        draw.all(mesh, filename).unwrap();
     }
 
     #[test]

@@ -24,7 +24,7 @@ pub(crate) fn extract_all_2d_edges(mesh: &Mesh) -> MapEdge2dToCells {
                     cell.points[cell.kind.edge_node_id(e, 0)],
                     cell.points[cell.kind.edge_node_id(e, 1)],
                 );
-                sort2(&mut edge_key);
+                sort2(&mut edge_key.0, &mut edge_key.1);
                 let data = edges.entry(edge_key).or_insert(Vec::new());
                 data.push((cell.id, e));
             }

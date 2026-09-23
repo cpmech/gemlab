@@ -158,7 +158,7 @@ fn draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -
     let space_ndim = edge_pad.jacobian.dims().0;
     let mut x = Vector::new(space_ndim);
     canvas.set_face_color("None").set_line_width(3.0);
-    if edge_color != "" {
+    if !edge_color.is_empty() {
         canvas.set_edge_color(edge_color);
     }
     if space_ndim == 2 {

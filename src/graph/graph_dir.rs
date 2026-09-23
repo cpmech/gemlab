@@ -79,7 +79,7 @@ impl GraphDir {
     /// # Arguments
     ///
     /// * `edges` - 2D array where each row defines an edge as [source, target]
-    ///             Additional nodes in each edge are ignored
+    ///   Additional nodes in each edge are ignored
     ///
     /// # Panics
     ///
@@ -324,10 +324,10 @@ impl GraphDir {
         // draw matrix
         width += 1;
         buf.clear();
-        write!(&mut buf, "┌{:1$}┐\n", " ", width * ncol + 1).unwrap();
+        writeln!(&mut buf, "┌{:1$}┐", " ", width * ncol + 1).unwrap();
         for i in 0..nrow {
             if i > 0 {
-                write!(&mut buf, " │\n").unwrap();
+                writeln!(&mut buf, " │").unwrap();
             }
             for j in 0..ncol {
                 if j == 0 {
@@ -350,7 +350,7 @@ impl GraphDir {
                 }
             }
         }
-        write!(&mut buf, " │\n").unwrap();
+        writeln!(&mut buf, " │").unwrap();
         write!(&mut buf, "└{:1$}┘", " ", width * ncol + 1).unwrap();
         buf
     }
@@ -372,7 +372,7 @@ impl GraphDir {
     pub fn draw(
         &self,
         full_path: &str,
-        coords: &Vec<Vec<f64>>,
+        coords: &[Vec<f64>],
         show_edge_ids: bool,
         show_weights: bool,
         precision: Option<usize>,
@@ -429,7 +429,7 @@ impl GraphDir {
             // plot vertex label
             let mut lbl = &format!("{}", i);
             if let Some(labels_n) = labels_n.as_ref() {
-                lbl = labels_n.get(&i).unwrap_or(&lbl);
+                lbl = labels_n.get(&i).unwrap_or(lbl);
             }
             text_n.draw(x, y, lbl);
 
@@ -998,14 +998,14 @@ mod tests {
 
         if SAVE_FIGURE {
             // define the graph layout data
-            let columns = vec![
+            let columns = [
                 vec![0, 2, 11, 12],
                 vec![3, 10, 13, 22, 23],
                 vec![4, 8, 9, 14, 21, 20],
                 vec![1, 5, 7, 15, 16, 18, 19],
                 vec![6, 17],
             ];
-            let y_coords = vec![
+            let y_coords = [
                 vec![7.0, 6.0, 4.0, 0.0],                // col0
                 vec![6.0, 4.0, 2.0, 1.0, 0.0],           // col1
                 vec![6.0, 5.0, 4.0, 2.0, 1.0, 0.0],      // col2

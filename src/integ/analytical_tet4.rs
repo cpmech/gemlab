@@ -152,7 +152,7 @@ impl AnalyticalTet4 {
     /// # Input
     ///
     /// * `pad` -- The same pad used in `new` because we need the nodal coordinates here.
-    ///            Do not change the coordinates, otherwise the values will be wrong.
+    ///   Do not change the coordinates, otherwise the values will be wrong.
     pub fn vec_01_ns_linear_along_z(&self, pad: &Scratchpad) -> Vec<f64> {
         let (z1, z2, z3, z4) = (
             pad.xxt.get(2, 0),
@@ -223,9 +223,9 @@ impl AnalyticalTet4 {
     /// dᵐ₂ = (σ₂₀ Bᵐ₀ + σ₂₁ Bᵐ₁ + σ₂₂ Bᵐ₂) V
     /// ```
     #[rustfmt::skip]
-    pub fn vec_04_bt(&self, tt: &Tensor2) -> Vec<f64> {
+    pub fn vec_04_bt(&self, tt: &Tensor2<6>) -> Vec<f64> {
         let c = self.volume;
-        let mat = tt.as_matrix();
+        let mat = tt.as_std_matrix();
         let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
         let (a11, a12) = (mat.get(1,1), mat.get(1,2));
         let a22 = mat.get(2,2);
@@ -275,9 +275,9 @@ impl AnalyticalTet4 {
 
     /// Performs the b-t-b integration with constant tensor field
     #[rustfmt::skip]
-    pub fn mat_03_btb(&self, tt: &Tensor2) -> Matrix {
+    pub fn mat_03_btb(&self, tt: &Tensor2<6>) -> Matrix {
         let c = self.volume;
-        let mat = tt.as_matrix();
+        let mat = tt.as_std_matrix();
         let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
         let (a10, a11, a12) = (mat.get(1,0), mat.get(1,1), mat.get(1,2));
         let (a20, a21, a22) = (mat.get(2,0), mat.get(2,1), mat.get(2,2));
@@ -311,9 +311,9 @@ impl AnalyticalTet4 {
 
     /// Performs the g-t-n integration with constant tensor field (coupled with itself)
     #[rustfmt::skip]
-    pub fn mat_05_btn(&self, tt: &Tensor2) -> Matrix {
+    pub fn mat_05_btn(&self, tt: &Tensor2<6>) -> Matrix {
         let c = self.volume / 4.0;
-        let mat = tt.as_matrix();
+        let mat = tt.as_std_matrix();
         let (t00, t01, t02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
         let (t11, t12) = (mat.get(1,1), mat.get(1,2));
         let t22 = mat.get(2,2);
@@ -375,9 +375,9 @@ impl AnalyticalTet4 {
 
     /// Performs the n-t-n integration with constant tensor field
     #[rustfmt::skip]
-    pub fn mat_08_ntn(&self, sig: &Tensor2) -> Matrix {
+    pub fn mat_08_ntn(&self, sig: &Tensor2<6>) -> Matrix {
         let vv = self.volume;
-        let mat = sig.as_matrix();
+        let mat = sig.as_std_matrix();
         let (a00, a01, a02) = (mat.get(0,0), mat.get(0,1), mat.get(0,2));
         let (a10, a11, a12) = (mat.get(1,0), mat.get(1,1), mat.get(1,2));
         let (a20, a21, a22) = (mat.get(2,0), mat.get(2,1), mat.get(2,2));
@@ -429,13 +429,19 @@ impl AnalyticalTet4 {
     /// K = Bᵀ ⋅ D ⋅ B ⋅ volume
     /// ```
     pub fn mat_10_bdb(&mut self, young: f64, poisson: f64) -> Result<Matrix, StrError> {
-        let ela = LinElasticity::new(young, poisson, false, false);
-        let dd = ela.get_modulus();
+        let ela = LinElasticity::<6>::new(young, poisson, false).unwrap();
+        let dd = ela.stiffness();
         let dim_dd = 6;
         let dim_kk = 12;
+        let mut dd_mat = Matrix::new(dim_dd, dim_dd);
+        for i in 0..dim_dd {
+            for j in 0..dim_dd {
+                dd_mat.set(i, j, dd.get(i, j));
+            }
+        }
         let mut bb_t_dd = Matrix::new(dim_kk, dim_dd);
         let mut kk = Matrix::new(dim_kk, dim_kk);
-        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, dd.matrix(), 0.0).unwrap(); // cannot fail
+        mat_t_mat_mul(&mut bb_t_dd, 1.0, &self.bbe, &dd_mat, 0.0).unwrap(); // cannot fail
         mat_mat_mul(&mut kk, self.volume, &bb_t_dd, &self.bbe, 0.0).unwrap(); // cannot fail
         Ok(kk)
     }

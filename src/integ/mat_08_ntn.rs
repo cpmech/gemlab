@@ -2,7 +2,7 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::{Mandel, Tensor2};
+use russell_tensor::Tensor2;
 
 /// Implements the shape(N) times tensor(T) times shape(N) integration case 08 (e.g., mass matrix)
 ///
@@ -53,9 +53,9 @@ use russell_tensor::{Mandel, Tensor2};
 /// * `args` --- Common arguments
 /// * `fn_tt` -- Function `f(T,p,N,B)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   shape functions N(ιᵖ), and gradients B(ιᵖ). `T` is set for `space_ndim`.
-pub fn mat_08_ntn<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_tt: F) -> Result<(), StrError>
+pub fn mat_08_ntn<const N: usize, F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_tt: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2<N>, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
@@ -67,9 +67,12 @@ where
     if ncol_kk < jj0 + nnode * space_ndim {
         return Err("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim");
     }
+    if N != 2 * space_ndim {
+        return Err("tensor dimension N must equal 2 * space_ndim");
+    }
 
     // allocate auxiliary tensor
-    let mut tt = Tensor2::new(Mandel::new(2 * space_ndim));
+    let mut tt = Tensor2::<N>::new();
 
     // clear output matrix
     if args.clear {
@@ -104,31 +107,30 @@ where
         };
 
         // add contribution to K matrix
-        let t = tt.vector();
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk.add(ii0 + 0 + m * 2, jj0 + 0 + n * 2, c * nn[m] * t[0] * nn[n]);
-                    kk.add(ii0 + 0 + m * 2, jj0 + 1 + n * 2, c * nn[m] * t[3] * nn[n] / s);
+                    kk.add(ii0 + 0 + m * 2, jj0 + 0 + n * 2, c * nn[m] * tt.get(0) * nn[n]);
+                    kk.add(ii0 + 0 + m * 2, jj0 + 1 + n * 2, c * nn[m] * tt.get(3) * nn[n] / s);
 
-                    kk.add(ii0 + 1 + m * 2, jj0 + 0 + n * 2, c * nn[m] * t[3] * nn[n] / s);
-                    kk.add(ii0 + 1 + m * 2, jj0 + 1 + n * 2, c * nn[m] * t[1] * nn[n]);
+                    kk.add(ii0 + 1 + m * 2, jj0 + 0 + n * 2, c * nn[m] * tt.get(3) * nn[n] / s);
+                    kk.add(ii0 + 1 + m * 2, jj0 + 1 + n * 2, c * nn[m] * tt.get(1) * nn[n]);
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk.add(ii0 + 0 + m * 3, jj0 + 0 + n * 3, c * nn[m] * t[0] * nn[n]);
-                    kk.add(ii0 + 0 + m * 3, jj0 + 1 + n * 3, c * nn[m] * t[3] * nn[n] / s);
-                    kk.add(ii0 + 0 + m * 3, jj0 + 2 + n * 3, c * nn[m] * t[5] * nn[n] / s);
+                    kk.add(ii0 + 0 + m * 3, jj0 + 0 + n * 3, c * nn[m] * tt.get(0) * nn[n]);
+                    kk.add(ii0 + 0 + m * 3, jj0 + 1 + n * 3, c * nn[m] * tt.get(3) * nn[n] / s);
+                    kk.add(ii0 + 0 + m * 3, jj0 + 2 + n * 3, c * nn[m] * tt.get(5) * nn[n] / s);
 
-                    kk.add(ii0 + 1 + m * 3, jj0 + 0 + n * 3, c * nn[m] * t[3] * nn[n] / s);
-                    kk.add(ii0 + 1 + m * 3, jj0 + 1 + n * 3, c * nn[m] * t[1] * nn[n]);
-                    kk.add(ii0 + 1 + m * 3, jj0 + 2 + n * 3, c * nn[m] * t[4] * nn[n] / s);
+                    kk.add(ii0 + 1 + m * 3, jj0 + 0 + n * 3, c * nn[m] * tt.get(3) * nn[n] / s);
+                    kk.add(ii0 + 1 + m * 3, jj0 + 1 + n * 3, c * nn[m] * tt.get(1) * nn[n]);
+                    kk.add(ii0 + 1 + m * 3, jj0 + 2 + n * 3, c * nn[m] * tt.get(4) * nn[n] / s);
 
-                    kk.add(ii0 + 2 + m * 3, jj0 + 0 + n * 3, c * nn[m] * t[5] * nn[n] / s);
-                    kk.add(ii0 + 2 + m * 3, jj0 + 1 + n * 3, c * nn[m] * t[4] * nn[n] / s);
-                    kk.add(ii0 + 2 + m * 3, jj0 + 2 + n * 3, c * nn[m] * t[2] * nn[n]);
+                    kk.add(ii0 + 2 + m * 3, jj0 + 0 + n * 3, c * nn[m] * tt.get(5) * nn[n] / s);
+                    kk.add(ii0 + 2 + m * 3, jj0 + 1 + n * 3, c * nn[m] * tt.get(4) * nn[n] / s);
+                    kk.add(ii0 + 2 + m * 3, jj0 + 2 + n * 3, c * nn[m] * tt.get(2) * nn[n]);
                 }
             }
         }
@@ -143,41 +145,41 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
-    use russell_tensor::{Mandel, Tensor2};
+    use russell_tensor::Tensor2;
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
-        let mut tt = Tensor2::new(Mandel::Symmetric2D);
+        let mut tt = Tensor2::<4>::new();
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
-        let f = |_tt: &mut Tensor2, _p: usize, _nn: &Vector, _bb: &Matrix| Ok(());
+        let f = |_tt: &mut Tensor2<4>, _p: usize, _nn: &Vector, _bb: &Matrix| Ok(());
         f(&mut tt, 0, &nn, &bb).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut args, f).err(),
+            integ::mat_08_ntn::<4, _>(&mut kk, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut args, f).err(),
+            integ::mat_08_ntn::<4, _>(&mut kk, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + nnode ⋅ space_ndim")
         );
         args.jj0 = 0;
         // more errors
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut args, f).err(),
+            integ::mat_08_ntn::<4, _>(&mut kk, &mut args, f).err(),
             Some("calc_gradient requires that geo_ndim = space_ndim")
         );
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(6, 6);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         assert_eq!(
-            integ::mat_08_ntn(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
+            integ::mat_08_ntn::<4, _>(&mut kk, &mut args, |_, _, _, _| Err("stop")).err(),
             Some("stop")
         );
     }
@@ -196,9 +198,9 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_08_ntn(&mut kk, &mut args, |tt, _, _, _| {
-                tt.sym_set(0, 0, rho);
-                tt.sym_set(1, 1, rho);
+            integ::mat_08_ntn::<4, _>(&mut kk, &mut args, |tt, _, _, _| {
+                tt.sym_set_std(0, 0, rho);
+                tt.sym_set_std(1, 1, rho);
                 Ok(())
             })
             .unwrap();
@@ -213,11 +215,10 @@ mod tests {
         let mut kk = Matrix::new(4 * 3, 4 * 3);
         let ana = AnalyticalTet4::new(&pad);
         #[rustfmt::skip]
-        let sig = Tensor2::from_matrix(&[
+        let sig = Tensor2::<6>::from_std_matrix(&[
             [1.1, 1.2, 1.3],
             [1.2, 2.2, 2.3],
-            [1.3, 2.3, 3.3]],
-        Mandel::Symmetric).unwrap();
+            [1.3, 2.3, 3.3]]).unwrap();
         let kk_correct = ana.mat_08_ntn(&sig);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
@@ -226,7 +227,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_08_ntn(&mut kk, &mut args, |tt, _, _, _| {
+            integ::mat_08_ntn::<6, _>(&mut kk, &mut args, |tt, _, _, _| {
                 tt.set_tensor(1.0, &sig);
                 Ok(())
             })

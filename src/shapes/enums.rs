@@ -246,6 +246,7 @@ impl GeoKind {
     }
 
     /// Returns the string representation
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         match self {
             // Lin
@@ -1433,7 +1434,7 @@ impl GeoKind {
     /// 1. This functionality is only available for Tri and Qua shapes
     /// 2. The total number of nodes will be equal to `kind.nnode() + kind.triangulate_extra_nnode()`
     pub fn triangulate_extra_coords(&self, k: usize) -> &'static [f64] {
-        const EMPTY: &'static [f64] = &[];
+        const EMPTY: &[f64] = &[];
         match self {
             // Lin
             GeoKind::Lin2 => EMPTY,
@@ -1535,6 +1536,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::clone_on_copy)] // test the derived Clone implementation
     fn derive_works() {
         let case = GeoCase::Cable.clone();
         let class = GeoClass::Tri.clone();
@@ -2023,7 +2025,7 @@ mod tests {
     #[test]
     fn triangulate_functions_are_consistent() {
         const UNAVAILABLE: usize = usize::MAX;
-        const EMPTY: &'static [f64] = &[];
+        const EMPTY: &[f64] = &[];
         for kind in GeoKind::VALUES {
             match kind {
                 // Lin

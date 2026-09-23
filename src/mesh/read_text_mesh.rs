@@ -35,7 +35,7 @@ impl DataForReadTextMesh {
 
     fn parse_sizes(&mut self, line: &str) -> Result<bool, StrError> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
-        if maybe_data.starts_with("#") || maybe_data == "" {
+        if maybe_data.starts_with("#") || maybe_data.is_empty() {
             return Ok(false); // ignore comments or empty lines; returns false == not parsed
         }
 
@@ -72,7 +72,7 @@ impl DataForReadTextMesh {
 
     fn parse_point(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, StrError> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
-        if maybe_data.starts_with("#") || maybe_data == "" {
+        if maybe_data.starts_with("#") || maybe_data.is_empty() {
             return Ok(false); // ignore comments or empty lines
         }
 
@@ -112,7 +112,7 @@ impl DataForReadTextMesh {
             };
         }
 
-        if data.next() != None {
+        if data.next().is_some() {
             return Err("point data contains extra values");
         }
 
@@ -125,7 +125,7 @@ impl DataForReadTextMesh {
 
     fn parse_cell(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, StrError> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
-        if maybe_data.starts_with("#") || maybe_data == "" {
+        if maybe_data.starts_with("#") || maybe_data.is_empty() {
             return Ok(false); // ignore comments or empty lines
         }
 
@@ -151,7 +151,7 @@ impl DataForReadTextMesh {
             None => return Err("cannot read cell kind"),
         };
 
-        let kind = GeoKind::from(&str_kind)?;
+        let kind = GeoKind::from(str_kind)?;
         let mut points: Vec<PointId> = vec![0; kind.nnode()];
 
         for m in 0..kind.nnode() {
@@ -164,7 +164,7 @@ impl DataForReadTextMesh {
             }
         }
 
-        if data.next() != None {
+        if data.next().is_some() {
             return Err("cell data contains extra values");
         }
 
@@ -182,7 +182,7 @@ impl DataForReadTextMesh {
 
     fn parse_marked_edge(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, StrError> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
-        if maybe_data.starts_with("#") || maybe_data == "" {
+        if maybe_data.starts_with("#") || maybe_data.is_empty() {
             return Ok(false); // ignore comments or empty lines
         }
 
@@ -203,7 +203,7 @@ impl DataForReadTextMesh {
             None => return Err("cannot read p2 of marked edge"),
         };
 
-        if data.next() != None {
+        if data.next().is_some() {
             return Err("marked edge data contains extra values");
         }
 
@@ -216,7 +216,7 @@ impl DataForReadTextMesh {
 
     fn parse_marked_face(&mut self, mesh: &mut Mesh, line: &str) -> Result<bool, StrError> {
         let maybe_data = line.trim_start().trim_end_matches("\n");
-        if maybe_data.starts_with("#") || maybe_data == "" {
+        if maybe_data.starts_with("#") || maybe_data.is_empty() {
             return Ok(false); // ignore comments or empty lines
         }
 
@@ -344,17 +344,12 @@ impl Mesh {
         };
 
         // read and parse points
-        loop {
-            match lines_iter.next() {
-                Some(v) => {
-                    let line = v.unwrap(); // must panic because no error expected here
-                    if data.parse_point(&mut mesh, &line)? {
-                        if data.current_npoint == data.npoint {
-                            break;
-                        }
-                    }
+        for v in lines_iter.by_ref() {
+            let line = v.unwrap(); // must panic because no error expected here
+            if data.parse_point(&mut mesh, &line)? {
+                if data.current_npoint == data.npoint {
+                    break;
                 }
-                None => break,
             }
         }
 
@@ -364,17 +359,12 @@ impl Mesh {
         }
 
         // read and parse cells
-        loop {
-            match lines_iter.next() {
-                Some(v) => {
-                    let line = v.unwrap(); // must panic because no error expected here
-                    if data.parse_cell(&mut mesh, &line)? {
-                        if data.current_ncell == data.ncell {
-                            break;
-                        }
-                    }
+        for v in lines_iter.by_ref() {
+            let line = v.unwrap(); // must panic because no error expected here
+            if data.parse_cell(&mut mesh, &line)? {
+                if data.current_ncell == data.ncell {
+                    break;
                 }
-                None => break,
             }
         }
 
@@ -385,17 +375,12 @@ impl Mesh {
 
         // read and parse marked edges
         if data.nmarked_edge > 0 {
-            loop {
-                match lines_iter.next() {
-                    Some(v) => {
-                        let line = v.unwrap(); // must panic because no error expected here
-                        if data.parse_marked_edge(&mut mesh, &line)? {
-                            if data.current_marked_edge == data.nmarked_edge {
-                                break;
-                            }
-                        }
+            for v in lines_iter.by_ref() {
+                let line = v.unwrap(); // must panic because no error expected here
+                if data.parse_marked_edge(&mut mesh, &line)? {
+                    if data.current_marked_edge == data.nmarked_edge {
+                        break;
                     }
-                    None => break,
                 }
             }
             if data.current_marked_edge != data.nmarked_edge {
@@ -405,17 +390,12 @@ impl Mesh {
 
         // read and parse marked faces
         if data.nmarked_face > 0 {
-            loop {
-                match lines_iter.next() {
-                    Some(v) => {
-                        let line = v.unwrap(); // must panic because no error expected here
-                        if data.parse_marked_face(&mut mesh, &line)? {
-                            if data.current_marked_face == data.nmarked_face {
-                                break;
-                            }
-                        }
+            for v in lines_iter.by_ref() {
+                let line = v.unwrap(); // must panic because no error expected here
+                if data.parse_marked_face(&mut mesh, &line)? {
+                    if data.current_marked_face == data.nmarked_face {
+                        break;
                     }
-                    None => break,
                 }
             }
             if data.current_marked_face != data.nmarked_face {
@@ -530,16 +510,11 @@ impl Mesh {
         };
 
         // read and parse points
-        loop {
-            match lines_iter.next() {
-                Some(line) => {
-                    if data.parse_point(&mut mesh, line)? {
-                        if data.current_npoint == data.npoint {
-                            break;
-                        }
-                    }
+        for line in lines_iter.by_ref() {
+            if data.parse_point(&mut mesh, line)? {
+                if data.current_npoint == data.npoint {
+                    break;
                 }
-                None => break,
             }
         }
 
@@ -549,16 +524,11 @@ impl Mesh {
         }
 
         // read and parse cells
-        loop {
-            match lines_iter.next() {
-                Some(line) => {
-                    if data.parse_cell(&mut mesh, line)? {
-                        if data.current_ncell == data.ncell {
-                            break;
-                        }
-                    }
+        for line in lines_iter.by_ref() {
+            if data.parse_cell(&mut mesh, line)? {
+                if data.current_ncell == data.ncell {
+                    break;
                 }
-                None => break,
             }
         }
 
@@ -569,16 +539,11 @@ impl Mesh {
 
         // read and parse marked edges
         if data.nmarked_edge > 0 {
-            loop {
-                match lines_iter.next() {
-                    Some(line) => {
-                        if data.parse_marked_edge(&mut mesh, &line)? {
-                            if data.current_marked_edge == data.nmarked_edge {
-                                break;
-                            }
-                        }
+            for line in lines_iter.by_ref() {
+                if data.parse_marked_edge(&mut mesh, line)? {
+                    if data.current_marked_edge == data.nmarked_edge {
+                        break;
                     }
-                    None => break,
                 }
             }
             if data.current_marked_edge != data.nmarked_edge {
@@ -588,16 +553,11 @@ impl Mesh {
 
         // read and parse marked faces
         if data.nmarked_face > 0 {
-            loop {
-                match lines_iter.next() {
-                    Some(line) => {
-                        if data.parse_marked_face(&mut mesh, &line)? {
-                            if data.current_marked_face == data.nmarked_face {
-                                break;
-                            }
-                        }
+            for line in lines_iter.by_ref() {
+                if data.parse_marked_face(&mut mesh, line)? {
+                    if data.current_marked_face == data.nmarked_face {
+                        break;
                     }
-                    None => break,
                 }
             }
             if data.current_marked_face != data.nmarked_face {

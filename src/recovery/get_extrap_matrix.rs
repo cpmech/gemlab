@@ -22,8 +22,8 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 /// # Output
 ///
 /// * `E` -- The (nnode,ngauss) extrapolation matrix; aka "inverse" of the
-///    interpolation matrix `P` calculated by [get_interp_matrix()]. See note below
-///    regarding the inversion problem.
+///   interpolation matrix `P` calculated by [get_interp_matrix()]. See note below
+///   regarding the inversion problem.
 ///
 /// This function returns the "inverse" of the interpolation matrix `P`; however, the
 /// inverse is only possible if `ngauss == nnode`. If there are more interpolation
@@ -141,10 +141,7 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Matrix, 
     if np == nv {
         // E ← P⁻¹
         mat_inverse(&mut ee, &pp)?;
-    } else if np > nv {
-        // E ← P⁺
-        mat_pseudo_inverse(&mut ee, &mut pp)?;
-    } else if np == 1 {
+    } else if np > nv || np == 1 {
         // E ← P⁺
         mat_pseudo_inverse(&mut ee, &mut pp)?;
     } else {
@@ -192,7 +189,7 @@ pub fn get_extrap_matrix(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Matrix, 
             }
         }
     }
-    return Ok(ee);
+    Ok(ee)
 }
 
 /// Returns the transpose of the pseudo-inverse of the reference coordinates matrix
@@ -807,7 +804,7 @@ mod tests {
     fn do_extrapolate(ee: &Matrix, u_point: &Vector) -> Vector {
         let nnode = ee.dims().0;
         let mut u_nodal = Vector::new(nnode);
-        mat_vec_mul(&mut u_nodal, 1.0, &ee, &u_point).unwrap();
+        mat_vec_mul(&mut u_nodal, 1.0, ee, u_point).unwrap();
         u_nodal
     }
 
@@ -880,7 +877,7 @@ mod tests {
         let mut pp = get_interp_matrix(pad, gauss); // (np,nv)
         let mut pp_inv = Matrix::new(nv, np);
         mat_pseudo_inverse(&mut pp_inv, &mut pp).unwrap();
-        return pp_inv;
+        pp_inv
     }
 
     #[test]
@@ -1023,7 +1020,7 @@ mod tests {
         // set (hyper) plane function at integration points
         let geo_ndim = pad.kind.ndim();
         let np = gauss.npoint();
-        let x_ips = get_points_coords(pad, &gauss).unwrap();
+        let x_ips = get_points_coords(pad, gauss).unwrap();
         let mut u_point = Vector::new(np);
         for p in 0..np {
             u_point[p] = -1.0;
@@ -1033,7 +1030,7 @@ mod tests {
         }
 
         // perform extrapolation to nodes
-        let ee = get_extrap_matrix(pad, &gauss).unwrap();
+        let ee = get_extrap_matrix(pad, gauss).unwrap();
         let u_nodal = do_extrapolate(&ee, &u_point);
 
         // check
@@ -1047,7 +1044,7 @@ mod tests {
 
         // interpolate back to integration points
         let mut u_point_interp = Vector::new(np);
-        let pp = get_interp_matrix(pad, &gauss);
+        let pp = get_interp_matrix(pad, gauss);
         mat_vec_mul(&mut u_point_interp, 1.0, &pp, &u_nodal).unwrap();
 
         // check

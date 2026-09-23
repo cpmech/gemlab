@@ -6,9 +6,9 @@
 //!
 //! * `space_ndim` -- is the number of dimensions of the space under study (2 or 3)
 //! * `geo_ndim` -- is the number of dimensions of the geometry element (shape).
-//!                  For instance, a line in the 2D space has `geo_ndim = 1` and
-//!                  `space_ndim = 2`. Another example: a triangle in the 3D space
-//!                  has `geo_ndim = 2` and `space_ndim = 3`.
+//!   For instance, a line in the 2D space has `geo_ndim = 1` and
+//!   `space_ndim = 2`. Another example: a triangle in the 3D space
+//!   has `geo_ndim = 2` and `space_ndim = 3`.
 //! * `local` -- refers to a numbering scheme for the nodes of the shape (or element)
 //! * `global` -- refers to a numbering scheme applied for the whole mesh
 //! * `spatial (real) space` -- is the "real" space mapped by the x₀,x₁,x₂ coordinates (see figure below)
@@ -22,7 +22,7 @@
 //!
 //! * `nnode` -- (local) number of points (aka nodes) that define the shape/element.
 //! * `npoint` -- (global) number of points in the whole mesh; not used in this module
-//!               but important to remember
+//!   but important to remember
 //! * `nedge` -- number of edges on the shape (2D or 3D)
 //! * `nface` -- number of faces on the shape (3D only)
 //! * `edge_nnode` -- number of points/nodes that define the edge

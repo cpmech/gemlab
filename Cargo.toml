@@ -23,14 +23,29 @@ cudss = ["russell_sparse/cudss"]
 
 [dependencies]
 plotpy = "1.23"
-russell_lab = "2.8"
-russell_sparse = "2.8"
-russell_stat = "2.8"
-russell_tensor = "2.8"
-tritet = { version = "3.2", features = ["with_tetgen"] }
+russell_lab = "3.0"
+russell_sparse = "3.0"
+russell_stat = "3.0"
+russell_tensor = "3.2"
+tritet = { version = "3.3", features = ["with_tetgen"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.150"
 structopt = "0.3"
 
 [dev-dependencies]
 criterion = "0.8"
+serial_test = "3.5"
+
+[lints.clippy]
+approx_constant = "allow"        # allow large constants; e.g. for OEIS reference
+bool_assert_comparison = "allow" # allow "assert_eq!(x, true)" for better diagnostics
+collapsible_if = "allow"         # allow nested "if" for readability
+excessive_precision = "allow"    # allow large constants; e.g. for OEIS reference
+identity_op = "allow"            # allow "i + 0" for uniform unrolled loops
+let_unit_value = "allow"         # allow "let _ = CONST;" to force const evaluation
+manual_is_multiple_of = "allow"  # allow "n % k == 0" instead of is_multiple_of()
+manual_range_contains = "allow"  # allow if "a < b && c < d" constructions
+needless_range_loop = "allow"    # allow "for i in a..b" instead of range
+new_without_default = "allow"    # The user is encouraged to call new()
+too_many_arguments = "allow"     # allow functions with many parameters
+type_complexity = "allow"        # allow deeply nested array types (index maps)

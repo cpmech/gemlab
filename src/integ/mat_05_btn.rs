@@ -3,7 +3,7 @@ use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::{Mandel, Tensor2};
+use russell_tensor::Tensor2;
 
 /// Implements the gradient(Bb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
 ///
@@ -65,14 +65,14 @@ use russell_tensor::{Mandel, Tensor2};
 ///
 /// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
 /// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
-pub fn mat_05_btn<F>(
+pub fn mat_05_btn<const N: usize, F>(
     kk: &mut Matrix,
     pad_b: &mut Scratchpad,
     args: &mut CommonArgs,
     mut fn_tt: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize, &Matrix, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2<N>, usize, &Matrix, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let nnode_b = pad_b.interp.dim();
@@ -85,9 +85,12 @@ where
     if ncol_kk < jj0 + nnode * space_ndim {
         return Err("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim");
     }
+    if N != 2 * space_ndim {
+        return Err("tensor dimension N must equal 2 * space_ndim");
+    }
 
     // allocate auxiliary tensor
-    let mut tt = Tensor2::new(Mandel::new(2 * space_ndim));
+    let mut tt = Tensor2::<N>::new();
 
     // clear output matrix
     if args.clear {
@@ -124,19 +127,18 @@ where
         };
 
         // add contribution to K matrix
-        let t = tt.vector();
         if space_ndim == 2 {
             for m in 0..nnode_b {
                 for n in 0..nnode {
                     kk.add(
                         ii0 + m,
                         jj0 + 0 + n * 2,
-                        c * (ggb.get(m, 0) * t[0] + ggb.get(m, 1) * t[3] / s) * nn[n],
+                        c * (ggb.get(m, 0) * tt.get(0) + ggb.get(m, 1) * tt.get(3) / s) * nn[n],
                     );
                     kk.add(
                         ii0 + m,
                         jj0 + 1 + n * 2,
-                        c * (ggb.get(m, 0) * t[3] / s + ggb.get(m, 1) * t[1]) * nn[n],
+                        c * (ggb.get(m, 0) * tt.get(3) / s + ggb.get(m, 1) * tt.get(1)) * nn[n],
                     );
                 }
             }
@@ -146,17 +148,20 @@ where
                     kk.add(
                         ii0 + m,
                         jj0 + 0 + n * 3,
-                        c * (ggb.get(m, 0) * t[0] + ggb.get(m, 1) * t[3] / s + ggb.get(m, 2) * t[5] / s) * nn[n],
+                        c * (ggb.get(m, 0) * tt.get(0) + ggb.get(m, 1) * tt.get(3) / s + ggb.get(m, 2) * tt.get(5) / s)
+                            * nn[n],
                     );
                     kk.add(
                         ii0 + m,
                         jj0 + 1 + n * 3,
-                        c * (ggb.get(m, 0) * t[3] / s + ggb.get(m, 1) * t[1] + ggb.get(m, 2) * t[4] / s) * nn[n],
+                        c * (ggb.get(m, 0) * tt.get(3) / s + ggb.get(m, 1) * tt.get(1) + ggb.get(m, 2) * tt.get(4) / s)
+                            * nn[n],
                     );
                     kk.add(
                         ii0 + m,
                         jj0 + 2 + n * 3,
-                        c * (ggb.get(m, 0) * t[5] / s + ggb.get(m, 1) * t[4] / s + ggb.get(m, 2) * t[2]) * nn[n],
+                        c * (ggb.get(m, 0) * tt.get(5) / s + ggb.get(m, 1) * tt.get(4) / s + ggb.get(m, 2) * tt.get(2))
+                            * nn[n],
                     );
                 }
             }
@@ -172,7 +177,7 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs, Gauss};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
-    use russell_tensor::{Mandel, Tensor2};
+    use russell_tensor::Tensor2;
 
     #[test]
     fn capture_some_errors() {
@@ -180,23 +185,23 @@ mod tests {
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(4, 8 * 2);
-        let mut tt = Tensor2::new(Mandel::Symmetric2D);
+        let mut tt = Tensor2::<4>::new();
         let ggb = Matrix::new(0, 0);
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
-        let f = |_tt: &mut Tensor2, _p: usize, _ggb: &Matrix, _nn: &Vector, _bb: &Matrix| Ok(());
+        let f = |_tt: &mut Tensor2<4>, _p: usize, _ggb: &Matrix, _nn: &Vector, _bb: &Matrix| Ok(());
         f(&mut tt, 0, &ggb, &nn, &bb).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, f).err(),
+            integ::mat_05_btn::<4, _>(&mut kk, &mut pad_b, &mut args, f).err(),
             Some("nrow(K) must be ≥ ii0 + pad_b.nnode")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, f).err(),
+            integ::mat_05_btn::<4, _>(&mut kk, &mut pad_b, &mut args, f).err(),
             Some("ncol(K) must be ≥ jj0 + pad.nnode ⋅ space_ndim")
         );
     }
@@ -209,11 +214,10 @@ mod tests {
         let mut kk = Matrix::new(4, 8 * 2);
         let ana = AnalyticalQua8::new(a, b);
         #[rustfmt::skip]
-        let tt = Tensor2::from_matrix(&[
+        let tt = Tensor2::<4>::from_std_matrix(&[
             [2.0, 5.0, 0.0],
             [5.0, 3.0, 0.0],
-            [0.0, 0.0, 4.0]],
-        Mandel::Symmetric2D).unwrap();
+            [0.0, 0.0, 4.0]]).unwrap();
         let kk_correct = ana.mat_05_btn(&tt);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
@@ -222,7 +226,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
+            integ::mat_05_btn::<4, _>(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
                 ten.set_tensor(1.0, &tt);
                 Ok(())
             })
@@ -239,11 +243,10 @@ mod tests {
         let mut kk = Matrix::new(4, 4 * 3);
         let ana = AnalyticalTet4::new(&pad);
         #[rustfmt::skip]
-        let tt = Tensor2::from_matrix(&[
+        let tt = Tensor2::<6>::from_std_matrix(&[
             [1.0, 4.0, 6.0],
             [4.0, 2.0, 5.0],
-            [6.0, 5.0, 3.0]],
-        Mandel::Symmetric).unwrap();
+            [6.0, 5.0, 3.0]]).unwrap();
         let kk_correct = ana.mat_05_btn(&tt);
         // println!("{}", kk_correct);
         let class = pad.kind.class();
@@ -252,7 +255,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_05_btn(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
+            integ::mat_05_btn::<6, _>(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
                 ten.set_tensor(1.0, &tt);
                 Ok(())
             })

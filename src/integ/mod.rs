@@ -7,7 +7,7 @@
 //! * `||J||` -- the norm of the Jacobian vector for lines in multi-dimensions
 //! * `ξ` -- ksi (or xi) -- coordinates in the reference space
 //! * `ιᵖ := ξᵖ` -- (**iota**-p gets ksi-p (or xi-p)) --
-//!    the coordinate of the integration point on the reference (natural) space
+//!   the coordinate of the integration point on the reference (natural) space
 //! * `wᵖ` -- the weight of the p-th integration point
 //! * Xᵀ -- Transposed matrix of coordinates
 //! * N -- Shape functions

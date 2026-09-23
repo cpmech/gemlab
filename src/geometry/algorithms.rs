@@ -33,13 +33,11 @@ pub fn point_point_distance(a: &[f64], b: &[f64]) -> Result<f64, StrError> {
     if b.len() != ndim {
         return Err("b.len() must equal a.len() == ndim");
     }
-    let distance: f64;
-    if ndim == 2 {
-        distance = f64::sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]));
+    let distance = if ndim == 2 {
+        f64::sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]))
     } else {
-        distance =
-            f64::sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]) + (b[2] - a[2]) * (b[2] - a[2]));
-    }
+        f64::sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]) + (b[2] - a[2]) * (b[2] - a[2]))
+    };
     Ok(distance)
 }
 
@@ -103,8 +101,7 @@ pub fn point_line_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrEr
     if c.len() != ndim {
         return Err("c.len() must equal a.len() == ndim");
     }
-    let distance: f64;
-    if ndim == 2 {
+    let distance = if ndim == 2 {
         // n ⋅ n  with n = b - a
         let n_dot_n = (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]);
         if n_dot_n <= f64::EPSILON {
@@ -116,7 +113,7 @@ pub fn point_line_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrEr
         let q0 = (c[0] - a[0]) - (b[0] - a[0]) * x_dot_n / n_dot_n;
         let q1 = (c[1] - a[1]) - (b[1] - a[1]) * x_dot_n / n_dot_n;
         // norm(q)
-        distance = f64::sqrt(q0 * q0 + q1 * q1);
+        f64::sqrt(q0 * q0 + q1 * q1)
     } else {
         // n ⋅ n  with n = b - a
         let n_dot_n = (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]) + (b[2] - a[2]) * (b[2] - a[2]);
@@ -130,8 +127,8 @@ pub fn point_line_distance(a: &[f64], b: &[f64], c: &[f64]) -> Result<f64, StrEr
         let q1 = (c[1] - a[1]) - (b[1] - a[1]) * x_dot_n / n_dot_n;
         let q2 = (c[2] - a[2]) - (b[2] - a[2]) * x_dot_n / n_dot_n;
         // norm(q)
-        distance = f64::sqrt(q0 * q0 + q1 * q1 + q2 * q2);
-    }
+        f64::sqrt(q0 * q0 + q1 * q1 + q2 * q2)
+    };
     Ok(distance)
 }
 

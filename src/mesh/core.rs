@@ -352,7 +352,7 @@ impl Mesh {
                 }
             })
             .collect();
-        if point_ids.len() == 0 {
+        if point_ids.is_empty() {
             return Err("cannot find at least one point with the given mark (and filter)");
         }
         point_ids.sort();
@@ -435,7 +435,7 @@ impl Mesh {
                 return Ok(self.points[i].id);
             }
         }
-        return Err("cannot find at least one point with the given mark (and filter)");
+        Err("cannot find at least one point with the given mark (and filter)")
     }
 
     /// Sets the pad's matrix of coordinates X given a list of point ids
@@ -624,11 +624,11 @@ impl fmt::Display for Mesh {
     /// Returns a text representation of the Mesh (can be used with [Mesh::from_text])
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // write header
-        write!(f, "# header\n").unwrap();
-        write!(f, "# ndim npoint ncell nmarked_edge nmarked_face\n").unwrap();
-        write!(
+        writeln!(f, "# header").unwrap();
+        writeln!(f, "# ndim npoint ncell nmarked_edge nmarked_face").unwrap();
+        writeln!(
             f,
-            "{} {} {} {} {}\n",
+            "{} {} {} {} {}",
             self.ndim,
             self.points.len(),
             self.cells.len(),
@@ -639,19 +639,19 @@ impl fmt::Display for Mesh {
 
         // write points
         write!(f, "\n# points\n").unwrap();
-        write!(f, "# id marker x y {{z}}\n").unwrap();
+        writeln!(f, "# id marker x y {{z}}").unwrap();
         self.points.iter().for_each(|point| {
             if self.ndim == 2 {
-                write!(
+                writeln!(
                     f,
-                    "{} {} {:?} {:?}\n",
+                    "{} {} {:?} {:?}",
                     point.id, point.marker, point.coords[0], point.coords[1]
                 )
                 .unwrap();
             } else {
-                write!(
+                writeln!(
                     f,
-                    "{} {} {:?} {:?} {:?}\n",
+                    "{} {} {:?} {:?} {:?}",
                     point.id, point.marker, point.coords[0], point.coords[1], point.coords[2]
                 )
                 .unwrap();
@@ -660,11 +660,11 @@ impl fmt::Display for Mesh {
 
         // write cells
         write!(f, "\n# cells\n").unwrap();
-        write!(f, "# id marker kind points\n").unwrap();
+        writeln!(f, "# id marker kind points").unwrap();
         self.cells.iter().for_each(|cell| {
-            write!(
+            writeln!(
                 f,
-                "{} {} {}{}\n",
+                "{} {} {}{}",
                 cell.id,
                 cell.marker,
                 cell.kind.to_string(),
@@ -677,23 +677,23 @@ impl fmt::Display for Mesh {
         });
 
         // write marked edges
-        if self.marked_edges.len() > 0 {
+        if !self.marked_edges.is_empty() {
             write!(f, "\n# marked edges\n").unwrap();
-            write!(f, "# marker p1 p2\n").unwrap();
+            writeln!(f, "# marker p1 p2").unwrap();
             for entry in &self.marked_edges {
-                write!(f, "{} {} {}\n", entry.0, entry.1, entry.2).unwrap();
+                writeln!(f, "{} {} {}", entry.0, entry.1, entry.2).unwrap();
             }
         }
 
         // write marked faces
-        if self.marked_faces.len() > 0 {
+        if !self.marked_faces.is_empty() {
             write!(f, "\n# marked faces\n").unwrap();
-            write!(f, "# marker p1 p2 p3 {{p4}}\n").unwrap();
+            writeln!(f, "# marker p1 p2 p3 {{p4}}").unwrap();
             for entry in &self.marked_faces {
                 if entry.4 == usize::MAX {
-                    write!(f, "{} {} {} {}\n", entry.0, entry.1, entry.2, entry.3).unwrap();
+                    writeln!(f, "{} {} {} {}", entry.0, entry.1, entry.2, entry.3).unwrap();
                 } else {
-                    write!(f, "{} {} {} {} {}\n", entry.0, entry.1, entry.2, entry.3, entry.4).unwrap();
+                    writeln!(f, "{} {} {} {} {}", entry.0, entry.1, entry.2, entry.3, entry.4).unwrap();
                 }
             }
         }

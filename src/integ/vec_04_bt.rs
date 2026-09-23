@@ -2,7 +2,7 @@ use super::CommonArgs;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
 use russell_lab::{Matrix, Vector};
-use russell_tensor::{Mandel, Tensor2};
+use russell_tensor::Tensor2;
 
 /// Implements the gradient(B) dot transpose tensor(T) integration case 04
 ///
@@ -72,10 +72,10 @@ use russell_tensor::{Mandel, Tensor2};
 ///     let gauss = Gauss::new(pad.kind);
 ///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
 ///     let mut args = CommonArgs::new(&mut pad, &gauss);
-///     integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
-///         sig.sym_set(0, 0, 1.0);
-///         sig.sym_set(1, 1, 2.0);
-///         sig.sym_set(0, 1, 3.0);
+///     integ::vec_04_bt::<4, _>(&mut d, &mut args, |sig, _, _, _| {
+///         sig.sym_set_std(0, 0, 1.0);
+///         sig.sym_set_std(1, 1, 2.0);
+///         sig.sym_set_std(0, 1, 3.0);
 ///         Ok(())
 ///     })?;
 ///     // solution (A = 6):
@@ -90,9 +90,9 @@ use russell_tensor::{Mandel, Tensor2};
 ///     Ok(())
 /// }
 /// ```
-pub fn vec_04_bt<F>(d: &mut Vector, args: &mut CommonArgs, mut fn_sig: F) -> Result<(), StrError>
+pub fn vec_04_bt<const N: usize, F>(d: &mut Vector, args: &mut CommonArgs, mut fn_sig: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Tensor2, usize, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor2<N>, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
@@ -102,9 +102,12 @@ where
     if args.axisymmetric && space_ndim != 2 {
         return Err("axisymmetric requires space_ndim = 2");
     }
+    if N != 2 * space_ndim {
+        return Err("tensor dimension N must equal 2 * space_ndim");
+    }
 
     // allocate auxiliary tensor
-    let mut sig = Tensor2::new(Mandel::new(2 * space_ndim));
+    let mut sig = Tensor2::<N>::new();
 
     // clear output vector
     if args.clear {
@@ -143,36 +146,52 @@ where
 
 /// Adds contribution to the d-vector in vec_04_bt
 #[inline]
-fn add_to_d(d: &mut Vector, ndim: usize, nnode: usize, c: f64, sig: &Tensor2, args: &mut CommonArgs) {
-    let t = sig.vector();
+fn add_to_d<const N: usize>(
+    d: &mut Vector,
+    ndim: usize,
+    nnode: usize,
+    c: f64,
+    sig: &Tensor2<N>,
+    args: &mut CommonArgs,
+) {
     let s = SQRT_2;
     let b = &args.pad.gradient;
     let ii0 = args.ii0;
     if ndim == 2 {
         for m in 0..nnode {
-            d[ii0 + 0 + m * 2] += c * (t[0] * b.get(m, 0) + t[3] * b.get(m, 1) / s);
-            d[ii0 + 1 + m * 2] += c * (t[3] * b.get(m, 0) / s + t[1] * b.get(m, 1));
+            d[ii0 + 0 + m * 2] += c * (sig.get(0) * b.get(m, 0) + sig.get(3) * b.get(m, 1) / s);
+            d[ii0 + 1 + m * 2] += c * (sig.get(3) * b.get(m, 0) / s + sig.get(1) * b.get(m, 1));
         }
     } else {
         for m in 0..nnode {
-            d[ii0 + 0 + m * 3] += c * (t[0] * b.get(m, 0) + t[3] * b.get(m, 1) / s + t[5] * b.get(m, 2) / s);
-            d[ii0 + 1 + m * 3] += c * (t[3] * b.get(m, 0) / s + t[1] * b.get(m, 1) + t[4] * b.get(m, 2) / s);
-            d[ii0 + 2 + m * 3] += c * (t[5] * b.get(m, 0) / s + t[4] * b.get(m, 1) / s + t[2] * b.get(m, 2));
+            d[ii0 + 0 + m * 3] +=
+                c * (sig.get(0) * b.get(m, 0) + sig.get(3) * b.get(m, 1) / s + sig.get(5) * b.get(m, 2) / s);
+            d[ii0 + 1 + m * 3] +=
+                c * (sig.get(3) * b.get(m, 0) / s + sig.get(1) * b.get(m, 1) + sig.get(4) * b.get(m, 2) / s);
+            d[ii0 + 2 + m * 3] +=
+                c * (sig.get(5) * b.get(m, 0) / s + sig.get(4) * b.get(m, 1) / s + sig.get(2) * b.get(m, 2));
         }
     }
 }
 
 /// Adds contribution to the d-vector in vec_04_bt (axisymmetric case)
 #[inline]
-fn add_to_d_axisymmetric(d: &mut Vector, nnode: usize, c: f64, r: f64, sig: &Tensor2, args: &mut CommonArgs) {
-    let t = sig.vector();
+fn add_to_d_axisymmetric<const N: usize>(
+    d: &mut Vector,
+    nnode: usize,
+    c: f64,
+    r: f64,
+    sig: &Tensor2<N>,
+    args: &mut CommonArgs,
+) {
     let s = SQRT_2;
     let nn = &args.pad.interp;
     let b = &args.pad.gradient;
     let ii0 = args.ii0;
     for m in 0..nnode {
-        d[ii0 + 0 + m * 2] += c * r * (t[0] * b.get(m, 0) + t[3] * b.get(m, 1) / s) + c * nn[m] * t[2];
-        d[ii0 + 1 + m * 2] += c * r * (t[3] * b.get(m, 0) / s + t[1] * b.get(m, 1));
+        d[ii0 + 0 + m * 2] +=
+            c * r * (sig.get(0) * b.get(m, 0) + sig.get(3) * b.get(m, 1) / s) + c * nn[m] * sig.get(2);
+        d[ii0 + 1 + m * 2] += c * r * (sig.get(3) * b.get(m, 0) / s + sig.get(1) * b.get(m, 1));
     }
 }
 
@@ -183,22 +202,22 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use russell_lab::{vec_approx_eq, Matrix, Vector};
-    use russell_tensor::{Mandel, Tensor2};
+    use russell_tensor::Tensor2;
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut d = Vector::new(4);
-        let mut sig = Tensor2::new(Mandel::Symmetric2D);
+        let mut sig = Tensor2::<4>::new();
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
-        let f = |_: &mut Tensor2, _, _: &Vector, _: &Matrix| Ok(());
+        let f = |_: &mut Tensor2<4>, _, _: &Vector, _: &Matrix| Ok(());
         f(&mut sig, 0, &nn, &bb).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
-            integ::vec_04_bt(&mut d, &mut args, f).err(),
+            integ::vec_04_bt::<4, _>(&mut d, &mut args, f).err(),
             Some("d.len() must be ≥ ii0 + nnode ⋅ space_ndim")
         );
     }
@@ -217,11 +236,7 @@ mod tests {
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
         let ana = AnalyticalTri3::new(&pad);
-        let sig = Tensor2::from_matrix(
-            &[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]],
-            Mandel::Symmetric2D,
-        )
-        .unwrap();
+        let sig = Tensor2::<4>::from_std_matrix(&[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]]).unwrap();
         let d_correct = ana.vec_04_bt(&sig, false);
 
         // integration points
@@ -238,11 +253,11 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
-                sig.sym_set(0, 0, S00);
-                sig.sym_set(1, 1, S11);
-                sig.sym_set(2, 2, S22);
-                sig.sym_set(0, 1, S01);
+            integ::vec_04_bt::<4, _>(&mut d, &mut args, |sig, _, _, _| {
+                sig.sym_set_std(0, 0, S00);
+                sig.sym_set_std(1, 1, S11);
+                sig.sym_set_std(2, 2, S22);
+                sig.sym_set_std(0, 1, S01);
                 Ok(())
             })
             .unwrap();
@@ -261,11 +276,7 @@ mod tests {
         const S22: f64 = 4.0;
         const S01: f64 = 5.0;
         let ana = AnalyticalTri3::new(&pad);
-        let sig = Tensor2::from_matrix(
-            &[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]],
-            Mandel::Symmetric2D,
-        )
-        .unwrap();
+        let sig = Tensor2::<4>::from_std_matrix(&[[S00, S01, 0.0], [S01, S11, 0.0], [0.0, 0.0, S22]]).unwrap();
         let d_correct = ana.vec_04_bt(&sig, true);
 
         // integration points
@@ -280,11 +291,11 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.data.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             args.axisymmetric = true;
-            integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
-                sig.sym_set(0, 0, S00);
-                sig.sym_set(1, 1, S11);
-                sig.sym_set(2, 2, S22);
-                sig.sym_set(0, 1, S01);
+            integ::vec_04_bt::<4, _>(&mut d, &mut args, |sig, _, _, _| {
+                sig.sym_set_std(0, 0, S00);
+                sig.sym_set_std(1, 1, S11);
+                sig.sym_set_std(2, 2, S22);
+                sig.sym_set_std(0, 1, S01);
                 Ok(())
             })
             .unwrap();
@@ -299,11 +310,11 @@ mod tests {
 
         // solution
         #[rustfmt::skip]
-        let tt = Tensor2::from_matrix(&[
+        let tt = Tensor2::<6>::from_std_matrix(&[
             [2.0, 5.0, 7.0],
             [5.0, 3.0, 6.0],
             [7.0, 6.0, 4.0],
-        ], Mandel::Symmetric).unwrap();
+        ]).unwrap();
         let ana = AnalyticalTet4::new(&pad);
         let d_correct = ana.vec_04_bt(&tt);
 
@@ -321,7 +332,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::vec_04_bt(&mut d, &mut args, |sig, _, _, _| {
+            integ::vec_04_bt::<6, _>(&mut d, &mut args, |sig, _, _, _| {
                 sig.set_tensor(1.0, &tt);
                 Ok(())
             })

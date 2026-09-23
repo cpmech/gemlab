@@ -63,7 +63,7 @@ pub struct GraphUnd {
 impl GraphUnd {
     /// Allocates a new instance given an adjacency set
     fn from_adjacency_set(
-        adjacency_set: &Vec<HashSet<PointId>>,
+        adjacency_set: &[HashSet<PointId>],
         calc_degree: bool,
         check_connectivity: bool,
     ) -> Result<Self, StrError> {
@@ -74,7 +74,7 @@ impl GraphUnd {
         if check_connectivity {
             explored[0] = true;
             queue.push_back(0);
-            while queue.len() != 0 {
+            while !queue.is_empty() {
                 if let Some(a) = queue.pop_front() {
                     for b in &adjacency_set[a] {
                         if !explored[*b] {
@@ -145,7 +145,7 @@ impl GraphUnd {
     /// # Input
     ///
     /// * `calc_degree` -- calculates the degree (the number of connections of a vertex), as required by the
-    ///    Cuthill-McKee algorithm. The degree affects the sorting of rows in the adjacency matrix.
+    ///   Cuthill-McKee algorithm. The degree affects the sorting of rows in the adjacency matrix.
     /// * `check_connectivity` -- checks if the graph is connected
     pub fn from_edges<'a, T>(edges: &'a T, calc_degree: bool, check_connectivity: bool) -> Result<Self, StrError>
     where
@@ -181,7 +181,7 @@ impl GraphUnd {
     /// # Input
     ///
     /// * `calc_degree` -- calculates the degree (the number of connections of a vertex), as required by the
-    ///    Cuthill-McKee algorithm. The degree affects the sorting of rows in the adjacency matrix.
+    ///   Cuthill-McKee algorithm. The degree affects the sorting of rows in the adjacency matrix.
     /// * `check_connectivity` -- checks if the graph is connected
     pub fn from_mesh(mesh: &Mesh, calc_degree: bool, check_connectivity: bool) -> Result<Self, StrError> {
         // find the adjacency (sparse) matrix of nodes' connections
@@ -245,7 +245,7 @@ impl GraphUnd {
         self.queue.push_back(root);
 
         // execute a breadth-first search (BFS)
-        while self.queue.len() != 0 {
+        while !self.queue.is_empty() {
             if let Some(a) = self.queue.pop_front() {
                 for b in &self.adjacency[a] {
                     if !self.explored[*b] {
@@ -285,7 +285,7 @@ impl GraphUnd {
         // run BFS
         self.explored[source] = true;
         self.queue.push_back(source);
-        while self.queue.len() != 0 {
+        while !self.queue.is_empty() {
             if let Some(a) = self.queue.pop_front() {
                 for b in &self.adjacency[a] {
                     if !self.explored[*b] {
@@ -333,7 +333,7 @@ impl GraphUnd {
         // run BFS
         self.explored[root] = true;
         self.queue.push_back(root);
-        while self.queue.len() != 0 {
+        while !self.queue.is_empty() {
             if let Some(a) = self.queue.pop_front() {
                 for b in &self.adjacency[a] {
                     if !self.explored[*b] {
@@ -472,7 +472,7 @@ impl GraphUnd {
             for j in 0..nnode {
                 print!(" {}", non_zeros_pattern[i][j])
             }
-            print!(" │\n");
+            println!(" │");
         }
         println!("└{:1$}┘", " ", width);
     }
@@ -500,7 +500,7 @@ impl GraphUnd {
     /// * `check_connectivity` -- checks if the associated graph is connected
     pub fn renumber_mesh(mesh: &mut Mesh, check_connectivity: bool) -> Result<(), StrError> {
         let calc_degree = true;
-        let mut graph = GraphUnd::from_mesh(&mesh, calc_degree, check_connectivity)?;
+        let mut graph = GraphUnd::from_mesh(mesh, calc_degree, check_connectivity)?;
         let ordering = graph.cuthill_mckee(None)?;
         let old_to_new = GraphUnd::get_old_to_new_map(&ordering);
         mesh.renumber_points(&old_to_new)

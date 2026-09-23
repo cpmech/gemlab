@@ -54,15 +54,13 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     }
 
     // insert cells of mesh B into new mesh
-    let mut new_cell_id = a.cells.len();
-    for cell in &b.cells {
+    for (i, cell) in b.cells.iter().enumerate() {
         mesh.cells.push(Cell {
-            id: new_cell_id,
+            id: a.cells.len() + i,
             marker: cell.marker,
             kind: cell.kind,
             points: cell.points.iter().map(|id| map_old_to_new_point_id_b[*id]).collect(),
         });
-        new_cell_id += 1;
     }
 
     // create a map of boundary markers from mesh A
@@ -70,12 +68,12 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
     let mut marked_faces_map = HashMap::new();
     a.marked_edges.iter().for_each(|(marker, p1, p2)| {
         let mut edge_key = (*p1, *p2);
-        sort2(&mut edge_key);
+        sort2(&mut edge_key.0, &mut edge_key.1);
         marked_edges_map.insert(edge_key, *marker);
     });
     a.marked_faces.iter().for_each(|(marker, p1, p2, p3, p4)| {
         let mut face_key = (*p1, *p2, *p3, *p4);
-        sort4(&mut face_key);
+        sort4(&mut face_key.0, &mut face_key.1, &mut face_key.2, &mut face_key.3);
         marked_faces_map.insert(face_key, *marker);
     });
 
@@ -84,10 +82,8 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
         let p1new = map_old_to_new_point_id_b[*p1];
         let p2new = map_old_to_new_point_id_b[*p2];
         let mut edge_key = (p1new, p2new);
-        sort2(&mut edge_key);
-        if marked_edges_map.get(&edge_key).is_none() {
-            marked_edges_map.insert(edge_key, *marker);
-        }
+        sort2(&mut edge_key.0, &mut edge_key.1);
+        marked_edges_map.entry(edge_key).or_insert(*marker);
     });
     b.marked_faces.iter().for_each(|(marker, p1, p2, p3, p4)| {
         let p1new = map_old_to_new_point_id_b[*p1];
@@ -95,16 +91,14 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
         let p3new = map_old_to_new_point_id_b[*p3];
         let p4new = map_old_to_new_point_id_b[*p4];
         let mut face_key = (p1new, p2new, p3new, p4new);
-        sort4(&mut face_key);
-        if marked_faces_map.get(&face_key).is_none() {
-            marked_faces_map.insert(face_key, *marker);
-        }
+        sort4(&mut face_key.0, &mut face_key.1, &mut face_key.2, &mut face_key.3);
+        marked_faces_map.entry(face_key).or_insert(*marker);
     });
 
     // rebuild marked edges/faces in the new mesh
     mesh.marked_edges.clear();
     mesh.marked_faces.clear();
-    if marked_edges_map.len() > 0 {
+    if !marked_edges_map.is_empty() {
         let mut edge_keys: Vec<_> = marked_edges_map.keys().cloned().collect();
         edge_keys.sort(); // sort just for deterministic behavior (important for tests)
         for edge_key in &edge_keys {
@@ -112,7 +106,7 @@ fn join_two_meshes(a: &Mesh, b: &Mesh) -> Result<Mesh, StrError> {
             mesh.marked_edges.push((marker, edge_key.0, edge_key.1));
         }
     }
-    if marked_faces_map.len() > 0 {
+    if !marked_faces_map.is_empty() {
         let mut face_keys: Vec<_> = marked_faces_map.keys().cloned().collect();
         face_keys.sort(); // sort just for deterministic behavior (important for tests)
         for face_key in &face_keys {

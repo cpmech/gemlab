@@ -751,7 +751,7 @@ impl<'a> Draw<'a> {
         }
 
         // loop over shell cells to draw the 3D surface (the wireframe is already drawn)
-        if shell_cell_ids.len() > 0 {
+        if !shell_cell_ids.is_empty() {
             let surface: Vec<_> = shell_cell_ids.iter().map(|&id| &mesh.cells[id]).collect();
             let res = Triangulation::from_surface(mesh, &surface);
             self.canvas_shells
@@ -829,7 +829,7 @@ impl<'a> Draw<'a> {
         for (marker, p1, p2) in &mesh.marked_edges {
             if ndim == 2 {
                 let mut key = (*p1, *p2);
-                sort2(&mut key);
+                sort2(&mut key.0, &mut key.1);
                 if let Some(edge) = features.edges.get(&key) {
                     let mut pad = Scratchpad::new(ndim, edge.kind)?;
                     mesh.set_pad(&mut pad, &edge.points);
@@ -881,7 +881,7 @@ impl<'a> Draw<'a> {
         let s = f64::sqrt(sum) * self.m_normal_vector_marker;
         for (marker, p1, p2, p3, p4) in &mesh.marked_faces {
             let mut key = (*p1, *p2, *p3, *p4);
-            sort4(&mut key);
+            sort4(&mut key.0, &mut key.1, &mut key.2, &mut key.3);
             if let Some(face) = features.faces.get(&key) {
                 let mut pad = Scratchpad::new(ndim, face.kind)?;
                 mesh.set_pad(&mut pad, &face.points);
@@ -983,7 +983,7 @@ impl<'a> Draw<'a> {
     pub fn boundary_edges_3d(&mut self, features: &Features) {
         if features.mesh.ndim == 3 {
             let edge_keys = features.get_boundary_edges();
-            if edge_keys.len() > 0 {
+            if !edge_keys.is_empty() {
                 for (i, j) in &edge_keys {
                     let a = &features.mesh.points[*i].coords;
                     let b = &features.mesh.points[*j].coords;
@@ -1001,7 +1001,7 @@ impl<'a> Draw<'a> {
     pub fn boundary_faces(&mut self, features: &Features) {
         if features.mesh.ndim == 3 {
             let res = features.triangulate_3d_boundary();
-            if res.triangles.len() > 0 {
+            if !res.triangles.is_empty() {
                 self.canvas_boundary_faces
                     .draw_triangles_3d(&res.xx, &res.yy, &res.zz, &res.triangles);
                 self.plot.add(&self.canvas_boundary_faces);

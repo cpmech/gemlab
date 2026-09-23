@@ -211,7 +211,7 @@ impl<'a> Features<'a> {
     ///
     /// * `mesh` -- the mesh
     /// * `extract_all` -- if true, will extract the boundary and the interior features.
-    ///    Otherwise, if false, will extract the **boundary only**
+    ///   Otherwise, if false, will extract the **boundary only**
     ///
     /// # Notes
     ///
@@ -588,9 +588,7 @@ impl<'a> Features<'a> {
             let mut this_a = cell.points[local_a];
             let mut this_b = cell.points[local_b];
             if this_b < this_a {
-                let temp = this_a;
-                this_a = this_b;
-                this_b = temp;
+                std::mem::swap(&mut this_a, &mut this_b);
             }
             let shares = self.all_2d_edges.get(&(this_a, this_b)).unwrap();
             for share in shares {
@@ -622,7 +620,7 @@ impl<'a> Features<'a> {
                         let p0 = face.points[face.kind.edge_node_id(e, 0)];
                         let p1 = face.points[face.kind.edge_node_id(e, 1)];
                         let mut edge_key = (self.mesh.points[p0].id, self.mesh.points[p1].id);
-                        sort2(&mut edge_key);
+                        sort2(&mut edge_key.0, &mut edge_key.1);
                         edges_keys.insert(edge_key);
                     }
                 }
@@ -791,7 +789,7 @@ impl<'a> Features<'a> {
                 }
             }
         }
-        if point_ids.len() == 0 {
+        if point_ids.is_empty() {
             return Err("cannot find any point with given constraints/filter");
         }
         let mut ids: Vec<_> = point_ids.iter().copied().collect();
@@ -832,7 +830,7 @@ impl<'a> Features<'a> {
                 // the None branch means that the point is not attached to any edge; i.e., a CABLE or SHELL point
             }
         }
-        if edge_keys.len() == 0 {
+        if edge_keys.is_empty() {
             return Err("cannot find any edge with given constraints/filter");
         }
         let mut keys: Vec<_> = edge_keys.iter().copied().collect();
@@ -885,7 +883,7 @@ impl<'a> Features<'a> {
                 // the None branch means that the point is not attached to any face; i.e., a SHELL point
             }
         }
-        if face_keys.len() == 0 {
+        if face_keys.is_empty() {
             return Err("cannot find any face with given constraints/filter");
         }
         let mut keys: Vec<_> = face_keys.iter().copied().collect();
@@ -1081,7 +1079,7 @@ impl<'a> Features<'a> {
         // Loop over point ids
         for point_id in &point_ids {
             // Loop over edges connected to points (using point_to_edges)
-            if let Some(edge_keys) = self.point_to_edges.get(&point_id) {
+            if let Some(edge_keys) = self.point_to_edges.get(point_id) {
                 for edge_key in edge_keys {
                     // Accept edge when at least two edge points validate "At"
                     let accept_edge = if point_ids.contains(&edge_key.0) && point_ids.contains(&edge_key.1) {
@@ -1193,8 +1191,8 @@ mod tests {
         assert_eq!(face.points, &[0, 1, 3]);
         assert_eq!(edge.key(), (1, 2));
         assert_eq!(face.key(), (0, 1, 3, usize::MAX));
-        assert_eq!(feat.get_cells_via_face(&face), &[0]);
-        assert_eq!(feat.get_cells_pairs_via_face(&face), vec![(0, vec![0, 1, 3])]);
+        assert_eq!(feat.get_cells_via_face(face), &[0]);
+        assert_eq!(feat.get_cells_pairs_via_face(face), vec![(0, vec![0, 1, 3])]);
     }
 
     #[test]
@@ -1352,7 +1350,7 @@ mod tests {
         let mesh = Samples::block_2d_four_qua12().clone();
         let features = Features::new(&mesh, true);
         let edges = features.all_2d_edges;
-        let mut keys: Vec<_> = edges.keys().into_iter().collect();
+        let mut keys: Vec<_> = edges.keys().collect();
         keys.sort();
         assert_eq!(edges.len(), 12);
         assert_eq!(
@@ -1666,7 +1664,7 @@ mod tests {
     #[test]
     fn search_points_fails_on_wrong_input() {
         // any_x works
-        assert_eq!(any_x(&vec![]), true);
+        assert_eq!(any_x(&[]), true);
 
         // 2d
         let mesh = Samples::two_qua4();
@@ -2367,10 +2365,10 @@ mod tests {
         let feat = Features::new(&mesh, false);
         let edge = feat.get_edge(1, 2);
         let edges = Edges { all: vec![&edge] };
-        assert_eq!(feat.get_cells_via_2d_edge(&edge), &[1]);
+        assert_eq!(feat.get_cells_via_2d_edge(edge), &[1]);
         assert_eq!(feat.get_cells_via_2d_edges(&edges), &[1]);
         assert_eq!(feat.get_points_via_2d_edges(&edges), &[1, 2]);
-        assert_eq!(feat.get_cells_pairs_via_2d_edge(&edge), vec![(1, vec![2, 1])]);
+        assert_eq!(feat.get_cells_pairs_via_2d_edge(edge), vec![(1, vec![2, 1])]);
         assert_eq!(feat.get_cells_pairs_via_2d_edges(&edges), vec![(1, vec![2, 1])]);
     }
 
@@ -2396,16 +2394,16 @@ mod tests {
         let edges = Edges {
             all: vec![&edge_a, &edge_b],
         };
-        assert_eq!(feat.get_cells_via_2d_edge(&edge_a), &[0, 2]);
-        assert_eq!(feat.get_cells_via_2d_edge(&edge_b), &[1, 3]);
+        assert_eq!(feat.get_cells_via_2d_edge(edge_a), &[0, 2]);
+        assert_eq!(feat.get_cells_via_2d_edge(edge_b), &[1, 3]);
         assert_eq!(feat.get_cells_via_2d_edges(&edges), &[0, 1, 2, 3]);
         assert_eq!(feat.get_points_via_2d_edges(&edges), &[2, 3, 5]);
         assert_eq!(
-            feat.get_cells_pairs_via_2d_edge(&edge_a),
+            feat.get_cells_pairs_via_2d_edge(edge_a),
             vec![(0, vec![3, 2]), (2, vec![3, 2])]
         );
         assert_eq!(
-            feat.get_cells_pairs_via_2d_edge(&edge_b),
+            feat.get_cells_pairs_via_2d_edge(edge_b),
             vec![(1, vec![2, 5]), (3, vec![2, 5])]
         );
         assert_eq!(
@@ -2436,12 +2434,12 @@ mod tests {
         let faces = Faces {
             all: vec![&face_a, &face_b],
         };
-        assert_eq!(feat.get_cells_via_face(&face_a), &[0]);
-        assert_eq!(feat.get_cells_via_face(&face_b), &[1]);
+        assert_eq!(feat.get_cells_via_face(face_a), &[0]);
+        assert_eq!(feat.get_cells_via_face(face_b), &[1]);
         assert_eq!(feat.get_cells_via_faces(&faces), &[0, 1]);
         assert_eq!(feat.get_points_via_faces(&faces), &[2, 3, 6, 7]);
-        assert_eq!(feat.get_cells_pairs_via_face(&face_a), vec![(0, vec![2, 3, 7, 6])]);
-        assert_eq!(feat.get_cells_pairs_via_face(&face_b), vec![(1, vec![2, 6, 3])]);
+        assert_eq!(feat.get_cells_pairs_via_face(face_a), vec![(0, vec![2, 3, 7, 6])]);
+        assert_eq!(feat.get_cells_pairs_via_face(face_b), vec![(1, vec![2, 6, 3])]);
         assert_eq!(
             feat.get_cells_pairs_via_faces(&faces),
             vec![(0, vec![2, 3, 7, 6]), (1, vec![2, 6, 3])]
@@ -2457,16 +2455,16 @@ mod tests {
         let faces = Faces {
             all: vec![&face_a, &face_b],
         };
-        assert_eq!(feat.get_cells_via_face(&face_a), &[0, 2]);
-        assert_eq!(feat.get_cells_via_face(&face_b), &[4, 6]);
+        assert_eq!(feat.get_cells_via_face(face_a), &[0, 2]);
+        assert_eq!(feat.get_cells_via_face(face_b), &[4, 6]);
         assert_eq!(feat.get_cells_via_faces(&faces), &[0, 2, 4, 6]);
         assert_eq!(feat.get_points_via_faces(&faces), &[2, 3, 6, 7, 20, 21]);
         assert_eq!(
-            feat.get_cells_pairs_via_face(&face_a),
+            feat.get_cells_pairs_via_face(face_a),
             vec![(0, vec![2, 3, 7, 6]), (2, vec![2, 3, 7, 6])]
         );
         assert_eq!(
-            feat.get_cells_pairs_via_face(&face_b),
+            feat.get_cells_pairs_via_face(face_b),
             vec![(4, vec![6, 7, 21, 20]), (6, vec![6, 7, 21, 20])]
         );
         assert_eq!(
