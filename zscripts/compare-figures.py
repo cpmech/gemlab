@@ -93,11 +93,14 @@ def _round(match: "re.Match[str]", decimals: int) -> str:
     return text
 
 
-# Matplotlib uses random identifiers for clip paths and markers (e.g.
-# id="p55578eea23" / clip-path="url(#p55578eea23)" and id="md60f825453" /
-# xlink:href="#md60f825453"). They are not stable between runs but do not affect
-# rendering, so mask them (both the definition and its reference).
-RANDOM_ID_RE = re.compile(r"\b[pm][0-9a-fA-F]{6,}\b")
+# Matplotlib uses random identifiers for clip paths, markers and images (e.g.
+# id="p55578eea23", id="md60f825453", id="image192e7172cd", together with the
+# matching clip-path="url(#...)" / xlink:href="#..."). They are not stable
+# between runs but do not affect rendering, so mask both the definition and its
+# reference. Deterministic ids contain an underscore (e.g. "patch_1",
+# "line2d_19") and are left untouched.
+RANDOM_ID_DEF_RE = re.compile(r'id="[A-Za-z0-9_]*[0-9a-fA-F]{8,}"')
+RANDOM_ID_REF_RE = re.compile(r'(url\(#|href="#)[A-Za-z0-9_]*[0-9a-fA-F]{8,}')
 
 
 def normalize(text: str, decimals: int) -> str:
@@ -105,7 +108,8 @@ def normalize(text: str, decimals: int) -> str:
     text = re.sub(r"<!DOCTYPE.*?>", "", text, flags=re.S)
     text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
     text = re.sub(r"<metadata>.*?</metadata>", "", text, flags=re.S)
-    text = RANDOM_ID_RE.sub("ID", text)
+    text = RANDOM_ID_DEF_RE.sub('id="ID"', text)
+    text = RANDOM_ID_REF_RE.sub(r"\1ID", text)
     if decimals >= 0:
         text = FLOAT_RE.sub(lambda m: _round(m, decimals), text)
     return text
