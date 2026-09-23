@@ -32,6 +32,8 @@
     "isoparametric",
     "Jcable",
     "Jshell",
+    "kdel",
+    "kmin",
     "ldconfig",
     "liblapacke",
     "libopenblas",

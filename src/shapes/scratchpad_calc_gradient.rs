@@ -166,7 +166,7 @@ mod tests {
 
         // loop over shapes
         for (kind, tol) in problem {
-            // println!("kind = {:?}", kind);
+            println!("kind = {:?}", kind);
 
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
