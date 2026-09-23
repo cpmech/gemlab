@@ -601,6 +601,8 @@ impl<'a> Features<'a> {
     }
 
     /// Extracts all boundary edges
+    ///
+    /// Returns the edges sorted by their edge keys (deterministic order).
     pub fn get_boundary_edges(&self) -> Vec<EdgeKey> {
         if self.mesh.ndim == 2 {
             let mut boundary_edges = Vec::new();
@@ -610,6 +612,7 @@ impl<'a> Features<'a> {
                     boundary_edges.push(*edge_key);
                 }
             }
+            boundary_edges.sort();
             boundary_edges
         } else {
             let mut edges_keys = HashSet::new();
@@ -625,14 +628,16 @@ impl<'a> Features<'a> {
                     }
                 }
             }
-            edges_keys.into_iter().collect()
+            let mut boundary_edges: Vec<_> = edges_keys.into_iter().collect();
+            boundary_edges.sort();
+            boundary_edges
         }
     }
 
     /// Triangulates the 3D boundary faces into triangles
     ///
-    /// Note: the order of the output arrays is non-deterministic because it depends
-    /// on the HashMap structures used to extract the boundary features.
+    /// The boundary faces are processed in sorted (deterministic) order, so the
+    /// output arrays are reproducible.
     ///
     /// **Note:** Only Tri and Qua cells will be triangulated; other cell classes will be ignored.
     /// Therefore, the result may be empty if no Tri or Qua cells are found on the surface.
@@ -645,19 +650,21 @@ impl<'a> Features<'a> {
         let ndim = 3;
         assert_eq!(self.mesh.ndim, ndim);
 
-        // collect boundary faces
-        let surface: Vec<_> = self
+        // collect boundary faces in deterministic order
+        let mut boundary: Vec<_> = self
             .faces
             .iter()
             .filter_map(|(face_key, face)| {
                 let shared_by_ncell = self.all_faces.get(face_key).unwrap().len();
                 if shared_by_ncell == 1 {
-                    Some(face)
+                    Some((*face_key, face))
                 } else {
                     None
                 }
             })
             .collect();
+        boundary.sort_by_key(|(face_key, _)| *face_key);
+        let surface: Vec<_> = boundary.into_iter().map(|(_, face)| face).collect();
 
         // perform triangulation
         Triangulation::from_surface(self.mesh, &surface)

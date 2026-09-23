@@ -93,11 +93,19 @@ def _round(match: "re.Match[str]", decimals: int) -> str:
     return text
 
 
+# Matplotlib uses random identifiers for clip paths and markers (e.g.
+# id="p55578eea23" / clip-path="url(#p55578eea23)" and id="md60f825453" /
+# xlink:href="#md60f825453"). They are not stable between runs but do not affect
+# rendering, so mask them (both the definition and its reference).
+RANDOM_ID_RE = re.compile(r"\b[pm][0-9a-fA-F]{6,}\b")
+
+
 def normalize(text: str, decimals: int) -> str:
     """Remove volatile parts and (optionally) round floating-point numbers."""
     text = re.sub(r"<!DOCTYPE.*?>", "", text, flags=re.S)
     text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
     text = re.sub(r"<metadata>.*?</metadata>", "", text, flags=re.S)
+    text = RANDOM_ID_RE.sub("ID", text)
     if decimals >= 0:
         text = FLOAT_RE.sub(lambda m: _round(m, decimals), text)
     return text
@@ -306,6 +314,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
                    help=f"directory with reference SVGs (default: {DEFAULT_REFERENCE})")
     p.add_argument("--pattern", default="*.svg",
                    help="glob for generated files (default: *.svg)")
+    p.add_argument("--recursive", action="store_true",
+                   help="search the generated directory recursively (for projects that write "
+                        "figures into sub-directories, e.g. /tmp/plotpy/{doc_tests,integ_tests}); "
+                        "files are still matched to references by basename")
     p.add_argument("--diff", action="store_true",
                    help="text mode: print a unified diff for the files that differ")
     p.add_argument("--max-lines", type=int, default=40,
@@ -351,10 +363,21 @@ def main(argv: list[str]) -> int:
             print(f"error: {exc}", file=sys.stderr)
             return 2
 
-    generated_files = sorted(p for p in args.generated.glob(args.pattern) if p.is_file())
+    if args.recursive:
+        generated_files = sorted(p for p in args.generated.rglob(args.pattern) if p.is_file())
+    else:
+        generated_files = sorted(p for p in args.generated.glob(args.pattern) if p.is_file())
     if not generated_files:
         print(f"error: no files match {args.pattern!r} in {args.generated}", file=sys.stderr)
         return 2
+
+    # guard against basename collisions when searching recursively
+    seen: set[str] = set()
+    for gen in generated_files:
+        if gen.name in seen:
+            print(f"error: duplicate basename {gen.name!r} under {args.generated}", file=sys.stderr)
+            return 2
+        seen.add(gen.name)
 
     results: list[Result] = []
     for gen in generated_files:

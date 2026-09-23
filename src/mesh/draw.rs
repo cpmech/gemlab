@@ -933,8 +933,12 @@ impl<'a> Draw<'a> {
         let mut un = Tensor1::new();
         let mut x = Tensor1::new();
         if ndim == 2 {
-            for (edge_key, edge) in &features.edges {
-                let ncell = features.all_2d_edges.get(edge_key).unwrap().len();
+            // iterate in deterministic (sorted) order because `features.edges` is a HashMap
+            let mut edge_keys: Vec<_> = features.edges.keys().copied().collect();
+            edge_keys.sort();
+            for edge_key in edge_keys {
+                let edge = &features.edges[&edge_key];
+                let ncell = features.all_2d_edges[&edge_key].len();
                 if ncell == 1 {
                     // only boundary edges
                     let mut pad = Scratchpad::new(ndim, edge.kind)?;
@@ -951,8 +955,12 @@ impl<'a> Draw<'a> {
             }
             self.plot.add(&self.canvas_normals_2d);
         } else {
-            for (face_key, face) in &features.faces {
-                let ncell = features.all_faces.get(face_key).unwrap().len();
+            // iterate in deterministic (sorted) order because `features.faces` is a HashMap
+            let mut face_keys: Vec<_> = features.faces.keys().copied().collect();
+            face_keys.sort();
+            for face_key in face_keys {
+                let face = &features.faces[&face_key];
+                let ncell = features.all_faces[&face_key].len();
                 if ncell == 1 {
                     // boundary faces only
                     let mut pad = Scratchpad::new(ndim, face.kind)?;

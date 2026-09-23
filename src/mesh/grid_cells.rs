@@ -379,10 +379,16 @@ impl<'a> GridCells<'a> {
         // draw cells and ids
         let mut canvas_cells = Canvas::new();
         canvas_cells.set_edge_color("#fcb827").set_face_color("#fefddc");
-        for container in self.containers.values() {
-            for cell_id in container {
-                let cell = &self.mesh.cells[*cell_id];
-                self.mesh.draw_cell(&mut canvas_cells, *cell_id)?;
+        // iterate in deterministic (sorted) order because containers are HashMaps/HashSets
+        let mut container_keys: Vec<_> = self.containers.keys().copied().collect();
+        container_keys.sort();
+        for key in container_keys {
+            let container = &self.containers[&key];
+            let mut cell_ids: Vec<_> = container.iter().copied().collect();
+            cell_ids.sort();
+            for cell_id in cell_ids {
+                let cell = &self.mesh.cells[cell_id];
+                self.mesh.draw_cell(&mut canvas_cells, cell_id)?;
                 if with_ids {
                     draw_ids(cell);
                 }
