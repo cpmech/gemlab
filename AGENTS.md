@@ -43,6 +43,25 @@ If a path is still wrong after the debounce window — or the watcher is disable
 (incremental) or `codegraph index` (full rebuild); `codegraph unlock` clears a
 stale lock file.
 
+## Test / lint commands
+
+```bash
+# Run tests
+cargo test --all-features
+
+# Formatting (CI runs the check)
+cargo fmt --all
+cargo fmt --all -- --check
+
+# Lint
+cargo clippy --all-targets --all-features
+
+# Coverage (nightly + llvm-tools-preview); project requires >95% lines
+cargo llvm-cov --workspace --all-features \
+  --ignore-filename-regex 'build.rs|mem_check.rs|mem_check_lab.rs' \
+  --fail-under-lines 95
+```
+
 ## Extra features:
 
 - `local_sparse` (and `cudss`) on `russell_sparse`, `russell_ode`,
