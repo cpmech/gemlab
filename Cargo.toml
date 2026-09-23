@@ -34,6 +34,7 @@ structopt = "0.3"
 
 [dev-dependencies]
 criterion = "0.8"
+serial_test = "3.5"
 
 [lints.clippy]
 approx_constant = "allow"        # allow large constants; e.g. for OEIS reference

@@ -66,6 +66,7 @@
     "structopt",
     "suitesparse",
     "tetgen",
+    "trigen",
     "tritet",
     "Warshall",
     "zdocker",

@@ -71,6 +71,11 @@ fn apply_constraints(mesh: &mut Mesh, rmin: f64, rmax: f64) {
 
 impl Unstructured {
     /// Allocates a mesh from the data stored in a Trigen instance
+    ///
+    /// # Warning
+    ///
+    /// The underlying Triangle C library uses global state and is **not thread-safe**.
+    /// Do not call this function concurrently with other Trigen/Tetgen operations.
     pub fn from_trigen(trigen: &Trigen) -> Mesh {
         // allocate data
         const NDIM: usize = 2;
@@ -109,6 +114,11 @@ impl Unstructured {
     }
 
     /// Allocates a mesh from the data stored in a Tetgen instance
+    ///
+    /// # Warning
+    ///
+    /// The underlying TetGen C++ library uses global state and is **not thread-safe**.
+    /// Do not call this function concurrently with other Tetgen/Trigen operations.
     ///
     /// # Notes
     ///
@@ -157,6 +167,11 @@ impl Unstructured {
     }
 
     /// Generates a triangular mesh from a Planar Straight Line Graph (PSLG) defined by a Mesh
+    ///
+    /// # Warning
+    ///
+    /// The underlying Triangle C library uses global state and is **not thread-safe**.
+    /// Serialize calls to this function, e.g. with a process-wide mutex (tests use `serial_test`).
     pub fn call_trigen(
         pslg: &Mesh,
         holes: &[(f64, f64)],
@@ -237,6 +252,11 @@ impl Unstructured {
     /// Generates a tetrahedral mesh from a Piecewise Linear Complex (PLC) defined by a Mesh
     ///
     /// The PLC must contain only faces (shells) and each face must be either a Tri3 or a Qua4.
+    ///
+    /// # Warning
+    ///
+    /// The underlying TetGen C++ library uses global state and is **not thread-safe**.
+    /// Serialize calls to this function, e.g. with a process-wide mutex (tests use `serial_test`).
     pub fn call_tetgen(
         plc: &Mesh,
         regions: &[(i32, f64, f64, f64)],
@@ -371,6 +391,11 @@ impl Unstructured {
     ///                 A ------- C
     ///               (-1)      (-3)
     /// ```
+    ///
+    /// # Warning
+    ///
+    /// The underlying Triangle C library uses global state and is **not thread-safe**.
+    /// Serialize calls to this function, e.g. with a process-wide mutex (tests use `serial_test`).
     ///
     /// # Input
     ///
@@ -533,6 +558,11 @@ impl Unstructured {
     ///                 A ------- C
     ///               (-1)      (-3)
     /// ```
+    ///
+    /// # Warning
+    ///
+    /// The underlying TetGen C++ library uses global state and is **not thread-safe**.
+    /// Serialize calls to this function, e.g. with a process-wide mutex (tests use `serial_test`).
     ///
     /// # Input
     ///
@@ -779,6 +809,7 @@ mod tests {
     use crate::util::any_x;
     use plotpy::Surface;
     use russell_lab::approx_eq;
+    use serial_test::serial; // because the trigen/tetgen C libraries are not thread-safe
 
     const RMIN: f64 = 3.0;
     const RMAX: f64 = 6.0;
@@ -883,6 +914,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn from_trigen_works() {
         let mut trigen = Trigen::new(3, Some(3), Some(1), None).unwrap();
         trigen.set_point(0, -100, 0.0, 0.0).unwrap();
@@ -916,6 +948,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn from_tetgen_works() {
         // allocate data for 4 points
         let mut tetgen = Tetgen::new(4, Some(vec![3, 3, 3, 3]), Some(1), None).unwrap();
@@ -960,6 +993,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn from_tetgen_works_o2() {
         // allocate data for 4 points
         let mut tetgen = Tetgen::new(4, Some(vec![3, 3, 3, 3]), Some(1), None).unwrap();
@@ -1004,6 +1038,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn from_trigen_works_o2() {
         let mut trigen = Trigen::new(3, Some(3), Some(1), None).unwrap();
         trigen.set_point(0, -100, 0.0, 0.0).unwrap();
@@ -1046,6 +1081,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn call_trigen_works_1() {
         let pslg = Samples::two_qua4();
         let holes = Vec::new();
@@ -1139,6 +1175,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn call_trigen_works_4() {
         let pslg = Samples::two_qua4();
         let holes = Vec::new();
@@ -1162,6 +1199,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn call_tetgen_works_1() {
         let plc = Samples::two_hex8();
         let regions = vec![(1, 0.5, 0.5, 0.5), (2, 0.5, 0.5, 1.5)];
@@ -1222,6 +1260,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn call_tetgen_works_2() {
         let plc = Samples::one_hex8();
         let regions = vec![(1, 0.5, 0.5, 0.5)];
@@ -1237,6 +1276,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_2d_captures_errors() {
         assert_eq!(
             Unstructured::quarter_ring_2d(RMIN, RMAX, 0, 4, GeoKind::Tri3, None, false).err(),
@@ -1253,6 +1293,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_2d_works() {
         let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, None, false).unwrap();
         if SAVE_FIGURE {
@@ -1279,6 +1320,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_2d_o2_works() {
         let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, None, false).unwrap();
         if SAVE_FIGURE {
@@ -1311,6 +1353,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_2d_global_max_area_works() {
         let global_max_area = Some(0.4);
         let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri3, global_max_area, false).unwrap();
@@ -1344,6 +1387,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_2d_o2_global_max_area_works() {
         let global_max_area = Some(0.4);
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri6, global_max_area, false).unwrap();
@@ -1378,6 +1422,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_2d_tri10_works() {
         let mut mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri10, None, false).unwrap();
         if SAVE_FIGURE {
@@ -1410,6 +1455,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_2d_tri15_works() {
         let mesh = Unstructured::quarter_ring_2d(RMIN, RMAX, 2, 4, GeoKind::Tri15, None, false).unwrap();
         if SAVE_FIGURE {
@@ -1439,6 +1485,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_3d_handles_errors() {
         assert_eq!(
             Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 0, 4, GeoKind::Tet4, None, false).err(),
@@ -1482,6 +1529,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_3d_works() {
         let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet4, None, false).unwrap();
         if SAVE_FIGURE {
@@ -1511,6 +1559,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_3d_o2_works() {
         let mesh = Unstructured::quarter_ring_3d(RMIN, RMAX, 1.0, 2, 4, GeoKind::Tet10, None, false).unwrap();
         if SAVE_FIGURE {
@@ -1542,6 +1591,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn tri_quarter_ring_3d_o2_max_vol_works() {
         let global_max_volume = Some(0.5);
         let mut mesh =
