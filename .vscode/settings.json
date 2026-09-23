@@ -28,6 +28,8 @@
     "gemlab",
     "integ",
     "interp",
+    "Jcable",
+    "Jshell",
     "ldconfig",
     "liblapacke",
     "libopenblas",
