@@ -73,8 +73,8 @@ fn main() -> Result<(), StrError> {
     // ```
     let mut b = Vector::filled(nnode * space_ndim, 0.0);
     integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
-        v[0] = 12.0;
-        v[1] = 12.0;
+        v.set(0, 12.0);
+        v.set(1, 12.0);
         Ok(())
     })?;
     assert_eq!(
@@ -110,8 +110,8 @@ fn main() -> Result<(), StrError> {
     //     └    ┘
     let mut c = Vector::filled(nnode, 0.0);
     integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
-        w[0] = -2.0;
-        w[1] = 4.0;
+        w.set(0, -2.0);
+        w.set(1, 4.0);
         Ok(())
     })?;
     assert_eq!(

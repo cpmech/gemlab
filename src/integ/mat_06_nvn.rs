@@ -2,6 +2,7 @@ use super::CommonArgs;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
+use russell_tensor::Tensor1;
 
 /// Implements the shape(N) times vector(V) times shape(Nb) integration case 06 (e.g., coupling matrix)
 ///
@@ -60,7 +61,8 @@ use russell_lab::{Matrix, Vector};
 /// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute B)
 /// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
 /// * `fn_v` -- Function `f(v,p,N,B,Nb)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
-///   shape functions N(ιᵖ), gradients B(ιᵖ), and shape functions Nb(ιᵖ). `v.dim() = space_ndim`.
+///   shape functions N(ιᵖ), gradients B(ιᵖ), and shape functions Nb(ιᵖ). `v` has 3 components (only
+///   `space_ndim` are used).
 ///
 /// # Warning
 ///
@@ -73,7 +75,7 @@ pub fn mat_06_nvn<F>(
     mut fn_v: F,
 ) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Matrix, &Vector) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor1, usize, &Vector, &Matrix, &Vector) -> Result<(), StrError>,
 {
     // check
     let nnode_b = pad_b.interp.dim();
@@ -88,7 +90,7 @@ where
     }
 
     // allocate auxiliary vector
-    let mut v = Vector::new(space_ndim);
+    let mut v = Tensor1::new();
 
     // clear output matrix
     if args.clear {
@@ -127,16 +129,16 @@ where
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode_b {
-                    kk.add(ii0 + 0 + m * 2, jj0 + n, c * nn[m] * v[0] * nnb[n]);
-                    kk.add(ii0 + 1 + m * 2, jj0 + n, c * nn[m] * v[1] * nnb[n]);
+                    kk.add(ii0 + 0 + m * 2, jj0 + n, c * nn[m] * v.get(0) * nnb[n]);
+                    kk.add(ii0 + 1 + m * 2, jj0 + n, c * nn[m] * v.get(1) * nnb[n]);
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode_b {
-                    kk.add(ii0 + 0 + m * 3, jj0 + n, c * nn[m] * v[0] * nnb[n]);
-                    kk.add(ii0 + 1 + m * 3, jj0 + n, c * nn[m] * v[1] * nnb[n]);
-                    kk.add(ii0 + 2 + m * 3, jj0 + n, c * nn[m] * v[2] * nnb[n]);
+                    kk.add(ii0 + 0 + m * 3, jj0 + n, c * nn[m] * v.get(0) * nnb[n]);
+                    kk.add(ii0 + 1 + m * 3, jj0 + n, c * nn[m] * v.get(1) * nnb[n]);
+                    kk.add(ii0 + 2 + m * 3, jj0 + n, c * nn[m] * v.get(2) * nnb[n]);
                 }
             }
         }
@@ -151,6 +153,7 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs, Gauss};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
+    use russell_tensor::Tensor1;
 
     #[test]
     fn capture_some_errors() {
@@ -158,11 +161,11 @@ mod tests {
         let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
-        let mut v = Vector::new(0);
+        let mut v = Tensor1::new();
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
         let nnb = Vector::new(0);
-        let f = |_v: &mut Vector, _p: usize, _nn: &Vector, _bb: &Matrix, _nnb: &Vector| Ok(());
+        let f = |_v: &mut Tensor1, _p: usize, _nn: &Vector, _bb: &Matrix, _nnb: &Vector| Ok(());
         f(&mut v, 0, &nn, &bb, &nnb).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
@@ -196,8 +199,8 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_06_nvn(&mut kk, &mut args, &mut pad_b, |v, _, _, _, _| {
-                v[0] = v0;
-                v[1] = v1;
+                v.set(0, v0);
+                v.set(1, v1);
                 Ok(())
             })
             .unwrap();
@@ -222,9 +225,9 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_06_nvn(&mut kk, &mut args, &mut pad_b, |v, _, _, _, _| {
-                v[0] = v0;
-                v[1] = v1;
-                v[2] = v2;
+                v.set(0, v0);
+                v.set(1, v1);
+                v.set(2, v2);
                 Ok(())
             })
             .unwrap();

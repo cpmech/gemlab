@@ -5,6 +5,7 @@ use crate::StrError;
 use plotpy::{Canvas, Curve, InsetAxes, Plot, Text};
 use russell_lab::math::PI;
 use russell_lab::{sort2, sort4, Vector};
+use russell_tensor::Tensor1;
 use std::ffi::OsStr;
 
 /// Implements functions to draw cells, edges, and faces or the whole mesh
@@ -819,8 +820,8 @@ impl<'a> Draw<'a> {
         let mesh = &features.mesh;
         let ndim = mesh.ndim;
         let ksi = &[0.0, 0.0];
-        let mut un = Vector::new(ndim);
-        let mut x = Vector::new(ndim);
+        let mut un = Tensor1::new();
+        let mut x = Tensor1::new();
         let mut sum = 0.0;
         for i in 0..ndim {
             sum += f64::abs(features.max[i] - features.min[i]) * f64::abs(features.max[i] - features.min[i]);
@@ -835,27 +836,32 @@ impl<'a> Draw<'a> {
                     mesh.set_pad(&mut pad, &edge.points);
                     pad.calc_normal_vector(&mut un, ksi)?;
                     pad.calc_coords(&mut x, ksi)?;
-                    let alpha = if f64::abs(un[1]) < self.tol_edge_marker {
+                    let alpha = if f64::abs(un.get(1)) < self.tol_edge_marker {
                         0.0
-                    } else if f64::abs(un[0]) < self.tol_edge_marker {
+                    } else if f64::abs(un.get(0)) < self.tol_edge_marker {
                         90.0
                     } else {
-                        f64::atan(un[1] / un[0]) * 180.0 / PI
+                        f64::atan(un.get(1) / un.get(0)) * 180.0 / PI
                     };
                     self.canvas_edge_markers.set_rotation(alpha).draw(
-                        x[0] + 0.5 * s * un[0],
-                        x[1] + 0.5 * s * un[1],
+                        x.get(0) + 0.5 * s * un.get(0),
+                        x.get(1) + 0.5 * s * un.get(1),
                         &format!("{}", marker),
                     );
-                    self.canvas_edge_markers_lines
-                        .draw_polyline(&[[x[0], x[1]], [x[0] + s * un[0], x[1] + s * un[1]]], false);
+                    self.canvas_edge_markers_lines.draw_polyline(
+                        &[
+                            [x.get(0), x.get(1)],
+                            [x.get(0) + s * un.get(0), x.get(1) + s * un.get(1)],
+                        ],
+                        false,
+                    );
                 }
             } else {
                 for i in 0..ndim {
-                    x[i] = 0.5 * (mesh.points[*p1].coords[i] + mesh.points[*p2].coords[i]);
+                    x.set(i, 0.5 * (mesh.points[*p1].coords[i] + mesh.points[*p2].coords[i]));
                 }
                 self.canvas_edge_markers
-                    .draw_3d(x[0], x[1], x[2], &format!("{}", marker));
+                    .draw_3d(x.get(0), x.get(1), x.get(2), &format!("{}", marker));
             }
         }
         self.plot.add(&self.canvas_edge_markers_lines);
@@ -872,8 +878,8 @@ impl<'a> Draw<'a> {
         }
         let ksi3 = &[1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
         let ksi4 = &[0.0, 0.0, 0.0];
-        let mut un = Vector::new(ndim);
-        let mut x = Vector::new(ndim);
+        let mut un = Tensor1::new();
+        let mut x = Tensor1::new();
         let mut sum = 0.0;
         for i in 0..ndim {
             sum += f64::abs(features.max[i] - features.min[i]) * f64::abs(features.max[i] - features.min[i]);
@@ -893,15 +899,19 @@ impl<'a> Draw<'a> {
                     pad.calc_coords(&mut x, ksi4)?;
                 }
                 self.canvas_face_markers.draw_3d(
-                    x[0] + 0.5 * s * un[0],
-                    x[1] + 0.5 * s * un[1],
-                    x[2] + 0.5 * s * un[2],
+                    x.get(0) + 0.5 * s * un.get(0),
+                    x.get(1) + 0.5 * s * un.get(1),
+                    x.get(2) + 0.5 * s * un.get(2),
                     &format!("{}", marker),
                 );
                 self.canvas_face_markers_lines.polyline_3d_begin();
-                self.canvas_face_markers_lines.polyline_3d_add(x[0], x[1], x[2]);
                 self.canvas_face_markers_lines
-                    .polyline_3d_add(x[0] + s * un[0], x[1] + s * un[1], x[2] + s * un[2]);
+                    .polyline_3d_add(x.get(0), x.get(1), x.get(2));
+                self.canvas_face_markers_lines.polyline_3d_add(
+                    x.get(0) + s * un.get(0),
+                    x.get(1) + s * un.get(1),
+                    x.get(2) + s * un.get(2),
+                );
                 self.canvas_face_markers_lines.polyline_3d_end();
             }
         }
@@ -920,8 +930,8 @@ impl<'a> Draw<'a> {
         let s = f64::sqrt(sum) * self.m_normal_vector;
         let ksi3 = &[1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
         let ksi4 = &[0.0, 0.0, 0.0];
-        let mut un = Vector::new(ndim);
-        let mut x = Vector::new(ndim);
+        let mut un = Tensor1::new();
+        let mut x = Tensor1::new();
         if ndim == 2 {
             for (edge_key, edge) in &features.edges {
                 let ncell = features.all_2d_edges.get(edge_key).unwrap().len();
@@ -931,8 +941,12 @@ impl<'a> Draw<'a> {
                     features.mesh.set_pad(&mut pad, &edge.points);
                     pad.calc_normal_vector(&mut un, ksi4)?;
                     pad.calc_coords(&mut x, ksi4)?;
-                    self.canvas_normals_2d
-                        .draw_arrow(x[0], x[1], x[0] + s * un[0], x[1] + s * un[1]);
+                    self.canvas_normals_2d.draw_arrow(
+                        x.get(0),
+                        x.get(1),
+                        x.get(0) + s * un.get(0),
+                        x.get(1) + s * un.get(1),
+                    );
                 }
             }
             self.plot.add(&self.canvas_normals_2d);
@@ -951,9 +965,12 @@ impl<'a> Draw<'a> {
                         pad.calc_coords(&mut x, ksi4)?;
                     }
                     self.canvas_normals_3d.polyline_3d_begin();
-                    self.canvas_normals_3d.polyline_3d_add(x[0], x[1], x[2]);
-                    self.canvas_normals_3d
-                        .polyline_3d_add(x[0] + s * un[0], x[1] + s * un[1], x[2] + s * un[2]);
+                    self.canvas_normals_3d.polyline_3d_add(x.get(0), x.get(1), x.get(2));
+                    self.canvas_normals_3d.polyline_3d_add(
+                        x.get(0) + s * un.get(0),
+                        x.get(1) + s * un.get(1),
+                        x.get(2) + s * un.get(2),
+                    );
                     self.canvas_normals_3d.polyline_3d_end();
                 }
             }
@@ -969,9 +986,12 @@ impl<'a> Draw<'a> {
                     pad.calc_coords(&mut x, ksi4)?;
                 }
                 self.canvas_normals_3d.polyline_3d_begin();
-                self.canvas_normals_3d.polyline_3d_add(x[0], x[1], x[2]);
-                self.canvas_normals_3d
-                    .polyline_3d_add(x[0] + s * un[0], x[1] + s * un[1], x[2] + s * un[2]);
+                self.canvas_normals_3d.polyline_3d_add(x.get(0), x.get(1), x.get(2));
+                self.canvas_normals_3d.polyline_3d_add(
+                    x.get(0) + s * un.get(0),
+                    x.get(1) + s * un.get(1),
+                    x.get(2) + s * un.get(2),
+                );
                 self.canvas_normals_3d.polyline_3d_end();
             }
             self.plot.add(&self.canvas_normals_3d);

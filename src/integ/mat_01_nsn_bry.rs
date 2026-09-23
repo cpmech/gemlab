@@ -1,6 +1,7 @@
 use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
+use russell_tensor::Tensor1;
 
 /// Implements the shape(N) times scalar(S) times shape(N) integration case 01 (boundary integral version)
 ///
@@ -47,7 +48,7 @@ use russell_lab::{Matrix, Vector};
 ///   the **unit** normal vector `un(x(ιᵖ))`, and shape functions N(ιᵖ).
 pub fn mat_01_nsn_bry<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_s: F) -> Result<(), StrError>
 where
-    F: FnMut(usize, &Vector, &Vector) -> Result<f64, StrError>,
+    F: FnMut(usize, &Tensor1, &Vector) -> Result<f64, StrError>,
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
@@ -68,7 +69,7 @@ where
     }
 
     // allocate auxiliary vector
-    let mut un = Vector::new(space_ndim); // unit normal vector
+    let mut un = Tensor1::new(); // unit normal vector
 
     // clear output matrix
     if args.clear {
@@ -118,14 +119,15 @@ mod tests {
     use crate::integ::{self, AnalyticalTri3, CommonArgs, Gauss};
     use crate::shapes::{GeoClass, GeoKind, Scratchpad};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
+    use russell_tensor::Tensor1;
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_tri3();
         let mut kk = Matrix::new(3, 3);
-        let un = Vector::new(0);
+        let un = Tensor1::new();
         let nn = Vector::new(0);
-        let f = |_, _: &Vector, _: &Vector| Ok(0.0);
+        let f = |_, _: &Tensor1, _: &Vector| Ok(0.0);
         assert_eq!(f(0, &un, &nn).unwrap(), 0.0);
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);

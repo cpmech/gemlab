@@ -1,6 +1,7 @@
 use super::CommonArgs;
 use crate::StrError;
 use russell_lab::Vector;
+use russell_tensor::Tensor1;
 
 /// Implements the the shape(N) times vector(V) integration case 02 (boundary integral version)
 ///
@@ -49,7 +50,7 @@ use russell_lab::Vector;
 /// * `args` --- Common arguments
 /// * `fn_v` -- Function `f(v,p,un,N)` that calculates `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
 ///   the **unit** normal vector `un(x(ιᵖ))`, and shape functions N(ιᵖ).
-///   `v.dim() = space_ndim` and `un.dim() = space_ndim`.
+///   `v` and `un` have 3 components each (only `space_ndim` are used).
 ///
 /// # Requirements
 ///
@@ -60,7 +61,7 @@ use russell_lab::Vector;
 ///
 pub fn vec_02_nv_bry<F>(b: &mut Vector, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Vector) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor1, usize, &Tensor1, &Vector) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
@@ -77,8 +78,8 @@ where
     }
 
     // allocate auxiliary vectors
-    let mut v = Vector::new(space_ndim);
-    let mut un = Vector::new(space_ndim); // unit normal vector
+    let mut v = Tensor1::new();
+    let mut un = Tensor1::new(); // unit normal vector
 
     // clear output vector
     if args.clear {
@@ -113,14 +114,14 @@ where
         // add contribution to b vector
         if space_ndim == 2 {
             for m in 0..nnode {
-                b[ii0 + 0 + m * 2] += coef * nn[m] * v[0];
-                b[ii0 + 1 + m * 2] += coef * nn[m] * v[1];
+                b[ii0 + 0 + m * 2] += coef * nn[m] * v.get(0);
+                b[ii0 + 1 + m * 2] += coef * nn[m] * v.get(1);
             }
         } else {
             for m in 0..nnode {
-                b[ii0 + 0 + m * 3] += coef * nn[m] * v[0];
-                b[ii0 + 1 + m * 3] += coef * nn[m] * v[1];
-                b[ii0 + 2 + m * 3] += coef * nn[m] * v[2];
+                b[ii0 + 0 + m * 3] += coef * nn[m] * v.get(0);
+                b[ii0 + 1 + m * 3] += coef * nn[m] * v.get(1);
+                b[ii0 + 2 + m * 3] += coef * nn[m] * v.get(2);
             }
         }
     }
@@ -137,6 +138,7 @@ mod tests {
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::math::SQRT_2;
     use russell_lab::{vec_approx_eq, Vector};
+    use russell_tensor::Tensor1;
 
     // to test if variables are cleared before sum
     const NOISE: f64 = 1234.56;
@@ -145,10 +147,10 @@ mod tests {
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_tri3();
         let mut b = Vector::new(6);
-        let mut v = Vector::new(0);
-        let un = Vector::new(0);
+        let mut v = Tensor1::new();
+        let un = Tensor1::new();
         let nn = Vector::new(0);
-        let f = |_: &mut Vector, _: usize, _: &Vector, _: &Vector| Ok(());
+        let f = |_: &mut Tensor1, _: usize, _: &Tensor1, _: &Vector| Ok(());
         f(&mut v, 0, &un, &nn).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
@@ -190,8 +192,8 @@ mod tests {
         // uniform
         let mut args = CommonArgs::new(&mut pad, &gauss);
         integ::vec_02_nv_bry(&mut b, &mut args, |t, _, _, _| {
-            t[0] = 0.0;
-            t[1] = -1.0;
+            t.set(0, 0.0);
+            t.set(1, -1.0);
             Ok(())
         })
         .unwrap();
@@ -200,9 +202,9 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &gauss);
         let x_ips = recovery::get_points_coords(args.pad, &gauss).unwrap();
         integ::vec_02_nv_bry(&mut b, &mut args, |t, p, _, _| {
-            let c = x_ips[p][0] / ll;
-            t[0] = 0.0;
-            t[1] = -c;
+            let c = x_ips[p].get(0) / ll;
+            t.set(0, 0.0);
+            t.set(1, -c);
             Ok(())
         })
         .unwrap();
@@ -222,8 +224,8 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &gauss);
         // uniform
         integ::vec_02_nv_bry(&mut b, &mut args, |t, _, _, _| {
-            t[0] = 0.0;
-            t[1] = -1.0;
+            t.set(0, 0.0);
+            t.set(1, -1.0);
             Ok(())
         })
         .unwrap();
@@ -232,9 +234,9 @@ mod tests {
         let x_ips = recovery::get_points_coords(&mut pad, &gauss).unwrap();
         let mut args = CommonArgs::new(&mut pad, &gauss);
         integ::vec_02_nv_bry(&mut b, &mut args, |t, p, _, _| {
-            let c = x_ips[p][0] / ll;
-            t[0] = 0.0;
-            t[1] = -c;
+            let c = x_ips[p].get(0) / ll;
+            t.set(0, 0.0);
+            t.set(1, -c);
             Ok(())
         })
         .unwrap();
@@ -258,8 +260,8 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &gauss);
         // uniform
         integ::vec_02_nv_bry(&mut b, &mut args, |t, _, _, _| {
-            t[0] = 0.0;
-            t[1] = -1.0;
+            t.set(0, 0.0);
+            t.set(1, -1.0);
             Ok(())
         })
         .unwrap();
@@ -280,9 +282,9 @@ mod tests {
         let x_ips = recovery::get_points_coords(&mut pad, &gauss).unwrap();
         let mut args = CommonArgs::new(&mut pad, &gauss);
         integ::vec_02_nv_bry(&mut b, &mut args, |t, p, _, _| {
-            let c = x_ips[p][0] / ll;
-            t[0] = 0.0;
-            t[1] = -c;
+            let c = x_ips[p].get(0) / ll;
+            t.set(0, 0.0);
+            t.set(1, -c);
             Ok(())
         })
         .unwrap();
@@ -322,9 +324,9 @@ mod tests {
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         integ::vec_02_nv_bry(&mut b, &mut args, |t, _, _, _| {
-            t[0] = 0.0;
-            t[1] = 0.0;
-            t[2] = -1.0;
+            t.set(0, 0.0);
+            t.set(1, 0.0);
+            t.set(2, -1.0);
             Ok(())
         })
         .unwrap();
@@ -376,9 +378,9 @@ mod tests {
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         integ::vec_02_nv_bry(&mut b, &mut args, |t, _, _, _| {
-            t[0] = 0.0;
-            t[1] = 0.0;
-            t[2] = -1.0;
+            t.set(0, 0.0);
+            t.set(1, 0.0);
+            t.set(2, -1.0);
             Ok(())
         })
         .unwrap();
@@ -429,8 +431,8 @@ mod tests {
         let mut args = CommonArgs::new(&mut pad, &gauss);
         let p = -20.0;
         integ::vec_02_nv_bry(&mut b, &mut args, |t, _, un, _| {
-            t[0] = p * un[0];
-            t[1] = p * un[1];
+            t.set(0, p * un.get(0));
+            t.set(1, p * un.get(1));
             Ok(())
         })
         .unwrap();

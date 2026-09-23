@@ -3,8 +3,9 @@ use crate::shapes::DET_JAC_NOT_AVAILABLE;
 use crate::shapes::{GeoCase, Scratchpad};
 use crate::util::GridSearch;
 use crate::StrError;
+use russell_lab::approx_eq;
 use russell_lab::math::ONE_BY_3;
-use russell_lab::{approx_eq, Vector};
+use russell_tensor::Tensor1;
 use std::collections::HashMap;
 
 impl Mesh {
@@ -75,7 +76,7 @@ impl Mesh {
         tolerance: f64,
     ) -> Result<(), StrError> {
         let ksi = &[0.0, 0.0];
-        let mut un = Vector::new(self.ndim);
+        let mut un = Tensor1::new();
         for (edge_key, (correct_mag_n, correct_un)) in solutions {
             let edge = edges.get(edge_key).ok_or("cannot find edge_key in edges map")?;
             let mut pad = Scratchpad::new(self.ndim, edge.kind)?;
@@ -83,7 +84,7 @@ impl Mesh {
             let mag_n = pad.calc_normal_vector(&mut un, ksi)?;
             approx_eq(mag_n, *correct_mag_n, tolerance);
             for i in 0..self.ndim {
-                if f64::abs(un[i] - correct_un[i]) > tolerance {
+                if f64::abs(un.get(i) - correct_un[i]) > tolerance {
                     return Err("wrong 2d edge unit normal vector found");
                 }
             }
@@ -101,7 +102,7 @@ impl Mesh {
         tolerance: f64,
     ) -> Result<(), StrError> {
         let ksi = &[0.0, 0.0, 0.0];
-        let mut un = Vector::new(self.ndim);
+        let mut un = Tensor1::new();
         for (face_key, (correct_mag_n, correct_un)) in solutions {
             let face = faces.get(face_key).ok_or("cannot find face_key in faces map")?;
             let mut pad = Scratchpad::new(self.ndim, face.kind)?;
@@ -109,7 +110,7 @@ impl Mesh {
             let mag_n = pad.calc_normal_vector(&mut un, ksi)?;
             approx_eq(mag_n, *correct_mag_n, tolerance);
             for i in 0..self.ndim {
-                if f64::abs(un[i] - correct_un[i]) > tolerance {
+                if f64::abs(un.get(i) - correct_un[i]) > tolerance {
                     return Err("wrong face unit normal vector found");
                 }
             }

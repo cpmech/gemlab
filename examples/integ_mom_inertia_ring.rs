@@ -28,7 +28,7 @@ fn main() -> Result<(), StrError> {
 
         // perform the integration over the domain of a single cell
         second_mom_inertia += scalar_field(&mut pad, &gauss, |p| {
-            let y = x_ips[p][1];
+            let y = x_ips[p].get(1);
             Ok(y * y)
         })?;
     }

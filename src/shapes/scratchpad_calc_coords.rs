@@ -1,6 +1,6 @@
 use super::Scratchpad;
 use crate::StrError;
-use russell_lab::{mat_vec_mul, Vector};
+use russell_tensor::Tensor1;
 
 impl Scratchpad {
     /// Calculates the real coordinates x from reference coordinates ξ
@@ -17,7 +17,7 @@ impl Scratchpad {
     ///
     /// # Output
     ///
-    /// * `x` -- real coordinates (space_ndim)
+    /// * `x` -- real coordinates (space_ndim); components beyond `space_ndim` are set to zero
     /// * `pad.interp` -- (nnode) interpolation functions @ ξ
     ///
     /// # Input
@@ -29,7 +29,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_lab::{Vector, vec_approx_eq};
+    /// use russell_tensor::{Tensor1, t1_approx_eq};
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //  3-------------2         ξ₀   ξ₁
@@ -53,22 +53,29 @@ impl Scratchpad {
     ///     pad.set_xx(3, 0, x0);
     ///     pad.set_xx(3, 1, y0 + h);
     ///
-    ///     let mut x = Vector::new(2);
+    ///     let mut x = Tensor1::new();
     ///     pad.calc_coords(&mut x, &[0.0, 0.0])?;
-    ///     vec_approx_eq(&x, &[x0 + w / 2.0, y0 + h / 2.0], 1e-15);
+    ///     let expected = Tensor1::from(&[x0 + w / 2.0, y0 + h / 2.0, 0.0]);
+    ///     t1_approx_eq(&x, &expected, 1e-15);
     ///     Ok(())
     /// }
     /// ```
-    pub fn calc_coords(&mut self, x: &mut Vector, ksi: &[f64]) -> Result<(), StrError> {
+    pub fn calc_coords(&mut self, x: &mut Tensor1, ksi: &[f64]) -> Result<(), StrError> {
         if !self.ok_xxt {
             return Err("all components of the coordinates matrix must be set first");
         }
-        let space_ndim = self.jacobian.dims().0;
-        if x.dim() != space_ndim {
-            return Err("x.dim() must be equal to space_ndim");
-        }
+        let (space_ndim, nnode) = self.xxt.dims();
         self.calc_interp(ksi);
-        mat_vec_mul(x, 1.0, &self.xxt, &self.interp).unwrap();
+        for i in 0..space_ndim {
+            x.set(i, 0.0);
+            for j in 0..nnode {
+                x.add(i, self.xxt.get(i, j) * self.interp.get(j));
+            }
+        }
+        // reset unused trailing components (e.g., the z component in 2D)
+        for i in space_ndim..3 {
+            x.set(i, 0.0);
+        }
         Ok(())
     }
 }
@@ -80,11 +87,11 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::math::ONE_BY_3;
-    use russell_lab::{vec_approx_eq, Vector};
+    use russell_tensor::{t1_approx_eq, Tensor1};
 
     #[test]
     fn calc_coords_handles_errors() {
-        let mut x = Vector::new(1);
+        let mut x = Tensor1::new();
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         assert_eq!(
             pad.calc_coords(&mut x, &[0.0, 0.0]).err(),
@@ -92,10 +99,7 @@ mod tests {
         );
         pad.set_xx(2, 1, 0.0); // setting the last component
                                // (cannot really check that all components have been set)
-        assert_eq!(
-            pad.calc_coords(&mut x, &[0.0, 0.0]).err(),
-            Some("x.dim() must be equal to space_ndim")
-        );
+        pad.calc_coords(&mut x, &[0.0, 0.0]).unwrap();
     }
 
     #[test]
@@ -128,8 +132,8 @@ mod tests {
 
             // loop over nodes of shape
             let nnode = kind.nnode();
-            let mut x = Vector::new(space_ndim);
-            let mut x_correct = Vector::new(space_ndim);
+            let mut x = Tensor1::new();
+            let mut x_correct = Tensor1::new();
             let (ksi_min, ksi_del) = kind.ksi_min_ksi_del();
             for m in 0..nnode {
                 // get ξᵐ corresponding to node m
@@ -140,7 +144,7 @@ mod tests {
 
                 // compare xᵐ with generated coordinates
                 aux::map_point_coords(&mut x_correct, ksi, ksi_min, ksi_del);
-                vec_approx_eq(&x, &x_correct, tol);
+                t1_approx_eq(&x, &x_correct, tol);
             }
 
             // test again inside the reference domain
@@ -151,7 +155,7 @@ mod tests {
             };
             pad.calc_coords(&mut x, &ksi_in).unwrap();
             aux::map_point_coords(&mut x_correct, &ksi_in, ksi_min, ksi_del);
-            vec_approx_eq(&x, &x_correct, tol_in);
+            t1_approx_eq(&x, &x_correct, tol_in);
         }
     }
 }

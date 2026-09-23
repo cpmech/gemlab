@@ -1,6 +1,7 @@
 use super::CommonArgs;
 use crate::StrError;
 use russell_lab::Vector;
+use russell_tensor::Tensor1;
 
 /// Implements the the shape(N) times vector(V) integration case 02
 ///
@@ -48,7 +49,7 @@ use russell_lab::Vector;
 ///   The length must be `b.len() ≥ ii0 + nnode ⋅ space_ndim`
 /// * `args` --- Common arguments
 /// * `fn_v` -- Function `f(v,p,N)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
-///   and shape functions N(ιᵖ). `v.dim() = space_ndim`.
+///   and shape functions N(ιᵖ). `v` has 3 components (only `space_ndim` are used).
 ///
 /// # Examples
 ///
@@ -71,8 +72,8 @@ use russell_lab::Vector;
 ///     let mut b = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
 ///     let mut args = CommonArgs::new(&mut pad, &gauss);
 ///     integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
-///         v[0] = 1.0;
-///         v[1] = 2.0;
+///         v.set(0, 1.0);
+///         v.set(1, 2.0);
 ///         Ok(())
 ///     })?;
 ///     // solution (A = 6):
@@ -84,7 +85,7 @@ use russell_lab::Vector;
 /// ```
 pub fn vec_02_nv<F>(b: &mut Vector, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor1, usize, &Vector) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
@@ -94,7 +95,7 @@ where
     }
 
     // allocate auxiliary vector
-    let mut v = Vector::new(space_ndim);
+    let mut v = Tensor1::new();
 
     // clear output vector
     if args.clear {
@@ -129,14 +130,14 @@ where
         // add contribution to b vector
         if space_ndim == 2 {
             for m in 0..nnode {
-                b[ii0 + 0 + m * 2] += coef * nn[m] * v[0];
-                b[ii0 + 1 + m * 2] += coef * nn[m] * v[1];
+                b[ii0 + 0 + m * 2] += coef * nn[m] * v.get(0);
+                b[ii0 + 1 + m * 2] += coef * nn[m] * v.get(1);
             }
         } else {
             for m in 0..nnode {
-                b[ii0 + 0 + m * 3] += coef * nn[m] * v[0];
-                b[ii0 + 1 + m * 3] += coef * nn[m] * v[1];
-                b[ii0 + 2 + m * 3] += coef * nn[m] * v[2];
+                b[ii0 + 0 + m * 3] += coef * nn[m] * v.get(0);
+                b[ii0 + 1 + m * 3] += coef * nn[m] * v.get(1);
+                b[ii0 + 2 + m * 3] += coef * nn[m] * v.get(2);
             }
         }
     }
@@ -151,14 +152,15 @@ mod tests {
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use crate::recovery;
     use russell_lab::{vec_approx_eq, Vector};
+    use russell_tensor::Tensor1;
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut b = Vector::new(4);
-        let mut v = Vector::new(0);
+        let mut v = Tensor1::new();
         let nn = Vector::new(0);
-        let f = |_v: &mut Vector, _p: usize, _nn: &Vector| Ok(());
+        let f = |_v: &mut Tensor1, _p: usize, _nn: &Vector| Ok(());
         f(&mut v, 0, &nn).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
@@ -198,8 +200,8 @@ mod tests {
             let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_02_nv(&mut b, &mut args, |v, p, _| {
-                v[0] = x_ips[p][0];
-                v[1] = x_ips[p][0]; // << note use of x component here too
+                v.set(0, x_ips[p].get(0));
+                v.set(1, x_ips[p].get(0)); // << note use of x component here too
                 Ok(())
             })
             .unwrap();
@@ -231,8 +233,8 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
-                v[0] = V0;
-                v[1] = V1;
+                v.set(0, V0);
+                v.set(1, V1);
                 Ok(())
             })
             .unwrap();
@@ -264,9 +266,9 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_02_nv(&mut b, &mut args, |v, _, _| {
-                v[0] = V0;
-                v[1] = V1;
-                v[2] = V2;
+                v.set(0, V0);
+                v.set(1, V1);
+                v.set(2, V2);
                 Ok(())
             })
             .unwrap();

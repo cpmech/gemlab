@@ -5,7 +5,8 @@ use crate::util::{AsArray2D, GridSearch};
 use crate::StrError;
 use plotpy::{Canvas, Plot};
 use russell_lab::math::PI;
-use russell_lab::{sort2, sort4, Vector};
+use russell_lab::{sort2, sort4};
+use russell_tensor::Tensor1;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -737,7 +738,7 @@ impl Block {
         let mut ksi = vec![0.0; ndim];
 
         // real coordinates of new points
-        let mut x = Vector::new(ndim);
+        let mut x = Tensor1::new();
 
         // number of divisions along each direction
         let (nx, ny, nz) = (self.ndiv[0], self.ndiv[1], if ndim == 2 { 1 } else { self.ndiv[2] });
@@ -803,7 +804,11 @@ impl Block {
                                 mesh.points.push(Point {
                                     id: point_id,
                                     marker: 0,
-                                    coords: x.as_data().clone(),
+                                    coords: if ndim == 2 {
+                                        vec![x.get(0), x.get(1)]
+                                    } else {
+                                        vec![x.get(0), x.get(1), x.get(2)]
+                                    },
                                 });
                                 point_id
                             }
@@ -850,7 +855,7 @@ impl Block {
                                     let ksi_edge = target_edge_kind.reference_coords(idx);
                                     pad_lin2.calc_coords(&mut x, ksi_edge)?;
                                     for dim in 0..ndim {
-                                        mesh.points[p].coords[dim] = x[dim];
+                                        mesh.points[p].coords[dim] = x.get(dim);
                                     }
                                 }
                             }
@@ -869,7 +874,7 @@ impl Block {
                                     let ksi_interior = target.reference_coords(m);
                                     pad_ser.calc_coords(&mut x, ksi_interior)?;
                                     for dim in 0..ndim {
-                                        mesh.points[points[m]].coords[dim] = x[dim];
+                                        mesh.points[points[m]].coords[dim] = x.get(dim);
                                     }
                                 }
                             }
@@ -1066,19 +1071,20 @@ impl Block {
 
     /// Maps reference coordinates to real coordinates on a cylinder
     #[inline]
-    fn map_coords_cylindrical(&self, x: &mut Vector, ksi: &[f64]) {
-        assert_eq!(x.dim(), ksi.len());
+    fn map_coords_cylindrical(&self, x: &mut Tensor1, ksi: &[f64]) {
+        assert!(ksi.len() >= self.ndim);
         const KSI_MIN: f64 = -1.0;
         const KSI_DEL: f64 = 2.0;
         let (amin, amax) = (self.args_ring.amin, self.args_ring.amax);
         let (rmin, rmax) = (self.args_ring.rmin, self.args_ring.rmax);
         let r = rmin + (ksi[0] - KSI_MIN) * (rmax - rmin) / KSI_DEL;
         let a = amin + (ksi[1] - KSI_MIN) * (amax - amin) / KSI_DEL;
-        x[0] = r * f64::cos(a);
-        x[1] = r * f64::sin(a);
-        if x.dim() == 3 {
+        x.set(0, r * f64::cos(a));
+        x.set(1, r * f64::sin(a));
+        x.set(2, 0.0); // reset unused trailing component (the z component in 2D)
+        if ksi.len() == 3 {
             let (zmin, zmax) = (self.args_ring.zmin, self.args_ring.zmax);
-            x[2] = zmin + (ksi[2] - KSI_MIN) * (zmax - zmin) / KSI_DEL;
+            x.set(2, zmin + (ksi[2] - KSI_MIN) * (zmax - zmin) / KSI_DEL);
         }
     }
 
@@ -1087,7 +1093,7 @@ impl Block {
     /// Returns the local index of the edge or face corresponding to the side
     /// where the constraint has been applied.
     /// Returns None if the point is not on a constrained side.
-    fn handle_constraints(&self, x: &mut Vector, ksi: &[f64]) -> Result<Option<usize>, StrError> {
+    fn handle_constraints(&self, x: &mut Tensor1, ksi: &[f64]) -> Result<Option<usize>, StrError> {
         const TOL: f64 = 1e-13;
         if self.ndim == 2 {
             if f64::abs(-1.0 - ksi[1]) < TOL {
@@ -1178,11 +1184,11 @@ impl Block {
     /// Applies 2D constraint
     ///
     /// Returns true if the constraint has been applied; otherwise, returns false
-    fn apply_constraint_2d(&self, x: &mut Vector, ct: &Constraint2d) -> Result<bool, StrError> {
+    fn apply_constraint_2d(&self, x: &mut Tensor1, ct: &Constraint2d) -> Result<bool, StrError> {
         match ct {
             Constraint2d::Circle(xc, yc, r) => {
-                let dx = x[0] - xc;
-                let dy = x[1] - yc;
+                let dx = x.get(0) - xc;
+                let dy = x.get(1) - yc;
                 let d = f64::sqrt(dx * dx + dy * dy);
                 if f64::abs(d) <= TOL_DISTANCE {
                     return Err("cannot apply constraint because a point is at the center of the circle");
@@ -1191,8 +1197,8 @@ impl Block {
                 if f64::abs(gap) > 0.0 {
                     let move_x = gap * dx / d;
                     let move_y = gap * dy / d;
-                    x[0] += move_x;
-                    x[1] += move_y;
+                    x.add(0, move_x);
+                    x.add(1, move_y);
                     return Ok(true);
                 }
             }
@@ -1203,11 +1209,11 @@ impl Block {
     /// Applies 3D constraint
     ///
     /// Returns true if the constraint has been applied; otherwise, returns false
-    fn apply_constraint_3d(&self, x: &mut Vector, ct: &Constraint3d) -> Result<bool, StrError> {
+    fn apply_constraint_3d(&self, x: &mut Tensor1, ct: &Constraint3d) -> Result<bool, StrError> {
         match ct {
             Constraint3d::CylinderX(yc, zc, r) => {
-                let dy = x[1] - yc;
-                let dz = x[2] - zc;
+                let dy = x.get(1) - yc;
+                let dz = x.get(2) - zc;
                 let d = f64::sqrt(dy * dy + dz * dz);
                 if f64::abs(d) <= TOL_DISTANCE {
                     return Err("cannot apply constraint because a point is at the center of the cylinder-x");
@@ -1216,14 +1222,14 @@ impl Block {
                 if f64::abs(gap) > 0.0 {
                     let move_y = gap * dy / d;
                     let move_z = gap * dz / d;
-                    x[1] += move_y;
-                    x[2] += move_z;
+                    x.add(1, move_y);
+                    x.add(2, move_z);
                     return Ok(true);
                 }
             }
             Constraint3d::CylinderY(xc, zc, r) => {
-                let dx = x[0] - xc;
-                let dz = x[2] - zc;
+                let dx = x.get(0) - xc;
+                let dz = x.get(2) - zc;
                 let d = f64::sqrt(dx * dx + dz * dz);
                 if f64::abs(d) <= TOL_DISTANCE {
                     return Err("cannot apply constraint because a point is at the center of the cylinder-y");
@@ -1232,14 +1238,14 @@ impl Block {
                 if f64::abs(gap) > 0.0 {
                     let move_x = gap * dx / d;
                     let move_z = gap * dz / d;
-                    x[0] += move_x;
-                    x[2] += move_z;
+                    x.add(0, move_x);
+                    x.add(2, move_z);
                     return Ok(true);
                 }
             }
             Constraint3d::CylinderZ(xc, yc, r) => {
-                let dx = x[0] - xc;
-                let dy = x[1] - yc;
+                let dx = x.get(0) - xc;
+                let dy = x.get(1) - yc;
                 let d = f64::sqrt(dx * dx + dy * dy);
                 if f64::abs(d) <= TOL_DISTANCE {
                     return Err("cannot apply constraint because a point is at the center of the cylinder-z");
@@ -1248,8 +1254,8 @@ impl Block {
                 if f64::abs(gap) > 0.0 {
                     let move_x = gap * dx / d;
                     let move_y = gap * dy / d;
-                    x[0] += move_x;
-                    x[1] += move_y;
+                    x.add(0, move_x);
+                    x.add(1, move_y);
                     return Ok(true);
                 }
             }

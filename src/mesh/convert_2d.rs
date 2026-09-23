@@ -2,7 +2,7 @@ use super::{Cell, Features, Mesh, Point};
 use crate::prelude::PointId;
 use crate::shapes::{GeoClass, GeoKind, Scratchpad};
 use crate::StrError;
-use russell_lab::Vector;
+use russell_tensor::Tensor1;
 use std::collections::HashMap;
 
 impl Mesh {
@@ -109,7 +109,7 @@ impl Mesh {
         let mut pad = Scratchpad::new(self.ndim, source).unwrap();
 
         // coordinates of new points
-        let mut x = Vector::new(self.ndim);
+        let mut x = Tensor1::new();
 
         // maps old point id to new point id
         let mut corners: HashMap<PointId, PointId> = HashMap::new();
@@ -191,7 +191,11 @@ impl Mesh {
                     dest.points.push(Point {
                         id: new_point_id,
                         marker,
-                        coords: x.as_data().clone(),
+                        coords: if self.ndim == 2 {
+                            vec![x.get(0), x.get(1)]
+                        } else {
+                            vec![x.get(0), x.get(1), x.get(2)]
+                        },
                     });
                     dest.cells[cell_id].points[m] = new_point_id;
                 }

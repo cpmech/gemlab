@@ -189,7 +189,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             let x_ips = recovery::get_points_coords(args.pad, ips).unwrap();
-            integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][0])).unwrap();
+            integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p].get(0))).unwrap();
             vec_approx_eq(&a, a_correct, tol);
         });
     }
@@ -273,7 +273,7 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             let x_ips = recovery::get_points_coords(args.pad, ips).unwrap();
-            integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p][2])).unwrap();
+            integ::vec_01_ns(&mut a, &mut args, |p, _| Ok(x_ips[p].get(2))).unwrap();
             vec_approx_eq(&a, &a_correct, tol);
         });
     }

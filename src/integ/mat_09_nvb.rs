@@ -1,6 +1,7 @@
 use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
+use russell_tensor::Tensor1;
 
 /// Implements the shape(N) times vector(V) dot gradient(B) integration case 09 (e.g., variable density matrix)
 ///
@@ -50,10 +51,10 @@ use russell_lab::{Matrix, Vector};
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + nnode ⋅ space_ndim`.
 /// * `args` --- Common arguments
 /// * `fn_v` -- Function `f(v,p,N,B)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
-///   shape functions N(ιᵖ), and gradients B(ιᵖ). `v.dim() = space_ndim`.
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `v` has 3 components (only `space_ndim` are used).
 pub fn mat_09_nvb<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor1, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
     let (space_ndim, nnode) = args.pad.xxt.dims();
@@ -67,7 +68,7 @@ where
     }
 
     // allocate auxiliary vector
-    let mut v = Vector::new(space_ndim);
+    let mut v = Tensor1::new();
 
     // clear output matrix
     if args.clear {
@@ -104,27 +105,27 @@ where
         if space_ndim == 2 {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk.add(ii0 + 0 + m * 2, jj0 + 0 + n * 2, c * nn[m] * v[0] * bb.get(n, 0));
-                    kk.add(ii0 + 0 + m * 2, jj0 + 1 + n * 2, c * nn[m] * v[0] * bb.get(n, 1));
+                    kk.add(ii0 + 0 + m * 2, jj0 + 0 + n * 2, c * nn[m] * v.get(0) * bb.get(n, 0));
+                    kk.add(ii0 + 0 + m * 2, jj0 + 1 + n * 2, c * nn[m] * v.get(0) * bb.get(n, 1));
 
-                    kk.add(ii0 + 1 + m * 2, jj0 + 0 + n * 2, c * nn[m] * v[1] * bb.get(n, 0));
-                    kk.add(ii0 + 1 + m * 2, jj0 + 1 + n * 2, c * nn[m] * v[1] * bb.get(n, 1));
+                    kk.add(ii0 + 1 + m * 2, jj0 + 0 + n * 2, c * nn[m] * v.get(1) * bb.get(n, 0));
+                    kk.add(ii0 + 1 + m * 2, jj0 + 1 + n * 2, c * nn[m] * v.get(1) * bb.get(n, 1));
                 }
             }
         } else {
             for m in 0..nnode {
                 for n in 0..nnode {
-                    kk.add(ii0 + 0 + m * 3, jj0 + 0 + n * 3, c * nn[m] * v[0] * bb.get(n, 0));
-                    kk.add(ii0 + 0 + m * 3, jj0 + 1 + n * 3, c * nn[m] * v[0] * bb.get(n, 1));
-                    kk.add(ii0 + 0 + m * 3, jj0 + 2 + n * 3, c * nn[m] * v[0] * bb.get(n, 2));
+                    kk.add(ii0 + 0 + m * 3, jj0 + 0 + n * 3, c * nn[m] * v.get(0) * bb.get(n, 0));
+                    kk.add(ii0 + 0 + m * 3, jj0 + 1 + n * 3, c * nn[m] * v.get(0) * bb.get(n, 1));
+                    kk.add(ii0 + 0 + m * 3, jj0 + 2 + n * 3, c * nn[m] * v.get(0) * bb.get(n, 2));
 
-                    kk.add(ii0 + 1 + m * 3, jj0 + 0 + n * 3, c * nn[m] * v[1] * bb.get(n, 0));
-                    kk.add(ii0 + 1 + m * 3, jj0 + 1 + n * 3, c * nn[m] * v[1] * bb.get(n, 1));
-                    kk.add(ii0 + 1 + m * 3, jj0 + 2 + n * 3, c * nn[m] * v[1] * bb.get(n, 2));
+                    kk.add(ii0 + 1 + m * 3, jj0 + 0 + n * 3, c * nn[m] * v.get(1) * bb.get(n, 0));
+                    kk.add(ii0 + 1 + m * 3, jj0 + 1 + n * 3, c * nn[m] * v.get(1) * bb.get(n, 1));
+                    kk.add(ii0 + 1 + m * 3, jj0 + 2 + n * 3, c * nn[m] * v.get(1) * bb.get(n, 2));
 
-                    kk.add(ii0 + 2 + m * 3, jj0 + 0 + n * 3, c * nn[m] * v[2] * bb.get(n, 0));
-                    kk.add(ii0 + 2 + m * 3, jj0 + 1 + n * 3, c * nn[m] * v[2] * bb.get(n, 1));
-                    kk.add(ii0 + 2 + m * 3, jj0 + 2 + n * 3, c * nn[m] * v[2] * bb.get(n, 2));
+                    kk.add(ii0 + 2 + m * 3, jj0 + 0 + n * 3, c * nn[m] * v.get(2) * bb.get(n, 0));
+                    kk.add(ii0 + 2 + m * 3, jj0 + 1 + n * 3, c * nn[m] * v.get(2) * bb.get(n, 1));
+                    kk.add(ii0 + 2 + m * 3, jj0 + 2 + n * 3, c * nn[m] * v.get(2) * bb.get(n, 2));
                 }
             }
         }
@@ -139,15 +140,16 @@ mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
+    use russell_tensor::Tensor1;
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(4, 4);
-        let mut vv = Vector::new(0);
+        let mut vv = Tensor1::new();
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
-        let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(());
+        let f = |_: &mut Tensor1, _: usize, _: &Vector, _: &Matrix| Ok(());
         f(&mut vv, 0, &nn, &bb).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
@@ -193,8 +195,8 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_09_nvb(&mut kk, &mut args, |v, _, _, _| {
-                v[0] = v0;
-                v[1] = v1;
+                v.set(0, v0);
+                v.set(1, v1);
                 Ok(())
             })
             .unwrap();
@@ -219,9 +221,9 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_09_nvb(&mut kk, &mut args, |v, _, _, _| {
-                v[0] = v0;
-                v[1] = v1;
-                v[2] = v2;
+                v.set(0, v0);
+                v.set(1, v1);
+                v.set(2, v2);
                 Ok(())
             })
             .unwrap();

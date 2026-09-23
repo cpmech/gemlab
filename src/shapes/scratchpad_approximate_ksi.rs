@@ -1,6 +1,7 @@
 use super::Scratchpad;
 use crate::StrError;
 use russell_lab::{mat_vec_mul, vec_norm, Norm, Vector};
+use russell_tensor::Tensor1;
 
 impl Scratchpad {
     /// Approximates the reference coordinates from given real coordinates (inverse mapping)
@@ -29,7 +30,8 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_lab::{Vector, array_approx_eq};
+    /// use russell_lab::array_approx_eq;
+    /// use russell_tensor::Tensor1;
     ///
     /// fn main() -> Result<(), StrError> {
     ///     // 7.0        2                ξ₀   ξ₁
@@ -51,7 +53,7 @@ impl Scratchpad {
     ///     pad.set_xx(2, 1, 7.0);
     ///
     ///     // x @ middle of edge (0,2)
-    ///     let x = Vector::from(&[3.5, 6.0]);
+    ///     let x = Tensor1::from(&[3.5, 6.0, 0.0]);
     ///
     ///     // find ξ corresponding to x @ middle of edge (0,2)
     ///     let mut ksi = vec![0.0; 2];
@@ -63,7 +65,7 @@ impl Scratchpad {
     pub fn approximate_ksi(
         &mut self,
         ksi: &mut [f64],
-        x: &Vector,
+        x: &Tensor1,
         nit_max: usize,
         tol: f64,
     ) -> Result<usize, StrError> {
@@ -71,9 +73,6 @@ impl Scratchpad {
         let (space_ndim, geo_ndim) = self.jacobian.dims();
         if geo_ndim != space_ndim {
             return Err("approximate_ksi requires that geo_ndim = space_ndim");
-        }
-        if x.dim() != space_ndim {
-            return Err("x.dim() must be equal to space_ndim");
         }
         if ksi.len() != geo_ndim {
             return Err("ksi.len() must be equal to geo_ndim = space_ndim");
@@ -95,18 +94,18 @@ impl Scratchpad {
             }
         }
         for j in 0..space_ndim {
-            ksi[j] = kmin + kdel * (x[j] - xmin[j]) / (xmax[j] - xmin[j]);
+            ksi[j] = kmin + kdel * (x.get(j) - xmin[j]) / (xmax[j] - xmin[j]);
         }
 
         // perform iterations
         let mut residual = Vector::new(space_ndim);
-        let mut x_at_ksi = Vector::new(space_ndim);
+        let mut x_at_ksi = Tensor1::new();
         let mut delta_ksi = Vector::new(geo_ndim);
         for it in 0..nit_max {
             // check residual
             self.calc_coords(&mut x_at_ksi, ksi)?;
             for i in 0..space_ndim {
-                residual[i] = x[i] - x_at_ksi[i];
+                residual[i] = x.get(i) - x_at_ksi.get(i);
             }
             if vec_norm(&residual, Norm::Euc) <= tol {
                 return Ok(it);
@@ -135,24 +134,20 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::GeoKind;
     use crate::shapes::Scratchpad;
+    use russell_lab::array_approx_eq;
     use russell_lab::math::{ONE_BY_3, SQRT_3};
-    use russell_lab::{array_approx_eq, vec_approx_eq, Vector};
+    use russell_tensor::{t1_approx_eq, Tensor1};
 
     #[test]
     fn approximate_ksi_handles_errors() {
         let mut ksi = vec![0.0; 1];
-        let x = Vector::new(1);
+        let x = Tensor1::new();
         let mut pad = Scratchpad::new(2, GeoKind::Lin2).unwrap();
         assert_eq!(
             pad.approximate_ksi(&mut ksi, &x, 1, 1e-15).err(),
             Some("approximate_ksi requires that geo_ndim = space_ndim")
         );
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
-        assert_eq!(
-            pad.approximate_ksi(&mut ksi, &x, 1, 1e-15).err(),
-            Some("x.dim() must be equal to space_ndim")
-        );
-        let x = Vector::new(2);
         assert_eq!(
             pad.approximate_ksi(&mut ksi, &x, 1, 1e-15).err(),
             Some("ksi.len() must be equal to geo_ndim = space_ndim")
@@ -201,7 +196,7 @@ mod tests {
 
             // loop over nodes of shape
             let nnode = kind.nnode();
-            let mut x = Vector::new(space_ndim);
+            let mut x = Tensor1::new();
             let mut ksi = vec![0.0; geo_ndim];
             for m in 0..nnode {
                 // get ξᵐ corresponding to node m
@@ -283,21 +278,21 @@ mod tests {
         );
         let mut ksi = vec![0.0; pad.kind.ndim()];
         for (nit_correct, x_data, tol) in &[
-            (Some(0), [3.0, 4.0], 1e-15),
-            (Some(0), [8.0, 4.0], 1e-15),
-            (Some(1), [5.5, 8.33], 1e-14),
-            (Some(0), [5.5, 4.0], 1e-15),
-            (Some(1), [6.75, 6.17], 1e-14),
-            (Some(1), [4.25, 6.17], 1e-14),
-            (Some(1), [10.0, 10.0], 1e-13),
-            (None, [-10.0, -10.0], 1e-13), // nit depends on the environment (e.g., CI vs local)
-            (Some(1), [100.0, 100.0], 1e-11),
+            (Some(0), [3.0, 4.0, 0.0], 1e-15),
+            (Some(0), [8.0, 4.0, 0.0], 1e-15),
+            (Some(1), [5.5, 8.33, 0.0], 1e-14),
+            (Some(0), [5.5, 4.0, 0.0], 1e-15),
+            (Some(1), [6.75, 6.17, 0.0], 1e-14),
+            (Some(1), [4.25, 6.17, 0.0], 1e-14),
+            (Some(1), [10.0, 10.0, 0.0], 1e-13),
+            (None, [-10.0, -10.0, 0.0], 1e-13), // nit depends on the environment (e.g., CI vs local)
+            (Some(1), [100.0, 100.0, 0.0], 1e-11),
         ] {
-            let x = Vector::from(x_data);
+            let x = Tensor1::from(x_data);
             let nit = pad.approximate_ksi(&mut ksi, &x, 30, *tol).unwrap();
-            let mut x_out = Vector::new(2);
+            let mut x_out = Tensor1::new();
             pad.calc_coords(&mut x_out, &ksi).unwrap();
-            vec_approx_eq(&x, &x_out, *tol);
+            t1_approx_eq(&x, &x_out, *tol);
             if let Some(nc) = *nit_correct {
                 assert_eq!(nit, nc);
             }
