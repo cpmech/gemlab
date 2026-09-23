@@ -1229,7 +1229,7 @@ mod tests {
     use crate::mesh::{Features, Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
-    const SAVE_FIGURE: bool = true;
+    const SAVE_FIGURE: bool = false;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
