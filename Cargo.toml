@@ -27,7 +27,7 @@ russell_lab = "3.0"
 russell_sparse = "3.0"
 russell_stat = "3.0"
 russell_tensor = "3.2"
-tritet = { version = "3.2", features = ["with_tetgen"] }
+tritet = { version = "3.3", features = ["with_tetgen"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.150"
 structopt = "0.3"
