@@ -116,7 +116,7 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///     mat_vec_mul(&mut u_points, 1.0, &pp, &u_nodal)?;
 ///
 ///     // extrapolated values (recovered)
-///     let nnode = pad.xxt.dims().1;
+///     let nnode = pad.nnode();
 ///     let mut u_nodal_rec = Vector::new(nnode);
 ///     let ee = get_extrap_matrix(&mut pad, &gauss)?;
 ///     mat_vec_mul(&mut u_nodal_rec, 1.0, &ee, &u_points)?;
@@ -955,7 +955,7 @@ mod tests {
         let x_ips = get_points_coords(&mut pad, &gauss).unwrap();
         let mut u_point = Vector::new(np);
         for p in 0..np {
-            u_point[p] = x_ips[p][0] + x_ips[p][1] - 1.0;
+            u_point[p] = x_ips[p].get(0) + x_ips[p].get(1) - 1.0;
         }
 
         // extrapolate to nodes
@@ -1025,7 +1025,7 @@ mod tests {
         for p in 0..np {
             u_point[p] = -1.0;
             for d in 0..geo_ndim {
-                u_point[p] += x_ips[p][d]; // -1 + x + y + z
+                u_point[p] += x_ips[p].get(d); // -1 + x + y + z
             }
         }
 

@@ -181,9 +181,22 @@ impl Scratchpad {
         })
     }
 
+    /// Returns space_ndim, geo_ndim, nnode
+    #[inline]
+    pub fn dims(&self) -> (usize, usize, usize) {
+        (self.xxt.nrow(), self.kind.ndim(), self.xxt.ncol())
+    }
+
     /// Returns the space ndim constant (2 or 3)
-    pub fn get_space_ndim(&self) -> usize {
+    #[inline]
+    pub fn space_ndim(&self) -> usize {
         self.xxt.nrow()
+    }
+
+    /// Returns the number of nodes
+    #[inline]
+    pub fn nnode(&self) -> usize {
+        self.xxt.ncol()
     }
 
     /// Sets the component of the coordinates matrix corresponding to node-m, dimension-j
@@ -262,7 +275,7 @@ impl Scratchpad {
     pub fn set_xx(&mut self, m: usize, j: usize, value: f64) {
         self.ok_xxt = false;
         self.xxt.set(j, m, value);
-        let (space_ndim, nnode) = self.xxt.dims();
+        let (space_ndim, _, nnode) = self.dims();
         if m == nnode - 1 && j == space_ndim - 1 {
             self.ok_xxt = true;
         }
@@ -345,7 +358,9 @@ mod tests {
             let kind = GeoKind::VALUES[i];
             let space_ndim = usize::max(2, kind.ndim());
             let pad = Scratchpad::new(space_ndim, kind).unwrap();
-            assert_eq!(pad.get_space_ndim(), space_ndim);
+            assert_eq!(pad.dims(), (space_ndim, geo_ndim[i], nnode[i]));
+            assert_eq!(pad.space_ndim(), space_ndim);
+            assert_eq!(pad.nnode(), nnode[i]);
             assert_eq!(pad.kind, kind);
             assert_eq!(pad.interp.dim(), nnode[i]);
             assert_eq!(pad.deriv.dims(), (nnode[i], geo_ndim[i]));

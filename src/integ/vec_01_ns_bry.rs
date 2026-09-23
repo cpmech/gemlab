@@ -1,6 +1,7 @@
 use super::CommonArgs;
 use crate::StrError;
 use russell_lab::Vector;
+use russell_tensor::Tensor1;
 
 /// Implements the shape(N) times scalar(S) integration case 01 (boundary integral version)
 ///
@@ -53,11 +54,10 @@ use russell_lab::Vector;
 ///
 pub fn vec_01_ns_bry<F>(a: &mut Vector, args: &mut CommonArgs, mut fn_s: F) -> Result<(), StrError>
 where
-    F: FnMut(usize, &Vector, &Vector) -> Result<f64, StrError>,
+    F: FnMut(usize, &Tensor1, &Vector) -> Result<f64, StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
-    let geo_ndim = args.pad.deriv.dims().1;
+    let (space_ndim, geo_ndim, nnode) = args.pad.dims();
     if space_ndim == 2 && geo_ndim != 1 {
         return Err("in 2D, geometry ndim must be equal to 1 (a line)");
     }
@@ -70,7 +70,7 @@ where
     }
 
     // allocate auxiliary vectors
-    let mut un = Vector::new(space_ndim); // unit normal vector
+    let mut un = Tensor1::new(); // unit normal vector
 
     // clear output vector
     if args.clear {
@@ -119,15 +119,16 @@ mod tests {
     use crate::mesh::{GeoKind, Mesh};
     use crate::recovery;
     use crate::shapes::Scratchpad;
-    use russell_lab::{vec_approx_eq, vec_inner, Vector};
+    use russell_lab::{vec_approx_eq, Vector};
+    use russell_tensor::{t1_approx_eq, Tensor1};
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut a = Vector::new(2);
         let nn = Vector::new(0);
-        let un = Vector::new(0);
-        let f = |_: usize, _: &Vector, _: &Vector| Ok(0.0);
+        let un = Tensor1::new();
+        let f = |_: usize, _: &Tensor1, _: &Vector| Ok(0.0);
         assert_eq!(f(0, &un, &nn).unwrap(), 0.0);
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
@@ -164,10 +165,10 @@ mod tests {
         let ips = Gauss::new_sized(class, 2).unwrap();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
         let x_ips = recovery::get_points_coords(args.pad, &ips).unwrap();
-        integ::vec_01_ns_bry(&mut a, &mut args, |p, _, _| Ok(x_ips[p][0])).unwrap();
+        integ::vec_01_ns_bry(&mut a, &mut args, |p, _, _| Ok(x_ips[p].get(0))).unwrap();
         vec_approx_eq(&a, a_correct, 1e-15);
     }
 
@@ -196,10 +197,10 @@ mod tests {
         let ips = Gauss::new_sized(class, 2).unwrap();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
         integ::vec_01_ns_bry(&mut a, &mut args, |_, un, _| {
-            let s = w0 * un[0] + w1 * un[1];
+            let s = w0 * un.get(0) + w1 * un.get(1);
             Ok(s)
         })
         .unwrap();
@@ -234,13 +235,13 @@ mod tests {
         let ips = Gauss::new_sized(class, 2).unwrap();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
         let x_ips = recovery::get_points_coords(args.pad, &ips).unwrap();
         integ::vec_01_ns_bry(&mut a, &mut args, |p, un, _| {
-            let x = x_ips[p][0];
-            let y = x_ips[p][1];
-            let s = (x + y) * un[0] + (y - x) * un[1];
+            let x = x_ips[p].get(0);
+            let y = x_ips[p].get(1);
+            let s = (x + y) * un.get(0) + (y - x) * un.get(1);
             Ok(s)
         })
         .unwrap();
@@ -260,7 +261,7 @@ mod tests {
         // un = {0, 0, 1};
         // m . un
         // Output: {8/9, -(1/9), 4/9}
-        let un_correct = Vector::from(&[8.0 / 9.0, -(1.0 / 9.0), 4.0 / 9.0]);
+        let un_correct = Tensor1::from(&[8.0 / 9.0, -(1.0 / 9.0), 4.0 / 9.0]);
 
         // integration points
         let mut pad = mesh.get_pad(0);
@@ -268,13 +269,13 @@ mod tests {
         let ips = Gauss::new_sized(class, 4).unwrap();
 
         // perform integration with constant flow vector
-        let w = Vector::from(&[1.0, 2.0, 3.0]);
-        let s = vec_inner(&w, &un_correct);
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let w = Tensor1::from(&[1.0, 2.0, 3.0]);
+        let s = w.dot(&un_correct);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
         integ::vec_01_ns_bry(&mut a, &mut args, |_, un, _| {
-            vec_approx_eq(un, &un_correct, 1e-7); // note that blender is single precision
-            Ok(vec_inner(&w, un))
+            t1_approx_eq(un, &un_correct, 1e-7); // note that blender is single precision
+            Ok(w.dot(un))
         })
         .unwrap();
         vec_approx_eq(&a, &[s, s, s, s], 1e-7);

@@ -4,7 +4,7 @@ pub mod aux {
     use plotpy::{Canvas, Curve, Plot};
     use russell_lab::generate2d;
     use russell_lab::math::PI;
-    use russell_lab::Vector;
+    use russell_tensor::Tensor1;
 
     pub const RMIN: f64 = 5.0;
     pub const RMAX: f64 = 10.0;
@@ -48,14 +48,14 @@ pub mod aux {
     /// x₀ := r · cos(α)
     /// x₁ := r · sin(α)
     /// x₂ := z
-    pub fn map_point_coords(x: &mut Vector, ksi: &[f64], ksi_min: f64, ksi_del: f64) {
-        assert_eq!(x.dim(), ksi.len());
+    pub fn map_point_coords(x: &mut Tensor1, ksi: &[f64], ksi_min: f64, ksi_del: f64) {
         let r = RMIN + (ksi[0] - ksi_min) * (RMAX - RMIN) / ksi_del;
         let a = AMIN + (ksi[1] - ksi_min) * (AMAX - AMIN) / ksi_del;
-        x[0] = r * f64::cos(a);
-        x[1] = r * f64::sin(a);
-        if x.dim() == 3 {
-            x[2] = ZMIN + (ksi[2] - ksi_min) * (ZMAX - ZMIN) / ksi_del;
+        x.set(0, r * f64::cos(a));
+        x.set(1, r * f64::sin(a));
+        x.set(2, 0.0); // reset unused trailing component (the z component in 2D)
+        if ksi.len() == 3 {
+            x.set(2, ZMIN + (ksi[2] - ksi_min) * (ZMAX - ZMIN) / ksi_del);
         }
     }
 
@@ -68,7 +68,7 @@ pub mod aux {
     pub fn gen_scratchpad_with_coords(space_ndim: usize, kind: GeoKind) -> Scratchpad {
         let geo_ndim = kind.ndim();
         let nnode = kind.nnode();
-        let mut x = Vector::new(space_ndim);
+        let mut x = Tensor1::new();
         let mut ksi_aux = vec![0.0; space_ndim];
         let mut pad = Scratchpad::new(space_ndim, kind).unwrap();
         let (ksi_min, ksi_del) = kind.ksi_min_ksi_del();
@@ -96,7 +96,7 @@ pub mod aux {
                 map_point_coords(&mut x, &ksi_aux, ksi_min, ksi_del);
             }
             for j in 0..space_ndim {
-                pad.set_xx(m, j, x[j])
+                pad.set_xx(m, j, x.get(j))
             }
         }
         pad
@@ -138,7 +138,7 @@ pub mod aux {
     /// 2. space_ndim is not 2 or 3
     /// 3. geo_ndim is greater than geo_ndim (impossible situation)
     pub fn extract_edge(e: usize, pad: &Scratchpad) -> Scratchpad {
-        let (space_ndim, geo_ndim) = pad.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = pad.dims();
         assert_ne!(geo_ndim, 1);
         let mut pad_edge = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap()).unwrap();
         for i in 0..pad.kind.edge_nnode() {
@@ -160,7 +160,7 @@ pub mod aux {
     /// 2. space_ndim is not 2 or 3
     /// 3. geo_ndim is greater than geo_ndim (impossible situation)
     pub fn extract_face(f: usize, pad: &Scratchpad) -> Scratchpad {
-        let (space_ndim, geo_ndim) = pad.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = pad.dims();
         assert_eq!(geo_ndim, 3);
         let mut pad_face = Scratchpad::new(space_ndim, pad.kind.face_kind().unwrap()).unwrap();
         for i in 0..pad.kind.face_nnode() {
@@ -199,14 +199,14 @@ pub mod aux {
         real_space.set_line_style("None").set_marker_style("o");
         let ksi_max = ksi_min + ksi_del;
         let (ksi_0, ksi_1) = generate2d(ksi_min, ksi_max, ksi_min, ksi_max, N, N);
-        let mut x = Vector::new(2);
+        let mut x = Tensor1::new();
         natural_space.points_begin();
         real_space.points_begin();
         for i in 0..N {
             for j in 0..N {
                 natural_space.points_add(ksi_0.get(i, j), ksi_1.get(i, j));
                 map_point_coords(&mut x, &[ksi_0.get(i, j), ksi_1.get(i, j)], ksi_min, ksi_del);
-                real_space.points_add(x[0], x[1]);
+                real_space.points_add(x.get(0), x.get(1));
             }
         }
         natural_space.points_end();

@@ -1,7 +1,7 @@
 use super::{GeoClass, Scratchpad};
 use crate::StrError;
 use plotpy::{Canvas, Plot, PolyCode, Text};
-use russell_lab::Vector;
+use russell_tensor::Tensor1;
 
 impl Scratchpad {
     /// Draws the geometric shape
@@ -23,7 +23,7 @@ impl Scratchpad {
         if !self.ok_xxt {
             return Err("all components of the coordinates matrix must be set first");
         }
-        let (space_ndim, nnode) = self.xxt.dims();
+        let (space_ndim, _, nnode) = self.dims();
         let mut canvas = Canvas::new();
         if self.kind.ndim() == 1 {
             let mut lin_pad = self.clone();
@@ -67,7 +67,7 @@ impl Scratchpad {
                     GeoClass::Tet => 4,
                     GeoClass::Hex => 8,
                 };
-                for m in 0..self.kind.nnode() {
+                for m in 0..self.nnode() {
                     if m < m_corner_max {
                         labels_corner.draw(self.xxt.get(0, m), self.xxt.get(1, m), format!("{}", m).as_str());
                     } else {
@@ -80,7 +80,7 @@ impl Scratchpad {
                     // shell (2D shape in 3D space => ignore the difference between corners and middle nodes)
                     m_corner_max = 0
                 }
-                for m in 0..self.kind.nnode() {
+                for m in 0..self.nnode() {
                     if m < m_corner_max {
                         labels_corner.draw_3d(
                             self.xxt.get(0, m),
@@ -155,8 +155,8 @@ impl Scratchpad {
 fn draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -> Result<(), StrError> {
     const N: usize = 11; // number of points along edge (to handle nonlinear edges)
     let (ksi_min, ksi_del) = (-1.0, 2.0); // all Lin shapes go from -1 to +1
-    let space_ndim = edge_pad.jacobian.dims().0;
-    let mut x = Vector::new(space_ndim);
+    let space_ndim = edge_pad.space_ndim();
+    let mut x = Tensor1::new();
     canvas.set_face_color("None").set_line_width(3.0);
     if !edge_color.is_empty() {
         canvas.set_edge_color(edge_color);
@@ -167,7 +167,7 @@ fn draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -
             let kval = ksi_min + ksi_del * (i as f64) / ((N - 1) as f64);
             edge_pad.calc_coords(&mut x, &[kval])?;
             let code = if i == 0 { PolyCode::MoveTo } else { PolyCode::LineTo };
-            canvas.polycurve_add(x[0], x[1], code);
+            canvas.polycurve_add(x.get(0), x.get(1), code);
         }
         canvas.polycurve_end(false);
     } else {
@@ -175,7 +175,7 @@ fn draw_edge(canvas: &mut Canvas, edge_pad: &mut Scratchpad, edge_color: &str) -
         for i in 0..N {
             let kval = ksi_min + ksi_del * (i as f64) / ((N - 1) as f64);
             edge_pad.calc_coords(&mut x, &[kval])?;
-            canvas.polyline_3d_add(x[0], x[1], x[2]);
+            canvas.polyline_3d_add(x.get(0), x.get(1), x.get(2));
         }
         canvas.polyline_3d_end();
     }

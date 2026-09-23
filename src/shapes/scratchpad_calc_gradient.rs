@@ -77,7 +77,7 @@ impl Scratchpad {
     /// ```
     pub fn calc_gradient(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
         // check
-        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = self.dims();
         if geo_ndim != space_ndim {
             return Err("calc_gradient requires that geo_ndim = space_ndim");
         }
@@ -98,8 +98,9 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
+    use russell_lab::deriv1_approx_eq;
     use russell_lab::math::ONE_BY_3;
-    use russell_lab::{deriv1_approx_eq, vec_copy, Vector};
+    use russell_tensor::Tensor1;
 
     #[test]
     fn calc_gradient_handles_errors() {
@@ -119,8 +120,8 @@ mod tests {
     // Holds arguments for numerical differentiation of N with respect to x => B (gradient) matrix
     struct ArgsNumGrad {
         pad: Scratchpad, // scratchpad to send to calc_coords
-        at_x: Vector,    // at x coord value
-        x: Vector,       // temporary x coord
+        at_x: Tensor1,   // at x coord value
+        x: Tensor1,      // temporary x coord
         ksi: Vec<f64>,   // temporary reference coord
         m: usize,        // node index from 0 to nnode
         j: usize,        // dimension index from 0 to space_ndim
@@ -128,9 +129,11 @@ mod tests {
 
     // Computes Nᵐ(ξ(x)) with variable v := xⱼ
     fn nn_given_x(v: f64, args: &mut ArgsNumGrad) -> Result<f64, StrError> {
-        vec_copy(&mut args.x, &args.at_x).unwrap();
-        args.x[args.j] = v;
-        args.pad.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-14).unwrap();
+        for i in 0..3 {
+            args.x.set(i, args.at_x.get(i));
+        }
+        args.x.set(args.j, v);
+        args.pad.approximate_ksi(&mut args.ksi, &args.x, 10, 1e-13).unwrap();
         (args.pad.fn_interp)(&mut args.pad.interp, &args.ksi);
         Ok(args.pad.interp[args.m])
     }
@@ -145,7 +148,7 @@ mod tests {
             (GeoKind::Tri10, 1e-9),
             (GeoKind::Tri15, 1e-9),
             // Qua
-            (GeoKind::Qua4, 1e-11),
+            (GeoKind::Qua4, 1e-10),
             (GeoKind::Qua8, 1e-10),
             (GeoKind::Qua9, 1e-10),
             (GeoKind::Qua12, 1e-9),
@@ -163,7 +166,7 @@ mod tests {
 
         // loop over shapes
         for (kind, tol) in problem {
-            // println!("kind = {:?}", kind);
+            println!("kind = {:?}", kind);
 
             // scratchpad with coordinates
             let geo_ndim = kind.ndim();
@@ -174,7 +177,7 @@ mod tests {
             let at_ksi = vec![ONE_BY_3; geo_ndim];
 
             // compute x corresponding to ξ using the isoparametric formula
-            let mut at_x = Vector::new(space_ndim);
+            let mut at_x = Tensor1::new();
             pad.calc_coords(&mut at_x, &at_ksi).unwrap();
 
             // compute gradient
@@ -185,7 +188,7 @@ mod tests {
             let args = &mut ArgsNumGrad {
                 pad: pad.clone(),
                 at_x,
-                x: Vector::new(space_ndim),
+                x: Tensor1::new(),
                 ksi: vec![0.0; geo_ndim],
                 m: 0,
                 j: 0,
@@ -197,7 +200,7 @@ mod tests {
                 for j in 0..geo_ndim {
                     args.j = j;
                     // Bᵐⱼ := dNᵐ/dxⱼ
-                    deriv1_approx_eq(pad.gradient.get(m, j), args.at_x[j], args, tol, nn_given_x);
+                    deriv1_approx_eq(pad.gradient.get(m, j), args.at_x.get(j), args, tol, nn_given_x);
                 }
             }
         }

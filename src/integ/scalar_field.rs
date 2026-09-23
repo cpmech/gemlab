@@ -116,8 +116,8 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
-                let x = x_ips[p][0];
-                let y = x_ips[p][1];
+                let x = x_ips[p].get(0);
+                let y = x_ips[p].get(1);
                 Ok(x * x + y * y)
             })
             .unwrap();
@@ -131,8 +131,8 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
-                let x = x_ips[p][0];
-                let y = x_ips[p][1];
+                let x = x_ips[p].get(0);
+                let y = x_ips[p].get(1);
                 Ok(x * x * x + y * y * y)
             })
             .unwrap();
@@ -218,9 +218,9 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
-                let x = x_ips[p][0];
-                let y = x_ips[p][1];
-                let z = x_ips[p][2];
+                let x = x_ips[p].get(0);
+                let y = x_ips[p].get(1);
+                let z = x_ips[p].get(2);
                 Ok(x * x + y * y + z * z)
             })
             .unwrap();
@@ -234,9 +234,9 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let x_ips = recovery::get_points_coords(&mut pad, ips).unwrap();
             let ii = scalar_field(&mut pad, ips, |p| {
-                let x = x_ips[p][0];
-                let y = x_ips[p][1];
-                let z = x_ips[p][2];
+                let x = x_ips[p].get(0);
+                let y = x_ips[p].get(1);
+                let z = x_ips[p].get(2);
                 Ok(x * x * x + y * y * y + z * z * z)
             })
             .unwrap();

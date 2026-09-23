@@ -88,7 +88,7 @@ use russell_tensor::Tensor4;
 ///     let model = LinElasticity::<6>::new(young, poisson, plane_stress).unwrap();
 ///
 ///     // stiffness
-///     let nrow = pad.kind.nnode() * space_ndim;
+///     let nrow = pad.nnode() * space_ndim;
 ///     let mut kk = Matrix::new(nrow, nrow);
 ///     let gauss = Gauss::new(pad.kind);
 ///     let mut args = CommonArgs::new(&mut pad, &gauss);
@@ -122,7 +122,7 @@ where
     F: FnMut(&mut Tensor4<N>, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let (space_ndim, _, nnode) = args.pad.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < args.ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim");
@@ -252,7 +252,7 @@ fn add_to_kk_axisymmetric<const N: usize>(
 ///
 /// Note: `pad` must be computed already
 fn calc_bb_matrix(bb_mat: &mut Matrix, pad: &Scratchpad, axisymmetric: bool) -> f64 {
-    let (space_ndim, nnode) = pad.xxt.dims();
+    let (space_ndim, _, nnode) = pad.dims();
     let bb = &pad.gradient;
     let nn = &pad.interp;
     let mut radius = 1.0;
@@ -322,7 +322,7 @@ where
     F: FnMut(&mut Tensor4<N>, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let (space_ndim, _, nnode) = args.pad.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     if nrow_kk < args.ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + nnode ⋅ space_ndim");
@@ -463,7 +463,7 @@ mod tests {
 
         // stiffness
         let class = pad.kind.class();
-        let (space_ndim, nnode) = pad.xxt.dims();
+        let (space_ndim, _, nnode) = pad.dims();
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let mut kk_alt = Matrix::new(nrow, nrow);
@@ -535,7 +535,7 @@ mod tests {
 
         // check
         let class = pad.kind.class();
-        let (space_ndim, nnode) = pad.xxt.dims();
+        let (space_ndim, _, nnode) = pad.dims();
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let mut kk_alt = Matrix::new(nrow, nrow);
@@ -577,7 +577,7 @@ mod tests {
 
         // allocate K matrix
         let class = pad.kind.class();
-        let (space_ndim, nnode) = pad.xxt.dims();
+        let (space_ndim, _, nnode) = pad.dims();
         let nrow = nnode * space_ndim;
         let mut kk = Matrix::new(nrow, nrow);
         let mut kk_alt = Matrix::new(nrow, nrow);

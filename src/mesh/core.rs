@@ -442,11 +442,11 @@ impl Mesh {
     ///
     /// # Panics
     ///
-    /// 1. Make sure `pad.kind.nnode() == points.len()`; otherwise a panic will occur
+    /// 1. Make sure `pad.nnode() == points.len()`; otherwise a panic will occur
     /// 2. This function does not check for bounds on point indices and dimensions
     /// 3. Use [Mesh::check_all] to capture (some) errors
     pub fn set_pad(&self, pad: &mut Scratchpad, points: &[PointId]) {
-        let nnode = pad.kind.nnode();
+        let nnode = pad.nnode();
         assert_eq!(nnode, points.len());
         for m in 0..nnode {
             for j in 0..self.ndim {

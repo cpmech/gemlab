@@ -1,16 +1,12 @@
 use super::{GeoClass, Scratchpad};
 use crate::StrError;
-use russell_lab::Vector;
+use russell_tensor::Tensor1;
 
 impl Scratchpad {
     /// Triangulates a Tri or Qua shape
     ///
     /// This function connects the existing nodes of a GeoKind to make triangles.
     /// For some shapes, a few extra nodes are defined.
-    ///
-    /// # Input
-    ///
-    /// * `x_work` -- is a workspace vector with dim = space_ndim
     ///
     /// # Output
     ///
@@ -24,9 +20,9 @@ impl Scratchpad {
     /// # Notes
     ///
     /// 1. This function works with Tri and Qua classes only
-    pub fn triangulate<F>(&mut self, x_work: &mut Vector, mut f: F) -> Result<(), StrError>
+    pub fn triangulate<F>(&mut self, mut f: F) -> Result<(), StrError>
     where
-        F: FnMut(usize, usize, usize, &Vector),
+        F: FnMut(usize, usize, usize, &Tensor1),
     {
         let kind = self.kind;
         let class = kind.class();
@@ -34,11 +30,9 @@ impl Scratchpad {
         if !tri_or_qua {
             return Err("triangulate works with Tri and Qua classes only");
         }
-        let space_ndim = self.get_space_ndim();
-        if x_work.dim() != space_ndim {
-            return Err("x_work.dim() must equal space_ndim");
-        }
+        let space_ndim = self.space_ndim();
         let nnode = kind.nnode();
+        let mut x = Tensor1::new();
         for t in 0..kind.triangulate_ntriangle() {
             for i in 0..3 {
                 let m = kind.triangulate_triangle_nodes(t, i);
@@ -46,14 +40,14 @@ impl Scratchpad {
                     // interpolation required
                     let k = m - nnode;
                     let ksi = kind.triangulate_extra_coords(k);
-                    self.calc_coords(x_work, ksi)?;
+                    self.calc_coords(&mut x, ksi)?;
                 } else {
                     // no interpolation required
                     for j in 0..space_ndim {
-                        x_work[j] = self.xxt.get(j, m);
+                        x.set(j, self.xxt.get(j, m));
                     }
                 };
-                f(t, i, m, x_work);
+                f(t, i, m, &x);
             }
         }
         Ok(())
@@ -68,8 +62,8 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoClass, GeoKind};
     use plotpy::{Canvas, Plot};
+    use russell_lab::approx_eq;
     use russell_lab::math::PI;
-    use russell_lab::{approx_eq, Vector};
 
     const SAVE_FIGURE: bool = false;
 
@@ -77,8 +71,6 @@ mod tests {
     fn pad_triangulate_works() {
         let ninety = PI / 2.0;
         let forty_five = PI / 4.0;
-        let space_ndim = 2;
-        let mut x_work = Vector::new(space_ndim);
         for kind in GeoKind::VALUES {
             let ntriangle = kind.triangulate_ntriangle();
             if ntriangle > 0 {
@@ -99,9 +91,9 @@ mod tests {
                 let mut xx = vec![0.0; nnode_total];
                 let mut yy = vec![0.0; nnode_total];
                 let mut triangles = vec![vec![0; 3]; ntriangle];
-                pad.triangulate(&mut x_work, |t, i, m, x| {
-                    xx[m] = x[0];
-                    yy[m] = x[1];
+                pad.triangulate(|t, i, m, x| {
+                    xx[m] = x.get(0);
+                    yy[m] = x.get(1);
                     triangles[t][i] = m;
                 })
                 .unwrap();
@@ -152,7 +144,6 @@ mod tests {
     #[test]
     fn pad_triangulate_works_2() {
         let space_ndim = 3; // shells
-        let mut x_work = Vector::new(space_ndim);
         for kind in GeoKind::VALUES {
             let ntriangle = kind.triangulate_ntriangle();
             if ntriangle > 0 {
@@ -162,10 +153,10 @@ mod tests {
                 let mut yy = vec![0.0; nnode_total];
                 let mut zz = vec![0.0; nnode_total];
                 let mut triangles = vec![vec![0; 3]; ntriangle];
-                pad.triangulate(&mut x_work, |t, i, m, x| {
-                    xx[m] = x[0];
-                    yy[m] = x[1];
-                    zz[m] = x[2];
+                pad.triangulate(|t, i, m, x| {
+                    xx[m] = x.get(0);
+                    yy[m] = x.get(1);
+                    zz[m] = x.get(2);
                     triangles[t][i] = m;
                 })
                 .unwrap();

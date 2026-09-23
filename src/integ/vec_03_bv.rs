@@ -1,6 +1,7 @@
 use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
+use russell_tensor::Tensor1;
 
 /// Implements the gradient(B) dot vector(V) integration case 03
 ///
@@ -41,7 +42,7 @@ use russell_lab::{Matrix, Vector};
 ///   `m` is the index of the node. The length must be `c.len() ≥ ii0 + nnode`.
 /// * `args` --- Common arguments
 /// * `fn_w` -- Function `f(w,p,N,B)` that computes `w(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
-///   shape functions N(ιᵖ), and gradients B(ιᵖ). `w.dim() = space_ndim`.
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `w` has 3 components (only `space_ndim` are used).
 ///
 /// # Examples
 ///
@@ -63,11 +64,11 @@ use russell_lab::{Matrix, Vector};
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
 ///     let gauss = Gauss::new(pad.kind);
-///     let mut c = Vector::filled(pad.kind.nnode(), 0.0);
+///     let mut c = Vector::filled(pad.nnode(), 0.0);
 ///     let mut args = CommonArgs::new(&mut pad, &gauss);
 ///     integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
-///         w[0] = 1.0;
-///         w[1] = 2.0;
+///         w.set(0, 1.0);
+///         w.set(1, 2.0);
 ///         Ok(())
 ///     })?;
 ///     // solution (A = 6):
@@ -83,17 +84,17 @@ use russell_lab::{Matrix, Vector};
 /// ```
 pub fn vec_03_bv<F>(c: &mut Vector, args: &mut CommonArgs, mut fn_w: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor1, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let (space_ndim, _, nnode) = args.pad.dims();
     let ii0 = args.ii0;
     if c.dim() < ii0 + nnode {
         return Err("c.len() must be ≥ ii0 + nnode");
     }
 
     // allocate auxiliary vector
-    let mut w = Vector::new(space_ndim);
+    let mut w = Tensor1::new();
 
     // clear output vector
     if args.clear {
@@ -129,11 +130,11 @@ where
         // add contribution to c vector
         if space_ndim == 2 {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * bb.get(m, 0) + w[1] * bb.get(m, 1));
+                c[ii0 + m] += coef * (w.get(0) * bb.get(m, 0) + w.get(1) * bb.get(m, 1));
             }
         } else {
             for m in 0..nnode {
-                c[ii0 + m] += coef * (w[0] * bb.get(m, 0) + w[1] * bb.get(m, 1) + w[2] * bb.get(m, 2));
+                c[ii0 + m] += coef * (w.get(0) * bb.get(m, 0) + w.get(1) * bb.get(m, 1) + w.get(2) * bb.get(m, 2));
             }
         }
     }
@@ -148,15 +149,16 @@ mod tests {
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use crate::recovery;
     use russell_lab::{vec_approx_eq, Matrix, Vector};
+    use russell_tensor::Tensor1;
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut c = Vector::new(2);
-        let mut w = Vector::new(0);
+        let mut w = Tensor1::new();
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
-        let f = |_: &mut Vector, _: usize, _: &Vector, _: &Matrix| Ok(());
+        let f = |_: &mut Tensor1, _: usize, _: &Vector, _: &Matrix| Ok(());
         f(&mut w, 0, &nn, &bb).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
@@ -184,13 +186,13 @@ mod tests {
         let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
-        let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut c = Vector::filled(pad.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
-                w[0] = W0;
-                w[1] = W1;
+                w.set(0, W0);
+                w.set(1, W1);
                 Ok(())
             })
             .unwrap();
@@ -213,14 +215,14 @@ mod tests {
         let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
-        let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut c = Vector::filled(pad.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             let x_ips = recovery::get_points_coords(args.pad, ips).unwrap();
             integ::vec_03_bv(&mut c, &mut args, |w, p, _, _| {
-                w[0] = x_ips[p][0];
-                w[1] = x_ips[p][1];
+                w.set(0, x_ips[p].get(0));
+                w.set(1, x_ips[p].get(1));
                 Ok(())
             })
             .unwrap();
@@ -249,14 +251,14 @@ mod tests {
             .collect();
 
         // check
-        let mut c = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut c = Vector::filled(pad.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_03_bv(&mut c, &mut args, |w, _, _, _| {
-                w[0] = W0;
-                w[1] = W1;
-                w[2] = W2;
+                w.set(0, W0);
+                w.set(1, W1);
+                w.set(2, W2);
                 Ok(())
             })
             .unwrap();

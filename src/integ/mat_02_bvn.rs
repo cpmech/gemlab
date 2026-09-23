@@ -1,6 +1,7 @@
 use super::CommonArgs;
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
+use russell_tensor::Tensor1;
 
 /// Implements the gradient(B) dot vector(V) times shape(N) integration case 02 (e.g., compressibility matrix)
 ///
@@ -44,13 +45,13 @@ use russell_lab::{Matrix, Vector};
 ///   The dimensions must be `nrow(K) ≥ ii0 + nnode` and `ncol(K) ≥ jj0 + nnode`
 /// * `args` --- Common arguments
 /// * `fn_v` -- Function `f(v,p,N,B)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
-///   shape functions N(ιᵖ), and gradients B(ιᵖ). `v.dim() = space_ndim`.
+///   shape functions N(ιᵖ), and gradients B(ιᵖ). `v` has 3 components (only `space_ndim` are used).
 pub fn mat_02_bvn<F>(kk: &mut Matrix, args: &mut CommonArgs, mut fn_v: F) -> Result<(), StrError>
 where
-    F: FnMut(&mut Vector, usize, &Vector, &Matrix) -> Result<(), StrError>,
+    F: FnMut(&mut Tensor1, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let (space_ndim, _, nnode) = args.pad.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     let (ii0, jj0) = (args.ii0, args.jj0);
     if nrow_kk < ii0 + nnode {
@@ -61,7 +62,7 @@ where
     }
 
     // allocate auxiliary vector
-    let mut v = Vector::new(space_ndim);
+    let mut v = Tensor1::new();
 
     // clear output matrix
     if args.clear {
@@ -101,7 +102,7 @@ where
                     kk.add(
                         ii0 + m,
                         jj0 + n,
-                        c * (bb.get(m, 0) * v[0] + bb.get(m, 1) * v[1]) * nn[n],
+                        c * (bb.get(m, 0) * v.get(0) + bb.get(m, 1) * v.get(1)) * nn[n],
                     );
                 }
             }
@@ -111,7 +112,7 @@ where
                     kk.add(
                         ii0 + m,
                         jj0 + n,
-                        c * (bb.get(m, 0) * v[0] + bb.get(m, 1) * v[1] + bb.get(m, 2) * v[2]) * nn[n],
+                        c * (bb.get(m, 0) * v.get(0) + bb.get(m, 1) * v.get(1) + bb.get(m, 2) * v.get(2)) * nn[n],
                     );
                 }
             }
@@ -128,15 +129,16 @@ mod tests {
     use crate::integ::{self, AnalyticalTet4, AnalyticalTri3, CommonArgs, Gauss};
     use crate::recovery;
     use russell_lab::{mat_approx_eq, Matrix, Vector};
+    use russell_tensor::Tensor1;
 
     #[test]
     fn capture_some_errors() {
         let mut pad = aux::gen_pad_lin2(1.0);
         let mut kk = Matrix::new(2, 2);
-        let mut v = Vector::new(0);
+        let mut v = Tensor1::new();
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
-        let f = |_v: &mut Vector, _p: usize, _nn: &Vector, _bb: &Matrix| Ok(());
+        let f = |_v: &mut Tensor1, _p: usize, _nn: &Vector, _bb: &Matrix| Ok(());
         f(&mut v, 0, &nn, &bb).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
@@ -182,8 +184,8 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_02_bvn(&mut kk, &mut args, |v, _, _, _| {
-                v[0] = v0;
-                v[1] = v1;
+                v.set(0, v0);
+                v.set(1, v1);
                 Ok(())
             })
             .unwrap();
@@ -199,8 +201,8 @@ mod tests {
             let mut args = CommonArgs::new(&mut pad, ips);
             let x_ips = recovery::get_points_coords(args.pad, ips).unwrap();
             integ::mat_02_bvn(&mut kk, &mut args, |v, p, _, _| {
-                v[0] = x_ips[p][0];
-                v[1] = x_ips[p][1];
+                v.set(0, x_ips[p].get(0));
+                v.set(1, x_ips[p].get(1));
                 Ok(())
             })
             .unwrap();
@@ -223,9 +225,9 @@ mod tests {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::mat_02_bvn(&mut kk, &mut args, |v, _, _, _| {
-                v[0] = v0;
-                v[1] = v1;
-                v[2] = v2;
+                v.set(0, v0);
+                v.set(1, v1);
+                v.set(2, v2);
                 Ok(())
             })
             .unwrap();

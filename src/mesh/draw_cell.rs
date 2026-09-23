@@ -3,7 +3,7 @@ use crate::shapes::{GeoKind, Scratchpad};
 use crate::StrError;
 use plotpy::{Canvas, PolyCode};
 use russell_lab::math::ONE_BY_3;
-use russell_lab::Vector;
+use russell_tensor::Tensor1;
 
 impl Mesh {
     /// Draws the boundaries of a single cell by using the associated Lin type
@@ -158,7 +158,7 @@ impl Mesh {
     fn add_curve(&self, canvas: &mut Canvas, lin_kind: GeoKind, lin_points: &[PointId], begin: bool, end: bool) {
         let pp = &self.points;
         let ii = lin_points;
-        let mut x = Vector::new(self.ndim);
+        let mut x = Tensor1::new();
         match lin_kind {
             GeoKind::Lin2 => {
                 if self.ndim == 2 {
@@ -264,9 +264,9 @@ impl Mesh {
                     let (xa, ya) = (pp[ii[0]].coords[0], pp[ii[0]].coords[1]);
                     let (xb, yb) = (pp[ii[1]].coords[0], pp[ii[1]].coords[1]);
                     pad.calc_coords(&mut x, &[-ONE_BY_3, 0.0]).unwrap();
-                    let (xc, yc) = (x[0], x[1]);
+                    let (xc, yc) = (x.get(0), x.get(1));
                     pad.calc_coords(&mut x, &[ONE_BY_3, 0.0]).unwrap();
-                    let (xd, yd) = (x[0], x[1]);
+                    let (xd, yd) = (x.get(0), x.get(1));
                     let qcx = (-5.0 * xa + 2.0 * xb + 18.0 * xc - 9.0 * xd) / 6.0;
                     let qcy = (-5.0 * ya + 2.0 * yb + 18.0 * yc - 9.0 * yd) / 6.0;
                     let qdx = (2.0 * xa - 5.0 * xb - 9.0 * xc + 18.0 * xd) / 6.0;

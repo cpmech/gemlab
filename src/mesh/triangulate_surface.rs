@@ -1,7 +1,6 @@
 use super::AsCell;
 use crate::mesh::{GeoClass, Mesh, PointId};
 use crate::shapes::{GeoKind, Scratchpad};
-use russell_lab::Vector;
 use std::collections::HashMap;
 
 /// Holds the result of a triangulation
@@ -31,7 +30,6 @@ impl Triangulation {
         // auxiliary
         let mut old_point_id_to_new_point_id: HashMap<PointId, PointId> = HashMap::new();
         let mut pads: HashMap<GeoKind, Scratchpad> = HashMap::new();
-        let mut x_work = Vector::new(ndim);
         let mut connectivity = vec![0; 3]; // 3 nodes per triangle
 
         // results
@@ -63,16 +61,16 @@ impl Triangulation {
             mesh.set_pad(pad, points);
 
             // loop over triangles and add them to the list of triangles
-            pad.triangulate(&mut x_work, |_, i, m, x| {
+            pad.triangulate(|_, i, m, x| {
                 let p = if m < nnode {
                     // existing point
                     let p_old = points[m];
                     *old_point_id_to_new_point_id.entry(p_old).or_insert_with(|| {
                         let p_new = res.xx.len();
-                        res.xx.push(x[0]);
-                        res.yy.push(x[1]);
+                        res.xx.push(x.get(0));
+                        res.yy.push(x.get(1));
                         if ndim == 3 {
-                            res.zz.push(x[2]);
+                            res.zz.push(x.get(2));
                         }
                         p_new
                     })
@@ -82,10 +80,10 @@ impl Triangulation {
                     if extra_points[k] == usize::MAX {
                         let p_new = res.xx.len();
                         extra_points[k] = p_new;
-                        res.xx.push(x[0]);
-                        res.yy.push(x[1]);
+                        res.xx.push(x.get(0));
+                        res.yy.push(x.get(1));
                         if ndim == 3 {
-                            res.zz.push(x[2]);
+                            res.zz.push(x.get(2));
                         }
                         p_new
                     } else {

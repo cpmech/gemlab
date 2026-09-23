@@ -111,7 +111,7 @@ impl Scratchpad {
         mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv, 0.0)?;
 
         // inverse Jacobian and determinant/norm (or not possible)
-        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = self.dims();
         if geo_ndim == space_ndim {
             // SOLID case: inverse J (returns determinant)
             mat_inverse(&mut self.inv_jacobian, &self.jacobian)
@@ -139,7 +139,8 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
-    use russell_lab::{deriv1_approx_eq, Matrix, Vector};
+    use russell_lab::{deriv1_approx_eq, Matrix};
+    use russell_tensor::Tensor1;
 
     #[test]
     fn calc_jacobian_handles_errors() {
@@ -162,7 +163,7 @@ mod tests {
         pad: Scratchpad,  // scratchpad to send to calc_coords
         at_ksi: Vec<f64>, // at reference coord value
         ksi: Vec<f64>,    // temporary reference coord
-        x: Vector,        // (space_ndim) coordinates at ξ
+        x: Tensor1,       // (space_ndim) coordinates at ξ
         i: usize,         // dimension index from 0 to space_ndim
         j: usize,         // dimension index from 0 to geo_ndim
     }
@@ -172,7 +173,7 @@ mod tests {
         args.ksi.copy_from_slice(&args.at_ksi);
         args.ksi[args.j] = v;
         args.pad.calc_coords(&mut args.x, &args.ksi).unwrap();
-        Ok(args.x[args.i])
+        Ok(args.x.get(args.i))
     }
 
     #[test]
@@ -227,7 +228,7 @@ mod tests {
                 pad: pad.clone(),
                 at_ksi,
                 ksi: vec![0.0; geo_ndim],
-                x: Vector::new(space_ndim),
+                x: Tensor1::new(),
                 i: 0,
                 j: 0,
             };

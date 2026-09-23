@@ -1,6 +1,7 @@
 use super::Scratchpad;
 use crate::StrError;
-use russell_lab::{mat_mat_mul, Vector};
+use russell_lab::mat_mat_mul;
+use russell_tensor::Tensor1;
 
 impl Scratchpad {
     /// Calculates the (unit) normal vector
@@ -14,7 +15,7 @@ impl Scratchpad {
     ///
     /// # Output
     ///
-    /// * `un` -- (space_ndim) the **unit** normal vector
+    /// * `un` -- (space_ndim) the **unit** normal vector; components beyond `space_ndim` are set to zero
     /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
     /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
     /// * Returns the magnitude of the normal vector
@@ -31,7 +32,7 @@ impl Scratchpad {
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
     /// use russell_lab::math::SQRT_2;
-    /// use russell_lab::Vector;
+    /// use russell_tensor::Tensor1;
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //  →  __       1   -----
@@ -57,9 +58,10 @@ impl Scratchpad {
     ///     // ny = +(L/2)cos(45) = +(H√2/2) √2/2 = +H/2
     ///     // unx = -(H/2)/(H√2/2) = -1/√2
     ///     // uny = +(H/2)/(H√2/2) = +1/√2
-    ///     let mut un = Vector::new(2);
+    ///     let mut un = Tensor1::new();
     ///     let mag_n = pad.calc_normal_vector(&mut un, &[0.0, 0.0])?;
-    ///     assert_eq!(un.as_data(), &[-1.0 / SQRT_2, 1.0 / SQRT_2]);
+    ///     assert_eq!(un.get(0), -1.0 / SQRT_2);
+    ///     assert_eq!(un.get(1), 1.0 / SQRT_2);
     ///     assert_eq!(mag_n, H * SQRT_2 / 2.0);
     ///     Ok(())
     /// }
@@ -70,7 +72,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_lab::Vector;
+    /// use russell_tensor::Tensor1;
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //           .   .  .   . ,.2|
@@ -101,24 +103,23 @@ impl Scratchpad {
     ///     pad.set_xx(3, 1, 1.0);
     ///     pad.set_xx(3, 2, 1.0);
     ///
-    ///     let mut un = Vector::new(3);
+    ///     let mut un = Tensor1::new();
     ///     let mag_n = pad.calc_normal_vector(&mut un, &[0.0, 0.0, 0.0])?;
-    ///     assert_eq!(un.as_data(), &[0.0, 1.0, 0.0]);
+    ///     assert_eq!(un.get(0), 0.0);
+    ///     assert_eq!(un.get(1), 1.0);
+    ///     assert_eq!(un.get(2), 0.0);
     ///     assert_eq!(mag_n, 1.0 / 4.0);
     ///     Ok(())
     /// }
     /// ```
-    pub fn calc_normal_vector(&mut self, un: &mut Vector, ksi: &[f64]) -> Result<f64, StrError> {
+    pub fn calc_normal_vector(&mut self, un: &mut Tensor1, ksi: &[f64]) -> Result<f64, StrError> {
         // check
-        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = self.dims();
         if space_ndim == 2 && geo_ndim != 1 {
             return Err("calc_normal_vector requires geo_ndim = 1 in 2D (CABLE in 2D)");
         }
         if space_ndim == 3 && geo_ndim != 2 {
             return Err("calc_normal_vector requires geo_ndim = 2 in 3D (SHELL in 3D)");
-        }
-        if un.dim() != space_ndim {
-            return Err("un.dim() must be equal to space_ndim");
         }
 
         // matrix L: dNᵐ/dξ
@@ -136,13 +137,15 @@ impl Scratchpad {
         // →   →    →
         // n = e₃ × g₁ = {-g₁_0, +g₁_1}
         if space_ndim == 2 {
-            un[0] = -self.jacobian.get(1, 0);
-            un[1] = self.jacobian.get(0, 0);
-            let mag_n = f64::sqrt(un[0] * un[0] + un[1] * un[1]);
+            un.set(0, -self.jacobian.get(1, 0));
+            un.set(1, self.jacobian.get(0, 0));
+            let mag_n = f64::sqrt(un.get(0) * un.get(0) + un.get(1) * un.get(1));
             if mag_n > 0.0 {
-                un[0] /= mag_n;
-                un[1] /= mag_n;
+                un.set(0, un.get(0) / mag_n);
+                un.set(1, un.get(1) / mag_n);
             }
+            // reset unused trailing component (the z component in 2D)
+            un.set(2, 0.0);
             return Ok(mag_n);
         }
 
@@ -160,14 +163,14 @@ impl Scratchpad {
         // →   →    →
         // n = g₁ × g₂
         let jj = &self.jacobian;
-        un[0] = jj.get(1, 0) * jj.get(2, 1) - jj.get(2, 0) * jj.get(1, 1);
-        un[1] = jj.get(2, 0) * jj.get(0, 1) - jj.get(0, 0) * jj.get(2, 1);
-        un[2] = jj.get(0, 0) * jj.get(1, 1) - jj.get(1, 0) * jj.get(0, 1);
-        let mag_n = f64::sqrt(un[0] * un[0] + un[1] * un[1] + un[2] * un[2]);
+        un.set(0, jj.get(1, 0) * jj.get(2, 1) - jj.get(2, 0) * jj.get(1, 1));
+        un.set(1, jj.get(2, 0) * jj.get(0, 1) - jj.get(0, 0) * jj.get(2, 1));
+        un.set(2, jj.get(0, 0) * jj.get(1, 1) - jj.get(1, 0) * jj.get(0, 1));
+        let mag_n = f64::sqrt(un.get(0) * un.get(0) + un.get(1) * un.get(1) + un.get(2) * un.get(2));
         if mag_n > 0.0 {
-            un[0] /= mag_n;
-            un[1] /= mag_n;
-            un[2] /= mag_n;
+            un.set(0, un.get(0) / mag_n);
+            un.set(1, un.get(1) / mag_n);
+            un.set(2, un.get(2) / mag_n);
         }
         Ok(mag_n)
     }
@@ -179,12 +182,13 @@ impl Scratchpad {
 mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
+    use russell_lab::approx_eq;
     use russell_lab::math::{ONE_BY_3, SQRT_2, SQRT_3};
-    use russell_lab::{approx_eq, vec_approx_eq, vec_norm, Norm, Vector};
+    use russell_tensor::{t1_approx_eq, Tensor1};
 
     #[test]
     fn calc_normal_vector_handles_errors() {
-        let mut un = Vector::new(1);
+        let mut un = Tensor1::new();
         let mut pad = Scratchpad::new(2, GeoKind::Tri3).unwrap();
         assert_eq!(
             pad.calc_normal_vector(&mut un, &[0.0, 0.0]).err(),
@@ -194,11 +198,6 @@ mod tests {
         assert_eq!(
             pad.calc_normal_vector(&mut un, &[0.0, 0.0]).err(),
             Some("calc_normal_vector requires geo_ndim = 2 in 3D (SHELL in 3D)")
-        );
-        let mut pad = Scratchpad::new(3, GeoKind::Tri3).unwrap();
-        assert_eq!(
-            pad.calc_normal_vector(&mut un, &[0.0, 0.0]).err(),
-            Some("un.dim() must be equal to space_ndim")
         );
     }
 
@@ -215,11 +214,11 @@ mod tests {
         // correct values
         const KSI_DEL: f64 = 2.0;
         let correct_magnitude = (aux::RMAX - aux::RMIN) / KSI_DEL;
-        let correct_normal = vec![-f64::sin(aux::AMAX), f64::cos(aux::AMAX)];
+        let correct_normal = Tensor1::from(&[-f64::sin(aux::AMAX), f64::cos(aux::AMAX), 0.0]);
 
         // lover over shapes
         let ksi = &[0.25];
-        let mut un = Vector::new(2);
+        let mut un = Tensor1::new();
         for (kind, tol_mag, tol_vec) in problem {
             // println!("kind = {:?}", kind);
 
@@ -231,8 +230,8 @@ mod tests {
             // check
             let mag_n = pad.calc_normal_vector(&mut un, ksi).unwrap();
             approx_eq(mag_n, correct_magnitude, tol_mag);
-            approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
-            vec_approx_eq(&un, &correct_normal, tol_vec);
+            approx_eq(un.norm(), 1.0, tol_mag);
+            t1_approx_eq(&un, &correct_normal, tol_vec);
         }
     }
 
@@ -249,12 +248,12 @@ mod tests {
         const REF_AREA: f64 = 4.0;
         let area_face2_face3 = (aux::RMAX - aux::RMIN) * (aux::ZMAX - aux::ZMIN);
         let correct_magnitude_face2_face3 = area_face2_face3 / REF_AREA;
-        let correct_normal_face2 = vec![f64::sin(aux::AMIN), -f64::cos(aux::AMIN), 0.0];
-        let correct_normal_face3 = vec![-f64::sin(aux::AMAX), f64::cos(aux::AMAX), 0.0];
+        let correct_normal_face2 = Tensor1::from(&[f64::sin(aux::AMIN), -f64::cos(aux::AMIN), 0.0]);
+        let correct_normal_face3 = Tensor1::from(&[-f64::sin(aux::AMAX), f64::cos(aux::AMAX), 0.0]);
 
         // lover over shapes
         let ksi = &[ONE_BY_3, ONE_BY_3];
-        let mut un = Vector::new(3);
+        let mut un = Tensor1::new();
         for (kind, tol_mag, tol_vec) in problem {
             // println!("kind = {:?}", kind);
 
@@ -266,44 +265,44 @@ mod tests {
             // face # 0
             let mut pad_face = aux::extract_face(0, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert!(un[0] < 0.0);
-            assert!(un[1] < 0.0);
-            approx_eq(un[2], 0.0, tol_vec);
+            assert!(un.get(0) < 0.0);
+            assert!(un.get(1) < 0.0);
+            approx_eq(un.get(2), 0.0, tol_vec);
 
             // face # 1
             let mut pad_face = aux::extract_face(1, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            assert!(un[0] > 0.0);
-            assert!(un[1] > 0.0);
-            approx_eq(un[2], 0.0, tol_vec);
+            assert!(un.get(0) > 0.0);
+            assert!(un.get(1) > 0.0);
+            approx_eq(un.get(2), 0.0, tol_vec);
 
             // face # 2
             let mut pad_face = aux::extract_face(2, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
-            approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
-            vec_approx_eq(&un, &correct_normal_face2, tol_vec);
+            approx_eq(un.norm(), 1.0, tol_mag);
+            t1_approx_eq(&un, &correct_normal_face2, tol_vec);
 
             // face # 3
             let mut pad_face = aux::extract_face(3, &pad);
             let mag_n = pad_face.calc_normal_vector(&mut un, ksi).unwrap();
             approx_eq(mag_n, correct_magnitude_face2_face3, tol_mag);
-            approx_eq(vec_norm(&un, Norm::Euc), 1.0, tol_mag);
-            vec_approx_eq(&un, &correct_normal_face3, tol_vec);
+            approx_eq(un.norm(), 1.0, tol_mag);
+            t1_approx_eq(&un, &correct_normal_face3, tol_vec);
 
             // face # 4
             let mut pad_face = aux::extract_face(4, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            approx_eq(un[0], 0.0, tol_vec);
-            approx_eq(un[1], 0.0, tol_vec);
-            assert!(un[2] < 0.0);
+            approx_eq(un.get(0), 0.0, tol_vec);
+            approx_eq(un.get(1), 0.0, tol_vec);
+            assert!(un.get(2) < 0.0);
 
             // face # 5
             let mut pad_face = aux::extract_face(5, &pad);
             pad_face.calc_normal_vector(&mut un, ksi).unwrap();
-            approx_eq(un[0], 0.0, tol_vec);
-            approx_eq(un[1], 0.0, tol_vec);
-            assert!(un[2] > 0.0);
+            approx_eq(un.get(0), 0.0, tol_vec);
+            approx_eq(un.get(1), 0.0, tol_vec);
+            assert!(un.get(2) > 0.0);
         }
     }
 
@@ -335,19 +334,19 @@ mod tests {
         //                                                         2
         const OS2: f64 = 1.0 / SQRT_2;
         let tri_correct = [
-            &[0.0, -1.0], // bottom
-            &[OS2, OS2],  // diagonal
-            &[-1.0, 0.0], // left
+            Tensor1::from(&[0.0, -1.0, 0.0]), // bottom
+            Tensor1::from(&[OS2, OS2, 0.0]),  // diagonal
+            Tensor1::from(&[-1.0, 0.0, 0.0]), // left
         ];
         let qua_correct = [
-            &[0.0, -1.0], // bottom
-            &[1.0, 0.0],  // right
-            &[0.0, 1.0],  // top
-            &[-1.0, 0.0], // left
+            Tensor1::from(&[0.0, -1.0, 0.0]), // bottom
+            Tensor1::from(&[1.0, 0.0, 0.0]),  // right
+            Tensor1::from(&[0.0, 1.0, 0.0]),  // top
+            Tensor1::from(&[-1.0, 0.0, 0.0]), // left
         ];
 
         // auxiliary
-        let mut un = Vector::new(2);
+        let mut un = Tensor1::new();
         let ksi_values = &[[0.0, 0.0], [ONE_BY_3, ONE_BY_3]];
 
         // loop over shapes
@@ -367,11 +366,11 @@ mod tests {
                         } else {
                             approx_eq(mag_n, 1.0, 1e-15);
                         }
-                        vec_approx_eq(&un, tri_correct[e], 1e-15);
+                        t1_approx_eq(&un, &tri_correct[e], 1e-15);
                     } else {
                         // check quadrilateral
                         approx_eq(mag_n, 1.0, 1e-15);
-                        vec_approx_eq(&un, qua_correct[e], 1e-15);
+                        t1_approx_eq(&un, &qua_correct[e], 1e-15);
                     }
                 }
             }
@@ -414,22 +413,22 @@ mod tests {
         //             ΔA_tri     1/2
         const OS3: f64 = 1.0 / SQRT_3;
         let tet_correct = [
-            &[-1.0, 0.0, 0.0], // negative-x face
-            &[0.0, -1.0, 0.0], // negative-y face
-            &[0.0, 0.0, -1.0], // negative-z face
-            &[OS3, OS3, OS3],  // face orthogonal to the diagonal
+            Tensor1::from(&[-1.0, 0.0, 0.0]), // negative-x face
+            Tensor1::from(&[0.0, -1.0, 0.0]), // negative-y face
+            Tensor1::from(&[0.0, 0.0, -1.0]), // negative-z face
+            Tensor1::from(&[OS3, OS3, OS3]),  // face orthogonal to the diagonal
         ];
         let hex_correct = [
-            &[-1.0, 0.0, 0.0], // behind
-            &[1.0, 0.0, 0.0],  // front
-            &[0.0, -1.0, 0.0], // left
-            &[0.0, 1.0, 0.0],  // right
-            &[0.0, 0.0, -1.0], // bottom
-            &[0.0, 0.0, 1.0],  // top
+            Tensor1::from(&[-1.0, 0.0, 0.0]), // behind
+            Tensor1::from(&[1.0, 0.0, 0.0]),  // front
+            Tensor1::from(&[0.0, -1.0, 0.0]), // left
+            Tensor1::from(&[0.0, 1.0, 0.0]),  // right
+            Tensor1::from(&[0.0, 0.0, -1.0]), // bottom
+            Tensor1::from(&[0.0, 0.0, 1.0]),  // top
         ];
 
         // auxiliary
-        let mut un = Vector::new(3);
+        let mut un = Tensor1::new();
         let ksi_values = &[[0.0, 0.0, 0.0], [ONE_BY_3, ONE_BY_3, ONE_BY_3]];
 
         // loop over shapes
@@ -449,11 +448,11 @@ mod tests {
                         } else {
                             approx_eq(mag_n, 4.0, tol);
                         }
-                        vec_approx_eq(&un, tet_correct[f], tol);
+                        t1_approx_eq(&un, &tet_correct[f], tol);
                     } else {
                         // check hexahedron
                         approx_eq(mag_n, 1.0, tol);
-                        vec_approx_eq(&un, hex_correct[f], tol);
+                        t1_approx_eq(&un, &hex_correct[f], tol);
                     }
                 }
             }

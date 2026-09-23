@@ -1,7 +1,7 @@
 use crate::integ::Gauss;
 use crate::shapes::Scratchpad;
 use crate::StrError;
-use russell_lab::Vector;
+use russell_tensor::Tensor1;
 
 /// Calculates the x-y-z coordinates of all integration points
 ///
@@ -30,6 +30,7 @@ use russell_lab::Vector;
 /// use gemlab::recovery::get_points_coords;
 /// use gemlab::shapes::{GeoKind, Scratchpad};
 /// use gemlab::StrError;
+/// use russell_tensor::{Tensor1, t1_approx_eq};
 ///
 /// fn main() -> Result<(), StrError> {
 ///     //  6 2
@@ -52,18 +53,23 @@ use russell_lab::Vector;
 ///
 ///     let gauss = Gauss::new_sized(pad.kind.class(), 3)?;
 ///     let x_ips = get_points_coords(&mut pad, &gauss)?;
-///     assert_eq!(x_ips[0].as_data(), &[1.0, 1.0]);
-///     assert_eq!(x_ips[1].as_data(), &[4.0, 1.0]);
-///     assert_eq!(x_ips[2].as_data(), &[1.0, 4.0]);
+///
+///     // expected
+///     let x_ref0 = Tensor1::from(&[1.0, 1.0, 0.0]);
+///     let x_ref1 = Tensor1::from(&[4.0, 1.0, 0.0]);
+///     let x_ref2 = Tensor1::from(&[1.0, 4.0, 0.0]);
+///
+///     t1_approx_eq(&x_ips[0], &x_ref0, 1e-15);
+///     t1_approx_eq(&x_ips[1], &x_ref1, 1e-15);
+///     t1_approx_eq(&x_ips[2], &x_ref2, 1e-15);
 ///     Ok(())
 /// }
 /// ```
-pub fn get_points_coords(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Vec<Vector>, StrError> {
-    let space_ndim = pad.xxt.dims().0;
+pub fn get_points_coords(pad: &mut Scratchpad, gauss: &Gauss) -> Result<Vec<Tensor1>, StrError> {
     let mut all_coords = Vec::new();
     let ngauss = gauss.npoint();
     for p in 0..ngauss {
-        let mut x = Vector::new(space_ndim);
+        let mut x = Tensor1::new();
         pad.calc_coords(&mut x, gauss.coords(p))?;
         all_coords.push(x);
     }
@@ -104,13 +110,13 @@ mod tests {
         let gauss = Gauss::new_sized(pad.kind.class(), 4).unwrap();
         let x_ips = get_points_coords(&mut pad, &gauss).unwrap();
 
-        approx_eq(x_ips[0][0], w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        approx_eq(x_ips[0][1], h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        approx_eq(x_ips[1][0], w * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        approx_eq(x_ips[1][1], h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        approx_eq(x_ips[2][0], w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        approx_eq(x_ips[2][1], h * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        approx_eq(x_ips[3][0], w * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
-        approx_eq(x_ips[3][1], h * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[0].get(0), w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[0].get(1), h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[1].get(0), w * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[1].get(1), h * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[2].get(0), w * (1.0 - f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[2].get(1), h * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[3].get(0), w * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
+        approx_eq(x_ips[3].get(1), h * (1.0 + f64::sqrt(3.0) / 3.0) / 2.0, 1e-15);
     }
 }

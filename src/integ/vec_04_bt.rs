@@ -70,7 +70,7 @@ use russell_tensor::Tensor2;
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
 ///     let gauss = Gauss::new(pad.kind);
-///     let mut d = Vector::filled(pad.kind.nnode() * space_ndim, 0.0);
+///     let mut d = Vector::filled(pad.nnode() * space_ndim, 0.0);
 ///     let mut args = CommonArgs::new(&mut pad, &gauss);
 ///     integ::vec_04_bt::<4, _>(&mut d, &mut args, |sig, _, _, _| {
 ///         sig.sym_set_std(0, 0, 1.0);
@@ -95,7 +95,7 @@ where
     F: FnMut(&mut Tensor2<N>, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let (space_ndim, _, nnode) = args.pad.dims();
     if d.dim() < args.ii0 + nnode * space_ndim {
         return Err("d.len() must be ≥ ii0 + nnode ⋅ space_ndim");
     }
@@ -248,7 +248,7 @@ mod tests {
             .collect();
 
         // check
-        let (space_ndim, nnode) = pad.xxt.dims();
+        let (space_ndim, _, nnode) = pad.dims();
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
@@ -285,7 +285,7 @@ mod tests {
         let selection: Vec<_> = [1, 3].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
-        let (space_ndim, nnode) = pad.xxt.dims();
+        let (space_ndim, _, nnode) = pad.dims();
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.data.len(), tol);
@@ -327,7 +327,7 @@ mod tests {
             .collect();
 
         // check
-        let (space_ndim, nnode) = pad.xxt.dims();
+        let (space_ndim, _, nnode) = pad.dims();
         let mut d = Vector::filled(nnode * space_ndim, aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
