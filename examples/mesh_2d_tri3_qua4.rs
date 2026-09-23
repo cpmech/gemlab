@@ -14,8 +14,8 @@ fn main() -> Result<(), StrError> {
     //     0.0     0.5     1.0
     let mesh = Mesh::from_text(
         r"# header
-          # ndim npoint ncell
-               2      8     5
+          # ndim npoint ncell nmarked_edge nmarked_face
+               2      8     5             0             0
           
           # points
           # id marker x y
