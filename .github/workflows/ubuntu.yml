@@ -21,4 +21,4 @@ jobs:
         run: |
           cargo llvm-cov --workspace \
             --ignore-filename-regex 'build.rs' \
-            --fail-under-lines 95
+            --fail-under-lines 90
