@@ -116,7 +116,7 @@ use russell_lab::{mat_inverse, mat_pseudo_inverse, Matrix};
 ///     mat_vec_mul(&mut u_points, 1.0, &pp, &u_nodal)?;
 ///
 ///     // extrapolated values (recovered)
-///     let nnode = pad.xxt.dims().1;
+///     let nnode = pad.nnode();
 ///     let mut u_nodal_rec = Vector::new(nnode);
 ///     let ee = get_extrap_matrix(&mut pad, &gauss)?;
 ///     mat_vec_mul(&mut u_nodal_rec, 1.0, &ee, &u_points)?;

@@ -30,7 +30,7 @@ impl Scratchpad {
         if !tri_or_qua {
             return Err("triangulate works with Tri and Qua classes only");
         }
-        let space_ndim = self.get_space_ndim();
+        let space_ndim = self.space_ndim();
         let nnode = kind.nnode();
         let mut x = Tensor1::new();
         for t in 0..kind.triangulate_ntriangle() {

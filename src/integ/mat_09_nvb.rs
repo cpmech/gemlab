@@ -57,7 +57,7 @@ where
     F: FnMut(&mut Tensor1, usize, &Vector, &Matrix) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
+    let (space_ndim, _, nnode) = args.pad.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     let (ii0, jj0) = (args.ii0, args.jj0);
     if nrow_kk < ii0 + nnode * space_ndim {

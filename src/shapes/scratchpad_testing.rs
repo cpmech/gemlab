@@ -138,7 +138,7 @@ pub mod aux {
     /// 2. space_ndim is not 2 or 3
     /// 3. geo_ndim is greater than geo_ndim (impossible situation)
     pub fn extract_edge(e: usize, pad: &Scratchpad) -> Scratchpad {
-        let (space_ndim, geo_ndim) = pad.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = pad.dims();
         assert_ne!(geo_ndim, 1);
         let mut pad_edge = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap()).unwrap();
         for i in 0..pad.kind.edge_nnode() {
@@ -160,7 +160,7 @@ pub mod aux {
     /// 2. space_ndim is not 2 or 3
     /// 3. geo_ndim is greater than geo_ndim (impossible situation)
     pub fn extract_face(f: usize, pad: &Scratchpad) -> Scratchpad {
-        let (space_ndim, geo_ndim) = pad.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = pad.dims();
         assert_eq!(geo_ndim, 3);
         let mut pad_face = Scratchpad::new(space_ndim, pad.kind.face_kind().unwrap()).unwrap();
         for i in 0..pad.kind.face_nnode() {

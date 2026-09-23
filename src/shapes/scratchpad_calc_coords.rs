@@ -64,7 +64,7 @@ impl Scratchpad {
         if !self.ok_xxt {
             return Err("all components of the coordinates matrix must be set first");
         }
-        let (space_ndim, nnode) = self.xxt.dims();
+        let (space_ndim, _, nnode) = self.dims();
         self.calc_interp(ksi);
         for i in 0..space_ndim {
             x.set(i, 0.0);

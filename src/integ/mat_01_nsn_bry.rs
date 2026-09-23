@@ -51,8 +51,7 @@ where
     F: FnMut(usize, &Tensor1, &Vector) -> Result<f64, StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
-    let geo_ndim = args.pad.deriv.dims().1;
+    let (space_ndim, geo_ndim, nnode) = args.pad.dims();
     if space_ndim == 2 && geo_ndim != 1 {
         return Err("in 2D, geometry ndim must be equal to 1 (a line)");
     }

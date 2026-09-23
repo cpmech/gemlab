@@ -70,7 +70,7 @@ impl Scratchpad {
         tol: f64,
     ) -> Result<usize, StrError> {
         // check
-        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = self.dims();
         if geo_ndim != space_ndim {
             return Err("approximate_ksi requires that geo_ndim = space_ndim");
         }

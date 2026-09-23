@@ -144,7 +144,7 @@ mod tests {
         // (nip,ndim)   (nip,nnode) (nnode,ndim)
 
         let ngauss = gauss.npoint();
-        let (ndim, nnode) = pad.xxt.dims();
+        let (ndim, _, nnode) = pad.dims();
         let mut xx_ips = Matrix::new(ngauss, ndim);
         for p in 0..ngauss {
             for j in 0..ndim {

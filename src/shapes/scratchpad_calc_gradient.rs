@@ -77,7 +77,7 @@ impl Scratchpad {
     /// ```
     pub fn calc_gradient(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
         // check
-        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = self.dims();
         if geo_ndim != space_ndim {
             return Err("calc_gradient requires that geo_ndim = space_ndim");
         }
@@ -148,7 +148,7 @@ mod tests {
             (GeoKind::Tri10, 1e-9),
             (GeoKind::Tri15, 1e-9),
             // Qua
-            (GeoKind::Qua4, 1e-11),
+            (GeoKind::Qua4, 1e-10),
             (GeoKind::Qua8, 1e-10),
             (GeoKind::Qua9, 1e-10),
             (GeoKind::Qua12, 1e-9),

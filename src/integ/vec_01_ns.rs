@@ -71,7 +71,7 @@ use russell_lab::Vector;
 ///     pad.set_xx(2, 0, 2.0);
 ///     pad.set_xx(2, 1, 6.0);
 ///     let gauss = Gauss::new(pad.kind);
-///     let mut a = Vector::filled(pad.kind.nnode(), 0.0);
+///     let mut a = Vector::filled(pad.nnode(), 0.0);
 ///     let mut args = CommonArgs::new(&mut pad, &gauss);
 ///     integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(5.0))?;
 ///     // solution (cₛ = 5, A = 6):
@@ -184,7 +184,7 @@ mod tests {
             .collect();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
@@ -213,7 +213,7 @@ mod tests {
             .collect();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             let mut args = CommonArgs::new(&mut pad, ips);
             integ::vec_01_ns(&mut a, &mut args, |_, _| Ok(CS)).unwrap();
@@ -239,7 +239,7 @@ mod tests {
         let selection: Vec<_> = [1, 4].iter().map(|n| Gauss::new_sized(class, *n).unwrap()).collect();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
@@ -268,7 +268,7 @@ mod tests {
             .collect();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);

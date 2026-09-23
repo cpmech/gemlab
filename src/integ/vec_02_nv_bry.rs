@@ -64,8 +64,7 @@ where
     F: FnMut(&mut Tensor1, usize, &Tensor1, &Vector) -> Result<(), StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
-    let geo_ndim = args.pad.deriv.dims().1;
+    let (space_ndim, geo_ndim, nnode) = args.pad.dims();
     if space_ndim == 2 && geo_ndim != 1 {
         return Err("in 2D, geometry ndim must be equal to 1 (a line)");
     }
@@ -187,7 +186,7 @@ mod tests {
         pad.set_xx(0, 1, 0.0);
         pad.set_xx(1, 0, ll);
         pad.set_xx(1, 1, 0.0);
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut b = Vector::filled(pad.nnode() * space_ndim, NOISE);
         let gauss = Gauss::new(pad.kind);
         // uniform
         let mut args = CommonArgs::new(&mut pad, &gauss);
@@ -219,7 +218,7 @@ mod tests {
         pad.set_xx(1, 1, 0.0);
         pad.set_xx(2, 0, ll / 2.0);
         pad.set_xx(2, 1, 0.0);
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut b = Vector::filled(pad.nnode() * space_ndim, NOISE);
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         // uniform
@@ -255,7 +254,7 @@ mod tests {
         pad.set_xx(3, 1, 0.0);
         pad.set_xx(4, 0, 3.0 * ll / 4.0);
         pad.set_xx(4, 1, 0.0);
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut b = Vector::filled(pad.nnode() * space_ndim, NOISE);
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         // uniform
@@ -320,7 +319,7 @@ mod tests {
         pad.set_xx(3, 0, 0.0);
         pad.set_xx(3, 1, dy);
         pad.set_xx(3, 2, 0.0);
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut b = Vector::filled(pad.nnode() * space_ndim, NOISE);
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         integ::vec_02_nv_bry(&mut b, &mut args, |t, _, _, _| {
@@ -374,7 +373,7 @@ mod tests {
         pad.set_xx(7, 0, 0.0);
         pad.set_xx(7, 1, dy / 2.0);
         pad.set_xx(7, 2, 0.0);
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut b = Vector::filled(pad.nnode() * space_ndim, NOISE);
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         integ::vec_02_nv_bry(&mut b, &mut args, |t, _, _, _| {
@@ -426,7 +425,7 @@ mod tests {
         pad.set_xx(1, 1, r);
         pad.set_xx(2, 0, r * SQRT_2 / 2.0);
         pad.set_xx(2, 1, r * SQRT_2 / 2.0);
-        let mut b = Vector::filled(pad.kind.nnode() * space_ndim, NOISE);
+        let mut b = Vector::filled(pad.nnode() * space_ndim, NOISE);
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         let p = -20.0;

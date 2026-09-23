@@ -57,8 +57,7 @@ where
     F: FnMut(usize, &Tensor1, &Vector) -> Result<f64, StrError>,
 {
     // check
-    let (space_ndim, nnode) = args.pad.xxt.dims();
-    let geo_ndim = args.pad.deriv.dims().1;
+    let (space_ndim, geo_ndim, nnode) = args.pad.dims();
     if space_ndim == 2 && geo_ndim != 1 {
         return Err("in 2D, geometry ndim must be equal to 1 (a line)");
     }
@@ -166,7 +165,7 @@ mod tests {
         let ips = Gauss::new_sized(class, 2).unwrap();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
         let x_ips = recovery::get_points_coords(args.pad, &ips).unwrap();
         integ::vec_01_ns_bry(&mut a, &mut args, |p, _, _| Ok(x_ips[p].get(0))).unwrap();
@@ -198,7 +197,7 @@ mod tests {
         let ips = Gauss::new_sized(class, 2).unwrap();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
         integ::vec_01_ns_bry(&mut a, &mut args, |_, un, _| {
             let s = w0 * un.get(0) + w1 * un.get(1);
@@ -236,7 +235,7 @@ mod tests {
         let ips = Gauss::new_sized(class, 2).unwrap();
 
         // check
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
         let x_ips = recovery::get_points_coords(args.pad, &ips).unwrap();
         integ::vec_01_ns_bry(&mut a, &mut args, |p, un, _| {
@@ -272,7 +271,7 @@ mod tests {
         // perform integration with constant flow vector
         let w = Tensor1::from(&[1.0, 2.0, 3.0]);
         let s = w.dot(&un_correct);
-        let mut a = Vector::filled(pad.kind.nnode(), aux::NOISE);
+        let mut a = Vector::filled(pad.nnode(), aux::NOISE);
         let mut args = CommonArgs::new(&mut pad, &ips);
         integ::vec_01_ns_bry(&mut a, &mut args, |_, un, _| {
             t1_approx_eq(un, &un_correct, 1e-7); // note that blender is single precision

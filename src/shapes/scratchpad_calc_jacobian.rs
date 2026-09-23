@@ -111,7 +111,7 @@ impl Scratchpad {
         mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv, 0.0)?;
 
         // inverse Jacobian and determinant/norm (or not possible)
-        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = self.dims();
         if geo_ndim == space_ndim {
             // SOLID case: inverse J (returns determinant)
             mat_inverse(&mut self.inv_jacobian, &self.jacobian)

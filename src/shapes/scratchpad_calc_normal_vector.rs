@@ -114,7 +114,7 @@ impl Scratchpad {
     /// ```
     pub fn calc_normal_vector(&mut self, un: &mut Tensor1, ksi: &[f64]) -> Result<f64, StrError> {
         // check
-        let (space_ndim, geo_ndim) = self.jacobian.dims();
+        let (space_ndim, geo_ndim, _) = self.dims();
         if space_ndim == 2 && geo_ndim != 1 {
             return Err("calc_normal_vector requires geo_ndim = 1 in 2D (CABLE in 2D)");
         }
