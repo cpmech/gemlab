@@ -1037,8 +1037,21 @@ impl<'a> Draw<'a> {
         if dx > 0.0 && dy > 0.0 {
             let gx = self.m_range * dx;
             let gy = self.m_range * dy;
-            self.plot
-                .set_range(xmin[0] - gx, xmax[0] + gx, xmin[1] - gy, xmax[1] + gy);
+            if mesh.ndim == 3 {
+                let dz = xmax[2] - xmin[2];
+                let gz = self.m_range * dz;
+                self.plot.set_range_3d(
+                    xmin[0] - gx,
+                    xmax[0] + gx,
+                    xmin[1] - gy,
+                    xmax[1] + gy,
+                    xmin[2] - gz,
+                    xmax[2] + gz,
+                );
+            } else {
+                self.plot
+                    .set_range(xmin[0] - gx, xmax[0] + gx, xmin[1] - gy, xmax[1] + gy);
+            }
         }
     }
 
@@ -1216,7 +1229,7 @@ mod tests {
     use crate::mesh::{Features, Mesh, Samples};
     use plotpy::{Canvas, Plot, Text};
 
-    const SAVE_FIGURE: bool = false;
+    const SAVE_FIGURE: bool = true;
 
     fn labels_and_caption() -> (Text, Text) {
         // labels for cell local ids
