@@ -365,7 +365,7 @@ where
         fn_dd(&mut dd, p, nn, bb)?;
 
         // add contribution to K matrix
-        let radius = calc_bb_matrix(&mut bb_mat, &args.pad, args.axisymmetric);
+        let radius = calc_bb_matrix(&mut bb_mat, args.pad, args.axisymmetric);
         let coef = det_jac * weight * args.alpha * radius;
         add_to_stiff_mat(kk, coef, &bb_mat, &dd);
     }

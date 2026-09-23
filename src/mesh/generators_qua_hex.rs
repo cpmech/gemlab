@@ -45,7 +45,7 @@ impl Structured {
 
             // set division weights
             let (wx, wy) = &blocks.div_weights[i];
-            if wx.len() > 0 && wy.len() > 0 {
+            if !wx.is_empty() && !wy.is_empty() {
                 b.set_div_weights_2d(wx, wy)?;
             }
 
@@ -55,7 +55,7 @@ impl Structured {
             }
 
             // set marked edges
-            if marked_edges_map.len() > 0 {
+            if !marked_edges_map.is_empty() {
                 let kind = GeoKind::Qua4;
                 for e in 0..4 {
                     let j0 = kind.edge_node_id(e, 0);
@@ -139,7 +139,7 @@ impl Structured {
 
             // set division weights
             let (wx, wy, wz) = &blocks.div_weights[i];
-            if wx.len() > 0 && wy.len() > 0 && wz.len() > 0 {
+            if !wx.is_empty() && !wy.is_empty() && !wz.is_empty() {
                 b.set_div_weights_3d(wx, wy, wz)?;
             }
 
@@ -149,7 +149,7 @@ impl Structured {
             }
 
             // set marked edges
-            if marked_edges_map.len() > 0 {
+            if !marked_edges_map.is_empty() {
                 let kind = GeoKind::Hex8;
                 for e in 0..12 {
                     let j0 = kind.edge_node_id(e, 0);
@@ -163,7 +163,7 @@ impl Structured {
             }
 
             // set marked faces
-            if marked_faces_map.len() > 0 {
+            if !marked_faces_map.is_empty() {
                 let kind = GeoKind::Hex8;
                 for f in 0..6 {
                     let j0 = kind.face_node_id(f, 0);
@@ -228,7 +228,7 @@ impl Structured {
         target: GeoKind,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
-        if wr.len() < 1 {
+        if wr.is_empty() {
             return Err("the length of wr must be ≥ 1");
         }
         let sum_wr = wr.iter().fold(0.0, |acc, w| acc + w);
@@ -296,7 +296,7 @@ impl Structured {
         target: GeoKind,
         renumber: bool,
     ) -> Result<Mesh, StrError> {
-        if wr.len() < 1 {
+        if wr.is_empty() {
             return Err("the length of wr must be ≥ 1");
         }
         let sum_wr = wr.iter().fold(0.0, |acc, w| acc + w);
@@ -1153,12 +1153,12 @@ mod tests {
     const MAX_NPOINT_PRINT: usize = 200;
 
     fn print_bandwidth(mesh: &mut Mesh) {
-        let graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
+        let graph = GraphUnd::from_mesh(mesh, true, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph.print_non_zero_pattern();
         }
         GraphUnd::renumber_mesh(mesh, false).unwrap();
-        let graph_after = GraphUnd::from_mesh(&mesh, true, false).unwrap();
+        let graph_after = GraphUnd::from_mesh(mesh, true, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph_after.print_non_zero_pattern();
         }
@@ -1172,7 +1172,7 @@ mod tests {
         if larger {
             draw.set_size(600.0, 600.0);
         }
-        draw.all(&mesh, filename).unwrap();
+        draw.all(mesh, filename).unwrap();
     }
 
     #[test]

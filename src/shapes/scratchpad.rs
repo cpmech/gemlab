@@ -122,7 +122,7 @@ impl Scratchpad {
     ///
     /// 1. `space_ndim` must be 2 or 3
     /// 2. `space_ndim` must be greater than or equal to `geo_ndim`;
-    ///     e.g., you cannot have a 3D shape in a 2D space.
+    ///    e.g., you cannot have a 3D shape in a 2D space.
     ///
     /// # Examples
     ///

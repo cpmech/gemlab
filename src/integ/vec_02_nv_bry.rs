@@ -198,7 +198,7 @@ mod tests {
         vec_approx_eq(&b, &[0.0, -2.0, 0.0, -2.0], 1e-15);
         // triangular (see @sgm:14\page{605})
         let mut args = CommonArgs::new(&mut pad, &gauss);
-        let x_ips = recovery::get_points_coords(&mut args.pad, &gauss).unwrap();
+        let x_ips = recovery::get_points_coords(args.pad, &gauss).unwrap();
         integ::vec_02_nv_bry(&mut b, &mut args, |t, p, _, _| {
             let c = x_ips[p][0] / ll;
             t[0] = 0.0;

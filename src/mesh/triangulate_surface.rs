@@ -67,18 +67,15 @@ impl Triangulation {
                 let p = if m < nnode {
                     // existing point
                     let p_old = points[m];
-                    old_point_id_to_new_point_id
-                        .entry(p_old)
-                        .or_insert_with(|| {
-                            let p_new = res.xx.len();
-                            res.xx.push(x[0]);
-                            res.yy.push(x[1]);
-                            if ndim == 3 {
-                                res.zz.push(x[2]);
-                            }
-                            p_new
-                        })
-                        .clone()
+                    *old_point_id_to_new_point_id.entry(p_old).or_insert_with(|| {
+                        let p_new = res.xx.len();
+                        res.xx.push(x[0]);
+                        res.yy.push(x[1]);
+                        if ndim == 3 {
+                            res.zz.push(x[2]);
+                        }
+                        p_new
+                    })
                 } else {
                     // extra point
                     let k = m - nnode;

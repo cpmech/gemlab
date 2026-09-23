@@ -334,12 +334,12 @@ mod tests {
         // For the diagonal of Tri: Δℓ_edge = 2 √2, thus ||n|| = ————— = √2
         //                                                         2
         const OS2: f64 = 1.0 / SQRT_2;
-        let tri_correct = vec![
+        let tri_correct = [
             &[0.0, -1.0], // bottom
             &[OS2, OS2],  // diagonal
             &[-1.0, 0.0], // left
         ];
-        let qua_correct = vec![
+        let qua_correct = [
             &[0.0, -1.0], // bottom
             &[1.0, 0.0],  // right
             &[0.0, 1.0],  // top
@@ -413,13 +413,13 @@ mod tests {
         //    ||n|| = ——————— = ——————— = 4 √3
         //             ΔA_tri     1/2
         const OS3: f64 = 1.0 / SQRT_3;
-        let tet_correct = vec![
+        let tet_correct = [
             &[-1.0, 0.0, 0.0], // negative-x face
             &[0.0, -1.0, 0.0], // negative-y face
             &[0.0, 0.0, -1.0], // negative-z face
             &[OS3, OS3, OS3],  // face orthogonal to the diagonal
         ];
-        let hex_correct = vec![
+        let hex_correct = [
             &[-1.0, 0.0, 0.0], // behind
             &[1.0, 0.0, 0.0],  // front
             &[0.0, -1.0, 0.0], // left

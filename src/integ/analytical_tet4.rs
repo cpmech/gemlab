@@ -152,7 +152,7 @@ impl AnalyticalTet4 {
     /// # Input
     ///
     /// * `pad` -- The same pad used in `new` because we need the nodal coordinates here.
-    ///            Do not change the coordinates, otherwise the values will be wrong.
+    ///   Do not change the coordinates, otherwise the values will be wrong.
     pub fn vec_01_ns_linear_along_z(&self, pad: &Scratchpad) -> Vec<f64> {
         let (z1, z2, z3, z4) = (
             pad.xxt.get(2, 0),

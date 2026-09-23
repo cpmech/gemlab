@@ -125,14 +125,11 @@ impl Mesh {
             grid.insert(point.id, &point.coords)?;
         }
         for point in &self.points {
-            match grid.search(&point.coords)? {
-                Some(id) => {
-                    if id != point.id {
-                        println!("found overlapping points: {} => {}", id, point.id);
-                        return Err("found overlapping points");
-                    }
+            if let Some(id) = grid.search(&point.coords)? {
+                if id != point.id {
+                    println!("found overlapping points: {} => {}", id, point.id);
+                    return Err("found overlapping points");
                 }
-                None => (),
             }
         }
         Ok(())

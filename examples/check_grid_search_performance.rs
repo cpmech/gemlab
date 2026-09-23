@@ -43,14 +43,11 @@ fn run(grid_search_ndiv: usize, nr: usize, na: usize) -> Result<(), StrError> {
 
     sw.reset();
     for point in &mesh.points {
-        match grid.search(&point.coords)? {
-            Some(id) => {
-                if id != point.id {
-                    println!("found overlapping points: {} => {}", id, point.id);
-                    return Err("found overlapping points");
-                }
+        if let Some(id) = grid.search(&point.coords)? {
+            if id != point.id {
+                println!("found overlapping points: {} => {}", id, point.id);
+                return Err("found overlapping points");
             }
-            None => (),
         }
     }
     println!("grid.search     : {}", format_nanoseconds(sw.stop()));

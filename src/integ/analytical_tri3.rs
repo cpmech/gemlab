@@ -177,7 +177,7 @@ impl AnalyticalTri3 {
     /// # Input
     ///
     /// * `pad` -- The same shape used in `new` because we need the nodal coordinates here
-    ///            Do not change the coordinates, otherwise the values will be wrong.
+    ///   Do not change the coordinates, otherwise the values will be wrong.
     #[rustfmt::skip]
     pub fn vec_03_bv_bilinear(&self, pad: &Scratchpad) -> Vector {
         let (x0, x1, x2) = (pad.xxt.get(0,0), pad.xxt.get(0,1), pad.xxt.get(0,2));

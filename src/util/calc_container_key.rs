@@ -22,7 +22,7 @@ pub fn calc_container_key(ndim: usize, side_length: f64, ndiv: &[usize], xmin: &
     if iz == ndiv[2] {
         iz -= 1; // point is on max edge => move to inner container
     }
-    return ix + iy * ndiv[0] + iz * ndiv[0] * ndiv[1];
+    ix + iy * ndiv[0] + iz * ndiv[0] * ndiv[1]
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

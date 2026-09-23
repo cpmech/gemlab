@@ -130,7 +130,7 @@ mod tests {
     ) where
         T: AsArray2D<'a, PointId>,
     {
-        let mut keys: Vec<_> = edges.keys().map(|k| *k).collect();
+        let mut keys: Vec<_> = edges.keys().copied().collect();
         keys.sort();
         assert_eq!(keys, correct_keys);
         for i in 0..keys.len() {
@@ -145,7 +145,7 @@ mod tests {
     ) where
         T: AsArray2D<'a, PointId>,
     {
-        let mut keys: Vec<_> = faces.keys().map(|k| *k).collect();
+        let mut keys: Vec<_> = faces.keys().copied().collect();
         keys.sort();
         assert_eq!(keys, correct_keys);
         for i in 0..keys.len() {
@@ -250,7 +250,7 @@ mod tests {
         validate_faces(&faces, &correct_face_keys, &correct_face_points);
         assert_eq!(min, &[0.0, 0.0, 0.0]);
         assert_eq!(max, &[1.0, 1.0, 2.0]);
-        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
+        let mut points: Vec<_> = points.iter().copied().collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     }
@@ -354,7 +354,7 @@ mod tests {
         validate_faces(&faces, &correct_face_keys, &correct_face_points);
         assert_eq!(min, &[0.0, 0.0, 0.0]);
         assert_eq!(max, &[1.0, 1.0, 2.0]);
-        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
+        let mut points: Vec<_> = points.iter().copied().collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     }
@@ -442,7 +442,7 @@ mod tests {
         validate_faces(&faces, &correct_face_keys, &correct_face_points);
         assert_eq!(min, &[0.0, 0.0, 0.0]);
         assert_eq!(max, &[1.0, 2.0, 1.0]);
-        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
+        let mut points: Vec<_> = points.iter().copied().collect();
         points.sort();
         assert_eq!(points, &[0, 1, 2, 3, 4, 5, 6, 7, 8]);
     }
@@ -651,7 +651,7 @@ mod tests {
         validate_faces(&faces, &correct_face_keys, &correct_face_points);
         assert_eq!(min, &[0.0, 0.0, 0.0]);
         assert_eq!(max, &[2.0, 2.0, 4.0]);
-        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
+        let mut points: Vec<_> = points.iter().copied().collect();
         points.sort();
         assert_eq!(
             points,
@@ -903,7 +903,7 @@ mod tests {
         validate_faces(&faces, &correct_face_keys, &correct_face_points);
         assert_eq!(min, &[0.0, 0.0, 0.0]);
         assert_eq!(max, &[2.0, 2.0, 4.0]);
-        let mut points: Vec<_> = points.iter().map(|id| *id).collect();
+        let mut points: Vec<_> = points.iter().copied().collect();
         points.sort();
         assert_eq!(
             points,

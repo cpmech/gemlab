@@ -356,7 +356,7 @@ impl Block {
 
     /// Draws this block
     pub fn draw(&self, plot: &mut Plot, with_ids: bool, set_range: bool) -> Result<(), StrError> {
-        if self.ndim == 2 && self.edge_constraints.len() > 0 {
+        if self.ndim == 2 && !self.edge_constraints.is_empty() {
             for ct in self.edge_constraints.values() {
                 match ct {
                     Constraint2d::Circle(xc, yc, r) => {
@@ -418,10 +418,10 @@ impl Block {
         if self.ndim != 2 {
             return Err("this method works only for 2D blocks");
         }
-        if wx.len() < 1 {
+        if wx.is_empty() {
             return Err("the length of the wx array must be ≥ 1");
         }
-        if wy.len() < 1 {
+        if wy.is_empty() {
             return Err("the length of the wy array must be ≥ 1");
         }
         let sum_wx = wx.iter().fold(0.0, |acc, w| acc + w);
@@ -452,13 +452,13 @@ impl Block {
         if self.ndim != 3 {
             return Err("this method works only for 3D blocks");
         }
-        if wx.len() < 1 {
+        if wx.is_empty() {
             return Err("the length of the wx array must be ≥ 1");
         }
-        if wy.len() < 1 {
+        if wy.is_empty() {
             return Err("the length of the wy array must be ≥ 1");
         }
-        if wz.len() < 1 {
+        if wz.is_empty() {
             return Err("the length of the wz array must be ≥ 1");
         }
         let sum_wx = wx.iter().fold(0.0, |acc, w| acc + w);
@@ -657,7 +657,7 @@ impl Block {
     /// # Input
     ///
     /// * `target` -- If 2D, a quadrilateral (must have [GeoClass::Qua])
-    ///               If 3D, a hexahedron (must have [GeoClass::Hex])
+    ///   If 3D, a hexahedron (must have [GeoClass::Hex])
     pub fn subdivide(&mut self, target: GeoKind) -> Result<Mesh, StrError> {
         // check
         let ndim = self.ndim;
@@ -685,7 +685,7 @@ impl Block {
 
         // constants
         let target_nnode = target.nnode();
-        let has_constraints = self.edge_constraints.len() > 0 || self.face_constraints.len() > 0;
+        let has_constraints = !self.edge_constraints.is_empty() || !self.face_constraints.is_empty();
 
         // constants used only if there are constraints and
         // the constraint causes some middle edge nodes to move
@@ -877,7 +877,7 @@ impl Block {
                     }
 
                     // set marked edges
-                    if self.edge_markers.len() > 0 {
+                    if !self.edge_markers.is_empty() {
                         if self.ndim == 2 {
                             let cell_touches_xm = i == 0; // x-minus boundary
                             let cell_touches_ym = j == 0; // y-minus boundary
@@ -976,7 +976,7 @@ impl Block {
                     }
 
                     // set marked faces
-                    if self.face_markers.len() > 0 {
+                    if !self.face_markers.is_empty() {
                         let cell_touches_xm = i == 0; // x-minus boundary
                         let cell_touches_ym = j == 0; // y-minus boundary
                         let cell_touches_zm = k == 0; // z-minus boundary
@@ -1299,7 +1299,7 @@ mod tests {
                 plot.add(&circle_out);
             }
         })
-        .all(&mesh, filename)
+        .all(mesh, filename)
         .unwrap();
     }
 
@@ -2478,7 +2478,8 @@ mod tests {
             approx_eq(d, r, 1e-14);
         }
         // middle nodes
-        for (a, mid, b) in [(3, 6, 2)] {
+        {
+            let (a, mid, b) = (3, 6, 2);
             let xmid = (mesh.points[a].coords[0] + mesh.points[b].coords[0]) / 2.0;
             let ymid = (mesh.points[a].coords[1] + mesh.points[b].coords[1]) / 2.0;
             array_approx_eq(&mesh.points[mid].coords, &[xmid, ymid], 1e-14);

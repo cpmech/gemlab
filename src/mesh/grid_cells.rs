@@ -274,7 +274,7 @@ impl<'a> GridCells<'a> {
             let xb = &self.mesh.points[cell.points[1]].coords;
             let xc = &self.mesh.points[cell.points[2]].coords;
             triangle_coords(ksi_or_zeta, xa, xb, xc, x);
-            return in_triangle(&ksi_or_zeta);
+            return in_triangle(ksi_or_zeta);
         }
         if cell.kind == GeoKind::Tet4 {
             let xa = &self.mesh.points[cell.points[0]].coords;
@@ -282,7 +282,7 @@ impl<'a> GridCells<'a> {
             let xc = &self.mesh.points[cell.points[2]].coords;
             let xd = &self.mesh.points[cell.points[3]].coords;
             tetrahedron_coords(ksi_or_zeta, xa, xb, xc, xd, x);
-            return in_tetrahedron(&ksi_or_zeta);
+            return in_tetrahedron(ksi_or_zeta);
         }
 
         // TODO: handle other cell kinds
@@ -403,14 +403,9 @@ impl<'a> GridCells<'a> {
 
         // draw grid
         let ndim = self.mesh.ndim;
-        let mut xmin = vec![0.0; ndim];
-        let mut xmax = vec![0.0; ndim];
-        let mut ndiv = vec![0; ndim];
-        for i in 0..ndim {
-            xmin[i] = self.xmin[i];
-            xmax[i] = self.xmax[i];
-            ndiv[i] = self.ndiv[i];
-        }
+        let xmin = self.xmin[..ndim].to_vec();
+        let xmax = self.xmax[..ndim].to_vec();
+        let ndiv = self.ndiv[..ndim].to_vec();
         let mut canvas_grid = Canvas::new();
         canvas_grid
             .set_alt_text_color("#5d5d5d")
@@ -482,16 +477,16 @@ impl<'a> GridCells<'a> {
         }
         let mut b = String::new();
         let ncell = unique_items.len() + self.large_cells.len();
-        write!(&mut b, "Summary\n").unwrap();
-        write!(&mut b, "=======\n").unwrap();
-        write!(&mut b, "ncell total = {:?}\n", ncell).unwrap();
-        write!(&mut b, "xmin = {:?}\n", self.xmin).unwrap();
-        write!(&mut b, "xmax = {:?}\n", self.xmax).unwrap();
-        write!(&mut b, "side_length = {:?}\n", self.side_length).unwrap();
-        write!(&mut b, "num of non-empty containers = {}\n", self.containers.len()).unwrap();
-        write!(&mut b, "max container num items = {}\n", max_container_num_items).unwrap();
+        writeln!(&mut b, "Summary").unwrap();
+        writeln!(&mut b, "=======").unwrap();
+        writeln!(&mut b, "ncell total = {:?}", ncell).unwrap();
+        writeln!(&mut b, "xmin = {:?}", self.xmin).unwrap();
+        writeln!(&mut b, "xmax = {:?}", self.xmax).unwrap();
+        writeln!(&mut b, "side_length = {:?}", self.side_length).unwrap();
+        writeln!(&mut b, "num of non-empty containers = {}", self.containers.len()).unwrap();
+        writeln!(&mut b, "max container num items = {}", max_container_num_items).unwrap();
         write!(&mut b, "\nHistogram of container num items\n").unwrap();
-        write!(&mut b, "================================\n").unwrap();
+        writeln!(&mut b, "================================").unwrap();
         let stations: Vec<_> = (0..max_container_num_items + 2).collect();
         let mut hist = Histogram::new(&stations).unwrap();
         hist.count(&container_num_items);
@@ -511,9 +506,9 @@ impl<'a> fmt::Display for GridCells<'a> {
         indices.sort();
         for index in indices {
             let container = self.containers.get(index).unwrap();
-            let mut ids: Vec<_> = container.iter().map(|id| *id).collect();
+            let mut ids: Vec<_> = container.iter().copied().collect();
             ids.sort();
-            write!(f, "{}: {:?}\n", index, ids).unwrap();
+            writeln!(f, "{}: {:?}", index, ids).unwrap();
             for id in ids {
                 unique_items.insert(id);
             }
@@ -523,10 +518,10 @@ impl<'a> fmt::Display for GridCells<'a> {
         let mut ids: Vec<_> = unique_items.iter().collect();
         large_ids.sort();
         ids.sort();
-        write!(f, "large_cells = {:?}\n", large_ids).unwrap();
-        write!(f, "ncell = {}\n", unique_items.len() + self.large_cells.len()).unwrap();
-        write!(f, "ncontainer = {}\n", self.containers.len()).unwrap();
-        write!(f, "ndiv = {:?}\n", self.ndiv).unwrap();
+        writeln!(f, "large_cells = {:?}", large_ids).unwrap();
+        writeln!(f, "ncell = {}", unique_items.len() + self.large_cells.len()).unwrap();
+        writeln!(f, "ncontainer = {}", self.containers.len()).unwrap();
+        writeln!(f, "ndiv = {:?}", self.ndiv).unwrap();
         Ok(())
     }
 }

@@ -205,6 +205,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::clone_on_copy)] // test the derived Clone implementation
     fn derive_methods_work() {
         // Point2d
         let point = Point2d::new(1.0, 2.0);

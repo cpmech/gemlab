@@ -114,7 +114,7 @@ impl Unstructured {
     ///
     /// 1. Zero face markers are ignored.
     /// 2. TetGen automatically assigns the marker 1 for points on the boundary
-    /// thus, we cannot use the marker 1 to identify corner points
+    ///    thus, we cannot use the marker 1 to identify corner points
     pub fn from_tetgen(tetgen: &Tetgen) -> Mesh {
         // allocate data
         const NDIM: usize = 3;
@@ -159,7 +159,7 @@ impl Unstructured {
     /// Generates a triangular mesh from a Planar Straight Line Graph (PSLG) defined by a Mesh
     pub fn call_trigen(
         pslg: &Mesh,
-        holes: &Vec<(f64, f64)>,
+        holes: &[(f64, f64)],
         o2: bool,
         max_areas: Option<HashMap<CellMarker, f64>>,
         global_max_area: Option<f64>,
@@ -176,7 +176,7 @@ impl Unstructured {
         let nregion = pslg.cells.len();
         let nhole = holes.len();
         let extract_all = true; // we need interior edges as well
-        let features = Features::new(&pslg, extract_all);
+        let features = Features::new(pslg, extract_all);
         let nsegment = features.edges.len();
 
         // allocate trigen structure
@@ -239,8 +239,8 @@ impl Unstructured {
     /// The PLC must contain only faces (shells) and each face must be either a Tri3 or a Qua4.
     pub fn call_tetgen(
         plc: &Mesh,
-        regions: &Vec<(i32, f64, f64, f64)>,
-        holes: &Vec<(f64, f64, f64)>,
+        regions: &[(i32, f64, f64, f64)],
+        holes: &[(f64, f64, f64)],
         o2: bool,
         max_volumes: Option<HashMap<CellMarker, f64>>,
         global_max_volume: Option<f64>,
@@ -259,7 +259,7 @@ impl Unstructured {
 
         // extract features
         let extract_all = true; // we need all facets
-        let features = Features::new(&plc, extract_all);
+        let features = Features::new(plc, extract_all);
         let nfacet = features.shells.len() + features.faces.len();
 
         // shells: counter the number of points on each facet
@@ -403,7 +403,7 @@ impl Unstructured {
 
         // generate o2 triangles (i.e., Tri6) (need to use o2 for others too, e.g.,
         // Tri10, Tri15, because the the middle-edge markers will be replicated by trigen
-        let o2 = if target.nnode() > 3 { true } else { false };
+        let o2 = target.nnode() > 3;
 
         // allocate data
         let npoint = 2 * (nr + 1) + 2 * (na - 1);
@@ -574,7 +574,7 @@ impl Unstructured {
 
         // generate o2 triangles (i.e., Tet10) (need to use o2 for others too, e.g.,
         // Tet20, because the the middle-edge markers will be replicated by tetgen
-        let o2 = if target.nnode() > 4 { true } else { false };
+        let o2 = target.nnode() > 4;
 
         // allocate data
         let nz = 1;
@@ -786,12 +786,12 @@ mod tests {
     const MAX_NPOINT_PRINT: usize = 200;
 
     fn print_bandwidth(mesh: &mut Mesh) {
-        let graph = GraphUnd::from_mesh(&mesh, true, false).unwrap();
+        let graph = GraphUnd::from_mesh(mesh, true, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph.print_non_zero_pattern();
         }
         GraphUnd::renumber_mesh(mesh, false).unwrap();
-        let graph_after = GraphUnd::from_mesh(&mesh, true, false).unwrap();
+        let graph_after = GraphUnd::from_mesh(mesh, true, false).unwrap();
         if mesh.points.len() < MAX_NPOINT_PRINT {
             graph_after.print_non_zero_pattern();
         }
@@ -813,7 +813,7 @@ mod tests {
         } else {
             draw.set_size(600.0, 600.0);
         }
-        draw.all(&mesh, filename).unwrap();
+        draw.all(mesh, filename).unwrap();
     }
 
     fn check_corner_markers(mesh: &Mesh, o2_3d: bool) {
@@ -1477,7 +1477,7 @@ mod tests {
                 plot.add(&cylin_in).add(&cylin_out);
             }
         })
-        .all(&mesh, filename)
+        .all(mesh, filename)
         .unwrap();
     }
 

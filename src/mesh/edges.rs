@@ -120,8 +120,8 @@ impl<'a> Edges<'a> {
         for e in 0..self.all.len() {
             let edge = &self.all[e];
             let (a, b) = edge.key();
-            map.entry(a).or_insert_with(Vec::new).push(e);
-            map.entry(b).or_insert_with(Vec::new).push(e);
+            map.entry(a).or_default().push(e);
+            map.entry(b).or_default().push(e);
             if edge.points.len() > nnode_per_edge_max {
                 nnode_per_edge_max = edge.points.len();
             }
@@ -137,7 +137,7 @@ impl<'a> Edges<'a> {
         endpoints.sort();
 
         // start with the first point (e.g., a point in a loop will do)
-        let endpoint = if endpoints.len() > 0 {
+        let endpoint = if !endpoints.is_empty() {
             // use the endpoint with the lowest point id among all extremities
             *endpoints[0]
         } else {
@@ -226,7 +226,7 @@ impl<'a> Edges<'a> {
         // follow path
         for _ in 0..self.all.len() {
             let edges = next_edges(b, e);
-            if edges.len() == 0 {
+            if edges.is_empty() {
                 // no more edges to follow
                 break;
             }
