@@ -1,6 +1,5 @@
 # Geometry, meshes, and numerical integration for finite element analyses <!-- omit from toc -->
 
-[![codecov](https://codecov.io/gh/cpmech/gemlab/graph/badge.svg?token=OjQKQ0PrNF)](https://codecov.io/gh/cpmech/gemlab)
 [![Arch](https://github.com/cpmech/gemlab/actions/workflows/arch.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/arch.yml)
 [![Ubuntu](https://github.com/cpmech/gemlab/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/ubuntu.yml)
 
