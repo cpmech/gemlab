@@ -34,7 +34,7 @@ impl Face {
         } else {
             (self.points[0], self.points[1], self.points[2], usize::MAX)
         };
-        sort4(&mut key);
+        sort4(&mut key.0, &mut key.1, &mut key.2, &mut key.3);
         key
     }
 }

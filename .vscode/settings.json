@@ -2,7 +2,9 @@
   "cSpell.words": [
     "archlinux",
     "argsort",
+    "axisymmetric",
     "Bbᵐᵢ",
+    "Bhatti",
     "blas",
     "connectivities",
     "conv",
@@ -18,12 +20,16 @@
     "Farias",
     "gemlab",
     "integ",
+    "interp",
     "ldconfig",
     "liblapacke",
     "libopenblas",
     "libsuitesparse",
     "makepkg",
     "matplotlib",
+    "ncell",
+    "ncol",
+    "ndim",
     "nfacet",
     "ngauss",
     "ngausss",
@@ -32,6 +38,8 @@
     "nocapture",
     "noconfirm",
     "NOPASSWD",
+    "npoint",
+    "nrow",
     "oneapi",
     "openblas",
     "pacman",
@@ -49,5 +57,6 @@
     "zdocker",
     "zrange",
     "zscripts"
-  ]
+  ],
+  "rust-analyzer.cargo.features": "all"
 }

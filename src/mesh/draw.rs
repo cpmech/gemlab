@@ -829,7 +829,7 @@ impl<'a> Draw<'a> {
         for (marker, p1, p2) in &mesh.marked_edges {
             if ndim == 2 {
                 let mut key = (*p1, *p2);
-                sort2(&mut key);
+                sort2(&mut key.0, &mut key.1);
                 if let Some(edge) = features.edges.get(&key) {
                     let mut pad = Scratchpad::new(ndim, edge.kind)?;
                     mesh.set_pad(&mut pad, &edge.points);
@@ -881,7 +881,7 @@ impl<'a> Draw<'a> {
         let s = f64::sqrt(sum) * self.m_normal_vector_marker;
         for (marker, p1, p2, p3, p4) in &mesh.marked_faces {
             let mut key = (*p1, *p2, *p3, *p4);
-            sort4(&mut key);
+            sort4(&mut key.0, &mut key.1, &mut key.2, &mut key.3);
             if let Some(face) = features.faces.get(&key) {
                 let mut pad = Scratchpad::new(ndim, face.kind)?;
                 mesh.set_pad(&mut pad, &face.points);

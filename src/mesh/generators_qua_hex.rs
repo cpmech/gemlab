@@ -20,7 +20,7 @@ impl Structured {
         let mut marked_edges_map = HashMap::new();
         blocks.marked_edges.iter().for_each(|(marker, p1, p2)| {
             let mut edge_key = (*p1, *p2);
-            sort2(&mut edge_key);
+            sort2(&mut edge_key.0, &mut edge_key.1);
             marked_edges_map.insert(edge_key, *marker);
         });
 
@@ -61,7 +61,7 @@ impl Structured {
                     let j0 = kind.edge_node_id(e, 0);
                     let j1 = kind.edge_node_id(e, 1);
                     let mut edge_key = (pp[j0], pp[j1]);
-                    sort2(&mut edge_key);
+                    sort2(&mut edge_key.0, &mut edge_key.1);
                     if let Some(marker) = marked_edges_map.get(&edge_key) {
                         b.set_edge_marker(e, *marker)?;
                     }
@@ -93,12 +93,12 @@ impl Structured {
         let mut marked_faces_map = HashMap::new();
         blocks.marked_edges.iter().for_each(|(marker, p1, p2)| {
             let mut edge_key = (*p1, *p2);
-            sort2(&mut edge_key);
+            sort2(&mut edge_key.0, &mut edge_key.1);
             marked_edges_map.insert(edge_key, *marker);
         });
         blocks.marked_faces.iter().for_each(|(marker, p1, p2, p3, p4)| {
             let mut face_key = (*p1, *p2, *p3, *p4);
-            sort4(&mut face_key);
+            sort4(&mut face_key.0, &mut face_key.1, &mut face_key.2, &mut face_key.3);
             marked_faces_map.insert(face_key, *marker);
         });
 
@@ -155,7 +155,7 @@ impl Structured {
                     let j0 = kind.edge_node_id(e, 0);
                     let j1 = kind.edge_node_id(e, 1);
                     let mut edge_key = (pp[j0], pp[j1]);
-                    sort2(&mut edge_key);
+                    sort2(&mut edge_key.0, &mut edge_key.1);
                     if let Some(marker) = marked_edges_map.get(&edge_key) {
                         b.set_edge_marker(e, *marker)?;
                     }
@@ -171,7 +171,7 @@ impl Structured {
                     let j2 = kind.face_node_id(f, 2);
                     let j3 = kind.face_node_id(f, 3);
                     let mut face_key = (pp[j0], pp[j1], pp[j2], pp[j3]);
-                    sort4(&mut face_key);
+                    sort4(&mut face_key.0, &mut face_key.1, &mut face_key.2, &mut face_key.3);
                     if let Some(marker) = marked_faces_map.get(&face_key) {
                         b.set_face_marker(f, *marker)?;
                     }

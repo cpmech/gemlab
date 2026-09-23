@@ -905,7 +905,7 @@ impl Block {
                                             let p1 = points[target.edge_node_id(e, 0)];
                                             let p2 = points[target.edge_node_id(e, 1)];
                                             let mut key = (p1, p2);
-                                            sort2(&mut key);
+                                            sort2(&mut key.0, &mut key.1);
                                             mesh.marked_edges.push((*marker, key.0, key.1));
                                         }
                                     }
@@ -966,7 +966,7 @@ impl Block {
                                             let p1 = points[target.edge_node_id(e, 0)];
                                             let p2 = points[target.edge_node_id(e, 1)];
                                             let mut key = (p1, p2);
-                                            sort2(&mut key);
+                                            sort2(&mut key.0, &mut key.1);
                                             mesh.marked_edges.push((*marker, key.0, key.1));
                                         }
                                     }
@@ -1022,7 +1022,7 @@ impl Block {
                                         let p3 = points[target.face_node_id(f, 2)];
                                         let p4 = points[target.face_node_id(f, 3)];
                                         let mut key = (p1, p2, p3, p4);
-                                        sort4(&mut key);
+                                        sort4(&mut key.0, &mut key.1, &mut key.2, &mut key.3);
                                         mesh.marked_faces.push((*marker, key.0, key.1, key.2, key.3));
                                     }
                                 }

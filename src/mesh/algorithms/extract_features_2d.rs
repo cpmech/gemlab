@@ -19,7 +19,7 @@ pub(crate) fn extract_features_2d(
     let mut marked_edges_map = HashMap::new();
     mesh.marked_edges.iter().for_each(|(marker, p1, p2)| {
         let mut edge_key = (*p1, *p2);
-        sort2(&mut edge_key);
+        sort2(&mut edge_key.0, &mut edge_key.1);
         marked_edges_map.insert(edge_key, *marker);
     });
 

@@ -24,9 +24,8 @@ fn main() -> Result<(), StrError> {
     // constants
     let young = 96.0;
     let poisson = 1.0 / 3.0;
-    let two_dim = false;
     let plane_stress = false;
-    let model = LinElasticity::new(young, poisson, two_dim, plane_stress);
+    let model = LinElasticity::<6>::new(young, poisson, plane_stress)?;
 
     // stiffness
     let nnode = pad.kind.nnode();
@@ -34,8 +33,8 @@ fn main() -> Result<(), StrError> {
     let mut kk = Matrix::new(nrow, nrow);
     let gauss = Gauss::new(pad.kind);
     let mut args = integ::CommonArgs::new(&mut pad, &gauss);
-    integ::mat_10_bdb(&mut kk, &mut args, |dd, _, _, _| {
-        dd.set_tensor(1.0, model.get_modulus());
+    integ::mat_10_bdb::<6, _>(&mut kk, &mut args, |dd, _, _, _| {
+        dd.set_tensor(1.0, model.stiffness());
         Ok(())
     })?;
 

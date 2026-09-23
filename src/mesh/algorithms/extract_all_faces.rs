@@ -34,7 +34,7 @@ pub(crate) fn extract_all_faces(mesh: &Mesh) -> MapFaceToCells {
                         usize::MAX,
                     )
                 };
-                sort4(&mut face_key);
+                sort4(&mut face_key.0, &mut face_key.1, &mut face_key.2, &mut face_key.3);
                 let data = faces.entry(face_key).or_insert(Vec::new());
                 data.push((cell.id, f));
             }

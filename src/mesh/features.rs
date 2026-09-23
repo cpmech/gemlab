@@ -622,7 +622,7 @@ impl<'a> Features<'a> {
                         let p0 = face.points[face.kind.edge_node_id(e, 0)];
                         let p1 = face.points[face.kind.edge_node_id(e, 1)];
                         let mut edge_key = (self.mesh.points[p0].id, self.mesh.points[p1].id);
-                        sort2(&mut edge_key);
+                        sort2(&mut edge_key.0, &mut edge_key.1);
                         edges_keys.insert(edge_key);
                     }
                 }

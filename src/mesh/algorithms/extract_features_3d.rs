@@ -26,12 +26,12 @@ pub(crate) fn extract_features_3d(
     let mut marked_faces_map = HashMap::new();
     mesh.marked_edges.iter().for_each(|(marker, p1, p2)| {
         let mut edge_key = (*p1, *p2);
-        sort2(&mut edge_key);
+        sort2(&mut edge_key.0, &mut edge_key.1);
         marked_edges_map.insert(edge_key, *marker);
     });
     mesh.marked_faces.iter().for_each(|(marker, p1, p2, p3, p4)| {
         let mut face_key = (*p1, *p2, *p3, *p4);
-        sort4(&mut face_key);
+        sort4(&mut face_key.0, &mut face_key.1, &mut face_key.2, &mut face_key.3);
         marked_faces_map.insert(face_key, *marker);
     });
 
@@ -86,7 +86,7 @@ pub(crate) fn extract_features_3d(
                 face.points[face.kind.edge_node_id(e, 0)],
                 face.points[face.kind.edge_node_id(e, 1)],
             );
-            sort2(&mut edge_key);
+            sort2(&mut edge_key.0, &mut edge_key.1);
 
             // skip already handled edge
             if edges.contains_key(&edge_key) {

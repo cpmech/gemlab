@@ -58,9 +58,9 @@ fn test_integ_heat_axis_1() {
     let mut kk = Matrix::new(3, 3);
     let (kx, ky) = (2.0, 2.0);
     let kk_correct = ana.mat_03_btb(kx, ky, true);
-    integ::mat_03_btb(&mut kk, &mut args_tri, |tt, _, _, _| {
-        tt.sym_set(0, 0, kx);
-        tt.sym_set(1, 1, ky);
+    integ::mat_03_btb::<4, _>(&mut kk, &mut args_tri, |tt, _, _, _| {
+        tt.sym_set_std(0, 0, kx);
+        tt.sym_set_std(1, 1, ky);
         Ok(())
     })
     .unwrap();

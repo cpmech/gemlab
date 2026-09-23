@@ -29,7 +29,7 @@ impl Edge {
     /// Returns the sorted list of key points
     pub fn key(&self) -> EdgeKey {
         let mut key = (self.points[0], self.points[1]);
-        sort2(&mut key);
+        sort2(&mut key.0, &mut key.1);
         key
     }
 }
