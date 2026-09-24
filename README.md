@@ -1,6 +1,5 @@
 # Geometry, meshes, and numerical integration for finite element analyses <!-- omit from toc -->
 
-[![codecov](https://codecov.io/gh/cpmech/gemlab/graph/badge.svg?token=OjQKQ0PrNF)](https://codecov.io/gh/cpmech/gemlab)
 [![Arch](https://github.com/cpmech/gemlab/actions/workflows/arch.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/arch.yml)
 [![Ubuntu](https://github.com/cpmech/gemlab/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/cpmech/gemlab/actions/workflows/ubuntu.yml)
 
@@ -20,6 +19,8 @@
 - [Examples](#examples)
   - [MSH file format](#msh-file-format)
   - [Numerical integration](#numerical-integration)
+- [Comparing figures](#comparing-figures)
+  - [Usage](#usage)
 - [Roadmap](#roadmap)
 - [Appendix A - Shapes and local numbering of nodes](#appendix-a---shapes-and-local-numbering-of-nodes)
   - [Lines (Lin)](#lines-lin)
@@ -201,6 +202,54 @@ fn main() -> Result<(), StrError> {
     Ok(())
 }
 ```
+
+
+
+## Comparing figures
+
+The tests that draw meshes (e.g., in `src/mesh/draw.rs`) save their SVG output to
+`/tmp/gemlab`, while the committed reference figures live in `data/figures`. The
+script `zscripts/compare-figures.py` compares the generated figures against the
+references and reports which ones are **identical**, **different**, or **missing**.
+
+It offers two comparison modes:
+
+1. **Text mode** (default) — normalises both SVGs before comparing: it removes the
+   `<!DOCTYPE>`, XML comments, and the `<metadata>` block (which holds a timestamp
+   and the Matplotlib version), and rounds floating-point numbers (`--decimals`).
+   This catches real content differences while ignoring Matplotlib noise.
+2. **Raster mode** (`--raster`) — rasterises both SVGs to PNG at the same pixel
+   width (using `rsvg-convert`, `inkscape`, or ImageMagick, whichever is
+   installed) and compares pixels. It reports the mean absolute error, the
+   percentage of differing pixels, and the maximum delta; this is tolerant to
+   Matplotlib-version and anti-aliasing differences.
+
+Both modes are selected with `--pattern` and can emit a machine-readable summary
+with `--json`. In raster mode, `--diff-image DIR` additionally writes a red
+diff heat-map and a side-by-side PNG for every differing figure. The exit status
+is `0` only when every compared figure is identical (or within tolerance) and none
+is missing, which makes the tool suitable for CI.
+
+### Usage
+
+```bash
+# text compare of the figures produced by the draw.rs tests
+./zscripts/compare-figures.py --pattern 'test_draw_*.svg'
+
+# show a unified diff for the figures that differ
+./zscripts/compare-figures.py --pattern 'test_draw_*.svg' --diff
+
+# pixel compare (tolerant to Matplotlib version differences), writing diff images
+./zscripts/compare-figures.py --pattern 'test_draw_*.svg' --raster \
+    --pixel-tol 24 --max-diff-pct 1.0 --diff-image /tmp/gemlab/diffs
+
+# refresh the committed reference figures from the current output
+# (review the differences first!)
+./zscripts/compare-figures.py --pattern 'test_draw_*.svg' --update
+```
+
+Run `./zscripts/compare-figures.py --help` for the full list of options.
+Raster mode requires `numpy` and `Pillow` in addition to a SVG rasteriser.
 
 
 

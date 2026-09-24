@@ -358,7 +358,11 @@ impl Block {
     /// Draws this block
     pub fn draw(&self, plot: &mut Plot, with_ids: bool, set_range: bool) -> Result<(), StrError> {
         if self.ndim == 2 && !self.edge_constraints.is_empty() {
-            for ct in self.edge_constraints.values() {
+            // iterate in deterministic (sorted) order because edge_constraints is a HashMap
+            let mut keys: Vec<_> = self.edge_constraints.keys().copied().collect();
+            keys.sort();
+            for key in keys {
+                let ct = &self.edge_constraints[&key];
                 match ct {
                     Constraint2d::Circle(xc, yc, r) => {
                         let mut circle = Canvas::new();

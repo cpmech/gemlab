@@ -22,12 +22,12 @@ local_sparse = ["russell_sparse/local_sparse"]
 cudss = ["russell_sparse/cudss"]
 
 [dependencies]
-plotpy = "1.23"
-russell_lab = "3.0"
-russell_sparse = "3.0"
-russell_stat = "3.0"
-russell_tensor = "3.2"
-tritet = { version = "3.3", features = ["with_tetgen"] }
+plotpy = "1.24"
+russell_lab = "3.3"
+russell_sparse = "3.3"
+russell_stat = "3.3"
+russell_tensor = "3.3"
+tritet = { version = "3.4", features = ["with_tetgen"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 structopt = "0.3"

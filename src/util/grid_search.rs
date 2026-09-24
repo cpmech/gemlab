@@ -626,8 +626,15 @@ impl GridSearch {
             .set_marker_line_color("black")
             .set_marker_line_width(0.5);
         text.set_color("#cd0000");
-        for container in self.containers.values() {
-            for (id, x) in container {
+        // iterate in deterministic (sorted) order because containers are HashMaps
+        let mut container_keys: Vec<_> = self.containers.keys().copied().collect();
+        container_keys.sort();
+        for key in container_keys {
+            let container = &self.containers[&key];
+            let mut item_ids: Vec<_> = container.keys().copied().collect();
+            item_ids.sort();
+            for id in item_ids {
+                let x = &container[&id];
                 let txt = format!("{}", id);
                 if self.ndim == 2 {
                     curve.draw(&[x[0]], &[x[1]]);
