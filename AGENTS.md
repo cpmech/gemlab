@@ -13,13 +13,7 @@ machine with no BLAS installed. Two opt-in backends exist:
 - **Intel MKL** — `intel_mkl`, built from `/opt/intel/oneapi/mkl/<version>`; set
   `MKL_VERSION` to override the default (`latest`).
 
-Both are forwarded from every dependent crate (`russell_tensor`, `russell_sparse`,
-`russell_stat`, `russell_ode`, `russell_pde`, `russell_nonlin`). Reach for
-`--features intel_mkl` when you want to *test the accelerated path*, not because the
-default build needs it.
-
-The one native library the repository does need is SuiteSparse, for the `umfpack`
-feature.
+Both are forwarded to `russell_lab`. Reach for `--features intel_mkl` when you want to *test the accelerated path*, not because the default build needs it.
 
 
 ## Code intelligence (CodeGraph)
@@ -62,7 +56,7 @@ cargo clippy --all-targets --all-features
 # CI does this as a single step -- `cpmech/rust-cov@v1`, min 90 -- because
 # `--fail-under-lines` counts a line once per monomorphization and reports this
 # crate lower than it is. To reproduce locally:
-cargo llvm-cov --workspace --features umfpack \
+cargo llvm-cov --workspace \
   --ignore-filename-regex 'build.rs|src/bin/' --lcov --output-path lcov.info
 curl -sL https://raw.githubusercontent.com/cpmech/rust-cov/v1/check-coverage.bash \
   | bash -s -- lcov.info 90
@@ -74,13 +68,6 @@ measures library code. Coverage of the library is 91.94% on that basis; the bare
 `cargo llvm-cov` summary reads 91.29% because of same-line re-counting.
 
 
-## Extra features:
-
-- `umfpack` and `mumps` forward to `russell_sparse`. `mumps` requires
-  `RUSSELL_LOCAL_PREFIX` with `include/mumps` and `lib/mumps` (see
-  `zscripts/arch-compile-mumps.bash`); `umfpack` prefers
-  `$RUSSELL_LOCAL_PREFIX/include/umfpack` and otherwise uses the system library.
-
 ## Architecture
 - Modules: `geometry` (entities, triangle/tetrahedron), `graph` (directed/undirected), `integ`
   (element matrices `mat_*`/vectors `vec_*`, Gauss rules), `mesh` (+ `mesh/algorithms`), `recovery`
@@ -89,13 +76,7 @@ measures library code. Coverage of the library is 91.94% on that basis; the bare
 - Errors are `gemlab::StrError = &'static str`; fallible functions return `Result<T, StrError>`.
 
 ## Build prerequisites (system libraries)
-Nothing, for a default build: `russell_lab` 4 links no external BLAS/LAPACK. The
-optional backends need the matching library:
-- `open_blas`: OpenBLAS with its LAPACK headers
-- `umfpack`: SuiteSparse, or a local install under `RUSSELL_LOCAL_PREFIX`
-- `mumps`: locally compiled MUMPS at `RUSSELL_LOCAL_PREFIX`
-- Arch: `pacman -Syu blas-openblas suitesparse python-matplotlib`
-- Debian/Ubuntu: `sudo apt-get install -y libopenblas-dev libsuitesparse-dev python3-matplotlib`
+Nothing, for a default build: `russell_lab` 4 links no external BLAS/LAPACK. `open_blas` needs OpenBLAS with its LAPACK headers; `intel_mkl` needs the Intel oneAPI toolkit. Matplotlib (`python-matplotlib` on Arch, `python3-matplotlib` on Debian/Ubuntu) is needed by the tests and examples that draw figures.
 
 ## Commands
 - Full tests (same as CI): `cargo test -- --nocapture`
