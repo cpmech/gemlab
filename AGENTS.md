@@ -4,21 +4,23 @@ Rust library for geometry, mesh generation/IO, and numerical integration for FEM
 
 ## Build backend (read this first)
 
-`russell_lab` links BLAS/LAPACK through the C shim in
-`russell_lab/c_code/interface_blas.c`. Two backends are available:
+`russell_lab` 4 links **nothing external by default**: the BLAS/LAPACK kernels are
+pure Rust (`algebra_linear`), so a plain `cargo build` and `cargo test` work on a
+machine with no BLAS installed. Two opt-in backends exist:
 
-- **OpenBLAS** (default) — resolved via `pkg-config`, with a Homebrew fallback.
-  This requires the OpenBLAS/LAPACK development headers (e.g. `lapack.h`).
-- **Intel MKL** — enabled with the `intel_mkl` feature. MKL is expected under
-  `/opt/intel/oneapi/mkl/<version>`; set `MKL_VERSION` to override the default
-  (`latest`).
+- **OpenBLAS** — `open_blas`, resolved via `pkg-config`, with a Homebrew fallback.
+  Requires the OpenBLAS/LAPACK development headers (e.g. `lapack.h`).
+- **Intel MKL** — `intel_mkl`, built from `/opt/intel/oneapi/mkl/<version>`; set
+  `MKL_VERSION` to override the default (`latest`).
 
-On machines without a complete OpenBLAS/LAPACK install the default backend fails
-to compile. **Use `--features intel_mkl` for local builds and tests.**
+Both are forwarded from every dependent crate (`russell_tensor`, `russell_sparse`,
+`russell_stat`, `russell_ode`, `russell_pde`, `russell_nonlin`). Reach for
+`--features intel_mkl` when you want to *test the accelerated path*, not because the
+default build needs it.
 
-The `intel_mkl` feature is forwarded from every dependent crate
-(`russell_tensor`, `russell_sparse`, `russell_stat`, `russell_ode`,
-`russell_pde`, `russell_nonlin`).
+The one native library the repository does need is SuiteSparse, for the `umfpack`
+feature.
+
 
 ## Code intelligence (CodeGraph)
 
@@ -46,8 +48,8 @@ stale lock file.
 ## Test / lint commands
 
 ```bash
-# Run tests
-cargo test --all-features
+# Run tests (no test is feature-gated, so the default build covers the suite)
+cargo test
 
 # Formatting (CI runs the check)
 cargo fmt --all
@@ -56,11 +58,21 @@ cargo fmt --all -- --check
 # Lint
 cargo clippy --all-targets --all-features
 
-# Coverage (nightly + llvm-tools-preview); project requires >95% lines
-cargo llvm-cov --workspace --all-features \
-  --ignore-filename-regex 'build.rs|mem_check.rs|mem_check_lab.rs' \
-  --fail-under-lines 95
+# Coverage: one instrumented run, which also runs the tests.
+# CI does this as a single step -- `cpmech/rust-cov@v1`, min 90 -- because
+# `--fail-under-lines` counts a line once per monomorphization and reports this
+# crate lower than it is. To reproduce locally:
+cargo llvm-cov --workspace --features umfpack \
+  --ignore-filename-regex 'build.rs|src/bin/' --lcov --output-path lcov.info
+curl -sL https://raw.githubusercontent.com/cpmech/rust-cov/v1/check-coverage.bash \
+  | bash -s -- lcov.info 90
 ```
+
+`src/bin/` is excluded from the gate on purpose: the five mesh converters
+(`msh2tri`, `msh2tet`, `hex2msh`, `qua2msh`, `drawmsh`) have no tests, and the gate
+measures library code. Coverage of the library is 91.94% on that basis; the bare
+`cargo llvm-cov` summary reads 91.29% because of same-line re-counting.
+
 
 ## Extra features:
 
