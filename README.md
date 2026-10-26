@@ -45,14 +45,22 @@ This crate contains structures and functions for geometry computations, generate
 
 This crate depends on [Russell (Rust Scientific Library)](https://github.com/cpmech/russell) and, therefore, has the same dependencies as `russell`. Among the combinations described in `russell` website, the following are recommended here:
 
-1. **Default** - Use [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) and [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse)
-2. **Alternative** - Use [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html) and locally compiled [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) and the [MUMPS solver](https://mumps-solver.org)
+1. **Default** - Nothing to install: `russell_lab` 4 ships pure-Rust BLAS/LAPACK, so a
+   plain `cargo build` works on a machine with no numerical library at all.
+2. **OpenBLAS + SuiteSparse** - [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) and
+   [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) from the system,
+   with `--features open_blas,umfpack`.
+3. **Intel MKL + locally compiled SuiteSparse and MUMPS** -
+   [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html)
+   with `--features intel_mkl,mumps`, and `RUSSELL_LOCAL_PREFIX` pointing at the local
+   install (see `zscripts/arch-compile-mumps.bash`).
 
 Therefore, the following (re-exported) **features** are available here:
 
-* `intel_mkl` - Tells `russell` to use Intel MKL
-* `local_sparse` - Tells `russell` that the local linear solvers are available locally
-* `cudss` - Tells `russell` to enable the [NVIDIA cuDSS solver](https://developer.nvidia.com/cudss)
+* `open_blas` - Use the system OpenBLAS for BLAS/LAPACK
+* `intel_mkl` - Use Intel MKL
+* `umfpack` - Enable UMFPACK, from the system SuiteSparse or from `$RUSSELL_LOCAL_PREFIX/include/umfpack`
+* `mumps` - Enable MUMPS; requires `RUSSELL_LOCAL_PREFIX` with `include/mumps` and `lib/mumps`
 
 ### Arch Linux
 
