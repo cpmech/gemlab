@@ -1,6 +1,6 @@
 [package]
 name = "gemlab"
-version = "3.1.0"
+version = "4.0.0"
 edition = "2021"
 license = "MIT"
 description = "Geometry and meshes laboratory for finite element analyses"
@@ -10,6 +10,7 @@ documentation = "https://docs.rs/gemlab"
 readme = "README.md"
 categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
+exclude = ["AGENTS.md", ".github/", ".vscode/", "zdocker/"]
 
 [features]
 open_blas = ["russell_lab/open_blas"]
@@ -17,9 +18,9 @@ intel_mkl = ["russell_lab/intel_mkl"]
 
 [dependencies]
 plotpy = "1.24"
-russell_lab = "4.0"
-russell_stat = "4.0"
-russell_tensor = "4.0"
+russell_lab = "4.0.1"
+russell_stat = "4.0.1"
+russell_tensor = "4.0.1"
 tritet = { version = "3.4", features = ["with_tetgen"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
