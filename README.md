@@ -11,11 +11,7 @@
   - [Documentation](#documentation)
 - [Installation](#installation)
   - [Arch Linux](#arch-linux)
-    - [1. Default](#1-default)
-    - [2. Alternative](#2-alternative)
   - [Debian/Ubuntu Linux](#debianubuntu-linux)
-    - [1. Default](#1-default-1)
-    - [2. Alternative](#2-alternative-1)
 - [Examples](#examples)
   - [MSH file format](#msh-file-format)
   - [Numerical integration](#numerical-integration)
@@ -43,52 +39,56 @@ This crate contains structures and functions for geometry computations, generate
 
 ## Installation
 
-This crate depends on [Russell (Rust Scientific Library)](https://github.com/cpmech/russell) and, therefore, has the same dependencies as `russell`. Among the combinations described in `russell` website, the following are recommended here:
+This crate builds with no external numerical library: `russell_lab` 4 ships pure-Rust BLAS/LAPACK kernels, so a plain `cargo build` works on a machine with no numerical library at all. The tests and examples that draw figures need Python 3 with Matplotlib (`plotpy`).
 
-1. **Default** - Nothing to install: `russell_lab` 4 ships pure-Rust BLAS/LAPACK, so a
-   plain `cargo build` works on a machine with no numerical library at all.
-2. **OpenBLAS + SuiteSparse** - [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) and
-   [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) from the system,
-   with `--features open_blas,umfpack`.
-3. **Intel MKL + locally compiled SuiteSparse and MUMPS** -
-   [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html)
-   with `--features intel_mkl,mumps`, and `RUSSELL_LOCAL_PREFIX` pointing at the local
-   install (see `zscripts/arch-compile-mumps.bash`).
+The following optional (Rust) features are available:
 
-Therefore, the following (re-exported) **features** are available here:
+* `open_blas`: Use OpenBLAS for the dense kernels (needs its development headers)
+* `intel_mkl`: Use Intel oneAPI MKL for the dense kernels; takes precedence over `open_blas` when both are enabled
 
-* `open_blas` - Use the system OpenBLAS for BLAS/LAPACK
-* `intel_mkl` - Use Intel MKL
-* `umfpack` - Enable UMFPACK, from the system SuiteSparse or from `$RUSSELL_LOCAL_PREFIX/include/umfpack`
-* `mumps` - Enable MUMPS; requires `RUSSELL_LOCAL_PREFIX` with `include/mumps` and `lib/mumps`
+Without either feature the build keeps the native Rust kernels. The [Russell README](https://github.com/cpmech/russell) has the installation steps for each platform.
 
 ### Arch Linux
 
-#### 1. Default
-
-Install some dependencies:
+The build needs nothing beyond the Rust toolchain. For the tests and examples that draw figures, install Matplotlib:
 
 ```bash
-  pacman -Syu blas-openblas python-matplotlib suitesparse
+pacman -Syu python-matplotlib
 ```
 
-#### 2. Alternative
+For the OpenBLAS accelerator, install it and enable `open_blas`:
 
-Check [Russell (Rust Scientific Library)](https://github.com/cpmech/russell) out for detailed instructions on how to install the optional dependencies.
+```bash
+pacman -Syu blas-openblas
+```
+
+```toml
+[dependencies]
+gemlab = { version = "*", features = ["open_blas"] }
+```
+
+Intel MKL is installed with `zscripts/arch-install-intel-toolkit.bash` and enabled with `intel_mkl`; see the [Russell README](https://github.com/cpmech/russell) for the remaining steps.
 
 ### Debian/Ubuntu Linux
 
-#### 1. Default
-
-Install some dependencies:
+The build needs nothing beyond the Rust toolchain. For the tests and examples that draw figures, install Matplotlib:
 
 ```bash
-sudo apt-get install -y liblapacke-dev libopenblas-dev libsuitesparse-dev python3-matplotlib
+sudo apt-get install -y python3-matplotlib
 ```
 
-#### 2. Alternative
+For the OpenBLAS accelerator, install it and enable `open_blas`:
 
-Check [Russell (Rust Scientific Library)](https://github.com/cpmech/russell) out for detailed instructions on how to install the optional dependencies.
+```bash
+sudo apt-get install -y libopenblas-dev
+```
+
+```toml
+[dependencies]
+gemlab = { version = "*", features = ["open_blas"] }
+```
+
+Intel MKL is installed from the Intel oneAPI toolkit and enabled with `intel_mkl`; see the [Russell README](https://github.com/cpmech/russell).
 
 
 

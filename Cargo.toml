@@ -14,13 +14,10 @@ keywords = ["geometry", "mesh", "fem"]
 [features]
 open_blas = ["russell_lab/open_blas"]
 intel_mkl = ["russell_lab/intel_mkl"]
-umfpack = ["russell_sparse/umfpack"]
-mumps = ["russell_sparse/mumps"]
 
 [dependencies]
 plotpy = "1.24"
 russell_lab = "4.0"
-russell_sparse = "4.1"
 russell_stat = "4.0"
 russell_tensor = "4.0"
 tritet = { version = "3.4", features = ["with_tetgen"] }
