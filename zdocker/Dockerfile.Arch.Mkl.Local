@@ -45,4 +45,11 @@ USER user
 
 # MKL requires sourcing setvars.sh in the same shell as cargo test
 ENV RUST_BACKTRACE=1
-RUN bash -c "source /opt/intel/oneapi/setvars.sh && cargo test --features intel_mkl,local_sparse"
+# MUMPS is the local install the two RUN steps above produce, laid out as
+# /usr/local/include/mumps and /usr/local/lib/mumps, which is what
+# RUSSELL_LOCAL_PREFIX names. UMFPACK is not enabled in this image: the SuiteSparse
+# build here installs under include/suitesparse, while russell_sparse 4 looks for
+# $RUSSELL_LOCAL_PREFIX/include/umfpack and would otherwise fall back to a system
+# UMFPACK this image does not have.
+ENV RUSSELL_LOCAL_PREFIX=/usr/local
+RUN bash -c "source /opt/intel/oneapi/setvars.sh && cargo test --features intel_mkl,mumps"

@@ -76,9 +76,10 @@ measures library code. Coverage of the library is 91.94% on that basis; the bare
 
 ## Extra features:
 
-- `local_sparse` (and `cudss`) on `russell_sparse`, `russell_ode`,
-  `russell_pde`, `russell_nonlin` — require locally compiled MUMPS/SuiteSparse
-  (see `zscripts/*-compile-mumps.bash` and `zscripts/*-compile-suitesparse.bash`).
+- `umfpack` and `mumps` forward to `russell_sparse`. `mumps` requires
+  `RUSSELL_LOCAL_PREFIX` with `include/mumps` and `lib/mumps` (see
+  `zscripts/arch-compile-mumps.bash`); `umfpack` prefers
+  `$RUSSELL_LOCAL_PREFIX/include/umfpack` and otherwise uses the system library.
 
 ## Architecture
 - Modules: `geometry` (entities, triangle/tetrahedron), `graph` (directed/undirected), `integ`
@@ -88,11 +89,13 @@ measures library code. Coverage of the library is 91.94% on that basis; the bare
 - Errors are `gemlab::StrError = &'static str`; fallible functions return `Result<T, StrError>`.
 
 ## Build prerequisites (system libraries)
-The crate links BLAS/LAPACK + SuiteSparse via `russell`:
-- Arch: `pacman -Syu blas-openblas python-matplotlib suitesparse`
-- Debian/Ubuntu: `sudo apt-get install -y liblapacke-dev libopenblas-dev libsuitesparse-dev python3-matplotlib`
-- Features (re-exported to `russell_*`): default uses OpenBLAS+SuiteSparse; `intel_mkl`, `local_sparse`,
-  `cudss` require the matching libraries installed locally.
+Nothing, for a default build: `russell_lab` 4 links no external BLAS/LAPACK. The
+optional backends need the matching library:
+- `open_blas`: OpenBLAS with its LAPACK headers
+- `umfpack`: SuiteSparse, or a local install under `RUSSELL_LOCAL_PREFIX`
+- `mumps`: locally compiled MUMPS at `RUSSELL_LOCAL_PREFIX`
+- Arch: `pacman -Syu blas-openblas suitesparse python-matplotlib`
+- Debian/Ubuntu: `sudo apt-get install -y libopenblas-dev libsuitesparse-dev python3-matplotlib`
 
 ## Commands
 - Full tests (same as CI): `cargo test -- --nocapture`
