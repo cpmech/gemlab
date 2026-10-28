@@ -18,9 +18,9 @@ intel_mkl = ["russell_lab/intel_mkl"]
 
 [dependencies]
 plotpy = "1.24"
-russell_lab = "4.0.1"
-russell_stat = "4.0.1"
-russell_tensor = "4.0.1"
+russell_lab = "5.0"
+russell_stat = "5.0"
+russell_tensor = "5.0"
 tritet = { version = "3.4", features = ["with_tetgen"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
