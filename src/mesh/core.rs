@@ -1,5 +1,5 @@
 use super::AsCell;
-use crate::shapes::{GeoKind, Scratchpad};
+use crate::shapes::{GeoKind, MixedPad, Scratchpad};
 use crate::StrError;
 use russell_lab::{argsort2_f64, argsort3_f64};
 use serde::{Deserialize, Serialize};
@@ -466,6 +466,44 @@ impl Mesh {
         let mut pad = Scratchpad::new(self.ndim, cell.kind).unwrap();
         self.set_pad(&mut pad, &cell.points);
         pad
+    }
+
+    /// Allocates a MixedPad (full and reduced shapes) for a cell and sets both coordinate sets
+    ///
+    /// The full shape is the cell's kind; the reduced shape is `kind.lower_order().unwrap_or(kind)`
+    /// and takes the **first** `k = MixedPad::nnode_reduced()` points of the cell, which are the
+    /// corner nodes in every quadratic kind (e.g. Qua8 → Qua4, Tri6 → Tri3, Hex20 → Hex8).
+    ///
+    /// See [MixedPad] for the meaning of the two pads and for the mixed gradient
+    /// `B_reduced = L_reduced · J_full⁻¹`.
+    ///
+    /// # Panics
+    ///
+    /// 1. A panic will occur if the cell's `geo_ndim` differs from the mesh's `ndim` (shells and
+    ///    cables are not supported), as in [MixedPad::new]
+    /// 2. This function does not check for bounds on point indices and dimensions
+    /// 3. Use [Mesh::check_all] to capture (some) errors
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use gemlab::mesh::Samples;
+    /// use gemlab::shapes::GeoKind;
+    ///
+    /// let mesh = Samples::one_qua8();
+    /// let mixed = mesh.get_mixed_pad(0);
+    /// assert_eq!(mixed.full.kind, GeoKind::Qua8);
+    /// assert_eq!(mixed.reduced.kind, GeoKind::Qua4);
+    /// assert_eq!(mixed.nnode_full(), 8);
+    /// assert_eq!(mixed.nnode_reduced(), 4);
+    /// ```
+    pub fn get_mixed_pad(&self, cell_id: CellId) -> MixedPad {
+        let cell = &self.cells[cell_id];
+        let mut mixed = MixedPad::new(self.ndim, cell.kind).unwrap();
+        let k = mixed.nnode_reduced();
+        self.set_pad(&mut mixed.full, &cell.points);
+        self.set_pad(&mut mixed.reduced, &cell.points[..k]);
+        mixed
     }
 
     /// Returns the min and max coordinates of all points in the mesh

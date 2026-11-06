@@ -25,11 +25,17 @@ impl Scratchpad {
     ///
     /// # Output
     ///
+    /// * `interp` -- interpolation functions (nnode)
     /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
     /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
     /// * `inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
     /// * `gradient` -- gradient matrix (nnode,space_ndim)
     /// * Returns the determinant of the Jacobian matrix
+    ///
+    /// **Note:** This function also computes the interpolation functions (it calls
+    /// [Scratchpad::calc_interp]), thus `interp` is available after the call together with the
+    /// matrices above. Previously, `interp` was left unchanged, which silently produced zero
+    /// shape values when the caller forgot the separate `calc_interp` call.
     ///
     /// # Input
     ///
@@ -40,7 +46,7 @@ impl Scratchpad {
     /// ```
     /// use gemlab::shapes::{GeoKind, Scratchpad};
     /// use gemlab::StrError;
-    /// use russell_lab::{mat_approx_eq, Matrix};
+    /// use russell_lab::{approx_eq, mat_approx_eq, Matrix};
     ///
     /// fn main() -> Result<(), StrError> {
     ///     //  3-------------2         ξ₀   ξ₁
@@ -72,6 +78,10 @@ impl Scratchpad {
     ///         [-1.0 / (4.0 * a), 1.0 / (2.0 * a)],
     ///     ]);
     ///     mat_approx_eq(&pad.gradient, &correct_gg, 1e-15);
+    ///
+    ///     // the interpolation functions are computed too; they sum to one
+    ///     let sum = pad.interp[0] + pad.interp[1] + pad.interp[2] + pad.interp[3];
+    ///     approx_eq(sum, 1.0, 1e-15);
     ///     Ok(())
     /// }
     /// ```
@@ -81,6 +91,9 @@ impl Scratchpad {
         if geo_ndim != space_ndim {
             return Err("calc_gradient requires that geo_ndim = space_ndim");
         }
+
+        // interpolation functions N
+        self.calc_interp(ksi);
 
         // Jacobian matrix J: dx/dξ
         let det_jac = self.calc_jacobian(ksi)?;
@@ -98,8 +111,8 @@ mod tests {
     use crate::shapes::scratchpad_testing::aux;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
-    use russell_lab::deriv1_approx_eq;
     use russell_lab::math::ONE_BY_3;
+    use russell_lab::{approx_eq, deriv1_approx_eq};
     use russell_tensor::Tensor1;
 
     #[test]
@@ -202,6 +215,63 @@ mod tests {
                     // Bᵐⱼ := dNᵐ/dxⱼ
                     deriv1_approx_eq(pad.gradient.get(m, j), args.at_x.get(j), args, tol, nn_given_x);
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn calc_gradient_fills_interp() {
+        // the SOLID kinds (geo_ndim = space_ndim); the other kinds are rejected by calc_gradient
+        let problem = vec![
+            // Tri
+            (GeoKind::Tri3, 1e-15),
+            (GeoKind::Tri6, 1e-15),
+            (GeoKind::Tri10, 1e-15),
+            (GeoKind::Tri15, 1e-15),
+            // Qua
+            (GeoKind::Qua4, 1e-15),
+            (GeoKind::Qua8, 1e-15),
+            (GeoKind::Qua9, 1e-15),
+            (GeoKind::Qua12, 1e-15),
+            (GeoKind::Qua16, 1e-15),
+            (GeoKind::Qua17, 1e-15),
+            // Tet
+            (GeoKind::Tet4, 1e-15),
+            (GeoKind::Tet10, 1e-15),
+            (GeoKind::Tet20, 1e-15),
+            // Hex
+            (GeoKind::Hex8, 1e-15),
+            (GeoKind::Hex20, 1e-15),
+            (GeoKind::Hex32, 1e-15),
+        ];
+        for (kind, tol) in problem {
+            println!("calc_gradient_fills_interp: kind = {:?}", kind);
+            let geo_ndim = kind.ndim();
+            let space_ndim = usize::max(2, geo_ndim);
+            let mut pad = aux::gen_scratchpad_with_coords(space_ndim, kind);
+
+            // the interpolation functions are zero before the call
+            for m in 0..kind.nnode() {
+                assert_eq!(pad.interp[m], 0.0);
+            }
+
+            // set ξ within the reference space and compute the gradient
+            let at_ksi = vec![ONE_BY_3; geo_ndim];
+            let det_jac = pad.calc_gradient(&at_ksi).unwrap();
+            assert!(det_jac > 0.0);
+
+            // interp is live: it sums to one (partition of unity)...
+            let mut sum = 0.0;
+            for m in 0..kind.nnode() {
+                sum += pad.interp[m];
+            }
+            approx_eq(sum, 1.0, tol);
+
+            // ...and it matches calc_interp exactly (same function, same input)
+            let mut correct = Scratchpad::new(space_ndim, kind).unwrap();
+            correct.calc_interp(&at_ksi);
+            for m in 0..kind.nnode() {
+                assert_eq!(pad.interp[m], correct.interp[m]);
             }
         }
     }
