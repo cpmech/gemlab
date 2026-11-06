@@ -2,7 +2,7 @@ use super::CommonArgs;
 use crate::shapes::Scratchpad;
 use crate::StrError;
 use russell_lab::math::SQRT_2;
-use russell_lab::{Matrix, Vector};
+use russell_lab::{mat_mat_mul, Matrix, Vector};
 use russell_tensor::Tensor2;
 
 /// Implements the gradient(Bb) times tensor(T) times shape(N) integration case 05 (e.g., coupling matrix)
@@ -15,6 +15,9 @@ use russell_tensor::Tensor2;
 /// * `n` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Nⁿ`)
 /// * For example, `1 ≤ m ≤ 4` for a `pad_b→Qua4` and `1 ≤ n ≤ 8` for `pad→Qua8`
 /// * The determinant of the Jacobian is calculated for `pad` (`pad` is the driver of the calculations)
+/// * The lower-order gradient is taken in the **driver's** mapping: `Bb = dNb/dξ · J⁻¹`, with `J` from
+///   `pad`. This matters only when the two pads describe different maps, i.e. on curved-edged cells;
+///   for straight-edged cells the two maps coincide and the result is the same either way
 /// * The number of integration points must consider the nodes of `pad` and the expected order of the whole integrand
 ///
 /// Coupling vectors:
@@ -79,6 +82,9 @@ where
     let (space_ndim, _, nnode) = args.pad.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     let (ii0, jj0) = (args.ii0, args.jj0);
+    if pad_b.dims().1 != space_ndim {
+        return Err("mat_05_btn requires pad_b with geo_ndim = space_ndim");
+    }
     if nrow_kk < ii0 + nnode_b {
         return Err("nrow(K) must be ≥ ii0 + pad_b.nnode");
     }
@@ -104,10 +110,14 @@ where
         let iota = args.gauss.coords(p);
         let weight = args.gauss.weight(p);
 
-        // calculate interpolation functions and Jacobian
-        pad_b.calc_gradient(iota)?; // Bb
+        // interpolation functions of both pads and the Jacobian of the driver
+        (pad_b.fn_interp)(&mut pad_b.interp, iota); // Nb
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // B
+        let det_jac = args.pad.calc_gradient(iota)?; // B and J of the driver
+
+        // gradient of the lower-order shape in the driver's mapping: Bb = dNb/dξ · J⁻¹
+        (pad_b.fn_deriv)(&mut pad_b.deriv, iota);
+        mat_mat_mul(&mut pad_b.gradient, 1.0, &pad_b.deriv, &args.pad.inv_jacobian, 0.0).unwrap(); // cannot fail because the dimensions are checked above
 
         // calculate T tensor
         let ggb = &pad_b.gradient;
@@ -176,6 +186,7 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs, Gauss};
+    use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
     use russell_tensor::Tensor2;
 
@@ -263,5 +274,82 @@ mod tests {
             // println!("{}", kk);
             mat_approx_eq(&kk, &kk_correct, tol);
         });
+    }
+    #[test]
+    fn curved_element_uses_the_driver_jacobian() {
+        // Curved 8-node element: the midside nodes are pushed off the straight edges, so the
+        // element's map and the bilinear (4-node) map are different domains. The reference below
+        // is assembled here from dNb/dξ and the driver's J⁻¹, independently of mat_05_btn.
+        #[rustfmt::skip]
+        let xx = [
+            [0.00, 0.00], [2.00, 0.10], [1.70, 1.30], [-0.20, 1.00],
+            [1.00, 0.35], [2.05, 0.72], [0.75, 1.45], [-0.10, 0.55],
+        ];
+        let mut pad = Scratchpad::new(2, GeoKind::Qua8).unwrap();
+        for m in 0..8 {
+            pad.set_xx(m, 0, xx[m][0]);
+            pad.set_xx(m, 1, xx[m][1]);
+        }
+        let mut pad_b = Scratchpad::new(2, GeoKind::Qua4).unwrap();
+        for m in 0..4 {
+            pad_b.set_xx(m, 0, xx[m][0]);
+            pad_b.set_xx(m, 1, xx[m][1]);
+        }
+        let gauss = Gauss::new_or_sized(GeoKind::Qua8, Some(9)).unwrap();
+        #[rustfmt::skip]
+        let tt = Tensor2::<4>::from_std_matrix(&[
+            [2.0, 0.3, 0.0],
+            [0.3, 1.0, 0.0],
+            [0.0, 0.0, 0.0]]).unwrap();
+
+        // kk_ref: Bb = dNb/dξ · J⁻¹ (driver's J). kk_own: Bb from the bilinear map (old behaviour).
+        let mut kk_ref = Matrix::new(4, 16);
+        let mut kk_own = Matrix::new(4, 16);
+        let mut pad_calc = pad.clone();
+        for p in 0..gauss.npoint() {
+            let iota = gauss.coords(p);
+            let det_jac = pad_calc.calc_gradient(iota).unwrap();
+            pad_b.calc_gradient(iota).unwrap(); // bilinear map: its own gradient
+            let c = det_jac * gauss.weight(p);
+            for m in 0..4 {
+                for n in 0..8 {
+                    for j in 0..2 {
+                        let mut g_ref = 0.0;
+                        let mut g_own = 0.0;
+                        for k in 0..2 {
+                            g_ref += (pad_b.deriv.get(m, 0) * pad_calc.inv_jacobian.get(0, k)
+                                + pad_b.deriv.get(m, 1) * pad_calc.inv_jacobian.get(1, k))
+                                * tt.get_std(k, j);
+                            g_own += pad_b.gradient.get(m, k) * tt.get_std(k, j);
+                        }
+                        kk_ref.add(m, n * 2 + j, g_ref * pad_calc.interp[n] * c);
+                        kk_own.add(m, n * 2 + j, g_own * pad_calc.interp[n] * c);
+                    }
+                }
+            }
+        }
+
+        let mut kk = Matrix::new(4, 16);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
+        integ::mat_05_btn::<4, _>(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
+            ten.set_tensor(1.0, &tt);
+            Ok(())
+        })
+        .unwrap();
+        mat_approx_eq(&kk, &kk_ref, 1e-13);
+
+        // on this element the old convention differs by an O(0.1) amount, so the check discriminates
+        let mut max_diff = 0.0;
+        for i in 0..4 {
+            for j in 0..16 {
+                max_diff = f64::max(max_diff, f64::abs(kk.get(i, j) - kk_own.get(i, j)));
+            }
+        }
+        println!("max |K - K_own| = {:.3e}", max_diff);
+        assert!(
+            max_diff > 1e-2,
+            "test does not discriminate: max_diff = {:.3e}",
+            max_diff
+        );
     }
 }
