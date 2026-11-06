@@ -335,7 +335,7 @@ mod tests {
             phi[m] = linear_field(&[mixed.full.xxt.get(0, m), mixed.full.xxt.get(1, m)]);
         }
         let mut norm_int = 0.0;
-        let mut mixed_int = vec![0.0; 2];
+        let mut mixed_int = [0.0; 2];
         let (mut err_sum_n, mut err_sum_b) = (0.0, 0.0);
         let (mut err_value, mut err_grad) = (0.0, 0.0);
         for p in 0..gauss.npoint() {
