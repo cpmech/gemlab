@@ -11,13 +11,17 @@ use russell_tensor::Tensor2;
 ///
 /// **Notes:**
 ///
-/// * `m` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Bbᵐ`)
-/// * `n` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Nⁿ`)
-/// * For example, `1 ≤ m ≤ 4` for a `pad_b→Qua4` and `1 ≤ n ≤ 8` for `pad→Qua8`
+/// * `m` ranges over the nodes of the shape specified by `pad_b` (for `Bbᵐ`), which is the shape
+///   being differentiated
+/// * `n` ranges over the nodes of the *driver* shape specified by `pad` (for `Nⁿ`); the driver carries
+///   the geometry and the integration measure
+/// * For example, `1 ≤ m ≤ 4` for a `pad_b→Qua4` and `1 ≤ n ≤ 8` for `pad→Qua8`. The roles may be
+///   reversed (`pad_b→Qua8`, `pad→Qua4`): the geometry is then the 4-node one and the quadratic shape
+///   is differentiated in that map, as in a subparametric element
 /// * The determinant of the Jacobian is calculated for `pad` (`pad` is the driver of the calculations)
 /// * The gradient `Bb` is taken in the driver's mapping as well: `Bb = dNb/dξ · J⁻¹` with the `J` of
-///   `pad`. Thus only the shape functions of `pad_b` are used (its coordinates are not read), and the
-///   two pads describe the same element when `pad_b` is the lower-order counterpart of `pad`
+///   `pad`. Thus only the shape functions of `pad_b` are used (its coordinates are not read), of any
+///   order, and the two pads describe the same element when both are built from the same cell
 /// * The number of integration points must consider the nodes of `pad` and the expected order of the whole integrand
 ///
 /// Coupling vectors:
@@ -68,10 +72,11 @@ use russell_tensor::Tensor2;
 ///
 /// # Warning
 ///
-/// The two [crate::shapes::Scratchpad]s must refer to the same reference element, otherwise
-/// **calculation errors will occur**. Since the coordinates of `pad_b` are not used, the requirement is
-/// on its shape functions and not on its coordinates: `pad_b` must be either the lower-version of
-/// `pad` (the same nodes, in the same order) or have the same shape as `pad`.
+/// The two [crate::shapes::Scratchpad]s must be functions on the same reference element, otherwise
+/// **calculation errors will occur**: the same `ιᵖ` must refer to the same point of both. Since the
+/// coordinates of `pad_b` are not used, the requirement is on its shape functions, not on its
+/// coordinates, and `pad_b` may be of the lower or of the higher order than `pad` (for example
+/// `pad_b→Qua4` with `pad→Qua8`, or the reverse).
 pub fn mat_05_btn<const N: usize, F>(
     kk: &mut Matrix,
     pad_b: &mut Scratchpad,
@@ -366,5 +371,63 @@ mod tests {
             "test does not discriminate: max_diff = {:.3e}",
             max_diff
         );
+    }
+    #[test]
+    fn reversed_order_gives_the_subparametric_element() {
+        // pad_b = Qua8 (differentiated), driver = Qua4 (geometry): the quadratic shape functions are
+        // differentiated in the bilinear map. The reference is assembled here from dNb/dξ · J⁻¹.
+        #[rustfmt::skip]
+        let xx = [
+            [0.00, 0.00], [2.00, 0.10], [1.70, 1.30], [-0.20, 1.00],
+            [1.00, 0.35], [2.05, 0.72], [0.75, 1.45], [-0.10, 0.55],
+        ];
+        let mut pad_b = Scratchpad::new(2, GeoKind::Qua8).unwrap();
+        for m in 0..8 {
+            pad_b.set_xx(m, 0, xx[m][0]);
+            pad_b.set_xx(m, 1, xx[m][1]);
+        }
+        let mut pad = Scratchpad::new(2, GeoKind::Qua4).unwrap();
+        for m in 0..4 {
+            pad.set_xx(m, 0, xx[m][0]);
+            pad.set_xx(m, 1, xx[m][1]);
+        }
+        let gauss = Gauss::new_or_sized(GeoKind::Qua4, Some(9)).unwrap();
+        #[rustfmt::skip]
+        let tt = Tensor2::<4>::from_std_matrix(&[
+            [2.0, 0.3, 0.0],
+            [0.3, 1.0, 0.0],
+            [0.0, 0.0, 0.0]]).unwrap();
+
+        let mut kk_ref = Matrix::new(8, 4 * 2);
+        let mut pad_calc = pad.clone();
+        let mut pad_deriv = Scratchpad::new(2, GeoKind::Qua8).unwrap();
+        for p in 0..gauss.npoint() {
+            let iota = gauss.coords(p);
+            let det_jac = pad_calc.calc_gradient(iota).unwrap();
+            (pad_deriv.fn_deriv)(&mut pad_deriv.deriv, iota);
+            let c = det_jac * gauss.weight(p);
+            for m in 0..8 {
+                for n in 0..4 {
+                    for j in 0..2 {
+                        let mut g = 0.0;
+                        for k in 0..2 {
+                            g += (pad_deriv.deriv.get(m, 0) * pad_calc.inv_jacobian.get(0, k)
+                                + pad_deriv.deriv.get(m, 1) * pad_calc.inv_jacobian.get(1, k))
+                                * tt.get_std(k, j);
+                        }
+                        kk_ref.add(m, n * 2 + j, g * pad_calc.interp[n] * c);
+                    }
+                }
+            }
+        }
+
+        let mut kk = Matrix::new(8, 4 * 2);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
+        integ::mat_05_btn::<4, _>(&mut kk, &mut pad_b, &mut args, |ten, _, _, _, _| {
+            ten.set_tensor(1.0, &tt);
+            Ok(())
+        })
+        .unwrap();
+        mat_approx_eq(&kk, &kk_ref, 1e-13);
     }
 }
