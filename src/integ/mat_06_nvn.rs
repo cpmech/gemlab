@@ -4,23 +4,27 @@ use crate::StrError;
 use russell_lab::{Matrix, Vector};
 use russell_tensor::Tensor1;
 
-/// Implements the shape(N) times vector(V) times shape(Nb) integration case 06 (e.g., coupling matrix)
+/// Implements the shape(N) times vector(V) times shape(Na) integration case 06 (e.g., coupling matrix)
 ///
-/// Callback function: `f(v, p, N, B, Nb)`
+/// Callback function: `f(v, p, N, B, Na)`
 ///
 /// **Notes:**
 ///
-/// * `m` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Nᵐ`)
-/// * `n` ranges over the number of nodes of the *lower-order* shape specified by `pad_b` (for `Nbⁿ`)
-/// * For example, `1 ≤ m ≤ 8` for a `pad→Qua8` and `1 ≤ n ≤ 4` for `pad_b→Qua4`
-/// * The determinant of the Jacobian is calculated for `pad` (`pad` is the driver of the calculations)
-/// * The number of integration points must consider the nodes of `pad` and the expected order of the whole integrand
+/// * `pad` (in `args`) is the **main** pad: it carries the geometry, the integration measure `|J|`,
+///   and its own shape functions `N` and gradients `B`
+/// * `pad_alt` is the **alternative** pad: only its shape functions are used, never its coordinates,
+///   and it may be of any order — lower, equal to, or higher than that of `pad`
+/// * `m` ranges over the nodes of `pad` (for `Nᵐ`) and `n` over the nodes of `pad_alt` (for `Naⁿ`),
+///   as in the result layout below
+/// * For example, `1 ≤ m ≤ 8` with a `pad→Qua8` and `pad_alt→Qua4`, or the other way round
+/// * The number of integration points must consider the nodes of both pads and the expected order of
+///   the whole integrand
 ///
 /// Coupling vectors:
 ///
 /// ```text
 /// →     ⌠    →
-/// Kᵐⁿ = │ Nᵐ v Nbⁿ α dΩ
+/// Kᵐⁿ = │ Nᵐ v Nᵃⁿ α dΩ
 ///       ⌡
 ///       Ωₑ
 /// ```
@@ -29,7 +33,7 @@ use russell_tensor::Tensor1;
 ///
 /// ```text
 ///        nip-1     →     →       →       →
-/// Kᵐⁿᵢ ≈   Σ   Nᵐ(ιᵖ) vᵢ(ιᵖ) Nbⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
+/// Kᵐⁿᵢ ≈   Σ   Nᵐ(ιᵖ) vᵢ(ιᵖ) Nᵃⁿ(ιᵖ) |J|(ιᵖ) wᵖ α
 ///         p=0
 /// ```
 ///
@@ -47,7 +51,7 @@ use russell_tensor::Tensor1;
 ///     | Kᵐ⁰ᵢ Kᵐ¹ᵢ Kᵐ²ᵢ ··· Kᵐⁿᵢ |  ⟸  ii := i + m ⋅ space_ndim
 ///     └                         ┘
 ///        ⇑                  ⇑
-///       jj0         (pad_b) jj
+///       jj0         (pad_alt) jj
 ///
 /// m = ii / space_ndim
 /// i = ii % space_ndim
@@ -57,36 +61,43 @@ use russell_tensor::Tensor1;
 ///
 /// * `kk` -- A matrix containing all `Kᵐⁿᵢ` values, one after another, and sequentially placed as shown
 ///   above (in 2D). `m` and `n` are the indices of the node and `i` corresponds to `space_ndim`.
-///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + pad_b.nnode`.
-/// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute B)
-/// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
-/// * `fn_v` -- Function `f(v,p,N,B,Nb)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
-///   shape functions N(ιᵖ), gradients B(ιᵖ), and shape functions Nb(ιᵖ). `v` has 3 components (only
+///   The dimensions must be `nrow(K) ≥ ii0 + nnode ⋅ space_ndim` and `ncol(K) ≥ jj0 + pad_alt.nnode`.
+/// * `args` --- Common arguments (`pad` is the **main** scratchpad (modified), which carries the
+///   geometry)
+/// * `pad_alt` -- Scratchpad of the alternative shape (modified) to compute `Na`; its
+///   coordinates are not used
+/// * `fn_v` -- Function `f(v,p,N,B,Na)` that computes `v(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
+///   shape functions N(ιᵖ), gradients B(ιᵖ), and shape functions Na(ιᵖ). `v` has 3 components (only
 ///   `space_ndim` are used).
 ///
 /// # Warning
 ///
-/// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
-/// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
+/// Both [crate::shapes::Scratchpad]s must be functions on the same reference element, otherwise
+/// **calculation errors will occur**: one `ιᵖ` must mean the same point in both. Their classes and
+/// geometric dimensions are checked here; the orders are free, and `pad_alt` may be of lower, equal,
+/// or higher order than `pad`.
 pub fn mat_06_nvn<F>(
     kk: &mut Matrix,
     args: &mut CommonArgs,
-    pad_b: &mut Scratchpad,
+    pad_alt: &mut Scratchpad,
     mut fn_v: F,
 ) -> Result<(), StrError>
 where
     F: FnMut(&mut Tensor1, usize, &Vector, &Matrix, &Vector) -> Result<(), StrError>,
 {
     // check
-    let nnode_b = pad_b.interp.dim();
+    let nnode_alt = pad_alt.interp.dim();
     let (space_ndim, _, nnode) = args.pad.dims();
     let (nrow_kk, ncol_kk) = kk.dims();
     let (ii0, jj0) = (args.ii0, args.jj0);
+    if pad_alt.kind.class() != args.pad.kind.class() || pad_alt.kind.ndim() != args.pad.kind.ndim() {
+        return Err("pad_alt and pad must be of the same class and geo_ndim (e.g. Qua4 with Qua8)");
+    }
     if nrow_kk < ii0 + nnode * space_ndim {
         return Err("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim");
     }
-    if ncol_kk < jj0 + nnode_b {
-        return Err("ncol(K) must be ≥ jj0 + pad_b.nnode");
+    if ncol_kk < jj0 + nnode_alt {
+        return Err("ncol(K) must be ≥ jj0 + pad_alt.nnode");
     }
 
     // allocate auxiliary vector
@@ -106,13 +117,13 @@ where
         // calculate interpolation functions and Jacobian
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
         let det_jac = args.pad.calc_gradient(iota)?; // B
-        (pad_b.fn_interp)(&mut pad_b.interp, iota); // Nb
+        (pad_alt.fn_interp)(&mut pad_alt.interp, iota); // Nb
 
         // calculate v
         let nn = &args.pad.interp;
         let bb = &args.pad.gradient;
-        let nnb = &pad_b.interp;
-        fn_v(&mut v, p, nn, bb, nnb)?;
+        let nn_alt = &pad_alt.interp;
+        fn_v(&mut v, p, nn, bb, nn_alt)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {
@@ -128,17 +139,17 @@ where
         // add contribution to K matrix
         if space_ndim == 2 {
             for m in 0..nnode {
-                for n in 0..nnode_b {
-                    kk.add(ii0 + 0 + m * 2, jj0 + n, c * nn[m] * v.get(0) * nnb[n]);
-                    kk.add(ii0 + 1 + m * 2, jj0 + n, c * nn[m] * v.get(1) * nnb[n]);
+                for n in 0..nnode_alt {
+                    kk.add(ii0 + 0 + m * 2, jj0 + n, c * nn[m] * v.get(0) * nn_alt[n]);
+                    kk.add(ii0 + 1 + m * 2, jj0 + n, c * nn[m] * v.get(1) * nn_alt[n]);
                 }
             }
         } else {
             for m in 0..nnode {
-                for n in 0..nnode_b {
-                    kk.add(ii0 + 0 + m * 3, jj0 + n, c * nn[m] * v.get(0) * nnb[n]);
-                    kk.add(ii0 + 1 + m * 3, jj0 + n, c * nn[m] * v.get(1) * nnb[n]);
-                    kk.add(ii0 + 2 + m * 3, jj0 + n, c * nn[m] * v.get(2) * nnb[n]);
+                for n in 0..nnode_alt {
+                    kk.add(ii0 + 0 + m * 3, jj0 + n, c * nn[m] * v.get(0) * nn_alt[n]);
+                    kk.add(ii0 + 1 + m * 3, jj0 + n, c * nn[m] * v.get(1) * nn_alt[n]);
+                    kk.add(ii0 + 2 + m * 3, jj0 + n, c * nn[m] * v.get(2) * nn_alt[n]);
                 }
             }
         }
@@ -152,33 +163,34 @@ where
 mod tests {
     use crate::integ::testing::aux;
     use crate::integ::{self, AnalyticalQua8, AnalyticalTet4, CommonArgs, Gauss};
+    use crate::shapes::{GeoKind, Scratchpad};
     use russell_lab::{mat_approx_eq, Matrix, Vector};
     use russell_tensor::Tensor1;
 
     #[test]
     fn capture_some_errors() {
         let (a, b) = (2.0, 3.0);
-        let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
+        let mut pad_alt = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
         let mut v = Tensor1::new();
         let nn = Vector::new(0);
         let bb = Matrix::new(0, 0);
-        let nnb = Vector::new(0);
-        let f = |_v: &mut Tensor1, _p: usize, _nn: &Vector, _bb: &Matrix, _nnb: &Vector| Ok(());
-        f(&mut v, 0, &nn, &bb, &nnb).unwrap();
+        let nn_alt = Vector::new(0);
+        let f = |_v: &mut Tensor1, _p: usize, _nn: &Vector, _bb: &Matrix, _nn_alt: &Vector| Ok(());
+        f(&mut v, 0, &nn, &bb, &nn_alt).unwrap();
         let gauss = Gauss::new(pad.kind);
         let mut args = CommonArgs::new(&mut pad, &gauss);
         args.ii0 = 1;
         assert_eq!(
-            integ::mat_06_nvn(&mut kk, &mut args, &mut pad_b, f).err(),
+            integ::mat_06_nvn(&mut kk, &mut args, &mut pad_alt, f).err(),
             Some("nrow(K) must be ≥ ii0 + pad.nnode ⋅ space_ndim")
         );
         args.ii0 = 0;
         args.jj0 = 1;
         assert_eq!(
-            integ::mat_06_nvn(&mut kk, &mut args, &mut pad_b, f).err(),
-            Some("ncol(K) must be ≥ jj0 + pad_b.nnode")
+            integ::mat_06_nvn(&mut kk, &mut args, &mut pad_alt, f).err(),
+            Some("ncol(K) must be ≥ jj0 + pad_alt.nnode")
         );
     }
 
@@ -186,7 +198,7 @@ mod tests {
     fn qua4_qua8_works() {
         let (a, b) = (2.0, 3.0);
         let mut pad = aux::gen_pad_qua8(0.0, 0.0, a, b);
-        let mut pad_b = aux::gen_pad_qua4(0.0, 0.0, a, b);
+        let mut pad_alt = aux::gen_pad_qua4(0.0, 0.0, a, b);
         let mut kk = Matrix::new(8 * 2, 4);
         let ana = AnalyticalQua8::new(a, b);
         let (v0, v1) = (4.0, 5.0);
@@ -198,7 +210,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_06_nvn(&mut kk, &mut args, &mut pad_b, |v, _, _, _, _| {
+            integ::mat_06_nvn(&mut kk, &mut args, &mut pad_alt, |v, _, _, _, _| {
                 v.set(0, v0);
                 v.set(1, v1);
                 Ok(())
@@ -211,8 +223,8 @@ mod tests {
 
     #[test]
     fn tet4_tet4_works() {
-        let mut pad_b = aux::gen_pad_tet4();
-        let mut pad = pad_b.clone();
+        let mut pad_alt = aux::gen_pad_tet4();
+        let mut pad = pad_alt.clone();
         let mut kk = Matrix::new(4 * 3, 4);
         let ana = AnalyticalTet4::new(&pad);
         let (v0, v1, v2) = (4.0, 5.0, 6.0);
@@ -224,7 +236,7 @@ mod tests {
         selection.iter().zip(tolerances).for_each(|(ips, tol)| {
             // println!("nip={}, tol={:.e}", ips.len(), tol);
             let mut args = CommonArgs::new(&mut pad, ips);
-            integ::mat_06_nvn(&mut kk, &mut args, &mut pad_b, |v, _, _, _, _| {
+            integ::mat_06_nvn(&mut kk, &mut args, &mut pad_alt, |v, _, _, _, _| {
                 v.set(0, v0);
                 v.set(1, v1);
                 v.set(2, v2);
@@ -234,5 +246,62 @@ mod tests {
             // println!("{}", kk);
             mat_approx_eq(&kk, &kk_correct, tol);
         });
+    }
+
+    #[test]
+    fn works_with_any_order_combination() {
+        // the main pad carries the geometry; the alternative may be of lower, equal, or higher order
+        #[rustfmt::skip]
+        let xx = [
+            [0.00, 0.00], [2.00, 0.10], [1.70, 1.30], [-0.20, 1.00],
+            [1.00, 0.35], [2.05, 0.72], [0.75, 1.45], [-0.10, 0.55],
+        ];
+        let cases = [
+            (GeoKind::Qua4, 4, GeoKind::Qua8, 8),
+            (GeoKind::Qua8, 8, GeoKind::Qua4, 4),
+            (GeoKind::Qua4, 4, GeoKind::Qua4, 4),
+        ];
+
+        let vv = [1.5, -0.7];
+        for (main_kind, n_main, alt_kind, n_alt) in cases {
+            let mut pad = Scratchpad::new(2, main_kind).unwrap();
+            for m in 0..n_main {
+                pad.set_xx(m, 0, xx[m][0]);
+                pad.set_xx(m, 1, xx[m][1]);
+            }
+            let mut pad_alt = Scratchpad::new(2, alt_kind).unwrap();
+            for m in 0..n_alt.min(n_main) {
+                pad_alt.set_xx(m, 0, xx[m][0]);
+                pad_alt.set_xx(m, 1, xx[m][1]);
+            }
+            let gauss = Gauss::new_or_sized(main_kind, Some(9)).unwrap();
+
+            let mut kk_ref = Matrix::new(n_main * 2, n_alt);
+            let mut pad_calc = pad.clone();
+            let mut pad_alt_calc = Scratchpad::new(2, alt_kind).unwrap();
+            for p in 0..gauss.npoint() {
+                let iota = gauss.coords(p);
+                let det_jac = pad_calc.calc_gradient(iota).unwrap();
+                (pad_alt_calc.fn_interp)(&mut pad_alt_calc.interp, iota);
+                let c = det_jac * gauss.weight(p);
+                for m in 0..n_main {
+                    for i in 0..2 {
+                        for n in 0..n_alt {
+                            kk_ref.add(m * 2 + i, n, pad_calc.interp[m] * vv[i] * pad_alt_calc.interp[n] * c);
+                        }
+                    }
+                }
+            }
+
+            let mut kk = Matrix::new(n_main * 2, n_alt);
+            let mut args = CommonArgs::new(&mut pad, &gauss);
+            integ::mat_06_nvn(&mut kk, &mut args, &mut pad_alt, |v, _, _, _, _| {
+                v.set(0, vv[0]);
+                v.set(1, vv[1]);
+                Ok(())
+            })
+            .unwrap();
+            mat_approx_eq(&kk, &kk_ref, 1e-13);
+        }
     }
 }

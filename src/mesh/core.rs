@@ -468,19 +468,22 @@ impl Mesh {
         pad
     }
 
-    /// Allocates a MixedPad (full and reduced shapes) for a cell and sets both coordinate sets
+    /// Allocates a MixedPad (main and alternative shapes) for a cell and sets the main coordinates
     ///
-    /// The full shape is the cell's kind; the reduced shape is `kind.lower_order().unwrap_or(kind)`
-    /// and takes the **first** `k = MixedPad::nnode_reduced()` points of the cell, which are the
-    /// corner nodes in every quadratic kind (e.g. Qua8 → Qua4, Tri6 → Tri3, Hex20 → Hex8).
+    /// The **main** shape is the cell's kind: it carries the geometry, so it receives the coordinates
+    /// of the cell's points. The **alternative** shape is `alt_kind`, of any order provided it is of
+    /// the same class and geometric dimension as the cell's kind (e.g. a `Qua4` with a `Qua8` cell,
+    /// or a `Qua8` with a `Qua4` cell). Only the main pad receives coordinates; the alternative pad's
+    /// coordinates are never read.
     ///
     /// See [MixedPad] for the meaning of the two pads and for the mixed gradient
-    /// `B_reduced = L_reduced · J_full⁻¹`.
+    /// `B_alt = dN_alt/dξ · J_main⁻¹`.
     ///
     /// # Panics
     ///
     /// 1. A panic will occur if the cell's `geo_ndim` differs from the mesh's `ndim` (shells and
-    ///    cables are not supported), as in [MixedPad::new]
+    ///    cables are not supported), or if `alt_kind` is not of the same class and geometric
+    ///    dimension as the cell's kind, as in [MixedPad::new]
     /// 2. This function does not check for bounds on point indices and dimensions
     /// 3. Use [Mesh::check_all] to capture (some) errors
     ///
@@ -491,18 +494,16 @@ impl Mesh {
     /// use gemlab::shapes::GeoKind;
     ///
     /// let mesh = Samples::one_qua8();
-    /// let mixed = mesh.get_mixed_pad(0);
-    /// assert_eq!(mixed.full.kind, GeoKind::Qua8);
-    /// assert_eq!(mixed.reduced.kind, GeoKind::Qua4);
-    /// assert_eq!(mixed.nnode_full(), 8);
-    /// assert_eq!(mixed.nnode_reduced(), 4);
+    /// let mixed = mesh.get_mixed_pad(0, GeoKind::Qua4);
+    /// assert_eq!(mixed.main.kind, GeoKind::Qua8);
+    /// assert_eq!(mixed.alt.kind, GeoKind::Qua4);
+    /// assert_eq!(mixed.nnode_main(), 8);
+    /// assert_eq!(mixed.nnode_alt(), 4);
     /// ```
-    pub fn get_mixed_pad(&self, cell_id: CellId) -> MixedPad {
+    pub fn get_mixed_pad(&self, cell_id: CellId, alt_kind: GeoKind) -> MixedPad {
         let cell = &self.cells[cell_id];
-        let mut mixed = MixedPad::new(self.ndim, cell.kind).unwrap();
-        let k = mixed.nnode_reduced();
-        self.set_pad(&mut mixed.full, &cell.points);
-        self.set_pad(&mut mixed.reduced, &cell.points[..k]);
+        let mut mixed = MixedPad::new(self.ndim, cell.kind, alt_kind).unwrap();
+        self.set_pad(&mut mixed.main, &cell.points);
         mixed
     }
 
