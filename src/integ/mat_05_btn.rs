@@ -15,9 +15,9 @@ use russell_tensor::Tensor2;
 /// * `n` ranges over the number of nodes of the *driver* shape specified by `pad` (for `Nⁿ`)
 /// * For example, `1 ≤ m ≤ 4` for a `pad_b→Qua4` and `1 ≤ n ≤ 8` for `pad→Qua8`
 /// * The determinant of the Jacobian is calculated for `pad` (`pad` is the driver of the calculations)
-/// * The lower-order gradient is taken in the **driver's** mapping: `Bb = dNb/dξ · J⁻¹`, with `J` from
-///   `pad`. This matters only when the two pads describe different maps, i.e. on curved-edged cells;
-///   for straight-edged cells the two maps coincide and the result is the same either way
+/// * The gradient `Bb` is taken in the driver's mapping as well: `Bb = dNb/dξ · J⁻¹` with the `J` of
+///   `pad`. Thus only the shape functions of `pad_b` are used (its coordinates are not read), and the
+///   two pads describe the same element when `pad_b` is the lower-order counterpart of `pad`
 /// * The number of integration points must consider the nodes of `pad` and the expected order of the whole integrand
 ///
 /// Coupling vectors:
@@ -59,15 +59,19 @@ use russell_tensor::Tensor2;
 /// * `kk` -- A matrix containing all `Kᵐⁿⱼ` values, one after another, and sequentially placed as shown
 ///   above (in 2D). `m` and `n` are the indices of the node and `j` corresponds to `space_ndim`.
 ///   The dimensions must be `nrow(K) ≥ ii0 + pad_b.nnode` and `ncol(K) ≥ jj0 + pad.nnode ⋅ space_ndim`
-/// * `pad_b` -- Lower-order scratchpad (modified) to compute Nb
+/// * `pad_b` -- Scratchpad of the lower-order shape (modified) to compute `Nb` and `Bb`; its
+///   coordinates are not used
 /// * `args` --- Common arguments (`pad` is the Driver scratchpad (modified) to compute B)
 /// * `fn_tt` -- Function `f(T,p,Bb,N,B)` that computes `T(x(ιᵖ))`, given `0 ≤ p ≤ ngauss`,
-///   the gradients Bb(ιᵖ), shape functions N(ιᵖ), and gradients B(ιᵖ). `T` is set for `space_ndim`.
+///   the gradients Bb(ιᵖ) (in the driver's mapping), shape functions N(ιᵖ), and gradients B(ιᵖ).
+///   `T` is set for `space_ndim`.
 ///
 /// # Warning
 ///
-/// The two [crate::shapes::Scratchpad]s mut be compatible, otherwise **calculation errors may occur**.
-/// Therefore, `pad_b` must be either the lower-version of `pad` or have the same shape as `pad`.
+/// The two [crate::shapes::Scratchpad]s must refer to the same reference element, otherwise
+/// **calculation errors will occur**. Since the coordinates of `pad_b` are not used, the requirement is
+/// on its shape functions and not on its coordinates: `pad_b` must be either the lower-version of
+/// `pad` (the same nodes, in the same order) or have the same shape as `pad`.
 pub fn mat_05_btn<const N: usize, F>(
     kk: &mut Matrix,
     pad_b: &mut Scratchpad,
@@ -337,6 +341,17 @@ mod tests {
         })
         .unwrap();
         mat_approx_eq(&kk, &kk_ref, 1e-13);
+
+        // the coordinates of pad_b are not used: the same matrix comes out of a pad without coordinates
+        let mut pad_b_nocoords = Scratchpad::new(2, GeoKind::Qua4).unwrap();
+        let mut kk_nocoords = Matrix::new(4, 16);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
+        integ::mat_05_btn::<4, _>(&mut kk_nocoords, &mut pad_b_nocoords, &mut args, |ten, _, _, _, _| {
+            ten.set_tensor(1.0, &tt);
+            Ok(())
+        })
+        .unwrap();
+        mat_approx_eq(&kk_nocoords, &kk_ref, 1e-13);
 
         // on this element the old convention differs by an O(0.1) amount, so the check discriminates
         let mut max_diff = 0.0;
