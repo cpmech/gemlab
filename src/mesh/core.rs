@@ -1,5 +1,5 @@
 use super::AsCell;
-use crate::shapes::{GeoKind, Scratchpad};
+use crate::shapes::{GeoKind, MixedPad, Scratchpad};
 use crate::StrError;
 use russell_lab::{argsort2_f64, argsort3_f64};
 use serde::{Deserialize, Serialize};
@@ -466,6 +466,45 @@ impl Mesh {
         let mut pad = Scratchpad::new(self.ndim, cell.kind).unwrap();
         self.set_pad(&mut pad, &cell.points);
         pad
+    }
+
+    /// Allocates a MixedPad (main and alternative shapes) for a cell and sets the main coordinates
+    ///
+    /// The **main** shape is the cell's kind: it carries the geometry, so it receives the coordinates
+    /// of the cell's points. The **alternative** shape is `alt_kind`, of any order provided it is of
+    /// the same class and geometric dimension as the cell's kind (e.g. a `Qua4` with a `Qua8` cell,
+    /// or a `Qua8` with a `Qua4` cell). Only the main pad receives coordinates; the alternative pad's
+    /// coordinates are never read.
+    ///
+    /// See [MixedPad] for the meaning of the two pads and for the mixed gradient
+    /// `B_alt = dN_alt/dξ · J_main⁻¹`.
+    ///
+    /// # Panics
+    ///
+    /// 1. A panic will occur if the cell's `geo_ndim` differs from the mesh's `ndim` (shells and
+    ///    cables are not supported), or if `alt_kind` is not of the same class and geometric
+    ///    dimension as the cell's kind, as in [MixedPad::new]
+    /// 2. This function does not check for bounds on point indices and dimensions
+    /// 3. Use [Mesh::check_all] to capture (some) errors
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use gemlab::mesh::Samples;
+    /// use gemlab::shapes::GeoKind;
+    ///
+    /// let mesh = Samples::one_qua8();
+    /// let mixed = mesh.get_mixed_pad(0, GeoKind::Qua4);
+    /// assert_eq!(mixed.main.kind, GeoKind::Qua8);
+    /// assert_eq!(mixed.alt.kind, GeoKind::Qua4);
+    /// assert_eq!(mixed.nnode_main(), 8);
+    /// assert_eq!(mixed.nnode_alt(), 4);
+    /// ```
+    pub fn get_mixed_pad(&self, cell_id: CellId, alt_kind: GeoKind) -> MixedPad {
+        let cell = &self.cells[cell_id];
+        let mut mixed = MixedPad::new(self.ndim, cell.kind, alt_kind).unwrap();
+        self.set_pad(&mut mixed.main, &cell.points);
+        mixed
     }
 
     /// Returns the min and max coordinates of all points in the mesh
