@@ -10,7 +10,7 @@ documentation = "https://docs.rs/gemlab"
 readme = "README.md"
 categories = ["mathematics", "science"]
 keywords = ["geometry", "mesh", "fem"]
-exclude = ["AGENTS.md", ".github/", ".vscode/", "zdocker/"]
+exclude = ["AGENTS.md", ".github/", ".vscode/", "zdocker/", ".codegraph/"]
 
 [features]
 open_blas = ["russell_lab/open_blas"]
