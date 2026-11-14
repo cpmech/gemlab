@@ -5,20 +5,25 @@ use russell_tensor::Tensor1;
 impl Scratchpad {
     /// Calculates the real coordinates x from reference coordinates ξ
     ///
-    /// This function uses the isoparametric formula to calculate x given ξ:
+    /// This function uses the **geometry** interpolation functions (`geo_kind`) to calculate x
+    /// given ξ:
     ///
     /// ```text
     /// → →         →  →
     /// x(ξ) = Σ Nᵐ(ξ) xᵐ
     ///        m
     ///
-    /// x := Xᵀ ⋅ N
+    /// x := Xᵀ ⋅ N_geo
     /// ```
+    ///
+    /// The field interpolation functions (`kind`) are also evaluated, so `interp` is available after
+    /// the call. For mixed-order shapes, the coordinates follow `geo_kind`, not the field `kind`.
     ///
     /// # Output
     ///
     /// * `x` -- real coordinates (space_ndim); components beyond `space_ndim` are set to zero
-    /// * `pad.interp` -- (nnode) interpolation functions @ ξ
+    /// * `pad.interp` -- (nnode) field interpolation functions @ ξ
+    /// * `pad.interp_geo` -- (geo_nnode) geometry interpolation functions @ ξ, when `geo_kind != kind`
     ///
     /// # Input
     ///
@@ -32,13 +37,13 @@ impl Scratchpad {
     /// use russell_tensor::{Tensor1, t1_approx_eq};
     ///
     /// fn main() -> Result<(), StrError> {
-    ///     //  3-------------2         ξ₀   ξ₁
-    ///     //  |      ξ₁     |  node    r    s
-    ///     //  |      |      |     0 -1.0 -1.0
-    ///     //  |      +--ξ₀  |     1  1.0 -1.0
-    ///     //  |             |     2  1.0  1.0
-    ///     //  |             |     3 -1.0  1.0
-    ///     //  0-------------1
+    ///   //  3-------------2         ξ₀   ξ₁
+    ///   //  |      ξ₁     |  node    r    s
+    ///   //  |      |      |     0 -1.0 -1.0
+    ///   //  |      +--ξ₀  |     1  1.0 -1.0
+    ///   //  |             |     2  1.0  1.0
+    ///   //  |             |     3 -1.0  1.0
+    ///   //  0-------------1
     ///
     ///     let (x0, y0) = (3.0, 4.0);
     ///     let (w, h) = (10.0, 5.0);
@@ -64,14 +69,30 @@ impl Scratchpad {
         if !self.ok_xxt {
             return Err("all components of the coordinates matrix must be set first");
         }
-        let (space_ndim, _, nnode) = self.dims();
+        let space_ndim = self.space_ndim();
+
+        // field interpolation functions (available to callers)
         self.calc_interp(ksi);
+
+        // physical coordinates from the geometric cell
         for i in 0..space_ndim {
             x.set(i, 0.0);
-            for j in 0..nnode {
-                x.add(i, self.xxt.get(i, j) * self.interp.get(j));
+        }
+        if self.geo_kind == self.kind {
+            for k in 0..self.nnode() {
+                for i in 0..space_ndim {
+                    x.add(i, self.xxt.get(i, k) * self.interp.get(k));
+                }
+            }
+        } else {
+            (self.fn_interp_geo)(&mut self.interp_geo, ksi);
+            for k in 0..self.geo_nnode() {
+                for i in 0..space_ndim {
+                    x.add(i, self.xxt.get(i, k) * self.interp_geo.get(k));
+                }
             }
         }
+
         // reset unused trailing components (e.g., the z component in 2D)
         for i in space_ndim..3 {
             x.set(i, 0.0);

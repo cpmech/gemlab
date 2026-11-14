@@ -163,10 +163,7 @@ where
         // add contribution to K matrix
         let c = det_jac * weight * args.alpha;
         if args.axisymmetric {
-            let mut r = 0.0; // radius @ x(ιᵖ)
-            for m in 0..nnode {
-                r += nn[m] * args.pad.xxt.get(0, m);
-            }
+            let r = args.pad.calc_radius(iota)?; // radius @ x(ιᵖ) from the geometry
             add_to_kk_axisymmetric(kk, nnode, c, r, &dd, args);
         } else {
             add_to_kk(kk, space_ndim, nnode, c, &dd, args);

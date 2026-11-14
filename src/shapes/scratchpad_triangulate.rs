@@ -3,9 +3,9 @@ use crate::StrError;
 use russell_tensor::Tensor1;
 
 impl Scratchpad {
-    /// Triangulates a Tri or Qua shape
+    /// Triangulates a Tri or Qua geometric shape
     ///
-    /// This function connects the existing nodes of a GeoKind to make triangles.
+    /// This function connects the existing nodes of the geometry (`geo_kind`) to make triangles.
     /// For some shapes, a few extra nodes are defined.
     ///
     /// # Output
@@ -24,7 +24,7 @@ impl Scratchpad {
     where
         F: FnMut(usize, usize, usize, &Tensor1),
     {
-        let kind = self.kind;
+        let kind = self.geo_kind;
         let class = kind.class();
         let tri_or_qua = class == GeoClass::Tri || class == GeoClass::Qua;
         if !tri_or_qua {

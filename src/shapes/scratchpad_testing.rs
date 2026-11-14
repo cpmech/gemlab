@@ -140,9 +140,9 @@ pub mod aux {
     pub fn extract_edge(e: usize, pad: &Scratchpad) -> Scratchpad {
         let (space_ndim, geo_ndim, _) = pad.dims();
         assert_ne!(geo_ndim, 1);
-        let mut pad_edge = Scratchpad::new(space_ndim, pad.kind.edge_kind().unwrap()).unwrap();
-        for i in 0..pad.kind.edge_nnode() {
-            let m = pad.kind.edge_node_id(e, i);
+        let mut pad_edge = Scratchpad::new(space_ndim, pad.geo_kind.edge_kind().unwrap()).unwrap();
+        for i in 0..pad.geo_kind.edge_nnode() {
+            let m = pad.geo_kind.edge_node_id(e, i);
             for j in 0..space_ndim {
                 pad_edge.set_xx(i, j, pad.xxt.get(j, m));
             }
@@ -162,9 +162,9 @@ pub mod aux {
     pub fn extract_face(f: usize, pad: &Scratchpad) -> Scratchpad {
         let (space_ndim, geo_ndim, _) = pad.dims();
         assert_eq!(geo_ndim, 3);
-        let mut pad_face = Scratchpad::new(space_ndim, pad.kind.face_kind().unwrap()).unwrap();
-        for i in 0..pad.kind.face_nnode() {
-            let m = pad.kind.face_node_id(f, i);
+        let mut pad_face = Scratchpad::new(space_ndim, pad.geo_kind.face_kind().unwrap()).unwrap();
+        for i in 0..pad.geo_kind.face_nnode() {
+            let m = pad.geo_kind.face_node_id(f, i);
             for j in 0..space_ndim {
                 pad_face.set_xx(i, j, pad.xxt.get(j, m));
             }

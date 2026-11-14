@@ -132,10 +132,7 @@ where
         // add contribution to d vector
         let c = det_jac * weight * args.alpha;
         if args.axisymmetric {
-            let mut r = 0.0; // radius @ x(ιᵖ)
-            for m in 0..nnode {
-                r += nn[m] * args.pad.xxt.get(0, m);
-            }
+            let r = args.pad.calc_radius(iota)?; // radius @ x(ιᵖ) from the geometry
             add_to_d_axisymmetric(d, nnode, c, r, &sig, args);
         } else {
             add_to_d(d, space_ndim, nnode, c, &sig, args);

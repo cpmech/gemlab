@@ -4,7 +4,7 @@ use plotpy::{Canvas, Plot, PolyCode, Text};
 use russell_tensor::Tensor1;
 
 impl Scratchpad {
-    /// Draws the geometric shape
+    /// Draws the geometric shape defined by `geo_kind`
     ///
     /// # Input
     ///
@@ -23,16 +23,16 @@ impl Scratchpad {
         if !self.ok_xxt {
             return Err("all components of the coordinates matrix must be set first");
         }
-        let (space_ndim, _, nnode) = self.dims();
+        let (space_ndim, _, _) = self.dims();
         let mut canvas = Canvas::new();
-        if self.kind.ndim() == 1 {
+        if self.geo_kind.ndim() == 1 {
             let mut lin_pad = self.clone();
             draw_edge(&mut canvas, &mut lin_pad, edge_color)?;
         } else {
-            let mut edge_pad = Scratchpad::new(space_ndim, self.kind.edge_kind().unwrap())?;
-            for e in 0..self.kind.nedge() {
-                for i in 0..self.kind.edge_nnode() {
-                    let m = self.kind.edge_node_id(e, i);
+            let mut edge_pad = Scratchpad::new(space_ndim, self.geo_kind.edge_kind().unwrap())?;
+            for e in 0..self.geo_kind.nedge() {
+                for i in 0..self.geo_kind.edge_nnode() {
+                    let m = self.geo_kind.edge_node_id(e, i);
                     for j in 0..space_ndim {
                         edge_pad.set_xx(i, j, self.xxt.get(j, m));
                     }
@@ -60,14 +60,14 @@ impl Scratchpad {
                 .set_bbox_facecolor("white")
                 .set_bbox_edgecolor("gold");
             if space_ndim == 2 {
-                let m_corner_max = match self.kind.class() {
+                let m_corner_max = match self.geo_kind.class() {
                     GeoClass::Lin => 2,
                     GeoClass::Tri => 3,
                     GeoClass::Qua => 4,
                     GeoClass::Tet => 4,
                     GeoClass::Hex => 8,
                 };
-                for m in 0..self.nnode() {
+                for m in 0..self.geo_nnode() {
                     if m < m_corner_max {
                         labels_corner.draw(self.xxt.get(0, m), self.xxt.get(1, m), format!("{}", m).as_str());
                     } else {
@@ -75,12 +75,12 @@ impl Scratchpad {
                     }
                 }
             } else {
-                let mut m_corner_max = if self.kind.is_tri_or_tet() { 4 } else { 8 };
-                if self.kind.ndim() == 2 {
+                let mut m_corner_max = if self.geo_kind.is_tri_or_tet() { 4 } else { 8 };
+                if self.geo_kind.ndim() == 2 {
                     // shell (2D shape in 3D space => ignore the difference between corners and middle nodes)
                     m_corner_max = 0
                 }
-                for m in 0..self.nnode() {
+                for m in 0..self.geo_nnode() {
                     if m < m_corner_max {
                         labels_corner.draw_3d(
                             self.xxt.get(0, m),
@@ -103,7 +103,7 @@ impl Scratchpad {
         if set_range {
             let mut xmin = vec![f64::MAX; space_ndim];
             let mut xmax = vec![f64::MIN; space_ndim];
-            for m in 0..nnode {
+            for m in 0..self.geo_nnode() {
                 for j in 0..space_ndim {
                     xmin[j] = f64::min(xmin[j], self.xxt.get(j, m));
                     xmax[j] = f64::max(xmax[j], self.xxt.get(j, m));

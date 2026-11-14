@@ -39,14 +39,19 @@ impl Scratchpad {
     ///
     /// # Output
     ///
-    /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
-    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `deriv` -- field derivatives (nnode,geo_ndim) when `geo_kind == kind`
+    /// * `deriv_geo` -- geometry derivatives (geo_nnode,geo_ndim) when `geo_kind != kind`
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim) of the geometry mapping
     /// * `inv_jacobian` -- If `geo_ndim = space_ndim` (`SOLID` case): inverse Jacobian matrix (space_ndim,space_ndim)
     /// * Returns one of the following:
     ///     * `CABLE`: (geo_ndim = 1 and space_ndim = 2 or 3), returns the norm of the Jacobian vector
     ///     * `SHELL`: (geo_ndim = 2 and space_ndim = 3), returns [DET_JAC_NOT_AVAILABLE] indicating that the
     ///       determinant of the Jacobian is not available and the inverse Jacobian has not been computed
     ///     * `SOLID`: (geo_ndim = space_ndim), returns the determinant of the Jacobian
+    ///
+    /// The Jacobian always comes from the cell geometry (`geo_kind`). The field derivatives `deriv`
+    /// are evaluated directly only in the isoparametric case; otherwise, [Scratchpad::calc_gradient]
+    /// evaluates them separately from `deriv_geo`.
     ///
     /// # Input
     ///
@@ -104,11 +109,16 @@ impl Scratchpad {
             return Err("all components of the coordinates matrix must be set first");
         }
 
-        // matrix L: dNᵐ/dξ
-        (self.fn_deriv)(&mut self.deriv, ksi);
-
-        // matrix J: dx/dξ
-        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv, 0.0)?;
+        // matrix L: dNᵐ/dξ, always from the cell geometry
+        if self.geo_kind == self.kind {
+            // isoparametric fast path: the field and geometry derivatives are the same
+            (self.fn_deriv)(&mut self.deriv, ksi);
+            mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv, 0.0)?;
+        } else {
+            // mixed-order: differentiate the geometry functions
+            (self.fn_deriv_geo)(&mut self.deriv_geo, ksi);
+            mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv_geo, 0.0)?;
+        }
 
         // inverse Jacobian and determinant/norm (or not possible)
         let (space_ndim, geo_ndim, _) = self.dims();

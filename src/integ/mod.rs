@@ -52,19 +52,6 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 01(mix): Shape(Na) times scalar(S)
-//!
-//! Function [vec_01_ns_mix()]
-//!
-//! `Na` is the **alternative** shape's functions; the measure and the geometry come from the main pad.
-//!
-//! ```text
-//!      ⌠    → →     →
-//! aᵐ = │ Naᵐ(x(ξ)) s(x) α dΩ
-//!      ⌡
-//!      Ωₑ
-//! ```
-//!
 //! ## VEC 02: Shape(N) times vector(V)
 //!
 //! Function [vec_02_nv()]
@@ -98,19 +85,6 @@
 //!      Ωₑ
 //! ```
 //!
-//! ## VEC 03(mix): Vector(V) dot gradient(Ba)
-//!
-//! Function [vec_03_bv_mix()]
-//!
-//! `Ba = dNa/dξ · J⁻¹` is the **alternative** shape's gradient; the measure and the geometry come from the main pad.
-//!
-//! ```text
-//!      ⌠ →  → →     → →
-//! cᵐ = │ Baᵐ(x(ξ)) · w(x) α dΩ
-//!      ⌡
-//!      Ωₑ
-//! ```
-//!
 //! ## VEC 04: gradient(B) dot transpose tensor(T)
 //!
 //! Function [vec_04_bt()]
@@ -137,19 +111,6 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 01(mix): Shape(Na) times scalar(S) times shape(Na)
-//!
-//! Function [mat_01_nsn_mix()]
-//!
-//! `Na` belongs to the **alternative** shape; the measure and the geometry come from the main pad.
-//!
-//! ```text
-//!       ⌠
-//! Kᵐⁿ = │ Naᵐ s Naⁿ α dΩ
-//!       ⌡
-//!       Ωₑ
-//! ```
-//!
 //! ## MAT 02: Gradient(B) dot vector(V) times shape(N) (e.g., compressibility matrix)
 //!
 //! Function [mat_02_bvn()]
@@ -172,19 +133,6 @@
 //!       Ωₑ
 //! ```
 //!
-//! ## MAT 03(mix): Gradient(Ba) dot tensor(T) dot gradient(Ba)
-//!
-//! Function [mat_03_btb_mix()]
-//!
-//! `Ba` belongs to the **alternative** shape; the measure and the geometry come from the main pad.
-//!
-//! ```text
-//!       ⌠ →        →
-//! Kᵐⁿ = │ Baᵐ ⋅ T ⋅ Baⁿ α dΩ
-//!       ⌡       ▔
-//!       Ωₑ
-//! ```
-//!
 //! ## MAT 04: shape(Nb) times scalar(S) times gradient(B) (e.g., coupling matrix)
 //!
 //! Function [mat_04_nsb()]
@@ -198,14 +146,50 @@
 //!
 //! ## MAT 05: Gradient(Bb) times tensor(T) times shape(N) (e.g., coupling matrix)
 //!
-//! Function [mat_05_btn()]
+//! Functions [mat_05_btn()], [mat_05_btn_qq()], and [mat_05_btn_nm()]
 //!
 //! ```text
 //! →     ⌠ →
-//! Kᵐⁿ = │ Bbᵐ ⋅ T Nⁿ dΩ
+//! Kᵐⁿ = │ Bᵐ ⋅ T Nⁿ α dΩ
 //!       ⌡       ▔
 //!       Ωₑ
 //! ```
+//!
+//! The general function [mat_05_btn()] (layout `Pᵉ`) uses the scalar `pad_alt` field and its
+//! gradient `Ba` for the rows, and the vector `args.pad` field for the columns.
+//!
+//! ### MAT 05 (Qᵉ): Gradient(B) dot tensor(T) times shape(Na)
+//!
+//! Function [mat_05_btn_qq()]
+//!
+//! The vector `args.pad` field addresses the rows (`Bᵐ`) and the scalar `pad_alt` field addresses
+//! the columns (`Naⁿ`). The axisymmetric hoop contribution is included exactly as in
+//! [vec_04_bt()].
+//!
+//! ```text
+//! →     ⌠ →        →
+//! Kᵐⁿ = │ Bᵐ ⋅ T Naⁿ α dΩ
+//!       ⌡       ▔
+//!       Ωₑ
+//! ```
+//!
+//! ### MAT 05 (Pᵉ): Shape(Na) times tensor(T) dot gradient(B)
+//!
+//! Function [mat_05_btn_nm()]
+//!
+//! The scalar `pad_alt` field addresses the rows (`Naᵐ`) and the vector `args.pad` field addresses
+//! the columns (`Bⁿ`). The axisymmetric hoop contribution is included exactly as in
+//! [vec_04_bt()].
+//!
+//! ```text
+//! →     ⌠        →
+//! Kᵐⁿ = │ Naᵐ T ⋅ Bⁿ α dΩ
+//!       ⌡     ▔
+//!       Ωₑ
+//! ```
+//!
+//! The two mappings are transposes of each other:
+//! `mat_05_btn_nm(T) = mat_05_btn_qq(T)ᵀ`.
 //!
 //! ## MAT 06: Shape(N) times vector(V) times shape(Nb) (e.g., coupling matrix)
 //!
@@ -259,34 +243,6 @@
 //!       ⌠                       →    →
 //! Kᵐⁿ = │ Σ Σ Σ Σ Bᵐₖ Dᵢₖⱼₗ Bⁿₗ eᵢ ⊗ eⱼ dΩ
 //! ▔     ⌡ i j k l
-//!       Ωₑ
-//! ```
-//!
-//! ## MAT 11: Shape(Na) times tensor(T) dot gradient(B) (coupled Pᵉ layout)
-//!
-//! Function [mat_11_ntb()]
-//!
-//! `B` differentiates the main pad's vector field, `Na` is the **alternative** shape, and the
-//! axisymmetric hoop contribution is included exactly as in [vec_04_bt()].
-//!
-//! ```text
-//!       ⌠        →
-//! Kᵐⁿ = │ Naᵐ T · Bⁿ α dΩ
-//!       ⌡     ▔
-//!       Ωₑ
-//! ```
-//!
-//! ## MAT 12: Gradient(B) dot tensor(T) times shape(Na) (coupled Qᵉ layout)
-//!
-//! Function [mat_12_btna()]
-//!
-//! `B` differentiates the main pad's vector field, `Na` is the **alternative** shape, and the
-//! axisymmetric hoop contribution is included exactly as in [vec_04_bt()].
-//!
-//! ```text
-//!       ⌠ →        →
-//! Kᵐⁿ = │ Bᵐ · T Naⁿ α dΩ
-//!       ⌡       ▔
 //!       Ωₑ
 //! ```
 //!
@@ -389,10 +345,8 @@ mod common_args;
 mod gauss;
 mod mat_01_nsn;
 mod mat_01_nsn_bry;
-mod mat_01_nsn_mix;
 mod mat_02_bvn;
 mod mat_03_btb;
-mod mat_03_btb_mix;
 mod mat_04_nsb;
 mod mat_05_btn;
 mod mat_06_nvn;
@@ -400,17 +354,13 @@ mod mat_07_bsn;
 mod mat_08_ntn;
 mod mat_09_nvb;
 mod mat_10_bdb;
-mod mat_11_ntb;
-mod mat_12_btna;
 mod scalar_field;
 mod testing;
 mod vec_01_ns;
 mod vec_01_ns_bry;
-mod vec_01_ns_mix;
 mod vec_02_nv;
 mod vec_02_nv_bry;
 mod vec_03_bv;
-mod vec_03_bv_mix;
 mod vec_04_bt;
 
 pub use analytical_qua4::*;
@@ -421,10 +371,8 @@ pub use common_args::*;
 pub use gauss::*;
 pub use mat_01_nsn::*;
 pub use mat_01_nsn_bry::*;
-pub use mat_01_nsn_mix::*;
 pub use mat_02_bvn::*;
 pub use mat_03_btb::*;
-pub use mat_03_btb_mix::*;
 pub use mat_04_nsb::*;
 pub use mat_05_btn::*;
 pub use mat_06_nvn::*;
@@ -432,14 +380,10 @@ pub use mat_07_bsn::*;
 pub use mat_08_ntn::*;
 pub use mat_09_nvb::*;
 pub use mat_10_bdb::*;
-pub use mat_11_ntb::*;
-pub use mat_12_btna::*;
 pub use scalar_field::*;
 pub use vec_01_ns::*;
 pub use vec_01_ns_bry::*;
-pub use vec_01_ns_mix::*;
 pub use vec_02_nv::*;
 pub use vec_02_nv_bry::*;
 pub use vec_03_bv::*;
-pub use vec_03_bv_mix::*;
 pub use vec_04_bt::*;

@@ -1,5 +1,5 @@
 use super::AsCell;
-use crate::shapes::{GeoKind, MixedPad, Scratchpad};
+use crate::shapes::{GeoKind, Scratchpad};
 use crate::StrError;
 use russell_lab::{argsort2_f64, argsort3_f64};
 use serde::{Deserialize, Serialize};
@@ -442,11 +442,11 @@ impl Mesh {
     ///
     /// # Panics
     ///
-    /// 1. Make sure `pad.nnode() == points.len()`; otherwise a panic will occur
+    /// 1. Make sure `pad.geo_nnode() == points.len()`; otherwise a panic will occur
     /// 2. This function does not check for bounds on point indices and dimensions
     /// 3. Use [Mesh::check_all] to capture (some) errors
     pub fn set_pad(&self, pad: &mut Scratchpad, points: &[PointId]) {
-        let nnode = pad.nnode();
+        let nnode = pad.geo_nnode();
         assert_eq!(nnode, points.len());
         for m in 0..nnode {
             for j in 0..self.ndim {
@@ -468,22 +468,19 @@ impl Mesh {
         pad
     }
 
-    /// Allocates a MixedPad (main and alternative shapes) for a cell and sets the main coordinates
+    /// Allocates a Scratchpad with an alternative field kind for a cell and sets its coordinates
     ///
-    /// The **main** shape is the cell's kind: it carries the geometry, so it receives the coordinates
-    /// of the cell's points. The **alternative** shape is `alt_kind`, of any order provided it is of
-    /// the same class and geometric dimension as the cell's kind (e.g. a `Qua4` with a `Qua8` cell,
-    /// or a `Qua8` with a `Qua4` cell). Only the main pad receives coordinates; the alternative pad's
-    /// coordinates are never read.
-    ///
-    /// See [MixedPad] for the meaning of the two pads and for the mixed gradient
-    /// `B_alt = dN_alt/dξ · J_main⁻¹`.
+    /// The cell's kind defines the geometry mapping (`geo_kind`), while `alt_kind` defines the field
+    /// interpolation (`kind`). The field may be of lower, equal, or higher order than the cell,
+    /// provided both are of the same class and geometric dimension (e.g. a `Qua4` field over a
+    /// `Qua8` cell, or a `Qua8` field over a `Qua4` cell). The field gradients are taken in the
+    /// cell's geometric mapping: `B = dN/dξ · J_geo⁻¹`.
     ///
     /// # Panics
     ///
     /// 1. A panic will occur if the cell's `geo_ndim` differs from the mesh's `ndim` (shells and
     ///    cables are not supported), or if `alt_kind` is not of the same class and geometric
-    ///    dimension as the cell's kind, as in [MixedPad::new]
+    ///    dimension as the cell's kind, as in [Scratchpad::new_mixed]
     /// 2. This function does not check for bounds on point indices and dimensions
     /// 3. Use [Mesh::check_all] to capture (some) errors
     ///
@@ -494,17 +491,17 @@ impl Mesh {
     /// use gemlab::shapes::GeoKind;
     ///
     /// let mesh = Samples::one_qua8();
-    /// let mixed = mesh.get_mixed_pad(0, GeoKind::Qua4);
-    /// assert_eq!(mixed.main.kind, GeoKind::Qua8);
-    /// assert_eq!(mixed.alt.kind, GeoKind::Qua4);
-    /// assert_eq!(mixed.nnode_main(), 8);
-    /// assert_eq!(mixed.nnode_alt(), 4);
+    /// let pad = mesh.get_pad_alt(0, GeoKind::Qua4);
+    /// assert_eq!(pad.kind, GeoKind::Qua4);
+    /// assert_eq!(pad.geo_kind, GeoKind::Qua8);
+    /// assert_eq!(pad.nnode(), 4);
+    /// assert_eq!(pad.geo_nnode(), 8);
     /// ```
-    pub fn get_mixed_pad(&self, cell_id: CellId, alt_kind: GeoKind) -> MixedPad {
+    pub fn get_pad_alt(&self, cell_id: CellId, alt_kind: GeoKind) -> Scratchpad {
         let cell = &self.cells[cell_id];
-        let mut mixed = MixedPad::new(self.ndim, cell.kind, alt_kind).unwrap();
-        self.set_pad(&mut mixed.main, &cell.points);
-        mixed
+        let mut pad = Scratchpad::new_mixed(self.ndim, alt_kind, cell.kind).unwrap();
+        self.set_pad(&mut pad, &cell.points);
+        pad
     }
 
     /// Returns the min and max coordinates of all points in the mesh

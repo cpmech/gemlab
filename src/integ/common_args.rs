@@ -14,7 +14,8 @@ pub struct CommonArgs<'a> {
 
     /// Specifies an axisymmetric model
     ///
-    /// Performs the integration for 1 radian.
+    /// Performs the integration for 1 radian. The radius is interpolated from the cell geometry; for
+    /// mixed-order pads, this is `geo_kind` (see [Scratchpad::new_mixed]).
     pub axisymmetric: bool,
 
     /// Extra coefficient that can be used to define the thickness of plane-stress models

@@ -85,17 +85,20 @@ where
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
         let mag_n = args.pad.calc_normal_vector(&mut un, iota).unwrap(); // un
 
+        // radius @ x(ιᵖ) from the geometry
+        let radius = if args.axisymmetric {
+            args.pad.calc_radius(iota)?
+        } else {
+            0.0
+        };
+
         // calculate s
         let nn = &args.pad.interp;
         let s = fn_s(p, &un, nn)?;
 
         // calculate coefficient
         let c = if args.axisymmetric {
-            let mut r = 0.0; // radius @ x(ιᵖ)
-            for m in 0..nnode {
-                r += nn[m] * args.pad.xxt.get(0, m);
-            }
-            s * mag_n * weight * args.alpha * r
+            s * mag_n * weight * args.alpha * radius
         } else {
             s * mag_n * weight * args.alpha
         };

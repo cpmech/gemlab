@@ -64,6 +64,64 @@ pub mod aux {
         pad
     }
 
+    /// Coordinates of the curved 8-node element used by the mixed-order integration tests
+    #[rustfmt::skip]
+    pub const CURVED_QUA8: [[f64; 2]; 8] = [
+        [0.00, 0.00], [2.00, 0.10], [1.70, 1.30], [-0.20, 1.00],
+        [1.00, 0.35], [2.05, 0.72], [0.75, 1.45], [-0.10, 0.55],
+    ];
+
+    /// Generates a Qua8 pad with the curved coordinates, shifted by `x_shift` in the first coordinate
+    pub fn gen_pad_curved_qua8(x_shift: f64) -> Scratchpad {
+        let mut pad = Scratchpad::new(2, GeoKind::Qua8).unwrap();
+        for m in 0..8 {
+            pad.set_xx(m, 0, CURVED_QUA8[m][0] + x_shift);
+            pad.set_xx(m, 1, CURVED_QUA8[m][1]);
+        }
+        pad
+    }
+
+    /// Generates a mixed pad with a Qua4 field over the curved Qua8 geometry
+    pub fn gen_pad_mixed_qua4_qua8(x_shift: f64) -> Scratchpad {
+        let mut pad = Scratchpad::new_mixed(2, GeoKind::Qua4, GeoKind::Qua8).unwrap();
+        for m in 0..8 {
+            pad.set_xx(m, 0, CURVED_QUA8[m][0] + x_shift);
+            pad.set_xx(m, 1, CURVED_QUA8[m][1]);
+        }
+        pad
+    }
+
+    /// Generates a bilinear Qua4 pad from the four corners of the curved element
+    pub fn gen_pad_bilinear_qua4(x_shift: f64) -> Scratchpad {
+        let mut pad = Scratchpad::new(2, GeoKind::Qua4).unwrap();
+        for m in 0..4 {
+            pad.set_xx(m, 0, CURVED_QUA8[m][0] + x_shift);
+            pad.set_xx(m, 1, CURVED_QUA8[m][1]);
+        }
+        pad
+    }
+
+    /// Generates a mixed pad with a Qua8 field over the straight-edged Qua4 geometry (the four corners)
+    pub fn gen_pad_mixed_qua8_qua4() -> Scratchpad {
+        let mut pad = Scratchpad::new_mixed(2, GeoKind::Qua8, GeoKind::Qua4).unwrap();
+        for m in 0..4 {
+            pad.set_xx(m, 0, CURVED_QUA8[m][0]);
+            pad.set_xx(m, 1, CURVED_QUA8[m][1]);
+        }
+        pad
+    }
+
+    /// Generates an equal-order mixed pad from the coordinates of a plain pad (kind = geo_kind)
+    pub fn gen_pad_equal_order_mixed(pad: &Scratchpad) -> Scratchpad {
+        let mut mixed = Scratchpad::new_mixed(pad.space_ndim(), pad.kind, pad.kind).unwrap();
+        for j in 0..pad.xxt.nrow() {
+            for m in 0..pad.xxt.ncol() {
+                mixed.set_xx(m, j, pad.xxt.get(j, m));
+            }
+        }
+        mixed
+    }
+
     /// Generates pad Tet4 for tests
     pub fn gen_pad_tet4() -> Scratchpad {
         let mut pad = Scratchpad::new(3, GeoKind::Tet4).unwrap();

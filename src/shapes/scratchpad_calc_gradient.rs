@@ -23,14 +23,18 @@ impl Scratchpad {
     /// B = L · J⁻¹
     /// ```
     ///
+    /// For mixed-order shapes, `L` belongs to the field `kind`, while `J` belongs to the cell
+    /// geometry `geo_kind` (see [Scratchpad::new_mixed]). Thus, the same geometric mapping is used
+    /// for both fields of a mixed element.
+    ///
     /// # Output
     ///
-    /// * `interp` -- interpolation functions (nnode)
-    /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
-    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `interp` -- field interpolation functions (nnode)
+    /// * `deriv` -- derivatives of the field interpolation functions (nnode,geo_ndim); `L` matrix
+    /// * `jacobian` -- Jacobian matrix of the geometry (space_ndim,geo_ndim)
     /// * `inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
-    /// * `gradient` -- gradient matrix (nnode,space_ndim)
-    /// * Returns the determinant of the Jacobian matrix
+    /// * `gradient` -- field gradient matrix (nnode,space_ndim)
+    /// * Returns the determinant of the geometric Jacobian matrix
     ///
     /// **Note:** This function also computes the interpolation functions (it calls
     /// [Scratchpad::calc_interp]), thus `interp` is available after the call together with the
@@ -92,11 +96,16 @@ impl Scratchpad {
             return Err("calc_gradient requires that geo_ndim = space_ndim");
         }
 
-        // interpolation functions N
+        // interpolation functions N of the field
         self.calc_interp(ksi);
 
-        // Jacobian matrix J: dx/dξ
+        // Jacobian matrix J: dx/dξ of the geometry
         let det_jac = self.calc_jacobian(ksi)?;
+
+        // field derivatives L when they differ from the geometry derivatives
+        if self.geo_kind != self.kind {
+            (self.fn_deriv)(&mut self.deriv, ksi);
+        }
 
         // gradient: B = L · J⁻¹
         mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian, 0.0).unwrap(); // cannot fail because the dims are checked

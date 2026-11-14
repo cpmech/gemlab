@@ -13,11 +13,14 @@ impl Scratchpad {
     /// # Output
     ///
     /// * `ksi` -- ξ reference coordinates (geo_ndim=space_ndim)
-    /// * `interp` -- interpolation functions (nnode)
-    /// * `deriv` -- interpolation functions (nnode,geo_ndim=space_ndim)
-    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim=space_ndim)
+    /// * `interp` -- field interpolation functions (nnode)
+    /// * `interp_geo` -- geometry interpolation functions (geo_nnode)
+    /// * `jacobian` -- Jacobian matrix of the geometry (space_ndim,geo_ndim=space_ndim)
     /// * `inv_jacobian` -- inverse Jacobian matrix (space_ndim,space_ndim)
     /// * Returns the number of iterations
+    ///
+    /// The inverse mapping always belongs to the cell geometry (`geo_kind`). For mixed-order
+    /// shapes, the field interpolation is evaluated too, but it does not affect the iteration.
     ///
     /// # Input
     ///
@@ -79,14 +82,14 @@ impl Scratchpad {
         }
 
         // use linear interpolation to guess ksi
-        let (kmin, kdel) = if self.kind.is_tri_or_tet() {
+        let (kmin, kdel) = if self.geo_kind.is_tri_or_tet() {
             (0.0, 1.0) // Tri or Tet
         } else {
             (-1.0, 2.0) // Qua or Hex
         };
         let mut xmin = vec![f64::MAX; space_ndim];
         let mut xmax = vec![f64::MIN; space_ndim];
-        let nnode = self.interp.dim();
+        let nnode = self.geo_nnode();
         for m in 0..nnode {
             for j in 0..space_ndim {
                 xmin[j] = f64::min(xmin[j], self.xxt.get(j, m));

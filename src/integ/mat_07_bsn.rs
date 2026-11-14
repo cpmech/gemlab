@@ -114,6 +114,13 @@ where
         let det_jac = args.pad.calc_gradient(iota)?; // B
         (pad_alt.fn_interp)(&mut pad_alt.interp, iota); // Nb
 
+        // radius @ x(ιᵖ) from the geometry
+        let radius = if args.axisymmetric {
+            args.pad.calc_radius(iota)?
+        } else {
+            0.0
+        };
+
         // calculate s
         let nn = &args.pad.interp;
         let bb = &args.pad.gradient;
@@ -122,11 +129,7 @@ where
 
         // calculate coefficient
         let c = if args.axisymmetric {
-            let mut r = 0.0; // radius @ x(ιᵖ)
-            for m in 0..nnode {
-                r += nn[m] * args.pad.xxt.get(0, m);
-            }
-            s * det_jac * weight * args.alpha * r
+            s * det_jac * weight * args.alpha * radius
         } else {
             s * det_jac * weight * args.alpha
         };

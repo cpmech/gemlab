@@ -16,8 +16,8 @@ impl Scratchpad {
     /// # Output
     ///
     /// * `un` -- (space_ndim) the **unit** normal vector; components beyond `space_ndim` are set to zero
-    /// * `deriv` -- derivatives of the interpolation functions (nnode); `L` matrix
-    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim)
+    /// * `deriv_geo` -- derivatives of the geometry interpolation functions (geo_nnode,geo_ndim)
+    /// * `jacobian` -- Jacobian matrix (space_ndim,geo_ndim) of the geometry
     /// * Returns the magnitude of the normal vector
     ///
     /// # Input
@@ -122,11 +122,11 @@ impl Scratchpad {
             return Err("calc_normal_vector requires geo_ndim = 2 in 3D (SHELL in 3D)");
         }
 
-        // matrix L: dNᵐ/dξ
-        (self.fn_deriv)(&mut self.deriv, ksi);
+        // matrix L: dNᵐ/dξ of the geometry
+        (self.fn_deriv_geo)(&mut self.deriv_geo, ksi);
 
         // matrix J: dx/dξ
-        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv, 0.0).unwrap();
+        mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv_geo, 0.0).unwrap();
 
         // CABLE: line in 2D (geo_ndim = 1 and space_ndim = 2)
         //          →

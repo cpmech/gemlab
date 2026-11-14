@@ -112,17 +112,20 @@ where
         (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
         let det_jac = args.pad.calc_jacobian(iota)?;
 
+        // radius @ x(ιᵖ) from the geometry
+        let radius = if args.axisymmetric {
+            args.pad.calc_radius(iota)?
+        } else {
+            0.0
+        };
+
         // calculate v
         let nn = &args.pad.interp;
         fn_v(&mut v, p, nn)?;
 
         // calculate coefficient
         let coef = if args.axisymmetric {
-            let mut r = 0.0; // radius @ x(ιᵖ)
-            for m in 0..nnode {
-                r += nn[m] * args.pad.xxt.get(0, m);
-            }
-            det_jac * weight * args.alpha * r
+            det_jac * weight * args.alpha * radius
         } else {
             det_jac * weight * args.alpha
         };
