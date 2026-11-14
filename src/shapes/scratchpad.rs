@@ -7,13 +7,13 @@ use russell_lab::{Matrix, Vector};
 /// This struct holds the variables calculated by the interpolation and derivative functions,
 /// including the Jacobian, inverse Jacobian, and gradients. The **field** interpolation is given by
 /// `kind`, while the **cell geometry** mapping is given by `geo_kind`. Both are equal for
-/// isoparametric shapes (see [Scratchpad::new]); they may differ in order for mixed-order shapes
+/// single-order shapes (see [Scratchpad::new]); they may differ in order for mixed-order shapes
 /// (see [Scratchpad::new_mixed]).
 ///
 /// # Sequence of computations for the gradient
 ///
 /// The derivatives `L` in step 1 are those of the field (`kind`), while the coordinates and the
-/// Jacobian in step 2 belong to the cell geometry (`geo_kind`). For isoparametric shapes, the two
+/// Jacobian in step 2 belong to the cell geometry (`geo_kind`). For single-order shapes, the two
 /// kinds coincide.
 ///
 /// ## 1 Derivatives of interpolation functions @ ξ
@@ -71,7 +71,7 @@ pub struct Scratchpad {
 
     /// The kind of the cell geometry mapping
     ///
-    /// This member equals `kind` for isoparametric shapes. For mixed-order shapes, it defines the
+    /// This member equals `kind` for single-order shapes. For mixed-order shapes, it defines the
     /// geometry that maps the reference coordinates to the real coordinates, while `kind` defines
     /// the field interpolation (see [Scratchpad::new_mixed]).
     pub geo_kind: GeoKind,
@@ -142,7 +142,7 @@ pub struct Scratchpad {
 }
 
 impl Scratchpad {
-    /// Allocates a new instance with an isoparametric shape (`geo_kind = kind`)
+    /// Allocates a new instance with a single-order shape (`geo_kind = kind`)
     ///
     /// # Notes
     ///
@@ -900,7 +900,7 @@ mod tests {
 
     #[test]
     fn calc_radius_works() {
-        // isoparametric shape
+        // single-order shape
         let mut pad = Scratchpad::new(2, GeoKind::Qua4).unwrap();
         let xx = [(2.0, 1.0), (6.0, 1.0), (6.0, 3.0), (2.0, 3.0)];
         for m in 0..4 {
@@ -969,7 +969,7 @@ mod tests {
             pad_geo.set_xx(m, 1, coords[m].1);
         }
 
-        // the Jacobian must match the isoparametric geometry
+        // the Jacobian must match the single-order geometry
         let gauss = Gauss::new_or_sized(GeoKind::Qua8, Some(9)).unwrap();
         for p in 0..gauss.npoint() {
             let iota = gauss.coords(p);

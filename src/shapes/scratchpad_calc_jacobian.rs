@@ -50,7 +50,7 @@ impl Scratchpad {
     ///     * `SOLID`: (geo_ndim = space_ndim), returns the determinant of the Jacobian
     ///
     /// The Jacobian always comes from the cell geometry (`geo_kind`). The field derivatives `deriv`
-    /// are evaluated directly only in the isoparametric case; otherwise, [Scratchpad::calc_gradient]
+    /// are evaluated directly only in the single-order case; otherwise, [Scratchpad::calc_gradient]
     /// evaluates them separately from `deriv_geo`.
     ///
     /// # Input
@@ -111,7 +111,7 @@ impl Scratchpad {
 
         // matrix L: dNᵐ/dξ, always from the cell geometry
         if self.geo_kind == self.kind {
-            // isoparametric fast path: the field and geometry derivatives are the same
+            // single-order fast path: the field and geometry derivatives are the same
             (self.fn_deriv)(&mut self.deriv, ksi);
             mat_mat_mul(&mut self.jacobian, 1.0, &self.xxt, &self.deriv, 0.0)?;
         } else {
