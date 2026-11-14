@@ -267,7 +267,7 @@
 //! Function [mat_11_ntb()]
 //!
 //! `B` differentiates the main pad's vector field, `Na` is the **alternative** shape, and the
-//! axisymmetric hoop contribution is included exactly as in MAT 04's counterpart.
+//! axisymmetric hoop contribution is included exactly as in [vec_04_bt()].
 //!
 //! ```text
 //!       ⌠        →
@@ -281,7 +281,7 @@
 //! Function [mat_12_btna()]
 //!
 //! `B` differentiates the main pad's vector field, `Na` is the **alternative** shape, and the
-//! axisymmetric hoop contribution is included exactly as in MAT 07's counterpart.
+//! axisymmetric hoop contribution is included exactly as in [vec_04_bt()].
 //!
 //! ```text
 //!       ⌠ →        →

@@ -14,7 +14,7 @@ use russell_lab::Vector;
 /// * `pad_alt` is the **alternative** pad: only its shape functions `Na` are used, never its
 ///   coordinates, and it may be of any order — lower, equal to, or higher than that of `pad`
 /// * `m` ranges over the nodes of `pad_alt` (for `Naᵐ`), as in the result layout below
-/// * For example, `0 ≤ m < 4` with a `pad_alt→Qua4` and `pad→Qua8`, or `0 ≤ m < 8` the other way round
+/// * For example, `0 ≤ m < 4` with a `pad_alt→Qua4` and `pad→Qua8`, or `0 ≤ m < 8` the other way around
 /// * The number of integration points must consider the nodes of both pads and the expected order of
 ///   the whole integrand
 ///

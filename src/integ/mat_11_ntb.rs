@@ -18,7 +18,7 @@ use russell_tensor::Tensor2;
 ///   than that of `pad`
 /// * `m` ranges over the nodes of `pad_alt` (for `Naᵐ`) and `n` over the nodes of `pad` (for `Bⁿ`),
 ///   as in the result layout below
-/// * For example, `1 ≤ m ≤ 4` with a `pad_alt→Qua4` and `pad→Qua8`, or `1 ≤ m ≤ 8` the other way round
+/// * For example, `0 ≤ m < 4` with a `pad_alt→Qua4` and `pad→Qua8`, or `0 ≤ m < 8` the other way around
 /// * The number of integration points must consider the nodes of both pads and the expected order of
 ///   the whole integrand
 ///
@@ -261,7 +261,6 @@ mod tests {
     use crate::recovery::get_points_coords;
     use crate::shapes::{GeoKind, Scratchpad};
     use crate::StrError;
-    use russell_lab::math::SQRT_2;
     use russell_lab::{approx_eq, mat_approx_eq, Matrix, Vector};
     use russell_tensor::{Tensor1, Tensor2};
 
@@ -320,6 +319,18 @@ mod tests {
         max_diff
     }
 
+    /// Returns the maximum absolute value of a matrix
+    fn max_abs_value(a: &Matrix) -> f64 {
+        let (nrow, ncol) = a.dims();
+        let mut max_abs = 0.0;
+        for i in 0..nrow {
+            for j in 0..ncol {
+                max_abs = f64::max(max_abs, f64::abs(a.get(i, j)));
+            }
+        }
+        max_abs
+    }
+
     /// Returns the spatially varying scalar s(x) = 2 + x₀ - x₁ used in the scalar-identity test (2D)
     fn s_2d(x: &Tensor1) -> f64 {
         2.0 + x.get(0) - x.get(1)
@@ -348,6 +359,24 @@ mod tests {
         tt.sym_set_std(0, 1, 0.4 + 0.1 * x0 + 0.25 * x1 - 0.15 * x2);
         tt.sym_set_std(1, 2, -0.3 + 0.2 * x0 - 0.1 * x1 + 0.35 * x2);
         tt.sym_set_std(2, 0, 0.6 - 0.25 * x0 + 0.3 * x1 + 0.05 * x2);
+    }
+
+    /// Sets a deviatoric tensor in 2D: tr(T) = 0 and non-zero shear (T₂₂ is the hoop component)
+    fn deviatoric_2d(tt: &mut Tensor2<4>, _x: &Tensor1) {
+        tt.sym_set_std(0, 0, 2.0);
+        tt.sym_set_std(1, 1, -1.0);
+        tt.sym_set_std(2, 2, -1.0);
+        tt.sym_set_std(0, 1, 0.75);
+    }
+
+    /// Sets a deviatoric tensor in 3D: tr(T) = 0 and non-zero shear
+    fn deviatoric_3d(tt: &mut Tensor2<6>, _x: &Tensor1) {
+        tt.sym_set_std(0, 0, 2.0);
+        tt.sym_set_std(1, 1, -0.5);
+        tt.sym_set_std(2, 2, -1.5);
+        tt.sym_set_std(0, 1, 0.75);
+        tt.sym_set_std(1, 2, -0.4);
+        tt.sym_set_std(2, 0, 0.6);
     }
 
     /// Asserts that mat_12_btna(T) is the transpose of mat_11_ntb(T)
@@ -382,6 +411,58 @@ mod tests {
                 approx_eq(kk12.get(j, i), kk11.get(i, j), 1e-14);
             }
         }
+    }
+
+    /// Asserts that summing the pad_alt block of mat_11_ntb gives vec_04_bt exactly (Σₘ Naᵐ = 1)
+    ///
+    /// Both functions use the same Gauss rule and the same integration point coordinates. The matrix
+    /// is returned so that the caller can also inspect its magnitude.
+    fn check_partition_of_unity<const N: usize>(
+        pad: &Scratchpad,
+        pad_alt: &Scratchpad,
+        axisymmetric: bool,
+        tensor_fn: fn(&mut Tensor2<N>, &Tensor1),
+    ) -> Matrix {
+        let gauss = Gauss::new(pad.kind);
+        let mut pad_main = pad.clone();
+        let mut pad_alt_main = pad_alt.clone();
+        let x_ips = get_points_coords(&mut pad_main, &gauss).unwrap();
+        let (space_ndim, _, nnode) = pad.dims();
+        let nnode_alt = pad_alt.nnode();
+
+        // coupled matrix: nnode_alt rows for Naᵐ times nnode ⋅ space_ndim columns for Bⁿ
+        let mut kk = Matrix::new(nnode_alt, nnode * space_ndim);
+        let mut args = CommonArgs::new(&mut pad_main, &gauss);
+        args.axisymmetric = axisymmetric;
+        integ::mat_11_ntb::<N, _>(&mut kk, &mut args, &mut pad_alt_main, |tt, p, _, _, _| {
+            tensor_fn(tt, &x_ips[p]);
+            Ok(())
+        })
+        .unwrap();
+
+        // reference: the same tensor through vec_04_bt on the main pad
+        let mut d = Vector::new(nnode * space_ndim);
+        let mut args = CommonArgs::new(&mut pad_main, &gauss);
+        args.axisymmetric = axisymmetric;
+        integ::vec_04_bt::<N, _>(&mut d, &mut args, |sig, p, _, _| {
+            tensor_fn(sig, &x_ips[p]);
+            Ok(())
+        })
+        .unwrap();
+
+        // since Σₘ Naᵐ = 1 at every integration point, the sum over the alternative nodes must match.
+        // The 1e-13 tolerance (instead of 1e-14) accounts for the axisymmetric entries reaching O(100),
+        // where one ulp is already ~3e-14; it is still ~1e-15 in relative terms.
+        for n in 0..nnode {
+            for j in 0..space_ndim {
+                let mut sum = 0.0;
+                for m in 0..nnode_alt {
+                    sum += kk.get(m, j + n * space_ndim);
+                }
+                approx_eq(sum, d[j + n * space_ndim], 1e-13);
+            }
+        }
+        kk
     }
 
     #[test]
@@ -531,7 +612,6 @@ mod tests {
             pad_alt_calc.set_xx(m, 1, xx[m][1]);
         }
         let mut tt = Tensor2::<4>::new();
-        let s = SQRT_2;
         for p in 0..gauss.npoint() {
             let iota = gauss.coords(p);
             let det_jac = pad_calc.calc_gradient(iota).unwrap();
@@ -541,12 +621,17 @@ mod tests {
             let c_wrong = det_jac_wrong * gauss.weight(p);
             for m in 0..4 {
                 for n in 0..8 {
-                    let q0 = tt.get(0) * pad_calc.gradient.get(n, 0) + tt.get(3) * pad_calc.gradient.get(n, 1) / s;
-                    let q1 = tt.get(3) * pad_calc.gradient.get(n, 0) / s + tt.get(1) * pad_calc.gradient.get(n, 1);
-                    kk_ref.add(m, n * 2, pad_alt_calc.interp[m] * c * q0);
-                    kk_ref.add(m, n * 2 + 1, pad_alt_calc.interp[m] * c * q1);
-                    kk_wrong.add(m, n * 2, pad_alt_calc.interp[m] * c_wrong * q0);
-                    kk_wrong.add(m, n * 2 + 1, pad_alt_calc.interp[m] * c_wrong * q1);
+                    // (T · Bⁿ)ⱼ = Σᵢ Tⱼᵢ Bⁿᵢ, with Tⱼᵢ the standard (non-Mandel) component
+                    let mut q = [0.0; 2];
+                    for j in 0..2 {
+                        for i in 0..2 {
+                            q[j] += tt.get_std(j, i) * pad_calc.gradient.get(n, i);
+                        }
+                    }
+                    kk_ref.add(m, n * 2, pad_alt_calc.interp[m] * c * q[0]);
+                    kk_ref.add(m, n * 2 + 1, pad_alt_calc.interp[m] * c * q[1]);
+                    kk_wrong.add(m, n * 2, pad_alt_calc.interp[m] * c_wrong * q[0]);
+                    kk_wrong.add(m, n * 2 + 1, pad_alt_calc.interp[m] * c_wrong * q[1]);
                 }
             }
         }
@@ -612,7 +697,6 @@ mod tests {
             pad_alt_calc.set_xx(m, 1, xx[m][1]);
         }
         let mut tt = Tensor2::<4>::new();
-        let s = SQRT_2;
         for p in 0..gauss.npoint() {
             let iota = gauss.coords(p);
             let det_jac = pad_calc.calc_gradient(iota).unwrap();
@@ -622,12 +706,17 @@ mod tests {
             let c_wrong = det_jac_wrong * gauss.weight(p);
             for m in 0..8 {
                 for n in 0..4 {
-                    let q0 = tt.get(0) * pad_calc.gradient.get(n, 0) + tt.get(3) * pad_calc.gradient.get(n, 1) / s;
-                    let q1 = tt.get(3) * pad_calc.gradient.get(n, 0) / s + tt.get(1) * pad_calc.gradient.get(n, 1);
-                    kk_ref.add(m, n * 2, pad_alt_calc.interp[m] * c * q0);
-                    kk_ref.add(m, n * 2 + 1, pad_alt_calc.interp[m] * c * q1);
-                    kk_wrong.add(m, n * 2, pad_alt_calc.interp[m] * c_wrong * q0);
-                    kk_wrong.add(m, n * 2 + 1, pad_alt_calc.interp[m] * c_wrong * q1);
+                    // (T · Bⁿ)ⱼ = Σᵢ Tⱼᵢ Bⁿᵢ, with Tⱼᵢ the standard (non-Mandel) component
+                    let mut q = [0.0; 2];
+                    for j in 0..2 {
+                        for i in 0..2 {
+                            q[j] += tt.get_std(j, i) * pad_calc.gradient.get(n, i);
+                        }
+                    }
+                    kk_ref.add(m, n * 2, pad_alt_calc.interp[m] * c * q[0]);
+                    kk_ref.add(m, n * 2 + 1, pad_alt_calc.interp[m] * c * q[1]);
+                    kk_wrong.add(m, n * 2, pad_alt_calc.interp[m] * c_wrong * q[0]);
+                    kk_wrong.add(m, n * 2 + 1, pad_alt_calc.interp[m] * c_wrong * q[1]);
                 }
             }
         }
@@ -685,7 +774,6 @@ mod tests {
         let mut pad_calc = pad.clone();
         let mut pad_alt_calc = Scratchpad::new(2, GeoKind::Qua4).unwrap();
         let mut tt = Tensor2::<4>::new();
-        let s = SQRT_2;
         for p in 0..gauss.npoint() {
             let iota = gauss.coords(p);
             let det_jac = pad_calc.calc_gradient(iota).unwrap();
@@ -699,11 +787,16 @@ mod tests {
             let c = det_jac * gauss.weight(p);
             for m in 0..4 {
                 for n in 0..8 {
-                    let q0 =
-                        c * r * (tt.get(0) * pad_calc.gradient.get(n, 0) + tt.get(3) * pad_calc.gradient.get(n, 1) / s);
-                    let q0_hoop = q0 + c * pad_calc.interp[n] * tt.get(2);
-                    let q1 =
-                        c * r * (tt.get(3) * pad_calc.gradient.get(n, 0) / s + tt.get(1) * pad_calc.gradient.get(n, 1));
+                    // (T · Bⁿ)ⱼ = Σᵢ Tⱼᵢ Bⁿᵢ, with Tⱼᵢ the standard (non-Mandel) component
+                    let mut q = [0.0; 2];
+                    for j in 0..2 {
+                        for i in 0..2 {
+                            q[j] += tt.get_std(j, i) * pad_calc.gradient.get(n, i);
+                        }
+                    }
+                    let q0 = c * r * q[0];
+                    let q0_hoop = q0 + c * pad_calc.interp[n] * tt.get_std(2, 2);
+                    let q1 = c * r * q[1];
                     kk_ref.add(m, n * 2, pad_alt_calc.interp[m] * q0_hoop);
                     kk_ref.add(m, n * 2 + 1, pad_alt_calc.interp[m] * q1);
                     kk_no_hoop.add(m, n * 2, pad_alt_calc.interp[m] * q0);
@@ -747,6 +840,120 @@ mod tests {
         let gauss = Gauss::new(pad.kind);
         let x_ips = get_points_coords(&mut pad, &gauss).unwrap();
         check_transpose(&mut pad, &mut pad_alt, &gauss, &x_ips, tensor_3d, false, 4, 30);
+    }
+
+    #[test]
+    fn anisotropic_3d_tet10_tet4() {
+        // Tet10 main pad + Tet4 alternative pad with a full anisotropic tensor. The whole 4 x 30
+        // matrix is compared against a reference assembled with the standard (non-Mandel)
+        // components, so a swap of T₁₂/T₂₀ or a missing √2 in 3D cannot pass.
+        let mut pad = gen_pad_tet10();
+        let mut pad_alt = aux::gen_pad_tet4();
+        let gauss = Gauss::new(pad.kind);
+        let x_ips = get_points_coords(&mut pad, &gauss).unwrap();
+
+        let mut kk_ref = Matrix::new(4, 30);
+        let mut pad_calc = pad.clone();
+        let mut pad_alt_calc = Scratchpad::new(3, GeoKind::Tet4).unwrap();
+        let mut tt = Tensor2::<6>::new();
+        for p in 0..gauss.npoint() {
+            let iota = gauss.coords(p);
+            let det_jac = pad_calc.calc_gradient(iota).unwrap();
+            (pad_alt_calc.fn_interp)(&mut pad_alt_calc.interp, iota);
+            tensor_3d(&mut tt, &x_ips[p]);
+            let c = det_jac * gauss.weight(p);
+            for m in 0..4 {
+                for n in 0..10 {
+                    // (T · Bⁿ)ⱼ = Σᵢ Tⱼᵢ Bⁿᵢ, with Tⱼᵢ the standard (non-Mandel) component
+                    let mut q = [0.0; 3];
+                    for j in 0..3 {
+                        for i in 0..3 {
+                            q[j] += tt.get_std(j, i) * pad_calc.gradient.get(n, i);
+                        }
+                    }
+                    for j in 0..3 {
+                        kk_ref.add(m, n * 3 + j, pad_alt_calc.interp[m] * c * q[j]);
+                    }
+                }
+            }
+        }
+
+        let mut kk = Matrix::new(4, 30);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
+        integ::mat_11_ntb::<6, _>(&mut kk, &mut args, &mut pad_alt, |tt, p, _, _, _| {
+            tensor_3d(tt, &x_ips[p]);
+            Ok(())
+        })
+        .unwrap();
+        mat_approx_eq(&kk, &kk_ref, 1e-13);
+    }
+
+    #[test]
+    fn partition_of_unity_matches_vec_04_bt() {
+        // 2D: Qua8 (main) + Qua4 (alt)
+        check_partition_of_unity(
+            &aux::gen_pad_qua8(0.0, 0.0, 2.0, 3.0),
+            &aux::gen_pad_qua4(0.0, 0.0, 2.0, 3.0),
+            false,
+            tensor_2d,
+        );
+
+        // axisymmetric 2D with r > 0 at every integration point
+        check_partition_of_unity(
+            &aux::gen_pad_qua8(5.0, 2.0, 2.0, 3.0),
+            &aux::gen_pad_qua4(5.0, 2.0, 2.0, 3.0),
+            true,
+            tensor_2d,
+        );
+
+        // 3D: Tet10 (main) + Tet4 (alt)
+        check_partition_of_unity(&gen_pad_tet10(), &aux::gen_pad_tet4(), false, tensor_3d);
+
+        // Deviatoric 2D tensor: tr(T) = 0 with non-zero shear
+        let kk_2d = check_partition_of_unity(
+            &aux::gen_pad_qua8(0.0, 0.0, 2.0, 3.0),
+            &aux::gen_pad_qua4(0.0, 0.0, 2.0, 3.0),
+            false,
+            deviatoric_2d,
+        );
+        // the coupled block is not the zero matrix even though tr(T) = 0
+        let max_abs = max_abs_value(&kk_2d);
+        println!("max |K| = {:.3e}", max_abs);
+        assert!(max_abs > 1e-1);
+
+        // the deviatoric coupling is invisible to the scalar case: with s = tr(T)/3 = 0,
+        // mat_04_nsb sees nothing on the same fixture
+        let mut pad = aux::gen_pad_qua8(0.0, 0.0, 2.0, 3.0);
+        let mut pad_alt = aux::gen_pad_qua4(0.0, 0.0, 2.0, 3.0);
+        let gauss = Gauss::new(pad.kind);
+        let mut kk_scalar = Matrix::new(4, 16);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
+        integ::mat_04_nsb(&mut kk_scalar, &mut args, &mut pad_alt, |_, _, _, _| Ok(0.0)).unwrap();
+        for i in 0..4 {
+            for j in 0..16 {
+                assert!(f64::abs(kk_scalar.get(i, j)) < 1e-15);
+            }
+        }
+
+        // Deviatoric 3D tensor: tr(T) = 0 with non-zero shear
+        let kk_3d = check_partition_of_unity(&gen_pad_tet10(), &aux::gen_pad_tet4(), false, deviatoric_3d);
+        let max_abs = max_abs_value(&kk_3d);
+        println!("max |K| = {:.3e}", max_abs);
+        assert!(max_abs > 1e-1);
+
+        // the deviatoric coupling is invisible to the scalar case: with s = tr(T)/3 = 0,
+        // mat_04_nsb sees nothing on the same fixture
+        let mut pad = gen_pad_tet10();
+        let mut pad_alt = aux::gen_pad_tet4();
+        let gauss = Gauss::new(pad.kind);
+        let mut kk_scalar = Matrix::new(4, 30);
+        let mut args = CommonArgs::new(&mut pad, &gauss);
+        integ::mat_04_nsb(&mut kk_scalar, &mut args, &mut pad_alt, |_, _, _, _| Ok(0.0)).unwrap();
+        for i in 0..4 {
+            for j in 0..30 {
+                assert!(f64::abs(kk_scalar.get(i, j)) < 1e-15);
+            }
+        }
     }
 
     #[test]

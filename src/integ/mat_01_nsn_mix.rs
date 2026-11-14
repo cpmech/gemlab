@@ -16,7 +16,7 @@ use russell_lab::{Matrix, Vector};
 /// * `m` and `n` range over the nodes of `pad_alt` (for `Naᵐ` and `Naⁿ`), as in the result layout
 ///   below
 /// * For example, `0 ≤ m,n < 4` with a `pad_alt→Qua4` and `pad→Qua8`, or `0 ≤ m,n < 8` the other
-///   way round
+///   way around
 /// * The number of integration points must consider the nodes of both pads and the expected order
 ///   of the whole integrand
 ///
