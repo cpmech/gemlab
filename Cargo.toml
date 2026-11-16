@@ -18,6 +18,7 @@ intel_mkl = ["russell_lab/intel_mkl"]
 
 [dependencies]
 plotpy = "1.24"
+postcard = { version = "1.1", features = ["use-std"] }
 russell_lab = "5.2"
 russell_stat = "5.2"
 russell_tensor = "5.2"

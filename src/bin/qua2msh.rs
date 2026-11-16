@@ -33,6 +33,10 @@ struct Options {
     /// Apply node renumbering to reduce the matrix bandwidth
     #[structopt(short, long)]
     renumber: bool,
+
+    /// Write a binary mesh file instead of the ASCII MSH file
+    #[structopt(long)]
+    bin: bool,
 }
 
 fn main() -> Result<(), StrError> {
@@ -60,10 +64,16 @@ fn main() -> Result<(), StrError> {
     };
     let mesh = Structured::from_blocks_2d(&blocks, target, options.renumber)?;
 
-    // write MSH file
-    let path_msh = format!("{}/{}.msh", options.out_dir, fn_stem);
-    mesh.write(&path_msh)?;
-    println!("\nGenerated MSH file: {}/{}.msh", options.out_dir, fn_stem);
+    // write mesh file
+    if options.bin {
+        let path_bin = format!("{}/{}.bin", options.out_dir, fn_stem);
+        mesh.write_bin(&path_bin)?;
+        println!("\nGenerated binary mesh file: {}", path_bin);
+    } else {
+        let path_msh = format!("{}/{}.msh", options.out_dir, fn_stem);
+        mesh.write(&path_msh)?;
+        println!("\nGenerated MSH file: {}/{}.msh", options.out_dir, fn_stem);
+    }
 
     // write VTU file
     if do_vtu {

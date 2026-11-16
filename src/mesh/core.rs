@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::{self, Write as FmtWrite};
 use std::fs::{self, File};
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter, Write};
 use std::path::Path;
 
 /// Aliases usize as Point ID
@@ -266,8 +266,10 @@ impl Mesh {
         if let Some(p) = path.parent() {
             fs::create_dir_all(p).map_err(|_| "cannot create directory")?;
         }
-        let mut file = File::create(&path).map_err(|_| "cannot create file")?;
-        serde_json::to_writer(&mut file, &self).map_err(|_| "cannot write file")?;
+        let file = File::create(&path).map_err(|_| "cannot create file")?;
+        let mut writer = BufWriter::new(file);
+        serde_json::to_writer(&mut writer, &self).map_err(|_| "cannot write file")?;
+        writer.flush().map_err(|_| "cannot flush file")?;
         Ok(())
     }
 

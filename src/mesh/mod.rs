@@ -51,6 +51,7 @@ mod grid_cells;
 mod join_meshes;
 mod paraview;
 mod read_text_mesh;
+mod read_write_bin;
 mod samples;
 mod triangulate_surface;
 mod write_text_file;

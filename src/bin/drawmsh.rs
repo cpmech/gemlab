@@ -1,5 +1,7 @@
 use gemlab::mesh::{Draw, Mesh};
 use gemlab::StrError;
+use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -8,9 +10,9 @@ const OUT_DIR: &str = "/tmp/gemlab";
 
 /// Command line options
 #[derive(Debug, StructOpt)]
-#[structopt(name = "drawmsh", about = "Draw MSH file")]
+#[structopt(name = "drawmsh", about = "Draw a mesh file (ASCII MSH or binary)")]
 struct Options {
-    /// Input MSH file
+    /// Input mesh file (ASCII MSH or binary)
     #[structopt(parse(from_os_str))]
     input: PathBuf,
 
@@ -120,6 +122,17 @@ fn get_glyph_origin(values: &Option<Vec<f64>>) -> Result<[f64; 3], StrError> {
     }
 }
 
+/// Reads a mesh file in either the ASCII MSH or the binary format
+fn read_mesh(in_path: &Path) -> Result<Mesh, StrError> {
+    let mut file = File::open(in_path).map_err(|_| "cannot open file")?;
+    let mut magic = [0u8; 4];
+    if file.read_exact(&mut magic).is_ok() && magic == *b"GML1" {
+        Mesh::read_bin(in_path)
+    } else {
+        Mesh::read(in_path)
+    }
+}
+
 fn main() -> Result<(), StrError> {
     // parse options
     let options = Options::from_args();
@@ -132,8 +145,8 @@ fn main() -> Result<(), StrError> {
         .to_str()
         .ok_or("cannot convert file stem to str")?;
 
-    // load MSH file
-    let mesh = Mesh::read(in_path)?;
+    // load mesh file
+    let mesh = read_mesh(in_path)?;
 
     // check mesh data
     if !options.skip_check {
