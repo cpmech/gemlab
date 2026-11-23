@@ -1,3 +1,4 @@
+use super::scratchpad_cache::ksi_key;
 use super::Scratchpad;
 use crate::StrError;
 use russell_lab::mat_mat_mul;
@@ -95,20 +96,65 @@ impl Scratchpad {
         if geo_ndim != space_ndim {
             return Err("calc_gradient requires that geo_ndim = space_ndim");
         }
+        if !self.ok_xxt {
+            return Err("all components of the coordinates matrix must be set first");
+        }
 
-        // interpolation functions N of the field
+        // lookup cached evaluation for the current cell geometry
+        let key = ksi_key(geo_ndim, ksi);
+        if let Some(cache) = self.cache.as_deref_mut() {
+            if let Some(slot) = cache.find(key) {
+                if cache.has_gradient(slot) {
+                    return Ok(cache.load_gradient(
+                        slot,
+                        &mut self.interp,
+                        &mut self.deriv,
+                        &mut self.deriv_geo,
+                        &mut self.jacobian,
+                        &mut self.inv_jacobian,
+                        &mut self.gradient,
+                    ));
+                }
+                // slot was seeded by `calc_jacobian`: reuse J⁻¹/L_geo and finish B = L · J⁻¹
+                let det_jac = cache.load_jacobian(
+                    slot,
+                    &mut self.deriv,
+                    &mut self.deriv_geo,
+                    &mut self.jacobian,
+                    &mut self.inv_jacobian,
+                );
+                self.calc_interp(ksi);
+                if self.geo_kind != self.kind {
+                    (self.fn_deriv)(&mut self.deriv, ksi);
+                }
+                mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian, 0.0).unwrap();
+                let cache = self.cache.as_deref_mut().unwrap();
+                cache.store_gradient_part(slot, &self.interp, &self.deriv, &self.gradient);
+                return Ok(det_jac);
+            }
+        }
+
+        // full miss: compute Jacobian, then interpolation functions and gradient
+        let det_jac = self.compute_jacobian_uncached(ksi)?;
         self.calc_interp(ksi);
-
-        // Jacobian matrix J: dx/dξ of the geometry
-        let det_jac = self.calc_jacobian(ksi)?;
-
-        // field derivatives L when they differ from the geometry derivatives
         if self.geo_kind != self.kind {
             (self.fn_deriv)(&mut self.deriv, ksi);
         }
-
-        // gradient: B = L · J⁻¹
         mat_mat_mul(&mut self.gradient, 1.0, &self.deriv, &self.inv_jacobian, 0.0).unwrap(); // cannot fail because the dims are checked
+
+        // record full evaluation in cache
+        self.init_cache();
+        let cache = self.cache.as_deref_mut().unwrap();
+        let slot = cache.alloc_slot(key);
+        cache.store_jacobian(
+            slot,
+            det_jac,
+            &self.deriv,
+            &self.deriv_geo,
+            &self.jacobian,
+            &self.inv_jacobian,
+        );
+        cache.store_gradient_part(slot, &self.interp, &self.deriv, &self.gradient);
         Ok(det_jac)
     }
 }

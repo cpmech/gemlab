@@ -151,9 +151,8 @@ where
         let iota = args.gauss.coords(p);
         let weight = args.gauss.weight(p);
 
-        // calculate Jacobian and Gradient
-        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // B
+        // calculate interpolation functions, Jacobian, and gradient
+        let det_jac = args.pad.calc_gradient(iota)?; // N and B
 
         // calculate D tensor
         let nn = &args.pad.interp;
@@ -352,9 +351,8 @@ where
         let iota = args.gauss.coords(p);
         let weight = args.gauss.weight(p);
 
-        // calculate Jacobian and Gradient
-        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // B
+        // calculate interpolation functions, Jacobian, and gradient
+        let det_jac = args.pad.calc_gradient(iota)?; // N and B
 
         // calculate D tensor
         let nn = &args.pad.interp;

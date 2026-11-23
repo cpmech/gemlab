@@ -1,3 +1,4 @@
+use super::scratchpad_cache::ksi_key;
 use super::Scratchpad;
 use crate::StrError;
 use russell_lab::{mat_inverse, mat_mat_mul};
@@ -109,6 +110,40 @@ impl Scratchpad {
             return Err("all components of the coordinates matrix must be set first");
         }
 
+        // lookup cached evaluation for the current cell geometry
+        let (_, geo_ndim, _) = self.dims();
+        let key = ksi_key(geo_ndim, ksi);
+        if let Some(cache) = self.cache.as_deref_mut() {
+            if let Some(slot) = cache.find(key) {
+                return Ok(cache.load_jacobian(
+                    slot,
+                    &mut self.deriv,
+                    &mut self.deriv_geo,
+                    &mut self.jacobian,
+                    &mut self.inv_jacobian,
+                ));
+            }
+        }
+
+        // miss: compute, then record in cache
+        let det_jac = self.compute_jacobian_uncached(ksi)?;
+        self.init_cache();
+        let cache = self.cache.as_deref_mut().unwrap();
+        let slot = cache.alloc_slot(key);
+        cache.store_jacobian(
+            slot,
+            det_jac,
+            &self.deriv,
+            &self.deriv_geo,
+            &self.jacobian,
+            &self.inv_jacobian,
+        );
+        Ok(det_jac)
+    }
+
+    /// Computes Jacobian and inverse Jacobian (or cable norm) directly without consulting the cache
+    #[inline]
+    pub(crate) fn compute_jacobian_uncached(&mut self, ksi: &[f64]) -> Result<f64, StrError> {
         // matrix L: dNᵐ/dξ, always from the cell geometry
         if self.geo_kind == self.kind {
             // single-order fast path: the field and geometry derivatives are the same

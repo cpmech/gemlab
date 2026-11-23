@@ -334,6 +334,7 @@ mod qua8;
 mod qua9;
 mod scratchpad;
 mod scratchpad_approximate_ksi;
+mod scratchpad_cache;
 mod scratchpad_calc_coords;
 mod scratchpad_calc_gradient;
 mod scratchpad_calc_jacobian;

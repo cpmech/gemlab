@@ -115,9 +115,8 @@ where
         let weight = args.gauss.weight(p);
 
         // calculate interpolation functions and Jacobian
-        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // B
-        (pad_alt.fn_interp)(&mut pad_alt.interp, iota); // Nb
+        let det_jac = args.pad.calc_gradient(iota)?; // N and B
+        pad_alt.calc_interp(iota); // Nb
 
         // radius @ x(ιᵖ) from the geometry
         let radius = if args.axisymmetric {

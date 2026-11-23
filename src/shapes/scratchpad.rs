@@ -1,3 +1,4 @@
+use super::scratchpad_cache::PadCache;
 use super::{FnDeriv, FnInterp, GeoKind};
 use crate::StrError;
 use russell_lab::{Matrix, Vector};
@@ -63,8 +64,10 @@ use russell_lab::{Matrix, Vector};
 /// # Warning
 ///
 /// All members are **readonly** and should not be modified externally. Use the member
-/// functions to calculate the data members of this struct.
-#[derive(Clone)]
+/// functions to calculate the data members of this struct. In particular, evaluations in
+/// [Scratchpad::calc_jacobian] and [Scratchpad::calc_gradient] cache recent reference points
+/// per cell geometry and invalidate automatically in [Scratchpad::set_xx]; writing directly
+/// to `xxt` would bypass invalidation.
 pub struct Scratchpad {
     /// The kind of the field interpolation
     pub kind: GeoKind,
@@ -139,6 +142,32 @@ pub struct Scratchpad {
 
     /// Function to calculate derivatives of the geometry interpolation functions
     pub fn_deriv_geo: FnDeriv,
+
+    /// Per-geometry bounded cache for `calc_jacobian` and `calc_gradient`
+    pub(crate) cache: Option<Box<PadCache>>,
+}
+
+impl Clone for Scratchpad {
+    fn clone(&self) -> Self {
+        Scratchpad {
+            kind: self.kind,
+            geo_kind: self.geo_kind,
+            interp: self.interp.clone(),
+            deriv: self.deriv.clone(),
+            interp_geo: self.interp_geo.clone(),
+            deriv_geo: self.deriv_geo.clone(),
+            jacobian: self.jacobian.clone(),
+            inv_jacobian: self.inv_jacobian.clone(),
+            gradient: self.gradient.clone(),
+            xxt: self.xxt.clone(),
+            ok_xxt: self.ok_xxt,
+            fn_interp: self.fn_interp,
+            fn_deriv: self.fn_deriv,
+            fn_interp_geo: self.fn_interp_geo,
+            fn_deriv_geo: self.fn_deriv_geo,
+            cache: None,
+        }
+    }
 }
 
 impl Scratchpad {
@@ -262,6 +291,18 @@ impl Scratchpad {
             fn_deriv,
             fn_interp_geo,
             fn_deriv_geo,
+            cache: None,
+        }
+    }
+
+    /// Allocates the evaluation cache if not yet created
+    #[inline]
+    pub(crate) fn init_cache(&mut self) {
+        if self.cache.is_none() {
+            let (space_ndim, geo_ndim, nnode) = self.dims();
+            let geo_nnode = self.geo_nnode();
+            let mixed = self.geo_kind != self.kind;
+            self.cache = Some(Box::new(PadCache::new(space_ndim, geo_ndim, nnode, geo_nnode, mixed)));
         }
     }
 
@@ -364,6 +405,9 @@ impl Scratchpad {
     /// ```
     pub fn set_xx(&mut self, m: usize, j: usize, value: f64) {
         self.ok_xxt = false;
+        if let Some(cache) = self.cache.as_deref_mut() {
+            cache.clear();
+        }
         self.xxt.set(j, m, value);
         let space_ndim = self.space_ndim();
         let geo_nnode = self.geo_nnode();

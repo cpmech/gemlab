@@ -121,9 +121,8 @@ where
         let weight = args.gauss.weight(p);
 
         // interpolation functions of both pads and the Jacobian of the main pad
-        (pad_alt.fn_interp)(&mut pad_alt.interp, iota); // Nb
-        (args.pad.fn_interp)(&mut args.pad.interp, iota); // N
-        let det_jac = args.pad.calc_gradient(iota)?; // B and J of the main pad
+        pad_alt.calc_interp(iota); // Nb
+        let det_jac = args.pad.calc_gradient(iota)?; // N, B, and J of the main pad
 
         // gradient of the alternative shape in the main pad's mapping: Ba = dNa/dξ · J⁻¹
         (pad_alt.fn_deriv)(&mut pad_alt.deriv, iota);
@@ -372,7 +371,7 @@ where
 
         // interpolation functions of both pads and the Jacobian of the main pad
         let det_jac = args.pad.calc_gradient(iota)?; // N, B, and J of the main pad
-        (pad_alt.fn_interp)(&mut pad_alt.interp, iota); // Na
+        pad_alt.calc_interp(iota); // Na
 
         // radius @ x(ιᵖ) from the geometry
         let radius = if args.axisymmetric {
@@ -619,7 +618,7 @@ where
 
         // interpolation functions of both pads and the Jacobian of the main pad
         let det_jac = args.pad.calc_gradient(iota)?; // N, B, and J of the main pad
-        (pad_alt.fn_interp)(&mut pad_alt.interp, iota); // Na
+        pad_alt.calc_interp(iota); // Na
 
         // radius @ x(ιᵖ) from the geometry
         let radius = if args.axisymmetric {
